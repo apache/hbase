@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.metrics;
 
 import javax.management.ObjectName;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.MetricsMBeanBase;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
@@ -27,6 +28,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
  * Exports the {@link MasterMetrics} statistics as an MBean
  * for JMX.
  */
+@InterfaceAudience.Private
 public class MasterStatistics extends MetricsMBeanBase {
   private final ObjectName mbeanName;
 

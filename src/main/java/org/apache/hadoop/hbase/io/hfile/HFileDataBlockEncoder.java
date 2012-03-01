@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Pair;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.util.Pair;
  * not set or the given block is not a data block (encoded or not), methods
  * should just return the unmodified block.
  */
+@InterfaceAudience.Private
 public interface HFileDataBlockEncoder {
   /**
    * Converts a block from the on-disk format to the in-cache format. Called in

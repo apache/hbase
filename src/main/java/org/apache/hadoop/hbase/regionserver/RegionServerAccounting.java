@@ -21,10 +21,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * RegionServerAccounting keeps record of some basic real time information about
  * the Region Server. Currently, it only keeps record the global memstore size. 
  */
+@InterfaceAudience.Private
 public class RegionServerAccounting {
 
   private final AtomicLong atomicGlobalMemstoreSize = new AtomicLong(0);

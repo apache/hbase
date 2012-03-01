@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * must not be relied upon. The values in the enum appear in the order they
  * appear in a version 2 {@link HFile}.
  */
+@InterfaceAudience.Private
 public enum BlockType {
 
   // Scanned block section

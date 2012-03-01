@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.zookeeper;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
@@ -30,6 +31,7 @@ import org.apache.zookeeper.KeeperException;
  * master on startup, and is subsequently available to all watchers (including
  * clients).
  */
+@InterfaceAudience.Private
 public class ClusterId {
   private ZooKeeperWatcher watcher;
   private Abortable abortable;

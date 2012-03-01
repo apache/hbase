@@ -19,9 +19,12 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Thrown when an invalid HFile format is detected
  */
+@InterfaceAudience.Private
 public class InvalidHFileException extends IOException {
   private static final long serialVersionUID = 4660352028739861249L;
 

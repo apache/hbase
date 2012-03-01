@@ -21,12 +21,16 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Thrown by a region server if it is sent a request for a region it is not
  * serving.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class NotServingRegionException extends IOException {
   private static final long serialVersionUID = 1L << 17 - 1L;
 

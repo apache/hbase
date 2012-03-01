@@ -22,11 +22,16 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.Serializable;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A generic class for pairs.
  * @param <T1>
  * @param <T2>
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Pair<T1, T2> implements Serializable
 {
   private static final long serialVersionUID = -3986244606585552569L;

@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,6 +49,7 @@ import org.apache.hadoop.io.Writable;
  * Note, a region is itself not splitable if it has instances of store file
  * references.  References are cleaned up by compactions.
  */
+@InterfaceAudience.Private
 public class Reference implements Writable {
   private byte [] splitkey;
   private Range region;

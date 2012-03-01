@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -63,6 +64,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
  * was started).  This is used to differentiate a restarted instance of a given
  * server from the original instance.
  */
+@InterfaceAudience.Private
 public class ServerManager {
   private static final Log LOG = LogFactory.getLog(ServerManager.class);
 

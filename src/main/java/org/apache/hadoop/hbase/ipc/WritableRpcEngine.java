@@ -47,11 +47,13 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.*;
 
 import org.codehaus.jackson.map.ObjectMapper;
 
 /** An RpcEngine implementation for Writable data. */
+@InterfaceAudience.Private
 class WritableRpcEngine implements RpcEngine {
   // LOG is NOT in hbase subpackage intentionally so that the default HBase
   // DEBUG log level does NOT emit RPC-level logging. 

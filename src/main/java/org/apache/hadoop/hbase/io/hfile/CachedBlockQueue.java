@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import com.google.common.collect.MinMaxPriorityQueue;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 
 /**
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
  * <p>Object used in this queue must implement {@link HeapSize} as well as
  * {@link Comparable}.
  */
+@InterfaceAudience.Private
 public class CachedBlockQueue implements HeapSize {
 
   private MinMaxPriorityQueue<CachedBlock> queue;

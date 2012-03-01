@@ -23,6 +23,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -32,6 +34,8 @@ import org.apache.hadoop.io.Writable;
  * {@link HTable::batch} to associate the action with it's region and maintain 
  * the index from the original request. 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Action<R> implements Writable, Comparable {
 
   private Row action;

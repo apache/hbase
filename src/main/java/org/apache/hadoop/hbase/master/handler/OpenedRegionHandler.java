@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master.handler;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -34,6 +35,7 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Handles OPENED region event on Master.
  */
+@InterfaceAudience.Private
 public class OpenedRegionHandler extends EventHandler implements TotesHRegionInfo {
   private static final Log LOG = LogFactory.getLog(OpenedRegionHandler.class);
   private final AssignmentManager assignmentManager;

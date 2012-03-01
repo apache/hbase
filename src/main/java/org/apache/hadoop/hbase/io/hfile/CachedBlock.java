@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * either instantiating as in-memory or handling the transition from single
  * to multiple access.
  */
+@InterfaceAudience.Private
 public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
 
   public final static long PER_BLOCK_OVERHEAD = ClassSize.align(

@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
@@ -74,6 +75,7 @@ import org.apache.zookeeper.KeeperException.SessionExpiredException;
  *    ...
  * </pre>
  */
+@InterfaceAudience.Private
 public class ReplicationZookeeper {
   private static final Log LOG =
     LogFactory.getLog(ReplicationZookeeper.class);

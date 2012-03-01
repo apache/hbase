@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.io;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Implementations can be asked for an estimate of their size in bytes.
  * <p>
@@ -37,6 +39,7 @@ package org.apache.hadoop.hbase.io;
  * }
  * </pre>
  */
+@InterfaceAudience.Private
 public interface HeapSize {
   /**
    * @return Approximate 'exclusive deep size' of implementing object.  Includes

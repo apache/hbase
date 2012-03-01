@@ -24,6 +24,8 @@ import org.apache.hadoop.hbase.util.Base64;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -50,6 +52,8 @@ import com.google.common.collect.Lists;
  *
  * @see ImportTsv#usage(String)
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class ImportTsv {
   final static String NAME = "importtsv";
 

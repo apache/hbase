@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master.handler;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 /**
  * Handles adding a new family to an existing table.
  */
+@InterfaceAudience.Private
 public class TableAddFamilyHandler extends TableEventHandler {
 
   private final HColumnDescriptor familyDesc;

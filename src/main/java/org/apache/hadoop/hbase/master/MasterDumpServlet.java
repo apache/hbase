@@ -29,6 +29,7 @@ import java.util.NavigableMap;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.monitoring.StateDumpServlet;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.util.ReflectionUtils;
 
+@InterfaceAudience.Private
 public class MasterDumpServlet extends StateDumpServlet {
   private static final long serialVersionUID = 1L;
   private static final String LINE =

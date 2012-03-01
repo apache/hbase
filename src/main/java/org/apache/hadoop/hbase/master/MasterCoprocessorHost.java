@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.coprocessor.*;
@@ -33,6 +34,7 @@ import java.io.IOException;
  * operations.  {@link HMaster} interacts with the loaded coprocessors
  * through this class.
  */
+@InterfaceAudience.Private
 public class MasterCoprocessorHost
     extends CoprocessorHost<MasterCoprocessorHost.MasterEnvironment> {
 

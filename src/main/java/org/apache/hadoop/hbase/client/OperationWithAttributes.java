@@ -27,10 +27,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.WritableUtils;
 
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class OperationWithAttributes extends Operation implements Attributes {
   // a opaque blob of attributes
   private Map<String, byte[]> attributes;

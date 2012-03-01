@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.handler;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -26,6 +27,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 /**
  * Handles closing of the root region on a region server.
  */
+@InterfaceAudience.Private
 public class CloseRootHandler extends CloseRegionHandler {
   // This is executed after receiving an CLOSE RPC from the master for root.
   public CloseRootHandler(final Server server,

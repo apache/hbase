@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -63,6 +65,8 @@ import java.util.TreeSet;
  * <p>
  * To add a filter, execute {@link #setFilter(Filter) setFilter}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Get extends OperationWithAttributes
   implements Writable, Row, Comparable<Row> {
   private static final byte GET_VERSION = (byte)2;

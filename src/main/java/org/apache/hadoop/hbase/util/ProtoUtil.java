@@ -21,6 +21,9 @@ package org.apache.hadoop.hbase.util;
 import java.io.DataInput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public abstract class ProtoUtil {
 
   /**

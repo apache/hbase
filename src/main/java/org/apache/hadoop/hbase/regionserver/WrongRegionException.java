@@ -21,9 +21,14 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Thrown when a request contains a key which is not part of this region
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class WrongRegionException extends IOException {
   private static final long serialVersionUID = 993179627856392526L;
 

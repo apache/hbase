@@ -25,6 +25,7 @@ import java.io.Serializable;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * </pre>
  */
 @XmlRootElement(name="Region")
+@InterfaceAudience.Private
 public class TableRegionModel implements Serializable {
 
   private static final long serialVersionUID = 1L;

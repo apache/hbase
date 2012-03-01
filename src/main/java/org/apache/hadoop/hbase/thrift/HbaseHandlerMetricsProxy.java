@@ -25,6 +25,7 @@ import java.lang.reflect.Proxy;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.thrift.generated.Hbase;
  * Converts a Hbase.Iface using InvocationHandler so that it reports process
  * time of each call to ThriftMetrics.
  */
+@InterfaceAudience.Private
 public class HbaseHandlerMetricsProxy implements InvocationHandler {
 
   public static final Log LOG = LogFactory.getLog(

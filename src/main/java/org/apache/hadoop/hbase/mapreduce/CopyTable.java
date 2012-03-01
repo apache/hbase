@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -36,6 +38,8 @@ import java.util.Map;
  * It is also configurable with a start and time as well as a specification
  * of the region server implementation if different from the local cluster.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class CopyTable {
 
   final static String NAME = "copytable";

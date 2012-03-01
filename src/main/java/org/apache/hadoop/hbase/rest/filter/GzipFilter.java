@@ -35,6 +35,9 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public class GzipFilter implements Filter {
   private Set<String> mimeTypes = new HashSet<String>();
 

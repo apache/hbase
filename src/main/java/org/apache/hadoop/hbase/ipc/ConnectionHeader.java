@@ -25,12 +25,14 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
 
 /**
  * The IPC connection header sent by the client to the server
  * on connection establishment.
  */
+@InterfaceAudience.Private
 class ConnectionHeader implements Writable {
   protected String protocol;
 

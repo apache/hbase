@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
@@ -46,6 +47,7 @@ import com.google.common.base.Preconditions;
  * even in cache only, i.e. HFile v1 blocks are always brought into cache
  * unencoded.
  */
+@InterfaceAudience.Private
 public class HFileReaderV1 extends AbstractHFileReader {
   private static final Log LOG = LogFactory.getLog(HFileReaderV1.class);
 

@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 
 import java.io.DataInput;
@@ -39,6 +41,8 @@ import com.google.common.base.Preconditions;
  * individual HRegions by making sure that the page size is never exceeded
  * locally.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class PageFilter extends FilterBase {
   private long pageSize = Long.MAX_VALUE;
   private int rowsAccepted = 0;

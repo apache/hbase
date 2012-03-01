@@ -19,12 +19,14 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+@InterfaceAudience.Private
 class MonitoredTaskImpl implements MonitoredTask {
   private long startTime;
   private long statusTime;

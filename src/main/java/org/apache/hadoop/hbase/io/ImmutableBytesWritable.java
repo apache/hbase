@@ -26,6 +26,8 @@ import java.io.DataOutput;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
@@ -39,6 +41,8 @@ import org.apache.hadoop.io.WritableComparator;
  * the underlying byte [] is not copied, just referenced.  The backing
  * buffer is accessed when we go to serialize.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class ImmutableBytesWritable
 implements WritableComparable<ImmutableBytesWritable> {
   private byte[] bytes;

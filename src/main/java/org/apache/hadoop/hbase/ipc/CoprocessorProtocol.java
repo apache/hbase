@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * All custom RPC protocols to be exported by Coprocessors must extend this interface.
  *
@@ -34,6 +37,8 @@ package org.apache.hadoop.hbase.ipc;
  * </ul>
  * </p>
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface CoprocessorProtocol extends VersionedProtocol {
   public static final long VERSION = 1L;
 }

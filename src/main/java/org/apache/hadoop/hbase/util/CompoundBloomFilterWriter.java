@@ -28,6 +28,7 @@ import java.util.Queue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
 import org.apache.hadoop.hbase.io.hfile.InlineBlockWriter;
@@ -39,6 +40,7 @@ import org.apache.hadoop.io.Writable;
  * section of an {@link org.apache.hadoop.hbase.io.hfile.HFile} to the
  * {@link CompoundBloomFilter} class.
  */
+@InterfaceAudience.Private
 public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     implements BloomFilterWriter, InlineBlockWriter {
 

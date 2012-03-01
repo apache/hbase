@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -35,6 +37,8 @@ import com.google.common.base.Preconditions;
  * a particular prefix. For example, if prefix is 'an', it will pass keys with
  * columns like 'and', 'anti' but not keys with columns like 'ball', 'act'.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class ColumnPrefixFilter extends FilterBase {
   protected byte [] prefix = null;
 

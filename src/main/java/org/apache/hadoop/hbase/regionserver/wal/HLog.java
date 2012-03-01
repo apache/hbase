@@ -50,6 +50,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -110,6 +111,7 @@ import org.apache.hadoop.util.StringUtils;
  * org.apache.hadoop.fs.Path, org.apache.hadoop.conf.Configuration)}.
  *
  */
+@InterfaceAudience.Private
 public class HLog implements Syncable {
   static final Log LOG = LogFactory.getLog(HLog.class);
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");

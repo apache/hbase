@@ -20,9 +20,12 @@
 
 package org.apache.hadoop.hbase.io;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * An optional interface to 'size' writables.
  */
+@InterfaceAudience.Private
 public interface WritableWithSize {
   /**
    * Provide a size hint to the caller. write() should ideally

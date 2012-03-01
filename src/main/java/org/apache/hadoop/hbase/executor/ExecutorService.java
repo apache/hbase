@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.EventHandler.EventHandlerListener;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.monitoring.ThreadMonitoring;
@@ -61,6 +62,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * with {@link #registerListener(EventHandler.EventType, EventHandler.EventHandlerListener)}.  Be sure
  * to deregister your listener when done via {@link #unregisterListener(EventHandler.EventType)}.
  */
+@InterfaceAudience.Private
 public class ExecutorService {
   private static final Log LOG = LogFactory.getLog(ExecutorService.class);
 

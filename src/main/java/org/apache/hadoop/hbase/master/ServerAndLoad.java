@@ -18,11 +18,13 @@
 package org.apache.hadoop.hbase.master;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 
 /**
  * Data structure that holds servername and 'load'.
  */
+@InterfaceAudience.Private
 class ServerAndLoad implements Comparable<ServerAndLoad> {
   private final ServerName sn;
   private final int load;

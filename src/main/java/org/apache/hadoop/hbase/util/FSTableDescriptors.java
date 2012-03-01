@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hbase.TableExistsException;
  * will not be lots of concurrent clients making table schema edits.  If so,
  * the below needs a bit of a reworking and perhaps some supporting api in hdfs.
  */
+@InterfaceAudience.Private
 public class FSTableDescriptors implements TableDescriptors {
   private static final Log LOG = LogFactory.getLog(FSTableDescriptors.class);
   private final FileSystem fs;

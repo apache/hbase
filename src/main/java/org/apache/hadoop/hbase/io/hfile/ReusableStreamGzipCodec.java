@@ -24,6 +24,7 @@ import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.CompressorStream;
 import org.apache.hadoop.io.compress.GzipCodec;
@@ -33,6 +34,7 @@ import org.apache.hadoop.io.compress.zlib.ZlibFactory;
  * Fixes an inefficiency in Hadoop's Gzip codec, allowing to reuse compression
  * streams.
  */
+@InterfaceAudience.Private
 public class ReusableStreamGzipCodec extends GzipCodec {
 
   private static final Log LOG = LogFactory.getLog(Compression.class);

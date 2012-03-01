@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.net.DNS;
@@ -47,6 +49,8 @@ import org.apache.zookeeper.server.quorum.QuorumPeerMain;
  * control over the process. This class uses {@link ZKConfig} to parse the
  * zoo.cfg and inject variables from HBase's site.xml configuration in.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class HQuorumPeer {
   
   /**

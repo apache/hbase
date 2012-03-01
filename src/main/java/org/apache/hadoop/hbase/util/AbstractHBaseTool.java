@@ -27,6 +27,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.util.Tool;
@@ -36,6 +37,7 @@ import org.apache.hadoop.util.ToolRunner;
  * Common base class used for HBase command-line tools. Simplifies workflow and
  * command-line argument parsing.
  */
+@InterfaceAudience.Private
 public abstract class AbstractHBaseTool implements Tool {
 
   private static final int EXIT_SUCCESS = 0;

@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -37,6 +39,8 @@ import java.io.IOException;
  * Defines coprocessor hooks for interacting with operations on the
  * {@link org.apache.hadoop.hbase.regionserver.wal.HLog}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface WALObserver extends Coprocessor {
 
   /**

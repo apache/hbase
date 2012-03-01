@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -82,6 +83,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * <p>This class is not thread safe.  Caller needs ensure split is run by
  * one thread only.
  */
+@InterfaceAudience.Private
 public class SplitTransaction {
   private static final Log LOG = LogFactory.getLog(SplitTransaction.class);
   private static final String SPLITDIR = "splits";

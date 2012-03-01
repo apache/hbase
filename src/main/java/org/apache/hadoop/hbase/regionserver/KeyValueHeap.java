@@ -25,6 +25,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
  * also implements InternalScanner.  WARNING: As is, if you try to use this
  * as an InternalScanner at the Store level, you will get runtime exceptions.
  */
+@InterfaceAudience.Private
 public class KeyValueHeap extends NonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner {
   private PriorityQueue<KeyValueScanner> heap = null;

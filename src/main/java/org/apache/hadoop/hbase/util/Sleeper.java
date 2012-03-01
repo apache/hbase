@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Stoppable;
 
 /**
@@ -29,6 +31,8 @@ import org.apache.hadoop.hbase.Stoppable;
  * will return if the flag is set (rather than go back to sleep until its
  * sleep time is up).
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Sleeper {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   private final int period;

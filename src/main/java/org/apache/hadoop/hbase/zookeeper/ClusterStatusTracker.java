@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -33,6 +34,7 @@ import org.apache.zookeeper.KeeperException;
  * cluster attributes up in zookeeper.
  *
  */
+@InterfaceAudience.Private
 public class ClusterStatusTracker extends ZooKeeperNodeTracker {
   private static final Log LOG = LogFactory.getLog(ClusterStatusTracker.class);
 

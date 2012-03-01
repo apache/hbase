@@ -25,6 +25,8 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Delete;
@@ -55,6 +57,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * because it is easy to rerun a bulk import).
  * </p>
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable, Writable> {
   /** Set this to {@link #WAL_OFF} to turn off write-ahead logging (HLog) */
   public static final String WAL_PROPERTY = "hbase.mapreduce.multitableoutputformat.wal";

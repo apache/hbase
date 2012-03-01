@@ -30,6 +30,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -39,6 +40,7 @@ import com.google.common.collect.Lists;
  * A Task here is anything which takes more than a few seconds
  * and the user might want to inquire about the status
  */
+@InterfaceAudience.Private
 public class TaskMonitor {
   private static final Log LOG = LogFactory.getLog(TaskMonitor.class);
 

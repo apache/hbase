@@ -21,6 +21,8 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.nio.ByteBuffer;
+
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 
@@ -33,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
  * getSerializedLength() of 0.
  *
  */
+@InterfaceAudience.Private
 public interface Cacheable extends HeapSize {
   /**
    * Returns the length of the ByteBuffer required to serialized the object. If the

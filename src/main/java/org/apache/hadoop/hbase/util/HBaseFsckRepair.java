@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -33,6 +35,8 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.zookeeper.KeeperException;
 
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class HBaseFsckRepair {
 
   /**

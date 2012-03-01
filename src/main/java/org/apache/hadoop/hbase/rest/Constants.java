@@ -20,9 +20,14 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Common constants for org.apache.hadoop.hbase.rest
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface Constants {
   public static final String VERSION_STRING = "0.0.2";
 

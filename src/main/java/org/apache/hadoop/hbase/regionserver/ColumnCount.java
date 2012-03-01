@@ -19,11 +19,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Simple wrapper for a byte buffer and a counter.  Does not copy.
  * <p>
  * NOT thread-safe because it is not used in a multi-threaded context, yet.
  */
+@InterfaceAudience.Private
 public class ColumnCount {
   private final byte [] bytes;
   private final int offset;

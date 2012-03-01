@@ -28,6 +28,7 @@ import java.util.List;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlElement;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
@@ -69,6 +70,7 @@ import com.google.protobuf.ByteString;
  * </pre>
  */
 @XmlRootElement(name="CellSet")
+@InterfaceAudience.Private
 public class CellSetModel implements Serializable, ProtobufMessageHandler {
 
   private static final long serialVersionUID = 1L;

@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>
  * This class is NOT thread-safe as queries are never multi-threaded
  */
+@InterfaceAudience.Private
 public class ExplicitColumnTracker implements ColumnTracker {
 
   private final int maxVersions;

@@ -25,6 +25,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -56,6 +58,8 @@ import org.apache.hadoop.hbase.util.PoolMap.PoolType;
  * Pool will manage its own connections to the cluster. See
  * {@link HConnectionManager}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class HTablePool implements Closeable {
   private final PoolMap<String, HTableInterface> tables;
   private final int maxSize;

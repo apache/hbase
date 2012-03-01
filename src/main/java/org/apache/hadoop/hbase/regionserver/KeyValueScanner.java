@@ -22,12 +22,14 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.SortedSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 
 /**
  * Scanner that returns the next KeyValue.
  */
+@InterfaceAudience.Private
 public interface KeyValueScanner {
   /**
    * Look at the next KeyValue in this scanner, but do not iterate scanner.

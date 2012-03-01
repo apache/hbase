@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.metrics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
@@ -28,6 +29,7 @@ import org.apache.hadoop.util.StringUtils;
  * Publishes a rate based on a counter - you increment the counter each
  * time an event occurs (eg: an RPC call) and this publishes a rate.
  */
+@InterfaceAudience.Private
 public class MetricsRate extends MetricsBase {
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.hbase.metrics");
 

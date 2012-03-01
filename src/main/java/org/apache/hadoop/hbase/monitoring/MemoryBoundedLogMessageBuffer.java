@@ -25,6 +25,8 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -35,6 +37,7 @@ import com.google.common.collect.Lists;
  * automatically be removed one by one when the specified heap
  * usage is exhausted.
  */
+@InterfaceAudience.Private
 public class MemoryBoundedLogMessageBuffer {
   private final long maxSizeBytes;
   private long usage = 0;

@@ -30,6 +30,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -45,6 +46,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  * @param <K> <byte []> key  TODO: Parameter K is never used, could be removed.
  * @param <V> value Expects a Writable or byte [].
  */
+@InterfaceAudience.Private
 public class HbaseMapWritable <K,V>
 implements SortedMap<byte[],V>, Configurable, Writable, CodeToClassAndBack{
   private AtomicReference<Configuration> conf = null;

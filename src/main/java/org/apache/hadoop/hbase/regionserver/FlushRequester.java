@@ -20,9 +20,12 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Request a flush.
  */
+@InterfaceAudience.Private
 public interface FlushRequester {
   /**
    * Tell the listener the cache needs to be flushed.

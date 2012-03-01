@@ -18,6 +18,8 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
@@ -34,6 +36,8 @@ import org.apache.hadoop.hbase.ipc.VersionedProtocol;
  * and Coprocessor to develop an Endpoint. But you won't be able to access
  * the region related resource, i.e., CoprocessorEnvironment.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class BaseEndpointCoprocessor implements Coprocessor,
     CoprocessorProtocol, VersionedProtocol {
   /**

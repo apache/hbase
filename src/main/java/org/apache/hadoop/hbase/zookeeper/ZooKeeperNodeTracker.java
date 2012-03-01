@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.zookeeper.KeeperException;
 
@@ -33,6 +35,8 @@ import org.apache.zookeeper.KeeperException;
  * <p>This is the base class used by trackers in both the Master and
  * RegionServers.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
   
   static final Log LOG = LogFactory.getLog(ZooKeeperNodeTracker.class);

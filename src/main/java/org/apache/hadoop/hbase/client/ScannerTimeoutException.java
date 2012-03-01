@@ -20,11 +20,15 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 
 /**
  * Thrown when a scanner has timed out.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class ScannerTimeoutException extends DoNotRetryIOException {
 
   private static final long serialVersionUID = 8788838690290688313L;

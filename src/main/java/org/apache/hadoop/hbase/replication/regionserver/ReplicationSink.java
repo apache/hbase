@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
@@ -53,6 +54,7 @@ import java.util.TreeMap;
  *
  * TODO make this class more like ReplicationSource wrt log handling
  */
+@InterfaceAudience.Private
 public class ReplicationSink {
 
   private static final Log LOG = LogFactory.getLog(ReplicationSink.class);

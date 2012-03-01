@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 
 
@@ -24,6 +26,8 @@ import org.apache.hadoop.hbase.HConstants;
  * Utility used by client connections such as {@link HConnection} and
  * {@link ServerCallable}
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ConnectionUtils {
   /**
    * Calculate pause time.

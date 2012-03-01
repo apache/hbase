@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -80,6 +82,8 @@ import java.util.TreeSet;
  * Expert: To explicitly disable server-side block caching for this scan,
  * execute {@link #setCacheBlocks(boolean)}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Scan extends OperationWithAttributes implements Writable {
   private static final String RAW_ATTR = "_raw_";
   private static final String ISOLATION_LEVEL = "_isolationlevel_";

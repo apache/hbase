@@ -25,12 +25,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
 
 /**
  * Simple one RFile soft reference cache.
  */
+@InterfaceAudience.Private
 public class SimpleBlockCache implements BlockCache {
   private static class Ref extends SoftReference<Cacheable> {
     public BlockCacheKey blockId;

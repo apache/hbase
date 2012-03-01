@@ -20,9 +20,11 @@
 
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.io.RawComparator;
 
+@InterfaceAudience.Private
 public class CompoundBloomFilterBase implements BloomFilterBase {
 
   /**

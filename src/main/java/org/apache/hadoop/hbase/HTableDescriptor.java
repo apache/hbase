@@ -31,6 +31,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
@@ -45,6 +47,8 @@ import org.apache.hadoop.io.WritableComparable;
  * <code> .META. </code>, is the table is read only, the maximum size of the memstore, 
  * when the region split should occur, coprocessors associated with it etc...
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**

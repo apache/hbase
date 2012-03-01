@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 
 import java.util.ArrayList;
@@ -37,6 +39,8 @@ import java.util.ArrayList;
  * If an already known column family is looked for, use {@link org.apache.hadoop.hbase.client.Get#addFamily(byte[])}
  * directly rather than a filter.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class FamilyFilter extends CompareFilter {
   /**
    * Writable constructor, do not use.

@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -117,6 +118,7 @@ import com.google.common.base.Preconditions;
  * that points at its file say for the case where an index lives apart from
  * an HFile instance?
  */
+@InterfaceAudience.Private
 public class HFile {
   static final Log LOG = LogFactory.getLog(HFile.class);
 

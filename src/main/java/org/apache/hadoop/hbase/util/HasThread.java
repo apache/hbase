@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.util;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Abstract class which contains a Thread and delegates the common Thread
  * methods to that instance.
@@ -27,6 +29,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
  * something internal to the JDK uses Thread.currentThread() as a monitor
  * lock. This can produce deadlocks like HBASE-4367, HBASE-4101, etc.
  */
+@InterfaceAudience.Private
 public abstract class HasThread implements Runnable {
   private final Thread thread;
   

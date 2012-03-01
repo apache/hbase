@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.metrics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
@@ -28,6 +29,7 @@ import org.apache.hadoop.util.StringUtils;
  * This class extends MetricsTimeVaryingRate to let the metrics
  * persist past a pushMetric() call
  */
+@InterfaceAudience.Private
 public class PersistentMetricsTimeVaryingRate extends MetricsTimeVaryingRate {
   protected static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.hbase.metrics");

@@ -27,6 +27,7 @@ import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.file.FileContext;
 import org.apache.hadoop.metrics.spi.OutputRecord;
@@ -34,6 +35,7 @@ import org.apache.hadoop.metrics.spi.OutputRecord;
 /**
  * Add timestamp to {@link org.apache.hadoop.metrics.file.FileContext#emitRecord(String, String, OutputRecord)}.
  */
+@InterfaceAudience.Private
 public class TimeStampingFileContext extends FileContext {
   // Copies bunch of FileContext here because writer and file are private in
   // superclass.

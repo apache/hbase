@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -35,6 +36,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
  * This class is for maintaining the various replication statistics
  * for a source and publishing them through the metrics interfaces.
  */
+@InterfaceAudience.Private
 public class ReplicationSourceMetrics implements Updater {
   private final MetricsRecord metricsRecord;
   private MetricsRegistry registry = new MetricsRegistry();

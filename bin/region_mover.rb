@@ -364,7 +364,8 @@ def loadRegions(options, hostname)
   for r in regions
     exists = false
     begin
-      exists = isSuccessfulScan(admin, r)
+      isSuccessfulScan(admin, r)
+      exists = true
     rescue org.apache.hadoop.hbase.NotServingRegionException => e
       $LOG.info("Failed scan of " + e.message)
     end

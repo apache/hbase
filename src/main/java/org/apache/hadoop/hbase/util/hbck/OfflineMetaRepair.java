@@ -21,6 +21,8 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -38,6 +40,8 @@ import org.apache.hadoop.io.MultipleIOException;
  * 
  * hbase org.apache.hadoop.hbase.util.hbck.OfflineMetaRepair ...
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class OfflineMetaRepair {
   private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
   HBaseFsck fsck;

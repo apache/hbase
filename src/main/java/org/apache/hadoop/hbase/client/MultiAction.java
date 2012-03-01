@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -36,6 +38,8 @@ import java.util.TreeMap;
  * Container for Actions (i.e. Get, Delete, or Put), which are grouped by
  * regionName. Intended to be used with HConnectionManager.processBatch()
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public final class MultiAction<R> implements Writable {
 
   // map of regions to lists of puts/gets/deletes for that region.

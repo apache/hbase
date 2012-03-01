@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
@@ -34,6 +35,7 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Handles closing of a region on a region server.
  */
+@InterfaceAudience.Private
 public class CloseRegionHandler extends EventHandler {
   // NOTE on priorities shutting down.  There are none for close. There are some
   // for open.  I think that is right.  On shutdown, we want the meta to close

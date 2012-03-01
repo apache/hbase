@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 
 /**
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
  * <p>
  * This class is NOT thread-safe as queries are never multi-threaded
  */
+@InterfaceAudience.Private
 public interface ColumnTracker {
   /**
    * Keeps track of the number of versions for the columns asked for

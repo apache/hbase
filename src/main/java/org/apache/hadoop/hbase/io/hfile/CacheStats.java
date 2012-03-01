@@ -21,9 +21,12 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Class that implements cache metrics.
  */
+@InterfaceAudience.Private
 public class CacheStats {
 
   /** Sliding window statistics. The number of metric periods to include in

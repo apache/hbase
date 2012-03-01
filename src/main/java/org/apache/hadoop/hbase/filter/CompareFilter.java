@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 
 import java.io.DataInput;
@@ -43,6 +45,8 @@ import com.google.common.base.Preconditions;
  * <p>
  * Multiple filters can be combined using {@link FilterList}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class CompareFilter extends FilterBase {
 
   /** Comparison operators. */

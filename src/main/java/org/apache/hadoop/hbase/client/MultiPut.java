@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -42,6 +44,8 @@ import java.util.TreeSet;
  * @deprecated Use MultiAction instead
  * Data type class for putting multiple regions worth of puts in one RPC.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class MultiPut extends Operation implements Writable {
   public HServerAddress address; // client code ONLY
 

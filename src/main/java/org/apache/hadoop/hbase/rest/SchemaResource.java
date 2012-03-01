@@ -41,6 +41,7 @@ import javax.xml.namespace.QName;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hbase.rest.model.ColumnSchemaModel;
 import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
+@InterfaceAudience.Private
 public class SchemaResource extends ResourceBase {
   private static final Log LOG = LogFactory.getLog(SchemaResource.class);
 

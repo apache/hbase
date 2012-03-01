@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.NavigableSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
 /**
  * A query matcher that is specifically designed for the scan case.
  */
+@InterfaceAudience.Private
 public class ScanQueryMatcher {
   // Optimization so we can skip lots of compares when we decide to skip
   // to the next row.

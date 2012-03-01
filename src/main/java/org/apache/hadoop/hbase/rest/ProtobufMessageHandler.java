@@ -22,11 +22,14 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Common interface for models capable of supporting protobuf marshalling
  * and unmarshalling. Hooks up to the ProtobufMessageBodyConsumer and
  * ProtobufMessageBodyProducer adapters. 
  */
+@InterfaceAudience.Private
 public abstract interface ProtobufMessageHandler {
   /**
    * @return the protobuf represention of the model

@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -74,6 +75,7 @@ import com.google.common.base.Preconditions;
  * The version 2 block representation in the block cache is the same as above,
  * except that the data section is always uncompressed in the cache.
  */
+@InterfaceAudience.Private
 public class HFileBlock extends SchemaConfigured implements Cacheable {
 
   public static final boolean FILL_HEADER = true;

@@ -31,6 +31,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -62,6 +64,8 @@ import org.apache.hadoop.hbase.util.Pair;
  * parameter type. For average and std, it returns a double value. For row
  * count, it returns a long value.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class AggregationClient {
 
   private static final Log log = LogFactory.getLog(AggregationClient.class);

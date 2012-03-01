@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,6 +66,8 @@ import java.util.Map;
  * deleteFamily -- then you need to use the method overrides that take a
  * timestamp.  The constructor timestamp is not referenced.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Delete extends Mutation
   implements Writable, Row, Comparable<Row> {
   private static final byte DELETE_VERSION = (byte)3;

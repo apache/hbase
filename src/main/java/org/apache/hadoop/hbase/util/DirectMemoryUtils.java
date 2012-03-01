@@ -27,8 +27,13 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 import com.google.common.base.Preconditions;
 
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class DirectMemoryUtils {
   /**
    * @return the setting of -XX:MaxDirectMemorySize as a long. Returns 0 if

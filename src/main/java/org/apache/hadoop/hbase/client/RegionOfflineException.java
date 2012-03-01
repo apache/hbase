@@ -19,9 +19,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.RegionException;
 
 /** Thrown when a table can not be located */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class RegionOfflineException extends RegionException {
   private static final long serialVersionUID = 466008402L;
   /** default constructor */

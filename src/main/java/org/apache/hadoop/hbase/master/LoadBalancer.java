@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -43,6 +44,7 @@ import java.util.Map;
  *
  * <p>This classes produces plans for the {@link AssignmentManager} to execute.
  */
+@InterfaceAudience.Private
 public interface LoadBalancer extends Configurable {
 
   /**

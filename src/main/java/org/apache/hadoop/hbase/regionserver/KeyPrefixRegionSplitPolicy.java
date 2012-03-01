@@ -21,6 +21,7 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * A custom RegionSplitPolicy implementing a SplitPolicy that groups
@@ -29,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
  * This ensures that a region is not split "inside" a prefix of a row key.
  * I.e. rows can be co-located in a regionb by their prefix.
  */
+@InterfaceAudience.Private
 public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSplitPolicy {
   private static final Log LOG = LogFactory
       .getLog(KeyPrefixRegionSplitPolicy.class);

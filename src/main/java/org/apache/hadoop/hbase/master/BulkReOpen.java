@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.ServerName;
 /**
  * Performs bulk reopen of the list of regions provided to it.
  */
+@InterfaceAudience.Private
 public class BulkReOpen extends BulkAssigner {
   private final Map<ServerName, List<HRegionInfo>> rsToRegions;
   private final AssignmentManager assignmentManager;

@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -32,6 +34,8 @@ import java.lang.reflect.Modifier;
  *
  * The core of this class is taken from the Derby project
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class ClassSize {
   static final Log LOG = LogFactory.getLog(ClassSize.class);
 

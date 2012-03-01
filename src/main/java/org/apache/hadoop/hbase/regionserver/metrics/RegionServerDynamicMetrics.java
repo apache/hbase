@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -49,6 +50,7 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
  * for example: rpcQueueTime.inc(time)
  *
  */
+@InterfaceAudience.Private
 public class RegionServerDynamicMetrics implements Updater {
   private MetricsRecord metricsRecord;
   private MetricsContext context;

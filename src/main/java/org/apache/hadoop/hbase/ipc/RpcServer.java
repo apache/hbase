@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import com.google.common.base.Function;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 
@@ -30,6 +31,7 @@ import java.net.InetSocketAddress;
 
 /**
  */
+@InterfaceAudience.Private
 public interface RpcServer {
 
   void setSocketSendBufSize(int size);

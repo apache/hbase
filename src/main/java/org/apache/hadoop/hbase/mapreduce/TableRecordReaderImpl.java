@@ -22,6 +22,8 @@ import java.lang.reflect.Method;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -41,6 +43,8 @@ import org.apache.hadoop.util.StringUtils;
  * Iterate over an HBase table data, return (ImmutableBytesWritable, Result)
  * pairs.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class TableRecordReaderImpl {
 
 

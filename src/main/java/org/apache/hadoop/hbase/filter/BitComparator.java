@@ -24,10 +24,15 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A bit comparator which performs the specified bitwise operation on each of the bytes
  * with the specified byte array. Then returns whether the result is non-zero.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class BitComparator extends WritableByteArrayComparable {
 
   /** Nullary constructor for Writable, do not use */

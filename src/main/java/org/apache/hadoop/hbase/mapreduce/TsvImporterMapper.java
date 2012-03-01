@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
@@ -32,6 +34,8 @@ import java.io.IOException;
 /**
  * Write table content out to files in hdfs.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class TsvImporterMapper
 extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
 {

@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,6 +42,7 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS
  * This Chore, everytime it runs, will clear the HLogs in the old logs folder
  * that are deletable for each log cleaner in the chain.
  */
+@InterfaceAudience.Private
 public class LogCleaner extends Chore {
   static final Log LOG = LogFactory.getLog(LogCleaner.class.getName());
 

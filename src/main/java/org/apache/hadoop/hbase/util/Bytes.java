@@ -36,6 +36,8 @@ import java.util.Iterator;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.RawComparator;
@@ -51,6 +53,8 @@ import com.google.common.annotations.VisibleForTesting;
  * comparisons, hash code generation, manufacturing keys for HashMaps or
  * HashSets, etc.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Bytes {
 
   private static final Log LOG = LogFactory.getLog(Bytes.class);

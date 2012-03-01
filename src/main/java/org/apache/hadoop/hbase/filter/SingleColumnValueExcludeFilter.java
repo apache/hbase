@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 
@@ -31,6 +33,8 @@ import java.util.ArrayList;
  * {@link SingleColumnValueFilter}, if the tested column value is not actually
  * needed as input (besides for the filtering itself).
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
 
   /**

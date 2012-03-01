@@ -22,12 +22,14 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
 /**
  * Block cache interface. Anything that implements the {@link Cacheable}
  * interface can be put in the cache.
  */
+@InterfaceAudience.Private
 public interface BlockCache {
   /**
    * Add block to cache.

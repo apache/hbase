@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -29,6 +31,8 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 
 import java.io.IOException;
 
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class BaseMasterObserver implements MasterObserver {
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,

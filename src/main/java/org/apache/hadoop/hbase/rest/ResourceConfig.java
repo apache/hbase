@@ -20,8 +20,11 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 import com.sun.jersey.api.core.PackagesResourceConfig;
 
+@InterfaceAudience.Private
 public class ResourceConfig extends PackagesResourceConfig {
   public ResourceConfig() {
     super("org.apache.hadoop.hbase.rest");

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.util.concurrent.Callable;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
@@ -29,6 +30,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
  * Implementing as future callable we are able to act on the timeout
  * asynchronously.
  */
+@InterfaceAudience.Private
 public class AssignCallable implements Callable<Object> {
   private AssignmentManager assignmentManager;
 

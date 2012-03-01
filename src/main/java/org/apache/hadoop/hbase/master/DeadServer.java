@@ -25,11 +25,13 @@ import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 
 /**
  * Class to hold dead servers list and utility querying dead server list.
  */
+@InterfaceAudience.Private
 public class DeadServer implements Set<ServerName> {
   /**
    * Set of known dead servers.  On znode expiration, servers are added here.

@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  *
  * <p>This file is not splitable.  Calls to {@link #midkey()} return null.
  */
+@InterfaceAudience.Private
 public class HalfStoreFileReader extends StoreFile.Reader {
   final Log LOG = LogFactory.getLog(HalfStoreFileReader.class);
   final boolean top;

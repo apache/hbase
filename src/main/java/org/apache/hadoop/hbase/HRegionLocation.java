@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Addressing;
 
 /**
@@ -28,6 +30,8 @@ import org.apache.hadoop.hbase.util.Addressing;
  * instances are the same if they refer to the same 'location' (the same
  * hostname and port), though they may be carrying different regions.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class HRegionLocation implements Comparable<HRegionLocation> {
   private final HRegionInfo regionInfo;
   private final String hostname;

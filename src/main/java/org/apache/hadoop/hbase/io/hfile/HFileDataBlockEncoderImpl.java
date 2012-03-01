@@ -21,6 +21,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
@@ -34,6 +35,7 @@ import com.google.common.base.Preconditions;
  * Do different kinds of data block encoding according to column family
  * options.
  */
+@InterfaceAudience.Private
 public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   private final DataBlockEncoding onDisk;
   private final DataBlockEncoding inCache;

@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -43,6 +44,7 @@ import java.lang.reflect.Method;
  *  <p> {@link #rpcQueueTime}.inc(time)
  *
  */
+@InterfaceAudience.Private
 public class HBaseRpcMetrics implements Updater {
   public static final String NAME_DELIM = "$";
   private final MetricsRegistry registry = new MetricsRegistry();

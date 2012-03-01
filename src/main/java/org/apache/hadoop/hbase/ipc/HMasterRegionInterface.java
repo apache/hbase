@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.security.KerberosInfo;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 @KerberosInfo(
     serverPrincipal = "hbase.master.kerberos.principal",
     clientPrincipal = "hbase.regionserver.kerberos.principal")
+@InterfaceAudience.Private
 public interface HMasterRegionInterface extends VersionedProtocol {
   /**
    * This Interfaces' version. Version changes when the Interface changes.

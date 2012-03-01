@@ -16,11 +16,16 @@
 package org.apache.hadoop.hbase;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 
 /**
  * Thrown during flush if the possibility snapshot content was not properly
  * persisted into store files.  Response should include replay of hlog content.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class DroppedSnapshotException extends IOException {
 
   private static final long serialVersionUID = -5463156580831677374L;

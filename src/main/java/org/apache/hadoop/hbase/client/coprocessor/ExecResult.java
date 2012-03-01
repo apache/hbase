@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.client.coprocessor;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Classes;
@@ -46,6 +48,8 @@ import java.io.Serializable;
  * @see org.apache.hadoop.hbase.client.HTable#coprocessorExec(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)
  * @see org.apache.hadoop.hbase.client.HTable#coprocessorExec(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ExecResult implements Writable {
   private byte[] regionName;
   private Object value;

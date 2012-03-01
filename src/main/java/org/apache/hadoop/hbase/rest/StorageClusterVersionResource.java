@@ -34,9 +34,11 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.model.StorageClusterVersionModel;
 
+@InterfaceAudience.Private
 public class StorageClusterVersionResource extends ResourceBase {
   private static final Log LOG =
     LogFactory.getLog(StorageClusterVersionResource.class);

@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -33,6 +35,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * Iterate over an HBase table data, return (ImmutableBytesWritable, Result)
  * pairs.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class TableRecordReader
 extends RecordReader<ImmutableBytesWritable, Result> {
 

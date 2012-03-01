@@ -25,6 +25,7 @@ import java.net.URLDecoder;
 import java.util.Collection;
 import java.util.TreeSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>
  *  
  */
+@InterfaceAudience.Private
 public class RowSpec {
   public static final long DEFAULT_START_TIMESTAMP = 0;
   public static final long DEFAULT_END_TIMESTAMP = Long.MAX_VALUE;

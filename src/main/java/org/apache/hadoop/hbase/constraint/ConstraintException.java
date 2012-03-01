@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.constraint;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.Put;
 
@@ -27,6 +28,7 @@ import org.apache.hadoop.hbase.client.Put;
  * <it>should</it> fail every time for the same {@link Put} (it should be
  * idempotent).
  */
+@InterfaceAudience.Private
 public class ConstraintException extends DoNotRetryIOException {
   private static final long serialVersionUID = 1197446454511704140L;
 

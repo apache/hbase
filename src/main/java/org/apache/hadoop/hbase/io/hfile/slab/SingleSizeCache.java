@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -52,6 +53,7 @@ import com.google.common.collect.MapMaker;
  * ConcurrentLinkedHashMap.
  *
  **/
+@InterfaceAudience.Private
 public class SingleSizeCache implements BlockCache, HeapSize {
   private final Slab backingStore;
   private final ConcurrentMap<BlockCacheKey, CacheablePair> backingMap;

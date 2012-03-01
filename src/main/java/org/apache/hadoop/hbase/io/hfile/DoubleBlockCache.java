@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.slab.SlabCache;
@@ -37,6 +38,7 @@ import org.apache.hadoop.util.StringUtils;
  * combined size and hits and misses of both caches.
  *
  **/
+@InterfaceAudience.Private
 public class DoubleBlockCache implements BlockCache, HeapSize {
 
   static final Log LOG = LogFactory.getLog(DoubleBlockCache.class.getName());

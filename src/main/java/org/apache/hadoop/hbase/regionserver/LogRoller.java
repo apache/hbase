@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
@@ -41,6 +42,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * can be interrupted when there is something to do, rather than the Chore
  * sleep time which is invariant.
  */
+@InterfaceAudience.Private
 class LogRoller extends HasThread implements WALActionsListener {
   static final Log LOG = LogFactory.getLog(LogRoller.class);
   private final ReentrantLock rollLock = new ReentrantLock();

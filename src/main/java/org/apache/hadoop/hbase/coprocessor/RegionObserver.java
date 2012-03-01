@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -45,6 +47,8 @@ import com.google.common.collect.ImmutableList;
  * Coprocessors implement this interface to observe and mediate client actions
  * on the region.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface RegionObserver extends Coprocessor {
 
   /**

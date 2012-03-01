@@ -28,6 +28,7 @@ import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.ColumnSchemaModel;
@@ -52,6 +53,7 @@ import com.sun.jersey.api.json.JSONJAXBContext;
  * created.
  */
 @Provider
+@InterfaceAudience.Private
 public class JAXBContextResolver implements ContextResolver<JAXBContext> {
 
 	private final JAXBContext context;

@@ -19,11 +19,15 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 
 /**
  * Thrown if a coprocessor encounters any exception.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class CoprocessorException extends DoNotRetryIOException {
   private static final long serialVersionUID = 4357922136679804887L;
 

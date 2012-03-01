@@ -20,11 +20,15 @@
 
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /**
  * This class represents a common API for hashing functions.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class Hash {
   /** Constant to denote invalid hash type. */
   public static final int INVALID_HASH = -1;

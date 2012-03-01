@@ -28,6 +28,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType;
@@ -39,6 +40,7 @@ import org.apache.hadoop.util.Shell.ExitCodeException;
  * Hbase API specified in the Hbase.thrift IDL file. The server runs in an
  * independent process.
  */
+@InterfaceAudience.Private
 public class ThriftServer {
 
   private static final Log LOG = LogFactory.getLog(ThriftServer.class);

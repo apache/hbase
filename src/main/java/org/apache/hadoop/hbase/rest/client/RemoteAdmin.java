@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.rest.client;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -29,6 +31,8 @@ import org.apache.hadoop.hbase.rest.Constants;
 import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class RemoteAdmin {
 
   final Client client;

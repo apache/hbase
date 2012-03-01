@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -29,6 +31,8 @@ import org.apache.hadoop.mapreduce.Job;
 /**
  * Pass the given key and record as-is to the reduce phase.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class IdentityTableMapper
 extends TableMapper<ImmutableBytesWritable, Result> {
 

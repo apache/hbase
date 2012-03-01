@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -45,6 +47,8 @@ import org.apache.commons.logging.LogFactory;
 * Writes content to sequence files up in HDFS.  Use {@link Import} to read it
 * back in again.
 */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Export {
   private static final Log LOG = LogFactory.getLog(Export.class);
   final static String NAME = "export";

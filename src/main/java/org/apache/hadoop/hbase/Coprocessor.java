@@ -18,9 +18,14 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Coprocess interface.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface Coprocessor {
   static final int VERSION = 1;
 

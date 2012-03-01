@@ -33,6 +33,7 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.*;
@@ -68,6 +69,7 @@ import com.sun.jersey.api.json.JSONUnmarshaller;
  * </pre>
  */
 @XmlRootElement(name="Scanner")
+@InterfaceAudience.Private
 public class ScannerModel implements ProtobufMessageHandler, Serializable {
 
   private static final long serialVersionUID = 1L;

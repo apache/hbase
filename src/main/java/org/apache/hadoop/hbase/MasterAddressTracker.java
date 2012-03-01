@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  * <p>
  * You can get the current master via {@link #getMasterAddress()}
  */
+@InterfaceAudience.Private
 public class MasterAddressTracker extends ZooKeeperNodeTracker {
   /**
    * Construct a master address listener with the specified

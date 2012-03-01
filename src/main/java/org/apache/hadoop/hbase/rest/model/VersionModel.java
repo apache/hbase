@@ -27,6 +27,7 @@ import javax.servlet.ServletContext;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RESTServlet;
 import org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version;
@@ -45,6 +46,7 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  * </ul>
  */
 @XmlRootElement(name="Version")
+@InterfaceAudience.Private
 public class VersionModel implements Serializable, ProtobufMessageHandler {
 
 	private static final long serialVersionUID = 1L;

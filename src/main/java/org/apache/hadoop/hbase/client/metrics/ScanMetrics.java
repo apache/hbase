@@ -26,6 +26,8 @@ import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.metrics.util.MetricsBase;
@@ -45,6 +47,8 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
  * However, there is no need for this. So they are defined under scan operation
  * for now.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ScanMetrics implements Writable {
 
   private static final byte SCANMETRICS_VERSION = (byte)1;

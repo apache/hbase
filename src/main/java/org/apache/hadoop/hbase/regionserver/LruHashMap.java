@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -48,6 +49,7 @@ import java.util.Set;
  * <p>
  * This class contains internal synchronization and is thread-safe.
  */
+@InterfaceAudience.Private
 public class LruHashMap<K extends HeapSize, V extends HeapSize>
 implements HeapSize, Map<K,V> {
 

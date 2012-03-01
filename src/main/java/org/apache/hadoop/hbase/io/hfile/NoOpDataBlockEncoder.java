@@ -18,6 +18,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Pair;
@@ -25,6 +26,7 @@ import org.apache.hadoop.hbase.util.Pair;
 /**
  * Does not perform any kind of encoding/decoding.
  */
+@InterfaceAudience.Private
 public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
 
   public static final NoOpDataBlockEncoder INSTANCE =

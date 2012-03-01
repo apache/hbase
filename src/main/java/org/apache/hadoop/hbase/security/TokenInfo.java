@@ -23,12 +23,15 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Indicates Token related information to be used in authorizing connections
  * over a given RPC protocol interface.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
+@InterfaceAudience.Private
 public @interface TokenInfo {
   /** The type of Token.getKind() to be handled */
   String value();

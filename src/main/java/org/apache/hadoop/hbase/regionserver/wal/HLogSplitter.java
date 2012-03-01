@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -67,6 +68,7 @@ import com.google.common.collect.Lists;
  * files that are no longer being written to, into new files, one per region for
  * region to replay on startup. Delete the old log files when finished.
  */
+@InterfaceAudience.Private
 public class HLogSplitter {
   private static final String LOG_SPLITTER_IMPL = "hbase.hlog.splitter.impl";
 

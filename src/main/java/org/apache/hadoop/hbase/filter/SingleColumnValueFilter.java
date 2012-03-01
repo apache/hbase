@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -64,6 +66,8 @@ import com.google.common.base.Preconditions;
  * <p>
  * To filter based on the value of all scanned columns, use {@link ValueFilter}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class SingleColumnValueFilter extends FilterBase {
   static final Log LOG = LogFactory.getLog(SingleColumnValueFilter.class);
 

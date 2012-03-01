@@ -24,6 +24,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -33,6 +35,8 @@ import org.apache.hadoop.mapreduce.InputSplit;
  * A table split corresponds to a key range (low, high). All references to row
  * below refer to the key of the row.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class TableSplit extends InputSplit
 implements Writable, Comparable<TableSplit> {
 

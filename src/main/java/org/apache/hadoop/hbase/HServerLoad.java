@@ -29,6 +29,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.VersionedWritable;
@@ -38,6 +40,8 @@ import org.apache.hadoop.io.WritableUtils;
 /**
  * This class is used exporting current state of load on a RegionServer.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class HServerLoad extends VersionedWritable
 implements WritableComparable<HServerLoad> {
   private static final byte VERSION = 2;

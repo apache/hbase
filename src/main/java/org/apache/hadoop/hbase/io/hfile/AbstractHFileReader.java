@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
@@ -34,6 +35,7 @@ import org.apache.hadoop.io.RawComparator;
 /**
  * Common functionality needed by all versions of {@link HFile} readers.
  */
+@InterfaceAudience.Private
 public abstract class AbstractHFileReader extends SchemaConfigured
     implements HFile.Reader {
 

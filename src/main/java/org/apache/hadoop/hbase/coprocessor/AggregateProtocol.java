@@ -23,6 +23,8 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.AggregationClient;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
@@ -38,6 +40,8 @@ import org.apache.hadoop.hbase.util.Pair;
  * be picked. Refer to {@link AggregationClient} for some general conditions on
  * input parameters.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface AggregateProtocol extends CoprocessorProtocol {
   public static final long VERSION = 1L;
 

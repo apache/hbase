@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Server;
 
 import java.io.IOException;
@@ -28,6 +29,7 @@ import java.util.List;
  * Interface to Map of online regions.  In the  Map, the key is the region's
  * encoded name and the value is an {@link HRegion} instance.
  */
+@InterfaceAudience.Private
 interface OnlineRegions extends Server {
   /**
    * Add to online regions.

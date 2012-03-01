@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -42,6 +44,8 @@ import com.google.common.base.Preconditions;
  * minColumnInclusive and maxColumnInclusive specify if the ranges are inclusive
  * or not.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class ColumnRangeFilter extends FilterBase {
   protected byte[] minColumn = null;
   protected boolean minColumnInclusive = true;

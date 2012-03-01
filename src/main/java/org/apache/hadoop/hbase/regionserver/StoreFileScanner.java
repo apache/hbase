@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
  * KeyValueScanner adaptor over the Reader.  It also provides hooks into
  * bloom filter things.
  */
+@InterfaceAudience.Private
 class StoreFileScanner implements KeyValueScanner {
   static final Log LOG = LogFactory.getLog(Store.class);
 

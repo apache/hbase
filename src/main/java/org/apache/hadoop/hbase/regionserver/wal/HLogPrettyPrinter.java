@@ -32,6 +32,8 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -54,6 +56,8 @@ import org.codehaus.jackson.map.ObjectMapper;
  * It can also toggle output of values.
  * 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class HLogPrettyPrinter {
   private boolean outputValues;
   private boolean outputJSON;

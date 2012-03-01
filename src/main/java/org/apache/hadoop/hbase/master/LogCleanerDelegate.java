@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.Stoppable;
  * Since LogCleanerDelegates are created in LogsCleaner by reflection. Classes
  * that implements this interface should provide a default constructor.
  */
+@InterfaceAudience.Private
 public interface LogCleanerDelegate extends Configurable, Stoppable {
   /**
    * Should the master delete the log or keep it?

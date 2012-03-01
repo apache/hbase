@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.io;
 
 import java.util.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A Static Interface.
  * Instead of having this code in the the HbaseMapWritable code, where it
@@ -29,6 +31,7 @@ import java.util.*;
  * it is put here in this static interface where the static final Maps are
  * loaded one time. Only byte[] and Cell are supported at this time.
  */
+@InterfaceAudience.Private
 public interface CodeToClassAndBack {
   /**
    * Static map that contains mapping from code to class

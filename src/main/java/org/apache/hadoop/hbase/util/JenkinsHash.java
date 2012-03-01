@@ -25,6 +25,9 @@ import static java.lang.Integer.rotateLeft;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Produces 32-bit hash for hash table lookup.
  *
@@ -40,6 +43,8 @@ import java.io.IOException;
  * @see <a href="http://burtleburtle.net/bob/hash/doobs.html">Has update on the
  * Dr. Dobbs Article</a>
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class JenkinsHash extends Hash {
   private static final int BYTE_MASK = 0xff;
 

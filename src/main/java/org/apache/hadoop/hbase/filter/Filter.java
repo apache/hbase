@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.io.Writable;
 
@@ -48,6 +50,8 @@ import java.util.List;
  * 
  * @see FilterBase
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface Filter extends Writable {
   /**
    * Reset the state of the filter between rows.

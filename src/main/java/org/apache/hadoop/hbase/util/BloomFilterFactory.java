@@ -25,6 +25,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
  * Handles Bloom filter initialization based on configuration and serialized
  * metadata in the reader and writer of {@link StoreFile}.
  */
+@InterfaceAudience.Private
 public final class BloomFilterFactory {
 
   private static final Log LOG =

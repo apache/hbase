@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.ShutdownHook;
 /**
  * Utility used running a cluster all in the one JVM.
  */
+@InterfaceAudience.Private
 public class JVMClusterUtil {
   private static final Log LOG = LogFactory.getLog(JVMClusterUtil.class);
 

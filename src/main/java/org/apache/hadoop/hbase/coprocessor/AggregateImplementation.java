@@ -26,6 +26,8 @@ import java.util.NavigableSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
@@ -37,6 +39,8 @@ import org.apache.hadoop.hbase.util.Pair;
  * A concrete AggregateProtocol implementation. Its system level coprocessor
  * that computes the aggregate function at a region level.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class AggregateImplementation extends BaseEndpointCoprocessor implements
     AggregateProtocol {
   protected static Log log = LogFactory.getLog(AggregateImplementation.class);

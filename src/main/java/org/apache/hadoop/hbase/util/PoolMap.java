@@ -32,6 +32,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  *
  * The <code>PoolMap</code> maps a key to a collection of values, the elements
@@ -50,6 +53,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @param <V>
  *          the type of the resource being pooled
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class PoolMap<K, V> implements Map<K, V> {
   private PoolType poolType;
 

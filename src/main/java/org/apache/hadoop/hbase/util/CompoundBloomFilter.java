@@ -24,6 +24,7 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -38,6 +39,7 @@ import org.apache.hadoop.io.RawComparator;
  * block stream, and loaded on demand at query time. This class only provides
  * reading capabilities.
  */
+@InterfaceAudience.Private
 public class CompoundBloomFilter extends CompoundBloomFilterBase
     implements BloomFilter {
 

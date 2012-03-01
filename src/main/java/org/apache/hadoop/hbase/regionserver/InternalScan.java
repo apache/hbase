@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.client.Scan;
  * {@link #checkOnlyMemStore()} or to only read from StoreFiles with
  * {@link #checkOnlyStoreFiles()}.
  */
+@InterfaceAudience.Private
 class InternalScan extends Scan {
   private boolean memOnly = false;
   private boolean filesOnly = false;

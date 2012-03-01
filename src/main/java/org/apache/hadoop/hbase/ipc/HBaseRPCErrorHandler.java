@@ -20,9 +20,12 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * An interface for calling out of RPC for error conditions.
  */
+@InterfaceAudience.Private
 public interface HBaseRPCErrorHandler {
 	/**
 	 * Take actions on the event of an OutOfMemoryError.

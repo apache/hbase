@@ -23,12 +23,14 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * An immutable class which contains a static method for handling
  * org.apache.hadoop.ipc.RemoteException exceptions.
  */
+@InterfaceAudience.Private
 public class RemoteExceptionHandler {
   /* Not instantiable */
   private RemoteExceptionHandler() {super();}

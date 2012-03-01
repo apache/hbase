@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 
 /**
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
  * This service allows an application to hook into the
  * regionserver and watch for new transactions.
  */
+@InterfaceAudience.Private
 public interface ReplicationSourceService extends ReplicationService {
 
   /**

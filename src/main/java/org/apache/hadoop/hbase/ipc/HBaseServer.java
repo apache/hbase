@@ -57,6 +57,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.WritableWithSize;
@@ -83,6 +84,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  *
  * @see HBaseClient
  */
+@InterfaceAudience.Private
 public abstract class HBaseServer implements RpcServer {
 
   /**

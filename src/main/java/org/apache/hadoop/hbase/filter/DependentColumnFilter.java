@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.ArrayList;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -40,6 +42,8 @@ import com.google.common.base.Preconditions;
  * Not compatible with Scan.setBatch as operations need 
  * full rows for correct filtering 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class DependentColumnFilter extends CompareFilter {
 
   protected byte[] columnFamily;

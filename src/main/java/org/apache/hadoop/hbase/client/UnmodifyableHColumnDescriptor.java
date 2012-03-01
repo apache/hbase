@@ -20,12 +20,16 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 
 /**
  * Immutable HColumnDescriptor
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class UnmodifyableHColumnDescriptor extends HColumnDescriptor {
 
   /**

@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -40,6 +41,7 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
  * This class is for maintaining the various statistics of thrift server
  * and publishing them through the metrics interfaces.
  */
+@InterfaceAudience.Private
 public class ThriftMetrics implements Updater {
   public final static Log LOG = LogFactory.getLog(ThriftMetrics.class);
   public final static String CONTEXT_NAME = "thriftserver";

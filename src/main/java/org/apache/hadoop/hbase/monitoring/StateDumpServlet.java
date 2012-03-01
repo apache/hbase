@@ -26,10 +26,12 @@ import java.util.Map;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorStatus;
 import org.apache.hadoop.hbase.util.VersionInfo;
 
+@InterfaceAudience.Private
 public abstract class StateDumpServlet extends HttpServlet {
   static final long DEFAULT_TAIL_KB = 100;
   private static final long serialVersionUID = 1L;

@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.util.Pair;
  * NOTE: this class is NOT thread safe. Concurrent setting/enabling/disabling of
  * constraints can cause constraints to be run at incorrect times or not at all.
  */
+@InterfaceAudience.Private
 public final class Constraints {
   private static final int DEFAULT_PRIORITY = -1;
 

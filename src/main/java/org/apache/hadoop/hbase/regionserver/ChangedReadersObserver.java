@@ -22,10 +22,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 
 /**
  * If set of MapFile.Readers in Store change, implementors are notified.
  */
+@InterfaceAudience.Private
 public interface ChangedReadersObserver {
   /**
    * Notify observers.

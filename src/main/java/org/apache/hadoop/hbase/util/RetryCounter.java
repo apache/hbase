@@ -23,7 +23,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 
+@InterfaceAudience.Private
 public class RetryCounter {
   private static final Log LOG = LogFactory.getLog(RetryCounter.class);
   private final int maxRetries;

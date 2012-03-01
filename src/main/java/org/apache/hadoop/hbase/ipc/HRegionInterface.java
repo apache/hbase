@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -61,6 +63,8 @@ import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 @KerberosInfo(
     serverPrincipal = "hbase.regionserver.kerberos.principal")
 @TokenInfo("HBASE_AUTH_TOKEN")
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortable {
   /**
    * This Interfaces' version. Version changes when the Interface changes.

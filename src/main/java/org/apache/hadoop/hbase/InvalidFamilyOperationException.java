@@ -21,10 +21,15 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Thrown if a request is table schema modification is requested but
  * made for an invalid family name.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class InvalidFamilyOperationException extends IOException {
   private static final long serialVersionUID = 1L << 22 - 1L;
   /** default constructor */

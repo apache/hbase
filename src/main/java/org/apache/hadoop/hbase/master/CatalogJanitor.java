@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.util.Writables;
  * A janitor for the catalog tables.  Scans the <code>.META.</code> catalog
  * table on a period looking for unused regions to garbage collect.
  */
+@InterfaceAudience.Private
 class CatalogJanitor extends Chore {
   private static final Log LOG = LogFactory.getLog(CatalogJanitor.class.getName());
   private final Server server;

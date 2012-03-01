@@ -19,7 +19,12 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** Thrown when a table can not be located */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class TableNotFoundException extends RegionException {
   private static final long serialVersionUID = 993179627856392526L;
 

@@ -25,6 +25,8 @@ import java.io.Serializable;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlValue;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Simple representation of the version of the storage cluster
  * 
@@ -35,6 +37,7 @@ import javax.xml.bind.annotation.XmlValue;
  * </pre>
  */
 @XmlRootElement(name="ClusterVersion")
+@InterfaceAudience.Private
 public class StorageClusterVersionModel implements Serializable {
 	private static final long serialVersionUID = 1L;
 

@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 
 /**
  * Thrown if a region server is passed an unknown scanner id.
@@ -26,6 +29,8 @@ package org.apache.hadoop.hbase;
  * scanner lease on the serverside has expired OR the serverside is closing
  * down and has cancelled all leases.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class UnknownScannerException extends DoNotRetryIOException {
   private static final long serialVersionUID = 993179627856392526L;
 

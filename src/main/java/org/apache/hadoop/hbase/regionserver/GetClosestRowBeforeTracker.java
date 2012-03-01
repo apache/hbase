@@ -24,6 +24,7 @@ import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * implement the {@link DeleteTracker} interface since state spans rows (There
  * is no update nor reset method).
  */
+@InterfaceAudience.Private
 class GetClosestRowBeforeTracker {
   private final KeyValue targetkey;
   // Any cell w/ a ts older than this is expired.

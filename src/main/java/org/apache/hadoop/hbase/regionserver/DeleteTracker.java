@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * This interface is used for the tracking and enforcement of Deletes
  * during the course of a Get or Scan operation.
@@ -28,6 +30,7 @@ package org.apache.hadoop.hbase.regionserver;
  * <li>{@link #isDeleted} when checking if a Put KeyValue has been deleted
  * <li>{@link #update} when reaching the end of a StoreFile
  */
+@InterfaceAudience.Private
 public interface DeleteTracker {
 
   /**

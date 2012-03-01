@@ -38,11 +38,15 @@ import org.apache.commons.httpclient.params.HttpClientParams;
 import org.apache.commons.httpclient.params.HttpConnectionManagerParams;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A wrapper around HttpClient which provides some useful function and
  * semantics for interacting with the REST gateway.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Client {
   public static final Header[] EMPTY_HEADER_ARRAY = new Header[0];
 

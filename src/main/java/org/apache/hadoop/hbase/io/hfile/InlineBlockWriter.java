@@ -22,11 +22,14 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A way to write "inline" blocks into an {@link HFile}. Inline blocks are
  * interspersed with data blocks. For example, Bloom filter chunks and
  * leaf-level blocks of a multi-level block index are stored as inline blocks.
  */
+@InterfaceAudience.Private
 public interface InlineBlockWriter {
 
   /**

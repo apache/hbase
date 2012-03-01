@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -40,6 +41,7 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Handler to run disable of a table.
  */
+@InterfaceAudience.Private
 public class DisableTableHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(DisableTableHandler.class);
   private final byte [] tableName;

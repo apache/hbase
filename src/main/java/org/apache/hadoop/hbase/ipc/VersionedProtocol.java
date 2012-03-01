@@ -20,11 +20,16 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Superclass of all protocols that use Hadoop RPC.
  * Subclasses of this interface are also supposed to have
  * a static final long versionID field.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface VersionedProtocol {
 
   /**

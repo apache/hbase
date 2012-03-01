@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -28,6 +30,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  * Get notification of {@link HLog}/WAL log events. The invocations are inline
  * so make sure your implementation is fast else you'll slow hbase.
  */
+@InterfaceAudience.Private
 public interface WALActionsListener {
 
   /**

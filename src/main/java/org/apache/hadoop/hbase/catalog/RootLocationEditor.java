@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.catalog;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -30,6 +31,7 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Makes changes to the location of <code>-ROOT-</code> in ZooKeeper.
  */
+@InterfaceAudience.Private
 public class RootLocationEditor {
   private static final Log LOG = LogFactory.getLog(RootLocationEditor.class);
 

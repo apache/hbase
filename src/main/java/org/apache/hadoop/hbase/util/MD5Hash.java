@@ -26,11 +26,15 @@ import java.security.NoSuchAlgorithmException;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Utility class for MD5
  * MD5 hash produces a 128-bit digest.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class MD5Hash {
   private static final Log LOG = LogFactory.getLog(MD5Hash.class);
 

@@ -19,9 +19,14 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Utility for Strings.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Strings {
   public final static String DEFAULT_SEPARATOR = "=";
   public final static String DEFAULT_KEYVALUE_SEPARATOR = ", ";

@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public interface CompactionRequestor {
   /**
    * @param r Region to compact

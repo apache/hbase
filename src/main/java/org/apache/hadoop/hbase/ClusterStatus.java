@@ -31,6 +31,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.VersionMismatchException;
@@ -54,6 +56,8 @@ import org.apache.hadoop.io.VersionedWritable;
  * <li>The unique cluster ID</li>
  * </ul>
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ClusterStatus extends VersionedWritable {
   /**
    * Version for object serialization.  Incremented for changes in serialized

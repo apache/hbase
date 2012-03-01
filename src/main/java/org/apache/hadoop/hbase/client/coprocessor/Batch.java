@@ -23,6 +23,8 @@ package org.apache.hadoop.hbase.client.coprocessor;
 import org.apache.commons.lang.reflect.MethodUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 
 import java.io.IOException;
@@ -36,6 +38,8 @@ import java.lang.reflect.Proxy;
  * A collection of interfaces and utilities used for interacting with custom RPC
  * interfaces exposed by Coprocessors.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class Batch {
   private static Log LOG = LogFactory.getLog(Batch.class);
 

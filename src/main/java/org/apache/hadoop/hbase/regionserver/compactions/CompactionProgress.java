@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * This class holds information relevant for tracking the progress of a
  * compaction.
@@ -29,6 +31,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
  * total amount scheduled to be compacted.
  *
  */
+@InterfaceAudience.Private
 public class CompactionProgress {
 
   /** the total compacting key values in currently running compaction */

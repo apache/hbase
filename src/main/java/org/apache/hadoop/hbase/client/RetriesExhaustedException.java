@@ -19,10 +19,15 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Exception thrown by HTable methods when an attempt to do something (like
  * commit changes) fails after a bunch of retries.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class RetriesExhaustedException extends IOException {
   private static final long serialVersionUID = 1876775844L;
 

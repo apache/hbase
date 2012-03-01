@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  * communicate with remote peers and is responsible for answering to expired
  * sessions and re-establishing the ZK connections.
  */
+@InterfaceAudience.Private
 public class ReplicationPeer implements Abortable {
   private static final Log LOG = LogFactory.getLog(ReplicationPeer.class);
 

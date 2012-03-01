@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -27,6 +29,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * up to the length of this byte array. For the rest it is similar to
  * {@link BinaryComparator}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class BinaryPrefixComparator extends WritableByteArrayComparable {
 
   /** Nullary constructor for Writable, do not use */

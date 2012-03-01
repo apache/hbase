@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.handler;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
  * <p>
  * Otherwise, assigns the region to another server.
  */
+@InterfaceAudience.Private
 public class ClosedRegionHandler extends EventHandler implements TotesHRegionInfo {
   private static final Log LOG = LogFactory.getLog(ClosedRegionHandler.class);
   private final AssignmentManager assignmentManager;

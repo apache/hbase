@@ -18,12 +18,14 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 
 /**
  * Stores the state of data block encoder at the beginning of new key.
  */
+@InterfaceAudience.Private
 class CompressionState {
   int keyLength;
   int valueLength;

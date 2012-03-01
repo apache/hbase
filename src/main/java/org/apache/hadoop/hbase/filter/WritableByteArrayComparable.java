@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
@@ -27,6 +29,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /** Base class, combines Comparable<byte []> and Writable. */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class WritableByteArrayComparable implements Writable, Comparable<byte[]> {
 
   byte[] value;

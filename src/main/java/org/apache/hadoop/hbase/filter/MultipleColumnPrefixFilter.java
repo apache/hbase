@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -33,6 +35,8 @@ import java.util.ArrayList;
  * a particular prefix. For example, if prefix is 'an', it will pass keys will
  * columns like 'and', 'anti' but not keys with columns like 'ball', 'act'.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class MultipleColumnPrefixFilter extends FilterBase {
   protected byte [] hint = null;
   protected TreeSet<byte []> sortedPrefixes = createTreeSet();

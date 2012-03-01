@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.RawComparator;
@@ -44,6 +45,7 @@ import com.google.common.io.NullOutputStream;
  * trailer size is fixed within a given {@link HFile} format version only, but
  * we always store the version number as the last four-byte integer of the file.
  */
+@InterfaceAudience.Private
 public class FixedFileTrailer {
 
   private static final Log LOG = LogFactory.getLog(FixedFileTrailer.class);

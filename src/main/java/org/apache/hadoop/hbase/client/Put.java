@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -43,6 +45,8 @@ import java.util.TreeMap;
  * for each column to be inserted, execute {@link #add(byte[], byte[], byte[]) add} or
  * {@link #add(byte[], byte[], long, byte[]) add} if setting the timestamp.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Put extends Mutation
   implements HeapSize, Writable, Row, Comparable<Row> {
   private static final byte PUT_VERSION = (byte)2;

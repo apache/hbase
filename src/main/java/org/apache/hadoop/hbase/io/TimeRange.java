@@ -26,6 +26,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Writable;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -36,6 +38,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>
  * Only used internally; should not be accessed directly by clients.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class TimeRange implements Writable {
   private long minStamp = 0L;
   private long maxStamp = Long.MAX_VALUE;

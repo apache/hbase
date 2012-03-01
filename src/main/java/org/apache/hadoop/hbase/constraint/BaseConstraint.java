@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.constraint;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configured;
 
 /**
  * Base class to use when actually implementing a {@link Constraint}. It takes
  * care of getting and setting of configuration for the constraint.
  */
+@InterfaceAudience.Private
 public abstract class BaseConstraint extends Configured implements Constraint {
 
 }

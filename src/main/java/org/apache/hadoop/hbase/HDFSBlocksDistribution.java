@@ -27,10 +27,13 @@ import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 
 /**
  * Data structure to describe the distribution of HDFS blocks amount hosts
  */
+@InterfaceAudience.Private
 public class HDFSBlocksDistribution {
   private Map<String,HostAndWeight> hostAndWeights = null;
   private long uniqueBlocksTotalWeight = 0;

@@ -44,6 +44,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Jdk14Logger;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -94,6 +96,8 @@ import org.apache.zookeeper.ZooKeeper;
  * hbase-site.xml for logging and test-run configuration.  It does not set
  * logging levels nor make changes to configuration parameters.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class HBaseTestingUtility {
   private static final Log LOG = LogFactory.getLog(HBaseTestingUtility.class);
   private Configuration conf;

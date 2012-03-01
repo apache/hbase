@@ -20,10 +20,15 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A binary comparator which lexicographically compares against the specified
  * byte array using {@link org.apache.hadoop.hbase.util.Bytes#compareTo(byte[], byte[])}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class NullComparator extends WritableByteArrayComparable {
 
   /** Nullary constructor for Writable, do not use */

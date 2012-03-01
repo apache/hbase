@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -31,6 +32,7 @@ import org.apache.hadoop.fs.Path;
  * One such application is a cross-datacenter
  * replication service that can keep two hbase clusters in sync.
  */
+@InterfaceAudience.Private
 public interface ReplicationService {
 
   /**

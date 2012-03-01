@@ -20,6 +20,9 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Specify Isolation levels in Scan operations.
  * <p>
@@ -29,6 +32,8 @@ package org.apache.hadoop.hbase.client;
  * should return data that is being modified by transactions that might
  * not have been committed yet.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public enum IsolationLevel {
 
   READ_COMMITTED(1),

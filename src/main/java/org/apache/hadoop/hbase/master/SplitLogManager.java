@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -93,6 +94,7 @@ import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.*
  * again. If a task is resubmitted then there is a risk that old "delete task"
  * can delete the re-submission.
  */
+@InterfaceAudience.Private
 public class SplitLogManager extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(SplitLogManager.class);
 

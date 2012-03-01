@@ -32,6 +32,8 @@ import java.util.Properties;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.EmptyWatcher;
 import org.apache.hadoop.hbase.HConstants;
@@ -58,6 +60,8 @@ import org.apache.zookeeper.data.Stat;
  * zookeeper exception, so callers of these methods must handle appropriately.
  * If ZK is required for the operation, the server will need to be aborted.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ZKUtil {
   private static final Log LOG = LogFactory.getLog(ZKUtil.class);
 

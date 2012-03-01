@@ -27,6 +27,7 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -42,6 +43,7 @@ import org.apache.hadoop.io.WritableComparable;
  * Contains HRegion id, start and end keys, a reference to this
  * HRegions' table descriptor, etc.
  */
+@InterfaceAudience.Private
 public class HRegionInfo090x extends VersionedWritable implements
     WritableComparable<HRegionInfo090x>{
   private static final byte VERSION = 0;

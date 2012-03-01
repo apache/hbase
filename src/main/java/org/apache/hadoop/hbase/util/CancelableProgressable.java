@@ -19,12 +19,15 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Similar interface as {@link org.apache.hadoop.util.Progressable} but returns
  * a boolean to support canceling the operation.
  * <p>
  * Used for doing updating of OPENING znode during log replay on region open.
  */
+@InterfaceAudience.Private
 public interface CancelableProgressable {
 
   /**

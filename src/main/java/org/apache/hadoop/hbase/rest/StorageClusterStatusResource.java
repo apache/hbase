@@ -34,12 +34,14 @@ import javax.ws.rs.core.UriInfo;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
 
+@InterfaceAudience.Private
 public class StorageClusterStatusResource extends ResourceBase {
   private static final Log LOG =
     LogFactory.getLog(StorageClusterStatusResource.class);

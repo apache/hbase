@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -42,6 +44,8 @@ import org.apache.hadoop.hbase.util.Pair;
 @KerberosInfo(
     serverPrincipal = "hbase.master.kerberos.principal")
 @TokenInfo("HBASE_AUTH_TOKEN")
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface HMasterInterface extends VersionedProtocol {
   /**
    * This Interfaces' version. Version changes when the Interface changes.

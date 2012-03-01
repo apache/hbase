@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 
 /**
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.KeyValue;
  * you position the Scanner using the seekTo variants and then getKey and
  * getValue.
  */
+@InterfaceAudience.Private
 public interface HFileScanner {
   /**
    * SeekTo or just before the passed <code>key</code>.  Examine the return

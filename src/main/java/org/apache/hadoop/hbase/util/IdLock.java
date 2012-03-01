@@ -24,6 +24,8 @@ import java.io.InterruptedIOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Allows multiple concurrent clients to lock on a numeric id with a minimal
  * memory overhead. The intended usage is as follows:
@@ -36,6 +38,7 @@ import java.util.concurrent.ConcurrentMap;
  *   idLock.releaseLockEntry(lockEntry);
  * }</pre>
  */
+@InterfaceAudience.Private
 public class IdLock {
 
   /** An entry returned to the client as a lock object */

@@ -22,6 +22,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
@@ -36,6 +38,8 @@ import org.apache.zookeeper.KeeperException;
  * be removed, and all waiting instances will be notified, with the race
  * to claim the leader znode beginning all over again.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ZKLeaderManager extends ZooKeeperListener {
   private static Log LOG = LogFactory.getLog(ZKLeaderManager.class);
 

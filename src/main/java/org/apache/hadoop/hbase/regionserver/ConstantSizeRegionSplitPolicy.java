@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 
 /**
@@ -25,6 +26,7 @@ import org.apache.hadoop.hbase.HConstants;
  * size.
  * <p>This is the default split policy.</p>
  */
+@InterfaceAudience.Private
 public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
   private long desiredMaxFileSize;
 

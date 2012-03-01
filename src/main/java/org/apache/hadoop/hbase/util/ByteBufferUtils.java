@@ -23,6 +23,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.encoding.
     EncoderBufferTooSmallException;
 import org.apache.hadoop.io.WritableUtils;
@@ -31,6 +33,8 @@ import org.apache.hadoop.io.WritableUtils;
  * Utility functions for working with byte buffers, such as reading/writing
  * variable-length long numbers.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public final class ByteBufferUtils {
 
   // "Compressed integer" serialization helper constants.

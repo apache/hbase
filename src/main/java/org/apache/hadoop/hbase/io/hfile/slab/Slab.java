@@ -25,6 +25,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.DirectMemoryUtils;
 import com.google.common.base.Preconditions;
@@ -35,6 +36,7 @@ import com.google.common.base.Preconditions;
  * requisite size, then puts them all in a buffer.
  **/
 
+@InterfaceAudience.Private
 class Slab implements org.apache.hadoop.hbase.io.HeapSize {
   static final Log LOG = LogFactory.getLog(Slab.class);
 

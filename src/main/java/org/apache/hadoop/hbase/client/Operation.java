@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.codehaus.jackson.map.ObjectMapper;
 
 /**
@@ -29,6 +31,8 @@ import org.codehaus.jackson.map.ObjectMapper;
  * (e.g. Put, Get, Delete, Scan, Next, etc.)
  * Contains methods for exposure to logging and debugging tools.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class Operation {
   // TODO make this configurable
   private static final int DEFAULT_MAX_COLS = 5;

@@ -27,6 +27,8 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,6 +46,8 @@ import org.apache.hadoop.io.WritableComparable;
  * Contains HRegion id, start and end keys, a reference to this
  * HRegions' table descriptor, etc.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class HRegionInfo extends VersionedWritable
 implements WritableComparable<HRegionInfo> {
   // VERSION == 0 when HRegionInfo had an HTableDescriptor inside it.

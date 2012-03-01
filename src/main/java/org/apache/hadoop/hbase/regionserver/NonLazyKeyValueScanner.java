@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.SortedSet;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.client.Scan;
  * A "non-lazy" scanner which always does a real seek operation. Most scanners
  * are inherited from this class.
  */
+@InterfaceAudience.Private
 public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
 
   @Override

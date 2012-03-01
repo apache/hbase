@@ -22,6 +22,9 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -36,6 +39,8 @@ import com.google.common.base.Preconditions;
  * This filter can be used to grab all of the keys without having to also grab
  * the values.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class KeyOnlyFilter extends FilterBase {
 
   boolean lenAsVal;

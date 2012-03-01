@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.DeadServer;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
  * Shutdown handler for the server hosting <code>-ROOT-</code>,
  * <code>.META.</code>, or both.
  */
+@InterfaceAudience.Private
 public class MetaServerShutdownHandler extends ServerShutdownHandler {
   private final boolean carryingRoot;
   private final boolean carryingMeta;

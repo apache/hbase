@@ -26,6 +26,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.thrift.generated.TRowResult;
  * <p>
  * This can be enabled with <i>hbase.regionserver.export.thrift</i> set to true.
  */
+@InterfaceAudience.Private
 public class HRegionThriftServer extends Thread {
 
   public static final Log LOG = LogFactory.getLog(HRegionThriftServer.class);

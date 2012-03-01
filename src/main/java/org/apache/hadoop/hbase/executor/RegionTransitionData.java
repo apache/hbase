@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -32,6 +33,7 @@ import org.apache.hadoop.io.Writable;
 /**
  * Data serialized into ZooKeeper for region transitions.
  */
+@InterfaceAudience.Private
 public class RegionTransitionData implements Writable {
   /**
    * Type of transition event (offline, opening, opened, closing, closed).

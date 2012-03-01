@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Utility for managing the flag byte passed in response to a
  * {@link HBaseServer.Call}
  */
+@InterfaceAudience.Private
 class ResponseFlag {
   private static final byte ERROR_BIT = 0x1;
   private static final byte LENGTH_BIT = 0x2;

@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.rest.metrics;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
 
 import org.apache.hadoop.metrics.MetricsContext;
@@ -29,6 +30,7 @@ import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 
+@InterfaceAudience.Private
 public class RESTMetrics implements Updater {
   private final MetricsRecord metricsRecord;
   private final MetricsRegistry registry = new MetricsRegistry();

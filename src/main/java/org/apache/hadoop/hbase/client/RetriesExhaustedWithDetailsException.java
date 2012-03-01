@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
@@ -42,6 +44,8 @@ import java.util.Set;
  * {@link #getCause(int)}, {@link #getRow(int)} and {@link #getAddress(int)}.
  */
 @SuppressWarnings("serial")
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class RetriesExhaustedWithDetailsException
 extends RetriesExhaustedException {
   List<Throwable> exceptions;

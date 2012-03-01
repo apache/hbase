@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.security;
 
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.Methods;
@@ -47,6 +48,7 @@ import org.apache.commons.logging.Log;
  * HBase, but can be extended as needs change.
  * </p>
  */
+@InterfaceAudience.Private
 public abstract class User {
   public static final String HBASE_SECURITY_CONF_KEY =
       "hbase.security.authentication";

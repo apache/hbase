@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -36,6 +37,7 @@ import org.apache.hadoop.io.Writable;
  * When writing StoreFiles, this information is stored in meta blocks and used
  * at read time to match against the required TimeRange.
  */
+@InterfaceAudience.Private
 public class TimeRangeTracker implements Writable {
 
   long minimumTimestamp = -1;

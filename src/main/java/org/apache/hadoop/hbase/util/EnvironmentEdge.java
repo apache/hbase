@@ -19,12 +19,17 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Has some basic interaction with the environment. Alternate implementations
  * can be used where required (eg in tests).
  *
  * @see EnvironmentEdgeManager
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface EnvironmentEdge {
 
   /**

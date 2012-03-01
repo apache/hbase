@@ -23,6 +23,8 @@ package org.apache.hadoop.hbase.zookeeper;
 import java.util.Properties;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 
@@ -30,6 +32,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
  * Tool for reading ZooKeeper servers from HBase XML configuration and producing
  * a line-by-line list for use by bash scripts.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ZKServerTool {
   /**
    * Run the tool.

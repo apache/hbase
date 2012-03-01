@@ -21,9 +21,12 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A call whose response can be delayed by the server.
  */
+@InterfaceAudience.Private
 public interface Delayable {
   /**
    * Signal that the call response should be delayed, thus freeing the RPC

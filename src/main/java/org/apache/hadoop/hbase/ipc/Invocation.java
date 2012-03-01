@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
@@ -32,6 +33,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 /** A method invocation, including the method name and its parameters.*/
+@InterfaceAudience.Private
 public class Invocation extends VersionedWritable implements Configurable {
   protected String methodName;
   @SuppressWarnings("rawtypes")

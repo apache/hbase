@@ -25,12 +25,16 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 
 /**
  * A filter that includes rows based on a chance.
  * 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class RandomRowFilter extends FilterBase {
   protected static final Random random = new Random();
 

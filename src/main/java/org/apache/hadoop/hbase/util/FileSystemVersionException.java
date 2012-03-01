@@ -22,7 +22,12 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** Thrown when the file system needs to be upgraded */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class FileSystemVersionException extends IOException {
   private static final long serialVersionUID = 1004053363L;
 

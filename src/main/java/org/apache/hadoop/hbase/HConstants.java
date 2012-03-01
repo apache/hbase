@@ -25,12 +25,16 @@ import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * HConstants holds a bunch of HBase-related constants
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public final class HConstants {
   /**
    * Status codes used for return values of bulk operations.

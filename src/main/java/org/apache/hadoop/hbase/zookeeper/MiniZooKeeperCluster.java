@@ -34,6 +34,8 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -46,6 +48,8 @@ import org.apache.zookeeper.server.persistence.FileTxnLog;
  * of redoing it, we should contribute updates to their code which let us more
  * easily access testing helper objects.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class MiniZooKeeperCluster {
   private static final Log LOG = LogFactory.getLog(MiniZooKeeperCluster.class);
 

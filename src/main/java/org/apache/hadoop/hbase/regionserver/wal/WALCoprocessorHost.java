@@ -26,12 +26,14 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.coprocessor.*;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
  * loaded within a {@link HLog}.
  */
+@InterfaceAudience.Private
 public class WALCoprocessorHost
     extends CoprocessorHost<WALCoprocessorHost.WALEnvironment> {
   

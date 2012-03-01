@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 
@@ -38,6 +40,8 @@ import java.util.ArrayList;
  * If an already known column qualifier is looked for, use {@link Get#addColumn}
  * directly rather than a filter.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class QualifierFilter extends CompareFilter {
 
   /**

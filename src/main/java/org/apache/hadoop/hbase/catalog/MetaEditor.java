@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.util.Writables;
  * TODO: Put MetaReader and MetaEditor together; doesn't make sense having
  * them distinct.
  */
+@InterfaceAudience.Private
 public class MetaEditor {
   // TODO: Strip CatalogTracker from this class.  Its all over and in the end
   // its only used to get its Configuration so we can get associated

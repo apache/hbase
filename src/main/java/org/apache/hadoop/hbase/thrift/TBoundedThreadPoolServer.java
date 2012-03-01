@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.util.Threads;
@@ -45,6 +46,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 /**
  * A bounded thread pool server customized for HBase.
  */
+@InterfaceAudience.Private
 public class TBoundedThreadPoolServer extends TServer {
 
   private static final String QUEUE_FULL_MSG =

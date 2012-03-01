@@ -21,11 +21,15 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Thrown if a table should be enabled but is not
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class TableNotEnabledException extends IOException {
   private static final long serialVersionUID = 262144L;
   /** default constructor */

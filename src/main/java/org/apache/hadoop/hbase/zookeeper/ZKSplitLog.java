@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Common methods and attributes used by {@link SplitLogManager} and
  * {@link SplitLogWorker}
  */
+@InterfaceAudience.Private
 public class ZKSplitLog {
   private static final Log LOG = LogFactory.getLog(ZKSplitLog.class);
 

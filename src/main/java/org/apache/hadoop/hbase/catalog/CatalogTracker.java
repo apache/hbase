@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -57,6 +58,7 @@ import org.apache.hadoop.ipc.RemoteException;
  * <p>Call {@link #start()} to start up operation.  Call {@link #stop()}} to
  * interrupt waits and close up shop.
  */
+@InterfaceAudience.Private
 public class CatalogTracker {
   // TODO: This class needs a rethink.  The original intent was that it would be
   // the one-stop-shop for root and meta locations and that it would get this

@@ -27,6 +27,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
  * A non-instantiable class that has a static method capable of compacting
  * a table by merging adjacent regions.
  */
+@InterfaceAudience.Private
 class HMerge {
   // TODO: Where is this class used?  How does it relate to Merge in same package?
   static final Log LOG = LogFactory.getLog(HMerge.class);

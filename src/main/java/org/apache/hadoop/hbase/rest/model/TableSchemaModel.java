@@ -34,6 +34,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.namespace.QName;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * </pre>
  */
 @XmlRootElement(name="TableSchema")
+@InterfaceAudience.Private
 public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   private static final long serialVersionUID = 1L;
   private static final QName IS_META = new QName(HTableDescriptor.IS_META);

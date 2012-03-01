@@ -28,6 +28,7 @@ import org.apache.commons.cli.ParseException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
@@ -56,6 +57,7 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  * <li>-ro --readonly : server mode</li>
  * </ul>
  */
+@InterfaceAudience.Private
 public class Main implements Constants {
 
   private static void printUsageAndExit(Options options, int exitCode) {

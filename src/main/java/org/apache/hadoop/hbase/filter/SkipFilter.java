@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 
 import java.io.DataInput;
@@ -45,6 +47,8 @@ import java.util.List;
  * Without this filter, the other non-zero valued columns in the row would still
  * be emitted.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class SkipFilter extends FilterBase {
   private boolean filterRow = false;
   private Filter filter;

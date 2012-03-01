@@ -30,6 +30,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -86,6 +87,7 @@ import com.google.protobuf.ByteString;
  * </pre>
  */
 @XmlRootElement(name="ClusterStatus")
+@InterfaceAudience.Private
 public class StorageClusterStatusModel 
     implements Serializable, ProtobufMessageHandler {
 	private static final long serialVersionUID = 1L;

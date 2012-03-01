@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
 import org.apache.zookeeper.KeeperException;
 
+@InterfaceAudience.Private
 public class MasterSchemaChangeTracker extends ZooKeeperNodeTracker {
   public static final Log LOG = LogFactory.getLog(MasterSchemaChangeTracker.class);
   private final MasterServices masterServices;

@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -27,6 +28,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * The class that creates a load balancer from a conf.
  */
+@InterfaceAudience.Private
 public class LoadBalancerFactory {
 
   /**

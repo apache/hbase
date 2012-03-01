@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.DataInput;
@@ -40,6 +42,8 @@ import java.io.IOException;
  *     new SubstringComparator("substr"));
  * </pre>
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class SubstringComparator extends WritableByteArrayComparable {
 
   private String substr;

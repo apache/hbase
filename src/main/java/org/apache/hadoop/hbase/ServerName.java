@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase;
 import java.util.Collection;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -43,6 +45,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * 
  * <p>Immutable.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ServerName implements Comparable<ServerName> {
   /**
    * Version for this class.

@@ -19,10 +19,15 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 
 /**
  * Thrown if a region server is passed an unknown row lock id
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class UnknownRowLockException extends DoNotRetryIOException {
   private static final long serialVersionUID = 993179627856392526L;
 

@@ -21,9 +21,14 @@ package org.apache.hadoop.hbase.util;
 
 import java.net.InetSocketAddress;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Utility for network addresses, resolving and naming.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class Addressing {
   public static final String VALID_PORT_REGEX = "[\\d]+";
   public static final String HOSTNAME_PORT_SEPARATOR = ":";

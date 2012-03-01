@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -40,6 +41,7 @@ import java.util.List;
  * alter schema requests from master and updates the status once the schema change
  * is complete.
  */
+@InterfaceAudience.Private
 public class SchemaChangeTracker extends ZooKeeperNodeTracker {
   public static final Log LOG = LogFactory.getLog(SchemaChangeTracker.class);
   private RegionServerServices regionServer = null;

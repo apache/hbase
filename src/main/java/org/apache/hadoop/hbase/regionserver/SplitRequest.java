@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
@@ -32,6 +33,7 @@ import com.google.common.base.Preconditions;
 /**
  * Handles processing region splits. Put in a queue, owned by HRegionServer.
  */
+@InterfaceAudience.Private
 class SplitRequest implements Runnable {
   static final Log LOG = LogFactory.getLog(SplitRequest.class);
   private final HRegion parent;

@@ -26,6 +26,9 @@ import java.util.zip.GZIPOutputStream;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public class GZIPResponseStream extends ServletOutputStream
 {
   private HttpServletResponse response;

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.metrics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * from another similar object. For example, an HFile reader configures HFile
  * blocks it reads with its own table/CF name.
  */
+@InterfaceAudience.Private
 public class SchemaConfigured implements HeapSize, SchemaAware {
   private static final Log LOG = LogFactory.getLog(SchemaConfigured.class);
 

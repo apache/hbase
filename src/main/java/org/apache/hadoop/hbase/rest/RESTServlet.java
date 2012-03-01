@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.rest.metrics.RESTMetrics;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hbase.rest.metrics.RESTMetrics;
 /**
  * Singleton class encapsulating global REST servlet state and functions.
  */
+@InterfaceAudience.Private
 public class RESTServlet implements Constants {
   private static RESTServlet INSTANCE;
   private final Configuration conf;

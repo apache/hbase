@@ -23,6 +23,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public class DebugPrint {
 
 private static final AtomicBoolean enabled = new AtomicBoolean(false);

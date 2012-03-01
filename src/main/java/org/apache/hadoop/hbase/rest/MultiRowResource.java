@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.rest.ResourceBase;
 import org.apache.hadoop.hbase.rest.RowSpec;
@@ -36,6 +37,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 
+@InterfaceAudience.Private
 public class MultiRowResource extends ResourceBase {
   public static final String ROW_KEYS_PARAM_NAME = "row";
 

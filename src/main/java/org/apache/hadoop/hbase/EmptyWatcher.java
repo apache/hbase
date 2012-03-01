@@ -19,12 +19,14 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
 
 /**
  * An empty ZooKeeper watcher
  */
+@InterfaceAudience.Private
 public class EmptyWatcher implements Watcher {
   public static EmptyWatcher instance = new EmptyWatcher();
   private EmptyWatcher() {}

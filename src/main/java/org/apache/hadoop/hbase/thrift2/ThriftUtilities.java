@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.*;
@@ -28,6 +29,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
 
+@InterfaceAudience.Private
 public class ThriftUtilities {
 
   private ThriftUtilities() {

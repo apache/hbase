@@ -27,6 +27,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
@@ -42,6 +43,7 @@ import org.apache.zookeeper.KeeperException;
  * <p>To save on trips to the zookeeper ensemble, internally we cache table
  * state.
  */
+@InterfaceAudience.Private
 public class ZKTable {
   // A znode will exist under the table directory if it is in any of the
   // following states: {@link TableState#ENABLING} , {@link TableState#DISABLING},

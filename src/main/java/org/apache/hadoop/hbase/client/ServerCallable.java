@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -48,6 +50,8 @@ import org.apache.hadoop.ipc.RemoteException;
  * @see HConnection#getRegionServerWithoutRetries(ServerCallable)
  * @param <T> the class that the ServerCallable handles
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class ServerCallable<T> implements Callable<T> {
   protected final HConnection connection;
   protected final byte [] tableName;

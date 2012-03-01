@@ -20,12 +20,16 @@
 
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
 /**
  * Read-only table descriptor.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   /** Default constructor */
   public UnmodifyableHTableDescriptor() {

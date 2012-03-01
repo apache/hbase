@@ -36,6 +36,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -68,6 +69,7 @@ import com.google.common.collect.Sets;
  *
  * <p>This classes produces plans for the {@link AssignmentManager} to execute.
  */
+@InterfaceAudience.Private
 public class DefaultLoadBalancer implements LoadBalancer {
   private static final Log LOG = LogFactory.getLog(LoadBalancer.class);
   private static final Random RANDOM = new Random(System.currentTimeMillis());

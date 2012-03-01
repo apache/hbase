@@ -26,6 +26,8 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -44,6 +46,8 @@ import org.apache.hadoop.io.MapWritable;
  * if we are running on DistributedFilesystem, create a FileSystem instance
  * each and will close down their instance on the way out.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class MiniHBaseCluster {
   static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
   private Configuration conf;

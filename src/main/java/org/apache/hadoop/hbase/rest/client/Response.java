@@ -21,10 +21,14 @@
 package org.apache.hadoop.hbase.rest.client;
 
 import org.apache.commons.httpclient.Header;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * The HTTP result code, response headers, and body of a HTTP response.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Response {
   private int code;
   private Header[] headers;

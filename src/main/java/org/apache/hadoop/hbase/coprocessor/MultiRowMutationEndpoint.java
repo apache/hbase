@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -34,6 +36,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * {@link HRegion#mutateRowsWithLocks(java.util.Collection, java.util.Collection)}
  * and Coprocessor endpoints.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class MultiRowMutationEndpoint extends BaseEndpointCoprocessor implements
     MultiRowMutationProtocol {
 

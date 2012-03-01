@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
@@ -41,6 +43,8 @@ import java.util.List;
  * Defaults to {@link Operator#MUST_PASS_ALL}.
  * <p>TODO: Fix creation of Configuration on serialization and deserialization.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class FilterList implements Filter {
   /** set operator */
   public static enum Operator {

@@ -22,10 +22,15 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Interface for client-side scanning.
  * Go to {@link HTable} to obtain instances.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface ResultScanner extends Closeable, Iterable<Result> {
 
   /**

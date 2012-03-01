@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -30,6 +31,7 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Services provided by {@link HRegionServer}
  */
+@InterfaceAudience.Private
 public interface RegionServerServices extends OnlineRegions {
   /**
    * @return True if this regionserver is stopping.

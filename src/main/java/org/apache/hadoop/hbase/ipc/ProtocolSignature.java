@@ -25,10 +25,12 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 
+@InterfaceAudience.Private
 public class ProtocolSignature implements Writable {
   static {               // register a ctor
     WritableFactories.setFactory

@@ -27,6 +27,9 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public class GZIPResponseWrapper extends HttpServletResponseWrapper {
   private HttpServletResponse response;
   private ServletOutputStream os;

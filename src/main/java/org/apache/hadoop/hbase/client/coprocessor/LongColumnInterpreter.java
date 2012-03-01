@@ -23,6 +23,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -35,6 +37,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * TestAggregateProtocol methods for its sample usage.
  * Its methods handle null arguments gracefully. 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class LongColumnInterpreter implements ColumnInterpreter<Long, Long> {
 
   public Long getValue(byte[] colFamily, byte[] colQualifier, KeyValue kv)

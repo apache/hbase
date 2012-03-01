@@ -40,6 +40,7 @@ import javax.management.ObjectName;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -126,6 +127,7 @@ import org.apache.zookeeper.Watcher;
  * @see HMasterRegionInterface
  * @see Watcher
  */
+@InterfaceAudience.Private
 public class HMaster extends HasThread
 implements HMasterInterface, HMasterRegionInterface, MasterServices,
 Server {

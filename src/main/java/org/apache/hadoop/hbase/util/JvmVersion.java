@@ -22,11 +22,16 @@ package org.apache.hadoop.hbase.util;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Certain JVM versions are known to be unstable with HBase. This
  * class has a utility function to determine whether the current JVM
  * is known to be unstable.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class JvmVersion {
   private static Set<String> BAD_JVM_VERSIONS = new HashSet<String>();
   static {

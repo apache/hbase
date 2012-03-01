@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.LinkedList;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -33,6 +34,7 @@ import org.apache.commons.logging.Log;
  * a mechanism for writers to obtain new write numbers, then "commit"
  * the new writes for readers to read (thus forming atomic transactions).
  */
+@InterfaceAudience.Private
 public class MultiVersionConsistencyControl {
   private volatile long memstoreRead = 0;
   private volatile long memstoreWrite = 0;

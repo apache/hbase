@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -65,6 +66,7 @@ import org.apache.zookeeper.data.Stat;
  * is stripped of its ownership. Here we rely on the idempotency of the log
  * splitting task for correctness
  */
+@InterfaceAudience.Private
 public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   private static final Log LOG = LogFactory.getLog(SplitLogWorker.class);
 

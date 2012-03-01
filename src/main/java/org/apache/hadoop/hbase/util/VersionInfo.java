@@ -23,6 +23,8 @@ package org.apache.hadoop.hbase.util;
 import org.apache.commons.logging.LogFactory;
 import java.io.PrintWriter;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.VersionAnnotation;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.commons.logging.Log;
@@ -31,6 +33,8 @@ import org.apache.commons.logging.Log;
  * This class finds the package info for hbase and the VersionAnnotation
  * information.  Taken from hadoop.  Only name of annotation is different.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class VersionInfo {
   private static final Log LOG = LogFactory.getLog(VersionInfo.class.getName());
   private static Package myPackage;

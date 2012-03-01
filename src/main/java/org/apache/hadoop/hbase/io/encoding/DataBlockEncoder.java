@@ -21,6 +21,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.io.RawComparator;
 
@@ -34,6 +35,7 @@ import org.apache.hadoop.io.RawComparator;
  * </ul>
  * It is designed to work fast enough to be feasible as in memory compression.
  */
+@InterfaceAudience.Private
 public interface DataBlockEncoder {
   /**
    * Compress KeyValues and write them to output buffer.

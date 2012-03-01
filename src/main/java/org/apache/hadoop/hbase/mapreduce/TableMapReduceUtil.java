@@ -34,6 +34,8 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -57,6 +59,8 @@ import org.apache.hadoop.util.StringUtils;
  * Utility for {@link TableMapper} and {@link TableReducer}
  */
 @SuppressWarnings("unchecked")
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class TableMapReduceUtil {
   static Log LOG = LogFactory.getLog(TableMapReduceUtil.class);
   

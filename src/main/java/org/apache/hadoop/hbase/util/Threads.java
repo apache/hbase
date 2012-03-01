@@ -28,11 +28,15 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Thread Utility
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Threads {
   protected static final Log LOG = LogFactory.getLog(Threads.class);
 

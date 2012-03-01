@@ -22,6 +22,7 @@ import java.lang.management.MemoryUsage;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -33,6 +34,7 @@ import org.apache.hadoop.util.StringUtils;
 /**
  * Stores all of the cache objects and configuration for a single HFile.
  */
+@InterfaceAudience.Private
 public class CacheConfig {
   private static final Log LOG = LogFactory.getLog(CacheConfig.class.getName());
 

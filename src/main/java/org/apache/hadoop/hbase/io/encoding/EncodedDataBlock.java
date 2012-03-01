@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.io.compress.Compressor;
 
@@ -32,6 +33,7 @@ import org.apache.hadoop.io.compress.Compressor;
  * Encapsulates a data block compressed using a particular encoding algorithm.
  * Useful for testing and benchmarking.
  */
+@InterfaceAudience.Private
 public class EncodedDataBlock {
   private static final int BUFFER_SIZE = 4 * 1024;
   protected DataBlockEncoder dataBlockEncoder;

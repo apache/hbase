@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.metrics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
@@ -26,6 +27,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
 /**
  * Publishes a string to the metrics collector
  */
+@InterfaceAudience.Private
 public class MetricsString extends MetricsBase {
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.hbase.metrics");
 

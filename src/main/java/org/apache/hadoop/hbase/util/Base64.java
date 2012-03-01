@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -116,6 +118,8 @@ import java.util.zip.GZIPOutputStream;
  * <br>
  * version: 2.2.1
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Base64 {
 
   /* ******** P U B L I C   F I E L D S ******** */

@@ -29,6 +29,8 @@ import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
@@ -51,6 +53,8 @@ import org.apache.zookeeper.data.ACL;
  * <p>This class also holds and manages the connection to ZooKeeper.  Code to
  * deal with connection related events and exceptions are handled here.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ZooKeeperWatcher implements Watcher, Abortable {
   private static final Log LOG = LogFactory.getLog(ZooKeeperWatcher.class);
 

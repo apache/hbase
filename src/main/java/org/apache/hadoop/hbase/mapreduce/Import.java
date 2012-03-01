@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -43,6 +45,8 @@ import org.apache.hadoop.util.GenericOptionsParser;
 /**
  * Import data written by {@link Export}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Import {
   final static String NAME = "import";
   final static String CF_RENAME_PROP = "HBASE_IMPORTER_RENAME_CFS";

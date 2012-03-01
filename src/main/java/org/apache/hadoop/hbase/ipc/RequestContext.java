@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
 
 import java.net.InetAddress;
@@ -30,6 +31,7 @@ import java.net.InetAddress;
  * called outside the context of a RPC request, all values will be
  * <code>null</code>.
  */
+@InterfaceAudience.Private
 public class RequestContext {
   private static ThreadLocal<RequestContext> instance =
       new ThreadLocal<RequestContext>() {

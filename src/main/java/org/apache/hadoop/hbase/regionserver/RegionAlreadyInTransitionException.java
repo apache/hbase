@@ -21,10 +21,16 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * This exception is thrown when a region server is asked to open or close
  * a region but it's already processing it
  */
+@SuppressWarnings("serial")
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class RegionAlreadyInTransitionException extends IOException {
 
   public RegionAlreadyInTransitionException(String s) {

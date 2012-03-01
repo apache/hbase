@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
  * This is an ease of use mechanism - all the functionality here could be
  * implemented on any given system by a coprocessor.
  */
+@InterfaceAudience.Private
 public class ConstraintProcessor extends BaseRegionObserver {
 
   private static final Log LOG = LogFactory.getLog(ConstraintProcessor.class);

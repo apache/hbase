@@ -21,10 +21,13 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Thrown when we fail close of the write-ahead-log file.
  * Package private.  Only used inside this package.
  */
+@InterfaceAudience.Private
 public class FailedLogCloseException extends IOException {
   private static final long serialVersionUID = 1759152841462990925L;
 

@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.client.coprocessor;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Row;
@@ -51,6 +53,8 @@ import java.lang.reflect.Method;
  * @see org.apache.hadoop.hbase.client.HTable#coprocessorExec(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)
  * @see org.apache.hadoop.hbase.client.HTable#coprocessorExec(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class Exec extends Invocation implements Row {
   /** Row key used as a reference for any region lookups */
   private byte[] referenceRow;

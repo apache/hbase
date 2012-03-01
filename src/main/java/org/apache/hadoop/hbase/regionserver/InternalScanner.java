@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 
 import java.io.Closeable;
@@ -39,6 +40,7 @@ import java.util.List;
  * all the family members, as they may have been last updated at different
  * times.
  */
+@InterfaceAudience.Private
 public interface InternalScanner extends Closeable {
   /**
    * Grab the next row's worth of values.

@@ -26,6 +26,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
@@ -45,6 +47,8 @@ import org.apache.hadoop.io.WritableComparable;
  * column and recreating it. If there is data stored in the column, it will be
  * deleted when the column is deleted.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> {
   // For future backward compatibility
 

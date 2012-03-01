@@ -29,6 +29,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
  * how you use this class.  If used during migrations, be careful when using
  * this class to check whether migration is needed.
  */
+@InterfaceAudience.Private
 public class MetaUtils {
   private static final Log LOG = LogFactory.getLog(MetaUtils.class);
   private final Configuration conf;

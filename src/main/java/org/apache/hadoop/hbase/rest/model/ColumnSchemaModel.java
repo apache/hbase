@@ -29,6 +29,7 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.namespace.QName;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.HConstants;
  * </pre>
  */
 @XmlRootElement(name="ColumnSchema")
+@InterfaceAudience.Private
 public class ColumnSchemaModel implements Serializable {
   private static final long serialVersionUID = 1L;
   private static QName BLOCKCACHE = new QName(HColumnDescriptor.BLOCKCACHE);

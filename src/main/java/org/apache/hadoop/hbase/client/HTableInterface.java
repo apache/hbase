@@ -23,6 +23,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -36,6 +38,8 @@ import java.util.Map;
  *
  * @since 0.21.0
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface HTableInterface extends Closeable {
 
   /**

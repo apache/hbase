@@ -21,6 +21,8 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -42,6 +44,8 @@ import java.util.TreeMap;
 /**
  * A container for Result objects, grouped by regionName.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class MultiResponse implements Writable {
 
   // map of regionName to list of (Results paired to the original index for that
