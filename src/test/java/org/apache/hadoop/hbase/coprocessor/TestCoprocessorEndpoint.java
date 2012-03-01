@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
@@ -200,6 +201,7 @@ public class TestCoprocessorEndpoint {
     dib.reset(dob.getData(), dob.getLength());
 
     Exec after = new Exec();
+    after.setConf(HBaseConfiguration.create());
     after.readFields(dib);
     // no error thrown
     assertEquals(after.getProtocolName(), protocolName);
