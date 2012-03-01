@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -4594,6 +4595,65 @@ public class TestFromClientSide {
     assertTrue(addrAfter.getPort() != addrCache.getPort());
     assertEquals(addrAfter.getPort(), addrNoCache.getPort());
   }  
+
+  @Test
+  /**
+   * Tests getRegionsInRange by creating some regions over which a range of
+   * keys spans; then changing the key range.
+   */
+  public void testGetRegionsInRange() throws Exception {
+    // Test Initialization.
+    byte [] startKey = Bytes.toBytes("ddc");
+    byte [] endKey = Bytes.toBytes("mmm");
+    byte [] TABLE = Bytes.toBytes("testGetRegionsInRange");
+    HTable table = TEST_UTIL.createTable(TABLE, new byte[][] {FAMILY}, 10);
+    int numOfRegions = TEST_UTIL.createMultiRegions(table, FAMILY);
+    assertEquals(25, numOfRegions);
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+
+    // Get the regions in this range
+    List<HRegionLocation> regionsList = table.getRegionsInRange(startKey,
+      endKey);
+    assertEquals(10, regionsList.size());
+
+    // Change the start key
+    startKey = Bytes.toBytes("fff");
+    regionsList = table.getRegionsInRange(startKey, endKey);
+    assertEquals(7, regionsList.size());
+
+    // Change the end key
+    endKey = Bytes.toBytes("nnn");
+    regionsList = table.getRegionsInRange(startKey, endKey);
+    assertEquals(8, regionsList.size());
+
+    // Empty start key
+    regionsList = table.getRegionsInRange(HConstants.EMPTY_START_ROW, endKey);
+    assertEquals(13, regionsList.size());
+
+    // Empty end key
+    regionsList = table.getRegionsInRange(startKey, HConstants.EMPTY_END_ROW);
+    assertEquals(20, regionsList.size());
+
+    // Both start and end keys empty
+    regionsList = table.getRegionsInRange(HConstants.EMPTY_START_ROW,
+      HConstants.EMPTY_END_ROW);
+    assertEquals(25, regionsList.size());
+
+    // Change the end key to somewhere in the last block
+    endKey = Bytes.toBytes("yyz");
+    regionsList = table.getRegionsInRange(startKey, endKey);
+    assertEquals(20, regionsList.size());
+
+    // Change the start key to somewhere in the first block
+    startKey = Bytes.toBytes("aac");
+    regionsList = table.getRegionsInRange(startKey, endKey);
+    assertEquals(25, regionsList.size());
+
+    // Make start and end key the same
+    startKey = endKey = Bytes.toBytes("ccc");
+    regionsList = table.getRegionsInRange(startKey, endKey);
+    assertEquals(1, regionsList.size());
+  }
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
