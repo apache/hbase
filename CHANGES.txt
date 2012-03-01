@@ -72,6 +72,8 @@ Release 0.92.1 - Unreleased
                jmx beans (Hitesh Shah)
    HBASE-5483  Allow configurable host to bind to for starting REST
                server from commandline (Dan Rosher)
+   HBASE-5489  Add HTable accessor to get regions for a key range
+               (David S. Wang)
 
   TESTS
    HBASE-5223  TestMetaReaderEditor is missing call to CatalogTracker.stop()
