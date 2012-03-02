@@ -325,6 +325,20 @@
     <pluginManagement>
       <plugins>
         <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-release-plugin</artifactId>
+          <version>${maven-release.version}</version>
+          <configuration>
+            <!--This stops our running tests for each stage of maven release.
+                We may want to disable this because it looks like this might
+                be responsible for our not including test jar in our release
+                to maven repository. Remove in 0.94 and trunk since tests
+                run faster there?
+              -->
+            <arguments>-Dmaven.test.skip</arguments>
+          </configuration>
+        </plugin>
+        <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
             <source>${compileSource}</source>
