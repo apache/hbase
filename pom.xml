@@ -365,7 +365,7 @@
           <configuration>
             <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
             <argLine>-enableassertions -Xmx1900m -Djava.security.egd=file:/dev/./urandom</argLine>
-            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+            <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
           </configuration>
         </plugin>
         <plugin>
@@ -393,7 +393,7 @@
               <exclude>**/*$*</exclude>
               <exclude>${test.exclude.pattern}</exclude>
             </excludes>
-            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+            <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
             <environmentVariables>
               <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/nativelib</LD_LIBRARY_PATH>
               <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/nativelib</DYLD_LIBRARY_PATH>
@@ -1008,6 +1008,7 @@
 
     <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
     <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
+    <test.output.tofile>true</test.output.tofile>
   </properties>
 
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
