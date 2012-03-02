@@ -299,9 +299,13 @@ public final class HConstants {
   /** The catalog family */
   public static final byte [] CATALOG_FAMILY = Bytes.toBytes(CATALOG_FAMILY_STR);
 
+  /** The RegionInfo qualifier as a string */
+  public static final String REGIONINFO_QUALIFIER_STR = "regioninfo";
+  
   /** The regioninfo column qualifier */
-  public static final byte [] REGIONINFO_QUALIFIER = Bytes.toBytes("regioninfo");
-
+  public static final byte [] REGIONINFO_QUALIFIER = 
+	  Bytes.toBytes(REGIONINFO_QUALIFIER_STR);
+  
   /** The server column qualifier */
   public static final byte [] SERVER_QUALIFIER = Bytes.toBytes("server");
 

@@ -421,8 +421,8 @@ public class HTable implements HTableInterface {
         byte [] bytes = rowResult.getValue(HConstants.CATALOG_FAMILY,
           HConstants.REGIONINFO_QUALIFIER);
         if (bytes == null) {
-          LOG.warn("Null " + HConstants.REGIONINFO_QUALIFIER + " cell in " +
-            rowResult);
+          LOG.warn("Null " + HConstants.REGIONINFO_QUALIFIER_STR +
+        		  " cell in " + rowResult);
           return true;
         }
         HRegionInfo info = Writables.getHRegionInfo(bytes);
