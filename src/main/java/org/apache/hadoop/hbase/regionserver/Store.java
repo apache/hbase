@@ -1345,7 +1345,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     StoreFile.Writer writer = null;
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = region.getSmallestReadPoint();
-    ReadWriteConsistencyControl.setThreadReadPoint(smallestReadPoint);
+    MultiVersionConsistencyControl.setThreadReadPoint(smallestReadPoint);
     try {
       InternalScanner scanner = null;
       try {

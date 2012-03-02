@@ -50,7 +50,7 @@ class StoreFileScanner implements KeyValueScanner {
   private boolean delayedReseek;
   private KeyValue delayedSeekKV;
 
-  private boolean enforceRWCC = false;
+  private boolean enforceMVCC = false;
 
   // The variable, realSeekDone, may cheat on store file scanner for the
   // multi-column bloom-filter optimization.
@@ -65,10 +65,10 @@ class StoreFileScanner implements KeyValueScanner {
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
    * @param hfs HFile scanner
    */
-  public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs, boolean useRWCC) {
+  public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs, boolean useMVCC) {
     this.reader = reader;
     this.hfs = hfs;
-    this.enforceRWCC = useRWCC;
+    this.enforceMVCC = useMVCC;
   }
 
   /**
@@ -183,11 +183,11 @@ class StoreFileScanner implements KeyValueScanner {
   }
 
   protected boolean skipKVsNewerThanReadpoint() throws IOException {
-    long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
+    long readPoint = MultiVersionConsistencyControl.getThreadReadPoint();
 
     // We want to ignore all key-values that are newer than our current
     // readPoint
-    while(enforceRWCC
+    while(enforceMVCC
         && cur != null
         && (cur.getMemstoreTS() > readPoint)) {
       hfs.next();

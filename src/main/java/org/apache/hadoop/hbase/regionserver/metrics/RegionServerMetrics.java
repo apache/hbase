@@ -197,8 +197,8 @@ public class RegionServerMetrics implements Updater {
   public final MetricsTimeVaryingRate rowLockTime =
     new MetricsTimeVaryingRate("rowLock", registry);
 
-  public final MetricsTimeVaryingRate rwccWaitTime =
-    new MetricsTimeVaryingRate("rwccWait", registry);
+  public final MetricsTimeVaryingRate mvccWaitTime =
+    new MetricsTimeVaryingRate("mvccWait", registry);
 
   /**
    * time each scheduled compaction takes
@@ -317,7 +317,7 @@ public class RegionServerMetrics implements Updater {
       int writeOps = (int)HRegion.getWriteOps();
       if (writeOps != 0) {
         this.memstoreInsertTime.inc(writeOps, HRegion.getMemstoreInsertTime());
-        this.rwccWaitTime.inc(writeOps, HRegion.getRWCCWaitTime());
+        this.mvccWaitTime.inc(writeOps, HRegion.getMVCCWaitTime());
         this.rowLockTime.inc(writeOps, HRegion.getRowLockTime());
       }
 
@@ -329,7 +329,7 @@ public class RegionServerMetrics implements Updater {
       this.fsGroupSyncLatency.pushMetric(this.metricsRecord);
       this.memstoreInsertTime.pushMetric(this.metricsRecord);
       this.rowLockTime.pushMetric(this.metricsRecord);
-      this.rwccWaitTime.pushMetric(this.metricsRecord);
+      this.mvccWaitTime.pushMetric(this.metricsRecord);
       this.compactionTime.pushMetric(this.metricsRecord);
       this.compactionSize.pushMetric(this.metricsRecord);
       this.flushTime.pushMetric(this.metricsRecord);
@@ -359,7 +359,7 @@ public class RegionServerMetrics implements Updater {
     this.fsGroupSyncLatency.resetMinMax();
     this.memstoreInsertTime.resetMinMax();
     this.rowLockTime.resetMinMax();
-    this.rwccWaitTime.resetMinMax();
+    this.mvccWaitTime.resetMinMax();
   }
 
   /**

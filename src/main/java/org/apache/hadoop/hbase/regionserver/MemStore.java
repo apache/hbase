@@ -540,7 +540,7 @@ public class MemStore implements HeapSize {
 
     protected KeyValue getNext(Iterator<KeyValue> it) {
       KeyValue ret = null;
-      long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
+      long readPoint = MultiVersionConsistencyControl.getThreadReadPoint();
       //DebugPrint.println( " MS@" + hashCode() + ": threadpoint = " + readPoint);
 
       while (ret == null && it.hasNext()) {
@@ -571,7 +571,7 @@ public class MemStore implements HeapSize {
       snapshotNextRow = getNext(snapshotIt);
 
 
-      //long readPoint = ReadWriteConsistencyControl.getThreadReadPoint();
+      //long readPoint = MultiVersionConsistencyControl.getThreadReadPoint();
       //DebugPrint.println( " MS@" + hashCode() + " kvset seek: " + kvsetNextRow + " with size = " +
       //    kvset.size() + " threadread = " + readPoint);
       //DebugPrint.println( " MS@" + hashCode() + " snapshot seek: " + snapshotNextRow + " with size = " +
@@ -618,7 +618,7 @@ public class MemStore implements HeapSize {
         snapshotNextRow = getNext(snapshotIt);
       }
 
-      //long readpoint = ReadWriteConsistencyControl.getThreadReadPoint();
+      //long readpoint = MultiVersionConsistencyControl.getThreadReadPoint();
       //DebugPrint.println(" MS@" + hashCode() + " next: " + theNext + " next_next: " +
       //    getLowest() + " threadpoint=" + readpoint);
       return theNext;

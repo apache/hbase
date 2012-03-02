@@ -20,7 +20,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.LinkedList;
-import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
@@ -31,7 +33,7 @@ import org.apache.commons.logging.Log;
  * a mechanism for writers to obtain new write numbers, then "commit"
  * the new writes for readers to read (thus forming atomic transactions).
  */
-public class ReadWriteConsistencyControl {
+public class MultiVersionConsistencyControl {
   private volatile long memstoreRead = 0;
   private volatile long memstoreWrite = 0;
 
@@ -53,7 +55,7 @@ public class ReadWriteConsistencyControl {
   /**
    * Default constructor. Initializes the memstoreRead/Write points to 0.
    */
-  public ReadWriteConsistencyControl() {
+  public MultiVersionConsistencyControl() {
     this.memstoreRead = this.memstoreWrite = 0;
   }
 
@@ -64,7 +66,7 @@ public class ReadWriteConsistencyControl {
   public void initialize(long startPoint) {
     synchronized (writeQueue) {
       if (this.memstoreWrite != this.memstoreRead) {
-        throw new RuntimeException("Already used this rwcc. Too late to initialize");
+        throw new RuntimeException("Already used this mvcc. Too late to initialize");
       }
 
       this.memstoreRead = this.memstoreWrite = startPoint;
@@ -81,7 +83,7 @@ public class ReadWriteConsistencyControl {
   }
 
   /**
-   * Set the thread read point to the given value. The thread RWCC
+   * Set the thread read point to the given value. The thread MVCC
    * is used by the Memstore scanner so it knows which values to skip.
    * Give it a value of 0 if you want everything.
    */
@@ -90,16 +92,16 @@ public class ReadWriteConsistencyControl {
   }
 
   /**
-   * Set the thread RWCC read point to whatever the current read point is in
-   * this particular instance of RWCC.  Returns the new thread read point value.
+   * Set the thread MVCC read point to whatever the current read point is in
+   * this particular instance of MVCC.  Returns the new thread read point value.
    */
-  public static long resetThreadReadPoint(ReadWriteConsistencyControl rwcc) {
-    perThreadReadPoint.set(rwcc.memstoreReadPoint());
+  public static long resetThreadReadPoint(MultiVersionConsistencyControl mvcc) {
+    perThreadReadPoint.set(mvcc.memstoreReadPoint());
     return getThreadReadPoint();
   }
 
   /**
-   * Set the thread RWCC read point to 0 (include everything).
+   * Set the thread MVCC read point to 0 (include everything).
    */
   public static void resetThreadReadPoint() {
     perThreadReadPoint.set(0L);
@@ -115,6 +117,11 @@ public class ReadWriteConsistencyControl {
   }
 
   public void completeMemstoreInsert(WriteEntry e) {
+    advanceMemstore(e);
+    waitForRead(e);
+  }
+
+  boolean advanceMemstore(WriteEntry e) {
     synchronized (writeQueue) {
       e.markCompleted();
 
@@ -148,10 +155,19 @@ public class ReadWriteConsistencyControl {
           memstoreRead = nextReadValue;
           readWaiters.notifyAll();
         }
-
       }
+      if (memstoreRead >= e.getWriteNumber()) {
+        return true;
+      }
+      return false;
     }
+  }
 
+  /**
+   * Wait for the global readPoint to advance upto
+   * the specified transaction number.
+   */
+  public void waitForRead(WriteEntry e) {
     boolean interrupted = false;
     synchronized (readWaiters) {
       while (memstoreRead < e.getWriteNumber()) {
@@ -188,4 +204,10 @@ public class ReadWriteConsistencyControl {
       return this.writeNumber;
     }
   }
+
+  public static final long FIXED_SIZE = ClassSize.align(
+      ClassSize.OBJECT +
+      2 * Bytes.SIZEOF_LONG +
+      2 * ClassSize.REFERENCE);
+
 }

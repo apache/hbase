@@ -199,7 +199,7 @@ public class HRegion implements HeapSize {
   private ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
 
   /*
-   * @return The smallest rwcc readPoint across all the scanners in this
+   * @return The smallest mvcc readPoint across all the scanners in this
    * region. Writes older than this readPoint, are included  in every
    * read operation.
    */
@@ -209,7 +209,7 @@ public class HRegion implements HeapSize {
     // no new RegionScanners can grab a readPoint that we are unaware of.
     // We achieve this by synchronizing on the scannerReadPoints object.
     synchronized(scannerReadPoints) {
-      minimumReadPoint = rwcc.memstoreReadPoint();
+      minimumReadPoint = mvcc.memstoreReadPoint();
 
       for (Long readPoint: this.scannerReadPoints.values()) {
         if (readPoint < minimumReadPoint) {
@@ -282,12 +282,12 @@ public class HRegion implements HeapSize {
   private boolean splitRequest;
   private byte[] splitPoint = null;
 
-  private final ReadWriteConsistencyControl rwcc =
-      new ReadWriteConsistencyControl();
+  private final MultiVersionConsistencyControl mvcc =
+      new MultiVersionConsistencyControl();
 
   public static volatile AtomicLong writeOps = new AtomicLong(0);
   public static volatile AtomicLong rowLockTime = new AtomicLong(0);
-  public static volatile AtomicLong rwccWaitTime = new AtomicLong(0);
+  public static volatile AtomicLong mvccWaitTime = new AtomicLong(0);
   public static volatile AtomicLong memstoreInsertTime = new AtomicLong(0);
 
   // for simple numeric metrics (# of blocks read from block cache)
@@ -380,9 +380,9 @@ public class HRegion implements HeapSize {
     return rowLockTime.getAndSet(0);
   }
 
-  public static final long getRWCCWaitTime()
+  public static final long getMVCCWaitTime()
   {
-    return rwccWaitTime.getAndSet(0);
+    return mvccWaitTime.getAndSet(0);
   }
 
   public static final long getMemstoreInsertTime() {
@@ -575,7 +575,7 @@ public class HRegion implements HeapSize {
           storeOpenerThreadPool.shutdownNow();
         }
       }
-      rwcc.initialize(maxMemstoreTS + 1);
+      mvcc.initialize(maxMemstoreTS + 1);
       // Recover any edits if available.
       maxSeqId = Math.max(maxSeqId, replayRecoveredEditsIfAny(
           this.regiondir, minSeqId, reporter, status));
@@ -707,8 +707,8 @@ public class HRegion implements HeapSize {
     }
   }
 
-   public ReadWriteConsistencyControl getRWCC() {
-     return rwcc;
+   public MultiVersionConsistencyControl getMVCC() {
+     return mvcc;
    }
 
   /**
@@ -2296,10 +2296,10 @@ public class HRegion implements HeapSize {
    */
   private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap) {
     long start = EnvironmentEdgeManager.currentTimeMillis();
-    ReadWriteConsistencyControl.WriteEntry w = null;
+    MultiVersionConsistencyControl.WriteEntry w = null;
     long size = 0;
     try {
-      w = rwcc.beginMemstoreInsert();
+      w = mvcc.beginMemstoreInsert();
 
       for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
         byte[] family = e.getKey();
@@ -2315,9 +2315,9 @@ public class HRegion implements HeapSize {
       long now = EnvironmentEdgeManager.currentTimeMillis();
       HRegion.memstoreInsertTime.addAndGet(now - start);
       start = now;
-      rwcc.completeMemstoreInsert(w);
+      mvcc.completeMemstoreInsert(w);
       now = EnvironmentEdgeManager.currentTimeMillis();
-      HRegion.rwccWaitTime.addAndGet(now - start);
+      HRegion.mvccWaitTime.addAndGet(now - start);
     }
 
     return size;
@@ -2909,7 +2909,7 @@ public class HRegion implements HeapSize {
       // synchronize on scannerReadPoints so that nobody calculates
       // getSmallestReadPoint, before scannerReadPoints is updated.
       synchronized(scannerReadPoints) {
-        this.readPt = ReadWriteConsistencyControl.resetThreadReadPoint(rwcc);
+        this.readPt = MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
         scannerReadPoints.put(this, this.readPt);
       }
 
@@ -2962,7 +2962,7 @@ public class HRegion implements HeapSize {
       }
 
       // This could be a new thread from the last time we called next().
-      ReadWriteConsistencyControl.setThreadReadPoint(this.readPt);
+      MultiVersionConsistencyControl.setThreadReadPoint(this.readPt);
 
       results.clear();
       boolean returnResult = nextInternal(limit, metric);
