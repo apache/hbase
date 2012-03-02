@@ -1342,7 +1342,7 @@ public class ThriftServerRunner implements Runnable {
 
         if (startRowResult == null) {
           throw new IOException("Cannot find row in .META., row="
-                                + Bytes.toString(searchRow.array()));
+                                + Bytes.toStringBinary(searchRow.array()));
         }
 
         // find region start and end keys
@@ -1351,7 +1351,7 @@ public class ThriftServerRunner implements Runnable {
         if (value == null || value.length == 0) {
           throw new IOException("HRegionInfo REGIONINFO was null or " +
                                 " empty in Meta for row="
-                                + Bytes.toString(searchRow.array()));
+                                + Bytes.toStringBinary(searchRow.array()));
         }
         HRegionInfo regionInfo = Writables.getHRegionInfo(value);
         TRegionInfo region = new TRegionInfo();

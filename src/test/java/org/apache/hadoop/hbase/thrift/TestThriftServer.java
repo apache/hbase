@@ -28,17 +28,19 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Collection;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.filter.ParseFilter;
-import org.junit.experimental.categories.Category;
-import org.junit.Test;
-import org.junit.BeforeClass;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
+import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.metrics.ContextFactory;
@@ -47,9 +49,9 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.spi.NoEmitMetricsContext;
 import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.junit.AfterClass;
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.conf.Configuration;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Unit testing for ThriftServerRunner.HBaseHandler, a part of the
@@ -104,6 +106,7 @@ public class TestThriftServer {
     doTestTableScanners();
     doTestGetTableRegions();
     doTestFilterRegistration();
+    doTestGetRegionInfo();
   }
 
   /**
@@ -116,6 +119,10 @@ public class TestThriftServer {
   public void doTestTableCreateDrop() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
+    doTestTableCreateDrop(handler);
+  }
+
+  public static void doTestTableCreateDrop(Hbase.Iface handler) throws Exception {
     createTestTables(handler);
     dropTestTables(handler);
   }
@@ -181,12 +188,14 @@ public class TestThriftServer {
     handler.deleteTable(tableBname);
     assertEquals(handler.getTableNames().size(), 1);
     handler.disableTable(tableAname);
+    assertFalse(handler.isTableEnabled(tableAname));
     /* TODO Reenable.
     assertFalse(handler.isTableEnabled(tableAname));
     handler.enableTable(tableAname);
     assertTrue(handler.isTableEnabled(tableAname));
     handler.disableTable(tableAname);*/
     handler.deleteTable(tableAname);
+    assertEquals(handler.getTableNames().size(), 0);
   }
 
   /**
@@ -443,6 +452,28 @@ public class TestThriftServer {
     assertEquals("filterclass", registeredFilters.get("MyFilter"));
   }
 
+  public void doTestGetRegionInfo() throws Exception {
+    ThriftServerRunner.HBaseHandler handler =
+      new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
+    doTestGetRegionInfo(handler);
+  }
+
+  public static void doTestGetRegionInfo(Hbase.Iface handler) throws Exception {
+    // Create tableA and add two columns to rowA
+    handler.createTable(tableAname, getColumnDescriptors());
+    try {
+      handler.mutateRow(tableAname, rowAname, getMutations(), null);
+      byte[] searchRow = HRegionInfo.createRegionName(
+          tableAname.array(), rowAname.array(), HConstants.NINES, false);
+      TRegionInfo regionInfo = handler.getRegionInfo(ByteBuffer.wrap(searchRow));
+      assertTrue(Bytes.toStringBinary(regionInfo.getName()).startsWith(
+            Bytes.toStringBinary(tableAname)));
+    } finally {
+      handler.disableTable(tableAname);
+      handler.deleteTable(tableAname);
+    }
+  }
+
   /**
    *
    * @return a List of ColumnDescriptors for use in creating a table.  Has one
@@ -482,7 +513,7 @@ public class TestThriftServer {
    * @return a List of Mutations for a row, with columnA having valueA
    * and columnB having valueB
    */
-  private List<Mutation> getMutations() {
+  private static List<Mutation> getMutations() {
     List<Mutation> mutations = new ArrayList<Mutation>();
     mutations.add(new Mutation(false, columnAname, valueAname, true));
     mutations.add(new Mutation(false, columnBname, valueBname, true));
