@@ -28,8 +28,7 @@ import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
  */
 public interface AccessControllerProtocol extends CoprocessorProtocol {
 
-  /* V2: Added {@link #checkPermissions(Permission...)}) */
-  public static final long VERSION = 2L;
+  public static final long VERSION = 1L;
 
   /**
    * Grants the given user or group the privilege to perform the given actions
