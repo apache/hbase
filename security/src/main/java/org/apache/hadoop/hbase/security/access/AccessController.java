@@ -163,7 +163,7 @@ public class AccessController extends BaseRegionObserver
   /**
    * Version number for AccessControllerProtocol
    */
-  private static final long PROTOCOL_VERSION = 2L;
+  private static final long PROTOCOL_VERSION = 1L;
 
   TableAuthManager authManager = null;
 
