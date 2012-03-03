@@ -58,6 +58,9 @@ Release 0.92.1 - Unreleased
                (James Page)
    HBASE-5489  Add HTable accessor to get regions for a key range
                (David S. Wang)
+   HBASE-5286  bin/hbase's logic of adding Hadoop jar files to the classpath
+               is fragile when presented with split packaged Hadoop 0.23
+               installation (Roman Shaposhnik)
  
  
   IMPROVEMENTS
