@@ -37,8 +37,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -150,8 +148,16 @@ public class TestScannerSelectionUsingTTL {
       region.getStore(FAMILY_BYTES).compactRecentForTesting(totalNumFiles);
     } else {
       region.compactStores();
+      verifyDataBlockRead(metricsBeforeCompaction, 0);
+      region.compactStores();
+      verifyDataBlockRead(metricsBeforeCompaction, this.numFreshFiles);
     }
 
+    region.close();
+  }
+
+  private void verifyDataBlockRead(Map<String, Long> metricsBeforeCompaction,
+      int expectCompactionDataBlocksRead){
     SchemaMetrics.validateMetricChanges(metricsBeforeCompaction);
     Map<String, Long> compactionMetrics =
         SchemaMetrics.diffMetrics(metricsBeforeCompaction,
@@ -162,8 +168,7 @@ public class TestScannerSelectionUsingTTL {
             BlockCategory.DATA, true, BlockMetricType.READ_COUNT));
     assertEquals("Invalid number of blocks accessed during compaction. " +
         "We only expect non-expired files to be accessed.",
-        numFreshFiles, compactionDataBlocksRead);
-    region.close();
+        compactionDataBlocksRead, compactionDataBlocksRead);
   }
 
 }

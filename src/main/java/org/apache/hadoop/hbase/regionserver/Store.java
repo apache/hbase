@@ -1181,7 +1181,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     boolean forcemajor = this.forceMajor && filesCompacting.isEmpty();
     if (!forcemajor) {
       // Delete the expired store files before the compaction selection.
-      if (conf.getBoolean("hbase.store.delete.expired.storefile", false)
+      if (conf.getBoolean("hbase.store.delete.expired.storefile", true)
           && (ttl != Long.MAX_VALUE)) {
         CompactSelection expiredSelection = compactSelection
             .selectExpiredStoreFilesToCompact(
