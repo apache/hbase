@@ -1785,7 +1785,7 @@ public class AssignmentManager extends ZooKeeperListener {
     if (servers.isEmpty()) return null;
 
     RegionPlan randomPlan = new RegionPlan(state.getRegion(), null,
-      balancer.randomAssignment(servers));
+      balancer.randomAssignment(state.getRegion(), servers));
     boolean newPlan = false;
     RegionPlan existingPlan = null;
 

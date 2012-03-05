@@ -44,7 +44,7 @@ import java.util.Map;
  *
  * <p>This classes produces plans for the {@link AssignmentManager} to execute.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public interface LoadBalancer extends Configurable {
 
   /**
@@ -93,8 +93,10 @@ public interface LoadBalancer extends Configurable {
 
   /**
    * Get a random region server from the list
+   * @param regionInfo Region for which this selection is being done.
    * @param servers
    * @return Servername
    */
-  public ServerName randomAssignment(List<ServerName> servers);
+  public ServerName randomAssignment(HRegionInfo regionInfo, 
+		  List<ServerName> servers);
 }
