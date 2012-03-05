@@ -3380,6 +3380,7 @@ public class TestFromClientSide {
     }
   }
 
+
   @Test
   public void testRowsPutMultiGet() throws IOException {
     final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");

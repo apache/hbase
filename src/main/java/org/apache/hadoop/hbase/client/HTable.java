@@ -35,7 +35,6 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -79,6 +78,17 @@ public class HTable implements HTableInterface {
   private int maxKeyValueSize;
 
   private long maxScannerResultSize;
+
+  // Share this multiput thread pool across all the HTable instance;
+  // The total number of threads will be bounded #HTable * #RegionServer.
+  static ExecutorService multiPutThreadPool =
+    new ThreadPoolExecutor(1, Integer.MAX_VALUE,
+      60, TimeUnit.SECONDS,
+      new SynchronousQueue<Runnable>(),
+      new DaemonThreadFactory());
+  static {
+    ((ThreadPoolExecutor)multiPutThreadPool).allowCoreThreadTimeOut(true);
+  }
 
   /**
    * Creates an object to access a HBase table. DO NOT USE THIS CONSTRUCTOR.
@@ -150,17 +160,6 @@ public class HTable implements HTableInterface {
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
     this.maxKeyValueSize = conf.getInt("hbase.client.keyvalue.maxsize", -1);
 
-    int maxThreads = conf.getInt("hbase.htable.threads.max", Integer.MAX_VALUE);
-
-    // Using the "direct handoff" approach, new threads will only be created
-    // if it is necessary and will grow unbounded. This could be bad but in HCM
-    // we only create as many Runnables as there are region servers. It means
-    // it also scales when new region servers are added.
-    this.pool = new ThreadPoolExecutor(1, maxThreads,
-        60, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(),
-        new DaemonThreadFactory());
-    ((ThreadPoolExecutor)this.pool).allowCoreThreadTimeOut(true);
   }
 
   public Configuration getConfiguration() {
@@ -179,9 +178,6 @@ public class HTable implements HTableInterface {
       .getZooKeeperWrapper()
       .getRSDirectoryCount();
   }
-
-  // For multiput
-  private ExecutorService pool;
 
   /**
    * Tells whether or not a table is enabled or not. DO NOT USE THIS METHOD.
@@ -695,8 +691,7 @@ public class HTable implements HTableInterface {
 
   public void flushCommits() throws IOException {
     try {
-      connection.processBatchOfPuts(writeBuffer,
-          tableName, pool);
+      connection.processBatchOfPuts(writeBuffer, tableName);
     } finally {
       if (clearBufferOnFail) {
         writeBuffer.clear();
@@ -1142,23 +1137,20 @@ public class HTable implements HTableInterface {
   }
 
   static class DaemonThreadFactory implements ThreadFactory {
-    static final AtomicInteger poolNumber = new AtomicInteger(1);
         final ThreadGroup group;
-        final AtomicInteger threadNumber = new AtomicInteger(1);
+        int threadNumber = 1;
         final String namePrefix;
 
         DaemonThreadFactory() {
             SecurityManager s = System.getSecurityManager();
             group = (s != null)? s.getThreadGroup() :
                                  Thread.currentThread().getThreadGroup();
-            namePrefix = "hbase-table-pool" +
-                          poolNumber.getAndIncrement() +
-                         "-thread-";
+            namePrefix = "hbase-table-thread-";
         }
 
         public Thread newThread(Runnable r) {
             Thread t = new Thread(group, r,
-                                  namePrefix + threadNumber.getAndIncrement(),
+                                  namePrefix + (threadNumber++),
                                   0);
             if (!t.isDaemon())
                 t.setDaemon(true);

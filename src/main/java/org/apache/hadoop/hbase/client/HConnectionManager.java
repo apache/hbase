@@ -37,7 +37,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -1568,10 +1567,145 @@ public class HConnectionManager {
     }
 
     /**
-     * Process a batch of Puts on the given executor service.
+     * Process a single put request
+     * @param put The put request
+     * @param failed The failed request list
+     * @param tableName The table name for the put request
+     * @return The cause of exceptions when processing the put request.
+     * @throws IOException
+     */
+    private Throwable processSinglePut(Put put,
+        List<Put> failed, final byte[] tableName) throws IOException {
+      // Get server address
+      byte [] row = put.getRow();
+      HRegionLocation loc = locateRegion(tableName, row, true);
+      HServerAddress address = loc.getServerAddress();
+      byte [] regionName = loc.getRegionInfo().getRegionName();
+
+      // Convert the single put to the multiput
+      MultiPut multiPut = new MultiPut(address);
+      multiPut.add(regionName, put);
+
+      // Create the multiPutCallable
+      Callable<MultiPutResponse> multiPutCallable =
+        createPutCallable(multiPut.address, multiPut, tableName);
+
+      try {
+        // Get the MultiPutResponse
+        MultiPutResponse response = multiPutCallable.call();
+
+        // verify the result
+        Integer result = response.getAnswer(regionName);
+        if (result == null || result >= 0) {
+          LOG.debug("Failed all for region: " +
+              Bytes.toStringBinary(regionName));
+          failed.add(put);
+        }
+      } catch (Exception e) {
+        // process exceptions
+        LOG.debug("Failed all from " + address, e);
+        failed.add(put);
+
+        if (e.getCause() instanceof DoNotRetryIOException) {
+          // Just give up, leaving the batch put list in an
+          // untouched/semi-committed state
+          throw (DoNotRetryIOException) e.getCause();
+        }
+        return e.getCause();
+      }
+      return null;
+    }
+
+    /**
+     * Process a list of puts from a shared HTable thread pool.
+     * @param list The input put request list
+     * @param failed The failed put request list
+     * @param tableName The table name for the put request
+     * @throws IOException
+     */
+    private void processBatchOfMultiPut(List<Put> list,
+        List<Put> failed, final byte[] tableName) throws IOException {
+      Collections.sort(list);
+      Map<HServerAddress, MultiPut> regionPuts =
+          new HashMap<HServerAddress, MultiPut>();
+      // step 1:
+      //  break up into regionserver-sized chunks and build the data structs
+      for ( Put put : list ) {
+        byte [] row = put.getRow();
+
+        HRegionLocation loc = locateRegion(tableName, row, true);
+        HServerAddress address = loc.getServerAddress();
+        byte [] regionName = loc.getRegionInfo().getRegionName();
+
+        MultiPut mput = regionPuts.get(address);
+        if (mput == null) {
+          mput = new MultiPut(address);
+          regionPuts.put(address, mput);
+        }
+        mput.add(regionName, put);
+      }
+
+      // step 2:
+      //  make the requests
+      // Discard the map, just use a list now, makes error recovery easier.
+      List<MultiPut> multiPuts = new ArrayList<MultiPut>(regionPuts.values());
+
+      List<Future<MultiPutResponse>> futures =
+          new ArrayList<Future<MultiPutResponse>>(regionPuts.size());
+      for ( MultiPut put : multiPuts ) {
+        futures.add(HTable.multiPutThreadPool.submit(
+            createPutCallable(put.address, put, tableName)));
+      }
+
+      // step 3:
+      //  collect the failures and tries from step 1.
+      for (int i = 0; i < futures.size(); i++ ) {
+        Future<MultiPutResponse> future = futures.get(i);
+        MultiPut request = multiPuts.get(i);
+        try {
+          MultiPutResponse resp = future.get();
+
+          // For each region
+          for (Map.Entry<byte[], List<Put>> e : request.puts.entrySet()) {
+            Integer result = resp.getAnswer(e.getKey());
+            if (result == null) {
+              // failed
+              LOG.debug("Failed all for region: " +
+                  Bytes.toStringBinary(e.getKey()) + ", removing from cache");
+              failed.addAll(e.getValue());
+            } else if (result >= 0) {
+              // some failures
+              List<Put> lst = e.getValue();
+              failed.addAll(lst.subList(result, lst.size()));
+              LOG.debug("Failed past " + result + " for region: " +
+                  Bytes.toStringBinary(e.getKey()) + ", removing from cache");
+            }
+          }
+        } catch (InterruptedException e) {
+          // go into the failed list.
+          LOG.debug("Failed all from " + request.address, e);
+          failed.addAll(request.allPuts());
+        } catch (ExecutionException e) {
+          // all go into the failed list.
+          LOG.debug("Failed all from " + request.address, e);
+          failed.addAll(request.allPuts());
+
+          // Just give up, leaving the batch put list in an untouched/semi-committed state
+          if (e.getCause() instanceof DoNotRetryIOException) {
+            throw (DoNotRetryIOException) e.getCause();
+          }
+        }
+      }
+    }
+
+    /**
+     * If there are multiple puts in the list, process them from a
+     * a thread pool, which is shared across all the HTable instance.
+     *
+     * However, if there is only a single put in the list, process this request
+     * within the current thread.
      *
      * @param list the puts to make - successful puts will be removed.
-     * @param pool thread pool to execute requests on
      *
      * In the case of an exception, we take different actions depending on the
      * situation:
@@ -1582,118 +1716,51 @@ public class HConnectionManager {
      *  - Otherwise, we throw a generic exception indicating that an error occurred.
      *    The 'list' parameter is mutated to contain those puts that did not succeed.
      */
-    public void processBatchOfPuts(List<Put> list,
-                                   final byte[] tableName, ExecutorService pool) throws IOException {
+    public void processBatchOfPuts(List<Put> list, final byte[] tableName)
+    throws IOException {
       boolean singletonList = list.size() == 1;
       Throwable singleRowCause = null;
       for ( int tries = 0 ; tries < numRetries && !list.isEmpty(); ++tries) {
-        Collections.sort(list);
-        Map<HServerAddress, MultiPut> regionPuts =
-            new HashMap<HServerAddress, MultiPut>();
-        // step 1:
-        //  break up into regionserver-sized chunks and build the data structs
-        for ( Put put : list ) {
-          byte [] row = put.getRow();
-
-          HRegionLocation loc = locateRegion(tableName, row, true);
-          HServerAddress address = loc.getServerAddress();
-          byte [] regionName = loc.getRegionInfo().getRegionName();
-
-          MultiPut mput = regionPuts.get(address);
-          if (mput == null) {
-            mput = new MultiPut(address);
-            regionPuts.put(address, mput);
-          }
-          mput.add(regionName, put);
-        }
-
-        // step 2:
-        //  make the requests
-        // Discard the map, just use a list now, makes error recovery easier.
-        List<MultiPut> multiPuts = new ArrayList<MultiPut>(regionPuts.values());
-
-        List<Future<MultiPutResponse>> futures =
-            new ArrayList<Future<MultiPutResponse>>(regionPuts.size());
-        for ( MultiPut put : multiPuts ) {
-          futures.add(pool.submit(createPutCallable(put.address,
-              put,
-              tableName)));
-        }
-        // RUN!
         List<Put> failed = new ArrayList<Put>();
-
-        // step 3:
-        //  collect the failures and tries from step 1.
-        for (int i = 0; i < futures.size(); i++ ) {
-          Future<MultiPutResponse> future = futures.get(i);
-          MultiPut request = multiPuts.get(i);
-          try {
-            MultiPutResponse resp = future.get();
-
-            // For each region
-            for (Map.Entry<byte[], List<Put>> e : request.puts.entrySet()) {
-              Integer result = resp.getAnswer(e.getKey());
-              if (result == null) {
-                // failed
-                LOG.debug("Failed all for region: " +
-                    Bytes.toStringBinary(e.getKey()) + ", removing from cache");
-                failed.addAll(e.getValue());
-              } else if (result >= 0) {
-                // some failures
-                List<Put> lst = e.getValue();
-                failed.addAll(lst.subList(result, lst.size()));
-                LOG.debug("Failed past " + result + " for region: " +
-                    Bytes.toStringBinary(e.getKey()) + ", removing from cache");
-              }
-            }
-          } catch (InterruptedException e) {
-            // go into the failed list.
-            LOG.debug("Failed all from " + request.address, e);
-            failed.addAll(request.allPuts());
-          } catch (ExecutionException e) {
-            // all go into the failed list.
-            LOG.debug("Failed all from " + request.address, e);
-            failed.addAll(request.allPuts());
-
-            // Just give up, leaving the batch put list in an untouched/semi-committed state
-            if (e.getCause() instanceof DoNotRetryIOException) {
-              throw (DoNotRetryIOException) e.getCause();
-            }
-
-            if (singletonList) {
-              // be richer for reporting in a 1 row case.
-              singleRowCause = e.getCause();
-            }
-          }
+        if (singletonList) {
+          singleRowCause = this.processSinglePut(list.get(0), failed, tableName);
+        } else {
+          this.processBatchOfMultiPut(list, failed, tableName);
         }
+
         list.clear();
         if (!failed.isEmpty()) {
+          // clear the cache for failed puts
           for (Put failedPut: failed) {
             deleteCachedLocation(tableName, failedPut.getRow());
           }
 
+          // retry the failed ones after sleep
           list.addAll(failed);
-
           long sleepTime = getPauseTime(tries);
           LOG.debug("processBatchOfPuts had some failures, sleeping for " + sleepTime +
               " ms!");
           try {
             Thread.sleep(sleepTime);
           } catch (InterruptedException ignored) {
+            // ignore here
           }
         }
       }
+
+      // Get exhausted after the retries
       if (!list.isEmpty()) {
         if (singletonList && singleRowCause != null) {
-          throw new IOException(singleRowCause);
+          throw new IOException("Exhaused retrying " + numRetries +
+              " and the last exception caught is " + singleRowCause);
         }
 
         // ran out of retries and didnt succeed everything!
-        throw new RetriesExhaustedException("Still had " + list.size() + " puts left after retrying " +
+        throw new RetriesExhaustedException("Still had " + list.size() +
+            " puts left after retrying " +
             numRetries + " times.");
       }
     }
-
 
     private Callable<MultiPutResponse> createPutCallable(
         final HServerAddress address, final MultiPut puts,

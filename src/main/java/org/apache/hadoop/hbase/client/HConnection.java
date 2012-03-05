@@ -233,8 +233,8 @@ public interface HConnection extends Closeable {
   public int processBatchOfDeletes(List<Delete> list, byte[] tableName)
   throws IOException;
 
-  public void processBatchOfPuts(List<Put> list,
-                                 final byte[] tableName, ExecutorService pool) throws IOException;
+  public void processBatchOfPuts(List<Put> list, final byte[] tableName)
+  throws IOException;
 
   /**
    * Enable or disable region cache prefetch for the table. It will be
