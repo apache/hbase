@@ -18,15 +18,18 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
-
 import java.io.IOException;
 import java.util.List;
+
+import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 
 /**
  * A custom protocol defined for maintaining and querying access control lists.
  */
 public interface AccessControllerProtocol extends CoprocessorProtocol {
+
+  public static final long VERSION = 1L;
+
   /**
    * Grants the given user or group the privilege to perform the given actions
    * over the specified scope contained in {@link TablePermission}
@@ -65,4 +68,18 @@ public interface AccessControllerProtocol extends CoprocessorProtocol {
    */
   public List<UserPermission> getUserPermissions(byte[] tableName)
       throws IOException;
+
+  /**
+   * Checks whether the given Permissions will pass the access checks for the
+   * current user. Global permissions can be checked from the -acl- table
+   * or any other table, however TablePermissions can only be checked by
+   * the table's regions. If access control checks fail this method throws
+   * AccessDeniedException.
+   * @param permissions to check for. Permission subclasses can be used
+   * to do more specific checks at the table/family/column level.
+   * @throws IOException if there is an error checking the permissions
+   */
+  public void checkPermissions(Permission[] permissions)
+      throws IOException;
+
 }

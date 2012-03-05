@@ -14,17 +14,22 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -52,8 +57,11 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.IOException;
-import java.util.*;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  * Provides basic authorization checks for data access and administrative
@@ -955,6 +963,40 @@ public class AccessController extends BaseRegionObserver
       throw new CoprocessorException(AccessController.class, "This method " +
           "can only execute at " +
           Bytes.toString(AccessControlLists.ACL_TABLE_NAME) + " table.");
+    }
+  }
+
+  @Override
+  public void checkPermissions(Permission[] permissions) throws IOException {
+    byte[] tableName = regionEnv.getRegion().getTableDesc().getName();
+    for (Permission permission : permissions) {
+      if (permission instanceof TablePermission) {
+        TablePermission tperm = (TablePermission) permission;
+        for (Permission.Action action : permission.getActions()) {
+          if (!Arrays.equals(tperm.getTable(), tableName)) {
+            throw new CoprocessorException(AccessController.class, String.format("This method "
+                + "can only execute at the table specified in TablePermission. " +
+                "Table of the region:%s , requested table:%s", Bytes.toString(tableName),
+                Bytes.toString(tperm.getTable())));
+          }
+
+          HashMap<byte[], Set<byte[]>> familyMap = Maps.newHashMapWithExpectedSize(1);
+          if (tperm.getFamily() != null) {
+            if (tperm.getQualifier() != null) {
+              familyMap.put(tperm.getFamily(), Sets.newHashSet(tperm.getQualifier()));
+            } else {
+              familyMap.put(tperm.getFamily(), null);
+            }
+          }
+
+          requirePermission(action, regionEnv, familyMap);
+        }
+
+      } else {
+        for (Permission.Action action : permission.getActions()) {
+          requirePermission(action);
+        }
+      }
     }
   }
 
