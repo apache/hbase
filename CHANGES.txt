@@ -4,6 +4,8 @@ Release 0.92.1 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-5228  [REST] Rip out "transform" feature
    HBASE-5255  Use singletons for OperationStatus to save memory (Benoit)
+   HBASE-5358  HBaseObjectWritable should be able to serialize/deserialize generic
+               arrays (Enis)
 
   BUG FIXES
    HBASE-5176  AssignmentManager#getRegion: logging nit  adds a redundant '+' (Karthik K)
