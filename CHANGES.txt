@@ -65,6 +65,8 @@ Release 0.92.1 - Unreleased
    HBASE-5286  bin/hbase's logic of adding Hadoop jar files to the classpath
                is fragile when presented with split packaged Hadoop 0.23
                installation (Roman Shaposhnik)
+   HBASE-5531  Maven hadoop profile (version 23) needs to be updated with latest 23 snapshot
+               (Laxman) 
  
  
   IMPROVEMENTS
