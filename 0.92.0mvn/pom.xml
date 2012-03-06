@@ -34,7 +34,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-  <version>0.92.1-SNAPSHOT</version>
+  <version>0.92.0-SNAPSHOT</version>
   <name>HBase</name>
   <description>
     HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
@@ -279,7 +279,6 @@
           <artifactId>maven-release-plugin</artifactId>
           <configuration>
             <releaseProfiles>release apache-release</releaseProfiles>
-            <goals>jar:test-jar deploy assembly:assembly</goals>
             <!--This stops our running tests for each stage of maven release.
                 We may want to disable this because it looks like this might
                 be responsible for our not including test jar in our release
