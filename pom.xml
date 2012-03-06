@@ -284,7 +284,10 @@
                 to maven repository. Remove in 0.94 and trunk since tests
                 run faster there?
               -->
+ <!--
+  Edit out to see if this is reason we are not building in the hbase tests jar
             <arguments>-Dmaven.test.skip</arguments>
+-->
           </configuration>
         </plugin>
         <plugin>
