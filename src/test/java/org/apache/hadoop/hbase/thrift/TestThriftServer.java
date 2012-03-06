@@ -116,6 +116,9 @@ public class TestThriftServer {
   public void doTestTableCreateDrop() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
+    doTestTableCreateDrop(handler);
+  }
+  public static void doTestTableCreateDrop(Hbase.Iface handler) throws Exception {
     createTestTables(handler);
     dropTestTables(handler);
   }
@@ -420,6 +423,11 @@ public class TestThriftServer {
   public void doTestGetTableRegions() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
+    doTestGetTableRegions(handler);
+  }
+
+  public static void doTestGetTableRegions(Hbase.Iface handler)
+      throws Exception {
     handler.createTable(tableAname, getColumnDescriptors());
     int regionCount = handler.getTableRegions(tableAname).size();
     assertEquals("empty table should have only 1 region, " +
