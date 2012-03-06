@@ -194,22 +194,19 @@ public class TestThriftServerCmdLine {
     }
 
     sock.open();
-    TProtocol prot;
-    if (specifyCompact) {
-      prot = new TCompactProtocol(transport);
-    } else {
-      prot = new TBinaryProtocol(transport);
+    try {
+      TProtocol prot;
+      if (specifyCompact) {
+        prot = new TCompactProtocol(transport);
+      } else {
+        prot = new TBinaryProtocol(transport);
+      }
+      Hbase.Client client = new Hbase.Client(prot);
+      TestThriftServer.doTestTableCreateDrop(client);
+      TestThriftServer.doTestGetTableRegions(client);
+    } finally {
+      sock.close();
     }
-    Hbase.Client client = new Hbase.Client(prot);
-    List<ByteBuffer> tableNames = client.getTableNames();
-    if (tableNames.isEmpty()) {
-      TestThriftServer.createTestTables(client);
-      assertEquals(2, client.getTableNames().size());
-    } else {
-      assertEquals(2, tableNames.size());
-      assertEquals(2, client.getColumnDescriptors(tableNames.get(0)).size());
-    }
-    sock.close();
   }
 
   private void stopCmdLineThread() throws Exception {
