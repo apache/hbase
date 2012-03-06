@@ -20,12 +20,17 @@
 package org.apache.hadoop.hbase.client;
 
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -40,9 +45,9 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Writables;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -58,13 +63,13 @@ public class TestAdmin {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private HBaseAdmin admin;
-
+  private static final int NUM_REGION_SERVER = 4;
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
     TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 6);
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster(NUM_REGION_SERVER);
   }
 
   @AfterClass
@@ -98,6 +103,64 @@ public class TestAdmin {
     List<Pair<HRegionInfo,HServerAddress>>  metaRegions =
         master.getTableRegions(HConstants.META_TABLE_NAME);
     assertTrue(metaRegions.size() != 0);
+  }
+
+  @Test
+  public void testCreateTableWithFavoriteNodes() throws IOException, InterruptedException {
+    Set<HServerAddress> set = new HashSet<HServerAddress>();
+    final int REGION_NUM = 1 ;
+    set.addAll(getRegionServerSetForNewCreatedTable("test1", REGION_NUM));
+    assertEquals(REGION_NUM, set.size());
+
+    set.addAll(getRegionServerSetForNewCreatedTable("test2", REGION_NUM));
+    assertEquals(REGION_NUM * 2, set.size());
+
+    set.addAll(getRegionServerSetForNewCreatedTable("test3", 100));
+    assertEquals(NUM_REGION_SERVER, set.size());
+  }
+
+  private Collection<HServerAddress> getRegionServerSetForNewCreatedTable(
+      String table, int regionNum) throws IOException {
+    byte[] tableName = Bytes.toBytes(table);
+    int expectedRegions = regionNum;
+    byte[][] splitKeys = new byte[expectedRegions - 1][];
+    for (int i = 1; i < expectedRegions; i++) {
+      byte splitKey = (byte) i;
+      splitKeys[i - 1] = new byte[] { splitKey, splitKey, splitKey };
+    }
+
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    admin.createTable(desc, splitKeys);
+
+    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Map<HRegionInfo, HServerAddress> regions = ht.getRegionsInfo();
+    assertEquals("Tried to create " + expectedRegions + " regions "
+        + "but only found " + regions.size(), expectedRegions, regions.size());
+
+    // scan the meta table to verify the favorite nodes has been added.
+    int favoriteNodeNum = 0;
+    HTable metaTable = new HTable(TEST_UTIL.getConfiguration(),
+        HConstants.META_TABLE_NAME);
+    ResultScanner s = metaTable.getScanner(new Scan());
+    for (Result result : s) {
+      HRegionInfo info = Writables.getHRegionInfo(result.getValue(
+          HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
+      if (Bytes.compareTo(info.getTableDesc().getName(), tableName) == 0) {
+        byte[] favoriteNodes = result.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.FAVOREDNODES_QUALIFIER);
+        if (favoriteNodes != null && favoriteNodes.length != 0) {
+          LOG.info("Region: " + info.getEncodedName() + " Favorite Nodes: "
+              + Bytes.toString(favoriteNodes));
+          favoriteNodeNum++;
+        }
+      }
+    }
+    s.close();
+    assertEquals("Tried to add " + expectedRegions
+        + " favorite nodes int meta " + "but only found " + favoriteNodeNum,
+        expectedRegions, favoriteNodeNum);
+    return regions.values();
   }
 
   @Test

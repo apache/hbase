@@ -186,6 +186,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
 
   @Override
   public int compareTo(HServerAddress o) {
+    if (address == null) return -1;
     // Addresses as Strings may not compare though address is for the one
     // server with only difference being that one address has hostname
     // resolved whereas other only has IP.

@@ -103,6 +103,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RegionPlacement;
 import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
@@ -211,6 +212,8 @@ public class HMaster extends Thread implements HMasterInterface,
 
   public ThreadPoolExecutor logSplitThreadPool;
 
+  public RegionPlacementPolicy regionPlacement;
+
   /** Log directories split on startup for testing master failover */
   private List<String> logDirsSplitOnStartup;
 
@@ -315,6 +318,8 @@ public class HMaster extends Thread implements HMasterInterface,
             return t;
           }
         });
+
+    regionPlacement = new RegionPlacement(this.conf);
   }
 
   /**
@@ -1273,8 +1278,21 @@ public class HMaster extends Thread implements HMasterInterface,
     } finally {
       srvr.close(scannerid);
     }
+
+    // get the favorite nodes map from the regionPlacement
+    Map<HRegionInfo, List<HServerInfo>> favoriteNodesMap =
+      regionPlacement.getFaroredNodesForNewRegions(newRegions,
+          getClusterStatus().getServerInfo());
+
     for(HRegionInfo newRegion : newRegions) {
-      regionManager.createRegion(newRegion, srvr, metaRegionName);
+      if (favoriteNodesMap != null) {
+        // create the region with favorite nodes.
+        List<HServerInfo> favoriteNodes = favoriteNodesMap.get(newRegion);
+        regionManager.createRegion(newRegion, srvr, metaRegionName,
+            favoriteNodes);
+      } else {
+        regionManager.createRegion(newRegion, srvr, metaRegionName);
+      }
     }
     // kick off a meta scan right away to assign the newly created regions
     regionManager.metaScannerThread.triggerNow();

@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
@@ -903,6 +904,23 @@ public class RegionManager {
   public void createRegion(HRegionInfo newRegion, HRegionInterface server,
       byte [] metaRegionName)
   throws IOException {
+    createRegion(newRegion, server, metaRegionName, null);
+  }
+
+  /**
+   * Create a new HRegion, put a row for it into META (or ROOT), and mark the
+   * new region unassigned so that it will get assigned to a region server.
+   * @param newRegion HRegionInfo for the region to create
+   * @param server server hosting the META (or ROOT) region where the new
+   * region needs to be noted
+   * @param metaRegionName name of the meta region where new region is to be
+   * @param favoriteNodeList The list of favorite nodes for this new region.
+   * written
+   * @throws IOException
+   */
+  public void createRegion(HRegionInfo newRegion, HRegionInterface server,
+      byte [] metaRegionName,  List<HServerInfo> favoriteNodeList)
+  throws IOException {
     // 2. Create the HRegion
     HRegion region = HRegion.createHRegion(newRegion, this.master.getRootDir(),
       master.getConfiguration());
@@ -912,8 +930,21 @@ public class RegionManager {
     byte [] regionName = region.getRegionName();
 
     Put put = new Put(regionName);
+    // 3.1 Put the region info into meta table.
     put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
         Writables.getBytes(info));
+
+    // 3.2 Put the favorite nodes into meta.
+    if (favoriteNodeList != null) {
+      String favoredNodes = "";
+      for (HServerInfo favoriteServer : favoriteNodeList) {
+        favoredNodes += favoriteServer.getHostnamePort() + ",";
+      }
+      favoredNodes = favoredNodes.substring(0, favoredNodes.length() - 1);
+      put.add(HConstants.CATALOG_FAMILY, HConstants.FAVOREDNODES_QUALIFIER,
+          EnvironmentEdgeManager.currentTimeMillis(), favoredNodes.getBytes());
+    }
+
     server.put(metaRegionName, put);
 
     // 4. Close the new region to flush it to disk.  Close its log file too.
