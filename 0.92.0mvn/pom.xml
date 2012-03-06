@@ -34,7 +34,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-  <version>0.92.1-SNAPSHOT</version>
+  <version>0.92.0-SNAPSHOT</version>
   <name>HBase</name>
   <description>
     HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
@@ -286,7 +286,7 @@
                 to maven repository. Remove in 0.94 and trunk since tests
                 run faster there?
               -->
-            <arguments>-Dmaven.test.skip</arguments>
+            <arguments>-Dmaven.test.skip.exec</arguments>
           </configuration>
         </plugin>
         <plugin>
