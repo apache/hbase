@@ -281,8 +281,7 @@ public class ScanQueryMatcher {
         // first ignore delete markers if the scanner can do so, and the
         // range does not include the marker
         boolean includeDeleteMarker = seePastDeleteMarkers ?
-            // +1, to allow a range between a delete and put of same TS
-            tr.withinTimeRange(timestamp+1) :
+            tr.withinTimeRange(timestamp) :
             tr.withinOrAfterTimeRange(timestamp);
         if (includeDeleteMarker) {
           this.deletes.add(bytes, offset, qualLength, timestamp, type);
