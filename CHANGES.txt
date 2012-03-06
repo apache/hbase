@@ -67,6 +67,7 @@ Release 0.92.1 - Unreleased
                installation (Roman Shaposhnik)
    HBASE-5531  Maven hadoop profile (version 23) needs to be updated with latest 23 snapshot
                (Laxman) 
+   HBASE-5522  hbase 0.92 test artifacts are missing from Maven central
  
  
   IMPROVEMENTS
