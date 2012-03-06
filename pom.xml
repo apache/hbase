@@ -34,7 +34,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-  <version>0.92.1-SNAPSHOT</version>
+  <version>0.92.0-SNAPSHOT</version>
   <name>HBase</name>
   <description>
     HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
@@ -274,19 +274,6 @@
          can be overwritten here. -->
     <pluginManagement>
       <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-release-plugin</artifactId>
-          <configuration>
-            <!--This stops our running tests for each stage of maven release.
-                We may want to disable this because it looks like this might
-                be responsible for our not including test jar in our release
-                to maven repository. Remove in 0.94 and trunk since tests
-                run faster there?
-              -->
-            <arguments>-Dmaven.test.skip</arguments>
-          </configuration>
-        </plugin>
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
