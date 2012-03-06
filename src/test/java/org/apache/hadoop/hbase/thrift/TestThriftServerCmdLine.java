@@ -87,15 +87,6 @@ public class TestThriftServerCmdLine {
             continue;
           }
           for (boolean specifyCompact : new boolean[] {false, true}) {
-            // TODO: We observed that when
-            // (specifyFramed, specifyCompact) == (true, false).
-            // The method getRegionInfo() gets a corrupted parameter. This may
-            // be a thrift bug that needs further investigation. In this test we
-            // temporarily exclude these cases to avoid test failures.
-            if ((specifyFramed == true || implType.isAlwaysFramed ) &&
-                specifyCompact == false) {
-              continue;
-            }
             parameters.add(new Object[]{implType, new Boolean(specifyFramed),
                 new Boolean(specifyBindIP), new Boolean(specifyCompact)});
           }
@@ -217,6 +208,7 @@ public class TestThriftServerCmdLine {
       Hbase.Client client = new Hbase.Client(prot);
       TestThriftServer.doTestTableCreateDrop(client);
       TestThriftServer.doTestGetRegionInfo(client);
+      TestThriftServer.doTestGetTableRegions(client);
     } finally {
       sock.close();
     }

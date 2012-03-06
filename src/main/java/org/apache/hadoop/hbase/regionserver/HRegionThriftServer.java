@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler.toBytes;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -119,8 +121,9 @@ public class HRegionThriftServer extends Thread {
                                                 long timestamp,
       Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       try {
-        byte [] row = rowb.array();
-        HTable table = getTable(tableName.array());
+        byte[] row = toBytes(rowb);
+
+        HTable table = getTable(toBytes(tableName));
         HRegionLocation location = table.getRegionLocation(row, false);
         byte[] regionName = location.getRegionInfo().getRegionName();
 
@@ -130,11 +133,9 @@ public class HRegionThriftServer extends Thread {
           Result result = rs.get(regionName, get);
           return ThriftUtilities.rowResultFromHBase(result);
         }
-        ByteBuffer[] columnArr = columns.toArray(
-                                   new ByteBuffer[columns.size()]);
         Get get = new Get(row);
-        for(ByteBuffer column : columnArr) {
-          byte [][] famAndQf = KeyValue.parseColumn(column.array());
+        for(ByteBuffer column : columns) {
+          byte [][] famAndQf = KeyValue.parseColumn(toBytes(column));
           if (famAndQf.length == 1) {
             get.addFamily(famAndQf[0]);
           } else {

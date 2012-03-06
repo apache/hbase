@@ -585,7 +585,7 @@ public class ThriftServerRunner implements Runnable {
     throws IOError {
       try{
         List<HRegionInfo> hris =
-            this.getHBaseAdmin().getTableRegions(tableName.array());
+            this.getHBaseAdmin().getTableRegions(toBytes(tableName));
         List<TRegionInfo> regions = new ArrayList<TRegionInfo>();
 
         if (hris != null) {
@@ -604,6 +604,18 @@ public class ThriftServerRunner implements Runnable {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
+    }
+
+    /**
+     * Convert ByteBuffer to byte array. Note that this cannot be replaced by
+     * Bytes.toBytes().
+     */
+    public static byte[] toBytes(ByteBuffer bb) {
+      byte[] result = new byte[bb.remaining()];
+      // Make a duplicate so the position doesn't change
+      ByteBuffer dup = bb.duplicate();
+      dup.get(result, 0, result.length);
+      return result;
     }
 
     @Deprecated
@@ -1337,12 +1349,13 @@ public class ThriftServerRunner implements Runnable {
     public TRegionInfo getRegionInfo(ByteBuffer searchRow) throws IOError {
       try {
         HTable table = getTable(HConstants.META_TABLE_NAME);
+        byte[] row = toBytes(searchRow);
         Result startRowResult = table.getRowOrBefore(
-          searchRow.array(), HConstants.CATALOG_FAMILY);
+          row, HConstants.CATALOG_FAMILY);
 
         if (startRowResult == null) {
           throw new IOException("Cannot find row in .META., row="
-                                + Bytes.toStringBinary(searchRow.array()));
+                                + Bytes.toStringBinary(row));
         }
 
         // find region start and end keys
@@ -1351,7 +1364,7 @@ public class ThriftServerRunner implements Runnable {
         if (value == null || value.length == 0) {
           throw new IOException("HRegionInfo REGIONINFO was null or " +
                                 " empty in Meta for row="
-                                + Bytes.toStringBinary(searchRow.array()));
+                                + Bytes.toStringBinary(row));
         }
         HRegionInfo regionInfo = Writables.getHRegionInfo(value);
         TRegionInfo region = new TRegionInfo();
