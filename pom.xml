@@ -327,15 +327,25 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
-          <version>${maven-release.version}</version>
+          <!--Making a release I've been using mvn 3.0 and specifying the apache-release
+              profile on the command line as follows:
+
+              $ ~/bin/mvn/bin/mvn  -Papache-release release:perform
+              
+              I've also been kiling the release:prepare step mid-way to check the
+              release.properties it generates at the top-level.  Sometimes it refers
+              to HEAD rather than to the svn branch.
+           -->
           <configuration>
+            <!--You need this profile. It'll sign your artifacts.
+                I'm not sure if this config. actually works though.
+                I've been specifying -Papache-release on the command-line
+             -->
+            <releaseProfiles>apache-release</releaseProfiles>
             <!--This stops our running tests for each stage of maven release.
-                We may want to disable this because it looks like this might
-                be responsible for our not including test jar in our release
-                to maven repository. Remove in 0.94 and trunk since tests
-                run faster there?
+                But it builds the test jar.  From SUREFIRE-172.      
               -->
-            <arguments>-Dmaven.test.skip</arguments>
+            <arguments>-Dmaven.test.skip.exec</arguments>
           </configuration>
         </plugin>
         <plugin>
