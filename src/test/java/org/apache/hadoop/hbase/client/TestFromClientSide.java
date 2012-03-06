@@ -178,7 +178,7 @@ public class TestFromClientSide {
      p.add(FAMILY, C0, T3);
      h.put(p);
 
-     Delete d = new Delete(T1, ts+2, null);
+     Delete d = new Delete(T1, ts+3, null);
      h.delete(d);
 
      d = new Delete(T1, ts+3, null);

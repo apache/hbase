@@ -447,16 +447,16 @@ public class TestKeepDeletes extends HBaseTestCase {
     p.add(c1, c1, T2);
     region.put(p);
 
-    Delete d = new Delete(T1, ts+1, null);
-    d.deleteColumns(c0, c0, ts+1);
+    Delete d = new Delete(T1, ts+2, null);
+    d.deleteColumns(c0, c0, ts+2);
     region.delete(d, null, true);
 
-    d = new Delete(T1, ts+1, null);
-    d.deleteFamily(c1, ts+1);
+    d = new Delete(T1, ts+2, null);
+    d.deleteFamily(c1, ts+2);
     region.delete(d, null, true);
 
-    d = new Delete(T2, ts+1, null);
-    d.deleteFamily(c0, ts+1);
+    d = new Delete(T2, ts+2, null);
+    d.deleteFamily(c0, ts+2);
     region.delete(d, null, true);
 
     // add an older delete, to make sure it is filtered
@@ -464,7 +464,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     d.deleteFamily(c1, ts-10);
     region.delete(d, null, true);
 
-    // ts + 2 does NOT include the delete at ts+1
+    // ts + 2 does NOT include the delete at ts+2
     checkGet(region, T1, c0, c0, ts+2, T2, T1);
     checkGet(region, T1, c0, c1, ts+2, T2, T1);
     checkGet(region, T1, c1, c0, ts+2, T2, T1);
@@ -610,10 +610,10 @@ public class TestKeepDeletes extends HBaseTestCase {
     region.put(p);
 
     // family markers are each family
-    Delete d = new Delete(T1, ts, null);
+    Delete d = new Delete(T1, ts+1, null);
     region.delete(d, null, true);
 
-    d = new Delete(T2, ts+1, null);
+    d = new Delete(T2, ts+2, null);
     region.delete(d, null, true);
 
     Scan s = new Scan(T1);
