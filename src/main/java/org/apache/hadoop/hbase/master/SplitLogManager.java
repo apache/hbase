@@ -487,7 +487,10 @@ public class SplitLogManager extends ZooKeeperListener {
           new_version, workerName);
       tot_mgr_heartbeat.incrementAndGet();
     } else {
-      LOG.warn("got dup heartbeat for " + path + " ver = " + new_version);
+      // duplicate heartbeats - heartbeats w/o zk node version
+      // changing - are possible. The timeout thread does
+      // getDataSetWatch() just to check whether a node still
+      // exists or not
     }
     return;
   }
