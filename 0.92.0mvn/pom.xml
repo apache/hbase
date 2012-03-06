@@ -45,9 +45,9 @@
   <url>http://hbase.apache.org</url>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/trunk</developerConnection>
-    <url>http://svn.apache.org/viewvc/hbase/trunk</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/tags/0.92.0mvn4</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/tags/0.92.0mvn4</developerConnection>
+    <url>http://svn.apache.org/viewvc/hbase/tags/0.92.0mvn4</url>
   </scm>
 
   <issueManagement>
@@ -274,6 +274,22 @@
          can be overwritten here. -->
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-release-plugin</artifactId>
+          <version>${maven-release.version}</version>
+          <configuration>
+            <releaseProfiles>release apache-release</releaseProfiles>
+            <goals>jar:test-jar deploy assembly:assembly</goals>
+            <!--This stops our running tests for each stage of maven release.
+                We may want to disable this because it looks like this might
+                be responsible for our not including test jar in our release
+                to maven repository. Remove in 0.94 and trunk since tests
+                run faster there?
+              -->
+            <arguments>-Dmaven.test.skip</arguments>
+          </configuration>
+        </plugin>
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
