@@ -286,7 +286,9 @@
                 to maven repository. Remove in 0.94 and trunk since tests
                 run faster there?
               -->
+            <!--
             <arguments>-Dmaven.test.skip</arguments>
+            -->
           </configuration>
         </plugin>
         <plugin>
