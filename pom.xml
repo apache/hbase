@@ -277,8 +277,15 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
-          <version>${maven-release.version}</version>
           <configuration>
+            <releaseProfiles>release apache-release</releaseProfiles>
+            <goals>jar:test-jar deploy assembly:assembly</goals>
+            <!--This stops our running tests for each stage of maven release.
+                We may want to disable this because it looks like this might
+                be responsible for our not including test jar in our release
+                to maven repository. Remove in 0.94 and trunk since tests
+                run faster there?
+              -->
             <arguments>-Dmaven.test.skip</arguments>
           </configuration>
         </plugin>
@@ -807,7 +814,6 @@
     <thrift.version>0.7.0</thrift.version>
     <zookeeper.version>3.4.2</zookeeper.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
-    <maven-release.version>2.2.2</maven-release.version>
 
     <package.prefix>/usr</package.prefix>	           
     <package.conf.dir>/etc/hbase</package.conf.dir>  
@@ -1108,14 +1114,7 @@
       <version>${commons-math.version}</version>
       <scope>test</scope>
     </dependency>
-    <!-- Publish dependencies -->
-    <dependency>
-      <groupId>org.apache.maven.plugins</groupId>
-      <artifactId>maven-release-plugin</artifactId>
-      <version>${maven-release.version}</version>
-    </dependency>
   </dependencies>
-  
 
   <!--
   To publish, use the following settings.xml file ( placed in ~/.m2/settings.xml )
