@@ -19,13 +19,11 @@ package org.apache.hadoop.hbase.master;
 
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.hbase.HServerLoad;
 
 /**
  * This is the JMX management interface for Hbase master information
  */
-@Evolving
 public interface MXBean {
 
   /**
