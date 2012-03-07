@@ -69,6 +69,7 @@ Release 0.92.1 - Unreleased
                (Laxman) 
    HBASE-5522  hbase 0.92 test artifacts are missing from Maven central
    HBASE-5519  Incorrect warning in splitlogmanager (Prakash Khemani)
+   HBASE-5537  MXBean shouldn't have a dependence on InterfaceStability until 0.96
  
  
   IMPROVEMENTS

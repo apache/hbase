@@ -18,12 +18,9 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
-
 /**
  * This is the JMX management interface for HBase Region Server information
  */
-@Evolving
 public interface MXBean {
 
   /**
