@@ -49,9 +49,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -78,7 +80,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -88,13 +89,14 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowLock;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
+import org.apache.hadoop.hbase.coprocessor.RowProcessor;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
-import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -228,13 +230,14 @@ public class HRegion implements HeapSize { // , Writable{
   final Configuration conf;
   final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
+  static final long DEFAULT_ROW_PROCESSOR_TIMEOUT = 10 * 1000L;
   final HRegionInfo regionInfo;
   final Path regiondir;
   KeyValue.KVComparator comparator;
 
   private ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
 
-  /*
+  /**
    * @return The smallest mvcc readPoint across all the scanners in this
    * region. Writes older than this readPoint, are included  in every
    * read operation.
@@ -297,6 +300,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   long memstoreFlushSize;
   final long timestampSlop;
+  final long rowProcessorTimeout;
   private volatile long lastFlushTime;
   final RegionServerServices rsServices;
   private List<Pair<Long, Long>> recentFlushes = new ArrayList<Pair<Long,Long>>();
@@ -413,6 +417,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.rsServices = null;
     this.fs = null;
     this.timestampSlop = HConstants.LATEST_TIMESTAMP;
+    this.rowProcessorTimeout = DEFAULT_ROW_PROCESSOR_TIMEOUT;
     this.memstoreFlushSize = 0L;
     this.log = null;
     this.regiondir = null;
@@ -475,6 +480,9 @@ public class HRegion implements HeapSize { // , Writable{
     this.timestampSlop = conf.getLong(
         "hbase.hregion.keyvalue.timestamp.slop.millisecs",
         HConstants.LATEST_TIMESTAMP);
+
+    this.rowProcessorTimeout = conf.getLong(
+        "hbase.hregion.row.processor.timeout", DEFAULT_ROW_PROCESSOR_TIMEOUT);
 
     // don't initialize coprocessors if not running within a regionserver
     // TODO: revisit if coprocessors should load in other cases
@@ -4288,6 +4296,155 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
+  /**
+   * Performs atomic multiple reads and writes on a given row.
+   * @param processor The object defines the reads and writes to a row.
+   */
+  public void processRow(RowProcessor<?> processor)
+      throws IOException {
+    byte[] row = processor.getRow();
+    checkRow(row, "processRow");
+    if (!processor.readOnly()) {
+      checkReadOnly();
+    }
+    checkResources();
+
+    MultiVersionConsistencyControl.WriteEntry writeEntry = null;
+
+    startRegionOperation();
+
+    boolean locked = false;
+    boolean walSyncSuccessful = false;
+    Integer rowLockID = null;
+    long addedSize = 0;
+    List<KeyValue> mutations = new ArrayList<KeyValue>();
+    try {
+      // 1. Row lock
+      rowLockID = getLock(null, row, true);
+
+      // 2. Region lock
+      this.updatesLock.readLock().lock();
+      locked = true;
+      long now = EnvironmentEdgeManager.currentTimeMillis();
+      try {
+        // 3. Let the processor scan the row and generate mutations
+        WALEdit walEdits = new WALEdit();
+        doProcessRowWithTimeout(processor, now, rowScanner, mutations,
+            walEdits, rowProcessorTimeout);
+        if (processor.readOnly() && !mutations.isEmpty()) {
+          throw new IOException(
+              "Processor is readOnly but generating mutations on row:" +
+              Bytes.toStringBinary(row));
+        }
+
+        if (!mutations.isEmpty()) {
+          // 4. Get a mvcc write number
+          writeEntry = mvcc.beginMemstoreInsert();
+          // 5. Apply to memstore and a WALEdit
+          for (KeyValue kv : mutations) {
+            kv.setMemstoreTS(writeEntry.getWriteNumber());
+            walEdits.add(kv);
+            addedSize += stores.get(kv.getFamily()).add(kv);
+          }
+
+          long txid = 0;
+          // 6. Append no sync
+          if (!walEdits.isEmpty()) {
+            txid = this.log.appendNoSync(this.regionInfo,
+                this.htableDescriptor.getName(), walEdits,
+                processor.getClusterId(), now, this.htableDescriptor);
+          }
+          // 7. Release region lock
+          if (locked) {
+            this.updatesLock.readLock().unlock();
+            locked = false;
+          }
+          // 8. Release row lock
+          if (rowLockID != null) {
+            releaseRowLock(rowLockID);
+            rowLockID = null;
+          }
+          // 9. Sync edit log
+          if (txid != 0) {
+            this.log.sync(txid);
+          }
+          walSyncSuccessful = true;
+        }
+      } finally {
+        if (!mutations.isEmpty() && !walSyncSuccessful) {
+          LOG.warn("Wal sync failed. Roll back " + mutations.size() +
+              " memstore keyvalues for row:" + processor.getRow());
+          for (KeyValue kv : mutations) {
+            stores.get(kv.getFamily()).rollback(kv);
+          }
+        }
+        // 10. Roll mvcc forward
+        if (writeEntry != null) {
+          mvcc.completeMemstoreInsert(writeEntry);
+          writeEntry = null;
+        }
+        if (locked) {
+          this.updatesLock.readLock().unlock();
+          locked = false;
+        }
+        if (rowLockID != null) {
+          releaseRowLock(rowLockID);
+          rowLockID = null;
+        }
+      }
+    } finally {
+      closeRegionOperation();
+      if (!mutations.isEmpty() &&
+          isFlushSize(this.addAndGetGlobalMemstoreSize(addedSize))) {
+        requestFlush();
+      }
+    }
+  }
+
+  private void doProcessRowWithTimeout(final RowProcessor<?> processor,
+                                       final long now,
+                                       final RowProcessor.RowScanner scanner,
+                                       final List<KeyValue> mutations,
+                                       final WALEdit walEdits,
+                                       final long timeout) throws IOException {
+    FutureTask<Void> task =
+      new FutureTask<Void>(new Callable<Void>() {
+        @Override
+        public Void call() throws IOException {
+          processor.process(now, scanner, mutations, walEdits);
+          return null;
+        }
+      });
+    Thread t = new Thread(task);
+    t.setDaemon(true);
+    t.start();
+    try {
+      task.get(timeout, TimeUnit.MILLISECONDS);
+    } catch (TimeoutException te) {
+      LOG.error("RowProcessor timeout on row:" +
+          Bytes.toStringBinary(processor.getRow()) + " timeout:" + timeout, te);
+      throw new IOException(te);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+  final private RowProcessor.RowScanner rowScanner =
+      new RowProcessor.RowScanner() {
+    @Override
+    public void doScan(Scan scan, List<KeyValue> result) throws IOException {
+      InternalScanner scanner = null;
+      try {
+        scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
+        scanner = HRegion.this.getScanner(scan);
+        result.clear();
+        scanner.next(result);
+      } finally {
+        if (scanner != null) scanner.close();
+      }
+    }
+  };
+
   // TODO: There's a lot of boiler plate code identical
   // to increment... See how to better unify that.
   /**
@@ -4660,8 +4817,8 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      30 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
-      (5 * Bytes.SIZEOF_LONG) +
+      31 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
+      (6 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD +
