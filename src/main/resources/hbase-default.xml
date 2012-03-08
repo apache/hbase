@@ -869,4 +869,18 @@
      value to 0.
      </description>
    </property>
+   <property>
+    <name>hbase.data.umask.enable</name>
+    <value>false</value>
+    <description>Enable, if true, that file permissions should be assigned
+      to the files written by the regionserver
+    </description>
+  </property>
+  <property>
+    <name>hbase.data.umask</name>
+    <value>000</value>
+    <description>File permissions that should be used to write data
+      files when hbase.data.umask.enable is true
+    </description>
+  </property>
 </configuration>
