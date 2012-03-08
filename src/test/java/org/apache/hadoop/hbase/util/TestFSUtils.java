@@ -19,14 +19,24 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.hbase.*;
+import java.io.File;
+import java.util.UUID;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -139,13 +149,42 @@ public class TestFSUtils {
       FileStatus status = fs.getFileStatus(testFile);
       HDFSBlocksDistribution blocksDistribution =
         FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
-      assertTrue(blocksDistribution.getTopHosts().size() == 3);
+      assertEquals("Wrong number of hosts distributing blocks.", 3,
+          blocksDistribution.getTopHosts().size());
     } finally {
       htu.shutdownMiniDFSCluster();
     }
-    
   }
-  
+
+  @Test
+  public void testPermMask() throws Exception {
+
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
+    FileSystem fs = FileSystem.get(conf);
+    // first check that we don't crash if we don't have perms set
+    FsPermission defaultPerms = FSUtils.getFilePermissions(fs, conf,
+        HConstants.DATA_FILE_UMASK_KEY);
+    assertEquals(FsPermission.getDefault(), defaultPerms);
+
+    conf.setStrings(HConstants.DATA_FILE_UMASK_KEY, "077");
+    // now check that we get the right perms
+    FsPermission filePerm = FSUtils.getFilePermissions(fs, conf,
+        HConstants.DATA_FILE_UMASK_KEY);
+    assertEquals(new FsPermission("700"), filePerm);
+
+    // then that the correct file is created
+    Path p = new Path("target" + File.separator + UUID.randomUUID().toString());
+    try {
+      FSDataOutputStream out = FSUtils.create(fs, p, filePerm);
+      out.close();
+      FileStatus stat = fs.getFileStatus(p);
+      assertEquals(new FsPermission("700"), stat.getPermission());
+      // and then cleanup
+    } finally {
+      fs.delete(p, true);
+    }
+  }
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
