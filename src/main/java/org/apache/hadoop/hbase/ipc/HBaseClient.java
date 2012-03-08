@@ -676,7 +676,17 @@ public class HBaseClient {
         Call c = itor.next().getValue();
         long waitTime = System.currentTimeMillis() - c.getStartTime();
         if (waitTime >= rpcTimeout) {
-          c.setException(closeException); // local exception
+          if (this.closeException == null) {
+            // There may be no exception in the case that there are many calls
+            // being multiplexed over this connection and these are succeeding
+            // fine while this Call object is taking a long time to finish
+            // over on the server; e.g. I just asked the regionserver to bulk
+            // open 3k regions or its a big fat multiput into a heavily-loaded
+            // server (Perhaps this only happens at the extremes?)
+            this.closeException = new CallTimeoutException("Call id=" + c.id +
+              ", waitTime=" + waitTime + ", rpcTimetout=" + rpcTimeout);
+          }
+          c.setException(this.closeException);
           synchronized (c) {
             c.notifyAll();
           }
@@ -702,6 +712,15 @@ public class HBaseClient {
       } catch (SocketException e) {
         LOG.debug("Couldn't lower timeout, which may result in longer than expected calls");
       }
+    }
+  }
+
+  /**
+   * Client-side call timeout
+   */
+  public static class CallTimeoutException extends IOException {
+    public CallTimeoutException(final String msg) {
+      super(msg);
     }
   }
 
