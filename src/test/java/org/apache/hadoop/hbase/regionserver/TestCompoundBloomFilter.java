@@ -298,6 +298,8 @@ public class TestCompoundBloomFilter {
         BLOCK_SIZES[t])
             .withOutputDir(TEST_UTIL.getDataTestDir())
             .withBloomType(bt)
+            .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
+            .withBytesPerChecksum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
             .build();
 
     assertTrue(w.hasGeneralBloom());

@@ -106,6 +106,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -195,7 +196,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   protected final Configuration conf;
 
   protected final AtomicBoolean haveRootRegion = new AtomicBoolean(false);
-  private FileSystem fs;
+  private HFileSystem fs;
+  private boolean useHBaseChecksum; // verify hbase checksums?
   private Path rootDir;
   private final Random rand = new Random();
 
@@ -367,6 +369,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     HConnectionManager.setServerSideHConnectionRetries(this.conf, LOG);
     this.isOnline = false;
     checkCodecs(this.conf);
+
+    // do we use checksum verfication in the hbase? If hbase checksum verification
+    // is enabled, then we automatically switch off hdfs checksum verification.
+    this.useHBaseChecksum = conf.getBoolean(
+      HConstants.HBASE_CHECKSUM_VERIFICATION, true);
 
     // Config'ed params
     this.numRetries = conf.getInt("hbase.client.retries.number", 10);
@@ -978,7 +985,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // to defaults).
       this.conf.set("fs.defaultFS", this.conf.get("hbase.rootdir"));
       // Get fs instance used by this RS
-      this.fs = FileSystem.get(this.conf);
+      this.fs = new HFileSystem(this.conf, this.useHBaseChecksum);
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
       this.tableDescriptors = new FSTableDescriptors(this.fs, this.rootDir, true);
       this.hlog = setupWALAndReplication();
@@ -1278,7 +1285,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * @throws IOException
    */
   protected HLog instantiateHLog(Path logdir, Path oldLogDir) throws IOException {
-    return new HLog(this.fs, logdir, oldLogDir, this.conf,
+    return new HLog(this.fs.getBackingFs(), logdir, oldLogDir, this.conf,
       getWALActionListeners(), this.serverNameFromMasterPOV.toString());
   }
 
@@ -3165,7 +3172,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   /**
    * @return Return the fs.
    */
-  protected FileSystem getFileSystem() {
+  public FileSystem getFileSystem() {
     return fs;
   }
 

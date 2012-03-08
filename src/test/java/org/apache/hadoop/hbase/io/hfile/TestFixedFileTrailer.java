@@ -52,7 +52,7 @@ public class TestFixedFileTrailer {
   private static final Log LOG = LogFactory.getLog(TestFixedFileTrailer.class);
 
   /** The number of used fields by version. Indexed by version minus one. */
-  private static final int[] NUM_FIELDS_BY_VERSION = new int[] { 8, 13 };
+  private static final int[] NUM_FIELDS_BY_VERSION = new int[] { 9, 14 };
 
   private HBaseTestingUtility util = new HBaseTestingUtility();
   private FileSystem fs;
@@ -83,7 +83,8 @@ public class TestFixedFileTrailer {
 
   @Test
   public void testTrailer() throws IOException {
-    FixedFileTrailer t = new FixedFileTrailer(version);
+    FixedFileTrailer t = new FixedFileTrailer(version, 
+                           HFileBlock.MINOR_VERSION_NO_CHECKSUM);
     t.setDataIndexCount(3);
     t.setEntryCount(((long) Integer.MAX_VALUE) + 1);
 
@@ -121,7 +122,8 @@ public class TestFixedFileTrailer {
     // Finished writing, trying to read.
     {
       DataInputStream dis = new DataInputStream(bais);
-      FixedFileTrailer t2 = new FixedFileTrailer(version);
+      FixedFileTrailer t2 = new FixedFileTrailer(version, 
+                              HFileBlock.MINOR_VERSION_NO_CHECKSUM);
       t2.deserialize(dis);
       assertEquals(-1, bais.read()); // Ensure we have read everything.
       checkLoadedTrailer(version, t, t2);
@@ -191,7 +193,7 @@ public class TestFixedFileTrailer {
 
   private void checkLoadedTrailer(int version, FixedFileTrailer expected,
       FixedFileTrailer loaded) throws IOException {
-    assertEquals(version, loaded.getVersion());
+    assertEquals(version, loaded.getMajorVersion());
     assertEquals(expected.getDataIndexCount(), loaded.getDataIndexCount());
 
     assertEquals(Math.min(expected.getEntryCount(),

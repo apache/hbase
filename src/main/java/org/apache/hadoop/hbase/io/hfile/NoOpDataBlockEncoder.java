@@ -46,7 +46,7 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
 
   @Override
   public Pair<ByteBuffer, BlockType> beforeWriteToDisk(
-      ByteBuffer in, boolean includesMemstoreTS) {
+      ByteBuffer in, boolean includesMemstoreTS, byte[] dummyHeader) {
     return new Pair<ByteBuffer, BlockType>(in, BlockType.DATA);
   }
 

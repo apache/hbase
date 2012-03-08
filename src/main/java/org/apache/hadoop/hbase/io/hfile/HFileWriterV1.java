@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -92,8 +93,9 @@ public class HFileWriterV1 extends AbstractHFileWriter {
     public Writer createWriter(FileSystem fs, Path path,
         FSDataOutputStream ostream, int blockSize,
         Algorithm compressAlgo, HFileDataBlockEncoder dataBlockEncoder,
-        KeyComparator comparator)
-        throws IOException {
+        KeyComparator comparator, final ChecksumType checksumType,
+        final int bytesPerChecksum) throws IOException {
+      // version 1 does not implement checksums
       return new HFileWriterV1(conf, cacheConf, fs, path, ostream, blockSize,
           compressAlgo, dataBlockEncoder, comparator);
     }
@@ -149,7 +151,13 @@ public class HFileWriterV1 extends AbstractHFileWriter {
       HFileBlock block = new HFileBlock(BlockType.DATA,
           (int) (outputStream.getPos() - blockBegin), bytes.length, -1,
           ByteBuffer.wrap(bytes, 0, bytes.length), HFileBlock.FILL_HEADER,
-          blockBegin, MemStore.NO_PERSISTENT_TS);
+          blockBegin, MemStore.NO_PERSISTENT_TS, 
+          HFileBlock.MINOR_VERSION_NO_CHECKSUM,        // minor version
+          0,                                         // bytesPerChecksum
+          ChecksumType.NULL.getCode(),               // checksum type
+          (int) (outputStream.getPos() - blockBegin) +
+          HFileBlock.HEADER_SIZE_NO_CHECKSUM);       // onDiskDataSizeWithHeader
+
       block = blockEncoder.diskToCacheFormat(block, false);
       passSchemaMetricsTo(block);
       cacheConf.getBlockCache().cacheBlock(
@@ -174,7 +182,7 @@ public class HFileWriterV1 extends AbstractHFileWriter {
     if (cacheConf.shouldCacheDataOnWrite()) {
       this.baos = new ByteArrayOutputStream();
       this.baosDos = new DataOutputStream(baos);
-      baosDos.write(HFileBlock.DUMMY_HEADER);
+      baosDos.write(HFileBlock.DUMMY_HEADER_NO_CHECKSUM);
     }
   }
 
@@ -332,7 +340,8 @@ public class HFileWriterV1 extends AbstractHFileWriter {
 
     finishBlock();
 
-    FixedFileTrailer trailer = new FixedFileTrailer(1);
+    FixedFileTrailer trailer = new FixedFileTrailer(1,
+                                 HFileBlock.MINOR_VERSION_NO_CHECKSUM);
 
     // Write out the metadata blocks if any.
     ArrayList<Long> metaOffsets = null;

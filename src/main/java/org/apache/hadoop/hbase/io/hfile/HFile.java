@@ -43,10 +43,12 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -156,6 +158,12 @@ public class HFile {
    */
   public final static int MIN_NUM_HFILE_PATH_LEVELS = 5;
 
+  /**
+   * The number of bytes per checksum.
+   */
+  public static final int DEFAULT_BYTES_PER_CHECKSUM = 16 * 1024;
+  public static final ChecksumType DEFAULT_CHECKSUM_TYPE = ChecksumType.CRC32;
+
   // For measuring latency of "sequential" reads and writes
   static final AtomicInteger readOps = new AtomicInteger();
   static final AtomicLong readTimeNano = new AtomicLong();
@@ -165,6 +173,9 @@ public class HFile {
   // For measuring latency of pread
   static final AtomicInteger preadOps = new AtomicInteger();
   static final AtomicLong preadTimeNano = new AtomicLong();
+
+  // For measuring number of checksum failures
+  static final AtomicLong checksumFailures = new AtomicLong();
 
   // for test purpose
   public static volatile AtomicLong dataBlockReadCnt = new AtomicLong(0);
@@ -193,6 +204,14 @@ public class HFile {
 
   public static final long getWriteTimeMs() {
     return writeTimeNano.getAndSet(0) / 1000000;
+  }
+
+  /**
+   * Number of checksum verification failures. It also
+   * clears the counter.
+   */
+  public static final long getChecksumFailuresCount() {
+    return checksumFailures.getAndSet(0);
   }
 
   /** API required to write an {@link HFile} */
@@ -247,6 +266,8 @@ public class HFile {
         HFile.DEFAULT_COMPRESSION_ALGORITHM;
     protected HFileDataBlockEncoder encoder = NoOpDataBlockEncoder.INSTANCE;
     protected KeyComparator comparator;
+    protected ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
+    protected int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;
 
     WriterFactory(Configuration conf, CacheConfig cacheConf) {
       this.conf = conf;
@@ -296,6 +317,17 @@ public class HFile {
       return this;
     }
 
+    public WriterFactory withChecksumType(ChecksumType checksumType) {
+      Preconditions.checkNotNull(checksumType);
+      this.checksumType = checksumType;
+      return this;
+    }
+
+    public WriterFactory withBytesPerChecksum(int bytesPerChecksum) {
+      this.bytesPerChecksum = bytesPerChecksum;
+      return this;
+    }
+
     public Writer create() throws IOException {
       if ((path != null ? 1 : 0) + (ostream != null ? 1 : 0) != 1) {
         throw new AssertionError("Please specify exactly one of " +
@@ -305,14 +337,15 @@ public class HFile {
         ostream = AbstractHFileWriter.createOutputStream(conf, fs, path);
       }
       return createWriter(fs, path, ostream, blockSize,
-          compression, encoder, comparator);
+          compression, encoder, comparator, checksumType, bytesPerChecksum);
     }
 
     protected abstract Writer createWriter(FileSystem fs, Path path,
         FSDataOutputStream ostream, int blockSize,
         Compression.Algorithm compress,
         HFileDataBlockEncoder dataBlockEncoder,
-        KeyComparator comparator) throws IOException;
+        KeyComparator comparator, ChecksumType checksumType,
+        int bytesPerChecksum) throws IOException;
   }
 
   /** The configuration key for HFile version to use for new files */
@@ -431,20 +464,22 @@ public class HFile {
   }
 
   private static Reader pickReaderVersion(Path path, FSDataInputStream fsdis,
+      FSDataInputStream fsdisNoFsChecksum,
       long size, boolean closeIStream, CacheConfig cacheConf,
-      DataBlockEncoding preferredEncodingInCache)
+      DataBlockEncoding preferredEncodingInCache, HFileSystem hfs)
       throws IOException {
     FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis, size);
-    switch (trailer.getVersion()) {
+    switch (trailer.getMajorVersion()) {
     case 1:
       return new HFileReaderV1(path, trailer, fsdis, size, closeIStream,
           cacheConf);
     case 2:
-      return new HFileReaderV2(path, trailer, fsdis, size, closeIStream,
-          cacheConf, preferredEncodingInCache);
+      return new HFileReaderV2(path, trailer, fsdis, fsdisNoFsChecksum,
+          size, closeIStream,
+          cacheConf, preferredEncodingInCache, hfs);
     default:
       throw new IOException("Cannot instantiate reader for HFile version " +
-          trailer.getVersion());
+          trailer.getMajorVersion());
     }
   }
 
@@ -452,9 +487,26 @@ public class HFile {
       FileSystem fs, Path path, CacheConfig cacheConf,
       DataBlockEncoding preferredEncodingInCache) throws IOException {
     final boolean closeIStream = true;
-    return pickReaderVersion(path, fs.open(path),
+    HFileSystem hfs = null;
+    FSDataInputStream fsdis = fs.open(path);
+    FSDataInputStream fsdisNoFsChecksum = fsdis;
+    // If the fs is not an instance of HFileSystem, then create an 
+    // instance of HFileSystem that wraps over the specified fs.
+    // In this case, we will not be able to avoid checksumming inside
+    // the filesystem.
+    if (!(fs instanceof HFileSystem)) {
+      hfs = new HFileSystem(fs);
+    } else {
+      hfs = (HFileSystem)fs;
+      // open a stream to read data without checksum verification in
+      // the filesystem
+      if (hfs != null) {
+        fsdisNoFsChecksum = hfs.getNoChecksumFs().open(path);
+      }
+    }
+    return pickReaderVersion(path, fsdis, fsdisNoFsChecksum,
         fs.getFileStatus(path).getLen(), closeIStream, cacheConf,
-        preferredEncodingInCache);
+        preferredEncodingInCache, hfs);
   }
 
   public static Reader createReader(
@@ -463,12 +515,15 @@ public class HFile {
         DataBlockEncoding.NONE);
   }
 
-  public static Reader createReaderFromStream(Path path,
+  /**
+   * This factory method is used only by unit tests
+   */
+  static Reader createReaderFromStream(Path path,
       FSDataInputStream fsdis, long size, CacheConfig cacheConf)
       throws IOException {
     final boolean closeIStream = false;
-    return pickReaderVersion(path, fsdis, size, closeIStream, cacheConf,
-        DataBlockEncoding.NONE);
+    return pickReaderVersion(path, fsdis, fsdis, size, closeIStream, cacheConf,
+        DataBlockEncoding.NONE, null);
   }
 
   /*

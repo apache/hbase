@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -156,6 +157,10 @@ public class Store extends SchemaConfigured implements HeapSize {
   /** Compression algorithm for major compaction */
   private final Compression.Algorithm compactionCompression;
   private HFileDataBlockEncoder dataBlockEncoder;
+
+  /** Checksum configuration */
+  private ChecksumType checksumType;
+  private int bytesPerChecksum;
 
   // Comparing KeyValues
   final KeyValue.KVComparator comparator;
@@ -246,6 +251,35 @@ public class Store extends SchemaConfigured implements HeapSize {
           "hbase.hstore.close.check.interval", 10*1000*1000 /* 10 MB */);
     }
     this.storefiles = sortAndClone(loadStoreFiles());
+
+    // Initialize checksum type from name. The names are CRC32, CRC32C, etc.
+    this.checksumType = getChecksumType(conf);
+    // initilize bytes per checksum
+    this.bytesPerChecksum = getBytesPerChecksum(conf);
+  }
+
+  /**
+   * Returns the configured bytesPerChecksum value.
+   * @param conf The configuration
+   * @return The bytesPerChecksum that is set in the configuration
+   */
+  public static int getBytesPerChecksum(Configuration conf) {
+    return conf.getInt(HConstants.BYTES_PER_CHECKSUM,
+                       HFile.DEFAULT_BYTES_PER_CHECKSUM);
+  }
+
+  /**
+   * Returns the configured checksum algorithm.
+   * @param conf The configuration
+   * @return The checksum algorithm that is set in the configuration
+   */
+  public static ChecksumType getChecksumType(Configuration conf) {
+    String checksumName = conf.get(HConstants.CHECKSUM_TYPE_NAME);
+    if (checksumName == null) {
+      return HFile.DEFAULT_CHECKSUM_TYPE;
+    } else {
+      return ChecksumType.nameToType(checksumName);
+    }
   }
 
   public HColumnDescriptor getFamily() {
@@ -799,6 +833,8 @@ public class Store extends SchemaConfigured implements HeapSize {
             .withComparator(comparator)
             .withBloomType(family.getBloomFilterType())
             .withMaxKeyCount(maxKeyCount)
+            .withChecksumType(checksumType)
+            .withBytesPerChecksum(bytesPerChecksum)
             .build();
     // The store file writer's path does not include the CF name, so we need
     // to configure the HFile writer directly.
@@ -2192,8 +2228,8 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   public static final long FIXED_OVERHEAD = 
       ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-          + (19 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
-          + (5 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
+          + (20 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
+          + (6 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
       + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK

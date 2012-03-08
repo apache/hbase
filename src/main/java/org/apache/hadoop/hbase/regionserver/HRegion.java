@@ -3624,7 +3624,14 @@ public class HRegion implements HeapSize { // , Writable{
     }
     Path dir = HTableDescriptor.getTableDir(FSUtils.getRootDir(conf),
       info.getTableName());
-    HRegion r = HRegion.newHRegion(dir, wal, FileSystem.get(conf), conf, info,
+    FileSystem fs = null;
+    if (rsServices != null) {
+      fs = rsServices.getFileSystem();
+    }
+    if (fs == null) {
+      fs = FileSystem.get(conf);
+    }
+    HRegion r = HRegion.newHRegion(dir, wal, fs, conf, info,
       htd, rsServices);
     return r.openHRegion(reporter);
   }

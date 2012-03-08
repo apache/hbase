@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
@@ -68,6 +69,9 @@ public class TestStoreFile extends HBaseTestCase {
   private CacheConfig cacheConf =  new CacheConfig(conf);
   private String ROOT_DIR;
   private Map<String, Long> startingMetrics;
+
+  private static final ChecksumType CKTYPE = ChecksumType.CRC32;
+  private static final int CKBYTES = 512;
 
   @Override
   public void setUp() throws Exception {
@@ -401,6 +405,8 @@ public class TestStoreFile extends HBaseTestCase {
             .withFilePath(f)
             .withBloomType(StoreFile.BloomType.ROW)
             .withMaxKeyCount(2000)
+            .withChecksumType(CKTYPE)
+            .withBytesPerChecksum(CKBYTES)
             .build();
     bloomWriteRead(writer, fs);
   }
@@ -420,6 +426,8 @@ public class TestStoreFile extends HBaseTestCase {
         fs, StoreFile.DEFAULT_BLOCKSIZE_SMALL)
             .withFilePath(f)
             .withMaxKeyCount(2000)
+            .withChecksumType(CKTYPE)
+            .withBytesPerChecksum(CKBYTES)
             .build();
 
     // add delete family
@@ -490,6 +498,8 @@ public class TestStoreFile extends HBaseTestCase {
               .withFilePath(f)
               .withBloomType(bt[x])
               .withMaxKeyCount(expKeys[x])
+              .withChecksumType(CKTYPE)
+              .withBytesPerChecksum(CKBYTES)
               .build();
 
       long now = System.currentTimeMillis();
@@ -565,6 +575,8 @@ public class TestStoreFile extends HBaseTestCase {
             .withFilePath(f)
             .withBloomType(StoreFile.BloomType.ROW)
             .withMaxKeyCount(2000)
+            .withChecksumType(CKTYPE)
+            .withBytesPerChecksum(CKBYTES)
             .build();
     assertFalse(writer.hasGeneralBloom());
     writer.close();
@@ -592,6 +604,8 @@ public class TestStoreFile extends HBaseTestCase {
             .withFilePath(f)
             .withBloomType(StoreFile.BloomType.ROW)
             .withMaxKeyCount(Integer.MAX_VALUE)
+            .withChecksumType(CKTYPE)
+            .withBytesPerChecksum(CKBYTES)
             .build();
     assertFalse(writer.hasGeneralBloom());
     writer.close();
@@ -859,6 +873,8 @@ public class TestStoreFile extends HBaseTestCase {
         blockSize)
             .withFilePath(path)
             .withMaxKeyCount(2000)
+            .withChecksumType(CKTYPE)
+            .withBytesPerChecksum(CKBYTES)
             .build();
     // We'll write N-1 KVs to ensure we don't write an extra block
     kvs.remove(kvs.size()-1);
@@ -890,6 +906,8 @@ public class TestStoreFile extends HBaseTestCase {
             .withFilePath(path)
             .withDataBlockEncoder(dataBlockEncoder)
             .withMaxKeyCount(2000)
+            .withChecksumType(CKTYPE)
+            .withBytesPerChecksum(CKBYTES)
             .build();
     writer.close();
     

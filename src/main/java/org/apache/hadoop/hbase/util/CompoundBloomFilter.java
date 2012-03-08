@@ -109,7 +109,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
 
       ByteBuffer bloomBuf = bloomBlock.getBufferReadOnly();
       result = ByteBloomFilter.contains(key, keyOffset, keyLength,
-          bloomBuf.array(), bloomBuf.arrayOffset() + HFileBlock.HEADER_SIZE,
+          bloomBuf.array(), bloomBuf.arrayOffset() + bloomBlock.headerSize(),
           bloomBlock.getUncompressedSizeWithoutHeader(), hash, hashCount);
     }
 

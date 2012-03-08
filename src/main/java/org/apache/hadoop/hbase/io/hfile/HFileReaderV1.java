@@ -65,10 +65,10 @@ public class HFileReaderV1 extends AbstractHFileReader {
   public HFileReaderV1(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long size,
       final boolean closeIStream,
-      final CacheConfig cacheConf) {
+      final CacheConfig cacheConf) throws IOException {
     super(path, trailer, fsdis, size, closeIStream, cacheConf);
 
-    trailer.expectVersion(1);
+    trailer.expectMajorVersion(1);
     fsBlockReader = new HFileBlock.FSReaderV1(fsdis, compressAlgo, fileSize);
   }
 

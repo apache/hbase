@@ -51,11 +51,12 @@ public interface HFileDataBlockEncoder {
    * Should be called before an encoded or unencoded data block is written to
    * disk.
    * @param in KeyValues next to each other
+   * @param dummyHeader A dummy header to be written as a placeholder
    * @return a non-null on-heap buffer containing the contents of the
    *         HFileBlock with unfilled header and block type
    */
   public Pair<ByteBuffer, BlockType> beforeWriteToDisk(
-      ByteBuffer in, boolean includesMemstoreTS);
+      ByteBuffer in, boolean includesMemstoreTS, byte[] dummyHeader);
 
   /**
    * Decides whether we should use a scanner over encoded blocks.

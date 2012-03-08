@@ -44,6 +44,13 @@ import com.google.common.io.NullOutputStream;
  * variable parts of the file. Also includes basic metadata on this file. The
  * trailer size is fixed within a given {@link HFile} format version only, but
  * we always store the version number as the last four-byte integer of the file.
+ * The version number itself is split into two portions, a major 
+ * version and a minor version. 
+ * The last three bytes of a file is the major
+ * version and a single preceding byte is the minor number. The major version
+ * determines which readers/writers to use to read/write a hfile while a minor
+ * version determines smaller changes in hfile format that do not need a new
+ * reader/writer type.
  */
 @InterfaceAudience.Private
 public class FixedFileTrailer {
@@ -108,12 +115,16 @@ public class FixedFileTrailer {
   /** Raw key comparator class name in version 2 */
   private String comparatorClassName = RawComparator.class.getName();
 
-  /** The {@link HFile} format version. */
-  private final int version;
+  /** The {@link HFile} format major version. */
+  private final int majorVersion;
 
-  FixedFileTrailer(int version) {
-    this.version = version;
-    HFile.checkFormatVersion(version);
+  /** The {@link HFile} format minor version. */
+  private final int minorVersion;
+
+  FixedFileTrailer(int majorVersion, int minorVersion) {
+    this.majorVersion = majorVersion;
+    this.minorVersion = minorVersion;
+    HFile.checkFormatVersion(majorVersion);
   }
 
   private static int[] computeTrailerSizeByVersion() {
@@ -121,7 +132,8 @@ public class FixedFileTrailer {
     for (int version = MIN_FORMAT_VERSION;
          version <= MAX_FORMAT_VERSION;
          ++version) {
-      FixedFileTrailer fft = new FixedFileTrailer(version);
+      FixedFileTrailer fft = new FixedFileTrailer(version, 
+                                   HFileBlock.MINOR_VERSION_NO_CHECKSUM);
       DataOutputStream dos = new DataOutputStream(new NullOutputStream());
       try {
         fft.serialize(dos);
@@ -151,7 +163,7 @@ public class FixedFileTrailer {
   }
 
   public int getTrailerSize() {
-    return getTrailerSize(version);
+    return getTrailerSize(majorVersion);
   }
 
   /**
@@ -163,7 +175,7 @@ public class FixedFileTrailer {
    * @throws IOException
    */
   void serialize(DataOutputStream outputStream) throws IOException {
-    HFile.checkFormatVersion(version);
+    HFile.checkFormatVersion(majorVersion);
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutput baosDos = new DataOutputStream(baos);
@@ -173,7 +185,7 @@ public class FixedFileTrailer {
     baosDos.writeLong(loadOnOpenDataOffset);
     baosDos.writeInt(dataIndexCount);
 
-    if (version == 1) {
+    if (majorVersion == 1) {
       // This used to be metaIndexOffset, but it was not used in version 1.
       baosDos.writeLong(0);
     } else {
@@ -182,7 +194,7 @@ public class FixedFileTrailer {
 
     baosDos.writeInt(metaIndexCount);
     baosDos.writeLong(totalUncompressedBytes);
-    if (version == 1) {
+    if (majorVersion == 1) {
       baosDos.writeInt((int) Math.min(Integer.MAX_VALUE, entryCount));
     } else {
       // This field is long from version 2 onwards.
@@ -190,14 +202,16 @@ public class FixedFileTrailer {
     }
     baosDos.writeInt(compressionCodec.ordinal());
 
-    if (version > 1) {
+    if (majorVersion > 1) {
       baosDos.writeInt(numDataIndexLevels);
       baosDos.writeLong(firstDataBlockOffset);
       baosDos.writeLong(lastDataBlockOffset);
       Bytes.writeStringFixedSize(baosDos, comparatorClassName,
           MAX_COMPARATOR_NAME_LENGTH);
     }
-    baosDos.writeInt(version);
+
+    // serialize the major and minor versions
+    baosDos.writeInt(materializeVersion(majorVersion, minorVersion));
 
     outputStream.write(baos.toByteArray());
   }
@@ -212,7 +226,7 @@ public class FixedFileTrailer {
    * @throws IOException
    */
   void deserialize(DataInputStream inputStream) throws IOException {
-    HFile.checkFormatVersion(version);
+    HFile.checkFormatVersion(majorVersion);
 
     BlockType.TRAILER.readAndCheck(inputStream);
 
@@ -220,7 +234,7 @@ public class FixedFileTrailer {
     loadOnOpenDataOffset = inputStream.readLong();
     dataIndexCount = inputStream.readInt();
 
-    if (version == 1) {
+    if (majorVersion == 1) {
       inputStream.readLong(); // Read and skip metaIndexOffset.
     } else {
       uncompressedDataIndexSize = inputStream.readLong();
@@ -228,9 +242,9 @@ public class FixedFileTrailer {
     metaIndexCount = inputStream.readInt();
 
     totalUncompressedBytes = inputStream.readLong();
-    entryCount = version == 1 ? inputStream.readInt() : inputStream.readLong();
+    entryCount = majorVersion == 1 ? inputStream.readInt() : inputStream.readLong();
     compressionCodec = Compression.Algorithm.values()[inputStream.readInt()];
-    if (version > 1) {
+    if (majorVersion > 1) {
       numDataIndexLevels = inputStream.readInt();
       firstDataBlockOffset = inputStream.readLong();
       lastDataBlockOffset = inputStream.readLong();
@@ -238,7 +252,9 @@ public class FixedFileTrailer {
           Bytes.readStringFixedSize(inputStream, MAX_COMPARATOR_NAME_LENGTH);
     }
 
-    expectVersion(inputStream.readInt());
+    int version = inputStream.readInt();
+    expectMajorVersion(extractMajorVersion(version));
+    expectMinorVersion(extractMinorVersion(version));
   }
 
   private void append(StringBuilder sb, String s) {
@@ -257,14 +273,15 @@ public class FixedFileTrailer {
     append(sb, "totalUncomressedBytes=" + totalUncompressedBytes);
     append(sb, "entryCount=" + entryCount);
     append(sb, "compressionCodec=" + compressionCodec);
-    if (version == 2) {
+    if (majorVersion == 2) {
       append(sb, "uncompressedDataIndexSize=" + uncompressedDataIndexSize);
       append(sb, "numDataIndexLevels=" + numDataIndexLevels);
       append(sb, "firstDataBlockOffset=" + firstDataBlockOffset);
       append(sb, "lastDataBlockOffset=" + lastDataBlockOffset);
       append(sb, "comparatorClassName=" + comparatorClassName);
     }
-    append(sb, "version=" + version);
+    append(sb, "majorVersion=" + majorVersion);
+    append(sb, "minorVersion=" + minorVersion);
 
     return sb.toString();
   }
@@ -301,31 +318,44 @@ public class FixedFileTrailer {
     buf.position(buf.limit() - Bytes.SIZEOF_INT);
     int version = buf.getInt();
 
+    // Extract the major and minor versions.
+    int majorVersion = extractMajorVersion(version);
+    int minorVersion = extractMinorVersion(version);
+
     try {
-      HFile.checkFormatVersion(version);
+      HFile.checkFormatVersion(majorVersion);
     } catch (IllegalArgumentException iae) {
       // In this context, an invalid version might indicate a corrupt HFile.
       throw new IOException(iae);
     }
 
-    int trailerSize = getTrailerSize(version);
+    int trailerSize = getTrailerSize(majorVersion);
 
-    FixedFileTrailer fft = new FixedFileTrailer(version);
+    FixedFileTrailer fft = new FixedFileTrailer(majorVersion, minorVersion);
     fft.deserialize(new DataInputStream(new ByteArrayInputStream(buf.array(),
         buf.arrayOffset() + bufferSize - trailerSize, trailerSize)));
     return fft;
   }
 
-  public void expectVersion(int expected) {
-    if (version != expected) {
-      throw new IllegalArgumentException("Invalid HFile version: " + version
+  public void expectMajorVersion(int expected) {
+    if (majorVersion != expected) {
+      throw new IllegalArgumentException("Invalid HFile major version: "
+          + majorVersion 
           + " (expected: " + expected + ")");
     }
   }
 
-  public void expectAtLeastVersion(int lowerBound) {
-    if (version < lowerBound) {
-      throw new IllegalArgumentException("Invalid HFile version: " + version
+  public void expectMinorVersion(int expected) {
+    if (minorVersion != expected) {
+      throw new IllegalArgumentException("Invalid HFile minor version: "
+          + minorVersion + " (expected: " + expected + ")");
+    }
+  }
+
+  public void expectAtLeastMajorVersion(int lowerBound) {
+    if (majorVersion < lowerBound) {
+      throw new IllegalArgumentException("Invalid HFile major version: "
+          + majorVersion
           + " (expected: " + lowerBound + " or higher).");
     }
   }
@@ -375,11 +405,11 @@ public class FixedFileTrailer {
   }
 
   public void setEntryCount(long newEntryCount) {
-    if (version == 1) {
+    if (majorVersion == 1) {
       int intEntryCount = (int) Math.min(Integer.MAX_VALUE, newEntryCount);
       if (intEntryCount != newEntryCount) {
         LOG.info("Warning: entry count is " + newEntryCount + " but writing "
-            + intEntryCount + " into the version " + version + " trailer");
+            + intEntryCount + " into the version " + majorVersion + " trailer");
       }
       entryCount = intEntryCount;
       return;
@@ -396,42 +426,52 @@ public class FixedFileTrailer {
   }
 
   public int getNumDataIndexLevels() {
-    expectAtLeastVersion(2);
+    expectAtLeastMajorVersion(2);
     return numDataIndexLevels;
   }
 
   public void setNumDataIndexLevels(int numDataIndexLevels) {
-    expectAtLeastVersion(2);
+    expectAtLeastMajorVersion(2);
     this.numDataIndexLevels = numDataIndexLevels;
   }
 
   public long getLastDataBlockOffset() {
-    expectAtLeastVersion(2);
+    expectAtLeastMajorVersion(2);
     return lastDataBlockOffset;
   }
 
   public void setLastDataBlockOffset(long lastDataBlockOffset) {
-    expectAtLeastVersion(2);
+    expectAtLeastMajorVersion(2);
     this.lastDataBlockOffset = lastDataBlockOffset;
   }
 
   public long getFirstDataBlockOffset() {
-    expectAtLeastVersion(2);
+    expectAtLeastMajorVersion(2);
     return firstDataBlockOffset;
   }
 
   public void setFirstDataBlockOffset(long firstDataBlockOffset) {
-    expectAtLeastVersion(2);
+    expectAtLeastMajorVersion(2);
     this.firstDataBlockOffset = firstDataBlockOffset;
   }
 
-  public int getVersion() {
-    return version;
+  /**
+   * Returns the major version of this HFile format
+   */
+  public int getMajorVersion() {
+    return majorVersion;
+  }
+
+  /**
+   * Returns the minor version of this HFile format
+   */
+  int getMinorVersion() {
+    return minorVersion;
   }
 
   @SuppressWarnings("rawtypes")
   public void setComparatorClass(Class<? extends RawComparator> klass) {
-    expectAtLeastVersion(2);
+    expectAtLeastMajorVersion(2);
     comparatorClassName = klass.getName();
   }
 
@@ -458,20 +498,43 @@ public class FixedFileTrailer {
   }
 
   RawComparator<byte[]> createComparator() throws IOException {
-    expectAtLeastVersion(2);
+    expectAtLeastMajorVersion(2);
     return createComparator(comparatorClassName);
   }
 
   public long getUncompressedDataIndexSize() {
-    if (version == 1)
+    if (majorVersion == 1)
       return 0;
     return uncompressedDataIndexSize;
   }
 
   public void setUncompressedDataIndexSize(
       long uncompressedDataIndexSize) {
-    expectAtLeastVersion(2);
+    expectAtLeastMajorVersion(2);
     this.uncompressedDataIndexSize = uncompressedDataIndexSize;
   }
 
+  /**
+   * Extracts the major version for a 4-byte serialized version data.
+   * The major version is the 3 least significant bytes
+   */
+  private static int extractMajorVersion(int serializedVersion) {
+    return (serializedVersion & 0x00ffffff);
+  }
+
+  /**
+   * Extracts the minor version for a 4-byte serialized version data.
+   * The major version are the 3 the most significant bytes
+   */
+  private static int extractMinorVersion(int serializedVersion) {
+    return (serializedVersion >>> 24);
+  }
+
+  /**
+   * Create a 4 byte serialized version number by combining the
+   * minor and major version numbers.
+   */
+  private static int materializeVersion(int majorVersion, int minorVersion) {
+    return ((majorVersion & 0x00ffffff) | (minorVersion << 24));
+  }
 }

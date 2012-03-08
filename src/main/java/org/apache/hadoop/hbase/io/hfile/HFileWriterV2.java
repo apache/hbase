@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -81,6 +82,10 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   private List<BlockWritable> additionalLoadOnOpenData =
     new ArrayList<BlockWritable>();
 
+  /** Checksum related settings */
+  private ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
+  private int bytesPerChecksum = HFile.DEFAULT_BYTES_PER_CHECKSUM;
+
   private final boolean includeMemstoreTS = true;
   private long maxMemstoreTS = 0;
 
@@ -93,9 +98,10 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     public Writer createWriter(FileSystem fs, Path path,
         FSDataOutputStream ostream, int blockSize,
         Compression.Algorithm compress, HFileDataBlockEncoder blockEncoder,
-        final KeyComparator comparator) throws IOException {
+        final KeyComparator comparator, final ChecksumType checksumType,
+        final int bytesPerChecksum) throws IOException {
       return new HFileWriterV2(conf, cacheConf, fs, path, ostream, blockSize,
-          compress, blockEncoder, comparator);
+          compress, blockEncoder, comparator, checksumType, bytesPerChecksum);
     }
   }
 
@@ -103,11 +109,14 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   public HFileWriterV2(Configuration conf, CacheConfig cacheConf,
       FileSystem fs, Path path, FSDataOutputStream ostream, int blockSize,
       Compression.Algorithm compressAlgo, HFileDataBlockEncoder blockEncoder,
-      final KeyComparator comparator) throws IOException {
+      final KeyComparator comparator, final ChecksumType checksumType,
+      final int bytesPerChecksum) throws IOException {
     super(cacheConf,
         ostream == null ? createOutputStream(conf, fs, path) : ostream,
         path, blockSize, compressAlgo, blockEncoder, comparator);
     SchemaMetrics.configureGlobally(conf);
+    this.checksumType = checksumType;
+    this.bytesPerChecksum = bytesPerChecksum;
     finishInit(conf);
   }
 
@@ -118,7 +127,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
     // HFile filesystem-level (non-caching) block writer
     fsBlockWriter = new HFileBlock.Writer(compressAlgo, blockEncoder,
-        includeMemstoreTS);
+        includeMemstoreTS, checksumType, bytesPerChecksum);
 
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
@@ -356,7 +365,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     finishBlock();
     writeInlineBlocks(true);
 
-    FixedFileTrailer trailer = new FixedFileTrailer(2);
+    FixedFileTrailer trailer = new FixedFileTrailer(2, 
+                                 HFileReaderV2.MAX_MINOR_VERSION);
 
     // Write out the metadata blocks if any.
     if (!metaNames.isEmpty()) {

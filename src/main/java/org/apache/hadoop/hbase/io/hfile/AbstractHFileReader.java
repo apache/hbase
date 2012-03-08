@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
@@ -42,8 +43,12 @@ public abstract class AbstractHFileReader extends SchemaConfigured
   /** Filesystem-level block reader for this HFile format version. */
   protected HFileBlock.FSReader fsBlockReader;
 
-  /** Stream to read from. */
+  /** Stream to read from. Does checksum verifications in file system */
   protected FSDataInputStream istream;
+
+  /** The file system stream of the underlying {@link HFile} that
+   * does not do checksum verification in the file system */
+  protected FSDataInputStream istreamNoFsChecksum;
 
   /**
    * True if we should close the input stream when done. We don't close it if we
@@ -99,10 +104,21 @@ public abstract class AbstractHFileReader extends SchemaConfigured
 
   protected FileInfo fileInfo;
 
+  /** The filesystem used for accesing data */
+  protected HFileSystem hfs;
+
   protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long fileSize,
       final boolean closeIStream,
       final CacheConfig cacheConf) {
+    this(path, trailer, fsdis, fsdis, fileSize, closeIStream, cacheConf, null);
+  }
+
+  protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
+      final FSDataInputStream fsdis, final FSDataInputStream fsdisNoFsChecksum,
+      final long fileSize,
+      final boolean closeIStream,
+      final CacheConfig cacheConf, final HFileSystem hfs) {
     super(null, path);
     this.trailer = trailer;
     this.compressAlgo = trailer.getCompressionCodec();
@@ -112,6 +128,8 @@ public abstract class AbstractHFileReader extends SchemaConfigured
     this.closeIStream = closeIStream;
     this.path = path;
     this.name = path.getName();
+    this.hfs = hfs;
+    this.istreamNoFsChecksum = fsdisNoFsChecksum;
   }
 
   @SuppressWarnings("serial")
@@ -343,5 +361,4 @@ public abstract class AbstractHFileReader extends SchemaConfigured
   public DataBlockEncoding getEncodingOnDisk() {
     return dataBlockEncoder.getEncodingOnDisk();
   }
-
 }

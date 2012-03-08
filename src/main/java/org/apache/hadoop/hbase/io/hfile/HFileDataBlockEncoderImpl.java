@@ -154,14 +154,14 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
    */
   @Override
   public Pair<ByteBuffer, BlockType> beforeWriteToDisk(ByteBuffer in,
-      boolean includesMemstoreTS) {
+      boolean includesMemstoreTS, byte[] dummyHeader) {
     if (onDisk == DataBlockEncoding.NONE) {
       // there is no need to encode the block before writing it to disk
       return new Pair<ByteBuffer, BlockType>(in, BlockType.DATA);
     }
 
     ByteBuffer encodedBuffer = encodeBufferToHFileBlockBuffer(in,
-        onDisk, includesMemstoreTS);
+        onDisk, includesMemstoreTS, dummyHeader);
     return new Pair<ByteBuffer, BlockType>(encodedBuffer,
         BlockType.ENCODED_DATA);
   }
@@ -175,12 +175,13 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   }
 
   private ByteBuffer encodeBufferToHFileBlockBuffer(ByteBuffer in,
-      DataBlockEncoding algo, boolean includesMemstoreTS) {
+      DataBlockEncoding algo, boolean includesMemstoreTS,
+      byte[] dummyHeader) {
     ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
     DataOutputStream dataOut = new DataOutputStream(encodedStream);
     DataBlockEncoder encoder = algo.getEncoder();
     try {
-      encodedStream.write(HFileBlock.DUMMY_HEADER);
+      encodedStream.write(dummyHeader);
       algo.writeIdInBytes(dataOut);
       encoder.compressKeyValues(dataOut, in,
           includesMemstoreTS);
@@ -194,13 +195,16 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   private HFileBlock encodeDataBlock(HFileBlock block,
       DataBlockEncoding algo, boolean includesMemstoreTS) {
     ByteBuffer compressedBuffer = encodeBufferToHFileBlockBuffer(
-        block.getBufferWithoutHeader(), algo, includesMemstoreTS);
-    int sizeWithoutHeader = compressedBuffer.limit() - HFileBlock.HEADER_SIZE;
+        block.getBufferWithoutHeader(), algo, includesMemstoreTS,
+        HFileBlock.DUMMY_HEADER);
+    int sizeWithoutHeader = compressedBuffer.limit() - block.headerSize();
     HFileBlock encodedBlock = new HFileBlock(BlockType.ENCODED_DATA,
         block.getOnDiskSizeWithoutHeader(),
         sizeWithoutHeader, block.getPrevBlockOffset(),
         compressedBuffer, HFileBlock.FILL_HEADER, block.getOffset(),
-        includesMemstoreTS);
+        includesMemstoreTS, block.getMinorVersion(),
+        block.getBytesPerChecksum(), block.getChecksumType(),
+        block.getOnDiskDataSizeWithHeader());
     block.passSchemaMetricsTo(encodedBlock);
     return encodedBlock;
   }

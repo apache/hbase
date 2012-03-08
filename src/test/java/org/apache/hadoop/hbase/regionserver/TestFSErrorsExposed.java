@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
@@ -69,10 +70,12 @@ public class TestFSErrorsExposed {
     Path hfilePath = new Path(new Path(
         util.getDataTestDir("internalScannerExposesErrors"),
         "regionname"), "familyname");
-    FaultyFileSystem fs = new FaultyFileSystem(util.getTestFileSystem());
+    HFileSystem hfs = (HFileSystem)util.getTestFileSystem();
+    FaultyFileSystem faultyfs = new FaultyFileSystem(hfs.getBackingFs());
+    FileSystem fs = new HFileSystem(faultyfs);
     CacheConfig cacheConf = new CacheConfig(util.getConfiguration());
     StoreFile.Writer writer = new StoreFile.WriterBuilder(
-        util.getConfiguration(), cacheConf, fs, 2*1024)
+        util.getConfiguration(), cacheConf, hfs, 2*1024)
             .withOutputDir(hfilePath)
             .build();
     TestStoreFile.writeStoreFile(
@@ -85,14 +88,14 @@ public class TestFSErrorsExposed {
     StoreFile.Reader reader = sf.createReader();
     HFileScanner scanner = reader.getScanner(false, true);
 
-    FaultyInputStream inStream = fs.inStreams.get(0).get();
+    FaultyInputStream inStream = faultyfs.inStreams.get(0).get();
     assertNotNull(inStream);
 
     scanner.seekTo();
     // Do at least one successful read
     assertTrue(scanner.next());
 
-    inStream.startFaults();
+    faultyfs.startFaults();
 
     try {
       int scanned=0;
@@ -116,10 +119,12 @@ public class TestFSErrorsExposed {
     Path hfilePath = new Path(new Path(
         util.getDataTestDir("internalScannerExposesErrors"),
         "regionname"), "familyname");
-    FaultyFileSystem fs = new FaultyFileSystem(util.getTestFileSystem());
+    HFileSystem hfs = (HFileSystem)util.getTestFileSystem();
+    FaultyFileSystem faultyfs = new FaultyFileSystem(hfs.getBackingFs());
+    HFileSystem fs = new HFileSystem(faultyfs);
     CacheConfig cacheConf = new CacheConfig(util.getConfiguration());
     StoreFile.Writer writer = new StoreFile.WriterBuilder(
-        util.getConfiguration(), cacheConf, fs, 2 * 1024)
+        util.getConfiguration(), cacheConf, hfs, 2 * 1024)
             .withOutputDir(hfilePath)
             .build();
     TestStoreFile.writeStoreFile(
@@ -132,14 +137,13 @@ public class TestFSErrorsExposed {
         Collections.singletonList(sf), false, true, false);
     KeyValueScanner scanner = scanners.get(0);
 
-    FaultyInputStream inStream = fs.inStreams.get(0).get();
+    FaultyInputStream inStream = faultyfs.inStreams.get(0).get();
     assertNotNull(inStream);
 
     scanner.seek(KeyValue.LOWESTKEY);
     // Do at least one successful read
     assertNotNull(scanner.next());
-
-    inStream.startFaults();
+    faultyfs.startFaults();
 
     try {
       int scanned=0;
@@ -220,6 +224,15 @@ public class TestFSErrorsExposed {
       inStreams.add(new SoftReference<FaultyInputStream>(faulty));
       return faulty;
     }
+
+    /**
+     * Starts to simulate faults on all streams opened so far
+     */
+    public void startFaults() {
+      for (SoftReference<FaultyInputStream> is: inStreams) {
+        is.get().startFaults();
+      }
+    } 
   }
 
   static class FaultyInputStream extends FSDataInputStream {

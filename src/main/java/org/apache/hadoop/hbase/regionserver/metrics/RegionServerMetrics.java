@@ -248,6 +248,12 @@ public class RegionServerMetrics implements Updater {
   public final MetricsTimeVaryingLong regionSplitFailureCount =
       new MetricsTimeVaryingLong("regionSplitFailureCount", registry);
 
+  /**
+   * Number of times checksum verification failed.
+   */
+  public final MetricsLongValue checksumFailuresCount =
+    new MetricsLongValue("checksumFailuresCount", registry);
+
   public RegionServerMetrics() {
     MetricsContext context = MetricsUtil.getContext("hbase");
     metricsRecord = MetricsUtil.createRecord(context, "regionserver");
@@ -346,6 +352,8 @@ public class RegionServerMetrics implements Updater {
       // HFile metrics, positional reads
       ops = HFile.getPreadOps(); 
       if (ops != 0) this.fsPreadLatency.inc(ops, HFile.getPreadTimeMs());
+      this.checksumFailuresCount.set(HFile.getChecksumFailuresCount());
+
       /* NOTE: removed HFile write latency.  2 reasons:
        * 1) Mixing HLog latencies are far higher priority since they're 
        *      on-demand and HFile is used in background (compact/flush)
@@ -366,6 +374,7 @@ public class RegionServerMetrics implements Updater {
       this.slowHLogAppendCount.pushMetric(this.metricsRecord);
       this.regionSplitSuccessCount.pushMetric(this.metricsRecord);
       this.regionSplitFailureCount.pushMetric(this.metricsRecord);
+      this.checksumFailuresCount.pushMetric(this.metricsRecord);
     }
     this.metricsRecord.update();
   }

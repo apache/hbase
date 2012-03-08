@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
@@ -73,6 +74,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
    */
   private List<HFileBlock> loadOnOpenBlocks = new ArrayList<HFileBlock>();
 
+  /** Minimum minor version supported by this HFile format */
+  static final int MIN_MINOR_VERSION = 0;
+
+  /** Maximum minor version supported by this HFile format */
+  static final int MAX_MINOR_VERSION = 1;
+
   /**
    * Opens a HFile. You must load the index before you can use it by calling
    * {@link #loadFileInfo()}.
@@ -89,14 +96,18 @@ public class HFileReaderV2 extends AbstractHFileReader {
    *          still use its on-disk encoding in cache.
    */
   public HFileReaderV2(Path path, FixedFileTrailer trailer,
-      final FSDataInputStream fsdis, final long size,
+      final FSDataInputStream fsdis, final FSDataInputStream fsdisNoFsChecksum,
+      final long size,
       final boolean closeIStream, final CacheConfig cacheConf,
-      DataBlockEncoding preferredEncodingInCache)
+      DataBlockEncoding preferredEncodingInCache, final HFileSystem hfs)
       throws IOException {
-    super(path, trailer, fsdis, size, closeIStream, cacheConf);
-    trailer.expectVersion(2);
+    super(path, trailer, fsdis, fsdisNoFsChecksum, size, 
+          closeIStream, cacheConf, hfs);
+    trailer.expectMajorVersion(2);
+    validateMinorVersion(path, trailer.getMinorVersion());
     HFileBlock.FSReaderV2 fsBlockReaderV2 = new HFileBlock.FSReaderV2(fsdis,
-        compressAlgo, fileSize);
+        fsdisNoFsChecksum,
+        compressAlgo, fileSize, trailer.getMinorVersion(), hfs, path);
     this.fsBlockReader = fsBlockReaderV2; // upcast
 
     // Comparator class name is stored in the trailer in version 2.
@@ -411,9 +422,15 @@ public class HFileReaderV2 extends AbstractHFileReader {
           + " block(s)");
       }
     }
-    if (closeIStream && istream != null) {
-      istream.close();
-      istream = null;
+    if (closeIStream) {
+      if (istream != istreamNoFsChecksum && istreamNoFsChecksum != null) {
+        istreamNoFsChecksum.close();
+        istreamNoFsChecksum = null;
+      }
+      if (istream != null) {
+        istream.close();
+        istream = null;
+      }
     }
   }
 
@@ -915,9 +932,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
     private ByteBuffer getEncodedBuffer(HFileBlock newBlock) {
       ByteBuffer origBlock = newBlock.getBufferReadOnly();
       ByteBuffer encodedBlock = ByteBuffer.wrap(origBlock.array(),
-          origBlock.arrayOffset() + HFileBlock.HEADER_SIZE +
+          origBlock.arrayOffset() + newBlock.headerSize() +
           DataBlockEncoding.ID_SIZE,
-          origBlock.limit() - HFileBlock.HEADER_SIZE -
+          newBlock.getUncompressedSizeWithoutHeader() -
           DataBlockEncoding.ID_SIZE).slice();
       return encodedBlock;
     }
@@ -1053,4 +1070,19 @@ public class HFileReaderV2 extends AbstractHFileReader {
     return true; // We load file info in constructor in version 2.
   }
 
+  /**
+   * Validates that the minor version is within acceptable limits.
+   * Otherwise throws an Runtime exception
+   */
+  private void validateMinorVersion(Path path, int minorVersion) {
+    if (minorVersion < MIN_MINOR_VERSION ||
+        minorVersion > MAX_MINOR_VERSION) {
+      String msg = "Minor version for path " + path + 
+                   " is expected to be between " +
+                   MIN_MINOR_VERSION + " and " + MAX_MINOR_VERSION +
+                   " but is found to be " + minorVersion;
+      LOG.error(msg);
+      throw new RuntimeException(msg);
+    }
+  }
 }

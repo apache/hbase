@@ -304,7 +304,7 @@ public final class HConstants {
   
   /** The regioninfo column qualifier */
   public static final byte [] REGIONINFO_QUALIFIER = 
-	  Bytes.toBytes(REGIONINFO_QUALIFIER_STR);
+    Bytes.toBytes(REGIONINFO_QUALIFIER_STR);
   
   /** The server column qualifier */
   public static final byte [] SERVER_QUALIFIER = Bytes.toBytes("server");
@@ -609,6 +609,35 @@ public final class HConstants {
 
   /** Host name of the local machine */
   public static final String LOCALHOST = "localhost";
+
+  /** 
+   * If this parameter is set to true, then hbase will read
+   * data and then verify checksums. Checksum verification 
+   * inside hdfs will be switched off.  However, if the hbase-checksum 
+   * verification fails, then it will switch back to using
+   * hdfs checksums for verifiying data that is being read from storage.
+   *
+   * If this parameter is set to false, then hbase will not
+   * verify any checksums, instead it will depend on checksum verification
+   * being done in the hdfs client.
+   */
+  public static final String HBASE_CHECKSUM_VERIFICATION = 
+      "hbase.regionserver.checksum.verify";
+
+  /**
+   * The name of the configuration parameter that specifies
+   * the number of bytes in a newly created checksum chunk.
+   */
+  public static final String BYTES_PER_CHECKSUM =
+      "hbase.hstore.bytes.per.checksum";
+
+  /**
+   * The name of the configuration parameter that specifies
+   * the name of an algorithm that is used to compute checksums
+   * for newly created blocks.
+   */
+  public static final String CHECKSUM_TYPE_NAME =
+      "hbase.hstore.checksum.algorithm";
 
   private HConstants() {
     // Can't be instantiated with this ctor.
