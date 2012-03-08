@@ -639,6 +639,11 @@ public final class HConstants {
   public static final String CHECKSUM_TYPE_NAME =
       "hbase.hstore.checksum.algorithm";
 
+  /** Enable file permission modification from standard hbase */
+  public static final String ENABLE_DATA_FILE_UMASK = "hbase.data.umask.enable";
+  /** File permission umask to use when creating hbase data files */
+  public static final String DATA_FILE_UMASK_KEY = "hbase.data.umask";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

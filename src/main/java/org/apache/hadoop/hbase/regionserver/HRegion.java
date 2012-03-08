@@ -67,6 +67,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -769,8 +770,15 @@ public class HRegion implements HeapSize { // , Writable{
     // create but before close.  If we don't successfully close the file,
     // subsequent region reopens will fail the below because create is
     // registered in NN.
+
+    // first check to get the permissions
+    FsPermission perms = FSUtils.getFilePermissions(fs, conf,
+        HConstants.DATA_FILE_UMASK_KEY);
+
+    // and then create the file
     Path tmpPath = new Path(getTmpDir(), REGIONINFO_FILE);
-    FSDataOutputStream out = this.fs.create(tmpPath, true);
+    FSDataOutputStream out = FSUtils.create(fs, tmpPath, perms);
+
     try {
       this.regionInfo.write(out);
       out.write('\n');

@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -60,6 +61,9 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceStability.Evolving
 public abstract class FSUtils {
   private static final Log LOG = LogFactory.getLog(FSUtils.class);
+
+  /** Full access permissions (starting point for a umask) */
+  private static final String FULL_RWX_PERMISSIONS = "777";
 
   protected FSUtils() {
     super();
@@ -105,21 +109,91 @@ public abstract class FSUtils {
   }
 
   /**
-   * Create file.
-   * @param fs filesystem object
-   * @param p path to create
-   * @return Path
-   * @throws IOException e
+   * Create the specified file on the filesystem. By default, this will:
+   * <ol>
+   * <li>overwrite the file if it exists</li>
+   * <li>apply the umask in the configuration (if it is enabled)</li>
+   * <li>use the fs configured buffer size (or {@value DEFAULT_BUFFER_SIZE} if
+   * not set)</li>
+   * <li>use the default replication</li>
+   * <li>use the default block size</li>
+   * <li>not track progress</li>
+   * </ol>
+   * 
+   * @param fs {@link FileSystem} on which to write the file
+   * @param path {@link Path} to the file to write
+   * @return output stream to the created file
+   * @throws IOException if the file cannot be created
    */
-  public static Path create(final FileSystem fs, final Path p)
-  throws IOException {
-    if (fs.exists(p)) {
-      throw new IOException("File already exists " + p.toString());
+  public static FSDataOutputStream create(FileSystem fs, Path path,
+      FsPermission perm) throws IOException {
+    return create(fs, path, perm, true);
+  }
+
+  /**
+   * Create the specified file on the filesystem. By default, this will:
+   * <ol>
+   * <li>apply the umask in the configuration (if it is enabled)</li>
+   * <li>use the fs configured buffer size (or {@value DEFAULT_BUFFER_SIZE} if
+   * not set)</li>
+   * <li>use the default replication</li>
+   * <li>use the default block size</li>
+   * <li>not track progress</li>
+   * </ol>
+   * 
+   * @param fs {@link FileSystem} on which to write the file
+   * @param path {@link Path} to the file to write
+   * @param perm
+   * @param overwrite Whether or not the created file should be overwritten.
+   * @return output stream to the created file
+   * @throws IOException if the file cannot be created
+   */
+  public static FSDataOutputStream create(FileSystem fs, Path path,
+      FsPermission perm, boolean overwrite) throws IOException {
+    LOG.debug("Creating file:" + path + "with permission:" + perm);
+
+    return fs.create(path, perm, overwrite,
+        fs.getConf().getInt("io.file.buffer.size", 4096),
+        fs.getDefaultReplication(), fs.getDefaultBlockSize(), null);
+  }
+
+  /**
+   * Get the file permissions specified in the configuration, if they are
+   * enabled.
+   * 
+   * @param fs filesystem that the file will be created on.
+   * @param conf configuration to read for determining if permissions are
+   *          enabled and which to use
+   * @param permssionConfKey property key in the configuration to use when
+   *          finding the permission
+   * @return the permission to use when creating a new file on the fs. If
+   *         special permissions are not specified in the configuration, then
+   *         the default permissions on the the fs will be returned.
+   */
+  public static FsPermission getFilePermissions(final FileSystem fs,
+      final Configuration conf, final String permssionConfKey) {
+    boolean enablePermissions = conf.getBoolean(
+        HConstants.ENABLE_DATA_FILE_UMASK, false);
+
+    if (enablePermissions) {
+      try {
+        FsPermission perm = new FsPermission(FULL_RWX_PERMISSIONS);
+        // make sure that we have a mask, if not, go default.
+        String mask = conf.get(permssionConfKey);
+        if (mask == null)
+          return FsPermission.getDefault();
+        // appy the umask
+        FsPermission umask = new FsPermission(mask);
+        return perm.applyUMask(umask);
+      } catch (IllegalArgumentException e) {
+        LOG.warn(
+            "Incorrect umask attempted to be created: "
+                + conf.get(permssionConfKey)
+                + ", using default file permissions.", e);
+        return FsPermission.getDefault();
+      }
     }
-    if (!fs.createNewFile(p)) {
-      throw new IOException("Failed create of " + p);
-    }
-    return p;
+    return FsPermission.getDefault();
   }
 
   /**

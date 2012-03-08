@@ -30,10 +30,12 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
@@ -266,9 +268,8 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
   /** A helper method to create HFile output streams in constructors */
   protected static FSDataOutputStream createOutputStream(Configuration conf,
       FileSystem fs, Path path) throws IOException {
-    return fs.create(path, FsPermission.getDefault(), true,
-        fs.getConf().getInt("io.file.buffer.size", 4096),
-        fs.getDefaultReplication(), fs.getDefaultBlockSize(),
-        null);
+    FsPermission perms = FSUtils.getFilePermissions(fs, conf,
+        HConstants.DATA_FILE_UMASK_KEY);
+    return FSUtils.create(fs, path, perms);
   }
 }
