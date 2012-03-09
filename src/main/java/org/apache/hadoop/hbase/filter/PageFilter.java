@@ -92,4 +92,9 @@ public class PageFilter extends FilterBase {
   public void write(final DataOutput out) throws IOException {
     out.writeLong(pageSize);
   }
+
+  @Override
+  public String toString() {
+    return this.getClass().getSimpleName() + " " + this.pageSize;
+  }
 }

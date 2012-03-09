@@ -308,11 +308,11 @@ public class Scan extends OperationWithAttributes implements Writable {
    * @param batch the maximum number of values
    */
   public void setBatch(int batch) {
-	if(this.hasFilter() && this.filter.hasFilterRow()) {
-	  throw new IncompatibleFilterException(
+    if (this.hasFilter() && this.filter.hasFilterRow()) {
+      throw new IncompatibleFilterException(
         "Cannot set batch on a scan using a filter" +
         " that returns true for filter.hasFilterRow");
-	}
+    }
     this.batch = batch;
   }
 
@@ -533,6 +533,9 @@ public class Scan extends OperationWithAttributes implements Writable {
       } 
     }       
     map.put("totalColumns", colCount);
+    if (this.filter != null) {
+      map.put("filter", this.filter.toString());
+    }
     return map;
   }
 

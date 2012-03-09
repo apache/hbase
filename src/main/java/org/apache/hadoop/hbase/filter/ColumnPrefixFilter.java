@@ -105,4 +105,9 @@ public class ColumnPrefixFilter extends FilterBase {
         kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
         kv.getFamilyOffset(), kv.getFamilyLength(), prefix, 0, prefix.length);
   }
+
+  @Override
+  public String toString() {
+    return this.getClass().getSimpleName() + " " + Bytes.toStringBinary(this.prefix);
+  }
 }
