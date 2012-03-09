@@ -33,6 +33,7 @@ import java.util.concurrent.Semaphore;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -62,33 +63,43 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
   private static final Log LOG =
       LogFactory.getLog(TestLogSplitOnMasterFailover.class);
 
-  private final int NUM_MASTERS = 2;
-  private final int NUM_RS = 2;
-  private final int NUM_ROWS = 8000;
-  private final int COLS_PER_ROW = 30;
+  private static final int NUM_MASTERS = 2;
+  private static final int NUM_RS = 2;
+  private static final int NUM_ROWS = 8000;
+  private static final int COLS_PER_ROW = 30;
 
-  private final byte[] TABLE_BYTES = Bytes.toBytes("myTable");
-  private final byte[] CF_BYTES = Bytes.toBytes("myCF");
+  private static final byte[] TABLE_BYTES = Bytes.toBytes("myTable");
+  private static final byte[] CF_BYTES = Bytes.toBytes("myCF");
 
-  private Compression.Algorithm COMPRESSION = Compression.Algorithm.GZ;
-
-  private Semaphore halfRowsLoaded = new Semaphore(0);
-  private Semaphore dataLoadVerifyFinished = new Semaphore(0);
+  private static Compression.Algorithm COMPRESSION = Compression.Algorithm.GZ;
 
   /**
-   * A worker that inserts data into HBase on a separate thread.
+   * A worker that inserts data into HBase on a separate thread. This is the
+   * reusable base class, which is subclassed for use in this particular test.
    */
-  private class DataLoader implements Runnable {
+  static class DataLoader implements Runnable {
 
-    private volatile boolean failure = false;
+    private volatile Throwable failureException;
+    private volatile boolean shutdownRequested = false;
 
     private Map<String, List<String>> rowToQuals =
         new HashMap<String, List<String>>();
     private HTable t;
 
+    private Semaphore halfRowsLoaded = new Semaphore(0);
+    private Semaphore dataLoadVerifyFinished = new Semaphore(0);
+
+    private final Configuration conf;
+    private volatile Thread myThread;
+
+    public DataLoader(Configuration conf) {
+      this.conf = conf;
+    }
+
     @Override
     public void run() {
-      Thread.currentThread().setName(getClass().getSimpleName());
+      myThread = Thread.currentThread();
+      myThread.setName(getClass().getSimpleName());
       try {
         HBaseTestingUtility.createPreSplitLoadTestTable(conf,
             TABLE_BYTES, CF_BYTES, COMPRESSION, DataBlockEncoding.NONE);
@@ -98,7 +109,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
         verifyData();
       } catch (Throwable ex) {
         LOG.error("Data loader failure", ex);
-        failure = true;
+        failureException = ex;
       } finally {
         dataLoadVerifyFinished.release();
         if (t != null) {
@@ -115,6 +126,9 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
       Random rand = new Random(190879817L);
       int bytesInserted = 0;
       for (int i = 0; i < NUM_ROWS; ++i) {
+        if (shutdownRequested) {
+          break;
+        }
         int rowsLoaded = i + 1;
         String rowStr = String.format("%04x", rand.nextInt(65536)) + "_" + i;
         byte[] rowBytes = Bytes.toBytes(rowStr);
@@ -147,6 +161,9 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     private void verifyData() throws IOException {
       LOG.debug("Starting data verification");
       for (Map.Entry<String, List<String>> entry : rowToQuals.entrySet()) {
+        if (shutdownRequested) {
+          break;
+        }
         String row = entry.getKey();
         List<String> quals = entry.getValue();
         Get g = new Get(Bytes.toBytes(row));
@@ -165,6 +182,32 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
 
     private String createValue(String rowStr, String qualStr) {
       return "v" + rowStr + "_" + qualStr;
+    }
+
+    public void waitUntilFinishedOrFailed() throws InterruptedException {
+      LOG.debug("Waiting until we finish loading/verifying the data");
+      dataLoadVerifyFinished.acquire();
+    }
+
+    public void waitUntilHalfRowsLoaded() throws InterruptedException {
+      LOG.debug("Waiting until half of the rows are loaded");
+      halfRowsLoaded.acquire();
+    }
+    public void requestShutdown() {
+      shutdownRequested = true;
+    }
+
+    public void assertSuccess() {
+      if (failureException != null) {
+        LOG.error("Data loader failure", failureException);
+        AssertionError ae = new AssertionError("Data loader failure");
+        ae.initCause(failureException);
+        throw ae;
+      }
+    }
+
+    public void join() throws InterruptedException {
+      myThread.join();
     }
   }
 
@@ -192,10 +235,11 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     List<HMaster> masters = miniCluster().getMasters();
 
     header("Starting data loader");
-    DataLoader dataLoader = new DataLoader();
+    DataLoader dataLoader =
+        new DataLoader(conf);
     Thread inserterThread = new Thread(dataLoader);
     inserterThread.start();
-    halfRowsLoaded.acquire();
+    dataLoader.waitUntilHalfRowsLoaded();
 
     Path logsDir = new Path(FSUtils.getRootDir(conf),
         HConstants.HREGION_LOGDIR_NAME);
@@ -239,9 +283,9 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     HMaster master = masters.get(0);
     assertTrue(master.isActiveMaster());
 
-    LOG.debug("Waiting until we finish loading/verifying the data");
-    dataLoadVerifyFinished.acquire();
-    assertFalse("Data loader failure, check the logs", dataLoader.failure);
+    dataLoader.waitUntilFinishedOrFailed();
+    dataLoader.join();
+    dataLoader.assertSuccess();
 
     // Check the master split the correct logs at startup;
     List<String> logDirsSplitAtStartup = master.getLogDirsSplitOnStartup();
