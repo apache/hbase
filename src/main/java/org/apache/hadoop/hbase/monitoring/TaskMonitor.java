@@ -63,7 +63,7 @@ public class TaskMonitor {
     return instance;
   }
 
-  public MonitoredTask createStatus(String description) {
+  public synchronized MonitoredTask createStatus(String description) {
     MonitoredTask stat = new MonitoredTaskImpl();
     stat.setDescription(description);
     MonitoredTask proxy = (MonitoredTask) Proxy.newProxyInstance(
@@ -75,7 +75,7 @@ public class TaskMonitor {
     return proxy;
   }
 
-  public MonitoredRPCHandler createRPCStatus(String description) {
+  public synchronized MonitoredRPCHandler createRPCStatus(String description) {
     MonitoredRPCHandler stat = new MonitoredRPCHandlerImpl();
     stat.setDescription(description);
     MonitoredRPCHandler proxy = (MonitoredRPCHandler) Proxy.newProxyInstance(
