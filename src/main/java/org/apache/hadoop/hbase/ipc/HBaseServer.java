@@ -203,6 +203,8 @@ public abstract class HBaseServer implements RpcServer {
 
   protected int highPriorityLevel;  // what level a high priority call is at
 
+  private volatile int responseQueueLen; // size of response queue for this server
+
   protected final List<Connection> connectionList =
     Collections.synchronizedList(new LinkedList<Connection>());
   //maintain a list
@@ -929,6 +931,7 @@ public abstract class HBaseServer implements RpcServer {
             return true;
           }
           if (!call.response.hasRemaining()) {
+            responseQueueLen--;
             call.connection.decRpcCount();
             //noinspection RedundantIfStatement
             if (numElements == 1) {    // last call fully processes.
@@ -998,6 +1001,7 @@ public abstract class HBaseServer implements RpcServer {
     void doRespond(Call call) throws IOException {
       // set the serve time when the response has to be sent later
       call.timestamp = System.currentTimeMillis();
+      responseQueueLen++;
 
       boolean doRegister = false;
       synchronized (call.connection.responseQueue) {
@@ -1287,6 +1291,7 @@ public abstract class HBaseServer implements RpcServer {
     } else {
       LOG.warn("Unknown call queue");
     }
+    rpcMetrics.responseQueueLen.set(responseQueueLen);
   }
 
   /** Handles queued calls . */

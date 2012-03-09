@@ -90,6 +90,8 @@ public class HBaseRpcMetrics implements Updater {
           new MetricsIntValue("callQueueLen", registry);
   public final MetricsIntValue priorityCallQueueLen =
           new MetricsIntValue("priorityCallQueueLen", registry);
+  public final MetricsIntValue responseQueueLen =
+          new MetricsIntValue("responseQueueLen", registry);
   public final MetricsTimeVaryingInt authenticationFailures = 
           new MetricsTimeVaryingInt("rpcAuthenticationFailures", registry);
   public final MetricsTimeVaryingInt authenticationSuccesses =
