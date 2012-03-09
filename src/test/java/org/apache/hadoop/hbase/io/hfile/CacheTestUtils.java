@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 
 public class CacheTestUtils {
@@ -323,7 +324,9 @@ public class CacheTestUtils {
       HFileBlock generated = new HFileBlock(BlockType.DATA,
           onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader,
           prevBlockOffset, cachedBuffer, HFileBlock.DONT_FILL_HEADER,
-          blockSize, includesMemstoreTS);
+          blockSize, includesMemstoreTS, HFileBlock.MINOR_VERSION_NO_CHECKSUM,
+          0, ChecksumType.NULL.getCode(),
+          onDiskSizeWithoutHeader + HFileBlock.HEADER_SIZE);
 
       String strKey;
       /* No conflicting keys */

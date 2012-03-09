@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -697,6 +698,8 @@ public class StoreFile extends SchemaConfigured {
     private long maxKeyCount = 0;
     private Path dir;
     private Path filePath;
+    private ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
+    private int bytesPerChecksum = HFile.DEFAULT_BYTES_PER_CHECKSUM;
 
     public WriterBuilder(Configuration conf, CacheConfig cacheConf,
         FileSystem fs, int blockSize) {
@@ -764,6 +767,24 @@ public class StoreFile extends SchemaConfigured {
     }
 
     /**
+     * @param checksumType the type of checksum
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder withChecksumType(ChecksumType checksumType) {
+      this.checksumType = checksumType;
+      return this;
+    }
+
+    /**
+     * @param bytesPerChecksum the number of bytes per checksum chunk
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder withBytesPerChecksum(int bytesPerChecksum) {
+      this.bytesPerChecksum = bytesPerChecksum;
+      return this;
+    }
+
+    /**
      * Create a store file writer. Client is responsible for closing file when
      * done. If metadata, add BEFORE closing using
      * {@link Writer#appendMetadata}.
@@ -796,7 +817,8 @@ public class StoreFile extends SchemaConfigured {
         comparator = KeyValue.COMPARATOR;
       }
       return new Writer(fs, filePath, blockSize, compressAlgo, dataBlockEncoder,
-          conf, cacheConf, comparator, bloomType, maxKeyCount);
+          conf, cacheConf, comparator, bloomType, maxKeyCount, checksumType,
+          bytesPerChecksum);
     }
   }
 
@@ -894,6 +916,12 @@ public class StoreFile extends SchemaConfigured {
 
     protected HFileDataBlockEncoder dataBlockEncoder;
 
+    /** Checksum type */
+    protected ChecksumType checksumType;
+
+    /** Bytes per Checksum */
+    protected int bytesPerChecksum;
+    
     TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
     /* isTimeRangeTrackerSet keeps track if the timeRange has already been set
      * When flushing a memstore, we set TimeRange and use this variable to
@@ -916,13 +944,16 @@ public class StoreFile extends SchemaConfigured {
      * @param bloomType bloom filter setting
      * @param maxKeys the expected maximum number of keys to be added. Was used
      *        for Bloom filter size in {@link HFile} format version 1.
+     * @param checksumType the checksum type
+     * @param bytesPerChecksum the number of bytes per checksum value
      * @throws IOException problem writing to FS
      */
     private Writer(FileSystem fs, Path path, int blocksize,
         Compression.Algorithm compress,
         HFileDataBlockEncoder dataBlockEncoder, final Configuration conf,
         CacheConfig cacheConf,
-        final KVComparator comparator, BloomType bloomType, long maxKeys)
+        final KVComparator comparator, BloomType bloomType, long maxKeys,
+        final ChecksumType checksumType, final int bytesPerChecksum)
         throws IOException {
       this.dataBlockEncoder = dataBlockEncoder != null ?
           dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
@@ -932,6 +963,8 @@ public class StoreFile extends SchemaConfigured {
           .withCompression(compress)
           .withDataBlockEncoder(dataBlockEncoder)
           .withComparator(comparator.getRawComparator())
+          .withChecksumType(checksumType)
+          .withBytesPerChecksum(bytesPerChecksum)
           .create();
 
       this.kvComparator = comparator;
@@ -962,6 +995,8 @@ public class StoreFile extends SchemaConfigured {
         LOG.info("Delete Family Bloom filter type for " + path + ": "
             + deleteFamilyBloomFilterWriter.getClass().getSimpleName());
       }
+      this.checksumType = checksumType;
+      this.bytesPerChecksum = bytesPerChecksum;
     }
 
     /**
@@ -1658,7 +1693,7 @@ public class StoreFile extends SchemaConfigured {
     }
 
     public int getHFileVersion() {
-      return reader.getTrailer().getVersion();
+      return reader.getTrailer().getMajorVersion();
     }
 
     HFile.Reader getHFileReader() {

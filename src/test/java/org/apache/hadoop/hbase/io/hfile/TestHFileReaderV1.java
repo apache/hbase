@@ -76,7 +76,7 @@ public class TestHFileReaderV1 {
 
     assertEquals(N, reader.getEntries());
     assertEquals(N, trailer.getEntryCount());
-    assertEquals(1, trailer.getVersion());
+    assertEquals(1, trailer.getMajorVersion());
     assertEquals(Compression.Algorithm.GZ, trailer.getCompressionCodec());
 
     for (boolean pread : new boolean[] { false, true }) {

@@ -56,7 +56,9 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -185,6 +187,9 @@ public class HBaseTestingUtility {
 
   public HBaseTestingUtility(Configuration conf) {
     this.conf = conf;
+
+    // a hbase checksum verification failure will cause unit tests to fail
+    ChecksumUtil.generateExceptionForChecksumFailureForTest(true);
   }
 
   /**
@@ -1433,7 +1438,7 @@ public class HBaseTestingUtility {
   }
 
   public FileSystem getTestFileSystem() throws IOException {
-    return FileSystem.get(conf);
+    return HFileSystem.get(conf);
   }
 
   /**

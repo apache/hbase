@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
@@ -88,6 +90,8 @@ public class TestCacheOnWrite {
   private static final int INDEX_BLOCK_SIZE = 512;
   private static final int BLOOM_BLOCK_SIZE = 4096;
   private static final BloomType BLOOM_TYPE = StoreFile.BloomType.ROWCOL;
+  private static final ChecksumType CKTYPE = ChecksumType.CRC32;
+  private static final int CKBYTES = 512;
 
   /** The number of valid key types possible in a store file */
   private static final int NUM_VALID_KEY_TYPES =
@@ -192,7 +196,7 @@ public class TestCacheOnWrite {
     conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
         cowType.shouldBeCached(BlockType.BLOOM_CHUNK));
     cowType.modifyConf(conf);
-    fs = FileSystem.get(conf);
+    fs = HFileSystem.get(conf);
     cacheConf = new CacheConfig(conf);
     blockCache = cacheConf.getBlockCache();
   }
@@ -292,6 +296,8 @@ public class TestCacheOnWrite {
             .withComparator(KeyValue.COMPARATOR)
             .withBloomType(BLOOM_TYPE)
             .withMaxKeyCount(NUM_KV)
+            .withChecksumType(CKTYPE)
+            .withBytesPerChecksum(CKBYTES)
             .build();
 
     final int rowLen = 32;

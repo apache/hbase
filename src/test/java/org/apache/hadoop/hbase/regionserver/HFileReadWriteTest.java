@@ -356,6 +356,8 @@ public class HFileReadWriteTest {
             .withDataBlockEncoder(dataBlockEncoder)
             .withBloomType(bloomType)
             .withMaxKeyCount(maxKeyCount)
+            .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
+            .withBytesPerChecksum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
             .build();
 
     StatisticsPrinter statsPrinter = new StatisticsPrinter();

@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -78,5 +79,9 @@ public interface RegionServerServices extends OnlineRegions {
    * @return map of regions in transition in this RS
    */
   public Map<byte[], Boolean> getRegionsInTransitionInRS();
-  
+
+  /**
+   * @return Return the FileSystem object used by the regionserver
+   */
+  public FileSystem getFileSystem();
 }

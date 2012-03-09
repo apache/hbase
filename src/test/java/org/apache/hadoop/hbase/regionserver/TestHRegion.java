@@ -3173,7 +3173,7 @@ public class TestHRegion extends HBaseTestCase {
 
 
     // set up a cluster with 3 nodes
-    MiniHBaseCluster cluster;
+    MiniHBaseCluster cluster = null;
     String dataNodeHosts[] = new String[] { "host1", "host2", "host3" };
     int regionServersCount = 3;
 
@@ -3221,7 +3221,9 @@ public class TestHRegion extends HBaseTestCase {
 
       ht.close();
       } finally {
-        htu.shutdownMiniCluster();
+        if (cluster != null) {
+          htu.shutdownMiniCluster();
+        }
       }
   }
 
