@@ -72,6 +72,7 @@ Release 0.92.1 - Unreleased
    HBASE-5537  MXBean shouldn't have a dependence on InterfaceStability until 0.96
    HBASE-4890  fix possible NPE in HConnectionManager
    HBASE-5529  MR test failures becuase MALLOC_ARENA_MAX is not set (Gregory Chanan)
+   HBASE-5552  Clean up our jmx view; its a bit of a mess
  
  
   IMPROVEMENTS
