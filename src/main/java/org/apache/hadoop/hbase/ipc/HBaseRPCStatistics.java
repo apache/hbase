@@ -36,7 +36,7 @@ public class HBaseRPCStatistics extends MetricsDynamicMBeanBase {
   @SuppressWarnings({"UnusedDeclaration"})
   public HBaseRPCStatistics(MetricsRegistry registry,
       String hostName, String port) {
-	  super(registry, "HBaseRPCStatistics");
+	  super(registry, "Metrics for RPC server instance");
 
     String name = String.format("RPCStatistics-%s",
         (port != null ? port : "unknown"));

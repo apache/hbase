@@ -3275,7 +3275,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @SuppressWarnings("deprecation")
   void registerMBean() {
     MXBeanImpl mxBeanInfo = MXBeanImpl.init(this);
-    mxBean = MBeanUtil.registerMBean("org.apache.hbase", "RegionServer",
+    mxBean = MBeanUtil.registerMBean("RegionServer", "RegionServer",
         mxBeanInfo);
     LOG.info("Registered RegionServer MXBean");
   }

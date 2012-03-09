@@ -36,9 +36,11 @@ public class HBaseInfo {
     private final ObjectName mbeanName;
   
     public HBaseInfoMBean(MetricsRegistry registry, String rsName) {
-      super(registry, "HBaseInfo");
-      mbeanName = MBeanUtil.registerMBean("HBase",
-          "Info", this);
+      super(registry, "HBase cluster information");
+      // The name seems wrong to me; should include clusterid IMO.
+      // That would make it harder to locate and rare we have
+      // two clusters up on single machine. St.Ack 20120309
+      mbeanName = MBeanUtil.registerMBean("HBase", "Info", this);
     }
   
     public void shutdown() {
