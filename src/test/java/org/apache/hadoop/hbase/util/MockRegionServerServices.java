@@ -24,8 +24,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
@@ -45,6 +47,7 @@ public class MockRegionServerServices implements RegionServerServices {
   private boolean stopping = false;
   private final ConcurrentSkipListMap<byte[], Boolean> rit = 
     new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
+  private HFileSystem hfs = null;
 
   @Override
   public boolean removeFromOnlineRegions(String encodedRegionName) {
@@ -147,5 +150,13 @@ public class MockRegionServerServices implements RegionServerServices {
   public boolean isAborted() {
     return false;
   }
-  
+
+  @Override
+  public HFileSystem getFileSystem() {
+    return this.hfs;
+  }
+
+  public void setFileSystem(FileSystem hfs) {
+    this.hfs = (HFileSystem)hfs;
+  }
 }

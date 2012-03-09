@@ -133,7 +133,8 @@ public class TestCloseRegionHandler {
      @Test public void testZKClosingNodeVersionMismatch()
      throws IOException, NodeExistsException, KeeperException {
        final Server server = new MockServer(HTU);
-       final RegionServerServices rss = new MockRegionServerServices();
+       final MockRegionServerServices rss = new MockRegionServerServices();
+       rss.setFileSystem(HTU.getTestFileSystem());
    
        HTableDescriptor htd = TEST_HTD;
        final HRegionInfo hri = TEST_HRI;
@@ -169,7 +170,8 @@ public class TestCloseRegionHandler {
      @Test public void testCloseRegion()
      throws IOException, NodeExistsException, KeeperException {
        final Server server = new MockServer(HTU);
-       final RegionServerServices rss = new MockRegionServerServices();
+       final MockRegionServerServices rss = new MockRegionServerServices();
+       rss.setFileSystem(HTU.getTestFileSystem());
    
        HTableDescriptor htd = TEST_HTD;
        HRegionInfo hri = TEST_HRI;

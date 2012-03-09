@@ -189,6 +189,8 @@ public class CreateRandomStoreFile {
             .withCompression(compr)
             .withBloomType(bloomType)
             .withMaxKeyCount(numKV)
+            .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
+            .withBytesPerChecksum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
             .build();
 
     rand = new Random();

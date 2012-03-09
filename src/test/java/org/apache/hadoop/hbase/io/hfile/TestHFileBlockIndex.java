@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexChunk;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -110,7 +111,7 @@ public class TestHFileBlockIndex {
     // This test requires at least HFile format version 2.
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
 
-    fs = FileSystem.get(conf);
+    fs = HFileSystem.get(conf);
   }
 
   @Test
@@ -215,7 +216,8 @@ public class TestHFileBlockIndex {
   private void writeWholeIndex() throws IOException {
     assertEquals(0, keys.size());
     HFileBlock.Writer hbw = new HFileBlock.Writer(compr, null,
-        includesMemstoreTS);
+        includesMemstoreTS, HFile.DEFAULT_CHECKSUM_TYPE,
+        HFile.DEFAULT_BYTES_PER_CHECKSUM);
     FSDataOutputStream outputStream = fs.create(path);
     HFileBlockIndex.BlockIndexWriter biw =
         new HFileBlockIndex.BlockIndexWriter(hbw, null, null);

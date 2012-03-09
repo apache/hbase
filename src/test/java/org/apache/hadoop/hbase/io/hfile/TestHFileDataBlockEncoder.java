@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.RedundantKVGenerator;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.Before;
@@ -123,12 +124,14 @@ public class TestHFileDataBlockEncoder {
     HFileBlock block = getSampleHFileBlock();
     Pair<ByteBuffer, BlockType> result =
         blockEncoder.beforeWriteToDisk(block.getBufferWithoutHeader(),
-            includesMemstoreTS);
+            includesMemstoreTS, HFileBlock.DUMMY_HEADER);
 
     int size = result.getFirst().limit() - HFileBlock.HEADER_SIZE;
     HFileBlock blockOnDisk = new HFileBlock(result.getSecond(),
         size, size, -1, result.getFirst(), HFileBlock.FILL_HEADER, 0,
-        includesMemstoreTS);
+        includesMemstoreTS, block.getMinorVersion(),
+        block.getBytesPerChecksum(), block.getChecksumType(),
+        block.getOnDiskDataSizeWithHeader());
 
     if (blockEncoder.getEncodingOnDisk() !=
         DataBlockEncoding.NONE) {
@@ -158,7 +161,8 @@ public class TestHFileDataBlockEncoder {
     keyValues.rewind();
     buf.put(keyValues);
     HFileBlock b = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-        HFileBlock.FILL_HEADER, 0, includesMemstoreTS);
+        HFileBlock.FILL_HEADER, 0, includesMemstoreTS, 
+        HFileReaderV2.MAX_MINOR_VERSION, 0, ChecksumType.NULL.getCode(), 0);
     UNKNOWN_TABLE_AND_CF.passSchemaMetricsTo(b);
     return b;
   }
