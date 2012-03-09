@@ -1643,7 +1643,7 @@ Server {
   @SuppressWarnings("deprecation")
   void registerMBean() {
     MXBeanImpl mxBeanInfo = MXBeanImpl.init(this);
-    MBeanUtil.registerMBean("org.apache.hbase", "Master", mxBeanInfo);
+    MBeanUtil.registerMBean("Master", "Master", mxBeanInfo);
     LOG.info("Registered HMaster MXBean");
   }
 }
