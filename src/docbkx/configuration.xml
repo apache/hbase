@@ -80,7 +80,11 @@ to ensure well-formedness of your document after an edit session.
         <title>DNS</title>
 
         <para>HBase uses the local hostname to self-report it's IP address.
-        Both forward and reverse DNS resolving should work.</para>
+        Both forward and reverse DNS resolving must work in versions of
+        HBase previous to 0.92.0
+        <footnote><para>The <link xlink:href="https://github.com/sujee/hadoop-dns-checker">hadoop-dns-checker</link> tool can be used to verify
+        DNS is working correctly on the cluster.  The project README file provides detailed instructions on usage.
+</para></footnote>.</para>
 
         <para>If your machine has multiple interfaces, HBase will use the
         interface that the primary hostname resolves to.</para>
