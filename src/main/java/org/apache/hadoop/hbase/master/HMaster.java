@@ -398,7 +398,14 @@ Server {
         this);
     this.zooKeeper.registerListener(activeMasterManager);
     stallIfBackupMaster(this.conf, this.activeMasterManager);
-    return this.activeMasterManager.blockUntilBecomingActiveMaster(startupStatus);
+
+    // The ClusterStatusTracker is setup before the other
+    // ZKBasedSystemTrackers because it's needed by the activeMasterManager
+    // to check if the cluster should be shutdown.
+    this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
+    this.clusterStatusTracker.start();
+    return this.activeMasterManager.blockUntilBecomingActiveMaster(startupStatus,
+        this.clusterStatusTracker);
   }
 
   /**
@@ -427,8 +434,6 @@ Server {
 
     // Set the cluster as up.  If new RSs, they'll be waiting on this before
     // going ahead with their startup.
-    this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
-    this.clusterStatusTracker.start();
     boolean wasUp = this.clusterStatusTracker.isClusterUp();
     if (!wasUp) this.clusterStatusTracker.setClusterUp();
 
