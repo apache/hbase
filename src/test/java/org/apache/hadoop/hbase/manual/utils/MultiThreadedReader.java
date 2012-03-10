@@ -110,15 +110,15 @@ public class MultiThreadedReader extends MultiThreadedAction
 
           if (startKey_ == -1) {
             // load test is running at the same time.
-            if (MultiThreadedWriter.insertedKeySet_.size() > 0) {
-              int idx = reader_.random_.nextInt(MultiThreadedWriter.insertedKeySet_.size());
-              curKey = MultiThreadedWriter.insertedKeySet_.get(idx);
-            } else {
+            while (MultiThreadedWriter.insertedKeySet_.isEmpty()) {
               try {
                 Thread.sleep(1000);
               } catch (InterruptedException e) {
               }
             }
+
+            int idx = reader_.random_.nextInt(MultiThreadedWriter.insertedKeySet_.size());
+            curKey = MultiThreadedWriter.insertedKeySet_.get(idx);
           } else {
             curKey = startKey_ + Math.abs(reader_.random_.nextLong())%(endKey_ - startKey_);
           }
