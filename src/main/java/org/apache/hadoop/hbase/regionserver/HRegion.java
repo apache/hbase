@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -200,7 +201,7 @@ public class HRegion implements HeapSize { // , Writable{
   // Registered region protocol handlers
   private ClassToInstanceMap<CoprocessorProtocol>
       protocolHandlers = MutableClassToInstanceMap.create();
-  
+
   private Map<String, Class<? extends CoprocessorProtocol>>
       protocolHandlerNames = Maps.newHashMap();
 
@@ -333,6 +334,9 @@ public class HRegion implements HeapSize { // , Writable{
   // for simple numeric metrics (# of blocks read from block cache)
   public static final ConcurrentMap<String, AtomicLong> numericMetrics = new ConcurrentHashMap<String, AtomicLong>();
 
+  public static final String METRIC_GETSIZE = "getsize";
+  public static final String METRIC_NEXTSIZE = "nextsize";
+
   // for simple numeric metrics (current block cache size)
   // These ones are not reset to zero when queried, unlike the previous.
   public static final ConcurrentMap<String, AtomicLong> numericPersistentMetrics = new ConcurrentHashMap<String, AtomicLong>();
@@ -342,7 +346,7 @@ public class HRegion implements HeapSize { // , Writable{
    * number of operations.
    */
   public static final ConcurrentMap<String, Pair<AtomicLong, AtomicInteger>>
-      timeVaryingMetrics = new ConcurrentHashMap<String, 
+      timeVaryingMetrics = new ConcurrentHashMap<String,
           Pair<AtomicLong, AtomicInteger>>();
 
   public static void incrNumericMetric(String key, long amount) {
@@ -958,7 +962,7 @@ public class HRegion implements HeapSize { // , Writable{
         CompletionService<ImmutableList<StoreFile>> completionService =
           new ExecutorCompletionService<ImmutableList<StoreFile>>(
             storeCloserThreadPool);
-      
+
         // close each store in parallel
         for (final Store store : stores.values()) {
           completionService
@@ -2903,7 +2907,7 @@ public class HRegion implements HeapSize { // , Writable{
       return currentEditSeqId;
     } finally {
       status.cleanup();
-      if (reader != null) {  
+      if (reader != null) {
          reader.close();
       }
     }
@@ -3345,6 +3349,12 @@ public class HRegion implements HeapSize { // , Writable{
     @Override
     public synchronized boolean next(List<KeyValue> outResults, int limit)
         throws IOException {
+      return next(outResults, limit, null);
+    }
+
+    @Override
+    public synchronized boolean next(List<KeyValue> outResults, int limit,
+        String metric) throws IOException {
       if (this.filterClosed) {
         throw new UnknownScannerException("Scanner was closed (timed out?) " +
             "after we renewed it. Could be caused by a very slow scanner " +
@@ -3359,7 +3369,7 @@ public class HRegion implements HeapSize { // , Writable{
 
         results.clear();
 
-        boolean returnResult = nextInternal(limit);
+        boolean returnResult = nextInternal(limit, metric);
 
         outResults.addAll(results);
         resetFilters();
@@ -3376,7 +3386,14 @@ public class HRegion implements HeapSize { // , Writable{
     public synchronized boolean next(List<KeyValue> outResults)
         throws IOException {
       // apply the batching limit by default
-      return next(outResults, batch);
+      return next(outResults, batch, null);
+    }
+
+    @Override
+    public synchronized boolean next(List<KeyValue> outResults, String metric)
+        throws IOException {
+      // apply the batching limit by default
+      return next(outResults, batch, metric);
     }
 
     /*
@@ -3386,7 +3403,7 @@ public class HRegion implements HeapSize { // , Writable{
       return this.filter != null && this.filter.filterAllRemaining();
     }
 
-    private boolean nextInternal(int limit) throws IOException {
+    private boolean nextInternal(int limit, String metric) throws IOException {
       while (true) {
         byte [] currentRow = peekRow();
         if (isStopRow(currentRow)) {
@@ -3403,7 +3420,7 @@ public class HRegion implements HeapSize { // , Writable{
         } else {
           byte [] nextRow;
           do {
-            this.storeHeap.next(results, limit - results.size());
+            this.storeHeap.next(results, limit - results.size(), metric);
             if (limit > 0 && results.size() == limit) {
               if (this.filter != null && filter.hasFilterRow()) {
                 throw new IncompatibleFilterException(
@@ -4160,7 +4177,7 @@ public class HRegion implements HeapSize { // , Writable{
     RegionScanner scanner = null;
     try {
       scanner = getScanner(scan);
-      scanner.next(results);
+      scanner.next(results, HRegion.METRIC_GETSIZE);
     } finally {
       if (scanner != null)
         scanner.close();
