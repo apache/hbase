@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -221,6 +222,10 @@ public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
     public void setStatus(String status) {
       outer.setStatus(status);
     }
+
+    public float getProgress() {
+      return 0;
+    }
   }
 
   private class MapRunner implements Runnable {
@@ -228,16 +233,32 @@ public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
     private Context subcontext;
     private Throwable throwable;
 
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     MapRunner(Context context) throws IOException, InterruptedException {
       mapper = ReflectionUtils.newInstance(mapClass,
           context.getConfiguration());
-      subcontext = new Context(outer.getConfiguration(), 
+      try {
+        Constructor c = context.getClass().getConstructor(
+          Configuration.class,
+          outer.getTaskAttemptID().getClass(),
+          SubMapRecordReader.class,
+          SubMapRecordWriter.class,
+          context.getOutputCommitter().getClass(),
+          SubMapStatusReporter.class,
+          outer.getInputSplit().getClass());
+        c.setAccessible(true);
+        subcontext = (Context) c.newInstance(
+          outer.getConfiguration(), 
           outer.getTaskAttemptID(),
           new SubMapRecordReader(),
           new SubMapRecordWriter(),
           context.getOutputCommitter(),
           new SubMapStatusReporter(),
           outer.getInputSplit());
+      } catch (Exception e) {
+        // rethrow as IOE
+        throw new IOException(e);
+      }
     }
 
     @Override
