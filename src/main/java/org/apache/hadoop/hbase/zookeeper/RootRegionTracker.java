@@ -90,7 +90,7 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
    * @return Returns null if <code>data</code> is null else converts passed data
    * to a ServerName instance.
    */
-  private static ServerName dataToServerName(final byte [] data) {
+  public static ServerName dataToServerName(final byte [] data) {
     // The str returned could be old style -- pre hbase-1502 -- which was
     // hostname and port seperated by a colon rather than hostname, port and
     // startcode delimited by a ','.

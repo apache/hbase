@@ -35,9 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.EmptyWatcher;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -253,9 +251,6 @@ public class ZKUtil {
   /**
    * Check if the specified node exists.  Sets no watches.
    *
-   * Returns true if node exists, false if not.  Returns an exception if there
-   * is an unexpected zookeeper exception.
-   *
    * @param zkw zk reference
    * @param znode path of node to watch
    * @return version of the node if it exists, -1 if does not exist
@@ -463,7 +458,8 @@ public class ZKUtil {
 
   /**
    * Get znode data. Does not set a watcher.
-   * @return ZNode data
+   * @return ZNode data, null if the node does not exist or if there is an
+   *  error.
    */
   public static byte [] getData(ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
@@ -1171,5 +1167,22 @@ public class ZKUtil {
     if (keeperEx != null) {
       throw new IOException(keeperEx);
     }
+  }
+
+
+  public static byte[] blockUntilAvailable(
+    final ZooKeeperWatcher zkw, final String znode, final long timeout)
+    throws InterruptedException {
+    if (timeout < 0) throw new IllegalArgumentException();
+    if (zkw == null) throw new IllegalArgumentException();
+    if (znode == null) throw new IllegalArgumentException();
+
+    ZooKeeperNodeTracker znt = new ZooKeeperNodeTracker(zkw, znode, new Abortable() {
+      @Override public void abort(String why, Throwable e) {}
+      @Override public boolean isAborted() {return false;}
+    }) {
+    };
+
+    return znt.blockUntilAvailable(timeout, true);
   }
 }

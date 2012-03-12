@@ -19,21 +19,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -53,16 +45,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable.DaemonThreadFactory;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -86,6 +69,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -94,6 +78,8 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.*;
 
 /**
  * Run tests that use the HBase clients; {@link HTable} and {@link HTablePool}.
@@ -213,6 +199,91 @@ public class TestFromClientSide {
      scanner.close();
      h.close();
    }
+
+   @Test
+   public void testSharedZooKeeper() throws Exception {
+     Configuration newConfig = new Configuration(TEST_UTIL.getConfiguration());
+     newConfig.set(HConstants.HBASE_CLIENT_INSTANCE_ID, "12345");
+
+     // First with a simple ZKW
+     ZooKeeperWatcher z0 = new ZooKeeperWatcher(
+       newConfig, "hconnection", new Abortable() {
+       @Override public void abort(String why, Throwable e) {}
+       @Override public boolean isAborted() {return false;}
+     });
+     z0.getRecoverableZooKeeper().getZooKeeper().exists("/oldZooKeeperWatcher", false);
+     z0.close();
+
+     // Then a ZooKeeperKeepAliveConnection
+     HConnectionManager.HConnectionImplementation connection1 =
+       (HConnectionManager.HConnectionImplementation)
+         HConnectionManager.getConnection(newConfig);
+
+     ZooKeeperKeepAliveConnection z1 = connection1.getKeepAliveZooKeeperWatcher();
+     z1.getRecoverableZooKeeper().getZooKeeper().exists("/z1", false);
+
+     z1.close();
+
+     // will still work, because the real connection is not closed yet
+     // Not do be done in real code
+     z1.getRecoverableZooKeeper().getZooKeeper().exists("/z1afterclose", false);
+
+
+     ZooKeeperKeepAliveConnection z2 = connection1.getKeepAliveZooKeeperWatcher();
+     assertTrue(
+       "ZooKeeperKeepAliveConnection equals on same connection", z1 == z2);
+
+
+
+     Configuration newConfig2 = new Configuration(TEST_UTIL.getConfiguration());
+     newConfig2.set(HConstants.HBASE_CLIENT_INSTANCE_ID, "6789");
+     HConnectionManager.HConnectionImplementation connection2 =
+       (HConnectionManager.HConnectionImplementation)
+         HConnectionManager.getConnection(newConfig2);
+
+     assertTrue("connections should be different ", connection1 != connection2);
+
+     ZooKeeperKeepAliveConnection z3 = connection2.getKeepAliveZooKeeperWatcher();
+     assertTrue(
+       "ZooKeeperKeepAliveConnection should be different" +
+         " on different connections", z1 != z3);
+
+     // Bypass the private access
+     Method m = HConnectionManager.HConnectionImplementation.class.
+       getDeclaredMethod("closeZooKeeperWatcher");
+     m.setAccessible(true);
+     m.invoke(connection2);
+
+     ZooKeeperKeepAliveConnection z4 = connection2.getKeepAliveZooKeeperWatcher();
+     assertTrue(
+       "ZooKeeperKeepAliveConnection should be recreated" +
+         " when previous connections was closed"
+       , z3 != z4);
+
+
+     z2.getRecoverableZooKeeper().getZooKeeper().exists("/z2", false);
+     z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
+
+
+     HConnectionManager.deleteConnection(newConfig, true);
+     try {
+       z2.getRecoverableZooKeeper().getZooKeeper().exists("/z2", false);
+       assertTrue("We should not have a valid connection for z2", false);
+     } catch (Exception e){
+     }
+
+     z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
+     // We expect success here.
+
+
+     HConnectionManager.deleteConnection(newConfig2, true);
+     try {
+       z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
+       assertTrue("We should not have a valid connection for z4", false);
+     } catch (Exception e){
+     }
+   }
+
 
    /**
    * HBASE-2468 use case 1 and 2: region info de/serialization
@@ -4594,7 +4665,7 @@ public class TestFromClientSide {
     assertNotNull(addrAfter);
     assertTrue(addrAfter.getPort() != addrCache.getPort());
     assertEquals(addrAfter.getPort(), addrNoCache.getPort());
-  }  
+  }
 
   @Test
   /**
@@ -4654,8 +4725,9 @@ public class TestFromClientSide {
     regionsList = table.getRegionsInRange(startKey, endKey);
     assertEquals(1, regionsList.size());
   }
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+
+   @org.junit.Rule
+   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

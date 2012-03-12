@@ -125,12 +125,38 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
     long remaining = timeout;
     if (refresh) {
       try {
+        // This does not create a watch if the node does not exists
         this.data = ZKUtil.getDataAndWatch(watcher, node);
       } catch(KeeperException e) {
+        // We use to abort here, but in some cases the abort is ignored (
+        //  (empty Abortable), so it's better to log...
+        LOG.warn("Unexpected exception handling blockUntilAvailable", e);
         abortable.abort("Unexpected exception handling blockUntilAvailable", e);
       }
     }
+    boolean nodeExistsChecked = (!refresh ||data!=null);
     while (!this.stopped && (notimeout || remaining > 0) && this.data == null) {
+      if (!nodeExistsChecked) {
+        try {
+          nodeExistsChecked = (ZKUtil.checkExists(watcher, node) != -1);
+        } catch (KeeperException e) {
+          LOG.warn(
+            "Got exception while trying to check existence in  ZooKeeper" +
+            " of the node: "+node+", retrying if timeout not reached",e );
+        }
+
+        // It did not exists, and now it does.
+        if (nodeExistsChecked){
+          LOG.info("Node "+node+" now exists, resetting a watcher");
+          try {
+            // This does not create a watch if the node does not exists
+            this.data = ZKUtil.getDataAndWatch(watcher, node);
+          } catch (KeeperException e) {
+            LOG.warn("Unexpected exception handling blockUntilAvailable", e);
+            abortable.abort("Unexpected exception handling blockUntilAvailable", e);
+          }
+        }
+      }
       // We expect a notification; but we wait with a
       //  a timeout to lower the impact of a race condition if any
       wait(100);
@@ -215,7 +241,8 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
     } catch (KeeperException e) {
       abortable
           .abort(
-              "Exception while checking if basenode exists.",
+              "Exception while checking if basenode ("+watcher.baseZNode+
+                ") exists in ZooKeeper.",
               e);
     }
     return true;

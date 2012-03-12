@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -76,7 +77,7 @@ import org.apache.zookeeper.KeeperException.SessionExpiredException;
  * </pre>
  */
 @InterfaceAudience.Private
-public class ReplicationZookeeper {
+public class ReplicationZookeeper implements Closeable{
   private static final Log LOG =
     LogFactory.getLog(ReplicationZookeeper.class);
   // Name of znode we use to lock when failover
@@ -744,6 +745,12 @@ public class ReplicationZookeeper {
    */
   public String getPeersZNode() {
     return peersZNode;
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (statusTracker != null)
+      statusTracker.stop();
   }
 
   /**

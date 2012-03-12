@@ -46,13 +46,14 @@ public class TestReplicationPeer {
     rp = new ReplicationPeer(conf, "clusterKey", "clusterId");
   }
 
+
   @Test(timeout=300000)
   public void testResetZooKeeperSession() throws Exception {
     ZooKeeperWatcher zkw = rp.getZkw();
     zkw.getRecoverableZooKeeper().exists("/1/2", false);
 
     LOG.info("Expiring ReplicationPeer ZooKeeper session.");
-    utility.expireSession(zkw, null, false);
+    utility.expireSession(zkw);
 
     try {
       LOG.info("Attempting to use expired ReplicationPeer ZooKeeper session.");

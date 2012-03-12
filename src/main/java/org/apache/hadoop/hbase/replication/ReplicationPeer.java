@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +39,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  * sessions and re-establishing the ZK connections.
  */
 @InterfaceAudience.Private
-public class ReplicationPeer implements Abortable {
+public class ReplicationPeer implements Abortable, Closeable {
   private static final Log LOG = LogFactory.getLog(ReplicationPeer.class);
 
   private final String clusterKey;
@@ -135,7 +136,7 @@ public class ReplicationPeer implements Abortable {
   public void reloadZkWatcher() throws IOException {
     if (zkw != null) zkw.close();
     zkw = new ZooKeeperWatcher(conf,
-        "connection to cluster: " + id, this);    
+        "connection to cluster: " + id, this);
   }
 
   @Override
@@ -143,5 +144,12 @@ public class ReplicationPeer implements Abortable {
     // Currently the replication peer is never "Aborted", we just log when the
     // abort method is called.
     return false;
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (zkw != null){
+      zkw.close();
+    }
   }
 }

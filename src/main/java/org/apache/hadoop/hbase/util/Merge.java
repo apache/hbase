@@ -96,7 +96,7 @@ public class Merge extends Configured implements Tool {
     LOG.info("Verifying that HBase is not running...");
     try {
       HBaseAdmin.checkHBaseAvailable(getConf());
-      LOG.fatal("HBase cluster must be off-line.");
+      LOG.fatal("HBase cluster must be off-line, and is not. Aborting.");
       return -1;
     } catch (ZooKeeperConnectionException zkce) {
       // If no zk, presume no master.

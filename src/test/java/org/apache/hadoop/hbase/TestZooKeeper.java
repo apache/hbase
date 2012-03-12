@@ -92,41 +92,41 @@ public class TestZooKeeper {
    * @throws InterruptedException
    */
   @Test
-  public void testClientSessionExpired()
-  throws IOException, InterruptedException {
+  public void testClientSessionExpired() throws Exception {
     LOG.info("testClientSessionExpired");
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     new HTable(c, HConstants.META_TABLE_NAME).close();
-    String quorumServers = ZKConfig.getZKQuorumServersString(c);
-    int sessionTimeout = 5 * 1000; // 5 seconds
+
     HConnection connection = HConnectionManager.getConnection(c);
     ZooKeeperWatcher connectionZK = connection.getZooKeeperWatcher();
-    long sessionID = connectionZK.getRecoverableZooKeeper().getSessionId();
-    byte[] password = connectionZK.getRecoverableZooKeeper().getSessionPasswd();
-    ZooKeeper zk = new ZooKeeper(quorumServers, sessionTimeout,
-        EmptyWatcher.instance, sessionID, password);
-    LOG.info("Session timeout=" + zk.getSessionTimeout() +
-      ", original=" + sessionTimeout +
-      ", id=" + zk.getSessionId());
-    zk.close();
 
-    Thread.sleep(sessionTimeout * 3L);
+    TEST_UTIL.expireSession(connectionZK);
 
+    // Depending on how long you wait here, the state after dump will
+    // be 'closed' or 'Connecting'.
+    // There should be no reason to wait, the connection is closed on the server
+    // Thread.sleep(sessionTimeout * 3L);
+
+    LOG.info("Before dump state=" +
+      connectionZK.getRecoverableZooKeeper().getState());
     // provoke session expiration by doing something with ZK
     ZKUtil.dump(connectionZK);
 
     // Check that the old ZK connection is closed, means we did expire
-    System.err.println("ZooKeeper should have timed out");
-    String state = connectionZK.getRecoverableZooKeeper().getState().toString();
-    LOG.info("state=" + connectionZK.getRecoverableZooKeeper().getState());
-    Assert.assertTrue(connectionZK.getRecoverableZooKeeper().getState().
-      equals(States.CLOSED));
+    LOG.info("ZooKeeper should have timed out");
+    States state = connectionZK.getRecoverableZooKeeper().getState();
+    LOG.info("After dump state=" + state);
+    Assert.assertTrue(state == States.CLOSED);
 
     // Check that the client recovered
     ZooKeeperWatcher newConnectionZK = connection.getZooKeeperWatcher();
-    LOG.info("state=" + newConnectionZK.getRecoverableZooKeeper().getState());
-    Assert.assertTrue(newConnectionZK.getRecoverableZooKeeper().getState().equals(
-      States.CONNECTED));
+    //Here, if you wait, you will have a CONNECTED state. If you don't,
+    //  you may have the CONNECTING one.
+    //Thread.sleep(sessionTimeout * 3L);
+    States state2 = newConnectionZK.getRecoverableZooKeeper().getState();
+    LOG.info("After new get state=" +state2);
+    Assert.assertTrue(
+      state2 == States.CONNECTED || state2 == States.CONNECTING);
   }
   
   @Test
@@ -141,6 +141,7 @@ public class TestZooKeeper {
   public void testMasterSessionExpired() throws Exception {
     LOG.info("Starting testMasterSessionExpired");
     TEST_UTIL.expireMasterSession();
+    Thread.sleep(7000); // Helps the test to succeed!!!
     testSanity();
   }
 
@@ -150,7 +151,7 @@ public class TestZooKeeper {
    */
   public void testSanity() throws Exception{
     HBaseAdmin admin =
-      new HBaseAdmin(new Configuration(TEST_UTIL.getConfiguration()));
+      new HBaseAdmin(TEST_UTIL.getConfiguration());
     String tableName = "test"+System.currentTimeMillis();
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor family = new HColumnDescriptor("fam");

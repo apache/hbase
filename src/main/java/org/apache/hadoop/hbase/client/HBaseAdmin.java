@@ -19,17 +19,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.net.SocketTimeoutException;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -46,7 +35,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionException;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -64,6 +52,18 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.KeeperException;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.net.SocketTimeoutException;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 /**
  * Provides an interface to manage HBase database table metadata + general
@@ -77,86 +77,54 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HBaseAdmin implements Abortable, Closeable {
-  private final Log LOG = LogFactory.getLog(this.getClass().getName());
-//  private final HConnection connection;
-  private HConnection connection;
+  private static final Log LOG = LogFactory.getLog(HBaseAdmin.class);
+
+  // We use the implementation class rather then the interface because we
+  //  need the package protected functions to get the connection to master
+  private HConnectionManager.HConnectionImplementation connection;
+
   private volatile Configuration conf;
   private final long pause;
   private final int numRetries;
   // Some operations can take a long time such as disable of big table.
-  // numRetries is for 'normal' stuff... Mutliply by this factor when
+  // numRetries is for 'normal' stuff... Multiply by this factor when
   // want to wait a long time.
   private final int retryLongerMultiplier;
   private boolean aborted;
-  
+
   /**
-   * Constructor
+   * Constructor.
+   * See {@link #HBaseAdmin(HConnection connection)}
    *
-   * @param c Configuration object
-   * @throws MasterNotRunningException if the master is not running
-   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
+   * @param c Configuration object. Copied internally.
    */
   public HBaseAdmin(Configuration c)
   throws MasterNotRunningException, ZooKeeperConnectionException {
-    this.conf = HBaseConfiguration.create(c);
-    this.connection = HConnectionManager.getConnection(this.conf);
-    this.pause = this.conf.getLong("hbase.client.pause", 1000);
-    this.numRetries = this.conf.getInt("hbase.client.retries.number", 10);
-    this.retryLongerMultiplier = this.conf.getInt(
-        "hbase.client.retries.longer.multiplier", 10);
-
-    int tries = 0;
-    while ( true ){
-      try {
-
-        this.connection.getMaster();
-        return;
-
-      } catch (MasterNotRunningException mnre) {
-        HConnectionManager.deleteStaleConnection(this.connection);
-        this.connection = HConnectionManager.getConnection(this.conf);
-      }
-
-      tries++;
-      if (tries >= numRetries) {
-        // we should delete connection between client and zookeeper
-        HConnectionManager.deleteStaleConnection(this.connection);
-        throw new MasterNotRunningException("Retried " + numRetries + " times");
-      }
-
-      try {
-        Thread.sleep(getPauseTime(tries));
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        // we should delete connection between client and zookeeper
-        HConnectionManager.deleteStaleConnection(this.connection);
-        throw new MasterNotRunningException(
-          "Interrupted after "+tries+" tries");
-      }
-    }
+    // Will not leak connections, as the new implementation of the constructor
+    // does not throw exceptions anymore.
+    this(HConnectionManager.getConnection(new Configuration(c)));
   }
 
  /**
-   * Constructor for externally managed HConnections.
-   * This constructor fails fast if the HMaster is not running.
-   * The HConnection can be re-used again in another attempt.
-   * This constructor fails fast.
-   *
-   * @param connection The HConnection instance to use
-   * @throws MasterNotRunningException if the master is not running
-   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
-   */
+  * Constructor for externally managed HConnections.
+  * The connection to master will be created when required by admin functions.
+  *
+  * @param connection The HConnection instance to use
+  * @throws MasterNotRunningException, ZooKeeperConnectionException are not
+  *  thrown anymore but kept into the interface for backward api compatibility
+  */
   public HBaseAdmin(HConnection connection)
       throws MasterNotRunningException, ZooKeeperConnectionException {
     this.conf = connection.getConfiguration();
-    this.connection = connection;
+
+    // We want the real class, without showing it our public interface,
+    //  hence the cast.
+    this.connection = (HConnectionManager.HConnectionImplementation)connection;
 
     this.pause = this.conf.getLong("hbase.client.pause", 1000);
     this.numRetries = this.conf.getInt("hbase.client.retries.number", 10);
     this.retryLongerMultiplier = this.conf.getInt(
         "hbase.client.retries.longer.multiplier", 10);
-
-    this.connection.getMaster();
   }
 
   /**
@@ -206,18 +174,25 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @return proxy connection to master server for this instance
    * @throws MasterNotRunningException if the master is not running
    * @throws ZooKeeperConnectionException if unable to connect to zookeeper
+   * @deprecated  Master is an implementation detail for HBaseAdmin.
+   * Deprecated in HBase 0.94
    */
+  @Deprecated
   public HMasterInterface getMaster()
   throws MasterNotRunningException, ZooKeeperConnectionException {
-    return this.connection.getMaster();
+    // We take a shared master, but we will never release it,
+    //  so we will have the same behavior as before.
+    return this.connection.getKeepAliveMaster();
   }
 
-  /** @return - true if the master server is running
+  /** @return - true if the master server is running. Throws an exception
+   *  otherwise.
    * @throws ZooKeeperConnectionException
-   * @throws MasterNotRunningException */
-  public boolean isMasterRunning()
+   * @throws MasterNotRunningException
+   */
+   public boolean isMasterRunning()
   throws MasterNotRunningException, ZooKeeperConnectionException {
-    return this.connection.isMasterRunning();
+    return connection.isMasterRunning();
   }
 
   /**
@@ -464,7 +439,8 @@ public class HBaseAdmin implements Abortable, Closeable {
    * and attempt-at-creation).
    * @throws IOException
    */
-  public void createTableAsync(HTableDescriptor desc, byte [][] splitKeys)
+  public void createTableAsync(
+    final HTableDescriptor desc, final byte [][] splitKeys)
   throws IOException {
     HTableDescriptor.isLegalTableName(desc.getName());
     if(splitKeys != null && splitKeys.length > 1) {
@@ -480,11 +456,14 @@ public class HBaseAdmin implements Abortable, Closeable {
         lastKey = splitKey;
       }
     }
-    try {
-      getMaster().createTable(desc, splitKeys);
-    } catch (RemoteException e) {
-      throw e.unwrapRemoteException();
-    }
+
+    execute(new MasterCallable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        master.createTable(desc, splitKeys);
+        return null;
+      }
+    });
   }
 
   /**
@@ -506,14 +485,17 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public void deleteTable(final byte [] tableName) throws IOException {
-    isMasterRunning();
     HTableDescriptor.isLegalTableName(tableName);
     HRegionLocation firstMetaServer = getFirstMetaServerForTable(tableName);
-    try {
-      getMaster().deleteTable(tableName);
-    } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
-    }
+
+    execute(new MasterCallable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        master.deleteTable(tableName);
+        return null;
+      }
+    });
+
     // Wait until all regions deleted
     HRegionInterface server =
       connection.getHRegionConnection(firstMetaServer.getHostname(), firstMetaServer.getPort());
@@ -533,7 +515,13 @@ public class HBaseAdmin implements Abortable, Closeable {
         // HMaster removes the table from its HTableDescriptors
         if (values == null) {
           boolean tableExists = false;
-          HTableDescriptor[] htds = getMaster().getHTableDescriptors();
+          HTableDescriptor[] htds;
+          MasterKeepAliveConnection master = connection.getKeepAliveMaster();
+          try {
+            htds = master.getHTableDescriptors();
+          } finally {
+            master.close();
+          }
           if (htds != null && htds.length > 0) {
             for (HTableDescriptor htd: htds) {
               if (Bytes.equals(tableName, htd.getName())) {
@@ -549,15 +537,16 @@ public class HBaseAdmin implements Abortable, Closeable {
       } catch (IOException ex) {
         if(tries == numRetries - 1) {           // no more tries left
           if (ex instanceof RemoteException) {
-            ex = RemoteExceptionHandler.decodeRemoteException((RemoteException) ex);
+            throw ((RemoteException) ex).unwrapRemoteException();
+          }else {
+            throw ex;
           }
-          throw ex;
         }
       } finally {
         if (scannerId != -1L) {
           try {
             server.close(scannerId);
-          } catch (Exception ex) {
+          } catch (IOException ex) {
             LOG.warn(ex);
           }
         }
@@ -682,13 +671,14 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void enableTableAsync(final byte [] tableName)
   throws IOException {
-    isMasterRunning();
-    try {
-      getMaster().enableTable(tableName);
-    } catch (RemoteException e) {
-      throw e.unwrapRemoteException();
-    }
-    LOG.info("Started enable of " + Bytes.toString(tableName));
+    execute(new MasterCallable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        LOG.info("Started enable of " + Bytes.toString(tableName));
+        master.enableTable(tableName);
+        return null;
+      }
+    });
   }
 
   /**
@@ -750,13 +740,14 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @since 0.90.0
    */
   public void disableTableAsync(final byte [] tableName) throws IOException {
-    isMasterRunning();
-    try {
-      getMaster().disableTable(tableName);
-    } catch (RemoteException e) {
-      throw e.unwrapRemoteException();
-    }
-    LOG.info("Started disable of " + Bytes.toString(tableName));
+    execute(new MasterCallable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        LOG.info("Started disable of " + Bytes.toString(tableName));
+        master.disableTable(tableName);
+        return null;
+      }
+    });
   }
 
   public void disableTable(final String tableName)
@@ -919,11 +910,12 @@ public class HBaseAdmin implements Abortable, Closeable {
   public Pair<Integer, Integer> getAlterStatus(final byte[] tableName)
   throws IOException {
     HTableDescriptor.isLegalTableName(tableName);
-    try {
-      return getMaster().getAlterStatus(tableName);
-    } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
-    }
+    return execute(new MasterCallable<Pair<Integer, Integer>>() {
+      @Override
+      public Pair<Integer, Integer> call() throws IOException {
+        return master.getAlterStatus(tableName);
+      }
+    });
   }
 
   /**
@@ -947,14 +939,15 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param column column descriptor of column to be added
    * @throws IOException if a remote or network exception occurs
    */
-  public void addColumn(final byte [] tableName, HColumnDescriptor column)
+  public void addColumn(final byte [] tableName, final HColumnDescriptor column)
   throws IOException {
-    HTableDescriptor.isLegalTableName(tableName);
-    try {
-      getMaster().addColumn(tableName, column);
-    } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
-    }
+    execute(new MasterCallable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        master.addColumn(tableName, column);
+        return null;
+      }
+    });
   }
 
   /**
@@ -980,11 +973,13 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void deleteColumn(final byte [] tableName, final byte [] columnName)
   throws IOException {
-    try {
-      getMaster().deleteColumn(tableName, columnName);
-    } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
-    }
+    execute(new MasterCallable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        master.deleteColumn(tableName, columnName);
+        return null;
+      }
+    });
   }
 
   /**
@@ -1000,6 +995,8 @@ public class HBaseAdmin implements Abortable, Closeable {
     modifyColumn(Bytes.toBytes(tableName), descriptor);
   }
 
+
+
   /**
    * Modify an existing column family on a table.
    * Asynchronous operation.
@@ -1008,16 +1005,15 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param descriptor new column descriptor to use
    * @throws IOException if a remote or network exception occurs
    */
-  public void modifyColumn(final byte [] tableName, HColumnDescriptor descriptor)
+  public void modifyColumn(final byte [] tableName, final HColumnDescriptor descriptor)
   throws IOException {
-    try {
-      getMaster().modifyColumn(tableName, descriptor);
-    } catch (RemoteException re) {
-      // Convert RE exceptions in here; client shouldn't have to deal with them,
-      // at least w/ the type of exceptions that come out of this method:
-      // TableNotFoundException, etc.
-      throw RemoteExceptionHandler.decodeRemoteException(re);
-    }
+    execute(new MasterCallable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        master.modifyColumn(tableName, descriptor);
+        return null;
+      }
+    });
   }
 
   /**
@@ -1311,7 +1307,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void move(final byte [] encodedRegionName, final byte [] destServerName)
   throws UnknownRegionException, MasterNotRunningException, ZooKeeperConnectionException {
-    getMaster().move(encodedRegionName, destServerName);
+    MasterKeepAliveConnection master = connection.getKeepAliveMaster();
+    try {
+      master.move(encodedRegionName, destServerName);
+    } finally {
+      master.close();
+    }
   }
 
   /**
@@ -1323,7 +1324,13 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void assign(final byte[] regionName) throws MasterNotRunningException,
       ZooKeeperConnectionException, IOException {
-    getMaster().assign(regionName);
+    execute(new MasterCallable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        master.assign(regionName);
+        return null;
+      }
+    });
   }
 
   /**
@@ -1342,7 +1349,13 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void unassign(final byte [] regionName, final boolean force)
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
-    getMaster().unassign(regionName, force);
+    execute(new MasterCallable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        master.unassign(regionName, force);
+        return null;
+      }
+    });
   }
 
   /**
@@ -1352,7 +1365,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean balanceSwitch(final boolean b)
   throws MasterNotRunningException, ZooKeeperConnectionException {
-    return getMaster().balanceSwitch(b);
+    MasterKeepAliveConnection master = connection.getKeepAliveMaster();
+    try {
+      return master.balanceSwitch(b);
+    } finally {
+      master.close();
+    }
   }
 
   /**
@@ -1363,7 +1381,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean balancer()
   throws MasterNotRunningException, ZooKeeperConnectionException {
-    return getMaster().balance();
+    MasterKeepAliveConnection master = connection.getKeepAliveMaster();
+    try {
+      return master.balance();
+    } finally {
+      master.close();
+    }
   }
 
   /**
@@ -1458,24 +1481,23 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param htd modified description of the table
    * @throws IOException if a remote or network exception occurs
    */
-  public void modifyTable(final byte [] tableName, HTableDescriptor htd)
+  public void modifyTable(final byte [] tableName, final HTableDescriptor htd)
   throws IOException {
-    try {
-      getMaster().modifyTable(tableName, htd);
-    } catch (RemoteException re) {
-      // Convert RE exceptions in here; client shouldn't have to deal with them,
-      // at least w/ the type of exceptions that come out of this method:
-      // TableNotFoundException, etc.
-      throw RemoteExceptionHandler.decodeRemoteException(re);
-    }
+    execute(new MasterCallable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        master.modifyTable(tableName, htd);
+        return null;
+      }
+    });
   }
 
   /**
    * @param tableNameOrRegionName Name of a table or name of a region.
-   * @param ct A {@link #CatalogTracker} instance (caller of this method usually has one).
+   * @param ct A {@link CatalogTracker} instance (caller of this method usually has one).
    * @return True if <code>tableNameOrRegionName</code> is a verified region
-   * name (we call {@link #MetaReader.getRegion(CatalogTracker catalogTracker,
-   * byte [] regionName)};) else false.
+   * name (we call {@link  MetaReader#getRegion( CatalogTracker, byte[])}
+   *  else false.
    * Throw an exception if <code>tableNameOrRegionName</code> is null.
    * @throws IOException
    */
@@ -1492,7 +1514,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Convert the table name byte array into a table name string and check if table
    * exists or not.
    * @param tableNameBytes Name of a table.
-   * @param ct A {@link #CatalogTracker} instance (caller of this method usually has one).
+   * @param ct A {@link CatalogTracker} instance (caller of this method usually has one).
    * @return tableName in string form.
    * @throws IOException if a remote or network exception occurs.
    * @throws TableNotFoundException if table does not exist.
@@ -1511,12 +1533,13 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public synchronized void shutdown() throws IOException {
-    isMasterRunning();
-    try {
-      getMaster().shutdown();
-    } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
-    }
+    execute(new MasterCallable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        master.shutdown();
+        return null;
+      }
+    });
   }
 
   /**
@@ -1526,12 +1549,13 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public synchronized void stopMaster() throws IOException {
-    isMasterRunning();
-    try {
-      getMaster().stopMaster();
-    } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
-    }
+    execute(new MasterCallable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        master.stopMaster();
+        return null;
+      }
+    });
   }
 
   /**
@@ -1554,7 +1578,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public ClusterStatus getClusterStatus() throws IOException {
-    return getMaster().getClusterStatus();
+    return execute(new MasterCallable<ClusterStatus>() {
+      @Override
+      public ClusterStatus call() {
+        return master.getClusterStatus();
+      }
+    });
   }
 
   private HRegionLocation getFirstMetaServerForTable(final byte [] tableName)
@@ -1572,20 +1601,60 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   /**
    * Check to see if HBase is running. Throw an exception if not.
+   * We consider that HBase is running if ZooKeeper and Master are running.
    *
    * @param conf system configuration
    * @throws MasterNotRunningException if the master is not running
    * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
   public static void checkHBaseAvailable(Configuration conf)
-  throws MasterNotRunningException, ZooKeeperConnectionException {
+    throws MasterNotRunningException, ZooKeeperConnectionException {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
+
+    // We set it to make it fail as soon as possible if HBase is not available
     copyOfConf.setInt("hbase.client.retries.number", 1);
-    HBaseAdmin admin = new HBaseAdmin(copyOfConf);
+    copyOfConf.setInt("zookeeper.recovery.retry", 0);
+
+    HConnectionManager.HConnectionImplementation connection
+      = (HConnectionManager.HConnectionImplementation)
+      HConnectionManager.getConnection(copyOfConf);
+
     try {
-      admin.close();
-    } catch (IOException ioe) {
-      admin.LOG.info("Failed to close connection", ioe);
+      // Check ZK first.
+      // If the connection exists, we may have a connection to ZK that does
+      //  not work anymore
+      ZooKeeperKeepAliveConnection zkw = null;
+      try {
+        zkw = connection.getKeepAliveZooKeeperWatcher();
+        zkw.getRecoverableZooKeeper().getZooKeeper().exists(
+          zkw.baseZNode, false);
+
+      } catch (IOException e) {
+        throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
+      } catch (KeeperException e) {
+        throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
+      } finally {
+        if (zkw != null) {
+          zkw.close();
+        }
+      }
+
+      // Check Master, same logic.
+      MasterKeepAliveConnection master = null;
+      try {
+        master = connection.getKeepAliveMaster();
+        master.isMasterRunning();
+      } finally {
+        if (master != null) {
+          master.close();
+        }
+      }
+
+    } finally {
+      connection.close();
     }
   }
 
@@ -1608,6 +1677,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     return Regions;
   }
   
+  @Override
   public void close() throws IOException {
     if (this.connection != null) {
       this.connection.close();
@@ -1652,6 +1722,34 @@ public class HBaseAdmin implements Abortable, Closeable {
     } catch (IOException e) {
       LOG.error("Could not getClusterStatus()",e);
       return null;
+    }
+  }
+
+  /**
+   * @see {@link #execute}
+   */
+  private abstract static class MasterCallable<V> implements Callable<V>{
+    protected MasterKeepAliveConnection master;
+  }
+
+  /**
+   * This method allows to execute a function requiring a connection to
+   * master without having to manage the connection creation/close.
+   * Create a {@link MasterCallable} to use it.
+   */
+  private <V> V execute(MasterCallable<V> function) throws IOException {
+    function.master = connection.getKeepAliveMaster();
+    try {
+      return function.call();
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    } catch (IOException e) {
+      throw e;
+    } catch (Exception e) {
+      // This should not happen...
+      throw new IOException("Unexpected exception when calling master", e);
+    } finally {
+      function.master.close();
     }
   }
 }

@@ -117,7 +117,7 @@ public class TestMergeTable {
         MetaReader.getTableRegions(ct, desc.getName());
       LOG.info("originalTableRegions size=" + originalTableRegions.size() +
         "; " + originalTableRegions);
-      HBaseAdmin admin = new HBaseAdmin(new Configuration(c));
+      HBaseAdmin admin = new HBaseAdmin(c);
       admin.disableTable(desc.getName());
       HMerge.merge(c, FileSystem.get(c), desc.getName());
       List<HRegionInfo> postMergeTableRegions =

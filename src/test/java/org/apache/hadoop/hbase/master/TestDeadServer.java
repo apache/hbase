@@ -20,12 +20,11 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.*;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category(SmallTests.class)
 public class TestDeadServer {
   @Test public void testIsDead() {
     DeadServer ds = new DeadServer();

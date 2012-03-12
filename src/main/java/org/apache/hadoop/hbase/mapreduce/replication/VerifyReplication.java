@@ -24,9 +24,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
@@ -43,6 +41,7 @@ import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.zookeeper.KeeperException;
@@ -111,16 +110,34 @@ public class VerifyReplication {
         HConnectionManager.execute(new HConnectable<Void>(conf) {
           @Override
           public Void connect(HConnection conn) throws IOException {
+            ZooKeeperWatcher localZKW = null;
+            ReplicationZookeeper zk = null;
+            ReplicationPeer peer = null;
             try {
-              ReplicationZookeeper zk = new ReplicationZookeeper(conn, conf,
-                  conn.getZooKeeperWatcher());
-              ReplicationPeer peer = zk.getPeer(conf.get(NAME+".peerId"));
+              localZKW = new ZooKeeperWatcher(
+                conf, "VerifyReplication", new Abortable() {
+                @Override public void abort(String why, Throwable e) {}
+                @Override public boolean isAborted() {return false;}
+              });
+              zk = new ReplicationZookeeper(conn, conf, localZKW);
+              // Just verifying it we can connect
+              peer = zk.getPeer(peerId);
               HTable replicatedTable = new HTable(peer.getConfiguration(),
                   conf.get(NAME+".tableName"));
               scan.setStartRow(value.getRow());
               replicatedScanner = replicatedTable.getScanner(scan);
             } catch (KeeperException e) {
               throw new IOException("Got a ZK exception", e);
+            } finally {
+              if (peer != null) {
+                peer.close();
+              }
+              if (zk != null) {
+                zk.close();
+              }
+              if (localZKW != null) {
+                localZKW.close();
+              }
             }
             return null;
           }
@@ -160,11 +177,18 @@ public class VerifyReplication {
     HConnectionManager.execute(new HConnectable<Void>(conf) {
       @Override
       public Void connect(HConnection conn) throws IOException {
+        ZooKeeperWatcher localZKW = null;
+        ReplicationZookeeper zk = null;
+        ReplicationPeer peer = null;
         try {
-          ReplicationZookeeper zk = new ReplicationZookeeper(conn, conf,
-              conn.getZooKeeperWatcher());
+          localZKW = new ZooKeeperWatcher(
+            conf, "VerifyReplication", new Abortable() {
+            @Override public void abort(String why, Throwable e) {}
+            @Override public boolean isAborted() {return false;}
+          });
+          zk = new ReplicationZookeeper(conn, conf, localZKW);
           // Just verifying it we can connect
-          ReplicationPeer peer = zk.getPeer(peerId);
+          peer = zk.getPeer(peerId);
           if (peer == null) {
             throw new IOException("Couldn't get access to the slave cluster," +
                 "please see the log");
@@ -172,6 +196,16 @@ public class VerifyReplication {
         } catch (KeeperException ex) {
           throw new IOException("Couldn't get access to the slave cluster" +
               " because: ", ex);
+        } finally {
+          if (peer != null){
+             peer.close();
+          }
+          if (zk != null){
+            zk.close();
+          }
+          if (localZKW != null){
+            localZKW.close();
+          }
         }
         return null;
       }

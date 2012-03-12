@@ -1321,28 +1321,38 @@ public class HBaseTestingUtility {
     expireSession(rs.getZooKeeper(), rs);
   }
 
-  public void expireSession(ZooKeeperWatcher nodeZK, Server server)
-    throws Exception {
-    expireSession(nodeZK, server, false);
+
+
+  public void expireSession(ZooKeeperWatcher nodeZK) throws Exception {
+   expireSession(nodeZK, false);
   }
 
-  public void expireSession(ZooKeeperWatcher nodeZK, Server server,
-      boolean checkStatus) throws Exception {
+  @Deprecated
+  public void expireSession(ZooKeeperWatcher nodeZK, Server server)
+    throws Exception {
+    expireSession(nodeZK, false);
+  }
+
+  /**
+   * Expire a ZooKeeer session as recommended in ZooKeeper documentation
+   * http://wiki.apache.org/hadoop/ZooKeeper/FAQ#A4
+   */
+  public void expireSession(ZooKeeperWatcher nodeZK, boolean checkStatus)
+    throws Exception {
     Configuration c = new Configuration(this.conf);
     String quorumServers = ZKConfig.getZKQuorumServersString(c);
-    int sessionTimeout = 500;
     ZooKeeper zk = nodeZK.getRecoverableZooKeeper().getZooKeeper();
     byte[] password = zk.getSessionPasswd();
     long sessionID = zk.getSessionId();
 
     ZooKeeper newZK = new ZooKeeper(quorumServers,
-        sessionTimeout, EmptyWatcher.instance, sessionID, password);
+        1000, EmptyWatcher.instance, sessionID, password);
     newZK.close();
-    final long sleep = 7000; // 7s seems enough to manage the timeout
-    LOG.info("ZK Closed Session 0x" + Long.toHexString(sessionID) +
-      "; sleeping=" + sleep);
+    LOG.info("ZK Closed Session 0x" + Long.toHexString(sessionID));
 
-    Thread.sleep(sleep);
+    // There is actually no reason to sleep here. Session is expired.
+    //  May be for old ZK versions?
+    // Thread.sleep(sleep);
 
     if (checkStatus) {
       new HTable(new Configuration(conf), HConstants.META_TABLE_NAME).close();
@@ -1361,7 +1371,7 @@ public class HBaseTestingUtility {
 
   /**
    * Returns a HBaseAdmin instance.
-   * This instance is shared between HBaseTestingUtility intance users.
+   * This instance is shared between HBaseTestingUtility instance users.
    * Don't close it, it will be closed automatically when the
    * cluster shutdowns
    *
@@ -1371,7 +1381,7 @@ public class HBaseTestingUtility {
   public synchronized HBaseAdmin getHBaseAdmin()
   throws IOException {
     if (hbaseAdmin == null){
-      hbaseAdmin = new HBaseAdmin(new Configuration(getConfiguration()));
+      hbaseAdmin = new HBaseAdmin(getConfiguration());
     }
     return hbaseAdmin;
   }

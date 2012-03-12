@@ -73,16 +73,24 @@ public interface HConnection extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    * @deprecated Removed because it was a mistake exposing zookeeper in this
    * interface (ZooKeeper is an implementation detail).
+   * Deprecated in HBase 0.94
    */
+  @Deprecated
   public ZooKeeperWatcher getZooKeeperWatcher() throws IOException;
 
   /**
    * @return proxy connection to master server for this instance
    * @throws MasterNotRunningException if the master is not running
    * @throws ZooKeeperConnectionException if unable to connect to zookeeper
+   * @deprecated Removed because it was a mistake exposing master in this
+   * interface (master is an implementation detail). Master functions are
+   * available from HConnection or HBaseAdmin, without having to use
+   * directly the master.
+   * Deprecated in HBase 0.94
    */
+  @Deprecated
   public HMasterInterface getMaster()
-  throws MasterNotRunningException, ZooKeeperConnectionException;
+    throws MasterNotRunningException, ZooKeeperConnectionException;
 
   /** @return - true if the master server is running */
   public boolean isMasterRunning()
@@ -197,6 +205,7 @@ public interface HConnection extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    * @deprecated Use {@link #getHRegionConnection(String, int)}
    */
+  @Deprecated
   public HRegionInterface getHRegionConnection(HServerAddress regionServer)
   throws IOException;
 
@@ -217,8 +226,9 @@ public interface HConnection extends Abortable, Closeable {
    * @param getMaster - do we check if master is alive
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Use {@link #getHRegionConnection(HServerAddress, boolean)}
+   * @deprecated Use {@link #getHRegionConnection(String, int)}
    */
+  @Deprecated
   public HRegionInterface getHRegionConnection(HServerAddress regionServer,
      boolean getMaster)
   throws IOException;
@@ -259,6 +269,7 @@ public interface HConnection extends Abortable, Closeable {
    * @throws RuntimeException other unspecified error
    * @deprecated Use {@link HConnectionManager#withoutRetries(ServerCallable)}
    */
+  @Deprecated
   public <T> T getRegionServerWithRetries(ServerCallable<T> callable)
   throws IOException, RuntimeException;
 
@@ -272,6 +283,7 @@ public interface HConnection extends Abortable, Closeable {
    * @throws RuntimeException other unspecified error
    * @deprecated Use {@link HConnectionManager#withoutRetries(ServerCallable)}
    */
+  @Deprecated
   public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
   throws IOException, RuntimeException;
 
@@ -365,6 +377,7 @@ public interface HConnection extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    * @deprecated This method will be changed from public to package protected.
    */
+  @Deprecated
   public int getCurrentNrHRS() throws IOException;
 
   /**
@@ -386,3 +399,4 @@ public interface HConnection extends Abortable, Closeable {
    */
   public void clearCaches(final String sn);
 }
+

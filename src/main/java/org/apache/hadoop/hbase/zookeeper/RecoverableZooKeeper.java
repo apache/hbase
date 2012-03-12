@@ -296,7 +296,7 @@ public class RecoverableZooKeeper {
     RetryCounter retryCounter = retryCounterFactory.create();
     while (true) {
       try {
-        byte[] revData = zk.getData(path, watcher, stat);       
+        byte[] revData = zk.getData(path, watcher, stat);
         return this.removeMetaData(revData);
       } catch (KeeperException e) {
         switch (e.code()) {

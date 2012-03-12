@@ -45,10 +45,10 @@ import org.junit.experimental.categories.Category;
  * Tests the restarting of everything as done during rolling restarts.
  */
 @Category(LargeTests.class)
-public class TestRollingRestart {
+public class  TestRollingRestart {
   private static final Log LOG = LogFactory.getLog(TestRollingRestart.class);
 
-  @Test (timeout=300000)
+  @Test (timeout=500000)
   public void testBasicRollingRestart() throws Exception {
 
     // Start a cluster with 2 masters and 4 regionservers
@@ -181,7 +181,7 @@ public class TestRollingRestart {
       assertEquals(expectedNumRS, cluster.getRegionServerThreads().size());
       num++;
     }
-    Thread.sleep(2000);
+    Thread.sleep(1000);
     assertRegionsAssigned(cluster, regions);
 
     // Bring the RS hosting ROOT down and the RS hosting META down at once

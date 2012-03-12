@@ -58,22 +58,15 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
-import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
-import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
-import org.apache.hadoop.hbase.zookeeper.ZKTable;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.*;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.zookeeper.KeeperException;
 
@@ -137,10 +130,9 @@ public class HBaseFsck {
     executor.allowCoreThreadTimeOut(true);
   }
 
-  public void connect() throws MasterNotRunningException,
-      ZooKeeperConnectionException {
+  public void connect() throws IOException {
     admin = new HBaseAdmin(conf);
-    status = admin.getMaster().getClusterStatus();
+    status = admin.getClusterStatus();
     connection = admin.getConnection();
   }
 

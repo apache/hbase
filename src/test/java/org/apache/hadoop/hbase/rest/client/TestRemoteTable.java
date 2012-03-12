@@ -77,8 +77,6 @@ public class TestRemoteTable {
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-    LOG.info("Admin Connection=" + admin.getConnection() + ", " + 
-      admin.getConnection().getZooKeeperWatcher());
     if (!admin.tableExists(TABLE)) {
       HTableDescriptor htd = new HTableDescriptor(TABLE);
       htd.addFamily(new HColumnDescriptor(COLUMN_1));
@@ -86,8 +84,6 @@ public class TestRemoteTable {
       htd.addFamily(new HColumnDescriptor(COLUMN_3));
       admin.createTable(htd);
       HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
-      LOG.info("Table connection=" + table.getConnection() + ", " +
-        admin.getConnection().getZooKeeperWatcher());
       Put put = new Put(ROW_1);
       put.add(COLUMN_1, QUALIFIER_1, TS_2, VALUE_1);
       table.put(put);

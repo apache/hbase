@@ -57,7 +57,7 @@ public class TestMergeTool extends HBaseTestCase {
   @Override
   public void setUp() throws Exception {
     // Set the timeout down else this test will take a while to complete.
-    this.conf.setLong("hbase.zookeeper.recoverable.waittime", 1000);
+    this.conf.setLong("hbase.zookeeper.recoverable.waittime", 10);
     // Make it so we try and connect to a zk that is not there (else we might
     // find a zk ensemble put up by another concurrent test and this will
     // mess up this test.  Choose unlikely port. Default test port is 21818.
@@ -186,7 +186,7 @@ public class TestMergeTool extends HBaseTestCase {
   throws Exception {
     Merge merger = new Merge(this.conf);
     LOG.info(msg);
-    System.out.println("fs2=" + this.conf.get("fs.defaultFS"));
+    LOG.info("fs2=" + this.conf.get("fs.defaultFS"));
     int errCode = ToolRunner.run(this.conf, merger,
       new String[] {this.desc.getNameAsString(), regionName1, regionName2}
     );

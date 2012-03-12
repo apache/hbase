@@ -749,6 +749,7 @@ public class TestAdmin {
     admin.createTable(desc, splitKeys);
     HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
     Map<HRegionInfo, HServerAddress> regions = ht.getRegionsInfo();
+    ht.close();
     assertEquals("Tried to create " + expectedRegions + " regions "
         + "but only found " + regions.size(), expectedRegions, regions.size());
     // Disable table.
@@ -1480,6 +1481,37 @@ public class TestAdmin {
     int finalCount = HConnectionTestingUtility.getConnectionCount();
 
     Assert.assertEquals(initialCount, finalCount) ;
+  }
+
+  /**
+   * Check that we have an exception if the cluster is not there.
+   */
+  @Test
+  public void testCheckHBaseAvailableWithoutCluster() {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+
+    // Change the ZK address to go to something not used.
+    conf.setInt(
+      "hbase.zookeeper.quorum",
+      conf.getInt("hbase.zookeeper.quorum", 9999)+10);
+
+    int initialCount = HConnectionTestingUtility.getConnectionCount();
+
+    long start = System.currentTimeMillis();
+    try {
+      HBaseAdmin.checkHBaseAvailable(conf);
+      assertTrue(false);
+    } catch (MasterNotRunningException ignored) {
+    } catch (ZooKeeperConnectionException ignored) {
+    }
+    long end = System.currentTimeMillis();
+
+    int finalCount = HConnectionTestingUtility.getConnectionCount();
+
+    Assert.assertEquals(initialCount, finalCount) ;
+
+    LOG.info("It took "+(end-start)+" ms to find out that" +
+      " HBase was not available");
   }
 
   @org.junit.Rule

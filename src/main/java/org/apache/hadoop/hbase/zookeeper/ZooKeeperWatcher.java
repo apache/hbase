@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -55,7 +56,7 @@ import org.apache.zookeeper.data.ACL;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class ZooKeeperWatcher implements Watcher, Abortable {
+public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   private static final Log LOG = LogFactory.getLog(ZooKeeperWatcher.class);
 
   // Identifier for this watcher (for logging only).  It is made of the prefix
@@ -69,7 +70,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   private RecoverableZooKeeper recoverableZooKeeper;
 
   // abortable in case of zk failure
-  private Abortable abortable;
+  protected Abortable abortable;
 
   // listeners to be notified
   private final List<ZooKeeperListener> listeners =
@@ -438,15 +439,16 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
 
   /**
    * Close the connection to ZooKeeper.
+   *
    * @throws InterruptedException
    */
   public void close() {
     try {
       if (recoverableZooKeeper != null) {
         recoverableZooKeeper.close();
-//        super.close();
       }
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
     }
   }
 

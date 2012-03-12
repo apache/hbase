@@ -51,4 +51,8 @@ public class MasterNotRunningException extends IOException {
   public MasterNotRunningException(Exception e) {
     super(e);
   }
+
+  public MasterNotRunningException(String s, Exception e) {
+    super(s, e);
+  }
 }

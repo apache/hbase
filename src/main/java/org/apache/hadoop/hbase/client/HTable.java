@@ -269,7 +269,7 @@ public class HTable implements HTableInterface {
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
-	* @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
+	 * @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
    */
   @Deprecated
   public static boolean isTableEnabled(Configuration conf, String tableName)
@@ -283,7 +283,9 @@ public class HTable implements HTableInterface {
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated use {@link HBaseAdmin#isTableEnabled(byte[] tableName)}
    */
+  @Deprecated
   public static boolean isTableEnabled(Configuration conf,
       final byte[] tableName) throws IOException {
     return HConnectionManager.execute(new HConnectable<Boolean>(conf) {
@@ -345,6 +347,7 @@ public class HTable implements HTableInterface {
    * @deprecated This method will be changed from public to package protected.
    */
   // TODO(tsuna): Remove this.  Unit tests shouldn't require public helpers.
+  @Deprecated
   public HConnection getConnection() {
     return this.connection;
   }
@@ -355,6 +358,7 @@ public class HTable implements HTableInterface {
    * The default value comes from {@code hbase.client.scanner.caching}.
    * @deprecated Use {@link Scan#setCaching(int)} and {@link Scan#getCaching()}
    */
+  @Deprecated
   public int getScannerCaching() {
     return scannerCaching;
   }
@@ -370,6 +374,7 @@ public class HTable implements HTableInterface {
    * @param scannerCaching the number of rows a scanner will fetch at once.
    * @deprecated Use {@link Scan#setCaching(int)}
    */
+  @Deprecated
   public void setScannerCaching(int scannerCaching) {
     this.scannerCaching = scannerCaching;
   }
@@ -447,6 +452,7 @@ public class HTable implements HTableInterface {
    * @throws IOException if a remote or network exception occurs
    * @deprecated Use {@link #getRegionLocations()} or {@link #getStartEndKeys()}
    */
+  @Deprecated
   public Map<HRegionInfo, HServerAddress> getRegionsInfo() throws IOException {
     final Map<HRegionInfo, HServerAddress> regionMap =
       new TreeMap<HRegionInfo, HServerAddress>();
