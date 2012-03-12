@@ -545,7 +545,7 @@ $JIRA_COMMENT_FOOTER"
   done
 
   ### if current warnings greater than OK_FINDBUGS_WARNINGS
-  if [[ $findbugsWarnings > $OK_FINDBUGS_WARNINGS ]] ; then
+  if [[ $findbugsWarnings -gt $OK_FINDBUGS_WARNINGS ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
     -1 findbugs.  The patch appears to introduce `expr $(($findbugsWarnings-$OK_FINDBUGS_WARNINGS))` new Findbugs (version ${findbugs_version}) warnings."
