@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -204,7 +205,18 @@ public class TestHLog  {
     Path p = new Path(dir, getName() + ".fsdos");
     FSDataOutputStream out = fs.create(p);
     out.write(bytes);
-    out.sync();
+    Method syncMethod = null;
+    try {
+      syncMethod = out.getClass().getMethod("hflush", new Class<?> []{});
+    } catch (NoSuchMethodException e) {
+      try {
+        syncMethod = out.getClass().getMethod("sync", new Class<?> []{});
+      } catch (NoSuchMethodException ex) {
+        fail("This version of Hadoop supports neither Syncable.sync() " +
+            "nor Syncable.hflush().");
+      }
+    }
+    syncMethod.invoke(out, new Object[]{});
     FSDataInputStream in = fs.open(p);
     assertTrue(in.available() > 0);
     byte [] buffer = new byte [1024];
