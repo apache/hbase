@@ -232,7 +232,7 @@ public final class HConstants {
       "hbase.hregion.max.filesize";
 
   /** Default maximum file size */
-  public static final long DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024;
+  public static final long DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024L;
 
   /**
    * The max number of threads used for opening and closing stores or store
