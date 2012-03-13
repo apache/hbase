@@ -24,8 +24,6 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.zookeeper.MasterSchemaChangeTracker;
@@ -91,5 +89,10 @@ public interface MasterServices extends Server {
    * @return RegionServerTracker
    */
   public RegionServerTracker getRegionServerTracker();
+
+  /**
+   * @return true if master enables ServerShutdownHandler;
+   */
+  public boolean isServerShutdownHandlerEnabled();
 
 }
