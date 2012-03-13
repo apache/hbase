@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState.State;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
@@ -326,11 +325,13 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Called on startup.
    * Figures whether a fresh cluster start of we are joining extant running cluster.
+   * @param onlineServers onlined servers when master started
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
    */
-  void joinCluster() throws IOException, KeeperException, InterruptedException {
+  void joinCluster(final Set<ServerName> onlineServers) throws IOException,
+      KeeperException, InterruptedException {
     // Concurrency note: In the below the accesses on regionsInTransition are
     // outside of a synchronization block where usually all accesses to RIT are
     // synchronized.  The presumption is that in this case it is safe since this
@@ -341,7 +342,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
     // Scan META to build list of existing regions, servers, and assignment
     // Returns servers who have not checked in (assumed dead) and their regions
-    Map<ServerName,List<Pair<HRegionInfo,Result>>> deadServers = rebuildUserRegions();
+    Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers = rebuildUserRegions(onlineServers);
 
     processDeadServersAndRegionsInTransition(deadServers);
 
@@ -349,6 +350,16 @@ public class AssignmentManager extends ZooKeeperListener {
     // These tables are in DISABLING state when the master restarted/switched.
     boolean isWatcherCreated = recoverTableInDisablingState(this.disablingTables);
     recoverTableInEnablingState(this.enablingTables, isWatcherCreated);
+  }
+
+  /**
+   * Only used for tests
+   * @throws IOException
+   * @throws KeeperException
+   * @throws InterruptedException
+   */
+  void joinCluster() throws IOException, KeeperException, InterruptedException {
+    joinCluster(serverManager.getOnlineServers().keySet());
   }
 
   /**
@@ -394,6 +405,12 @@ public class AssignmentManager extends ZooKeeperListener {
         this.failover = true;
         break;
       }
+    }
+
+    // Remove regions in RIT, they are possibly being processed by
+    // ServerShutdownHandler.
+    synchronized (regionsInTransition) {
+      nodes.removeAll(regionsInTransition.keySet());
     }
 
     // If we found user regions out on cluster, its a failover.
@@ -1768,6 +1785,7 @@ public class AssignmentManager extends ZooKeeperListener {
     final List<ServerName> servers = this.serverManager.getOnlineServersList();
     final List<ServerName> drainingServers = this.serverManager.getDrainingServersList();
 
+
     if (serverToExclude != null) servers.remove(serverToExclude);
 
     // Loop through the draining server list and remove them from the server
@@ -1779,6 +1797,11 @@ public class AssignmentManager extends ZooKeeperListener {
         servers.remove(server);
       }
     }
+
+    // Remove the deadNotExpired servers from the server list.
+    removeDeadNotExpiredServers(servers);
+
+
 
     if (servers.isEmpty()) return null;
 
@@ -1811,12 +1834,29 @@ public class AssignmentManager extends ZooKeeperListener {
         " so generated a random one; " + randomPlan + "; " +
         serverManager.countOfRegionServers() +
                " (online=" + serverManager.getOnlineServers().size() +
-               ", exclude=" + drainingServers.size() + ") available servers");
+               ", available=" + servers.size() + ") available servers");
         return randomPlan;
       }
     LOG.debug("Using pre-existing plan for region " +
                state.getRegion().getRegionNameAsString() + "; plan=" + existingPlan);
       return existingPlan;
+  }
+
+  /**
+   * Loop through the deadNotExpired server list and remove them from the
+   * servers.
+   * @param servers
+   */
+  public void removeDeadNotExpiredServers(List<ServerName> servers) {
+    Set<ServerName> deadNotExpiredServers = this.serverManager
+        .getDeadNotExpiredServers();
+    if (!deadNotExpiredServers.isEmpty()) {
+      for (ServerName server : deadNotExpiredServers) {
+        LOG.debug("Removing dead but not expired server: " + server
+            + " from eligible server pool.");
+        servers.remove(server);
+      }
+    }
   }
 
   /**
@@ -2132,6 +2172,7 @@ public class AssignmentManager extends ZooKeeperListener {
       throws IOException,
       InterruptedException {
     List<ServerName> servers = this.serverManager.getOnlineServersList();
+    removeDeadNotExpiredServers(servers);
     assignUserRegions(regions, servers);
   }
 
@@ -2170,6 +2211,9 @@ public class AssignmentManager extends ZooKeeperListener {
   public void assignAllUserRegions() throws IOException, InterruptedException {
     // Get all available servers
     List<ServerName> servers = serverManager.getOnlineServersList();
+
+    // Remove the deadNotExpired servers from the server list.
+    removeDeadNotExpiredServers(servers);
 
     // If there are no servers we need not proceed with region assignment.
     if(servers.isEmpty()) return;
@@ -2375,11 +2419,14 @@ public class AssignmentManager extends ZooKeeperListener {
    * <p>
    * Returns a map of servers that are not found to be online and the regions
    * they were hosting.
+   * @param onlineServers if one region's location belongs to onlineServers, it
+   *          doesn't need to be assigned.
    * @return map of servers not online to their assigned regions, as stored
    *         in META
    * @throws IOException
    */
-  Map<ServerName, List<Pair<HRegionInfo, Result>>> rebuildUserRegions()
+  Map<ServerName, List<Pair<HRegionInfo, Result>>> rebuildUserRegions(
+      final Set<ServerName> onlineServers)
   throws IOException, KeeperException {
     // Region assignment from META
     List<Result> results = MetaReader.fullScan(this.catalogTracker);
@@ -2412,7 +2459,7 @@ public class AssignmentManager extends ZooKeeperListener {
         }
         addTheTablesInPartialState(this.disablingTables, this.enablingTables, regionInfo,
             tableName);
-      } else if (!this.serverManager.isServerOnline(regionLocation)) {
+      } else if (!onlineServers.contains(regionLocation)) {
         // Region is located on a server that isn't online
         List<Pair<HRegionInfo, Result>> offlineRegions =
           offlineServers.get(regionLocation);

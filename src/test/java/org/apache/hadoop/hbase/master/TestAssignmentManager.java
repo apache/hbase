@@ -22,17 +22,22 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
@@ -45,6 +50,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -59,10 +65,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.client.Get;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
@@ -115,10 +117,12 @@ public class TestAssignmentManager {
     this.serverManager = Mockito.mock(ServerManager.class);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_B)).thenReturn(true);
-    final List<ServerName> onlineServers = new ArrayList<ServerName>();
-    onlineServers.add(SERVERNAME_B);
-    onlineServers.add(SERVERNAME_A);
-    Mockito.when(this.serverManager.getOnlineServersList()).thenReturn(onlineServers);
+    final Map<ServerName, HServerLoad> onlineServers = new HashMap<ServerName, HServerLoad>();
+    onlineServers.put(SERVERNAME_B, new HServerLoad());
+    onlineServers.put(SERVERNAME_A, new HServerLoad());
+    Mockito.when(this.serverManager.getOnlineServersList()).thenReturn(
+        new ArrayList<ServerName>(onlineServers.keySet()));
+    Mockito.when(this.serverManager.getOnlineServers()).thenReturn(onlineServers);
     Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_A, REGIONINFO, -1)).
       thenReturn(true);
     Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_B, REGIONINFO, -1)).

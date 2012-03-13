@@ -24,6 +24,8 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,10 +47,10 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 
 /**
  * The ServerManager class manages info about region servers.
@@ -94,6 +96,14 @@ public class ServerManager {
   private final DeadServer deadservers;
 
   private final long maxSkew;
+
+  /**
+   * Set of region servers which are dead but not expired immediately. If one
+   * server died before master enables ServerShutdownHandler, the server will be
+   * added to set and will be expired through calling
+   * {@link ServerManager#expireDeadNotExpiredServers()} by master.
+   */
+  private Set<ServerName> deadNotExpiredServers = new HashSet<ServerName>();
 
   /**
    * Constructor.
@@ -347,6 +357,12 @@ public class ServerManager {
    * shutdown processing.
    */
   public synchronized void expireServer(final ServerName serverName) {
+    if (!services.isServerShutdownHandlerEnabled()) {
+      LOG.info("Master doesn't enable ServerShutdownHandler during initialization, "
+          + "delay expiring server " + serverName);
+      this.deadNotExpiredServers.add(serverName);
+      return;
+    }
     excludeRegionServerFromSchemaChanges(serverName);
     if (!this.onlineServers.containsKey(serverName)) {
       LOG.warn("Received expiration of " + serverName +
@@ -391,6 +407,22 @@ public class ServerManager {
     LOG.debug("Added=" + serverName +
       " to dead servers, submitted shutdown handler to be executed, root=" +
         carryingRoot + ", meta=" + carryingMeta);
+  }
+
+  /**
+   * Expire the servers which died during master's initialization. It will be
+   * called after HMaster#assignRootAndMeta.
+   * @throws IOException
+   * */
+  synchronized void expireDeadNotExpiredServers() throws IOException {
+    if (!services.isServerShutdownHandlerEnabled()) {
+      throw new IOException("Master hasn't enabled ServerShutdownHandler ");
+    }
+    Iterator<ServerName> serverIterator = deadNotExpiredServers.iterator();
+    while (serverIterator.hasNext()) {
+      expireServer(serverIterator.next());
+      serverIterator.remove();
+    }
   }
 
   /*
@@ -602,6 +634,13 @@ public class ServerManager {
    */
   public List<ServerName> getDrainingServersList() {
     return new ArrayList<ServerName>(this.drainingServers);
+  }
+
+  /**
+   * @return A copy of the internal set of deadNotExpired servers.
+   */
+  Set<ServerName> getDeadNotExpiredServers() {
+    return new HashSet<ServerName>(this.deadNotExpiredServers);
   }
 
   public boolean isServerOnline(ServerName serverName) {
