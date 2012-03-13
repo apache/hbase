@@ -780,7 +780,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Interrupt catalog tracker here in case any regions being opened out in
     // handlers are stuck waiting on meta or root.
     if (this.catalogTracker != null) this.catalogTracker.stop();
-    if (this.fsOk) {
+    if (!this.killed && this.fsOk) {
       waitOnAllRegionsToClose(abortRequested);
       LOG.info("stopping server " + this.serverNameFromMasterPOV +
         "; all regions closed.");

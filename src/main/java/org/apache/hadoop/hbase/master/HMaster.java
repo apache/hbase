@@ -26,6 +26,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -191,6 +192,8 @@ Server {
   private volatile boolean isActiveMaster = false;
   // flag set after we complete initialization once active (used for testing)
   private volatile boolean initialized = false;
+  // flag set after we complete assignRootAndMeta.
+  private volatile boolean serverShutdownHandlerEnabled = false;
 
   // Instance of the hbase executor service.
   ExecutorService executorService;
@@ -527,13 +530,17 @@ Server {
       }
     }
 
+    Set<ServerName> onlineServers = new HashSet<ServerName>(serverManager
+        .getOnlineServers().keySet());
     // TODO: Should do this in background rather than block master startup
     status.setStatus("Splitting logs after master startup");
-    this.fileSystemManager.
-      splitLogAfterStartup(this.serverManager.getOnlineServers().keySet());
+    splitLogAfterStartup(this.fileSystemManager, onlineServers);
 
     // Make sure root and meta assigned before proceeding.
     assignRootAndMeta(status);
+    serverShutdownHandlerEnabled = true;
+    this.serverManager.expireDeadNotExpiredServers();
+
     // Update meta with new HRI if required. i.e migrate all HRI with HTD to
     // HRI with out HTD in meta and update the status in ROOT. This must happen
     // before we assign all user regions or else the assignment will fail.
@@ -543,7 +550,7 @@ Server {
 
     // Fixup assignment manager status
     status.setStatus("Starting assignment manager");
-    this.assignmentManager.joinCluster();
+    this.assignmentManager.joinCluster(onlineServers);
 
     this.balancer.setClusterStatus(getClusterStatus());
     this.balancer.setMasterServices(this);
@@ -579,6 +586,16 @@ Server {
   }
 
   /**
+   * Override to change master's splitLogAfterStartup. Used testing
+   * @param mfs
+   * @param onlineServers
+   */
+  protected void splitLogAfterStartup(final MasterFileSystem mfs,
+      Set<ServerName> onlineServers) {
+    mfs.splitLogAfterStartup(onlineServers);
+  }
+
+  /**
    * Check <code>-ROOT-</code> and <code>.META.</code> are assigned.  If not,
    * assign them.
    * @throws InterruptedException
@@ -595,17 +612,11 @@ Server {
     status.setStatus("Assigning ROOT region");
     boolean rit = this.assignmentManager.
       processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.ROOT_REGIONINFO);
-    ServerName expiredServer = null;
+    ServerName currentRootServer = null;
     if (!catalogTracker.verifyRootRegionLocation(timeout)) {
-      ServerName currentRootServer = this.catalogTracker.getRootLocation();
-      if (expireIfOnline(currentRootServer)) {
-        // We are expiring this server. The processing of expiration will assign
-        // root so don't do it here.
-        expiredServer = currentRootServer;
-      } else {
-        // Root was not on an online server when we failed verification
-        this.assignmentManager.assignRoot();
-      }
+      currentRootServer = this.catalogTracker.getRootLocation();
+      splitLogAndExpireIfOnline(currentRootServer);
+      this.assignmentManager.assignRoot();
       this.catalogTracker.waitForRoot();
       //This guarantees that the transition has completed
       this.assignmentManager.waitForAssignment(HRegionInfo.ROOT_REGIONINFO);
@@ -625,13 +636,11 @@ Server {
     if (!this.catalogTracker.verifyMetaRegionLocation(timeout)) {
       ServerName currentMetaServer =
         this.catalogTracker.getMetaLocationOrReadLocationFromRoot();
-      if (currentMetaServer != null && currentMetaServer.equals(expiredServer)) {
-        // We are expiring the server that is carrying meta already.
-        // The expiration processing will take care of reassigning meta.
-        expireIfOnline(currentMetaServer);
-      } else {
-        this.assignmentManager.assignMeta();
+      if (currentMetaServer != null
+          && !currentMetaServer.equals(currentRootServer)) {
+        splitLogAndExpireIfOnline(currentMetaServer);
       }
+      assignmentManager.assignMeta();
       this.catalogTracker.waitForMeta();
       // Above check waits for general meta availability but this does not
       // guarantee that the transition has completed
@@ -682,16 +691,19 @@ Server {
   }
 
   /**
-   * Expire a server if we find it is one of the online servers set.
+   * Split a server's log and expire it if we find it is one of the online
+   * servers.
    * @param sn ServerName to check.
-   * @return True if server was online and so we expired it as unreachable.
+   * @throws IOException
    */
-  private boolean expireIfOnline(final ServerName sn) {
-    if (sn == null) return false;
-    if (!this.serverManager.isServerOnline(sn)) return false;
-    LOG.info("Forcing expiration of " + sn);
-    this.serverManager.expireServer(sn);
-    return true;
+  private void splitLogAndExpireIfOnline(final ServerName sn)
+      throws IOException {
+    if (sn == null || !serverManager.isServerOnline(sn)) {
+      return;
+    }
+    LOG.info("Forcing splitLog and expire of " + sn);
+    fileSystemManager.splitLog(sn);
+    serverManager.expireServer(sn);
   }
 
   @Override
@@ -1692,7 +1704,16 @@ Server {
   public boolean isInitialized() {
     return initialized;
   }
-  
+
+  /**
+   * ServerShutdownHandlerEnabled is set false before completing
+   * assignRootAndMeta to prevent processing of ServerShutdownHandler.
+   * @return true if assignRootAndMeta has completed;
+   */
+  public boolean isServerShutdownHandlerEnabled() {
+    return this.serverShutdownHandlerEnabled;
+  }
+
   @Override
   @Deprecated
   public void assign(final byte[] regionName, final boolean force)
