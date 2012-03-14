@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -96,6 +97,9 @@ public class TestMasterRestartAfterDisablingTable {
     cluster.hbaseCluster.waitOnMaster(activeMaster);
     cluster.waitForActiveAndReadyMaster();
 
+    assertTrue("The table should not be in enabled state", cluster.getMaster()
+        .getAssignmentManager().getZKTable().isDisablingOrDisabledTable(
+            "tableRestart"));
     log("Enabling table\n");
     // Need a new Admin, the previous one is on the old master
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
@@ -108,6 +112,8 @@ public class TestMasterRestartAfterDisablingTable {
     assertEquals(
         "The assigned regions were not onlined after master switch except for the catalog tables.",
         6, regions.size());
+    assertTrue("The table should be in enabled state", cluster.getMaster()
+        .getAssignmentManager().getZKTable().isEnabledTable("tableRestart"));
     ht.close();
     TEST_UTIL.shutdownMiniCluster();
   }

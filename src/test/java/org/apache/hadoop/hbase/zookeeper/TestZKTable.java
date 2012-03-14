@@ -68,29 +68,42 @@ public class TestZKTable {
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       name, abortable, true);
     ZKTable zkt = new ZKTable(zkw);
-    assertTrue(zkt.isEnabledTable(name));
+    assertFalse(zkt.isEnabledTable(name));
     assertFalse(zkt.isDisablingTable(name));
     assertFalse(zkt.isDisabledTable(name));
     assertFalse(zkt.isEnablingTable(name));
     assertFalse(zkt.isDisablingOrDisabledTable(name));
     assertFalse(zkt.isDisabledOrEnablingTable(name));
+    assertFalse(zkt.isTablePresent(name));
     zkt.setDisablingTable(name);
     assertTrue(zkt.isDisablingTable(name));
     assertTrue(zkt.isDisablingOrDisabledTable(name));
     assertFalse(zkt.getDisabledTables().contains(name));
+    assertTrue(zkt.isTablePresent(name));
     zkt.setDisabledTable(name);
     assertTrue(zkt.isDisabledTable(name));
     assertTrue(zkt.isDisablingOrDisabledTable(name));
     assertFalse(zkt.isDisablingTable(name));
     assertTrue(zkt.getDisabledTables().contains(name));
+    assertTrue(zkt.isTablePresent(name));
     zkt.setEnablingTable(name);
     assertTrue(zkt.isEnablingTable(name));
     assertTrue(zkt.isDisabledOrEnablingTable(name));
     assertFalse(zkt.isDisabledTable(name));
     assertFalse(zkt.getDisabledTables().contains(name));
+    assertTrue(zkt.isTablePresent(name));
     zkt.setEnabledTable(name);
     assertTrue(zkt.isEnabledTable(name));
     assertFalse(zkt.isEnablingTable(name));
+    assertTrue(zkt.isTablePresent(name));
+    zkt.setDeletedTable(name);
+    assertFalse(zkt.isEnabledTable(name));
+    assertFalse(zkt.isDisablingTable(name));
+    assertFalse(zkt.isDisabledTable(name));
+    assertFalse(zkt.isEnablingTable(name));
+    assertFalse(zkt.isDisablingOrDisabledTable(name));
+    assertFalse(zkt.isDisabledOrEnablingTable(name));
+    assertFalse(zkt.isTablePresent(name));
   }
 
   @org.junit.Rule

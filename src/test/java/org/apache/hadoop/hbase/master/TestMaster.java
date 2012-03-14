@@ -69,6 +69,8 @@ public class TestMaster {
     HMaster m = cluster.getMaster();
 
     HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
+    assertTrue(m.assignmentManager.getZKTable().isEnabledTable
+        (Bytes.toString(TABLENAME)));
     TEST_UTIL.loadTable(ht, FAMILYNAME);
     ht.close();
 
