@@ -1586,7 +1586,7 @@ public class AssignmentManager extends ZooKeeperListener {
         if(versionOfOfflineNode != -1){
           if (isDisabledorDisablingRegionInRIT(region)) {
             return;
-          } else setEnabledTable(region);
+          }
         }
       }
       
@@ -2201,14 +2201,6 @@ public class AssignmentManager extends ZooKeeperListener {
     LOG.info("Bulk assigning done");
   }
 
-  private void setEnabledTable(HRegionInfo hri) {
-    String tableName = hri.getTableNameAsString();
-    boolean isTableEnabled = this.zkTable.isEnabledTable(tableName);
-    if (!isTableEnabled) {
-      setEnabledTable(tableName);
-    }    
-  }
-
   /**
    * Assigns all user regions, if any exist.  Used during cluster startup.
    * <p>
@@ -2244,9 +2236,6 @@ public class AssignmentManager extends ZooKeeperListener {
     } else {
       // assign regions in round-robin fashion
       assignUserRegions(new ArrayList<HRegionInfo>(allRegions.keySet()), servers);
-      for (HRegionInfo hri : allRegions.keySet()) {
-        setEnabledTable(hri);
-      }
       return;
     }
     LOG.info("Bulk assigning " + allRegions.size() + " region(s) across " +
@@ -2255,9 +2244,6 @@ public class AssignmentManager extends ZooKeeperListener {
     // Use fixed count thread pool assigning.
     BulkAssigner ba = new StartupBulkAssigner(this.master, bulkPlan, this);
     ba.bulkAssign();
-    for (HRegionInfo hri : allRegions.keySet()) {
-      setEnabledTable(hri);
-    }
     LOG.info("Bulk assigning done");
   }
 
@@ -2451,8 +2437,6 @@ public class AssignmentManager extends ZooKeeperListener {
       new TreeMap<ServerName, List<Pair<HRegionInfo, Result>>>();
     // Iterate regions in META
     for (Result result : results) {
-      boolean disabled = false;
-      boolean disablingOrEnabling = false;
       Pair<HRegionInfo, ServerName> region = MetaReader.parseCatalogResult(result);
       if (region == null) continue;
       HRegionInfo regionInfo = region.getFirst();
@@ -2486,13 +2470,6 @@ public class AssignmentManager extends ZooKeeperListener {
           offlineServers.put(regionLocation, offlineRegions);
         }
         offlineRegions.add(new Pair<HRegionInfo,Result>(regionInfo, result));
-        disabled = checkIfRegionBelongsToDisabled(regionInfo);
-        disablingOrEnabling = addTheTablesInPartialState(this.disablingTables,
-            this.enablingTables, regionInfo, tableName);
-        // need to enable the table if not disabled or disabling or enabling
-        // this will be used in rolling restarts
-        enableTableIfNotDisabledOrDisablingOrEnabling(disabled,
-            disablingOrEnabling, tableName);
       } else {
         // Region is being served and on an active server
         // add only if region not in disabled and enabling table
@@ -2501,37 +2478,21 @@ public class AssignmentManager extends ZooKeeperListener {
           regions.put(regionInfo, regionLocation);
           addToServers(regionLocation, regionInfo);
         }
-        disablingOrEnabling = addTheTablesInPartialState(this.disablingTables,
-            this.enablingTables, regionInfo, tableName);
-        disabled = checkIfRegionBelongsToDisabled(regionInfo);
-        // need to enable the table if not disabled or disabling or enabling
-        // this will be used in rolling restarts
-        enableTableIfNotDisabledOrDisablingOrEnabling(disabled,
-            disablingOrEnabling, tableName);
+        addTheTablesInPartialState(this.disablingTables, this.enablingTables, regionInfo,
+            tableName);
       }
     }
     return offlineServers;
   }
 
-  private void enableTableIfNotDisabledOrDisablingOrEnabling(boolean disabled,
-      boolean disablingOrEnabling, String tableName) {
-    if (!disabled && !disablingOrEnabling
-        && !getZKTable().isEnabledTable(tableName)) {
-      setEnabledTable(tableName);
-    }
-  }
-
-  private Boolean addTheTablesInPartialState(Set<String> disablingTables,
+  private void addTheTablesInPartialState(Set<String> disablingTables,
       Set<String> enablingTables, HRegionInfo regionInfo,
       String disablingTableName) {
     if (checkIfRegionBelongsToDisabling(regionInfo)) {
       disablingTables.add(disablingTableName);
-      return true;
     } else if (checkIfRegionsBelongsToEnabling(regionInfo)) {
       enablingTables.add(disablingTableName);
-      return true;
-    } 
-    return false;
+    }
   }
 
   /**
@@ -3346,18 +3307,6 @@ public class AssignmentManager extends ZooKeeperListener {
   public void shutdown() {
     if (null != threadPoolExecutorService) {
       this.threadPoolExecutorService.shutdown();
-    }
-  }
-
-  protected void setEnabledTable(String tableName) {
-    try {
-      this.zkTable.setEnabledTable(tableName);
-    } catch (KeeperException e) {
-      // here we can abort as it is the start up flow
-      String errorMsg = "Unable to ensure that the table " + tableName
-          + " is enabled because of a ZooKeeper issue:" + e;
-      LOG.error(errorMsg);
-      this.master.abort(errorMsg, e);
     }
   }
 }
