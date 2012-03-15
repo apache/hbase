@@ -69,14 +69,22 @@ public interface HConnection extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    * @deprecated Removed because it was a mistake exposing zookeeper in this
    * interface (ZooKeeper is an implementation detail).
+   * Deprecated in HBase 0.94
    */
+  @Deprecated
   public ZooKeeperWatcher getZooKeeperWatcher() throws IOException;
 
   /**
    * @return proxy connection to master server for this instance
    * @throws MasterNotRunningException if the master is not running
    * @throws ZooKeeperConnectionException if unable to connect to zookeeper
+   * @deprecated Removed because it was a mistake exposing master in this
+   * interface (master is an implementation detail). Master functions are
+   * available from HConnection or HBaseAdmin, without having to use
+   * directly the master.
+   * Deprecated in HBase 0.94
    */
+  @Deprecated
   public HMasterInterface getMaster()
   throws MasterNotRunningException, ZooKeeperConnectionException;
 

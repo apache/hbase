@@ -202,7 +202,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @return proxy connection to master server for this instance
    * @throws MasterNotRunningException if the master is not running
    * @throws ZooKeeperConnectionException if unable to connect to zookeeper
+   * @deprecated  Master is an implementation detail for HBaseAdmin.
+   * Deprecated in HBase 0.94
    */
+  @Deprecated
   public HMasterInterface getMaster()
   throws MasterNotRunningException, ZooKeeperConnectionException {
     return this.connection.getMaster();
