@@ -22,11 +22,8 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.FilterInputStream;
 import java.io.IOException;
-import java.lang.Class;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,7 +53,6 @@ public class SequenceFileLogReader implements HLog.Reader {
     WALReader(final FileSystem fs, final Path p, final Configuration c)
     throws IOException {
       super(fs, p, c);
-
     }
 
     @Override
@@ -65,6 +61,15 @@ public class SequenceFileLogReader implements HLog.Reader {
     throws IOException {
       return new WALReaderFSDataInputStream(super.openFile(fs, file,
         bufferSize, length), length);
+    }
+
+    /**
+     * Call this method after init() has been executed
+     * 
+     * @return whether WAL compression is enabled
+     */
+    public boolean isWALCompressionEnabled() {
+      return SequenceFileLogWriter.isWALCompressionEnabled(this.getMetadata());
     }
 
     /**
@@ -134,10 +139,15 @@ public class SequenceFileLogReader implements HLog.Reader {
 
   Configuration conf;
   WALReader reader;
+
   // Needed logging exceptions
   Path path;
   int edit = 0;
   long entryStart = 0;
+  /**
+   * Compression context to use reading.  Can be null if no compression.
+   */
+  private CompressionContext compressionContext = null;
 
   protected Class<? extends HLogKey> keyClass;
 
@@ -157,19 +167,35 @@ public class SequenceFileLogReader implements HLog.Reader {
     this.keyClass = keyClass;
   }
 
-
   @Override
   public void init(FileSystem fs, Path path, Configuration conf)
       throws IOException {
     this.conf = conf;
     this.path = path;
     reader = new WALReader(fs, path, conf);
+
+    // If compression is enabled, new dictionaries are created here.
+    boolean compression = reader.isWALCompressionEnabled();
+    if (compression) {
+      try {
+        if (compressionContext == null) {
+          compressionContext = new CompressionContext(LRUDictionary.class);
+        } else {
+          compressionContext.clear();
+        }
+      } catch (Exception e) {
+        throw new IOException("Failed to initialize CompressionContext", e);
+      }
+    }
   }
 
   @Override
   public void close() throws IOException {
     try {
-      reader.close();
+      if (reader != null) {
+        this.reader.close();
+        this.reader = null;
+      }
     } catch (IOException ioe) {
       throw addFileInfoToException(ioe);
     }
@@ -203,6 +229,9 @@ public class SequenceFileLogReader implements HLog.Reader {
     }
     boolean b = false;
     try {
+      if (compressionContext != null) {
+        e.setCompressionContext(compressionContext);
+      }
       b = this.reader.next(e.getKey(), e.getEdit());
     } catch (IOException ioe) {
       throw addFileInfoToException(ioe);

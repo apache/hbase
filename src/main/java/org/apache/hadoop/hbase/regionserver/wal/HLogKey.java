@@ -44,7 +44,40 @@ import org.apache.hadoop.io.WritableUtils;
  */
 public class HLogKey implements WritableComparable<HLogKey> {
   // should be < 0 (@see #readFields(DataInput))
-  private static final int VERSION = -1;
+  // version 2 supports HLog compression
+  enum Version {
+    UNVERSIONED(0),
+    // Initial number we put on HLogKey when we introduced versioning.
+    INITIAL(-1),
+    // Version -2 introduced a dictionary compression facility.  Only this
+    // dictionary-based compression is available in version -2.
+    COMPRESSED(-2);
+
+    final int code;
+    static final Version[] byCode;
+    static {
+      byCode = Version.values();
+      for (int i = 0; i < byCode.length; i++) {
+        if (byCode[i].code != -1 * i) {
+          throw new AssertionError("Values in this enum should be descending by one");
+        }
+      }
+    }
+
+    Version(int code) {
+      this.code = code;
+    }
+
+    boolean atLeast(Version other) {
+      return code <= other.code;
+    }
+
+    static Version fromCode(int code) {
+      return byCode[code * -1];
+    }
+  }
+
+  private static final Version VERSION = Version.COMPRESSED;
 
   //  The encoded region name.
   private byte [] encodedRegionName;
@@ -55,7 +88,9 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   private UUID clusterId;
 
-  /** Writable Consructor -- Do not use. */
+  private CompressionContext compressionContext;
+
+  /** Writable Constructor -- Do not use. */
   public HLogKey() {
     this(null, null, 0L, HConstants.LATEST_TIMESTAMP,
         HConstants.DEFAULT_CLUSTER_ID);
@@ -80,6 +115,13 @@ public class HLogKey implements WritableComparable<HLogKey> {
     this.logSeqNum = logSeqNum;
     this.writeTime = now;
     this.clusterId = clusterId;
+  }
+
+  /**
+   * @param compressionContext Compression context to use
+   */
+  public void setCompressionContext(CompressionContext compressionContext) {
+    this.compressionContext = compressionContext;
   }
 
   /** @return encoded region name */
@@ -213,9 +255,17 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   @Override
   public void write(DataOutput out) throws IOException {
-    WritableUtils.writeVInt(out, VERSION);
-    Bytes.writeByteArray(out, this.encodedRegionName);
-    Bytes.writeByteArray(out, this.tablename);
+    WritableUtils.writeVInt(out, VERSION.code);
+    if (compressionContext == null) {
+      Bytes.writeByteArray(out, this.encodedRegionName);
+      Bytes.writeByteArray(out, this.tablename);
+    } else {
+      Compressor.writeCompressed(this.encodedRegionName, 0,
+          this.encodedRegionName.length, out,
+          compressionContext.regionDict);
+      Compressor.writeCompressed(this.tablename, 0, this.tablename.length, out,
+          compressionContext.tableDict);
+    }
     out.writeLong(this.logSeqNum);
     out.writeLong(this.writeTime);
     // avoid storing 16 bytes when replication is not enabled
@@ -230,7 +280,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    int version = 0;
+    Version version = Version.UNVERSIONED;
     // HLogKey was not versioned in the beginning.
     // In order to introduce it now, we make use of the fact
     // that encodedRegionName was written with Bytes.writeByteArray,
@@ -242,16 +292,26 @@ public class HLogKey implements WritableComparable<HLogKey> {
     int len = WritableUtils.readVInt(in);
     if (len < 0) {
       // what we just read was the version
-      version = len;
-      len = WritableUtils.readVInt(in);
+      version = Version.fromCode(len);
+      // We only compress V2 of HLogkey.
+      // If compression is on, the length is handled by the dictionary
+      if (compressionContext == null || !version.atLeast(Version.COMPRESSED)) {
+        len = WritableUtils.readVInt(in);
+      }
     }
-    this.encodedRegionName = new byte[len];
-    in.readFully(this.encodedRegionName);
-    this.tablename = Bytes.readByteArray(in);
+    if (compressionContext == null || !version.atLeast(Version.COMPRESSED)) {
+      this.encodedRegionName = new byte[len];
+      in.readFully(this.encodedRegionName);
+      this.tablename = Bytes.readByteArray(in);
+    } else {
+      this.encodedRegionName = Compressor.readCompressed(in, compressionContext.regionDict);
+      this.tablename = Compressor.readCompressed(in, compressionContext.tableDict);
+    }
+    
     this.logSeqNum = in.readLong();
     this.writeTime = in.readLong();
     this.clusterId = HConstants.DEFAULT_CLUSTER_ID;
-    if (version < 0) {
+    if (version.atLeast(Version.INITIAL)) {
       if (in.readBoolean()) {
         this.clusterId = new UUID(in.readLong(), in.readLong());
       }
