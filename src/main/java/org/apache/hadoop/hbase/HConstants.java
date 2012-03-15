@@ -636,6 +636,10 @@ public final class HConstants {
   public static final String CHECKSUM_TYPE_NAME =
       "hbase.hstore.checksum.algorithm";
 
+  /** Configuration name of HLog Compression */
+  public static final String ENABLE_WAL_COMPRESSION =
+    "hbase.regionserver.wal.enablecompression";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

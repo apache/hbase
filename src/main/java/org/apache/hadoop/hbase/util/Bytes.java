@@ -1457,6 +1457,18 @@ public class Bytes {
   }
 
   /**
+   * @param bytes array to hash
+   * @param offset offset to start from
+   * @param length length to hash
+   * */
+  public static int hashCode(byte[] bytes, int offset, int length) {
+    int hash = 1;
+    for (int i = offset; i < offset + length; i++)
+      hash = (31 * hash) + (int) bytes[i];
+    return hash;
+  }
+
+  /**
    * @param t operands
    * @return Array of byte arrays made from passed array of Text
    */

@@ -61,7 +61,7 @@ import org.mockito.Mockito;
 @Category(MediumTests.class)
 public class TestWALReplay {
   public static final Log LOG = LogFactory.getLog(TestWALReplay.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
   private Path hbaseRootDir = null;
   private Path oldLogDir;
