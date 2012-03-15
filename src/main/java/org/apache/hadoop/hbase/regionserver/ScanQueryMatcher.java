@@ -306,7 +306,8 @@ public class ScanQueryMatcher {
       }
       // note the following next else if...
       // delete marker are not subject to other delete markers
-    } else if (!this.deletes.isEmpty()) {
+    } else if (!this.deletes.isEmpty()
+        && kv.getMemstoreTS() <= maxReadPointToTrackVersions) {
       DeleteResult deleteResult = deletes.isDeleted(bytes, offset, qualLength,
           timestamp);
       switch (deleteResult) {

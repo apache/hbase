@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.experimental.categories.Category;
 
@@ -55,10 +54,7 @@ public class TestAtomicOperation extends HBaseTestCase {
 
   HRegion region = null;
   private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final String DIR = TEST_UTIL.getDataTestDir("TestIncrement").toString();
-
-
-  private final int MAX_VERSIONS = 2;
+  private final String DIR = TEST_UTIL.getDataTestDir("TestAtomicOperation").toString();
 
   // Test names
   static final byte[] tableName = Bytes.toBytes("testtable");;
@@ -258,10 +254,10 @@ public class TestAtomicOperation extends HBaseTestCase {
     LOG.info("Starting test testRowMutationMultiThreads");
     initHRegion(tableName, getName(), fam1);
 
-    // create 100 threads, each will alternate between adding and
+    // create 50 threads, each will alternate between adding and
     // removing a column
-    int numThreads = 100;
-    int opsPerThread = 1000;
+    int numThreads = 50;
+    int opsPerThread = 500;
     AtomicOperation[] all = new AtomicOperation[numThreads];
 
     AtomicLong timeStamps = new AtomicLong(0);
@@ -340,10 +336,10 @@ public class TestAtomicOperation extends HBaseTestCase {
     LOG.info("Starting test testMultiRowMutationMultiThreads");
     initHRegion(tableName, getName(), fam1);
 
-    // create 100 threads, each will alternate between adding and
+    // create 50 threads, each will alternate between adding and
     // removing a column
-    int numThreads = 100;
-    int opsPerThread = 1000;
+    int numThreads = 50;
+    int opsPerThread = 500;
     AtomicOperation[] all = new AtomicOperation[numThreads];
 
     AtomicLong timeStamps = new AtomicLong(0);
