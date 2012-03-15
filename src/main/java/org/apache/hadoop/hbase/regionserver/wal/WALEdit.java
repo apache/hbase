@@ -76,7 +76,13 @@ public class WALEdit implements Writable, HeapSize {
   private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
   private NavigableMap<byte[], Integer> scopes;
 
+  private CompressionContext compressionContext;
+
   public WALEdit() {
+  }
+
+  public void setCompressionContext(final CompressionContext compressionContext) {
+    this.compressionContext = compressionContext;
   }
 
   public void add(KeyValue kv) {
@@ -116,9 +122,13 @@ public class WALEdit implements Writable, HeapSize {
       // this is new style HLog entry containing multiple KeyValues.
       int numEdits = in.readInt();
       for (int idx = 0; idx < numEdits; idx++) {
-        KeyValue kv = new KeyValue();
-        kv.readFields(in);
-        this.add(kv);
+        if (compressionContext != null) {
+          this.add(KeyValueCompression.readKV(in, compressionContext));
+        } else {
+          KeyValue kv = new KeyValue();
+          kv.readFields(in);
+          this.add(kv);
+    	  }
       }
       int numFamilies = in.readInt();
       if (numFamilies > 0) {
@@ -133,7 +143,7 @@ public class WALEdit implements Writable, HeapSize {
       }
     } else {
       // this is an old style HLog entry. The int that we just
-      // read is actually the length of a single KeyValue.
+      // read is actually the length of a single KeyValue
       KeyValue kv = new KeyValue();
       kv.readFields(versionOrLength, in);
       this.add(kv);
@@ -146,7 +156,11 @@ public class WALEdit implements Writable, HeapSize {
     out.writeInt(kvs.size());
     // We interleave the two lists for code simplicity
     for (KeyValue kv : kvs) {
-      kv.write(out);
+      if (compressionContext != null) {
+        KeyValueCompression.writeKV(out, kv, compressionContext);
+      } else{
+        kv.write(out);
+      }
     }
     if (scopes == null) {
       out.writeInt(0);

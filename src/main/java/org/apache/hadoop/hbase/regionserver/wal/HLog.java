@@ -1671,6 +1671,15 @@ public class HLog implements Syncable {
       return key;
     }
 
+    /**
+     * Set compression context for this entry.
+     * @param compressionContext Compression context
+     */
+    public void setCompressionContext(CompressionContext compressionContext) {
+      edit.setCompressionContext(compressionContext);
+      key.setCompressionContext(compressionContext);
+    }
+
     @Override
     public String toString() {
       return this.key + "=" + this.edit;

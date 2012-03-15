@@ -644,6 +644,10 @@ public final class HConstants {
   /** File permission umask to use when creating hbase data files */
   public static final String DATA_FILE_UMASK_KEY = "hbase.data.umask";
 
+  /** Configuration name of HLog Compression */
+  public static final String ENABLE_WAL_COMPRESSION =
+    "hbase.regionserver.wal.enablecompression";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

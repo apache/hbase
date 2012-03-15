@@ -25,6 +25,7 @@ import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,7 +34,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -45,6 +48,16 @@ import org.apache.hadoop.io.compress.DefaultCodec;
  */
 @InterfaceAudience.Private
 public class SequenceFileLogWriter implements HLog.Writer {
+  static final Text WAL_VERSION_KEY = new Text("version");
+  // Let the version be 1.  Let absence of a version meta tag be old, version 0.
+  // Set this version '1' to be the version that introduces compression,
+  // the COMPRESSION_VERSION.
+  private static final int COMPRESSION_VERSION = 1;
+  static final int VERSION = COMPRESSION_VERSION;
+  static final Text WAL_VERSION = new Text("" + VERSION);
+  static final Text WAL_COMPRESSION_TYPE_KEY = new Text("compression.type");
+  static final Text DICTIONARY_COMPRESSION_TYPE = new Text("dictionary");
+
   private final Log LOG = LogFactory.getLog(this.getClass());
   // The sequence file we delegate to.
   private SequenceFile.Writer writer;
@@ -53,6 +66,13 @@ public class SequenceFileLogWriter implements HLog.Writer {
   private FSDataOutputStream writer_out;
 
   private Class<? extends HLogKey> keyClass;
+
+  /**
+   * Context used by our wal dictionary compressor.  Null if we're not to do
+   * our custom dictionary compression.  This custom WAL compression is distinct
+   * from sequencefile native compression.
+   */
+  private CompressionContext compressionContext;
 
   private Method syncFs = null;
   private Method hflush = null;
@@ -74,9 +94,56 @@ public class SequenceFileLogWriter implements HLog.Writer {
     this.keyClass = keyClass;
   }
 
+  /**
+   * Create sequence file Metadata for our WAL file with version and compression
+   * type (if any).
+   * @param conf
+   * @param compress
+   * @return Metadata instance.
+   */
+  private static Metadata createMetadata(final Configuration conf,
+      final boolean compress) {
+    TreeMap<Text, Text> metaMap = new TreeMap<Text, Text>();
+    metaMap.put(WAL_VERSION_KEY, WAL_VERSION);
+    if (compress) {
+      // Currently we only do one compression type.
+      metaMap.put(WAL_COMPRESSION_TYPE_KEY, DICTIONARY_COMPRESSION_TYPE);
+    }
+    return new Metadata(metaMap);
+  }
+
+  /**
+   * Call this method after init() has been executed
+   * 
+   * @return whether WAL compression is enabled
+   */
+  static boolean isWALCompressionEnabled(final Metadata metadata) {
+    // Check version is >= VERSION?
+    Text txt = metadata.get(WAL_VERSION_KEY);
+    if (txt == null || Integer.parseInt(txt.toString()) < COMPRESSION_VERSION) {
+      return false;
+    }
+    // Now check that compression type is present.  Currently only one value.
+    txt = metadata.get(WAL_COMPRESSION_TYPE_KEY);
+    return txt != null && txt.equals(DICTIONARY_COMPRESSION_TYPE);
+  }
+
   @Override
   public void init(FileSystem fs, Path path, Configuration conf)
   throws IOException {
+    // Should we do our custom WAL compression?
+    boolean compress = conf.getBoolean(HConstants.ENABLE_WAL_COMPRESSION, false);
+    if (compress) {
+      try {
+        if (this.compressionContext == null) {
+          this.compressionContext = new CompressionContext(LRUDictionary.class);
+        } else {
+          this.compressionContext.clear();
+        }
+      } catch (Exception e) {
+        throw new IOException("Failed to initiate CompressionContext", e);
+      }
+    }
 
     if (null == keyClass) {
       keyClass = HLog.getKeyClass(conf);
@@ -101,7 +168,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
                 fs.getDefaultBlockSize())),
             Boolean.valueOf(false) /*createParent*/,
             SequenceFile.CompressionType.NONE, new DefaultCodec(),
-            new Metadata()
+            createMetadata(conf, compress)
             });
     } catch (InvocationTargetException ite) {
       // function was properly called, but threw it's own exception
@@ -123,7 +190,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
         SequenceFile.CompressionType.NONE,
         new DefaultCodec(),
         null,
-        new Metadata());
+        createMetadata(conf, compress));
     } else {
       LOG.debug("using new createWriter -- HADOOP-6840");
     }
@@ -133,7 +200,8 @@ public class SequenceFileLogWriter implements HLog.Writer {
     this.hflush = getHFlush();
     String msg = "Path=" + path +
       ", syncFs=" + (this.syncFs != null) +
-      ", hflush=" + (this.hflush != null);
+      ", hflush=" + (this.hflush != null) +
+      ", compression=" + compress;
     if (this.syncFs != null || this.hflush != null) {
       LOG.debug(msg);
     } else {
@@ -207,6 +275,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
 
   @Override
   public void append(HLog.Entry entry) throws IOException {
+    entry.setCompressionContext(compressionContext);
     this.writer.append(entry.getKey(), entry.getEdit());
   }
 
