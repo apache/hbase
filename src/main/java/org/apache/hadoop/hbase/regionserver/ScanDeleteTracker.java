@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -43,7 +42,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public class ScanDeleteTracker implements DeleteTracker {
 
-  private long familyStamp = -1L;
+  private boolean hasFamilyStamp = false;
+  private long familyStamp = 0L;
   private byte [] deleteBuffer = null;
   private int deleteOffset = 0;
   private int deleteLength = 0;
@@ -71,8 +71,9 @@ public class ScanDeleteTracker implements DeleteTracker {
   @Override
   public void add(byte[] buffer, int qualifierOffset, int qualifierLength,
       long timestamp, byte type) {
-    if (timestamp > familyStamp) {
+    if (!hasFamilyStamp || timestamp > familyStamp) {
       if (type == KeyValue.Type.DeleteFamily.getCode()) {
+        hasFamilyStamp = true;
         familyStamp = timestamp;
         return;
       }
@@ -107,7 +108,7 @@ public class ScanDeleteTracker implements DeleteTracker {
   @Override
   public DeleteResult isDeleted(byte [] buffer, int qualifierOffset,
       int qualifierLength, long timestamp) {
-    if (timestamp <= familyStamp) {
+    if (hasFamilyStamp && timestamp <= familyStamp) {
       return DeleteResult.FAMILY_DELETED;
     }
 
@@ -146,12 +147,13 @@ public class ScanDeleteTracker implements DeleteTracker {
 
   @Override
   public boolean isEmpty() {
-    return deleteBuffer == null && familyStamp == 0;
+    return deleteBuffer == null && !hasFamilyStamp;
   }
 
   @Override
   // called between every row.
   public void reset() {
+    hasFamilyStamp = false;
     familyStamp = 0L;
     deleteBuffer = null;
   }
