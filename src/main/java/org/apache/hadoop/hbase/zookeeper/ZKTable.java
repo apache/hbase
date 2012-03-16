@@ -216,7 +216,7 @@ public class ZKTable {
   public boolean checkEnabledAndSetDisablingTable(final String tableName)
     throws KeeperException {
     synchronized (this.cache) {
-      if (!isEnabledTable(tableName)) {
+      if (this.cache.get(tableName) != null && !isEnabledTable(tableName)) {
         return false;
       }
       setTableState(tableName, TableState.DISABLING);
@@ -265,10 +265,7 @@ public class ZKTable {
   }
 
   public boolean isEnabledTable(String tableName) {
-    synchronized (this.cache) {
-      // No entry in cache means enabled table.
-      return !this.cache.containsKey(tableName);
-    }
+    return isTableState(tableName, TableState.ENABLED);
   }
 
   /**
@@ -283,7 +280,7 @@ public class ZKTable {
   public static boolean isEnabledTable(final ZooKeeperWatcher zkw,
       final String tableName)
   throws KeeperException {
-    return getTableState(zkw, tableName) == null;
+    return getTableState(zkw, tableName) == TableState.ENABLED;
   }
 
   public boolean isDisablingOrDisabledTable(final String tableName) {
@@ -335,23 +332,47 @@ public class ZKTable {
   }
 
   /**
-   * Enables the table in zookeeper.  Fails silently if the
+   * Deletes the table in zookeeper.  Fails silently if the
    * table is not currently disabled in zookeeper.  Sets no watches.
    * @param tableName
    * @throws KeeperException unexpected zookeeper exception
    */
-  public void setEnabledTable(final String tableName)
+  public void setDeletedTable(final String tableName)
   throws KeeperException {
     synchronized (this.cache) {
       if (this.cache.remove(tableName) == null) {
-        LOG.warn("Moving table " + tableName + " state to enabled but was " +
-          "already enabled");
+        LOG.warn("Moving table " + tableName + " state to deleted but was " +
+          "already deleted");
       }
       ZKUtil.deleteNodeFailSilent(this.watcher,
         ZKUtil.joinZNode(this.watcher.tableZNode, tableName));
     }
   }
+  
+  /**
+   * Sets the ENABLED state in the cache and deletes the zookeeper node. Fails
+   * silently if the node is not in enabled in zookeeper
+   * 
+   * @param tableName
+   * @throws KeeperException
+   */
+  public void setEnabledTable(final String tableName) throws KeeperException {
+    setTableState(tableName, TableState.ENABLED);
+  }
 
+  /**
+   * check if table is present .
+   * 
+   * @param tableName
+   * @return true if the table is present
+   */
+  public boolean isTablePresent(final String tableName) {
+    synchronized (this.cache) {
+      TableState state = this.cache.get(tableName);
+      return !(state == null);
+    }
+  }
+  
   /**
    * Gets a list of all the tables set as disabled in zookeeper.
    * @return Set of disabled tables, empty Set if none

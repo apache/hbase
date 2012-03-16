@@ -325,13 +325,27 @@ public class ServerShutdownHandler extends EventHandler {
   public static boolean processDeadRegion(HRegionInfo hri, Result result,
       AssignmentManager assignmentManager, CatalogTracker catalogTracker)
   throws IOException {
+    boolean tablePresent = assignmentManager.getZKTable().isTablePresent(
+        hri.getTableNameAsString());
+    if (!tablePresent) {
+      LOG.info("The table " + hri.getTableNameAsString()
+          + " was deleted.  Hence not proceeding.");
+      return false;
+    }
     // If table is not disabled but the region is offlined,
     boolean disabled = assignmentManager.getZKTable().isDisabledTable(
         hri.getTableNameAsString());
-    if (disabled) return false;
+    if (disabled){
+      LOG.info("The table " + hri.getTableNameAsString()
+          + " was disabled.  Hence not proceeding.");
+      return false;
+    }
     if (hri.isOffline() && hri.isSplit()) {
       LOG.debug("Offlined and split region " + hri.getRegionNameAsString() +
         "; checking daughter presence");
+      if (MetaReader.getRegion(catalogTracker, hri.getRegionName()) == null) {
+        return false;
+      }
       fixupDaughters(result, assignmentManager, catalogTracker);
       return false;
     }
