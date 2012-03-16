@@ -58,12 +58,12 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -80,13 +80,13 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MultipleIOException;
@@ -841,20 +841,19 @@ public class HRegion implements HeapSize { // , Writable{
         LOG.debug("Skipping flush on " + this + " because closed");
         return false;
       }
-      try {
-        synchronized (writestate) {
-          if (!writestate.flushing && writestate.writesEnabled) {
-            this.writestate.flushing = true;
-          } else {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("NOT flushing memstore for region " + this +
-                  ", flushing=" +
-                  writestate.flushing + ", writesEnabled=" +
-                  writestate.writesEnabled);
-            }
-            return false;
+      synchronized (writestate) {
+        if (!writestate.flushing && writestate.writesEnabled) {
+          this.writestate.flushing = true;
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("NOT flushing memstore for region " + this
+                + ", flushing=" + writestate.flushing + ", writesEnabled="
+                + writestate.writesEnabled);
           }
+          return false;
         }
+      }
+      try {
         return internalFlushcache();
       } finally {
         synchronized (writestate) {
