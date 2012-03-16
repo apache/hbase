@@ -160,9 +160,10 @@ module Hbase
         end
 
         if arg.kind_of?(Hash) and (arg.has_key?(NUMREGIONS) or arg.has_key?(SPLITALGO))
+          raise(ArgumentError, "Column family configuration should be specified in a separate clause") if arg.has_key?(NAME)
           raise(ArgumentError, "Number of regions must be specified") unless arg.has_key?(NUMREGIONS)
           raise(ArgumentError, "Split algorithm must be specified") unless arg.has_key?(SPLITALGO)
-          raise(ArgumentError, "Number of regions must be geter than 1") unless arg[NUMREGIONS] > 1
+          raise(ArgumentError, "Number of regions must be greater than 1") unless arg[NUMREGIONS] > 1
           num_regions = arg[NUMREGIONS]
           split_algo = RegionSplitter.newSplitAlgoInstance(@conf, arg[SPLITALGO])
         else
