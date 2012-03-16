@@ -1318,22 +1318,22 @@ public class HRegion implements HeapSize { // , Writable{
         status.setStatus("Running coprocessor pre-flush hooks");
         coprocessorHost.preFlush();
       }
-      try {
-        synchronized (writestate) {
-          if (!writestate.flushing && writestate.writesEnabled) {
-            this.writestate.flushing = true;
-          } else {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("NOT flushing memstore for region " + this +
-                  ", flushing=" +
-                  writestate.flushing + ", writesEnabled=" +
-                  writestate.writesEnabled);
-            }
-            status.abort("Not flushing since " +
-                (writestate.flushing ? "already flushing" : "writes not enabled"));
-            return false;
+      synchronized (writestate) {
+        if (!writestate.flushing && writestate.writesEnabled) {
+          this.writestate.flushing = true;
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("NOT flushing memstore for region " + this
+                + ", flushing=" + writestate.flushing + ", writesEnabled="
+                + writestate.writesEnabled);
           }
+          status.abort("Not flushing since "
+              + (writestate.flushing ? "already flushing"
+                  : "writes not enabled"));
+          return false;
         }
+      }
+      try {
         boolean result = internalFlushcache(status);
 
         if (coprocessorHost != null) {

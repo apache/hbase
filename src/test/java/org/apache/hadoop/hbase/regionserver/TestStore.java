@@ -152,7 +152,7 @@ public class TestStore extends TestCase {
 
   public void testDeleteExpiredStoreFiles() throws Exception {
     int storeFileNum = 4;
-    int ttl = 1;
+    int ttl = 4;
     
     Configuration conf = HBaseConfiguration.create();
     // Enable the expired store file deletion
