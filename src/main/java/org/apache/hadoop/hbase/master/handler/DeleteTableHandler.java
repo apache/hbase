@@ -79,8 +79,8 @@ public class DeleteTableHandler extends TableEventHandler {
     this.masterServices.getTableDescriptors().remove(Bytes.toString(tableName));
 
     // If entry for this table in zk, and up in AssignmentManager, remove it.
-    // Call to undisableTable does this. TODO: Make a more formal purge table.
-    am.getZKTable().setEnabledTable(Bytes.toString(tableName));
+
+    am.getZKTable().setDeletedTable(Bytes.toString(tableName));
   }
   
   @Override

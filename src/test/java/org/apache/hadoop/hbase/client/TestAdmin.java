@@ -49,6 +49,8 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtilsForTests;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKTable;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 
@@ -222,6 +224,9 @@ public class TestAdmin {
     ht.get(get);
 
     this.admin.disableTable(table);
+    assertTrue("Table must be disabled.", TEST_UTIL.getHBaseCluster()
+        .getMaster().getAssignmentManager().getZKTable().isDisabledTable(
+            Bytes.toString(table)));
 
     // Test that table is disabled
     get = new Get(row);
@@ -236,6 +241,9 @@ public class TestAdmin {
     }
     assertTrue(ok);
     this.admin.enableTable(table);
+    assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster()
+        .getMaster().getAssignmentManager().getZKTable().isEnabledTable(
+            Bytes.toString(table)));
 
     // Test that table is enabled
     try {
@@ -307,6 +315,9 @@ public class TestAdmin {
       HConstants.CATALOG_FAMILY).close();
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
+    assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster()
+        .getMaster().getAssignmentManager().getZKTable().isEnabledTable(
+            "testCreateTable"));
   }
 
   @Test
@@ -952,10 +963,14 @@ public class TestAdmin {
      new HColumnDescriptor("/cfamily/name");
   }
 
-  @Test
+  @Test(timeout=36000)
   public void testEnableDisableAddColumnDeleteColumn() throws Exception {
+    ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
     byte [] tableName = Bytes.toBytes("testMasterAdmin");
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
+    while (!ZKTable.isEnabledTable(zkw, "testMasterAdmin")) {
+      Thread.sleep(10);
+    }
     this.admin.disableTable(tableName);
     try {
       new HTable(TEST_UTIL.getConfiguration(), tableName);
