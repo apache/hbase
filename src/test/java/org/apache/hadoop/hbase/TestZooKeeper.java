@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -93,40 +94,75 @@ public class TestZooKeeper {
    */
   @Test
   public void testClientSessionExpired() throws Exception {
-    LOG.info("testClientSessionExpired");
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
-    new HTable(c, HConstants.META_TABLE_NAME).close();
+
+    // We don't want to share the connection as we will check
+    //  its state
+    c.set(HConstants.HBASE_CLIENT_INSTANCE_ID, "1111");
 
     HConnection connection = HConnectionManager.getConnection(c);
+
     ZooKeeperWatcher connectionZK = connection.getZooKeeperWatcher();
+    LOG.info("ZooKeeperWatcher= 0x"+ Integer.toHexString(
+      connectionZK.hashCode()));
+    LOG.info("getRecoverableZooKeeper= 0x"+ Integer.toHexString(
+      connectionZK.getRecoverableZooKeeper().hashCode()));
+    LOG.info("session="+Long.toHexString(
+      connectionZK.getRecoverableZooKeeper().getSessionId()));
 
     TEST_UTIL.expireSession(connectionZK);
 
-    // Depending on how long you wait here, the state after dump will
-    // be 'closed' or 'Connecting'.
-    // There should be no reason to wait, the connection is closed on the server
-    // Thread.sleep(sessionTimeout * 3L);
-
-    LOG.info("Before dump state=" +
+    LOG.info("Before using zkw state=" +
       connectionZK.getRecoverableZooKeeper().getState());
     // provoke session expiration by doing something with ZK
-    ZKUtil.dump(connectionZK);
+    try {
+      connectionZK.getRecoverableZooKeeper().getZooKeeper().exists(
+        "/1/1", false);
+    } catch (KeeperException ignored) {
+    }
 
     // Check that the old ZK connection is closed, means we did expire
-    LOG.info("ZooKeeper should have timed out");
     States state = connectionZK.getRecoverableZooKeeper().getState();
-    LOG.info("After dump state=" + state);
+    LOG.info("After using zkw state=" + state);
+    LOG.info("session="+Long.toHexString(
+      connectionZK.getRecoverableZooKeeper().getSessionId()));
+
+    // It's asynchronous, so we may have to wait a little...
+    final long limit1 = System.currentTimeMillis() + 3000;
+    while (System.currentTimeMillis() < limit1 && state != States.CLOSED){
+      state = connectionZK.getRecoverableZooKeeper().getState();
+    }
+    LOG.info("After using zkw loop=" + state);
+    LOG.info("ZooKeeper should have timed out");
+    LOG.info("session="+Long.toHexString(
+      connectionZK.getRecoverableZooKeeper().getSessionId()));
+
+    // It's surprising but sometimes we can still be in connected state.
+    // As it's known (even if not understood) we don't make the the test fail
+    // for this reason.
     Assert.assertTrue(state == States.CLOSED);
 
     // Check that the client recovered
     ZooKeeperWatcher newConnectionZK = connection.getZooKeeperWatcher();
-    //Here, if you wait, you will have a CONNECTED state. If you don't,
-    //  you may have the CONNECTING one.
-    //Thread.sleep(sessionTimeout * 3L);
+
     States state2 = newConnectionZK.getRecoverableZooKeeper().getState();
     LOG.info("After new get state=" +state2);
+
+    // As it's an asynchronous event we may got the same ZKW, if it's not
+    //  yet invalidated. Hence this loop.
+    final long limit2 = System.currentTimeMillis() + 3000;
+    while (System.currentTimeMillis() < limit2 &&
+      state2 != States.CONNECTED && state2 != States.CONNECTING) {
+
+      newConnectionZK = connection.getZooKeeperWatcher();
+      state2 = newConnectionZK.getRecoverableZooKeeper().getState();
+    }
+    LOG.info("After new get state loop=" + state2);
+
     Assert.assertTrue(
       state2 == States.CONNECTED || state2 == States.CONNECTING);
+
+    connection.close();
   }
   
   @Test
@@ -141,7 +177,21 @@ public class TestZooKeeper {
   public void testMasterSessionExpired() throws Exception {
     LOG.info("Starting testMasterSessionExpired");
     TEST_UTIL.expireMasterSession();
-    Thread.sleep(7000); // Helps the test to succeed!!!
+    testSanity();
+  }
+
+  /**
+   * Master recovery when the znode already exists. Internally, this
+   *  test differs from {@link #testMasterSessionExpired} because here
+   *  the master znode will exist in ZK.
+   */
+  @Test(timeout=20000)
+  public void testMasterZKSessionRecoveryFailure() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HMaster m = cluster.getMaster();
+    m.abort("Test recovery from zk session expired",
+      new KeeperException.SessionExpiredException());
+    assertFalse(m.isStopped());
     testSanity();
   }
 
