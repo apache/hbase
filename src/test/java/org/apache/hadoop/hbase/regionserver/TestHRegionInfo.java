@@ -130,6 +130,18 @@ public class TestHRegionInfo {
     assertTrue(HRegionInfo.FIRST_META_REGIONINFO.isMetaTable());
   }
 
+  @Test
+  public void testComparator() {
+    byte[] tablename = Bytes.toBytes("comparatorTablename");
+    byte[] empty = new byte[0];
+    HRegionInfo older = new HRegionInfo(tablename, empty, empty, false, 0L); 
+    HRegionInfo newer = new HRegionInfo(tablename, empty, empty, false, 1L); 
+    assertTrue(older.compareTo(newer) < 0);
+    assertTrue(newer.compareTo(older) > 0);
+    assertTrue(older.compareTo(older) == 0);
+    assertTrue(newer.compareTo(newer) == 0);
+  }
+  
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
