@@ -25,6 +25,7 @@ include Java
 module Hbase
   class Table
     include HBaseConstants
+    attr_reader :table
 
     def initialize(configuration, table_name, formatter)
       @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name)
