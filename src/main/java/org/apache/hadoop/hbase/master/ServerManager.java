@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -53,6 +55,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.RegionManager.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Rack;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -173,7 +177,9 @@ public class ServerManager {
         master.getFileSystem(), master.getOldLogDir());
     Threads.setDaemonThreadRunning(oldLogCleaner,
       n + ".oldLogCleaner");
-
+    rackInfo = new Rack(c);
+    Threads.setDaemonThreadRunning(new ServerTimeoutMonitor(c),
+        n + "ServerManager-Timeout-Monitor");
   }
 
   /**
@@ -459,24 +465,30 @@ public class ServerManager {
   throws IOException {
     // Refresh the info object and the load information
     this.serversToServerInfo.put(serverInfo.getServerName(), serverInfo);
-    HServerLoad load = this.serversToLoad.get(serverInfo.getServerName());
-    if (load != null) {
-      this.master.getMetrics().incrementRequests(load.getNumberOfRequests());
-      if (!load.equals(serverInfo.getLoad())) {
-        updateLoadToServers(serverInfo.getServerName(), load);
+    HServerLoad oldLoad = this.serversToLoad.get(serverInfo.getServerName());
+    HServerLoad newLoad = serverInfo.getLoad();
+    if (oldLoad != null) {
+      // XXX why are we using oldLoad to update metrics
+      this.master.getMetrics().incrementRequests(oldLoad.getNumberOfRequests());
+      if (!oldLoad.equals(newLoad)) {
+        updateLoadToServers(serverInfo.getServerName(), oldLoad);
       }
     }
 
     // Set the current load information
-    load = serverInfo.getLoad();
-    this.serversToLoad.put(serverInfo.getServerName(), load);
+    newLoad.lastLoadRefreshTime = EnvironmentEdgeManager.currentTimeMillis();
+    if (oldLoad!= null && oldLoad.missedLastLoadReport) {
+      LOG.info("Restarted receiving reports from server " + serverInfo);
+    }
+    newLoad.missedLastLoadReport = false;
+    this.serversToLoad.put(serverInfo.getServerName(), newLoad);
     synchronized (loadToServers) {
-      Set<String> servers = this.loadToServers.get(load);
+      Set<String> servers = this.loadToServers.get(newLoad);
       if (servers == null) {
         servers = new HashSet<String>();
       }
       servers.add(serverInfo.getServerName());
-      this.loadToServers.put(load, servers);
+      this.loadToServers.put(newLoad, servers);
     }
 
     // Next, process messages for this server
@@ -1057,4 +1069,180 @@ public class ServerManager {
     serverMonitorThread.stopThread();
   }
 
+  // should ServerTimeoutMonitor and ServerMonitor be merged XXX?
+  private class ServerTimeoutMonitor extends Thread {
+    private final Log LOG =
+        LogFactory.getLog(ServerTimeoutMonitor.class.getName());
+    int timeout;
+    int shortTimeout;
+    int maxServersToExpirePerRack;
+
+    public ServerTimeoutMonitor(Configuration conf) {
+      this.shortTimeout = Math.max(2000,
+          2 * conf.getInt("hbase.regionserver.msginterval",
+                          HConstants.REGION_SERVER_MSG_INTERVAL));
+      this.timeout =
+          conf.getInt("hbase.region.server.missed.report.timeout", 10000);
+      if (shortTimeout > timeout) {
+        timeout = shortTimeout;
+      }
+      // XXX what should be the default value of maxServersToExpirePerRack? We
+      // could set it to the max number of servers that will go down in a rack
+      // if a 'line card' in a rack switch were to go bad.
+      maxServersToExpirePerRack =
+          conf.getInt("hbase.region.server.missed.report.max.expired.per.rack",
+                      1);
+      LOG.info("hbase.region.server.missed.report.max.expired.per.rack=" +
+          maxServersToExpirePerRack);
+      LOG.info("hbase.region.server.missed.report.timeout=" +
+          timeout + "ms shortTimeout=" + shortTimeout + "ms");
+    }
+
+    @Override
+    public void run() {
+      try {
+        while (true) {
+          boolean waitingForMoreServersInRackToTimeOut =
+              expireTimedOutServers(timeout, maxServersToExpirePerRack);
+          if (waitingForMoreServersInRackToTimeOut) {
+            sleep(shortTimeout/2);
+          } else {
+            sleep(timeout/2);
+          }
+        }
+      } catch (Exception e) {
+        // even InterruptedException is unexpected
+        LOG.fatal("ServerManager Timeout Monitor thread, unexpected exception",
+            e);
+      }
+      return;
+    }
+  }
+
+  private long lastDetailedLogAt = 0;
+  private long lastLoggedServerCount = 0;
+  private HashSet<String> inaccessibleRacks = new HashSet<String>();
+  Rack rackInfo;
+  /**
+   * @param timeout
+   * @param maxServersToExpire If more than these many servers expire in a rack
+   * then do nothing. Most likely there is something wrong with rack
+   * connectivity. Wait for rack to recover or wait for region servers to
+   * loose their zk sessions (which typically should have a much longer
+   * timeout)
+   * @return true if servers timed out but were not expired because
+   * we would like to wait and see whether more servers in the rack time out or
+   * not
+   */
+  boolean expireTimedOutServers(long timeout, int maxServersToExpire) {
+    long curTime = EnvironmentEdgeManager.currentTimeMillis();
+    boolean waitingForMoreServersInRackToTimeOut = false;
+    boolean reportDetails = false;
+    if ((curTime > lastDetailedLogAt + (3600 * 1000)) ||
+        lastLoggedServerCount != serversToLoad.size()) {
+      reportDetails = true;
+      lastDetailedLogAt = curTime;
+      lastLoggedServerCount = serversToLoad.size();
+    }
+    // rack -> time of last report from rack
+    Map<String, Long> rackLastReportAtMap = new HashMap<String, Long>();
+    // rack -> list of timed out servers in rack
+    Map<String, List<HServerInfo>> rackTimedOutServersMap =
+        new HashMap<String, List<HServerInfo>>();
+    for (Map.Entry<String, HServerLoad> e : this.serversToLoad.entrySet()) {
+      HServerInfo si = this.serversToServerInfo.get(e.getKey());
+      if (si == null) continue; // server removed
+      HServerLoad load = e.getValue();
+      String rack =
+          rackInfo.getRack(si.getServerAddress().getInetSocketAddress());
+      long timeOfLastPingFromThisServer = load.lastLoadRefreshTime;
+      if (timeOfLastPingFromThisServer <= 0 ) {
+        // invalid value implies that the master has discovered the rs
+        // but hasn't yet had the first report from the rs. It is usually
+        // in the master failover path. It might be a while before the rs
+        // discovers the new master and starts reporting to the new master
+        continue;
+      }
+      Long timeOfLastPingFromThisRack = rackLastReportAtMap.get(rack);
+      if (timeOfLastPingFromThisRack == null ||
+          (timeOfLastPingFromThisServer > timeOfLastPingFromThisRack)) {
+        // this is ok to do even if load.missedLastLoadReport is true
+        rackLastReportAtMap.put(rack, timeOfLastPingFromThisServer);
+      }
+      if (curTime <= timeOfLastPingFromThisServer + timeout) {
+        if (reportDetails) {
+          LOG.debug("rack=" + rack + ", recently heard from server=" +
+              si.getServerName());
+        }
+        if (load.missedLastLoadReport) {
+          waitingForMoreServersInRackToTimeOut = true;
+        }
+        continue; // not expired
+      }
+      List<HServerInfo> timedOutServersInThisRack =
+          rackTimedOutServersMap.get(rack);
+      if (timedOutServersInThisRack == null) {
+        timedOutServersInThisRack = new ArrayList<HServerInfo>();
+        rackTimedOutServersMap.put(rack, timedOutServersInThisRack);
+      }
+      timedOutServersInThisRack.add(si);
+    }
+    // In rackTimedOutServersMap[rack] we have all the expired servers in the
+    // rack
+    // In rackLastReportAtMap[rack] we have the time when the last report from
+    // this rack was received
+    for (Map.Entry<String, List<HServerInfo>> e:
+      rackTimedOutServersMap.entrySet()) {
+      String rack = e.getKey();
+      List<HServerInfo> timedOutServers = e.getValue();
+      if (timedOutServers.size() > maxServersToExpire) {
+        // Too many servers timed out in this rack. We expect something is
+        // wrong with the rack and not with the servers. We will not expire
+        // these servers. We will pretend as if they never timed out - set the
+        // load.missedLastReport to false. We could have also reset the
+        // load.lastLoadRefreshTime but we don't do that
+        for (HServerInfo si : timedOutServers) {
+          HServerLoad load = serversToLoad.get(si.getServerName());
+          if (load == null) continue; //server vanished
+          load.missedLastLoadReport = false;
+        }
+        if (!inaccessibleRacks.contains(rack)) {
+          inaccessibleRacks.add(rack);
+          LOG.info("Too many servers count=" + timedOutServers.size() +
+              " timed out in rack " + rack + ". . Timed out Servers = " +
+              timedOutServers + ". Not expiring these servers, hoping for rack" +
+              " to become accessible");
+        }
+        continue; // next rack
+      }
+      if (inaccessibleRacks.contains(rack)) {
+        LOG.info("rack " + rack + "has become accessible");
+      }
+      inaccessibleRacks.remove(rack);
+      long lastHeardFromRackAt = rackLastReportAtMap.get(rack);
+      for (HServerInfo si : timedOutServers) {
+        HServerLoad load = serversToLoad.get(si.getServerName());
+        if (load == null) continue; //server vanished
+        if (load.missedLastLoadReport) {
+          LOG.warn("Expiring Server " + si + " because of missed load reports");
+          // Since the server load is fetched again, therefore it might have
+          // changed since we last read it. We do look at
+          // load.missedLastLoadReport one more time but that isn't enough
+          // guarantee that we will not expire a server that has just reported.
+          this.expireServer(si);
+        } else {
+          // wait for some more time to make sure that no other server in the
+          // rack becomes inaccessible. Also advance the timeout to the timeout
+          // of the last server from the rack to send a report
+          LOG.debug("Server " + si + " timed out. Will wait " +
+          (lastHeardFromRackAt + timeout - curTime) + "ms for others in" +
+              " rack before expiring it");
+          load.missedLastLoadReport = true;
+          load.lastLoadRefreshTime = lastHeardFromRackAt;
+          waitingForMoreServersInRackToTimeOut = true;
+        }
+      }
+    }
+    return waitingForMoreServersInRackToTimeOut;
+  }
 }

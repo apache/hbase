@@ -453,6 +453,8 @@ public final class HConstants {
   public static final String DISTRIBUTED_LOG_SPLITTING_KEY =
       "hbase.master.distributed.log.splitting";
 
+  public static final int REGION_SERVER_MSG_INTERVAL = 1 * 1000;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

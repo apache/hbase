@@ -289,10 +289,11 @@ public class HMaster extends Thread implements HMasterInterface,
     if (conf.getBoolean(HConstants.MASTER_TYPE_BACKUP,
         HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
       // ephemeral node expiry will be detected between about 40 to 60 seconds;
+      // (if the session timeout is set to 60 seconds)
       // plus add a little extra since only ZK leader can expire nodes, and
       // leader maybe a little  bit delayed in getting info about the pings.
       // Conservatively, just double the time.
-      int stallTime = conf.getInt("zookeeper.session.timeout", 60 * 1000) * 2;
+      int stallTime = getZKSessionTimeOutForMaster(conf) * 2;
 
       LOG.debug("HMaster started in backup mode. Stall " + stallTime +
           "ms giving primary master a fair chance to be the master...");
@@ -384,14 +385,37 @@ public class HMaster extends Thread implements HMasterInterface,
     return this.logSplitThreadPool;
   }
 
+  private int getZKSessionTimeOutForMaster(Configuration conf) {
+    int zkTimeout = conf.getInt("hbase.master.zookeeper.session.timeout", 0);
+    if (zkTimeout != 0) {
+      return zkTimeout;
+    }
+    return conf.getInt(HConstants.ZOOKEEPER_SESSION_TIMEOUT,
+        HConstants.DEFAULT_ZOOKEEPER_SESSION_TIMEOUT);
+  }
+
   private void initializeZooKeeper() throws IOException {
     boolean abortProcesstIfZKExpired = conf.getBoolean(
         HConstants.ZOOKEEPER_SESSION_EXPIRED_ABORT_PROCESS, true);
+    // Set this property to set zk session timeout for master which is different
+    // from what region servers use. The master's zk session timeout can be
+    // much shorter than region server's. It is easier to recycle master becuase
+    // it doesn't handle data. The region server can have an inflated zk session
+    // timeout because they also rely on master to kill them if they miss any
+    // heartbeat
+    int zkTimeout = conf.getInt("hbase.master.zookeeper.session.timeout", 0);
+    Configuration localConf;
+    if (zkTimeout != 0) {
+      localConf = new Configuration(conf);
+      localConf.setInt(HConstants.ZOOKEEPER_SESSION_TIMEOUT, zkTimeout);
+    } else {
+      localConf = conf;
+    }
     if (abortProcesstIfZKExpired) {
-      zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
+      zooKeeperWrapper = ZooKeeperWrapper.createInstance(localConf,
           getZKWrapperName(), new RuntimeHaltAbortStrategy());
     } else {
-      zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
+      zooKeeperWrapper = ZooKeeperWrapper.createInstance(localConf,
           getZKWrapperName(), new Abortable() {
 
             @Override
