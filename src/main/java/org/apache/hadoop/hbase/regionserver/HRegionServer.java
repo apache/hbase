@@ -105,6 +105,8 @@ import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.master.AssignmentPlan;
+import org.apache.hadoop.hbase.master.RegionPlacement;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerDynamicMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
@@ -1575,7 +1577,7 @@ public class HRegionServer implements HRegionInterface,
                 }
               }
               if (e.msg.getMessage() != null && e.msg.getMessage().length > 0) {
-                openRegion(info, new String(e.msg.getMessage()).split(","));
+                openRegion(info, new String(e.msg.getMessage()));
               } else {
                 openRegion(info, null);
               }
@@ -1678,7 +1680,7 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
-  void openRegion(final HRegionInfo regionInfo, String[] favoredNodes) {
+  void openRegion(final HRegionInfo regionInfo, String favoredNodes) {
     Integer mapKey = Bytes.mapKey(regionInfo.getRegionName());
     HRegion region = this.onlineRegions.get(mapKey);
     RSZookeeperUpdater zkUpdater = new RSZookeeperUpdater(
@@ -1738,20 +1740,13 @@ public class HRegionServer implements HRegionInterface,
     }
   }
 
-  private void setFavoredNodes(HRegion region, String[] favoredNodes) {
-    if (favoredNodes != null && favoredNodes.length > 0) {
-      InetSocketAddress[] nodes = new InetSocketAddress[favoredNodes.length];
-      StringBuilder favoratedNodesList = new StringBuilder();
-      for (int i = 0; i < favoredNodes.length; i++) {
-        int colon = favoredNodes[i].indexOf(':');
-        String hostname = colon >= 0 ? favoredNodes[i].substring(0, colon) :
-          favoredNodes[i];
-        favoratedNodesList.append(hostname + ",");
-        nodes[i] = new InetSocketAddress(hostname, 0);
-      }
+  private void setFavoredNodes(HRegion region, String favoredNodes) {
+    if (favoredNodes != null && favoredNodes.length() > 0) {
+      InetSocketAddress[] nodes =
+        RegionPlacement.getFavoredInetSocketAddress(favoredNodes);
       region.setFavoredNodes(nodes);
       LOG.debug("Set the region " + region.getRegionNameAsString() +
-          " with the favored nodes: " + favoratedNodesList);
+          " with the favored nodes: " + favoredNodes);
     }
   }
 
@@ -2985,6 +2980,40 @@ public class HRegionServer implements HRegionInterface,
         this, protocol, clientVersion, clientMethodsHash);
   }
 
+  @Override
+  public int updateFavoredNodes(AssignmentPlan plan)
+  throws IOException {
+    if (plan == null) {
+      LOG.debug("The assignment plan is empty");
+      return 0;
+    }
+    int counter = 0;
+    for (Map.Entry<HRegionInfo, List<HServerAddress>> entry :
+      plan.getAssignmentMap().entrySet()) {
+        // Get the online region
+      HRegion region =
+        this.onlineRegions.get(Bytes.mapKey(entry.getKey().getRegionName()));
+
+      if (region == null) {
+        LOG.warn("Region " + entry.getKey().getRegionNameAsString() +
+            " is not running on this" + this.serverInfo.getHostnamePort()
+            + " region server any more !");
+        continue;
+      }
+      List<HServerAddress> serverList = entry.getValue();
+      if (serverList != null) {
+        String favoredNodes = RegionPlacement.getFavoredNodes(serverList);
+        InetSocketAddress[] favoredAddress =
+          RegionPlacement.getFavoredInetSocketAddress(serverList);
+        // Set the favored nodes
+        region.setFavoredNodes(favoredAddress);
+        LOG.debug("Update region " + region.getRegionNameAsString() +
+            " with new favored nodes: " + favoredNodes);
+        counter++;
+      }
+    }
+    return counter;
+  }
   /**
    * @param args
    */

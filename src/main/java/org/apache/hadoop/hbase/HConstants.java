@@ -455,6 +455,9 @@ public final class HConstants {
 
   public static final int REGION_SERVER_MSG_INTERVAL = 1 * 1000;
 
+  /** The number of favored nodes for each region */
+  public static final int FAVORED_NODES_NUM = 3;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

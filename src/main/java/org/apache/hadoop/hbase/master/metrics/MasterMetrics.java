@@ -18,12 +18,12 @@
 package org.apache.hadoop.hbase.master.metrics;
 
 import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.metrics.HBaseInfo;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
-import org.apache.hadoop.hbase.metrics.PersistentMetricsTimeVaryingRate;
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -186,8 +186,16 @@ public class MasterMetrics implements Updater {
 	  numRegionsOpened.set(numRegionsOpened.get() + 1);
   }
 
+  public synchronized int getRegionsOpened() {
+    return numRegionsOpened.get();
+  }
+
   public synchronized void incRegionServerExpired() {
 	  numRSExpired.set(numRSExpired.get() + 1);
+  }
+
+  public synchronized int getRegionServerExpired() {
+    return numRSExpired.get();
   }
 
 }

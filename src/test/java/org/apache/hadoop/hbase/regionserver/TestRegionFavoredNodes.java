@@ -1,5 +1,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.fail;
+
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.List;
@@ -15,8 +17,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-
 /**
  * Tests the ability to specify favored nodes for a region.
  */
@@ -26,8 +26,8 @@ public class TestRegionFavoredNodes {
   private static HTable table;
   private static final byte[] TABLE_NAME = Bytes.toBytes("table");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("family");
-  private static final int REPLICATION = 3;
-  private static final int REGION_SERVERS = 6;
+  private static final int FAVORED_NODES_NUM = 3;
+  private static final int REGION_SERVERS = 3;
   private static final int FLUSHES = 3;
 
   @BeforeClass
@@ -60,10 +60,10 @@ public class TestRegionFavoredNodes {
 
     // For each region, choose some datanodes as the favored nodes then assign
     // them as favored nodes through the HRegion.
-    InetSocketAddress[] favoredNodes = new InetSocketAddress[REPLICATION];
+    InetSocketAddress[] favoredNodes = new InetSocketAddress[FAVORED_NODES_NUM];
     List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME);
     for (int i = 0; i < regions.size(); i++) {
-      for (int j = 0; j < REPLICATION; j++) {
+      for (int j = 0; j < FAVORED_NODES_NUM; j++) {
         favoredNodes[j] = nodes[(i + j) % REGION_SERVERS];
       }
       regions.get(i).setFavoredNodes(favoredNodes);
@@ -88,7 +88,7 @@ public class TestRegionFavoredNodes {
         for (LocatedBlock lbk : lbks.getLocatedBlocks()) {
           locations:
           for (DatanodeInfo info : lbk.getLocations()) {
-            for (int j = 0; j < REPLICATION; j++) {
+            for (int j = 0; j < FAVORED_NODES_NUM; j++) {
               if (info.getName().equals(nodeNames[(i + j) % REGION_SERVERS])) {
                 continue locations;
               }

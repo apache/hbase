@@ -20,13 +20,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.WritableWithSize;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -37,6 +30,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.WritableWithSize;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Single row result of a {@link Get} or {@link Scan} query.<p>
@@ -318,6 +318,17 @@ public class Result implements Writable, WritableWithSize {
   public byte [] getValue(byte [] family, byte [] qualifier) {
     Map.Entry<Long,byte[]> entry = getKeyValue(family, qualifier);
     return entry == null? null: entry.getValue();
+  }
+
+  /**
+   * Get the latest time stamp.
+   * @param family family name
+   * @param qualifier column qualifier
+   * @return the latest time stamp
+   */
+  public long getLastestTimeStamp(byte [] family, byte [] qualifier) {
+    Map.Entry<Long,byte[]> entry = getKeyValue(family, qualifier);
+    return entry == null? Long.MIN_VALUE: entry.getKey();
   }
 
   private Map.Entry<Long,byte[]> getKeyValue(byte[] family, byte[] qualifier) {

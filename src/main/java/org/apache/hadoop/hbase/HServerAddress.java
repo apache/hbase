@@ -33,7 +33,7 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class HServerAddress implements WritableComparable<HServerAddress> {
   private InetSocketAddress address;
-  String stringValue;
+  private String stringValue;
 
   public HServerAddress() {
     this.address = null;
@@ -46,8 +46,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
    */
   public HServerAddress(InetSocketAddress address) {
     this.address = address;
-    this.stringValue = address.getAddress().getHostAddress() + ":" +
-      address.getPort();
+    this.stringValue = getHostAddressWithPort();
     checkBindAddressCanBeResolved();
   }
 
@@ -62,7 +61,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     String host = hostAndPort.substring(0, colonIndex);
     int port = Integer.parseInt(hostAndPort.substring(colonIndex + 1));
     this.address = new InetSocketAddress(host, port);
-    this.stringValue = hostAndPort;
+    this.stringValue = getHostAddressWithPort();
     checkBindAddressCanBeResolved();
   }
 
@@ -86,6 +85,27 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     this.address = new InetSocketAddress(bindAddress, port);
     stringValue = other.stringValue;
     checkBindAddressCanBeResolved();
+  }
+
+  /**
+   * Get the normalized hostAddress:port as a string format
+   * @param address
+   * @return the normalized hostAddress:port as a string format
+   */
+  public String getHostAddressWithPort() {
+    if (address == null) return null;
+    return this.getBindAddress() + ":" + address.getPort();
+  }
+
+  /**
+   * Get the normalized hostName:port as a string format
+   * @param address
+   * @return the normalized hostName:port as a string format
+   */
+  public String getHostNameWithPort() {
+    if (address == null) return null;
+    return address.getHostName() + ":" +
+      address.getPort();
   }
 
   /** @return Bind address */

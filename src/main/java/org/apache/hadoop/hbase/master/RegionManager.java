@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,7 +36,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -86,7 +84,7 @@ public class RegionManager {
 
   private static final byte [] META_REGION_PREFIX = Bytes.toBytes(".META.,");
 
-  final PreferredAssignmentManager assignmentManager;
+  private final AssignmentManager assignmentManager;
 
   /**
    * Map key -> tableName, value -> ThrottledRegionReopener
@@ -178,22 +176,12 @@ public class RegionManager {
         ZooKeeperWrapper.getInstance(conf, master.getZKWrapperName());
     this.maxAssignInOneGo = conf.getInt("hbase.regions.percheckin", 10);
 
-    LoadBalancer loadBalancerImpl;
-    try {
-      Class<? extends LoadBalancer> theClass = conf.getClass(
-          HConstants.LOAD_BALANCER_IMPL, DefaultLoadBalancer.class,
-          LoadBalancer.class);
-      Constructor<? extends LoadBalancer> meth =
-          theClass.getDeclaredConstructor(RegionManager.class);
-      meth.setAccessible(true);
-      loadBalancerImpl = meth.newInstance(this);
-    } catch (Exception e) {
-      loadBalancerImpl = new DefaultLoadBalancer();
+    if (master.shouldAssignRegionsWithFavoredNodes()) {
+      this.loadBalancer = new AssignmentLoadBalancer();
+    } else {
+      this.loadBalancer = new DefaultLoadBalancer();
     }
-    this.loadBalancer = loadBalancerImpl;
-    LOG.info("The load balancer is " + this.loadBalancer.getClass().getName());
-
-    this.assignmentManager = new PreferredAssignmentManager(master);
+    this.assignmentManager = new AssignmentManager(master);
 
     // The root region
     rootScannerThread = new RootScanner(master);
@@ -209,12 +197,20 @@ public class RegionManager {
     reassignRootRegion();
   }
 
+  public LoadBalancer getLoadBalancer() {
+    return this.loadBalancer;
+  }
+
   void start() {
     assignmentManager.start();
     Threads.setDaemonThreadRunning(rootScannerThread,
       "RegionManager.rootScanner");
     Threads.setDaemonThreadRunning(metaScannerThread,
       "RegionManager.metaScanner");
+  }
+
+  public AssignmentManager getAssignmentManager() {
+    return this.assignmentManager;
   }
 
   void unsetRootRegion() {
@@ -263,6 +259,33 @@ public class RegionManager {
       // be assigned when the region server reports next
       return;
     }
+
+    if (this.master.shouldAssignRegionsWithFavoredNodes()) {
+      // assign regions with favored nodes
+      assignRegionsWithFavoredNodes(info, mostLoadedRegions, returnMsgs);
+    } else {
+      // assign regions without favored nodes
+      assignRegionsWithoutFavoredNodes(info, mostLoadedRegions, returnMsgs);
+    }
+  }
+
+  private void assignRegionsWithFavoredNodes(HServerInfo regionServer,
+      HRegionInfo[] mostLoadedRegions, ArrayList<HMsg> returnMsgs) {
+    // get the regions that are waiting for assignment for that region server
+    Set<RegionState> regionsToAssign = regionsAwaitingAssignment(regionServer);
+
+    if (regionsToAssign.isEmpty() &&
+        master.getRegionServerOperationQueue().isEmpty()) {
+        // There are no regions waiting to be assigned.
+        // load balance as before
+        this.loadBalancer.loadBalancing(regionServer, mostLoadedRegions, returnMsgs);
+    } else {
+      assignRegionsToOneServer(regionsToAssign, regionServer, returnMsgs);
+    }
+  }
+
+  private void assignRegionsWithoutFavoredNodes(HServerInfo info,
+      HRegionInfo[] mostLoadedRegions, ArrayList<HMsg> returnMsgs) {
     // the region may assigned to this region server
     Set<RegionState> regionsToAssign = null;
 
@@ -459,11 +482,11 @@ public class RegionManager {
       this.regionsInTransition.put(regionName, rs);
     }
 
-    if (assignmentManager.hasPersistentAssignment(rs.getRegionInfo())) {
-      String nodes = StringUtils.join(assignmentManager
-          .getPreferredAssignments(rs.getRegionInfo()), ',');
+    if (assignmentManager.hasAssignmentFromPlan(rs.getRegionInfo())) {
+      String favoredNodes = RegionPlacement.getFavoredNodes(
+          assignmentManager.getAssignmentFromPlan(rs.regionInfo));
       returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, rs.getRegionInfo(),
-          nodes.getBytes()));
+          favoredNodes.getBytes()));
     } else {
       returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, rs.getRegionInfo()));
     }
@@ -507,6 +530,122 @@ public class RegionManager {
    * only caller (assignRegions, whose caller is ServerManager.processMsgs) owns
    * the monitor for RegionManager
    */
+  private Set<RegionState> regionsAwaitingAssignment(HServerInfo server) {
+    // set of regions we want to assign to this server
+    Set<RegionState> regionsToAssign = new HashSet<RegionState>();
+    boolean isSingleServer = this.master.numServers() == 1;
+    HServerAddress addr = server.getServerAddress();
+    boolean isMetaServer = isMetaServer(addr);
+    RegionState rootState = null;
+    boolean isPreferredAssignment = false;
+    boolean reassigningMetas =
+      (numberOfMetaRegions.get() != onlineMetaRegions.size());
+    boolean isMetaOrRoot = isMetaServer || isRootServer(addr);
+
+    // Assign ROOT region if ROOT region is offline.
+    synchronized (this.regionsInTransition) {
+      rootState = regionsInTransition.get(HRegionInfo.ROOT_REGIONINFO
+          .getRegionNameAsString());
+    }
+    if (rootState != null && rootState.isUnassigned()) {
+      // just make sure it isn't hosting META regions (unless
+      // it's the only server left).
+      if (!isMetaServer || isSingleServer) {
+        regionsToAssign.add(rootState);
+        LOG.debug("Going to assign -ROOT- region to server " +
+            server.getHostnamePort());
+      }
+      return regionsToAssign;
+    }
+
+    // Don't assign META to this server who has already hosted any ROOT or META
+    if (isMetaOrRoot && reassigningMetas && !isSingleServer) {
+      return regionsToAssign;
+    }
+
+    // Get the set of the regions which are preserved
+    // for the current region server
+    Set<HRegionInfo> preservedRegionsForCurrentRS =
+      assignmentManager.getTransientAssignments(addr);
+
+    synchronized (this.regionsInTransition) {
+      int nonPreferredAssignment = 0;
+      for (RegionState regionState : regionsInTransition.values()) {
+        HRegionInfo regionInfo = regionState.getRegionInfo();
+        if (regionInfo == null) continue;
+        if (regionInfo.isRootRegion() && !regionState.isUnassigned()) {
+          LOG.debug("The -ROOT- region"
+              + " has been assigned and will be online soon. " +
+                  "Do nothing for server " + server.getHostnamePort());
+          break;
+        }
+        // Assign the META region here explicitly
+        if (regionInfo.isMetaRegion()) {
+          if (regionState.isUnassigned()) {
+            regionsToAssign.clear();
+            regionsToAssign.add(regionState);
+            LOG.debug("Going to assign META region: " +
+                regionInfo.getRegionNameAsString() + " to server " +
+                server.getHostnamePort());
+          } else {
+            LOG.debug("The .META. region " + regionInfo.getRegionNameAsString()
+                + " has been assigned and will be online soon. " +
+                "Do nothing for server " + server.getHostnamePort());
+          }
+          break;
+        }
+
+        // Can't assign user regions until all meta regions have been assigned,
+        // the initial meta scan is done and there are enough online
+        // region servers
+        if (reassigningMetas || !this.isInitialMetaScanComplete() ||
+            !master.getServerManager().hasEnoughRegionServers()) {
+          LOG.debug("Cannot assign region " + regionInfo.getRegionNameAsString()
+              + " because not all the META are online, "
+              + "or the initial META scan is not completed, or there are no "
+              + "enough online region servers");
+          continue;
+        }
+
+        // Cannot assign region which is NOT in the unassigned state
+        if (!regionState.isUnassigned()) {
+          continue;
+        }
+
+        if (preservedRegionsForCurrentRS == null ||
+            !preservedRegionsForCurrentRS.contains(regionInfo)) {
+          if (assignmentManager.hasTransientAssignment(regionInfo) ||
+              nonPreferredAssignment > this.maxAssignInOneGo) {
+            // Hold the region for its favored nodes and limit the number of
+            // non preferred assignments for each region server.
+            continue;
+          }
+          // This is a non preferred assignment.
+          isPreferredAssignment = false;
+          nonPreferredAssignment++;
+        } else {
+          isPreferredAssignment = true;
+        }
+
+        // Assign the current region to the region server.
+        regionsToAssign.add(regionState);
+        LOG.debug("Going to assign user region " +
+            regionInfo.getRegionNameAsString() +
+            " to server " + server.getHostnamePort() + " in a " +
+            (isPreferredAssignment ? "": "non-") + "preferred way");
+
+      }
+    }
+    return regionsToAssign;
+  }
+
+  /**
+   * Get the set of regions that should be assignable in this pass.
+   *
+   * Note that no synchronization on regionsInTransition is needed because the
+   * only caller (assignRegions, whose caller is ServerManager.processMsgs) owns
+   * the monitor for RegionManager
+   */
   private Set<RegionState> regionsAwaitingAssignment(HServerAddress addr,
       boolean isSingleServer, MutableBoolean isPreferredAssignment,
       boolean assignmentByLocality, boolean holdRegionForBestRegionserver,
@@ -515,7 +654,7 @@ public class RegionManager {
     // set of regions we want to assign to this server
     Set<RegionState> regionsToAssign = new HashSet<RegionState>();
 
-    Set<HRegionInfo> regions = assignmentManager.getPreferredAssignments(addr);
+    Set<HRegionInfo> regions = assignmentManager.getTransientAssignments(addr);
     if (null != regions) {
       isPreferredAssignment.setValue(true);
       // One could use regionsInTransition.keySet().containsAll(regions) but
@@ -588,7 +727,7 @@ public class RegionManager {
           continue;
         }
         if (!i.isMetaRegion()
-            && !master.getServerManager().canAssignUserRegions()) {
+            && !master.getServerManager().hasEnoughRegionServers()) {
           LOG.debug("user region " + i.getRegionNameAsString()
               + " is in transition but not enough servers yet");
           continue;
@@ -919,7 +1058,7 @@ public class RegionManager {
    * @throws IOException
    */
   public void createRegion(HRegionInfo newRegion, HRegionInterface server,
-      byte [] metaRegionName,  List<HServerInfo> favoriteNodeList)
+      byte [] metaRegionName,  List<HServerAddress> favoriteNodeList)
   throws IOException {
     // 2. Create the HRegion
     HRegion region = HRegion.createHRegion(newRegion, this.master.getRootDir(),
@@ -936,10 +1075,7 @@ public class RegionManager {
 
     // 3.2 Put the favorite nodes into meta.
     if (favoriteNodeList != null) {
-      String favoredNodes = "";
-      for (HServerInfo favoriteServer : favoriteNodeList) {
-        favoredNodes += favoriteServer.getHostnamePort() + ",";
-      }
+      String favoredNodes = RegionPlacement.getFavoredNodes(favoriteNodeList);
       favoredNodes = favoredNodes.substring(0, favoredNodes.length() - 1);
       put.add(HConstants.CATALOG_FAMILY, HConstants.FAVOREDNODES_QUALIFIER,
           EnvironmentEdgeManager.currentTimeMillis(), favoredNodes.getBytes());
@@ -1201,10 +1337,10 @@ public class RegionManager {
       }
     }
     if (force || (!s.isPendingOpen() && !s.isOpen())) {
-      s.setUnassigned();
       // Refresh assignment information when a region is marked unassigned so
       // that it opens on the preferred server.
-      this.assignmentManager.putTransientFromPersistent(info);
+      this.assignmentManager.executeAssignmentPlan(info);
+      s.setUnassigned();
     }
   }
 
@@ -1295,7 +1431,7 @@ public class RegionManager {
       if (!setOffline) {
         // Refresh assignment information when a region is closed and not
         // marked offline so that it opens on the preferred server.
-        this.assignmentManager.putTransientFromPersistent(regionInfo);
+        this.assignmentManager.executeAssignmentPlan(regionInfo);
       }
     }
   }
@@ -1720,7 +1856,7 @@ public class RegionManager {
       // primary is alive, unassign that region and let it move to the primary.
       for (HRegionInfo region : mostLoadedRegions) {
         List<HServerAddress> preferences =
-            assignmentManager.getPreferredAssignments(region);
+            assignmentManager.getAssignmentFromPlan(region);
         if (preferences == null || preferences.size() == 0) {
           // No prefered assignment, do nothing.
           continue;
@@ -1763,7 +1899,7 @@ public class RegionManager {
       int regionsUnassigned = 0;
       for (HRegionInfo region : mostLoadedRegions) {
         List<HServerAddress> preferences =
-            assignmentManager.getPreferredAssignments(region);
+            assignmentManager.getAssignmentFromPlan(region);
         if (preferences == null || preferences.size() == 0) {
           // No preferredAssignment, do nothing.
           continue;
@@ -1826,7 +1962,7 @@ public class RegionManager {
 
       for (HRegionInfo region : mostLoadedRegions) {
         List<HServerAddress> preferences =
-            assignmentManager.getPreferredAssignments(region);
+            assignmentManager.getAssignmentFromPlan(region);
         if (preferences == null || preferences.size() == 0) {
           // No preferredAssignment, do nothing.
           continue;

@@ -1662,11 +1662,7 @@ public class HRegion implements HeapSize {
    * @param favoredNodes the favored nodes, or null
    */
   public void setFavoredNodes(InetSocketAddress[] favoredNodes) {
-    if (favoredNodes == null) {
-      this.favoredNodes = null;
-      return;
-    }
-    this.favoredNodes = Arrays.copyOf(favoredNodes, favoredNodes.length);
+    this.favoredNodes = favoredNodes;
   }
 
   /**

@@ -192,7 +192,7 @@ public class ThrottledRegionReopener {
   public synchronized void addPreferredAssignmentForReopen(HRegionInfo region,
       HServerInfo serverInfo) {
     if (regionsBeingReopened.contains(region)) {
-      regionManager.assignmentManager.addTransientAssignment(
+      regionManager.getAssignmentManager().addTransientAssignment(
           serverInfo.getServerAddress(), region);
     }
   }

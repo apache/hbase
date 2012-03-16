@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.MultiPutResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
@@ -360,5 +361,12 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
    * @throws IOException
    */
   public void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
+  throws IOException;
+
+  /**
+   * Update the assignment plan for each region server.
+   * @param updatedFavoredNodesMap
+   */
+  public int updateFavoredNodes(AssignmentPlan plan)
   throws IOException;
 }

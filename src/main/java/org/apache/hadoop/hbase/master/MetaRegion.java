@@ -42,7 +42,7 @@ public class MetaRegion implements Comparable<MetaRegion> {
 
   @Override
   public String toString() {
-    return "{server: " + this.server.toString() + ", regionname: " +
+    return "{server: " + this.server.getHostNameWithPort() + ", regionname: " +
         regionInfo.getRegionNameAsString() + ", startKey: <" +
         Bytes.toString(regionInfo.getStartKey()) + ">}";
   }

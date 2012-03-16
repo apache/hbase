@@ -120,7 +120,6 @@ abstract class BaseScanner extends Chore {
     }
   }
   private final boolean rootRegion;
-  private final boolean readFavoredNodes;
   protected final HMaster master;
 
   protected boolean initialScanComplete;
@@ -140,13 +139,6 @@ abstract class BaseScanner extends Chore {
     this.rootRegion = rootRegion;
     this.master = master;
     this.initialScanComplete = false;
-
-    // Only read favored nodes if using the assignment-based load balancer.
-    this.readFavoredNodes = master.getConfiguration().getClass(
-        HConstants.LOAD_BALANCER_IMPL, Object.class).equals(
-        RegionManager.AssignmentLoadBalancer.class);
-    LOG.debug("Whether to read the favoredNodes from meta: " +
-        (readFavoredNodes ? "Yes" : "No"));
   }
 
   /** @return true if initial scan completed successfully */
@@ -165,14 +157,14 @@ abstract class BaseScanner extends Chore {
   }
 
   /**
-   * @param region Region to scan
+   * @param metaRegion Region to scan
    * @throws IOException
    */
-  protected void scanRegion(final MetaRegion region) throws IOException {
+  protected void scanRegion(final MetaRegion metaRegion) throws IOException {
     HRegionInterface regionServer = null;
     long scannerId = -1L;
     LOG.info(Thread.currentThread().getName() + " scanning meta region " +
-      region.toString());
+      metaRegion.toString());
 
     // Array to hold list of split parents found.  Scan adds to list.  After
     // scan we go check if parents can be removed and that their daughters
@@ -182,46 +174,58 @@ abstract class BaseScanner extends Chore {
     int rows = 0;
     try {
       regionServer =
-        this.master.getServerConnection().getHRegionConnection(region.getServer());
+        this.master.getServerConnection().getHRegionConnection(metaRegion.getServer());
       Scan s = new Scan().addFamily(HConstants.CATALOG_FAMILY);
       // Make this scan do a row at a time otherwise, data can be stale.
       s.setCaching(1);
-      scannerId = regionServer.openScanner(region.getRegionName(), s);
+      scannerId = regionServer.openScanner(metaRegion.getRegionName(), s);
       while (true) {
         Result values = regionServer.next(scannerId);
         if (values == null || values.size() == 0) {
           break;
         }
-        HRegionInfo info = master.getHRegionInfo(values.getRow(), values);
-        if (info == null) {
+        HRegionInfo region = master.getHRegionInfo(values.getRow(), values);
+        if (region == null) {
           emptyRows.add(values.getRow());
           continue;
         }
+        // Process the favored nodes
+        if (this.master.shouldAssignRegionsWithFavoredNodes()) {
+          byte[] favoredNodes = values.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.FAVOREDNODES_QUALIFIER);
+          AssignmentManager assignmentManager =
+            this.master.getRegionManager().getAssignmentManager();
+
+          if (favoredNodes != null) {
+            // compare the update TS
+            long updateTimeStamp =
+              values.getLastestTimeStamp(HConstants.CATALOG_FAMILY,
+                HConstants.FAVOREDNODES_QUALIFIER);
+            long lastUpdate =
+              assignmentManager.getAssignmentPlanUpdateTimeStamp(region);
+            if (lastUpdate < updateTimeStamp) {
+              // need to update the persistent assignment
+              List<HServerAddress> servers =
+                RegionPlacement.getFavoredNodesList(favoredNodes);
+              assignmentManager.updateAssignmentPlan(region,
+                  servers, updateTimeStamp);
+            }
+          } else {
+            assignmentManager.removeAssignmentFromPlan(region);
+          }
+        }
+
         String serverAddress = getServerAddress(values);
         long startCode = getStartCode(values);
 
-        // Note Region has been assigned.
-        checkAssigned(regionServer, region, info, serverAddress, startCode, true);
-        if (isSplitParent(info)) {
-          splitParents.put(info, values);
+        // Verify region has been validly assigned.
+        checkAssigned(regionServer, metaRegion, region, serverAddress,
+            startCode, true);
+        if (isSplitParent(region)) {
+          splitParents.put(region, values);
         }
         rows += 1;
 
-        if (this.readFavoredNodes) {
-          byte[] favoredNodes = values.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.FAVOREDNODES_QUALIFIER);
-          if (favoredNodes != null) {
-            List<HServerAddress> addresses = new ArrayList<HServerAddress>();
-            for (String address : new String(favoredNodes).split(",")) {
-              addresses.add(new HServerAddress(address));
-            }
-            this.master.getRegionManager().assignmentManager
-                .addPersistentAssignment(info, addresses);
-          } else {
-            this.master.getRegionManager().assignmentManager
-                .removePersistentAssignment(info);
-          }
-        }
       }
       if (rootRegion) {
         this.master.getRegionManager().setNumMetaRegions(rows);
@@ -253,8 +257,8 @@ abstract class BaseScanner extends Chore {
     // First clean up any meta region rows which had null HRegionInfos
     if (emptyRows.size() > 0) {
       LOG.warn("Found " + emptyRows.size() + " rows with empty HRegionInfo " +
-        "while scanning meta region " + Bytes.toString(region.getRegionName()));
-      this.master.deleteEmptyMetaRows(regionServer, region.getRegionName(),
+        "while scanning meta region " + Bytes.toString(metaRegion.getRegionName()));
+      this.master.deleteEmptyMetaRows(regionServer, metaRegion.getRegionName(),
           emptyRows);
     }
 
@@ -263,12 +267,12 @@ abstract class BaseScanner extends Chore {
     if (splitParents.size() > 0) {
       for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
         HRegionInfo hri = e.getKey();
-        cleanupAndVerifySplits(region.getRegionName(), regionServer,
+        cleanupAndVerifySplits(metaRegion.getRegionName(), regionServer,
           hri, e.getValue());
       }
     }
     LOG.info(Thread.currentThread().getName() + " scan of " + rows +
-      " row(s) of meta region " + region.toString() + " complete");
+      " row(s) of meta region " + metaRegion.toString() + " complete");
   }
 
   /*

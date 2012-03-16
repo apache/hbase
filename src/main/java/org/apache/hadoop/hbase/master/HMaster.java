@@ -103,7 +103,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.RegionPlacement;
 import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
@@ -217,6 +216,8 @@ public class HMaster extends Thread implements HMasterInterface,
   /** Log directories split on startup for testing master failover */
   private List<String> logDirsSplitOnStartup;
 
+  private boolean shouldAssignRegionsWithFavoredNodes = false;
+
   /**
    * Constructor
    * @param conf configuration
@@ -321,6 +322,17 @@ public class HMaster extends Thread implements HMasterInterface,
         });
 
     regionPlacement = new RegionPlacement(this.conf);
+
+    // Only read favored nodes if using the assignment-based load balancer.
+    this.shouldAssignRegionsWithFavoredNodes = conf.getClass(
+        HConstants.LOAD_BALANCER_IMPL, Object.class).equals(
+        RegionManager.AssignmentLoadBalancer.class);
+    LOG.debug("Whether to read the favoredNodes from meta: " +
+        (shouldAssignRegionsWithFavoredNodes ? "Yes" : "No"));
+  }
+
+  public boolean shouldAssignRegionsWithFavoredNodes() {
+    return shouldAssignRegionsWithFavoredNodes;
   }
 
   /**
@@ -1257,7 +1269,7 @@ public class HMaster extends Thread implements HMasterInterface,
         if (!this.regionManager.areAllMetaRegionsOnline()) {
           throw new NotAllMetaRegionsOnlineException();
         }
-        if (!this.serverManager.canAssignUserRegions()) {
+        if (!this.serverManager.hasEnoughRegionServers()) {
           throw new IOException("not enough servers to create table yet");
         }
         createTable(newRegions);
@@ -1303,17 +1315,19 @@ public class HMaster extends Thread implements HMasterInterface,
       srvr.close(scannerid);
     }
 
-    // get the favorite nodes map from the regionPlacement
-    Map<HRegionInfo, List<HServerInfo>> favoriteNodesMap =
-      regionPlacement.getFaroredNodesForNewRegions(newRegions,
-          getClusterStatus().getServerInfo());
+    AssignmentPlan assignmentPlan = null;
+    if (this.shouldAssignRegionsWithFavoredNodes) {
+      // Get the assignment plan for the new regions
+      assignmentPlan = regionPlacement.getAssignmentPlan(newRegions);
+    }
 
     for(HRegionInfo newRegion : newRegions) {
-      if (favoriteNodesMap != null) {
+      if (assignmentPlan != null) {
         // create the region with favorite nodes.
-        List<HServerInfo> favoriteNodes = favoriteNodesMap.get(newRegion);
+        List<HServerAddress> favoredNodes =
+          assignmentPlan.getAssignment(newRegion);
         regionManager.createRegion(newRegion, srvr, metaRegionName,
-            favoriteNodes);
+            favoredNodes);
       } else {
         regionManager.createRegion(newRegion, srvr, metaRegionName);
       }
@@ -1653,7 +1667,8 @@ public class HMaster extends Thread implements HMasterInterface,
       HServerAddress serverAddress = new HServerAddress(hostnameAndPort);
 
       // Assign the specified host to be the preferred host for the specified region.
-      this.regionManager.assignmentManager.addTransientAssignment(serverAddress, hri);
+      this.regionManager.getAssignmentManager().
+        addTransientAssignment(serverAddress, hri);
 
       // Close the region so that it will be re-opened by the preferred host.
       modifyTable(tableName, HConstants.Modify.CLOSE_REGION, new Writable[]{args[0]});
@@ -1774,6 +1789,7 @@ public class HMaster extends Thread implements HMasterInterface,
       }
     }
   }
+
 
   /**
    * @see org.apache.zookeeper.Watcher#process(org.apache.zookeeper.WatchedEvent)

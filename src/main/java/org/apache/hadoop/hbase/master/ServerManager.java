@@ -701,6 +701,8 @@ public class ServerManager {
           this.master.getServerConnection().setRootRegionLocation(
             new HRegionLocation(region, rootServer));
           this.master.getRegionManager().setRootRegionLocation(rootServer);
+          // Increase the region opened counter
+          this.master.getMetrics().incRegionsOpened();
         } else {
           // Note that the table has been assigned and is waiting for the
           // meta table to be updated.
@@ -1038,7 +1040,7 @@ public class ServerManager {
     }
   }
 
-  public boolean canAssignUserRegions() {
+  public boolean hasEnoughRegionServers() {
     if (minimumServerCount == 0) {
       return true;
     }

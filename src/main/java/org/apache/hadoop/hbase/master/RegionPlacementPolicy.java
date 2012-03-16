@@ -1,20 +1,33 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 
 public interface RegionPlacementPolicy {
 
-  public Map<HRegionInfo, List<HServerInfo>> getFaroredNodesForNewRegions(
-      final HRegionInfo[] newRegions, Collection<HServerInfo> serverInfo)
-      throws IOException;
+/**
+ * Get the assignment plan for the new regions
+ * @param regions
+ * @return the favored assignment plan for the regions
+ * @throws IOException
+ */
+  public AssignmentPlan getAssignmentPlan(final HRegionInfo[] regions)
+  throws IOException;
 
-  public Map<HRegionInfo, List<HServerInfo>> getFaroredNodesForAllRegions()
-      throws MasterNotRunningException, IOException, InterruptedException;
+  /**
+   * Get the favored assignment plan for all the regions
+   * @return the favored assignment plan for all the regions
+   * @throws IOException
+   */
+  public AssignmentPlan getAssignmentPlan()
+  throws IOException;
+
+  /**
+   * Update the favored assignment plan
+   * @param plan
+   * @throws IOException
+   */
+  public void updateAssignmentPlan(AssignmentPlan plan)
+  throws IOException;
 }
