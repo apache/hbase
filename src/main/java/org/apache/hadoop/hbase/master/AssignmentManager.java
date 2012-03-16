@@ -2625,8 +2625,10 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   public List<HRegionInfo> getRegionsOfTable(byte[] tableName) {
     List<HRegionInfo> tableRegions = new ArrayList<HRegionInfo>();
+    // boundary needs to have table's name but regionID 0 so that it is sorted 
+    // before all table's regions.
     HRegionInfo boundary =
-      new HRegionInfo(tableName, null, null);
+      new HRegionInfo(tableName, null, null, false, 0L);
     synchronized (this.regions) {
       for (HRegionInfo regionInfo: this.regions.tailMap(boundary).keySet()) {
         if(Bytes.equals(regionInfo.getTableName(), tableName)) {

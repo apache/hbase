@@ -787,6 +787,15 @@ implements WritableComparable<HRegionInfo> {
       }
       return result;
     }
+
+    // regionId is usually milli timestamp -- this defines older stamps
+    // to be "smaller" than newer stamps in sort order.
+    if (this.regionId > o.regionId) {
+      return 1;
+    } else if (this.regionId < o.regionId) {
+      return -1;
+    }
+
     if (this.offLine == o.offLine)
       return 0;
     if (this.offLine == true) return -1;
