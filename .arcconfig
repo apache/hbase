@@ -7,5 +7,6 @@
   },
   "arcanist_configuration" : "ArcJIRAConfiguration",
   "jira_project" : "HBASE",
-  "jira_api_url" : "https://issues.apache.org/jira/si/"
+  "jira_api_url" : "https://issues.apache.org/jira/si/",
+  "lint_engine" : "JavaLintEngine"
 }
