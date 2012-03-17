@@ -203,7 +203,7 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.1
 &lt;/settings>
         </programlisting>
         </para>
-        <para>When you run <command>release:perform</command>, pass <command>-Dapache-release</command>
+        <para>When you run <command>release:perform</command>, pass <command>-Papache-release</command>
         else it will not 'sign' the artifacts it uploads.
         </para>
         <para>If you see run into the below, its because you need to edit version in the pom.xml and add
