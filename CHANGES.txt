@@ -4,6 +4,9 @@ Release 0.90.7 - Unreleased
   BUG FIXES
    HBASE-5568  Multi concurrent flushcache() for one region could cause data loss (Chunhui)
 
+  IMPROVEMENT
+   HBASE-5588 Deprecate/remove AssignmentManager#clearRegionFromTransition
+
 Release 0.90.6 - March 16, 2012
   INCOMPATIBLE CHANGES
    HBASE-5228  [REST] Rip out "transform" feature

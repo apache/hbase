@@ -960,7 +960,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   public void clearFromTransition(HRegionInfo hri) {
     if (this.assignmentManager.isRegionInTransition(hri) != null) {
-      this.assignmentManager.clearRegionFromTransition(hri);
+      this.assignmentManager.regionOffline(hri);
     }
   }
   /**
@@ -1079,7 +1079,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
     HRegionInfo hri = pair.getFirst();
     if (force) {
-      this.assignmentManager.clearRegionFromTransition(hri);
+      this.assignmentManager.regionOffline(hri);
       assignRegion(hri);
     } else {
       this.assignmentManager.unassign(hri, force);

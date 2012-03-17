@@ -122,7 +122,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * Server to regions assignment map.
    * Contains the set of regions currently assigned to a given server.
    * This Map and {@link #regions} are tied.  Always update this in tandem
-   * with the other under a lock on {@link #regions}
+   * with the other under a lock on {@link #regions}.
    * @see #regions
    */
   private final NavigableMap<HServerInfo, Set<HRegionInfo>> servers =
@@ -132,7 +132,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * Region to server assignment map.
    * Contains the server a given region is currently assigned to.
    * This Map and {@link #servers} are tied.  Always update this in tandem
-   * with the other under a lock on {@link #regions}
+   * with the other under a lock on {@link #regions}.
    * @see #servers
    */
   private final SortedMap<HRegionInfo,HServerInfo> regions =
@@ -1843,8 +1843,9 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Clears the specified region from being in transition.
    * <p>
-   * Used only by HBCK tool.
-   * @param hri
+   * @param hri Region to remove.
+   * @deprecated This is a dupe of {@link #regionOffline(HRegionInfo)}.
+   *   Please use that method instead.
    */
   public void clearRegionFromTransition(HRegionInfo hri) {
     synchronized (this.regionsInTransition) {
