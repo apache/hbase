@@ -1,8 +1,12 @@
 HBase Change Log
 Release 0.92.2 - Unreleased
-   HBASE-5592  Make it easier to get a table from shell (Ben West)
+  BUG FIXES
    HBASE-5563  Add comparison of regionId to HRegionInfo#compareTo (chunhui and jmhsieh)
-   
+
+  IMPROVEMENTS
+   HBASE-5592  Make it easier to get a table from shell (Ben West)
+   HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
+
 Release 0.92.1 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-5228  [REST] Rip out "transform" feature
