@@ -45,9 +45,9 @@
   <url>http://hbase.apache.org</url>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/tags/0.92.1mvn</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/tags/0.92.1mvn</developerConnection>
-    <url>http://svn.apache.org/viewvc/hbase/tags/0.92.1</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/tags/0.92.1mvn2security</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/tags/0.92.1mvn2security</developerConnection>
+    <url>http://svn.apache.org/viewvc/hbase/tags/0.92.1mvn2security</url>
   </scm>
 
   <issueManagement>
