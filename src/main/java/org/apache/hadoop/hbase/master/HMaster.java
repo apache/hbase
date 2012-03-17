@@ -1420,7 +1420,7 @@ Server {
 
   public void clearFromTransition(HRegionInfo hri) {
     if (this.assignmentManager.isRegionInTransition(hri) != null) {
-      this.assignmentManager.clearRegionFromTransition(hri);
+      this.assignmentManager.regionOffline(hri);
     }
   }
 
@@ -1767,7 +1767,7 @@ Server {
       }
     }
     if (force) {
-      this.assignmentManager.clearRegionFromTransition(hri);
+      this.assignmentManager.regionOffline(hri);
       assignRegion(hri);
     } else {
       this.assignmentManager.unassign(hri, force);
