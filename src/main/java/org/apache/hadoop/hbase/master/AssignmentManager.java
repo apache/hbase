@@ -146,7 +146,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * Server to regions assignment map.
    * Contains the set of regions currently assigned to a given server.
    * This Map and {@link #regions} are tied.  Always update this in tandem
-   * with the other under a lock on {@link #regions}
+   * with the other under a lock on {@link #regions}.
    * @see #regions
    */
   private final NavigableMap<ServerName, Set<HRegionInfo>> servers =
@@ -156,7 +156,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * Region to server assignment map.
    * Contains the server a given region is currently assigned to.
    * This Map and {@link #servers} are tied.  Always update this in tandem
-   * with the other under a lock on {@link #regions}
+   * with the other under a lock on {@link #regions}.
    * @see #servers
    */
   private final SortedMap<HRegionInfo, ServerName> regions =
@@ -1098,7 +1098,7 @@ public class AssignmentManager extends ZooKeeperListener {
         if (rs.isSplitting() || rs.isSplit()) {
           LOG.debug("Ephemeral node deleted, regionserver crashed?, " +
             "clearing from RIT; rs=" + rs);
-          clearRegionFromTransition(rs.getRegion());
+          regionOffline(rs.getRegion());
         } else {
           LOG.debug("The znode of region " + regionInfo.getRegionNameAsString()
               + " has been deleted.");
@@ -2567,7 +2567,10 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * Clears the specified region from being in transition.
+   * <p>
    * @param hri Region to remove.
+   * @deprecated This is a dupe of {@link #regionOffline(HRegionInfo)}.
+   *   Please use that method instead.
    */
   public void clearRegionFromTransition(HRegionInfo hri) {
     synchronized (this.regionsInTransition) {
