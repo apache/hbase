@@ -2,6 +2,8 @@ HBase Change Log
 Release 0.92.2 - Unreleased
   BUG FIXES
    HBASE-5563  Add comparison of regionId to HRegionInfo#compareTo (chunhui and jmhsieh)
+   HBASE-5595  Fix NoSuchMethodException in 0.92 when running on local filesystem
+               (Uma Maheswara Rao G)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
