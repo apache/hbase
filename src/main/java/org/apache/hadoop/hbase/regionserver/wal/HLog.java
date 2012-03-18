@@ -452,26 +452,26 @@ public class HLog implements Syncable {
    */
   private Method getGetNumCurrentReplicas(final FSDataOutputStream os) {
     Method m = null;
-    Exception exception = null;
     if (os != null) {
+      Class<? extends OutputStream> wrappedStreamClass = os.getWrappedStream()
+          .getClass();
       try {
-        m = os.getWrappedStream().getClass().
-          getDeclaredMethod("getNumCurrentReplicas", new Class<?> []{});
+        m = wrappedStreamClass.getDeclaredMethod("getNumCurrentReplicas",
+            new Class<?>[] {});
         m.setAccessible(true);
       } catch (NoSuchMethodException e) {
-        // Thrown if getNumCurrentReplicas() function isn't available
-        exception = e;
+        LOG.info("FileSystem's output stream doesn't support"
+            + " getNumCurrentReplicas; --HDFS-826 not available; fsOut="
+            + wrappedStreamClass.getName());
       } catch (SecurityException e) {
-        // Thrown if we can't get access to getNumCurrentReplicas()
-        exception = e;
+        LOG.info("Doesn't have access to getNumCurrentReplicas on "
+            + "FileSystems's output stream --HDFS-826 not available; fsOut="
+            + wrappedStreamClass.getName(), e);
         m = null; // could happen on setAccessible()
       }
     }
     if (m != null) {
       LOG.info("Using getNumCurrentReplicas--HDFS-826");
-    } else {
-      LOG.info("getNumCurrentReplicas--HDFS-826 not available; hdfs_out=" +
-        os, exception);
     }
     return m;
   }
