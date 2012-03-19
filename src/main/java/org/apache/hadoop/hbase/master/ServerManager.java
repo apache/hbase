@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.RegionManager.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Rack;
+import org.apache.hadoop.hbase.util.RackManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -177,7 +177,7 @@ public class ServerManager {
         master.getFileSystem(), master.getOldLogDir());
     Threads.setDaemonThreadRunning(oldLogCleaner,
       n + ".oldLogCleaner");
-    rackInfo = new Rack(c);
+    rackManager = new RackManager(c);
     Threads.setDaemonThreadRunning(new ServerTimeoutMonitor(c),
         n + "ServerManager-Timeout-Monitor");
   }
@@ -1124,7 +1124,7 @@ public class ServerManager {
   private long lastDetailedLogAt = 0;
   private long lastLoggedServerCount = 0;
   private HashSet<String> inaccessibleRacks = new HashSet<String>();
-  Rack rackInfo;
+  private RackManager rackManager;
   /**
    * @param timeout
    * @param maxServersToExpire If more than these many servers expire in a rack
@@ -1156,7 +1156,7 @@ public class ServerManager {
       if (si == null) continue; // server removed
       HServerLoad load = e.getValue();
       String rack =
-          rackInfo.getRack(si.getServerAddress().getInetSocketAddress());
+          rackManager.getRack(si);
       long timeOfLastPingFromThisServer = load.lastLoadRefreshTime;
       if (timeOfLastPingFromThisServer <= 0 ) {
         // invalid value implies that the master has discovered the rs

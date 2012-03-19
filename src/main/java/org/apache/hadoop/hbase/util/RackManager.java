@@ -1,20 +1,21 @@
 package org.apache.hadoop.hbase.util;
 
-import java.lang.reflect.Constructor;
-import java.net.InetSocketAddress;
 import java.util.Arrays;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.IPv4AddressTruncationMapping;
 
-public class Rack {
-  static final Log LOG = LogFactory.getLog(Rack.class);
+public class RackManager {
+  static final Log LOG = LogFactory.getLog(RackManager.class);
   private DNSToSwitchMapping switchMapping;
-  public Rack(Configuration conf) {
+
+  public RackManager(Configuration conf) {
     Class<DNSToSwitchMapping> clz = (Class<DNSToSwitchMapping>)
         conf.getClass("hbase.util.ip.to.rack.determiner",
         IPv4AddressTruncationMapping.class);
@@ -32,12 +33,20 @@ public class Rack {
     }
   }
 
-  public String getRack(InetSocketAddress addr) {
-    String rack = switchMapping.resolve(Arrays.asList(
-        new String[]{addr.getAddress().getHostAddress()})).get(0);
-    if (rack != null && rack.length() > 0) {
-      return rack;
+  /**
+   * Get the name of the rack containing a server, according to the DNS to
+   * switch mapping.
+   * @param info the server for which to get the rack name
+   * @return the rack name of the server
+   */
+  public String getRack(HServerInfo info) {
+    List<String> racks = switchMapping.resolve(Arrays.asList(
+        new String[]{info.getServerAddress().getInetSocketAddress()
+            .getAddress().getHostAddress()}));
+    if (racks != null && racks.size() > 0) {
+      return racks.get(0);
     }
-    return "unknown";
+
+    return HConstants.UNKOWN_RACK;
   }
 }

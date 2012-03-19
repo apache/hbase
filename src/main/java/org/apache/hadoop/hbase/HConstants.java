@@ -458,6 +458,8 @@ public final class HConstants {
   /** The number of favored nodes for each region */
   public static final int FAVORED_NODES_NUM = 3;
 
+  public static final String UNKOWN_RACK = "Unkown Rack";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

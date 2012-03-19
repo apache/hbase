@@ -3,7 +3,6 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,9 +35,8 @@ import org.apache.hadoop.hbase.master.AssignmentPlan.POSITION;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MunkresAssignment;
+import org.apache.hadoop.hbase.util.RackManager;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.apache.hadoop.net.IPv4AddressTruncationMapping;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -62,9 +60,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
   private static final float NOT_CURRENT_HOST_PENALTY = 0.1f;
 
   private Configuration conf;
-  private DNSToSwitchMapping switchMapping;
-  private Map<HServerInfo, String> rackCache;
-
+  private RackManager rackManager;
   private final boolean enforceLocality;
   private final boolean enforceMinAssignmentMove;
   private HBaseAdmin admin;
@@ -78,8 +74,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
       boolean enforceMinAssignmentMove)
   throws IOException {
     this.conf = conf;
-    this.switchMapping = new IPv4AddressTruncationMapping();
-    this.rackCache = new HashMap<HServerInfo, String>();
+    rackManager = new RackManager(conf);
     this.enforceLocality = enforceLocality;
     this.enforceMinAssignmentMove = enforceMinAssignmentMove;
   }
@@ -581,28 +576,6 @@ public class RegionPlacement implements RegionPlacementPolicy{
     return regionServersToRegions;
   }
 
-  /**
-   * Get the name of the rack containing a server, according to the DNS to
-   * switch mapping.
-   * @param info the server for which to get the rack name
-   * @return the rack name of the server
-   */
-  private String getRack(HServerInfo info) {
-    String cached = rackCache.get(info);
-    if (cached != null) {
-      return cached;
-    }
-    List<String> racks = switchMapping.resolve(Arrays.asList(
-        new String[]{info.getServerAddress().getInetSocketAddress()
-            .getAddress().getHostAddress()}));
-    if (racks != null && racks.size() > 0) {
-      rackCache.put(info, racks.get(0));
-      return racks.get(0);
-    }
-    rackCache.put(info, "");
-    return "";
-  }
-
   private AssignmentPlan getAssignmentPlanForAllRegions(
       Map<HRegionInfo, HServerAddress> currentAssignmentMap,
       Map<String, Map<String, Float>> regionLocalityMap,
@@ -662,7 +635,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
       for (int i = 0; i < numRegions; i++) {
         HRegionInfo region = regions.get(i);
         for (int j = 0; j < regionSlots; j += slotsPerServer) {
-          String rack = getRack(servers.get(j / slotsPerServer));
+          String rack = rackManager.getRack(servers.get(j / slotsPerServer));
           Map<HRegionInfo, Float> rackLocality = rackRegionLocality.get(rack);
           if (rackLocality == null) {
             rackLocality = new HashMap<HRegionInfo, Float>();
@@ -676,7 +649,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
       }
       for (int i = 0; i < numRegions; i++) {
         for (int j = 0; j < regionSlots; j++) {
-          String rack = getRack(servers.get(j / slotsPerServer));
+          String rack = rackManager.getRack(servers.get(j / slotsPerServer));
           Float totalRackLocalityObj =
               rackRegionLocality.get(rack).get(regions.get(i));
           float totalRackLocality = totalRackLocalityObj == null ?
@@ -741,9 +714,9 @@ public class RegionPlacement implements RegionPlacementPolicy{
     // and either one of secondary or tertiary.
     for (int i = 0; i < numRegions; i++) {
       int slot = primaryAssignment[i];
-      String rack = getRack(servers.get(slot / slotsPerServer));
+      String rack = rackManager.getRack(servers.get(slot / slotsPerServer));
       for (int k = 0; k < servers.size(); k++) {
-        if (!getRack(servers.get(k)).equals(rack)) {
+        if (!rackManager.getRack(servers.get(k)).equals(rack)) {
           continue;
         }
         if (k == slot / slotsPerServer) {
@@ -772,7 +745,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
     // server, but not the same server in that rack.
     for (int i = 0; i < numRegions; i++) {
       int slot = secondaryAssignment[i];
-      String rack = getRack(servers.get(slot / slotsPerServer));
+      String rack = rackManager.getRack(servers.get(slot / slotsPerServer));
       for (int k = 0; k < servers.size(); k++) {
         if (k == slot / slotsPerServer) {
           // Same node, do not place tertiary here ever.
@@ -780,7 +753,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
             tertiaryCost[i][k * slotsPerServer + m] = MAX_COST;
           }
         } else {
-          if (getRack(servers.get(k)).equals(rack)) {
+          if (rackManager.getRack(servers.get(k)).equals(rack)) {
             continue;
           }
           // Different rack, do not place tertiary here if possible.
