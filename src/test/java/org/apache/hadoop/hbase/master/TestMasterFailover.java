@@ -57,10 +57,7 @@ public class TestMasterFailover extends MultiMasterTest {
     int backupIndex = (activeIndex + 1) % masters.size();
 
     header("Stopping backup master (#" + backupIndex + ")");
-
-    miniCluster().killMaster(backupIndex);
-    miniCluster().waitForActiveAndReadyMaster();
-    miniCluster().getHBaseCluster().waitOnMasterStop(backupIndex);
+    killMasterAndWaitToStop(backupIndex);
 
     // Verify there is still one active master and it is the same.
     // We must compare server names, because indexes might have shifted.
@@ -72,18 +69,8 @@ public class TestMasterFailover extends MultiMasterTest {
         "in mind that the old master was removed, so the indexes might have " +
         "shifted.");
 
-    miniCluster().killMaster(newActiveIndex);
-    miniCluster().getHBaseCluster().waitOnMasterStop(newActiveIndex);
+    killActiveMasterAndWaitToStop();
     assertEquals(1, masters.size());
-
-    // wait for an active master to show up and be ready
-    assertTrue(miniCluster().waitForActiveAndReadyMaster());
-
-    header("Verifying backup master is now active");
-    // should only have one master now
-    assertEquals(1, masters.size());
-    // and he should be active
-    assertTrue(masters.get(0).isActiveMaster());
   }
 
 }

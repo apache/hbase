@@ -265,10 +265,17 @@ public class MiniHBaseCluster {
    * @throws IOException
    * @return New RegionServerThread
    */
-  public JVMClusterUtil.RegionServerThread startRegionServer() throws IOException {
-    JVMClusterUtil.RegionServerThread t = this.hbaseCluster.addRegionServer();
-    t.start();
+  public JVMClusterUtil.RegionServerThread startRegionServer()
+      throws IOException {
+    JVMClusterUtil.RegionServerThread t = startRegionServerNoWait();
     t.waitForServerOnline();
+    return t;
+  }
+
+  public JVMClusterUtil.RegionServerThread startRegionServerNoWait()
+      throws IOException {
+    JVMClusterUtil.RegionServerThread t = hbaseCluster.addRegionServer();
+    t.start();
     return t;
   }
 
@@ -559,6 +566,10 @@ public class MiniHBaseCluster {
 
   public HMaster getMaster(int activeIndex) {
     return getMasters().get(activeIndex);
+  }
+
+  public HMaster getActiveMaster() {
+    return hbaseCluster.getActiveMaster();
   }
 
 }

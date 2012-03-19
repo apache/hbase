@@ -190,8 +190,9 @@ public class LocalHBaseCluster {
    * @return the HMaster object
    */
   public HMaster getMaster() {
-    if (masters.size() != 1) {
-      throw new AssertionError("one master expected");
+    final int numMasters = masters.size();
+    if (numMasters != 1) {
+      throw new AssertionError("one master expected, got " + numMasters);
     }
     return this.masters.get(0);
   }

@@ -144,6 +144,8 @@ public class HRegionServer implements HRegionInterface,
       Type.MSG_REPORT_EXITING_FOR_RESTART);
   private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
   private static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg [] {};
+  private static final String UNABLE_TO_READ_MASTER_ADDRESS_ERR_MSG =
+      "Unable to read master address from ZooKeeper";
 
   // Set when a report to the master comes back with a message asking us to
   // shutdown.  Also set by call to stop when debugging or running unit tests
@@ -1430,23 +1432,21 @@ public class HRegionServer implements HRegionInterface,
   }
 
   private boolean getMaster() {
+    HServerAddress prevMasterAddress = null;
     HServerAddress masterAddress = null;
-    while (masterAddress == null) {
-      if (stopRequested.get()) {
-        return false;
-      }
-      try {
-        masterAddress = zooKeeperWrapper.readAddressOrThrow(
-            zooKeeperWrapper.masterElectionZNode, zooKeeperWrapper);
-      } catch (KeeperException e) {
-        LOG.warn("Unable to read master address from ZooKeeper.", e);
-        abort("Unable to read master address in ZK");
-      }
-    }
-
-    LOG.info("Telling master at " + masterAddress + " that we are up");
     HMasterRegionInterface master = null;
     while (!stopRequested.get() && master == null) {
+      // Re-read master address from ZK as it might have changed.
+      masterAddress = readMasterAddressFromZK();
+      if (masterAddress == null) {
+        continue;
+      }
+
+      if (!masterAddress.equals(prevMasterAddress)) {
+        LOG.info("Telling master at " + masterAddress + " that we are up");
+        prevMasterAddress = masterAddress;
+      }
+
       try {
         // Do initial RPC setup.  The final argument indicates that the RPC
         // should retry indefinitely.
@@ -1461,6 +1461,18 @@ public class HRegionServer implements HRegionInterface,
     }
     this.hbaseMaster = master;
     return true;
+  }
+
+  private HServerAddress readMasterAddressFromZK() {
+    HServerAddress masterAddress = null;
+    try {
+      masterAddress = zooKeeperWrapper.readAddressOrThrow(
+          zooKeeperWrapper.masterElectionZNode, zooKeeperWrapper);
+    } catch (KeeperException e) {
+      LOG.fatal(UNABLE_TO_READ_MASTER_ADDRESS_ERR_MSG, e);
+      forceAbort();
+    }
+    return masterAddress;
   }
 
   /*

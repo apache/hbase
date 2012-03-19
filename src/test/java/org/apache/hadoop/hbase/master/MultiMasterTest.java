@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -37,6 +38,10 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.junit.After;
 
+/**
+ * A base class for unit tests that require multiple masters, e.g. master
+ * failover tests.
+ */
 public class MultiMasterTest {
   private static final Log LOG = LogFactory.getLog(MultiMasterTest.class);
   private MiniHBaseCluster cluster;
@@ -136,6 +141,32 @@ public class MultiMasterTest {
 
   public MiniHBaseCluster miniCluster() {
     return cluster;
+  }
+
+  protected void waitForActiveMasterAndVerify() throws InterruptedException {
+    final List<HMaster> masters = miniCluster().getMasters();
+    // wait for an active master to show up and be ready
+    assertTrue(cluster.waitForActiveAndReadyMaster());
+
+    header("Verifying backup master is now active");
+    // should only have one master now
+    assertEquals(1, masters.size());
+    // and he should be active
+    assertTrue(masters.get(0).isActiveMaster());
+  }
+
+  protected HServerAddress killMasterAndWaitToStop(int masterIndex)
+      throws InterruptedException {
+    HMaster master = cluster.getMaster(masterIndex);
+    HServerAddress address = master.getHServerAddress();
+    master.killMaster();
+    cluster.getHBaseCluster().waitOnMasterStop(masterIndex);
+    return address;
+  }
+
+  protected HServerAddress killActiveMasterAndWaitToStop()
+      throws InterruptedException {
+    return killMasterAndWaitToStop(getActiveMasterIndex());
   }
 
 }

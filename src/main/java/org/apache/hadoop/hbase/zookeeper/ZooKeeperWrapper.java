@@ -640,6 +640,9 @@ public class ZooKeeperWrapper implements Watcher {
   throws KeeperException {
     try {
       Stat s = recoverableZK.exists(masterElectionZNode, watcher);
+      if (s == null) {
+        LOG.debug("Master znode does not exist yet: " + masterElectionZNode);
+      }
       LOG.debug("<" + instanceName + ">" + " Set watcher on master address ZNode " + masterElectionZNode);
       return s != null;
     } catch (KeeperException e) {
@@ -1842,6 +1845,11 @@ public class ZooKeeperWrapper implements Watcher {
   public static int getZKClientPort(Configuration conf) {
     return conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT,
         HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT);
+  }
+
+  public void deleteMasterAddress() throws InterruptedException,
+      KeeperException {
+    recoverableZK.delete(masterElectionZNode, -1);
   }
 
 }
