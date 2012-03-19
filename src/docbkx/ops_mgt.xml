@@ -75,7 +75,7 @@
       </section>
     </section>
     <section xml:id="compression.tool"><title>Compression Tool</title>
-        <para>See <xref linkend="compression.tool" />.</para>
+        <para>See <xref linkend="compression.test" />.</para>
     </section>
         <section xml:id="copytable">
         <title>CopyTable</title>
