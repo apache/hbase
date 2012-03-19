@@ -171,7 +171,7 @@ public class LoadBalancer {
         clusterState.entrySet()) {
       server.getKey().getLoad().setNumberOfRegions(server.getValue().size());
       numRegions += server.getKey().getLoad().getNumberOfRegions();
-      serversByLoad.put(server.getKey(), server.getValue());
+      serversByLoad.put(server.getKey(), randomize(server.getValue()));
       
       strBalanceParam.append(server.getKey().getServerName()).append("=")
           .append(server.getValue().size()).append(", ");
@@ -222,7 +222,7 @@ public class LoadBalancer {
         break;
       }
       serversOverloaded++;
-      List<HRegionInfo> regions = randomize(server.getValue());
+      List<HRegionInfo> regions = server.getValue();
       int numToOffload = Math.min(regionCount - max, regions.size());
       int numTaken = 0;
       
@@ -278,18 +278,32 @@ public class LoadBalancer {
     // If we need more to fill min, grab one from each most loaded until enough
     if (neededRegions != 0) {
       // Walk down most loaded, grabbing one from each until we get enough
-      for(Map.Entry<HServerInfo, List<HRegionInfo>> server :
+      for(Map.Entry<HServerInfo, List<HRegionInfo>> server : 
         serversByLoad.descendingMap().entrySet()) {
+        // If region count is less than or equal to min, don't
+        // grab region from this server
+        if (server.getValue().size() <= min) break;
         BalanceInfo balanceInfo = serverBalanceInfo.get(server.getKey());
         int idx =
           balanceInfo == null ? 0 : balanceInfo.getNextRegionForUnload();
         if (idx >= server.getValue().size()) break;
         HRegionInfo region = server.getValue().get(idx);
-        if (region.isMetaRegion()) continue; // Don't move meta regions.
-        regionsToMove.add(new RegionPlan(region, server.getKey(), null));
-        if(--neededRegions == 0) {
-          // No more regions needed, done shedding
-          break;
+        // If region at the idx position is META or ROOT get the next region
+        // if one is available.
+        while (region != null && region.isMetaRegion()) {
+          region = null;
+          idx++;
+          if (idx >= server.getValue().size()) {
+            break;
+          }
+          region = server.getValue().get(idx);
+        }
+        if (region != null) {
+          regionsToMove.add(new RegionPlan(region, server.getKey(), null));
+          if (--neededRegions == 0) {
+            // No more regions needed, done shedding
+            break;
+          }
         }
       }
     }
@@ -364,7 +378,7 @@ public class LoadBalancer {
    * @param regions
    * @return Randomization of passed <code>regions</code>
    */
-  static List<HRegionInfo> randomize(final List<HRegionInfo> regions) {
+  List<HRegionInfo> randomize(final List<HRegionInfo> regions) {
     Collections.shuffle(regions, RANDOM);
     return regions;
   }

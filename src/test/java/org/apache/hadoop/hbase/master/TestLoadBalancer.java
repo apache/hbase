@@ -25,6 +25,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +57,8 @@ public class TestLoadBalancer {
 
   private static LoadBalancer loadBalancer;
 
+  public static List<HRegionInfo> metaRootRegions;
+
   private static Random rand;
 
   @BeforeClass
@@ -63,6 +67,9 @@ public class TestLoadBalancer {
     conf.set("hbase.regions.slop", "0");
     loadBalancer = new LoadBalancer(conf);
     rand = new Random();
+    metaRootRegions = new ArrayList<HRegionInfo>();
+    metaRootRegions.add(HRegionInfo.ROOT_REGIONINFO);
+    metaRootRegions.add(HRegionInfo.FIRST_META_REGIONINFO);
   }
 
   // int[testnum][servernumber] -> numregions
@@ -145,8 +152,8 @@ public class TestLoadBalancer {
   public void testRandomizer() {
     for(int [] mockCluster : clusterStateMocks) {
       if (mockCluster.length < 5) continue;
-      Map<HServerInfo, List<HRegionInfo>> servers =
-        mockClusterServers(mockCluster);
+      Map<HServerInfo, List<HRegionInfo>> servers = mockClusterServers(
+          mockCluster, false);
       for (Map.Entry<HServerInfo, List<HRegionInfo>> e: servers.entrySet()) {
         List<HRegionInfo> original = e.getValue();
         if (original.size() < 5) continue;
@@ -159,7 +166,7 @@ public class TestLoadBalancer {
           for (HRegionInfo hri: copy) {
             System.out.println(hri.getEncodedName());
           }
-          List<HRegionInfo> randomized = LoadBalancer.randomize(copy);
+          List<HRegionInfo> randomized = loadBalancer.randomize(copy);
           System.out.println("Randomizing after " + randomized.size());
           for (HRegionInfo hri: randomized) {
             System.out.println(hri.getEncodedName());
@@ -183,20 +190,75 @@ public class TestLoadBalancer {
    */
   @Test
   public void testBalanceCluster() throws Exception {
-
-    for(int [] mockCluster : clusterStateMocks) {
-      Map<HServerInfo,List<HRegionInfo>> servers = mockClusterServers(mockCluster);
-      LOG.info("Mock Cluster : " + printMock(servers) + " " + printStats(servers));
-      List<RegionPlan> plans = loadBalancer.balanceCluster(servers);
-      List<HServerInfo> balancedCluster = reconcile(servers, plans);
-      LOG.info("Mock Balance : " + printMock(balancedCluster));
-      assertClusterAsBalanced(balancedCluster);
-      for(Map.Entry<HServerInfo, List<HRegionInfo>> entry : servers.entrySet()) {
-        returnRegions(entry.getValue());
-        returnServer(entry.getKey());
-      }
+    for (int[] mockCluster : clusterStateMocks) {
+      balanceCluster(mockCluster, false, null);
     }
+  }
 
+  @Test
+  public void testBalanceClusterWithFirstRegionsRootMeta() throws Exception {
+    int[] cluster = new int[] { 293, 293, 291 };
+    LoadBalancer loadBalancerStub = new LoadBalancer(HBaseConfiguration
+        .create()) {
+      // do not randomize in order to create a scenario where ROOT and META are 
+      // coming as the first region in the top two RS
+      List<HRegionInfo> randomize(final List<HRegionInfo> regions) {
+        return regions;
+      }
+    };
+    balanceCluster(cluster, true, loadBalancerStub);
+  }
+
+  private void balanceCluster(int[] mockCluster,
+      boolean needRootMetaFirstRegions, LoadBalancer loadBalancerStub) {
+    Map<HServerInfo, List<HRegionInfo>> servers = mockClusterServers(
+        mockCluster, needRootMetaFirstRegions);
+    LOG.info("Mock Cluster : " + printMock(servers) + " "
+            + printStats(servers));
+    List<RegionPlan> plans = null;
+    if (loadBalancerStub != null) {
+      plans = loadBalancerStub.balanceCluster(servers);
+    } else {
+      plans = loadBalancer.balanceCluster(servers);
+    }
+    List<HServerInfo> balancedCluster = reconcile(servers, plans);
+    LOG.info("Mock Balance : " + printMock(balancedCluster));
+    assertClusterAsBalanced(balancedCluster);
+    for (Map.Entry<HServerInfo, List<HRegionInfo>> entry : servers.entrySet()) {
+      returnRegions(entry.getValue());
+      returnServer(entry.getKey());
+    }
+  }
+  
+  @Test
+  public void testNoDuplicateRegionsInPlan() throws Exception {
+    int[] mocCluster = new int[] { 6, 0, 4 };
+    Map<HServerInfo, List<HRegionInfo>> servers = mockClusterServers(
+        mocCluster, false);
+    LOG.info("Mock Cluster : " + printMock(servers) + " "
+            + printStats(servers));
+    List<RegionPlan> plans = new LoadBalancer(HBaseConfiguration.create()) {
+      //Try to fake the randomization.
+      List<HRegionInfo> randomize(final List<HRegionInfo> regions) {
+        ArrayList<HRegionInfo> randList = new ArrayList<HRegionInfo>();
+        if (regions.size() == 6) {
+          randList.add(regions.get(2));
+          randList.add(regions.get(3));
+          randList.add(regions.get(4));
+          randList.add(regions.get(0));
+          randList.add(regions.get(5));
+          randList.add(regions.get(1));
+        }
+        return randList;
+      }
+    }.balanceCluster(servers);
+    boolean duplicates = false;
+    Set<HRegionInfo> movingRegions = new HashSet<HRegionInfo>();
+    for (RegionPlan regionPlan : plans) {
+      if (!movingRegions.add(regionPlan.getRegionInfo()))
+        duplicates = true;
+    }
+    assertFalse("Plans contains duplicate regions", duplicates);
   }
 
   /**
@@ -242,7 +304,7 @@ public class TestLoadBalancer {
   public void testImmediateAssignment() throws Exception {
     for(int [] mock : regionsAndServersMocks) {
       LOG.debug("testImmediateAssignment with " + mock[0] + " regions and " + mock[1] + " servers");
-      List<HRegionInfo> regions = randomRegions(mock[0]);
+      List<HRegionInfo> regions = randomRegions(mock[0], false);
       List<HServerInfo> servers = randomServers(mock[1], 0);
       Map<HRegionInfo,HServerInfo> assignments =
         LoadBalancer.immediateAssignment(regions, servers);
@@ -277,7 +339,7 @@ public class TestLoadBalancer {
   public void testBulkAssignment() throws Exception {
     for(int [] mock : regionsAndServersMocks) {
       LOG.debug("testBulkAssignment with " + mock[0] + " regions and " + mock[1] + " servers");
-      List<HRegionInfo> regions = randomRegions(mock[0]);
+      List<HRegionInfo> regions = randomRegions(mock[0], false);
       List<HServerInfo> servers = randomServers(mock[1], 0);
       Map<HServerInfo,List<HRegionInfo>> assignments =
         LoadBalancer.roundRobinAssignment(regions, servers);
@@ -303,7 +365,7 @@ public class TestLoadBalancer {
   public void testRetainAssignment() throws Exception {
     // Test simple case where all same servers are there
     List<HServerInfo> servers = randomServers(10, 10);
-    List<HRegionInfo> regions = randomRegions(100);
+    List<HRegionInfo> regions = randomRegions(100, false);
     Map<HRegionInfo, HServerAddress> existing =
       new TreeMap<HRegionInfo, HServerAddress>();
     for (int i=0;i<regions.size();i++) {
@@ -420,27 +482,34 @@ public class TestLoadBalancer {
   }
 
   private Map<HServerInfo, List<HRegionInfo>> mockClusterServers(
-      int [] mockCluster) {
+      int [] mockCluster, boolean needRootMetaFirstRegions) {
     int numServers = mockCluster.length;
     Map<HServerInfo,List<HRegionInfo>> servers =
       new TreeMap<HServerInfo,List<HRegionInfo>>();
     for(int i=0;i<numServers;i++) {
       int numRegions = mockCluster[i];
       HServerInfo server = randomServer(numRegions);
-      List<HRegionInfo> regions = randomRegions(numRegions);
+      List<HRegionInfo> regions = randomRegions(numRegions,
+          needRootMetaFirstRegions);
       servers.put(server, regions);
     }
     return servers;
   }
 
   private Queue<HRegionInfo> regionQueue = new LinkedList<HRegionInfo>();
-
-  private List<HRegionInfo> randomRegions(int numRegions) {
+  
+  private List<HRegionInfo> randomRegions(int numRegions,
+      boolean needRootMetaFirstRegions) {
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>(numRegions);
     byte [] start = new byte[16];
     byte [] end = new byte[16];
     rand.nextBytes(start);
     rand.nextBytes(end);
+    if (needRootMetaFirstRegions && metaRootRegions.size() > 0) {
+      regions.add(metaRootRegions.get(0));
+      metaRootRegions.remove(0);
+      numRegions = numRegions - 1;
+    }
     for(int i=0;i<numRegions;i++) {
       if(!regionQueue.isEmpty()) {
         regions.add(regionQueue.poll());
@@ -491,4 +560,5 @@ public class TestLoadBalancer {
   private void returnServers(List<HServerInfo> servers) {
     serverQueue.addAll(servers);
   }
+    
 }

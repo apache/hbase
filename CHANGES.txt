@@ -3,6 +3,8 @@ HBase Change Log
 Release 0.90.7 - Unreleased
   BUG FIXES
    HBASE-5568  Multi concurrent flushcache() for one region could cause data loss (Chunhui)
+   HBASE-5482  In 0.90, balancer algo leading to same region balanced twice and picking 
+               same region with Src and Destination as same RS. (Ram)
 
   IMPROVEMENT
    HBASE-5588 Deprecate/remove AssignmentManager#clearRegionFromTransition
