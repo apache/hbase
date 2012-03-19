@@ -115,11 +115,10 @@ public class DataBlockEncodingTool {
     byte[] previousKey = null;
     byte[] currentKey;
 
-    List<DataBlockEncoder> dataBlockEncoders =
-        DataBlockEncoding.getAllEncoders();
-
-    for (DataBlockEncoder d : dataBlockEncoders) {
-      codecs.add(new EncodedDataBlock(d, includesMemstoreTS));
+    DataBlockEncoding[] encodings = DataBlockEncoding.values();
+    for(DataBlockEncoding encoding : encodings) {
+      DataBlockEncoder d = encoding.getEncoder();
+      codecs.add(new EncodedDataBlock(d, includesMemstoreTS, encoding));
     }
 
     int j = 0;
@@ -280,7 +279,7 @@ public class DataBlockEncodingTool {
     List<Long> compressDurations = new ArrayList<Long>();
     for (int itTime = 0; itTime < BENCHMARK_N_TIMES; ++itTime) {
       final long startTime = System.nanoTime();
-      codec.doCompressData();
+      codec.encodeData();
       final long finishTime = System.nanoTime();
       if (itTime >= BENCHMARK_N_OMIT) {
         compressDurations.add(finishTime - startTime);

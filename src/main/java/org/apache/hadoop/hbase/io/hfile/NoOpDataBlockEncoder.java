@@ -16,12 +16,17 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Does not perform any kind of encoding/decoding.
@@ -45,9 +50,19 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
   }
 
   @Override
-  public Pair<ByteBuffer, BlockType> beforeWriteToDisk(
-      ByteBuffer in, boolean includesMemstoreTS, byte[] dummyHeader) {
-    return new Pair<ByteBuffer, BlockType>(in, BlockType.DATA);
+  public void beforeWriteToDisk(ByteBuffer in,
+      boolean includesMemstoreTS,
+      HFileBlockEncodingContext encodeCtx, BlockType blockType)
+      throws IOException {
+    if (!(encodeCtx.getClass().getName().equals(
+        HFileBlockDefaultEncodingContext.class.getName()))) {
+      throw new IOException (this.getClass().getName() + " only accepts " +
+          HFileBlockDefaultEncodingContext.class.getName() + ".");
+    }
+
+    HFileBlockDefaultEncodingContext defaultContext =
+        (HFileBlockDefaultEncodingContext) encodeCtx;
+    defaultContext.compressAfterEncoding(in.array(), blockType);
   }
 
   @Override
@@ -77,6 +92,19 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
   @Override
   public String toString() {
     return getClass().getSimpleName();
+  }
+
+  @Override
+  public HFileBlockEncodingContext newOnDiskDataBlockEncodingContext(
+      Algorithm compressionAlgorithm, byte[] dummyHeader) {
+    return new HFileBlockDefaultEncodingContext(compressionAlgorithm,
+        null, dummyHeader);
+  }
+
+  @Override
+  public HFileBlockDecodingContext newOnDiskDataBlockDecodingContext(
+      Algorithm compressionAlgorithm) {
+    return new HFileBlockDefaultDecodingContext(compressionAlgorithm);
   }
 
 }

@@ -33,7 +33,7 @@ import org.apache.hadoop.io.RawComparator;
 @InterfaceAudience.Private
 public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   @Override
-  public void compressKeyValues(DataOutputStream out,
+  public void internalEncodeKeyValues(DataOutputStream out,
       ByteBuffer in, boolean includesMemstoreTS) throws IOException {
     in.rewind();
     ByteBufferUtils.putInt(out, in.limit());
@@ -94,4 +94,5 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
       }
     };
   }
+
 }

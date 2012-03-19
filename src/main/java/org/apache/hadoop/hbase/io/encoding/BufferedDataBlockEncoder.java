@@ -24,6 +24,8 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.RawComparator;
@@ -298,6 +300,56 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         throw new RuntimeException("Unable to copy memstore timestamp " +
             memstoreTS + " after decoding a key/value");
       }
+    }
+  }
+
+  @Override
+  public HFileBlockEncodingContext newDataBlockEncodingContext(
+      Algorithm compressionAlgorithm,
+      DataBlockEncoding encoding, byte[] header) {
+    return new HFileBlockDefaultEncodingContext(
+        compressionAlgorithm, encoding, header);
+  }
+
+  @Override
+  public HFileBlockDecodingContext newDataBlockDecodingContext(
+      Algorithm compressionAlgorithm) {
+    return new HFileBlockDefaultDecodingContext(compressionAlgorithm);
+  }
+
+  /**
+   * Compress KeyValues and write them to output buffer.
+   * @param out Where to write compressed data.
+   * @param in Source of KeyValue for compression.
+   * @param includesMemstoreTS true if including memstore timestamp after every
+   *          key-value pair
+   * @throws IOException If there is an error writing to output stream.
+   */
+  public abstract void internalEncodeKeyValues(DataOutputStream out,
+      ByteBuffer in, boolean includesMemstoreTS) throws IOException;
+
+  @Override
+  public void compressKeyValues(ByteBuffer in,
+      boolean includesMemstoreTS,
+      HFileBlockEncodingContext blkEncodingCtx) throws IOException {
+    if (!(blkEncodingCtx.getClass().getName().equals(
+        HFileBlockDefaultEncodingContext.class.getName()))) {
+      throw new IOException (this.getClass().getName() + " only accepts "
+          + HFileBlockDefaultEncodingContext.class.getName() + " as the " +
+          "encoding context.");
+    }
+
+    HFileBlockDefaultEncodingContext encodingCtx =
+        (HFileBlockDefaultEncodingContext) blkEncodingCtx;
+    encodingCtx.prepareEncoding();
+    DataOutputStream dataOut =
+        ((HFileBlockDefaultEncodingContext) encodingCtx)
+        .getOutputStreamForEncoder();
+    internalEncodeKeyValues(dataOut, in, includesMemstoreTS);
+    if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
+      encodingCtx.postEncoding(BlockType.ENCODED_DATA);
+    } else {
+      encodingCtx.postEncoding(BlockType.DATA);
     }
   }
 

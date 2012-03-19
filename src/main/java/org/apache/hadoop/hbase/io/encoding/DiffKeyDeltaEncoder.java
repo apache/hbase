@@ -316,7 +316,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public void compressKeyValues(DataOutputStream out,
+  public void internalEncodeKeyValues(DataOutputStream out,
       ByteBuffer in, boolean includesMemstoreTS) throws IOException {
     in.rewind();
     ByteBufferUtils.putInt(out, in.limit());

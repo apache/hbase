@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.io.hfile.BlockType.MAGIC_LENGTH;
-import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.NONE;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -29,7 +28,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.zip.Checksum;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -38,6 +36,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
@@ -45,14 +47,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompoundBloomFilter;
-import org.apache.hadoop.hbase.util.ChecksumFactory;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.compress.CompressionOutputStream;
-import org.apache.hadoop.io.compress.Compressor;
-import org.apache.hadoop.io.compress.Decompressor;
 
 import com.google.common.base.Preconditions;
 
@@ -114,8 +111,8 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
    * There is a 1 byte checksum type, followed by a 4 byte bytesPerChecksum
    * followed by another 4 byte value to store sizeofDataOnDisk.
    */
-  static final int HEADER_SIZE = HEADER_SIZE_NO_CHECKSUM + Bytes.SIZEOF_BYTE +
-                                 2 * Bytes.SIZEOF_INT;
+  public static final int HEADER_SIZE = HEADER_SIZE_NO_CHECKSUM +
+    Bytes.SIZEOF_BYTE + 2 * Bytes.SIZEOF_INT;
 
   /**
    * The size of block header when blockType is {@link BlockType#ENCODED_DATA}.
@@ -125,7 +122,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       + DataBlockEncoding.ID_SIZE;
 
   /** Just an array of bytes of the right size. */
-  static final byte[] DUMMY_HEADER = new byte[HEADER_SIZE];
+  public static final byte[] DUMMY_HEADER = new byte[HEADER_SIZE];
   static final byte[] DUMMY_HEADER_NO_CHECKSUM = 
      new byte[HEADER_SIZE_NO_CHECKSUM];
 
@@ -303,7 +300,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
    * @return the on-disk size of the data part of the block, header and
    *         checksum not included. 
    */
-  int getOnDiskSizeWithoutHeader() {
+  public int getOnDiskSizeWithoutHeader() {
     return onDiskSizeWithoutHeader;
   }
 
@@ -342,7 +339,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
    *
    * @return the buffer with header skipped
    */
-  ByteBuffer getBufferWithoutHeader() {
+  public ByteBuffer getBufferWithoutHeader() {
     return ByteBuffer.wrap(buf.array(), buf.arrayOffset() + headerSize(),
         buf.limit() - headerSize() - totalChecksumBytes()).slice();
   }
@@ -644,6 +641,11 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     /** Data block encoder used for data blocks */
     private final HFileDataBlockEncoder dataBlockEncoder;
 
+    private HFileBlockEncodingContext dataBlockEncodingCtx;
+
+    /** block encoding context for non-data blocks */
+    private HFileBlockDefaultEncodingContext defaultBlockEncodingCtx;
+
     /**
      * The stream we use to accumulate data in uncompressed format for each
      * block. We reset this stream at the end of each block and reuse it. The
@@ -651,15 +653,6 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      * stream.
      */
     private ByteArrayOutputStream baosInMemory;
-
-    /** Compressor, which is also reused between consecutive blocks. */
-    private Compressor compressor;
-
-    /** Compression output stream */
-    private CompressionOutputStream compressionStream;
-    
-    /** Underlying stream to write compressed bytes to */
-    private ByteArrayOutputStream compressedByteStream;
 
     /**
      * Current block type. Set in {@link #startWriting(BlockType)}. Could be
@@ -680,12 +673,6 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      * immediately follows the block data. (header + data + checksums)
      */
     private byte[] onDiskBytesWithHeader;
-
-    /**
-     * The size of the data on disk that does not include the checksums.
-     * (header + data)
-     */
-    private int onDiskDataSizeWithHeader;
 
     /**
      * The size of the checksum data on disk. It is used only if data is
@@ -734,28 +721,23 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     public Writer(Compression.Algorithm compressionAlgorithm,
           HFileDataBlockEncoder dataBlockEncoder, boolean includesMemstoreTS,
           ChecksumType checksumType, int bytesPerChecksum) {
-      compressAlgo = compressionAlgorithm == null ? NONE : compressionAlgorithm;
+      compressAlgo = compressionAlgorithm == null ? Compression.Algorithm.NONE :
+        compressionAlgorithm;
       this.dataBlockEncoder = dataBlockEncoder != null
           ? dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
+      defaultBlockEncodingCtx =
+        new HFileBlockDefaultEncodingContext(compressionAlgorithm, null);
+      dataBlockEncodingCtx =
+        this.dataBlockEncoder.newOnDiskDataBlockEncodingContext(
+            compressionAlgorithm, DUMMY_HEADER);
 
-      baosInMemory = new ByteArrayOutputStream();
-      if (compressAlgo != NONE) {
-        compressor = compressionAlgorithm.getCompressor();
-        compressedByteStream = new ByteArrayOutputStream();
-        try {
-          compressionStream =
-              compressionAlgorithm.createPlainCompressionStream(
-                  compressedByteStream, compressor);
-        } catch (IOException e) {
-          throw new RuntimeException("Could not create compression stream " + 
-              "for algorithm " + compressionAlgorithm, e);
-        }
-      }
       if (bytesPerChecksum < HEADER_SIZE) {
         throw new RuntimeException("Unsupported value of bytesPerChecksum. " +
             " Minimum is " + HEADER_SIZE + " but the configured value is " +
             bytesPerChecksum);
       }
+
+      baosInMemory = new ByteArrayOutputStream();
       
       prevOffsetByType = new long[BlockType.values().length];
       for (int i = 0; i < prevOffsetByType.length; ++i)
@@ -828,7 +810,6 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      */
     private void finishBlock() throws IOException {
       userDataStream.flush();
-
       // This does an array copy, so it is safe to cache this byte array.
       uncompressedBytesWithHeader = baosInMemory.toByteArray();
       prevOffset = prevOffsetByType[blockType.getId()];
@@ -837,81 +818,32 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       // cache-on-write. In a way, the block is ready, but not yet encoded or
       // compressed.
       state = State.BLOCK_READY;
-      encodeDataBlockForDisk();
-
-      doCompressionAndChecksumming();
-    }
-
-    /**
-     * Do compression if it is enabled, or re-use the uncompressed buffer if
-     * it is not. Fills in the compressed block's header if doing compression.
-     * Also, compute the checksums. In the case of no-compression, write the
-     * checksums to its own seperate data structure called onDiskChecksum. In
-     * the case when compression is enabled, the checksums are written to the
-     * outputbyte stream 'baos'.
-     */
-    private void doCompressionAndChecksumming() throws IOException {
-      // do the compression
-      if (compressAlgo != NONE) {
-        compressedByteStream.reset();
-        compressedByteStream.write(DUMMY_HEADER);
-
-        compressionStream.resetState();
-
-        compressionStream.write(uncompressedBytesWithHeader, HEADER_SIZE,
-            uncompressedBytesWithHeader.length - HEADER_SIZE);
-
-        compressionStream.flush();
-        compressionStream.finish();
-
-        // generate checksums
-        onDiskDataSizeWithHeader = compressedByteStream.size(); // data size
-
-        // reserve space for checksums in the output byte stream
-        ChecksumUtil.reserveSpaceForChecksums(compressedByteStream, 
-          onDiskDataSizeWithHeader, bytesPerChecksum);
-
-
-        onDiskBytesWithHeader = compressedByteStream.toByteArray();
-        putHeader(onDiskBytesWithHeader, 0, onDiskBytesWithHeader.length,
-            uncompressedBytesWithHeader.length, onDiskDataSizeWithHeader);
-
-       // generate checksums for header and data. The checksums are
-       // part of onDiskBytesWithHeader itself.
-       ChecksumUtil.generateChecksums(
-         onDiskBytesWithHeader, 0, onDiskDataSizeWithHeader,
-         onDiskBytesWithHeader, onDiskDataSizeWithHeader,
-         checksumType, bytesPerChecksum);
-
-        // Checksums are already part of onDiskBytesWithHeader
-        onDiskChecksum = HConstants.EMPTY_BYTE_ARRAY;
-
-        //set the header for the uncompressed bytes (for cache-on-write)
-        putHeader(uncompressedBytesWithHeader, 0,
-          onDiskBytesWithHeader.length + onDiskChecksum.length,
-          uncompressedBytesWithHeader.length, onDiskDataSizeWithHeader);
-
+      if (blockType == BlockType.DATA) {
+        encodeDataBlockForDisk();
       } else {
-        // If we are not using any compression, then the
-        // checksums are written to its own array onDiskChecksum.
-        onDiskBytesWithHeader = uncompressedBytesWithHeader;
-
-        onDiskDataSizeWithHeader = onDiskBytesWithHeader.length;
-        int numBytes = (int)ChecksumUtil.numBytes(
-                          uncompressedBytesWithHeader.length,
-                          bytesPerChecksum);
-        onDiskChecksum = new byte[numBytes];
-
-        //set the header for the uncompressed bytes
-        putHeader(uncompressedBytesWithHeader, 0,
-          onDiskBytesWithHeader.length + onDiskChecksum.length,
-          uncompressedBytesWithHeader.length, onDiskDataSizeWithHeader);
-
-        ChecksumUtil.generateChecksums(
-          uncompressedBytesWithHeader, 0, uncompressedBytesWithHeader.length,
-          onDiskChecksum, 0,
-          checksumType, bytesPerChecksum);
+        defaultBlockEncodingCtx.compressAfterEncoding(
+            uncompressedBytesWithHeader, blockType);
+        onDiskBytesWithHeader =
+          defaultBlockEncodingCtx.getOnDiskBytesWithHeader();
       }
+
+      int numBytes = (int) ChecksumUtil.numBytes(
+          onDiskBytesWithHeader.length,
+          bytesPerChecksum);
+
+      // put the header for on disk bytes
+      putHeader(onDiskBytesWithHeader, 0,
+          onDiskBytesWithHeader.length + numBytes,
+          uncompressedBytesWithHeader.length, onDiskBytesWithHeader.length);
+      //set the header for the uncompressed bytes (for cache-on-write)
+      putHeader(uncompressedBytesWithHeader, 0,
+          onDiskBytesWithHeader.length + numBytes,
+        uncompressedBytesWithHeader.length, onDiskBytesWithHeader.length);
+
+      onDiskChecksum = new byte[numBytes];
+      ChecksumUtil.generateChecksums(
+          onDiskBytesWithHeader, 0, onDiskBytesWithHeader.length,
+          onDiskChecksum, 0, checksumType, bytesPerChecksum);
     }
 
     /**
@@ -919,35 +851,20 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      * {@link #dataBlockEncoder}.
      */
     private void encodeDataBlockForDisk() throws IOException {
-      if (blockType != BlockType.DATA) {
-        return; // skip any non-data block
-      }
-
       // do data block encoding, if data block encoder is set
-      ByteBuffer rawKeyValues = ByteBuffer.wrap(uncompressedBytesWithHeader,
-          HEADER_SIZE, uncompressedBytesWithHeader.length -
-          HEADER_SIZE).slice();
-      Pair<ByteBuffer, BlockType> encodingResult =
-          dataBlockEncoder.beforeWriteToDisk(rawKeyValues,
-              includesMemstoreTS, DUMMY_HEADER);
+      ByteBuffer rawKeyValues =
+          ByteBuffer.wrap(uncompressedBytesWithHeader, HEADER_SIZE,
+              uncompressedBytesWithHeader.length - HEADER_SIZE).slice();
 
-      BlockType encodedBlockType = encodingResult.getSecond();
-      if (encodedBlockType == BlockType.ENCODED_DATA) {
-        uncompressedBytesWithHeader = encodingResult.getFirst().array();
-        blockType = BlockType.ENCODED_DATA;
-      } else {
-        // There is no encoding configured. Do some extra sanity-checking.
-        if (encodedBlockType != BlockType.DATA) {
-          throw new IOException("Unexpected block type coming out of data " +
-              "block encoder: " + encodedBlockType);
-        }
-        if (userDataStream.size() !=
-            uncompressedBytesWithHeader.length - HEADER_SIZE) {
-          throw new IOException("Uncompressed size mismatch: "
-              + userDataStream.size() + " vs. "
-              + (uncompressedBytesWithHeader.length - HEADER_SIZE));
-        }
-      }
+      //do the encoding
+      dataBlockEncoder.beforeWriteToDisk(rawKeyValues,
+              includesMemstoreTS, dataBlockEncodingCtx, blockType);
+
+      uncompressedBytesWithHeader =
+          dataBlockEncodingCtx.getUncompressedBytesWithHeader();
+      onDiskBytesWithHeader =
+          dataBlockEncodingCtx.getOnDiskBytesWithHeader();
+      blockType = dataBlockEncodingCtx.getBlockType();
     }
 
     /**
@@ -966,7 +883,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       offset = Bytes.putLong(dest, offset, prevOffset);
       offset = Bytes.putByte(dest, offset, checksumType.getCode());
       offset = Bytes.putInt(dest, offset, bytesPerChecksum);
-      offset = Bytes.putInt(dest, offset, onDiskDataSizeWithHeader);
+      offset = Bytes.putInt(dest, offset, onDiskDataSize);
     }
 
     /**
@@ -986,7 +903,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       }
       startOffset = offset;
 
-      writeHeaderAndData((DataOutputStream) out);
+      finishBlockAndWriteHeaderAndData((DataOutputStream) out);
     }
 
     /**
@@ -998,17 +915,11 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      * @param out the output stream to write the
      * @throws IOException
      */
-    private void writeHeaderAndData(DataOutputStream out) throws IOException {
+    private void finishBlockAndWriteHeaderAndData(DataOutputStream out)
+      throws IOException {
       ensureBlockReady();
       out.write(onDiskBytesWithHeader);
-      if (compressAlgo == NONE) {
-        if (onDiskChecksum == HConstants.EMPTY_BYTE_ARRAY) {
-          throw new IOException("A " + blockType 
-              + " without compression should have checksums " 
-              + " stored separately.");
-        }
-        out.write(onDiskChecksum);
-      }
+      out.write(onDiskChecksum);
     }
 
     /**
@@ -1023,34 +934,29 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      */
     byte[] getHeaderAndDataForTest() throws IOException {
       ensureBlockReady();
-      if (compressAlgo == NONE) {
-        if (onDiskChecksum == HConstants.EMPTY_BYTE_ARRAY) {
-          throw new IOException("A " + blockType 
-              + " without compression should have checksums " 
-              + " stored separately.");
-        }
-        // This is not very optimal, because we are doing an extra copy.
-        // But this method is used only by unit tests.
-        byte[] output = new byte[onDiskBytesWithHeader.length +
-                                 onDiskChecksum.length];
-        System.arraycopy(onDiskBytesWithHeader, 0,
-                         output, 0, onDiskBytesWithHeader.length);
-        System.arraycopy(onDiskChecksum, 0,
-                         output, onDiskBytesWithHeader.length,
-                         onDiskChecksum.length);
-        return output;
-      }
-      return onDiskBytesWithHeader;
+      // This is not very optimal, because we are doing an extra copy.
+      // But this method is used only by unit tests.
+      byte[] output =
+          new byte[onDiskBytesWithHeader.length
+              + onDiskChecksum.length];
+      System.arraycopy(onDiskBytesWithHeader, 0, output, 0,
+          onDiskBytesWithHeader.length);
+      System.arraycopy(onDiskChecksum, 0, output,
+          onDiskBytesWithHeader.length, onDiskChecksum.length);
+      return output;
     }
 
     /**
-     * Releases the compressor this writer uses to compress blocks into the
-     * compressor pool. Needs to be called before the writer is discarded.
+     * Releases resources used by this writer.
      */
-    public void releaseCompressor() {
-      if (compressor != null) {
-        compressAlgo.returnCompressor(compressor);
-        compressor = null;
+    public void release() {
+      if (dataBlockEncodingCtx != null) {
+        dataBlockEncodingCtx.close();
+        dataBlockEncodingCtx = null;
+      }
+      if (defaultBlockEncodingCtx != null) {
+        defaultBlockEncodingCtx.close();
+        defaultBlockEncodingCtx = null;
       }
     }
 
@@ -1252,7 +1158,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     private int minorVersion;
 
     /** The size of the header */
-    protected int hdrSize;
+    protected final int hdrSize;
 
     /** The filesystem used to access data */
     protected HFileSystem hfs;
@@ -1377,36 +1283,6 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     }
 
     /**
-     * Decompresses data from the given stream using the configured compression
-     * algorithm.
-     * @param dest
-     * @param destOffset
-     * @param bufferedBoundedStream
-     *          a stream to read compressed data from, bounded to the exact
-     *          amount of compressed data
-     * @param uncompressedSize
-     *          uncompressed data size, header not included
-     * @throws IOException
-     */
-    protected void decompress(byte[] dest, int destOffset,
-        InputStream bufferedBoundedStream,
-        int uncompressedSize) throws IOException {
-      Decompressor decompressor = null;
-      try {
-        decompressor = compressAlgo.getDecompressor();
-        InputStream is = compressAlgo.createDecompressionStream(
-            bufferedBoundedStream, decompressor, 0);
-
-        IOUtils.readFully(is, dest, destOffset, uncompressedSize);
-        is.close();
-      } finally {
-        if (decompressor != null) {
-          compressAlgo.returnDecompressor(decompressor);
-        }
-      }
-    }
-
-    /**
      * Creates a buffered stream reading a certain slice of the file system
      * input stream. We need this because the decompression we use seems to
      * expect the input stream to be bounded.
@@ -1511,8 +1387,9 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       } else {
         InputStream bufferedBoundedStream = createBufferedBoundedStream(
             offset, onDiskSize, pread);
-        decompress(buf.array(), buf.arrayOffset() + HEADER_DELTA,
-            bufferedBoundedStream, uncompressedSizeWithMagic);
+        Compression.decompress(buf.array(), buf.arrayOffset()
+            + HEADER_DELTA, bufferedBoundedStream, onDiskSize,
+            uncompressedSizeWithMagic, this.compressAlgo);
 
         // We don't really have a good way to exclude the "magic record" size
         // from the compressed block's size, since it is compressed as well.
@@ -1566,6 +1443,10 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     protected HFileDataBlockEncoder dataBlockEncoder =
         NoOpDataBlockEncoder.INSTANCE;
 
+    private HFileBlockDecodingContext encodedBlockDecodingCtx;
+
+    private HFileBlockDefaultDecodingContext defaultDecodingCtx;
+
     private ThreadLocal<PrefetchedHeader> prefetchedHeaderForThread =
         new ThreadLocal<PrefetchedHeader>() {
           @Override
@@ -1598,6 +1479,10 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         useHBaseChecksum = false;
       }
       this.useHBaseChecksumConfigured = useHBaseChecksum;
+      defaultDecodingCtx =
+        new HFileBlockDefaultDecodingContext(compressAlgo);
+      encodedBlockDecodingCtx =
+          new HFileBlockDefaultDecodingContext(compressAlgo);
     }
 
     /**
@@ -1716,9 +1601,8 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      * @return the HFileBlock or null if there is a HBase checksum mismatch
      */
     private HFileBlock readBlockDataInternal(FSDataInputStream is, long offset, 
-        long onDiskSizeWithHeaderL,
-        int uncompressedSize, boolean pread, boolean verifyChecksum) 
-        throws IOException {
+        long onDiskSizeWithHeaderL, int uncompressedSize, boolean pread,
+        boolean verifyChecksum) throws IOException {
       if (offset < 0) {
         throw new IOException("Invalid offset=" + offset + " trying to read "
             + "block (onDiskSize=" + onDiskSizeWithHeaderL
@@ -1738,8 +1622,20 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       }
 
       int onDiskSizeWithHeader = (int) onDiskSizeWithHeaderL;
+      // See if we can avoid reading the header. This is desirable, because
+      // we will not incur a backward seek operation if we have already
+      // read this block's header as part of the previous read's look-ahead.
+      // And we also want to skip reading the header again if it has already
+      // been read.
+      PrefetchedHeader prefetchedHeader = prefetchedHeaderForThread.get();
+      ByteBuffer headerBuf = prefetchedHeader.offset == offset ?
+          prefetchedHeader.buf : null;
 
-      HFileBlock b;
+      int nextBlockOnDiskSize = 0;
+      // Allocate enough space to fit the next block's header too.
+      byte[] onDiskBlock = null;
+
+      HFileBlock b = null;
       if (onDiskSizeWithHeader > 0) {
         // We know the total on-disk size but not the uncompressed size. Read
         // the entire block into memory, then parse the header and decompress
@@ -1749,186 +1645,122 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         // block's header (e.g. this block's header) when reading the previous
         // block. This is the faster and more preferable case.
 
+        // Size that we have to skip in case we have already read the header.
+        int preReadHeaderSize = headerBuf == null ? 0 : hdrSize;
+        onDiskBlock = new byte[onDiskSizeWithHeader + hdrSize];
+        nextBlockOnDiskSize = readAtOffset(is, onDiskBlock,
+            preReadHeaderSize, onDiskSizeWithHeader - preReadHeaderSize,
+            true, offset + preReadHeaderSize, pread);
+        if (headerBuf != null) {
+          // the header has been read when reading the previous block, copy
+          // to this block's header
+          System.arraycopy(headerBuf.array(),
+              headerBuf.arrayOffset(), onDiskBlock, 0, hdrSize);
+        } else {
+          headerBuf = ByteBuffer.wrap(onDiskBlock, 0, hdrSize);
+        }
+        // We know the total on-disk size but not the uncompressed size. Read
+        // the entire block into memory, then parse the header and decompress
+        // from memory if using compression. Here we have already read the
+        // block's header
+        try {
+          b = new HFileBlock(headerBuf, getMinorVersion());
+        } catch (IOException ex) {
+          // Seen in load testing. Provide comprehensive debug info.
+          throw new IOException("Failed to read compressed block at "
+              + offset
+              + ", onDiskSizeWithoutHeader="
+              + onDiskSizeWithHeader
+              + ", preReadHeaderSize="
+              + hdrSize
+              + ", header.length="
+              + prefetchedHeader.header.length
+              + ", header bytes: "
+              + Bytes.toStringBinary(prefetchedHeader.header, 0,
+                  hdrSize), ex);
+        }
+        // if the caller specifies a onDiskSizeWithHeader, validate it.
         int onDiskSizeWithoutHeader = onDiskSizeWithHeader - hdrSize;
         assert onDiskSizeWithoutHeader >= 0;
-
-        // See if we can avoid reading the header. This is desirable, because
-        // we will not incur a seek operation to seek back if we have already
-        // read this block's header as part of the previous read's look-ahead.
-        PrefetchedHeader prefetchedHeader = prefetchedHeaderForThread.get();
-        byte[] header = prefetchedHeader.offset == offset
-            ? prefetchedHeader.header : null;
-
-        // Size that we have to skip in case we have already read the header.
-        int preReadHeaderSize = header == null ? 0 : hdrSize;
-
-        if (compressAlgo == Compression.Algorithm.NONE) {
-          // Just read the whole thing. Allocate enough space to read the
-          // next block's header too.
-
-          ByteBuffer headerAndData = ByteBuffer.allocate(onDiskSizeWithHeader
-              + hdrSize);
-          headerAndData.limit(onDiskSizeWithHeader);
-
-          if (header != null) {
-            System.arraycopy(header, 0, headerAndData.array(), 0,
-                hdrSize);
-          }
-
-          int nextBlockOnDiskSizeWithHeader = readAtOffset(is,
-              headerAndData.array(), headerAndData.arrayOffset()
-                  + preReadHeaderSize, onDiskSizeWithHeader
-                  - preReadHeaderSize, true, offset + preReadHeaderSize,
-                  pread);
-
-          b = new HFileBlock(headerAndData, getMinorVersion());
-          b.assumeUncompressed();
-          b.validateOnDiskSizeWithoutHeader(onDiskSizeWithoutHeader);
-          b.nextBlockOnDiskSizeWithHeader = nextBlockOnDiskSizeWithHeader;
-          if (verifyChecksum &&
-              !validateBlockChecksum(b, headerAndData.array(), hdrSize)) {
-            return null;             // checksum mismatch
-          }
-          if (b.nextBlockOnDiskSizeWithHeader > 0)
-            setNextBlockHeader(offset, b);
-        } else {
-          // Allocate enough space to fit the next block's header too.
-          byte[] onDiskBlock = new byte[onDiskSizeWithHeader + hdrSize];
-
-          int nextBlockOnDiskSize = readAtOffset(is, onDiskBlock,
-              preReadHeaderSize, onDiskSizeWithHeader - preReadHeaderSize,
-              true, offset + preReadHeaderSize, pread);
-
-          if (header == null)
-            header = onDiskBlock;
-
-          try {
-            b = new HFileBlock(ByteBuffer.wrap(header, 0, hdrSize), 
-                               getMinorVersion());
-          } catch (IOException ex) {
-            // Seen in load testing. Provide comprehensive debug info.
-            throw new IOException("Failed to read compressed block at "
-                + offset + ", onDiskSizeWithoutHeader=" + onDiskSizeWithHeader
-                + ", preReadHeaderSize=" + preReadHeaderSize
-                + ", header.length=" + header.length + ", header bytes: "
-                + Bytes.toStringBinary(header, 0, hdrSize), ex);
-          }
-          b.validateOnDiskSizeWithoutHeader(onDiskSizeWithoutHeader);
-          b.nextBlockOnDiskSizeWithHeader = nextBlockOnDiskSize;
-          if (verifyChecksum && 
-              !validateBlockChecksum(b, onDiskBlock, hdrSize)) {
-            return null;             // checksum mismatch
-          }
-
-          DataInputStream dis = new DataInputStream(new ByteArrayInputStream(
-              onDiskBlock, hdrSize, onDiskSizeWithoutHeader));
-
-          // This will allocate a new buffer but keep header bytes.
-          b.allocateBuffer(b.nextBlockOnDiskSizeWithHeader > 0);
-
-          decompress(b.buf.array(), b.buf.arrayOffset() + hdrSize, dis,
-              b.uncompressedSizeWithoutHeader);
-
-          // Copy next block's header bytes into the new block if we have them.
-          if (nextBlockOnDiskSize > 0) {
-            System.arraycopy(onDiskBlock, onDiskSizeWithHeader, b.buf.array(),
-                b.buf.arrayOffset() + hdrSize
-                    + b.uncompressedSizeWithoutHeader + b.totalChecksumBytes(), 
-                hdrSize);
-
-            setNextBlockHeader(offset, b);
-          }
-        }
-
+        b.validateOnDiskSizeWithoutHeader(onDiskSizeWithoutHeader);
       } else {
-        // We don't know the on-disk size. Read the header first, determine the
-        // on-disk size from it, and read the remaining data, thereby incurring
-        // two read operations. This might happen when we are doing the first
-        // read in a series of reads or a random read, and we don't have access
-        // to the block index. This is costly and should happen very rarely.
+        // Check headerBuf to see if we have read this block's header as part of
+        // reading the previous block. This is an optimization of peeking into
+        // the next block's header (e.g.this block's header) when reading the
+        // previous block. This is the faster and more preferable case. If the
+        // header is already there, don't read the header again.
 
-        // Check if we have read this block's header as part of reading the
-        // previous block. If so, don't read the header again.
-        PrefetchedHeader prefetchedHeader = prefetchedHeaderForThread.get();
-        ByteBuffer headerBuf = prefetchedHeader.offset == offset ?
-            prefetchedHeader.buf : null;
-
+        // Unfortunately, we still have to do a separate read operation to
+        // read the header.
         if (headerBuf == null) {
-          // Unfortunately, we still have to do a separate read operation to
-          // read the header.
+          // From the header, determine the on-disk size of the given hfile
+          // block, and read the remaining data, thereby incurring two read
+          // operations. This might happen when we are doing the first read
+          // in a series of reads or a random read, and we don't have access
+          // to the block index. This is costly and should happen very rarely.
           headerBuf = ByteBuffer.allocate(hdrSize);
-          readAtOffset(is, headerBuf.array(), headerBuf.arrayOffset(), hdrSize,
-              false, offset, pread);
+          readAtOffset(is, headerBuf.array(), headerBuf.arrayOffset(),
+              hdrSize, false, offset, pread);
         }
 
         b = new HFileBlock(headerBuf, getMinorVersion());
+        onDiskBlock = new byte[b.getOnDiskSizeWithHeader() + hdrSize];
+        System.arraycopy(headerBuf.array(),
+              headerBuf.arrayOffset(), onDiskBlock, 0, hdrSize);
+        nextBlockOnDiskSize =
+          readAtOffset(is, onDiskBlock, hdrSize, b.getOnDiskSizeWithHeader()
+              - hdrSize, true, offset + hdrSize, pread);
+        onDiskSizeWithHeader = b.onDiskSizeWithoutHeader + hdrSize;
+      }
 
-        // This will also allocate enough room for the next block's header.
-        b.allocateBuffer(true);
+      boolean isCompressed =
+        compressAlgo != null
+            && compressAlgo != Compression.Algorithm.NONE;
+      if (!isCompressed) {
+        b.assumeUncompressed();
+      }
 
-        if (compressAlgo == Compression.Algorithm.NONE) {
+      if (verifyChecksum &&
+          !validateBlockChecksum(b, onDiskBlock, hdrSize)) {
+        return null;             // checksum mismatch
+      }
 
-          // Avoid creating bounded streams and using a "codec" that does
-          // nothing.
-          b.assumeUncompressed();
-          b.nextBlockOnDiskSizeWithHeader = readAtOffset(is, b.buf.array(),
-              b.buf.arrayOffset() + hdrSize,
-              b.uncompressedSizeWithoutHeader + b.totalChecksumBytes(), 
-              true, offset + hdrSize,
-              pread);
-          if (verifyChecksum && 
-              !validateBlockChecksum(b, b.buf.array(), hdrSize)) {
-            return null;             // checksum mismatch
-          }
-
-          if (b.nextBlockOnDiskSizeWithHeader > 0) {
-            setNextBlockHeader(offset, b);
-          }
+      if (isCompressed) {
+        // This will allocate a new buffer but keep header bytes.
+        b.allocateBuffer(nextBlockOnDiskSize > 0);
+        if (b.blockType.equals(BlockType.ENCODED_DATA)) {
+          encodedBlockDecodingCtx.prepareDecoding(b, onDiskBlock, hdrSize);
         } else {
-          // Allocate enough space for the block's header and compressed data.
-          byte[] compressedBytes = new byte[b.getOnDiskSizeWithHeader()
-              + hdrSize];
-
-          b.nextBlockOnDiskSizeWithHeader = readAtOffset(is, compressedBytes,
-              hdrSize, b.onDiskSizeWithoutHeader, true, offset
-                  + hdrSize, pread);
-          if (verifyChecksum &&
-              !validateBlockChecksum(b, compressedBytes, hdrSize)) {
-            return null;             // checksum mismatch
-          }
-          DataInputStream dis = new DataInputStream(new ByteArrayInputStream(
-              compressedBytes, hdrSize, b.onDiskSizeWithoutHeader));
-
-          decompress(b.buf.array(), b.buf.arrayOffset() + hdrSize, dis,
-              b.uncompressedSizeWithoutHeader);
-
-          if (b.nextBlockOnDiskSizeWithHeader > 0) {
-            // Copy the next block's header into the new block.
-            int nextHeaderOffset = b.buf.arrayOffset() + hdrSize
-                + b.uncompressedSizeWithoutHeader + b.totalChecksumBytes();
-            System.arraycopy(compressedBytes,
-                compressedBytes.length - hdrSize,
-                b.buf.array(),
-                nextHeaderOffset,
-                hdrSize);
-
-            setNextBlockHeader(offset, b);
-          }
+          defaultDecodingCtx.prepareDecoding(b, onDiskBlock, hdrSize);
         }
+        if (nextBlockOnDiskSize > 0) {
+          // Copy next block's header bytes into the new block if we have them.
+          System.arraycopy(onDiskBlock, onDiskSizeWithHeader, b.buf.array(),
+              b.buf.arrayOffset() + hdrSize
+              + b.uncompressedSizeWithoutHeader + b.totalChecksumBytes(),
+              hdrSize);
+        }
+      } else {
+        // The onDiskBlock will become the headerAndDataBuffer for this block.
+        // If nextBlockOnDiskSizeWithHeader is not zero, the onDiskBlock already
+        // contains the header of next block, so no need to set next
+        // block's header in it.
+        b = new HFileBlock(ByteBuffer.wrap(onDiskBlock, 0,
+                onDiskSizeWithHeader), getMinorVersion());
+      }
+
+      b.nextBlockOnDiskSizeWithHeader = nextBlockOnDiskSize;
+
+      // Set prefetched header
+      if (b.nextBlockOnDiskSizeWithHeader > 0) {
+        prefetchedHeader.offset = offset + b.getOnDiskSizeWithHeader();
+        System.arraycopy(onDiskBlock, onDiskSizeWithHeader,
+            prefetchedHeader.header, 0, hdrSize);
       }
 
       b.includesMemstoreTS = includesMemstoreTS;
       b.offset = offset;
       return b;
-    }
-
-    private void setNextBlockHeader(long offset, HFileBlock b) {
-      PrefetchedHeader prefetchedHeader = prefetchedHeaderForThread.get();
-      prefetchedHeader.offset = offset + b.getOnDiskSizeWithHeader();
-      int nextHeaderOffset = b.buf.arrayOffset() + hdrSize
-          + b.uncompressedSizeWithoutHeader + b.totalChecksumBytes();
-      System.arraycopy(b.buf.array(), nextHeaderOffset,
-          prefetchedHeader.header, 0, hdrSize);
     }
 
     void setIncludesMemstoreTS(boolean enabled) {
@@ -1937,6 +1769,8 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
 
     void setDataBlockEncoder(HFileDataBlockEncoder encoder) {
       this.dataBlockEncoder = encoder;
+      encodedBlockDecodingCtx = encoder.newOnDiskDataBlockDecodingContext(
+          this.compressAlgo);
     }
 
     /**

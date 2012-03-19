@@ -50,12 +50,15 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.DoubleOutputStream;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 
 import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.*;
@@ -203,7 +206,7 @@ public class TestHFileBlock {
     writeTestBlockContents(dos);
     byte[] headerAndData = hbw.getHeaderAndDataForTest();
     assertEquals(1000 * 4, hbw.getUncompressedSizeWithoutHeader());
-    hbw.releaseCompressor();
+    hbw.release();
     return hbw;
   }
 
@@ -371,9 +374,8 @@ public class TestHFileBlock {
           final List<ByteBuffer> encodedBlocks = new ArrayList<ByteBuffer>();
           for (int blockId = 0; blockId < numBlocks; ++blockId) {
             DataOutputStream dos = hbw.startWriting(BlockType.DATA);
-            writeEncodedBlock(encoding, dos, encodedSizes, encodedBlocks,
-                blockId, includesMemstoreTS);
-
+            writeEncodedBlock(algo, encoding, dos, encodedSizes, encodedBlocks,
+                blockId, includesMemstoreTS, HFileBlock.DUMMY_HEADER);
             hbw.writeHeaderAndData(os);
             totalSize += hbw.getOnDiskSizeWithHeader();
           }
@@ -392,7 +394,6 @@ public class TestHFileBlock {
             assertEquals(0, HFile.getChecksumFailuresCount());
             b.sanityCheck();
             pos += b.getOnDiskSizeWithHeader();
-
             assertEquals((int) encodedSizes.get(blockId),
                 b.getUncompressedSizeWithoutHeader());
             ByteBuffer actualBuffer = b.getBufferWithoutHeader();
@@ -417,35 +418,52 @@ public class TestHFileBlock {
     }
   }
 
-  static void writeEncodedBlock(DataBlockEncoding encoding,
-      DataOutputStream dos, final List<Integer> encodedSizes,
+  static void writeEncodedBlock(Algorithm algo, DataBlockEncoding encoding,
+       DataOutputStream dos, final List<Integer> encodedSizes,
       final List<ByteBuffer> encodedBlocks, int blockId, 
-      boolean includesMemstoreTS) throws IOException {
+      boolean includesMemstoreTS, byte[] dummyHeader) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DoubleOutputStream doubleOutputStream =
         new DoubleOutputStream(dos, baos);
-
-    final int rawBlockSize = writeTestKeyValues(doubleOutputStream,
-        blockId, includesMemstoreTS);
-
+    writeTestKeyValues(doubleOutputStream, blockId, includesMemstoreTS);
     ByteBuffer rawBuf = ByteBuffer.wrap(baos.toByteArray());
     rawBuf.rewind();
 
-    final int encodedSize;
-    final ByteBuffer encodedBuf;
-    if (encoding == DataBlockEncoding.NONE) {
-      encodedSize = rawBlockSize;
-      encodedBuf = rawBuf;
+    DataBlockEncoder encoder = encoding.getEncoder();
+    int headerLen = dummyHeader.length;
+    byte[] encodedResultWithHeader = null;
+    if (encoder != null) {
+      HFileBlockEncodingContext encodingCtx =
+          encoder.newDataBlockEncodingContext(algo, encoding, dummyHeader);
+      encoder.compressKeyValues(rawBuf, includesMemstoreTS,
+          encodingCtx);
+      encodedResultWithHeader =
+          encodingCtx.getUncompressedBytesWithHeader();
     } else {
-      ByteArrayOutputStream encodedOut = new ByteArrayOutputStream();
-      encoding.getEncoder().compressKeyValues(
-          new DataOutputStream(encodedOut),
-          rawBuf.duplicate(), includesMemstoreTS);
+      HFileBlockDefaultEncodingContext defaultEncodingCtx =
+        new HFileBlockDefaultEncodingContext(algo, encoding, dummyHeader);
+      byte[] rawBufWithHeader =
+          new byte[rawBuf.array().length + headerLen];
+      System.arraycopy(rawBuf.array(), 0, rawBufWithHeader,
+          headerLen, rawBuf.array().length);
+      defaultEncodingCtx.compressAfterEncoding(rawBufWithHeader,
+          BlockType.DATA);
+      encodedResultWithHeader =
+        defaultEncodingCtx.getUncompressedBytesWithHeader();
+    }
+    final int encodedSize =
+        encodedResultWithHeader.length - headerLen;
+    if (encoder != null) {
       // We need to account for the two-byte encoding algorithm ID that
       // comes after the 24-byte block header but before encoded KVs.
-      encodedSize = encodedOut.size() + DataBlockEncoding.ID_SIZE;
-      encodedBuf = ByteBuffer.wrap(encodedOut.toByteArray());
+      headerLen += DataBlockEncoding.ID_SIZE;
     }
+    byte[] encodedDataSection =
+        new byte[encodedResultWithHeader.length - headerLen];
+    System.arraycopy(encodedResultWithHeader, headerLen,
+        encodedDataSection, 0, encodedDataSection.length);
+    final ByteBuffer encodedBuf =
+        ByteBuffer.wrap(encodedDataSection);
     encodedSizes.add(encodedSize);
     encodedBlocks.add(encodedBuf);
   }

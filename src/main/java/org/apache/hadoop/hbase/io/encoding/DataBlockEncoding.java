@@ -103,6 +103,18 @@ public enum DataBlockEncoding {
     stream.write(idInBytes);
   }
 
+
+  /**
+   * Writes id bytes to the given array starting from offset.
+   *
+   * @param dest output array
+   * @param offset starting offset of the output array
+   * @throws IOException
+   */
+  public void writeIdInBytes(byte[] dest, int offset) throws IOException {
+    System.arraycopy(idInBytes, 0, dest, offset, ID_SIZE);
+  }
+
   /**
    * Return new data block encoder for given algorithm type.
    * @return data block encoder if algorithm is specified, null if none is
@@ -110,25 +122,6 @@ public enum DataBlockEncoding {
    */
   public DataBlockEncoder getEncoder() {
     return encoder;
-  }
-
-  /**
-   * Provide access to all data block encoders, even those which are not
-   * exposed in the enum. Useful for testing and benchmarking.
-   * @return list of all data block encoders.
-   */
-  public static List<DataBlockEncoder> getAllEncoders() {
-    ArrayList<DataBlockEncoder> encoders = new ArrayList<DataBlockEncoder>();
-    for (DataBlockEncoding algo : values()) {
-      DataBlockEncoder encoder = algo.getEncoder();
-      if (encoder != null) {
-        encoders.add(encoder);
-      }
-    }
-
-    // Add encoders that are only used in testing.
-    encoders.add(new CopyKeyDataBlockEncoder());
-    return encoders;
   }
 
   /**

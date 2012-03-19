@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -27,6 +26,8 @@ import java.util.Iterator;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.io.compress.Compressor;
 
 /**
@@ -40,17 +41,22 @@ public class EncodedDataBlock {
   ByteArrayOutputStream uncompressedOutputStream;
   ByteBuffer uncompressedBuffer;
   private byte[] cacheCompressData;
-  private ByteArrayOutputStream compressedStream = new ByteArrayOutputStream();
   private boolean includesMemstoreTS;
+
+  private final HFileBlockEncodingContext encodingCxt;
 
   /**
    * Create a buffer which will be encoded using dataBlockEncoder.
    * @param dataBlockEncoder Algorithm used for compression.
+   * @param encoding encoding type used
    */
   public EncodedDataBlock(DataBlockEncoder dataBlockEncoder,
-      boolean includesMemstoreTS) {
+      boolean includesMemstoreTS, DataBlockEncoding encoding) {
     this.dataBlockEncoder = dataBlockEncoder;
     uncompressedOutputStream = new ByteArrayOutputStream(BUFFER_SIZE);
+    encodingCxt =
+        dataBlockEncoder.newDataBlockEncodingContext(Compression.Algorithm.NONE,
+            encoding, HFileBlock.DUMMY_HEADER);
   }
 
   /**
@@ -175,7 +181,7 @@ public class EncodedDataBlock {
     if (cacheCompressData != null) {
       return cacheCompressData;
     }
-    cacheCompressData = doCompressData();
+    cacheCompressData = encodeData();
 
     return cacheCompressData;
   }
@@ -190,22 +196,20 @@ public class EncodedDataBlock {
   }
 
   /**
-   * Do the compression.
-   * @return Compressed byte buffer.
+   * Do the encoding .
+   * @return encoded byte buffer.
    */
-  public byte[] doCompressData() {
-    compressedStream.reset();
-    DataOutputStream dataOut = new DataOutputStream(compressedStream);
+  public byte[] encodeData() {
     try {
       this.dataBlockEncoder.compressKeyValues(
-          dataOut, getUncompressedBuffer(), includesMemstoreTS);
+          getUncompressedBuffer(), includesMemstoreTS, encodingCxt);
     } catch (IOException e) {
       throw new RuntimeException(String.format(
-          "Bug in decoding part of algorithm %s. " +
+          "Bug in encoding part of algorithm %s. " +
           "Probably it requested more bytes than are available.",
           toString()), e);
     }
-    return compressedStream.toByteArray();
+    return encodingCxt.getUncompressedBytesWithHeader();
   }
 
   @Override

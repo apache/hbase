@@ -19,7 +19,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.*;
+import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.GZ;
+import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.NONE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -28,46 +32,31 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.io.DoubleOutputStream;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.io.compress.CompressionOutputStream;
-import org.apache.hadoop.io.compress.Compressor;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
-import org.apache.hadoop.hbase.util.Pair;
-import com.google.common.base.Preconditions;
-
-import static org.apache.hadoop.hbase.io.hfile.Compression.Algorithm.*;
+import org.apache.hadoop.io.compress.Compressor;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import com.google.common.base.Preconditions;
 
 /**
  * This class has unit tests to prove that older versions of
@@ -129,7 +118,8 @@ public class TestHFileBlockCompatibility {
         includesMemstoreTS);
     DataOutputStream dos = hbw.startWriting(blockType);
     TestHFileBlock.writeTestBlockContents(dos);
-    byte[] headerAndData = hbw.getHeaderAndData();
+    // make sure the block is ready by calling hbw.getHeaderAndData()
+    hbw.getHeaderAndData();
     assertEquals(1000 * 4, hbw.getUncompressedSizeWithoutHeader());
     hbw.releaseCompressor();
     return hbw;
@@ -145,7 +135,7 @@ public class TestHFileBlockCompatibility {
       // variations across operating systems.
       // See http://www.gzip.org/zlib/rfc-gzip.html for gzip format.
       testV2Block[osOffset] = 3;
-    }   
+    }
     return Bytes.toStringBinary(testV2Block);
   }
 
@@ -173,8 +163,9 @@ public class TestHFileBlockCompatibility {
             + "\\xD6\\xE8\\xA3\\xB9K\\x84`\\x96Q\\xD3\\xA8\\xDB\\xA8e\\xD4c"
             + "\\xD46\\xEA5\\xEA3\\xEA7\\xE7\\x00LI\\s\\xA0\\x0F\\x00\\x00";
     final int correctGzipBlockLength = 82;
-    assertEquals(correctTestBlockStr, createTestBlockStr(GZ,
-        correctGzipBlockLength));
+
+    String returnedStr = createTestBlockStr(GZ, correctGzipBlockLength);
+    assertEquals(correctTestBlockStr, returnedStr);
   }
 
   @Test
@@ -288,16 +279,19 @@ public class TestHFileBlockCompatibility {
               + algo + "_" + encoding.toString());
           FSDataOutputStream os = fs.create(path);
           HFileDataBlockEncoder dataBlockEncoder =
-              new HFileDataBlockEncoderImpl(encoding);
-          Writer hbw = new Writer(algo, dataBlockEncoder,
-              includesMemstoreTS);
+              new HFileDataBlockEncoderImpl(encoding, encoding,
+                  TestHFileBlockCompatibility.Writer.DUMMY_HEADER);
+          TestHFileBlockCompatibility.Writer hbw =
+              new TestHFileBlockCompatibility.Writer(algo,
+                  dataBlockEncoder, includesMemstoreTS);
           long totalSize = 0;
           final List<Integer> encodedSizes = new ArrayList<Integer>();
           final List<ByteBuffer> encodedBlocks = new ArrayList<ByteBuffer>();
           for (int blockId = 0; blockId < numBlocks; ++blockId) {
             DataOutputStream dos = hbw.startWriting(BlockType.DATA);
-            TestHFileBlock.writeEncodedBlock(encoding, dos, encodedSizes, encodedBlocks,
-                blockId, includesMemstoreTS);
+            TestHFileBlock.writeEncodedBlock(algo, encoding, dos, encodedSizes,
+                encodedBlocks, blockId, includesMemstoreTS,
+                TestHFileBlockCompatibility.Writer.DUMMY_HEADER);
 
             hbw.writeHeaderAndData(os);
             totalSize += hbw.getOnDiskSizeWithHeader();
@@ -332,8 +326,8 @@ public class TestHFileBlockCompatibility {
             expectedBuffer.rewind();
 
             // test if content matches, produce nice message
-            TestHFileBlock.assertBuffersEqual(expectedBuffer, actualBuffer, algo, encoding,
-                pread);
+            TestHFileBlock.assertBuffersEqual(expectedBuffer, actualBuffer,
+              algo, encoding, pread);
           }
           is.close();
         }
@@ -378,6 +372,10 @@ public class TestHFileBlockCompatibility {
     /** Data block encoder used for data blocks */
     private final HFileDataBlockEncoder dataBlockEncoder;
 
+    private HFileBlockEncodingContext dataBlockEncodingCtx;
+    /** block encoding context for non-data blocks */
+    private HFileBlockDefaultEncodingContext defaultBlockEncodingCtx;
+
     /**
      * The stream we use to accumulate data in uncompressed format for each
      * block. We reset this stream at the end of each block and reuse it. The
@@ -388,12 +386,6 @@ public class TestHFileBlockCompatibility {
 
     /** Compressor, which is also reused between consecutive blocks. */
     private Compressor compressor;
-
-    /** Compression output stream */
-    private CompressionOutputStream compressionStream;
-
-    /** Underlying stream to write compressed bytes to */
-    private ByteArrayOutputStream compressedByteStream;
 
     /**
      * Current block type. Set in {@link #startWriting(BlockType)}. Could be
@@ -449,19 +441,14 @@ public class TestHFileBlockCompatibility {
       this.dataBlockEncoder = dataBlockEncoder != null
           ? dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
 
+      defaultBlockEncodingCtx =
+          new HFileBlockDefaultEncodingContext(compressionAlgorithm,
+              null, DUMMY_HEADER);
+      dataBlockEncodingCtx =
+        this.dataBlockEncoder.newOnDiskDataBlockEncodingContext(
+            compressionAlgorithm, DUMMY_HEADER);
+
       baosInMemory = new ByteArrayOutputStream();
-      if (compressAlgo != NONE) {
-        compressor = compressionAlgorithm.getCompressor();
-        compressedByteStream = new ByteArrayOutputStream();
-        try {
-          compressionStream =
-              compressionAlgorithm.createPlainCompressionStream(
-                  compressedByteStream, compressor);
-        } catch (IOException e) {
-          throw new RuntimeException("Could not create compression stream " +
-              "for algorithm " + compressionAlgorithm, e);
-        }
-      }
 
       prevOffsetByType = new long[BlockType.values().length];
       for (int i = 0; i < prevOffsetByType.length; ++i)
@@ -532,48 +519,31 @@ public class TestHFileBlockCompatibility {
      */
     private void finishBlock() throws IOException {
       userDataStream.flush();
-
       // This does an array copy, so it is safe to cache this byte array.
       uncompressedBytesWithHeader = baosInMemory.toByteArray();
-      LOG.warn("Writer.finishBlock user data size with header before compression " +
-               uncompressedBytesWithHeader.length);
       prevOffset = prevOffsetByType[blockType.getId()];
 
       // We need to set state before we can package the block up for
       // cache-on-write. In a way, the block is ready, but not yet encoded or
       // compressed.
       state = State.BLOCK_READY;
-      encodeDataBlockForDisk();
-
-      doCompression();
-      putHeader(uncompressedBytesWithHeader, 0, onDiskBytesWithHeader.length,
-          uncompressedBytesWithHeader.length);
-    }
-
-    /**
-     * Do compression if it is enabled, or re-use the uncompressed buffer if
-     * it is not. Fills in the compressed block's header if doing compression.
-     */
-    private void doCompression() throws IOException {
-      // do the compression
-      if (compressAlgo != NONE) {
-        compressedByteStream.reset();
-        compressedByteStream.write(DUMMY_HEADER);
-
-        compressionStream.resetState();
-
-        compressionStream.write(uncompressedBytesWithHeader, HEADER_SIZE,
-            uncompressedBytesWithHeader.length - HEADER_SIZE);
-
-        compressionStream.flush();
-        compressionStream.finish();
-
-        onDiskBytesWithHeader = compressedByteStream.toByteArray();
-        putHeader(onDiskBytesWithHeader, 0, onDiskBytesWithHeader.length,
-            uncompressedBytesWithHeader.length);
+      if (blockType == BlockType.DATA) {
+        encodeDataBlockForDisk();
       } else {
-        onDiskBytesWithHeader = uncompressedBytesWithHeader;
+        defaultBlockEncodingCtx.compressAfterEncoding(
+            uncompressedBytesWithHeader, blockType);
+        onDiskBytesWithHeader =
+          defaultBlockEncodingCtx.getOnDiskBytesWithHeader();
       }
+
+      // put the header for on disk bytes
+      putHeader(onDiskBytesWithHeader, 0,
+          onDiskBytesWithHeader.length,
+          uncompressedBytesWithHeader.length);
+      //set the header for the uncompressed bytes (for cache-on-write)
+      putHeader(uncompressedBytesWithHeader, 0,
+          onDiskBytesWithHeader.length,
+        uncompressedBytesWithHeader.length);
     }
 
     /**
@@ -581,35 +551,20 @@ public class TestHFileBlockCompatibility {
      * {@link #dataBlockEncoder}.
      */
     private void encodeDataBlockForDisk() throws IOException {
-      if (blockType != BlockType.DATA) {
-        return; // skip any non-data block
-      }
-
       // do data block encoding, if data block encoder is set
-      ByteBuffer rawKeyValues = ByteBuffer.wrap(uncompressedBytesWithHeader,
-          HEADER_SIZE, uncompressedBytesWithHeader.length -
-          HEADER_SIZE).slice();
-      Pair<ByteBuffer, BlockType> encodingResult =
-          dataBlockEncoder.beforeWriteToDisk(rawKeyValues,
-              includesMemstoreTS, DUMMY_HEADER);
+      ByteBuffer rawKeyValues =
+          ByteBuffer.wrap(uncompressedBytesWithHeader, HEADER_SIZE,
+              uncompressedBytesWithHeader.length - HEADER_SIZE).slice();
 
-      BlockType encodedBlockType = encodingResult.getSecond();
-      if (encodedBlockType == BlockType.ENCODED_DATA) {
-        uncompressedBytesWithHeader = encodingResult.getFirst().array();
-        blockType = BlockType.ENCODED_DATA;
-      } else {
-        // There is no encoding configured. Do some extra sanity-checking.
-        if (encodedBlockType != BlockType.DATA) {
-          throw new IOException("Unexpected block type coming out of data " +
-              "block encoder: " + encodedBlockType);
-        }
-        if (userDataStream.size() !=
-            uncompressedBytesWithHeader.length - HEADER_SIZE) {
-          throw new IOException("Uncompressed size mismatch: "
-              + userDataStream.size() + " vs. "
-              + (uncompressedBytesWithHeader.length - HEADER_SIZE));
-        }
-      }
+      //do the encoding
+      dataBlockEncoder.beforeWriteToDisk(rawKeyValues,
+              includesMemstoreTS, dataBlockEncodingCtx, blockType);
+
+      uncompressedBytesWithHeader =
+          dataBlockEncodingCtx.getUncompressedBytesWithHeader();
+      onDiskBytesWithHeader =
+          dataBlockEncodingCtx.getOnDiskBytesWithHeader();
+      blockType = dataBlockEncodingCtx.getBlockType();
     }
 
     /**
@@ -802,5 +757,6 @@ public class TestHFileBlockCompatibility {
           getOnDiskSizeWithoutHeader());
     }
   }
+
 }
 

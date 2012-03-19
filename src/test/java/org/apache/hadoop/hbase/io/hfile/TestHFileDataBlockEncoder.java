@@ -30,11 +30,12 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.RedundantKVGenerator;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.ChecksumType;
-import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -117,18 +118,23 @@ public class TestHFileDataBlockEncoder {
 
   /**
    * Test writing to disk.
+   * @throws IOException
    */
   @Test
-  public void testEncodingWritePath() {
+  public void testEncodingWritePath() throws IOException {
     // usually we have just block without headers, but don't complicate that
     HFileBlock block = getSampleHFileBlock();
-    Pair<ByteBuffer, BlockType> result =
-        blockEncoder.beforeWriteToDisk(block.getBufferWithoutHeader(),
-            includesMemstoreTS, HFileBlock.DUMMY_HEADER);
+    HFileBlockEncodingContext context =
+        new HFileBlockDefaultEncodingContext(
+            Compression.Algorithm.NONE, blockEncoder.getEncodingOnDisk());
+    blockEncoder.beforeWriteToDisk(block.getBufferWithoutHeader(),
+            includesMemstoreTS, context, block.getBlockType());
 
-    int size = result.getFirst().limit() - HFileBlock.HEADER_SIZE;
-    HFileBlock blockOnDisk = new HFileBlock(result.getSecond(),
-        size, size, -1, result.getFirst(), HFileBlock.FILL_HEADER, 0,
+    byte[] encodedBytes = context.getUncompressedBytesWithHeader();
+    int size = encodedBytes.length - HFileBlock.HEADER_SIZE;
+    HFileBlock blockOnDisk =
+        new HFileBlock(context.getBlockType(), size, size, -1,
+            ByteBuffer.wrap(encodedBytes), HFileBlock.FILL_HEADER, 0,
         includesMemstoreTS, block.getMinorVersion(),
         block.getBytesPerChecksum(), block.getChecksumType(),
         block.getOnDiskDataSizeWithHeader());

@@ -21,8 +21,10 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Controls what kind of data block encoding is used. If data block encoding is
@@ -31,6 +33,7 @@ import org.apache.hadoop.hbase.util.Pair;
  */
 @InterfaceAudience.Private
 public interface HFileDataBlockEncoder {
+
   /**
    * Converts a block from the on-disk format to the in-cache format. Called in
    * the following cases:
@@ -51,12 +54,14 @@ public interface HFileDataBlockEncoder {
    * Should be called before an encoded or unencoded data block is written to
    * disk.
    * @param in KeyValues next to each other
-   * @param dummyHeader A dummy header to be written as a placeholder
-   * @return a non-null on-heap buffer containing the contents of the
-   *         HFileBlock with unfilled header and block type
+   * @param encodingResult the encoded result
+   * @param blockType block type
+   * @throws IOException
    */
-  public Pair<ByteBuffer, BlockType> beforeWriteToDisk(
-      ByteBuffer in, boolean includesMemstoreTS, byte[] dummyHeader);
+  public void beforeWriteToDisk(
+      ByteBuffer in, boolean includesMemstoreTS,
+      HFileBlockEncodingContext encodingResult,
+      BlockType blockType) throws IOException;
 
   /**
    * Decides whether we should use a scanner over encoded blocks.
@@ -84,5 +89,28 @@ public interface HFileDataBlockEncoder {
    *         whether we are doing a compaction.
    */
   public DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction);
+
+  /**
+   * Create an encoder specific encoding context object for writing. And the
+   * encoding context should also perform compression if compressionAlgorithm is
+   * valid.
+   *
+   * @param compressionAlgorithm compression algorithm
+   * @param headerBytes header bytes
+   * @return a new {@link HFileBlockEncodingContext} object
+   */
+  public HFileBlockEncodingContext newOnDiskDataBlockEncodingContext(
+      Algorithm compressionAlgorithm, byte[] headerBytes);
+
+  /**
+   * create a encoder specific decoding context for reading. And the
+   * decoding context should also do decompression if compressionAlgorithm
+   * is valid.
+   *
+   * @param compressionAlgorithm
+   * @return a new {@link HFileBlockDecodingContext} object
+   */
+  public HFileBlockDecodingContext newOnDiskDataBlockDecodingContext(
+      Algorithm compressionAlgorithm);
 
 }

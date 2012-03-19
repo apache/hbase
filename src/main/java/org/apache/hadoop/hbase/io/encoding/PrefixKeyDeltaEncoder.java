@@ -75,7 +75,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public void compressKeyValues(DataOutputStream writeHere,
+  public void internalEncodeKeyValues(DataOutputStream writeHere,
       ByteBuffer in, boolean includesMemstoreTS) throws IOException {
     in.rewind();
     ByteBufferUtils.putInt(writeHere, in.limit());

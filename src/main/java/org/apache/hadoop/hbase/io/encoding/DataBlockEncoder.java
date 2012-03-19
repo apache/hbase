@@ -17,12 +17,12 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.io.RawComparator;
 
 /**
@@ -34,19 +34,32 @@ import org.apache.hadoop.io.RawComparator;
  * <li>knowledge of Key Value format</li>
  * </ul>
  * It is designed to work fast enough to be feasible as in memory compression.
+ *
+ * After encoding, it also optionally compresses the encoded data if a
+ * compression algorithm is specified in HFileBlockEncodingContext argument of
+ * {@link #compressKeyValues(ByteBuffer, boolean, HFileBlockEncodingContext)}.
  */
 @InterfaceAudience.Private
 public interface DataBlockEncoder {
+
   /**
-   * Compress KeyValues and write them to output buffer.
-   * @param out Where to write compressed data.
-   * @param in Source of KeyValue for compression.
-   * @param includesMemstoreTS true if including memstore timestamp after every
-   *          key-value pair
-   * @throws IOException If there is an error writing to output stream.
+   * Compress KeyValues. It will first encode key value pairs, and then
+   * optionally do the compression for the encoded data.
+   *
+   * @param in
+   *          Source of KeyValue for compression.
+   * @param includesMemstoreTS
+   *          true if including memstore timestamp after every key-value pair
+   * @param encodingContext
+   *          the encoding context which will contain encoded uncompressed bytes
+   *          as well as compressed encoded bytes if compression is enabled, and
+   *          also it will reuse resources across multiple calls.
+   * @throws IOException
+   *           If there is an error writing to output stream.
    */
-  public void compressKeyValues(DataOutputStream out,
-      ByteBuffer in, boolean includesMemstoreTS) throws IOException;
+  public void compressKeyValues(
+      ByteBuffer in, boolean includesMemstoreTS,
+      HFileBlockEncodingContext encodingContext) throws IOException;
 
   /**
    * Uncompress.
@@ -92,6 +105,34 @@ public interface DataBlockEncoder {
    */
   public EncodedSeeker createSeeker(RawComparator<byte[]> comparator,
       boolean includesMemstoreTS);
+
+  /**
+   * Creates a encoder specific encoding context
+   *
+   * @param compressionAlgorithm
+   *          compression algorithm used if the final data needs to be
+   *          compressed
+   * @param encoding
+   *          encoding strategy used
+   * @param headerBytes
+   *          header bytes to be written, put a dummy header here if the header
+   *          is unknown
+   * @return a newly created encoding context
+   */
+  public HFileBlockEncodingContext newDataBlockEncodingContext(
+      Algorithm compressionAlgorithm, DataBlockEncoding encoding,
+      byte[] headerBytes);
+
+  /**
+   * Creates an encoder specific decoding context, which will prepare the data
+   * before actual decoding
+   *
+   * @param compressionAlgorithm
+   *          compression algorithm used if the data needs to be decompressed
+   * @return a newly created decoding context
+   */
+  public HFileBlockDecodingContext newDataBlockDecodingContext(
+      Algorithm compressionAlgorithm);
 
   /**
    * An interface which enable to seek while underlying data is encoded.

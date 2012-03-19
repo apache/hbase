@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
@@ -234,7 +235,7 @@ public final class Compression {
      * Creates a compression stream without any additional wrapping into
      * buffering streams.
      */
-    CompressionOutputStream createPlainCompressionStream(
+    public CompressionOutputStream createPlainCompressionStream(
         OutputStream downStream, Compressor compressor) throws IOException {
       CompressionCodec codec = getCodec(conf);
       ((Configurable)codec).getConf().setInt("io.file.buffer.size", 32 * 1024);
@@ -323,4 +324,52 @@ public final class Compression {
 
     return ret;
   }
+
+  /**
+   * Decompresses data from the given stream using the configured compression
+   * algorithm. It will throw an exception if the dest buffer does not have
+   * enough space to hold the decompressed data.
+   *
+   * @param dest
+   *          the output bytes buffer
+   * @param destOffset
+   *          start writing position of the output buffer
+   * @param bufferedBoundedStream
+   *          a stream to read compressed data from, bounded to the exact amount
+   *          of compressed data
+   * @param compressedSize
+   *          compressed data size, header not included
+   * @param uncompressedSize
+   *          uncompressed data size, header not included
+   * @param compressAlgo
+   *          compression algorithm used
+   * @throws IOException
+   */
+  public static void decompress(byte[] dest, int destOffset,
+      InputStream bufferedBoundedStream, int compressedSize,
+      int uncompressedSize, Compression.Algorithm compressAlgo)
+      throws IOException {
+
+    if (dest.length - destOffset < uncompressedSize) {
+      throw new IllegalArgumentException(
+          "Output buffer does not have enough space to hold "
+              + uncompressedSize + " decompressed bytes, available: "
+              + (dest.length - destOffset));
+    }
+
+    Decompressor decompressor = null;
+    try {
+      decompressor = compressAlgo.getDecompressor();
+      InputStream is = compressAlgo.createDecompressionStream(
+          bufferedBoundedStream, decompressor, 0);
+
+      IOUtils.readFully(is, dest, destOffset, uncompressedSize);
+      is.close();
+    } finally {
+      if (decompressor != null) {
+        compressAlgo.returnDecompressor(decompressor);
+      }
+    }
+  }
+
 }
