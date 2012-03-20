@@ -6,7 +6,10 @@ Release 0.92.2 - Unreleased
                (Uma Maheswara Rao G)
    HBASE-5568  Multi concurrent flushcache() for one region could cause data loss
                (Chunhui)
-   HBASE-5603  rolling-restart.sh script hangs when attempting to detect expiration of /hbase/master znode
+   HBASE-5603  rolling-restart.sh script hangs when attempting to detect expiration of
+               /hbase/master znode
+   HBASE-5270  Handle potential data loss due to concurrent processing of
+               processFaileOver and ServerShutdownHandler (Chunhui)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)

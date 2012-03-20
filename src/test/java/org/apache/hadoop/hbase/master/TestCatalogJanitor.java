@@ -253,6 +253,12 @@ public class TestCatalogJanitor {
         }
       };
     }
+
+    @Override
+    public boolean isServerShutdownHandlerEnabled() {
+      // TODO Auto-generated method stub
+      return true;
+    }
   }
 
   @Test

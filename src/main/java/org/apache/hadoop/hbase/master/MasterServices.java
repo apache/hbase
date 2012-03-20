@@ -73,4 +73,9 @@ public interface MasterServices extends Server {
    * @return Return table descriptors implementation.
    */
   public TableDescriptors getTableDescriptors();
+
+  /**
+   * @return true if master enables ServerShutdownHandler;
+   */
+  public boolean isServerShutdownHandlerEnabled();
 }
