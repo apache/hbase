@@ -652,7 +652,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // Everafter, the HSI combination 'server name' is what uniquely identifies
     // the incoming RegionServer.
     InetSocketAddress address = new InetSocketAddress(
-        HBaseServer.getRemoteIp().getHostName(),
+        Strings.domainNamePointerToHostName(
+          HBaseServer.getRemoteIp().getHostName()),
         serverInfo.getServerAddress().getPort());
     serverInfo.setServerAddress(new HServerAddress(address));
 

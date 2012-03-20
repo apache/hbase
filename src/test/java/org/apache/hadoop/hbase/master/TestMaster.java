@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.util.Pair;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -63,6 +65,19 @@ public class TestMaster {
   @AfterClass
   public static void afterAllTests() throws IOException {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testMasterCorrectHostnameFormatForOnlineRegions() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HMaster m = cluster.getMaster();
+    for (Map.Entry<String, HServerInfo> e:
+         m.getServerManager().getOnlineServers().entrySet()) {
+      HServerInfo hsi = e.getValue();
+      String hostName = hsi.getHostname();
+      LOG.info("Online region hostname: " + hostName);
+      assertFalse(hostName.endsWith("."));
+    }
   }
 
   @Test
