@@ -84,6 +84,11 @@ public class TestCoprocessorInterface extends HBaseTestCase {
       return delegate.isFilterDone();
     }
 
+    @Override
+    public boolean reseek(byte[] row) throws IOException {
+      return false;
+    }
+
   }
 
   public static class CoprocessorImpl extends BaseRegionObserver {
