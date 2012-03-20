@@ -3500,6 +3500,23 @@ public class HRegion implements HeapSize { // , Writable{
     KeyValueHeap getStoreHeapForTesting() {
       return storeHeap;
     }
+
+    @Override
+    public synchronized boolean reseek(byte[] row) throws IOException {
+      if (row == null) {
+        throw new IllegalArgumentException("Row cannot be null.");
+      }
+      startRegionOperation();
+      try {
+        // This could be a new thread from the last time we called next().
+        MultiVersionConsistencyControl.setThreadReadPoint(this.readPt);
+        KeyValue kv = KeyValue.createFirstOnRow(row);
+        // use request seek to make use of the lazy seek option. See HBASE-5520
+        return this.storeHeap.requestSeek(kv, true, true);
+      } finally {
+        closeRegionOperation();
+      }
+    }
   }
 
   // Utility methods
