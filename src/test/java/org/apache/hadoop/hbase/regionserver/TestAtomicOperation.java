@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.experimental.categories.Category;
 
@@ -55,10 +54,8 @@ public class TestAtomicOperation extends HBaseTestCase {
 
   HRegion region = null;
   private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final String DIR = TEST_UTIL.getDataTestDir("TestIncrement").toString();
+  private final String DIR = TEST_UTIL.getDataTestDir("TestAtomicOperation").toString();
 
-
-  private final int MAX_VERSIONS = 2;
 
   // Test names
   static final byte[] tableName = Bytes.toBytes("testtable");;
@@ -260,8 +257,8 @@ public class TestAtomicOperation extends HBaseTestCase {
 
     // create 100 threads, each will alternate between adding and
     // removing a column
-    int numThreads = 100;
-    int opsPerThread = 1000;
+    int numThreads = 10;
+    int opsPerThread = 500;
     AtomicOperation[] all = new AtomicOperation[numThreads];
 
     AtomicLong timeStamps = new AtomicLong(0);
@@ -275,9 +272,11 @@ public class TestAtomicOperation extends HBaseTestCase {
           for (int i=0; i<numOps; i++) {
             try {
               // throw in some flushes
-              if (r.nextFloat() < 0.001) {
-                LOG.debug("flushing");
-                region.flushcache();
+              if (i%10==0) {
+                synchronized(region) {
+                  LOG.debug("flushing");
+                  region.flushcache();
+                }
               }
               long ts = timeStamps.incrementAndGet();
               RowMutations rm = new RowMutations(row);
@@ -342,7 +341,7 @@ public class TestAtomicOperation extends HBaseTestCase {
 
     // create 100 threads, each will alternate between adding and
     // removing a column
-    int numThreads = 100;
+    int numThreads = 10;
     int opsPerThread = 1000;
     AtomicOperation[] all = new AtomicOperation[numThreads];
 
@@ -358,9 +357,11 @@ public class TestAtomicOperation extends HBaseTestCase {
           for (int i=0; i<numOps; i++) {
             try {
               // throw in some flushes
-              if (r.nextFloat() < 0.001) {
-                LOG.debug("flushing");
-                region.flushcache();
+              if (i%10==0) {
+                synchronized(region) {
+                  LOG.debug("flushing");
+                  region.flushcache();
+                }
               }
               long ts = timeStamps.incrementAndGet();
               List<Mutation> mrm = new ArrayList<Mutation>();
@@ -386,6 +387,7 @@ public class TestAtomicOperation extends HBaseTestCase {
               RegionScanner rs = region.getScanner(s);
               List<KeyValue> r = new ArrayList<KeyValue>();
               while(rs.next(r));
+              rs.close();
               if (r.size() != 1) {
                 LOG.debug(r);
                 failures.incrementAndGet();

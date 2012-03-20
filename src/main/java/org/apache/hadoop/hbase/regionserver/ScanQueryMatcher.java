@@ -280,10 +280,15 @@ public class ScanQueryMatcher {
       if (!keepDeletedCells) {
         // first ignore delete markers if the scanner can do so, and the
         // range does not include the marker
+        //
+        // during flushes and compactions also ignore delete markers newer
+        // than the readpoint of any open scanner, this prevents deleted
+        // rows that could still be seen by a scanner from being collected
         boolean includeDeleteMarker = seePastDeleteMarkers ?
             tr.withinTimeRange(timestamp) :
             tr.withinOrAfterTimeRange(timestamp);
-        if (includeDeleteMarker) {
+        if (includeDeleteMarker
+            && kv.getMemstoreTS() <= maxReadPointToTrackVersions) {
           this.deletes.add(bytes, offset, qualLength, timestamp, type);
         }
         // Can't early out now, because DelFam come before any other keys
