@@ -97,7 +97,7 @@ else
     if [ "$zmaster" == "null" ]; then zmaster="master"; fi
     zmaster=$zparent/$zmaster
     echo -n "Waiting for Master ZNode ${zmaster} to expire"
-    while bin/hbase zkcli stat $zmaster >/dev/null 2>&1; do
+    while ! bin/hbase zkcli stat $zmaster 2>&1 | grep "Node does not exist"; do
       echo -n "."
       sleep 1
     done
