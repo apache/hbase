@@ -131,6 +131,7 @@ public class TestCompaction extends HBaseTestCase {
       r.delete(new Delete(results.get(0).getRow()), null, false);
       if (!result) break;
     } while(true);
+    s.close();
     // Flush
     r.flushcache();
     // Major compact.
