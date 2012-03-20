@@ -692,7 +692,7 @@ public class KeyValue implements Writable, HeapSize {
       return "empty";
     }
     return keyToString(this.bytes, this.offset + ROW_OFFSET, getKeyLength()) +
-      "/vlen=" + getValueLength();
+      "/vlen=" + getValueLength() + "/ts=" + memstoreTS;
   }
 
   /**

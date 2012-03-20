@@ -404,7 +404,7 @@ public class TestKeyValue extends TestCase {
     System.err.println("kv=" + kv);
     System.err.println("kvFromKey=" + kvFromKey);
     assertEquals(kvFromKey.toString(),
-        kv.toString().replaceAll("=[0-9]+$", "=0"));
+        kv.toString().replaceAll("=[0-9]+", "=0"));
   }
 
   @org.junit.Rule
