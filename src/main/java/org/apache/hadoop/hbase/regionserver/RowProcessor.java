@@ -15,30 +15,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.coprocessor;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.io.Writable;
+
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 
 /**
  * Defines the procedure to atomically perform multiple scans and mutations
- * on one single row. The generic type parameter T is the return type of
+ * on a HRegion.
+ *
+ * This is invoked by {@link HRegion#processRowsWithLocks()}.
+ * This class performs scans and generates mutations and WAL edits.
+ * The locks and MVCC will be handled by HRegion.
+ *
+ * The generic type parameter T is the return type of
  * RowProcessor.getResult().
  */
-@InterfaceAudience.Public
-public interface RowProcessor<T> extends Writable {
+public interface RowProcessor<T> {
 
   /**
-   * Which row to perform the read-write
+   * Rows to lock while operation.
+   * They have to be sorted with <code>RowProcessor</code>
+   * to avoid deadlock.
    */
-  byte[] getRow();
+  Collection<byte[]> getRowsToLock();
 
   /**
    * Obtain the processing result
@@ -53,29 +63,40 @@ public interface RowProcessor<T> extends Writable {
   boolean readOnly();
 
   /**
-   * HRegion calls this to process a row. You should override this to create
-   * your own RowProcessor.
+   * HRegion handles the locks and MVCC and invokes this method properly.
+   * 
+   * You should override this to create your own RowProcessor.
+   *
+   * If you are doing read-modify-write here, you should consider using
+   * <code>IsolationLevel.READ_UNCOMMITTED</code> for scan because
+   * we advance MVCC after releasing the locks for optimization purpose.
    *
    * @param now the current system millisecond
-   * @param scanner the call back object the can be used to scan the row
-   * @param mutations the mutations for HRegion to do
-   * @param walEdit the wal edit here allows inject some other meta data
+   * @param region the HRegion
+   * @param mutations the output mutations to apply to memstore
+   * @param walEdit the output WAL edits to apply to write ahead log
    */
   void process(long now,
-               RowProcessor.RowScanner scanner,
+               HRegion region,
                List<KeyValue> mutations,
                WALEdit walEdit) throws IOException;
 
   /**
-   * The call back provided by HRegion to perform the scans on the row
+   * The hook to be executed before process().
+   *
+   * @param region the HRegion
+   * @param walEdit the output WAL edits to apply to write ahead log
    */
-  public interface RowScanner {
-    /**
-     * @param scan The object defines what to read
-     * @param result The scan results will be added here
-     */
-    void doScan(Scan scan, List<KeyValue> result) throws IOException;
-  }
+  void preProcess(HRegion region, WALEdit walEdit) throws IOException;
+
+  /**
+   * The hook to be executed after process().
+   *
+   * @param region the HRegion
+   * @param walEdit the output WAL edits to apply to write ahead log
+   */
+  void postProcess(HRegion region, WALEdit walEdit) throws IOException;
+
 
   /**
    * @return The replication cluster id.
