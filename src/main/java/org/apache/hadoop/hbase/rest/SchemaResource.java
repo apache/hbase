@@ -96,10 +96,13 @@ public class SchemaResource extends ResourceBase {
       ResponseBuilder response =
         Response.ok(new TableSchemaModel(getTableSchema()));
       response.cacheControl(cacheControl);
+      servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();
     } catch (TableNotFoundException e) {
+      servlet.getMetrics().incrementFailedGetRequests(1);
       throw new WebApplicationException(Response.Status.NOT_FOUND);
     } catch (IOException e) {
+      servlet.getMetrics().incrementFailedGetRequests(1);
       throw new WebApplicationException(e,
                   Response.Status.SERVICE_UNAVAILABLE);
     }
@@ -126,8 +129,10 @@ public class SchemaResource extends ResourceBase {
         admin.disableTable(name);
         admin.modifyTable(name, htd);
         admin.enableTable(name);
+        servlet.getMetrics().incrementSucessfulPutRequests(1);
       } else try {
         admin.createTable(htd);
+        servlet.getMetrics().incrementSucessfulPutRequests(1);
       } catch (TableExistsException e) {
         // race, someone else created a table with the same name
         throw new WebApplicationException(e, Response.Status.NOT_MODIFIED);
@@ -165,6 +170,7 @@ public class SchemaResource extends ResourceBase {
       } finally {
         admin.enableTable(tableResource.getName());
       }
+      servlet.getMetrics().incrementSucessfulPutRequests(1);
       return Response.ok().build();
     } catch (IOException e) {
       throw new WebApplicationException(e,
@@ -183,6 +189,7 @@ public class SchemaResource extends ResourceBase {
         return update(name, model, uriInfo, admin);
       }
     } catch (IOException e) {
+      servlet.getMetrics().incrementFailedPutRequests(1);
       throw new WebApplicationException(e, 
             Response.Status.SERVICE_UNAVAILABLE);
     }
@@ -229,10 +236,13 @@ public class SchemaResource extends ResourceBase {
         throw new IOException("could not disable table");
       }
       admin.deleteTable(tableResource.getName());
+      servlet.getMetrics().incrementSucessfulDeleteRequests(1);
       return Response.ok().build();
     } catch (TableNotFoundException e) {
+      servlet.getMetrics().incrementFailedDeleteRequests(1);
       throw new WebApplicationException(Response.Status.NOT_FOUND);
     } catch (IOException e) {
+      servlet.getMetrics().incrementFailedDeleteRequests(1);
       throw new WebApplicationException(e, 
             Response.Status.SERVICE_UNAVAILABLE);
     }

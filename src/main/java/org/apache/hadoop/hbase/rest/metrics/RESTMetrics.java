@@ -35,6 +35,19 @@ public class RESTMetrics implements Updater {
   private final RESTStatistics restStatistics;
 
   private MetricsRate requests = new MetricsRate("requests", registry);
+  private MetricsRate sucessfulGetCount =
+      new MetricsRate("sucessful.get.count", registry);
+  private MetricsRate sucessfulPutCount =
+      new MetricsRate("sucessful.put.count", registry);
+  private MetricsRate sucessfulDeleteCount =
+      new MetricsRate("sucessful.delete.count", registry);
+  
+  private MetricsRate failedGetCount =
+      new MetricsRate("failed.get.count", registry);
+  private MetricsRate failedPutCount =
+      new MetricsRate("failed.put.count", registry);
+  private MetricsRate failedDeleteCount =
+      new MetricsRate("failed.delete.count", registry);
 
   public RESTMetrics() {
     MetricsContext context = MetricsUtil.getContext("rest");
@@ -62,6 +75,12 @@ public class RESTMetrics implements Updater {
   public void doUpdates(MetricsContext unused) {
     synchronized (this) {
       requests.pushMetric(metricsRecord);
+      sucessfulGetCount.pushMetric(metricsRecord);
+      sucessfulPutCount.pushMetric(metricsRecord);
+      sucessfulDeleteCount.pushMetric(metricsRecord);
+      failedGetCount.pushMetric(metricsRecord);
+      failedPutCount.pushMetric(metricsRecord);
+      failedDeleteCount.pushMetric(metricsRecord);
     }
     this.metricsRecord.update();
   }
@@ -83,5 +102,89 @@ public class RESTMetrics implements Updater {
   public void incrementRequests(final int inc) {
     requests.inc(inc);
   }
+  
+  /**
+   * @return Count of sucessfulGetCount.
+   */
+  public float getSucessfulGetCount() {
+    return sucessfulGetCount.getPreviousIntervalValue();
+  }
+  
+  /**
+   * @param inc How much to add to sucessfulGetCount.
+   */
+  public void incrementSucessfulGetRequests(final int inc) {
+    sucessfulGetCount.inc(inc);
+  }
+  
+  /**
+   * @return Count of sucessfulGetCount.
+   */
+  public float getSucessfulPutCount() {
+    return sucessfulPutCount.getPreviousIntervalValue();
+  }
+  
+  /**
+   * @param inc How much to add to sucessfulPutCount.
+   */
+  public void incrementSucessfulPutRequests(final int inc) {
+    sucessfulPutCount.inc(inc);
+  }
+  
+  /**
+   * @return Count of failedPutCount.
+   */
+  public float getFailedPutCount() {
+    return failedPutCount.getPreviousIntervalValue();
+  }
+  
+  /**
+   * @param inc How much to add to failedPutCount.
+   */
+  public void incrementFailedPutRequests(final int inc) {
+    failedPutCount.inc(inc);
+  }
+  
+  /**
+   * @return Count of failedGetCount.
+   */
+  public float getFailedGetCount() {
+    return failedGetCount.getPreviousIntervalValue();
+  }
+  
+  /**
+   * @param inc How much to add to failedGetCount.
+   */
+  public void incrementFailedGetRequests(final int inc) {
+    failedGetCount.inc(inc);
+  }
+  
+  /**
+   * @return Count of sucessfulGetCount.
+   */
+  public float getSucessfulDeleteCount() {
+    return sucessfulDeleteCount.getPreviousIntervalValue();
+  }
+  
+  /**
+   * @param inc How much to add to sucessfulDeleteCount.
+   */
+  public void incrementSucessfulDeleteRequests(final int inc) {
+    sucessfulDeleteCount.inc(inc);
+  }
 
+  /**
+   * @return Count of failedDeleteCount.
+   */
+  public float getFailedDeleteCount() {
+    return failedDeleteCount.getPreviousIntervalValue();
+  }
+  
+  /**
+   * @param inc How much to add to failedDeleteCount.
+   */
+  public void incrementFailedDeleteRequests(final int inc) {
+    failedDeleteCount.inc(inc);
+  }
+  
 }

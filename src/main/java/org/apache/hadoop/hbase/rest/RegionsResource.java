@@ -100,10 +100,13 @@ public class RegionsResource extends ResourceBase {
       }
       ResponseBuilder response = Response.ok(model);
       response.cacheControl(cacheControl);
+      servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();
     } catch (TableNotFoundException e) {
+      servlet.getMetrics().incrementFailedGetRequests(1);
       throw new WebApplicationException(Response.Status.NOT_FOUND);
     } catch (IOException e) {
+      servlet.getMetrics().incrementFailedGetRequests(1);
       throw new WebApplicationException(e,
                   Response.Status.SERVICE_UNAVAILABLE);
     }

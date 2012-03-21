@@ -105,8 +105,10 @@ public class RowResource extends ResourceBase {
         value = generator.next();
       } while (value != null);
       model.addRow(rowModel);
+      servlet.getMetrics().incrementSucessfulGetRequests(1);
       return Response.ok(model).build();
     } catch (IOException e) {
+      servlet.getMetrics().incrementFailedGetRequests(1);
       throw new WebApplicationException(e,
                   Response.Status.SERVICE_UNAVAILABLE);
     }
@@ -133,8 +135,10 @@ public class RowResource extends ResourceBase {
       KeyValue value = generator.next();
       ResponseBuilder response = Response.ok(value.getValue());
       response.header("X-Timestamp", value.getTimestamp());
+      servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();
     } catch (IOException e) {
+      servlet.getMetrics().incrementFailedGetRequests(1);
       throw new WebApplicationException(e,
                   Response.Status.SERVICE_UNAVAILABLE);
     }
@@ -186,8 +190,10 @@ public class RowResource extends ResourceBase {
       table.put(puts);
       table.flushCommits();
       ResponseBuilder response = Response.ok();
+      servlet.getMetrics().incrementSucessfulPutRequests(1);
       return response.build();
     } catch (IOException e) {
+      servlet.getMetrics().incrementFailedPutRequests(1);
       throw new WebApplicationException(e,
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {
@@ -246,8 +252,10 @@ public class RowResource extends ResourceBase {
       if (LOG.isDebugEnabled()) {
         LOG.debug("PUT " + put.toString());
       }
+      servlet.getMetrics().incrementSucessfulPutRequests(1);
       return Response.ok().build();
     } catch (IOException e) {
+      servlet.getMetrics().incrementFailedPutRequests(1);
       throw new WebApplicationException(e,
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {
@@ -338,10 +346,12 @@ public class RowResource extends ResourceBase {
     try {
       table = pool.getTable(tableResource.getName());
       table.delete(delete);
+      servlet.getMetrics().incrementSucessfulDeleteRequests(1);
       if (LOG.isDebugEnabled()) {
         LOG.debug("DELETE " + delete.toString());
       }
     } catch (IOException e) {
+      servlet.getMetrics().incrementFailedDeleteRequests(1);
       throw new WebApplicationException(e, 
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {

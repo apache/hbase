@@ -80,8 +80,10 @@ public class RootResource extends ResourceBase {
     try {
       ResponseBuilder response = Response.ok(getTableList());
       response.cacheControl(cacheControl);
+      servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();
     } catch (IOException e) {
+      servlet.getMetrics().incrementFailedGetRequests(1);
       throw new WebApplicationException(e, 
                   Response.Status.SERVICE_UNAVAILABLE);
     }

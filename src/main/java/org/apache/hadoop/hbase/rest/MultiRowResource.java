@@ -89,8 +89,10 @@ public class MultiRowResource extends ResourceBase {
 
         model.addRow(rowModel);
       }
+      servlet.getMetrics().incrementSucessfulGetRequests(1);
       return Response.ok(model).build();
     } catch (IOException e) {
+      servlet.getMetrics().incrementFailedGetRequests(1);
       throw new WebApplicationException(e,
               Response.Status.SERVICE_UNAVAILABLE);
     }
