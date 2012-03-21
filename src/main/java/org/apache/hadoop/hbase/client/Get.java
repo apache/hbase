@@ -368,6 +368,9 @@ public class Get extends OperationWithAttributes
       }   
     }   
     map.put("totalColumns", colCount);
+    if (this.filter != null) {
+      map.put("filter", this.filter.toString());
+    }
     return map;
   }
 

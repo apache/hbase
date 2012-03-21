@@ -306,4 +306,12 @@ public class SingleColumnValueFilter extends FilterBase {
     out.writeBoolean(filterIfMissing);
     out.writeBoolean(latestVersionOnly);
   }
+
+  @Override
+  public String toString() {
+    return String.format("%s (%s, %s, %s, %s)",
+        this.getClass().getSimpleName(), Bytes.toStringBinary(this.columnFamily),
+        Bytes.toStringBinary(this.columnQualifier), this.compareOp.name(),
+        Bytes.toStringBinary(this.comparator.getValue()));
+  }
 }

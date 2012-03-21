@@ -237,4 +237,14 @@ public class DependentColumnFilter extends CompareFilter {
     out.writeBoolean(this.dropDependentColumn);    
   }
 
+  @Override
+  public String toString() {
+    return String.format("%s (%s, %s, %s, %s, %s)",
+        this.getClass().getSimpleName(),
+        Bytes.toStringBinary(this.columnFamily),
+        Bytes.toStringBinary(this.columnQualifier),
+        this.dropDependentColumn,
+        this.compareOp.name(),
+        Bytes.toStringBinary(this.comparator.getValue()));
+  }
 }

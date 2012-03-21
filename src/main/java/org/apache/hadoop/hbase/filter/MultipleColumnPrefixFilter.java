@@ -36,6 +36,7 @@ import java.util.ArrayList;
 public class MultipleColumnPrefixFilter extends FilterBase {
   protected byte [] hint = null;
   protected TreeSet<byte []> sortedPrefixes = createTreeSet();
+  private final static int MAX_LOG_PREFIXES = 5;
 
   public MultipleColumnPrefixFilter() {
     super();
@@ -135,5 +136,29 @@ public class MultipleColumnPrefixFilter extends FilterBase {
           return Bytes.compareTo (b1, 0, b1.length, b2, 0, b2.length);
         }
       });
+  }
+
+  @Override
+  public String toString() {
+    return toString(MAX_LOG_PREFIXES);
+  }
+
+  protected String toString(int maxPrefixes) {
+    StringBuilder prefixes = new StringBuilder();
+
+    int count = 0;
+    for (byte[] ba : this.sortedPrefixes) {
+      if (count >= maxPrefixes) {
+        break;
+      }
+      ++count;
+      prefixes.append(Bytes.toStringBinary(ba));
+      if (count < this.sortedPrefixes.size() && count < maxPrefixes) {
+        prefixes.append(", ");
+      }
+    }
+
+    return String.format("%s (%d/%d): [%s]", this.getClass().getSimpleName(),
+        count, this.sortedPrefixes.size(), prefixes.toString());
   }
 }

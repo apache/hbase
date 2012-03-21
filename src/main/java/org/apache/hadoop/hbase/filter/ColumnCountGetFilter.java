@@ -88,4 +88,9 @@ public class ColumnCountGetFilter extends FilterBase {
   public void write(DataOutput out) throws IOException {
     out.writeInt(this.limit);
   }
+
+  @Override
+  public String toString() {
+    return this.getClass().getSimpleName() + " " + this.limit;
+  }
 }

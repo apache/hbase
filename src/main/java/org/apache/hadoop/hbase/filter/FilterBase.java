@@ -139,4 +139,11 @@ public abstract class FilterBase implements Filter {
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
     throw new IllegalArgumentException("This method has not been implemented");
   }
+
+  /**
+   * Return filter's info for debugging and logging purpose.
+   */
+  public String toString() {
+    return this.getClass().getSimpleName();
+  }
 }
