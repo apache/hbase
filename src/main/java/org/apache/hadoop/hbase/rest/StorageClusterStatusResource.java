@@ -95,8 +95,10 @@ public class StorageClusterStatusResource extends ResourceBase {
       }
       ResponseBuilder response = Response.ok(model);
       response.cacheControl(cacheControl);
+      servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();
     } catch (IOException e) {
+      servlet.getMetrics().incrementFailedGetRequests(1);
       throw new WebApplicationException(e, 
                   Response.Status.SERVICE_UNAVAILABLE);
     }
