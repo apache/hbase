@@ -89,4 +89,9 @@ public class InclusiveStopFilter extends FilterBase {
   public void readFields(DataInput in) throws IOException {
     this.stopRowKey = Bytes.readByteArray(in);
   }
+
+  @Override
+  public String toString() {
+    return this.getClass().getSimpleName() + " " + Bytes.toStringBinary(this.stopRowKey);
+  }
 }

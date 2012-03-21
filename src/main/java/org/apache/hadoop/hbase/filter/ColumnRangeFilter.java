@@ -202,4 +202,12 @@ public class ColumnRangeFilter extends FilterBase {
         .getFamilyLength(), this.minColumn, 0, this.minColumn == null ? 0
         : this.minColumn.length);
   }
+
+  @Override
+  public String toString() {
+    return this.getClass().getSimpleName() + " "
+        + (this.minColumnInclusive ? "[" : "(") + Bytes.toStringBinary(this.minColumn)
+        + ", " + Bytes.toStringBinary(this.maxColumn)
+        + (this.maxColumnInclusive ? "]" : ")");
+  }
 }

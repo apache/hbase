@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -154,5 +155,13 @@ public abstract class CompareFilter extends FilterBase {
     out.writeUTF(compareOp.name());
     HbaseObjectWritable.writeObject(out, comparator,
       WritableByteArrayComparable.class, null);
+  }
+
+  @Override
+  public String toString() {
+    return String.format("%s (%s, %s)",
+        this.getClass().getSimpleName(),
+        this.compareOp.name(),
+        Bytes.toStringBinary(this.comparator.getValue()));
   }
 }

@@ -106,4 +106,10 @@ public class ColumnPaginationFilter extends FilterBase
     out.writeInt(this.limit);
     out.writeInt(this.offset);
   }
+
+  @Override
+  public String toString() {
+    return String.format("%s (%d, %d)", this.getClass().getSimpleName(),
+        this.limit, this.offset);
+  }
 }
