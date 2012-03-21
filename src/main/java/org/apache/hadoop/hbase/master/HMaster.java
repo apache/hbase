@@ -1822,6 +1822,19 @@ Server {
   public double getAverageLoad() {
     return this.assignmentManager.getAverageLoad();
   }
+  
+  /**
+   * Special method, only used by hbck.
+   */
+  @Override
+  public void offline(final byte[] regionName) 
+  throws IOException {
+    Pair<HRegionInfo, ServerName> pair =
+      MetaReader.getRegion(this.catalogTracker, regionName);
+    if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
+    HRegionInfo hri = pair.getFirst();
+    this.assignmentManager.regionOffline(hri);    
+  }
 
   /**
    * Utility for constructing an instance of the passed HMaster class.
