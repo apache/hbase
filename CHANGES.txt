@@ -10,6 +10,7 @@ Release 0.92.2 - Unreleased
                /hbase/master znode
    HBASE-5270  Handle potential data loss due to concurrent processing of
                processFaileOver and ServerShutdownHandler (Chunhui)
+   HBASE-5560  Avoid RegionServer GC caused by timed-out calls (Dhruba)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
