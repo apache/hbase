@@ -63,10 +63,13 @@ public class ScannerResource extends ResourceBase {
     this.tableResource = tableResource;
   }
 
-  static void delete(final String id) {
+  static boolean delete(final String id) {
     ScannerInstanceResource instance = scanners.remove(id);
     if (instance != null) {
       instance.generator.close();
+      return true;
+    } else {
+      return false;
     }
   }
 
@@ -94,16 +97,20 @@ public class ScannerResource extends ResourceBase {
       }
       UriBuilder builder = uriInfo.getAbsolutePathBuilder();
       URI uri = builder.path(id).build();
+      servlet.getMetrics().incrementSucessfulPutRequests(1);
       return Response.created(uri).build();
     } catch (IOException e) {
+      servlet.getMetrics().incrementFailedPutRequests(1);
       throw new WebApplicationException(e,
               Response.Status.SERVICE_UNAVAILABLE);
     } catch (RuntimeException e) {
+      servlet.getMetrics().incrementFailedPutRequests(1);
       if (e.getCause() instanceof TableNotFoundException) {
         throw new WebApplicationException(e, Response.Status.NOT_FOUND);
       }
       throw new WebApplicationException(e, Response.Status.BAD_REQUEST);
     } catch (Exception e) {
+      servlet.getMetrics().incrementFailedPutRequests(1);
       throw new WebApplicationException(e, Response.Status.BAD_REQUEST);
     }
   }
@@ -133,7 +140,10 @@ public class ScannerResource extends ResourceBase {
       final @PathParam("scanner") String id) {
     ScannerInstanceResource instance = scanners.get(id);
     if (instance == null) {
+      servlet.getMetrics().incrementFailedGetRequests(1);
       throw new WebApplicationException(Response.Status.NOT_FOUND);
+    } else {
+      servlet.getMetrics().incrementSucessfulGetRequests(1);
     }
     return instance;
   }

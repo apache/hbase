@@ -86,7 +86,12 @@ public class ScannerInstanceResource extends ResourceBase {
       try {
         value = generator.next();
       } catch (IllegalStateException e) {
-        ScannerResource.delete(id);
+        if (ScannerResource.delete(id)) {
+          servlet.getMetrics().incrementSucessfulDeleteRequests(1);
+        } else {
+          servlet.getMetrics().incrementFailedDeleteRequests(1);
+        }
+        servlet.getMetrics().incrementFailedGetRequests(1);
         throw new WebApplicationException(Response.Status.GONE);
       }
       if (value == null) {
@@ -122,6 +127,7 @@ public class ScannerInstanceResource extends ResourceBase {
     model.addRow(rowModel);
     ResponseBuilder response = Response.ok(model);
     response.cacheControl(cacheControl);
+    servlet.getMetrics().incrementSucessfulGetRequests(1);
     return response.build();
   }
 
@@ -146,9 +152,15 @@ public class ScannerInstanceResource extends ResourceBase {
         Base64.encodeBytes(
           KeyValue.makeColumn(value.getFamily(), value.getQualifier())));
       response.header("X-Timestamp", value.getTimestamp());
+      servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();
     } catch (IllegalStateException e) {
-      ScannerResource.delete(id);
+      if (ScannerResource.delete(id)) {
+        servlet.getMetrics().incrementSucessfulDeleteRequests(1);
+      } else {
+        servlet.getMetrics().incrementFailedDeleteRequests(1);
+      }
+      servlet.getMetrics().incrementFailedGetRequests(1);
       throw new WebApplicationException(Response.Status.GONE);
     }
   }
@@ -162,7 +174,11 @@ public class ScannerInstanceResource extends ResourceBase {
     if (servlet.isReadOnly()) {
       throw new WebApplicationException(Response.Status.FORBIDDEN);
     }
-    ScannerResource.delete(id);
+    if (ScannerResource.delete(id)) {
+      servlet.getMetrics().incrementSucessfulDeleteRequests(1);
+    } else {
+      servlet.getMetrics().incrementFailedDeleteRequests(1);
+    }
     return Response.ok().build();
   }
 }

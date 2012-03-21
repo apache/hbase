@@ -79,6 +79,7 @@ public class VersionResource extends ResourceBase {
     servlet.getMetrics().incrementRequests(1);
     ResponseBuilder response = Response.ok(new VersionModel(context));
     response.cacheControl(cacheControl);
+    servlet.getMetrics().incrementSucessfulGetRequests(1);
     return response.build();
   }
 
