@@ -10,6 +10,7 @@ Release 0.90.7 - Unreleased
 
   IMPROVEMENT
    HBASE-5588 Deprecate/remove AssignmentManager#clearRegionFromTransition
+   HBASE-5589 Add of the offline call to the Master Interface
 
 Release 0.90.6 - March 16, 2012
   INCOMPATIBLE CHANGES

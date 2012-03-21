@@ -1111,6 +1111,19 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
           e.getCause().getMessage(): ""), e);
     }
   }
+  
+  /**
+   * Special method, only used by hbck.
+   */
+  @Override
+  public void offline(final byte[] regionName) 
+  throws IOException {
+    Pair<HRegionInfo, ServerName> pair =
+      MetaReader.getRegion(this.catalogTracker, regionName);
+    if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
+    HRegionInfo hri = pair.getFirst();
+    this.assignmentManager.regionOffline(hri);    
+  }
 
 
   /**

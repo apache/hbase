@@ -184,6 +184,18 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    */
   public boolean balance();
 
+  
+  /**
+   * Offline a region from the assignment manager's in-memory state.  The
+   * region should be in a closed state and there will be no attempt to
+   * automatically reassign the region as in unassign.   This is a special
+   * method, and should only be used by experts or hbck.
+   * @param regionName Region to offline.  Will clear any existing RegionPlan
+   * if one found.
+   * @throws IOException
+   */
+  public void offline(final byte[] regionName) throws IOException;
+
   /**
    * Turn the load balancer on or off.
    * @param b If true, enable balancer. If false, disable balancer.
