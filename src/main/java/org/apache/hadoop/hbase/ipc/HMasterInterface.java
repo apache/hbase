@@ -51,6 +51,10 @@ public interface HMasterInterface extends VersionedProtocol {
   // meant all HBase RPC was broke though only one of the three RPC Interfaces
   // had changed.  This has since been undone.
   // 29:  4/3/2010 - changed ClusterStatus serialization
+  // 30: 3/20/2012 - HBASE-5589: Added offline method 
+	
+  // NOTE: Not bumped from 29 to maintain compatibility since this addition is
+  // after the v0.92.0 release.
   public static final long VERSION = 29L;
 
   /** @return true if master is available */
@@ -212,6 +216,18 @@ public interface HMasterInterface extends VersionedProtocol {
    */
   public void unassign(final byte [] regionName, final boolean force)
   throws IOException;
+
+  
+  /**
+   * Offline a region from the assignment manager's in-memory state.  The
+   * region should be in a closed state and there will be no attempt to
+   * automatically reassign the region as in unassign.   This is a special
+   * method, and should only be used by experts or hbck.
+   * @param regionName Region to offline.  Will clear any existing RegionPlan
+   * if one found.
+   * @throws IOException
+   */
+  public void offline(final byte[] regionName) throws IOException;
 
   /**
    * Run the balancer.  Will run the balancer and if regions to move, it will

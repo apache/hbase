@@ -15,6 +15,7 @@ Release 0.92.2 - Unreleased
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
+   HBASE-5589  Add of the offline call to the Master Interface
 
 Release 0.92.1 - March 17th, 2012
   INCOMPATIBLE CHANGES
