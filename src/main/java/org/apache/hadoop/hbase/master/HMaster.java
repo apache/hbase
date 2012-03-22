@@ -1118,7 +1118,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   @Override
   public void offline(final byte[] regionName) 
   throws IOException {
-    Pair<HRegionInfo, ServerName> pair =
+    Pair<HRegionInfo, HServerAddress> pair =
       MetaReader.getRegion(this.catalogTracker, regionName);
     if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
     HRegionInfo hri = pair.getFirst();
