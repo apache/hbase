@@ -104,7 +104,7 @@ public class TestMasterNoCluster {
    * @throws KeeperException
    * @throws InterruptedException
    */
-  @Test
+  @Test (timeout=30000)
   public void testStopDuringStart()
   throws IOException, KeeperException, InterruptedException {
     HMaster master = new HMaster(TESTUTIL.getConfiguration());

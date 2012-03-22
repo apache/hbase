@@ -479,7 +479,7 @@ Server {
     return new CatalogTracker(zk, conf, abortable, defaultTimeout);
   }
 
-  // Check if we should stop every second.
+  // Check if we should stop every 100ms
   private Sleeper stopSleeper = new Sleeper(100, this);
   private void loop() {
     while (!this.stopped) {
