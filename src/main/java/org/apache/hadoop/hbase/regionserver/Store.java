@@ -715,6 +715,7 @@ public class Store extends SchemaConfigured implements HeapSize {
             .withBloomType(family.getBloomFilterType())
             .withMaxKeyCount(maxKeyCount)
             .withFavoredNodes(region.getFavoredNodes())
+            .withCompression(compression)
             .build();
     // The store file writer's path does not include the CF name, so we need
     // to configure the HFile writer directly.
