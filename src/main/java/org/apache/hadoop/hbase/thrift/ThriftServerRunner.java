@@ -585,7 +585,7 @@ public class ThriftServerRunner implements Runnable {
     throws IOError {
       try{
         List<HRegionInfo> hris =
-            this.getHBaseAdmin().getTableRegions(toBytes(tableName));
+            this.getHBaseAdmin().getTableRegions(getBytes(tableName));
         List<TRegionInfo> regions = new ArrayList<TRegionInfo>();
 
         if (hris != null) {
@@ -604,18 +604,6 @@ public class ThriftServerRunner implements Runnable {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
       }
-    }
-
-    /**
-     * Convert ByteBuffer to byte array. Note that this cannot be replaced by
-     * Bytes.toBytes().
-     */
-    public static byte[] toBytes(ByteBuffer bb) {
-      byte[] result = new byte[bb.remaining()];
-      // Make a duplicate so the position doesn't change
-      ByteBuffer dup = bb.duplicate();
-      dup.get(result, 0, result.length);
-      return result;
     }
 
     @Deprecated
@@ -1349,7 +1337,7 @@ public class ThriftServerRunner implements Runnable {
     public TRegionInfo getRegionInfo(ByteBuffer searchRow) throws IOError {
       try {
         HTable table = getTable(HConstants.META_TABLE_NAME);
-        byte[] row = toBytes(searchRow);
+        byte[] row = getBytes(searchRow);
         Result startRowResult = table.getRowOrBefore(
           row, HConstants.CATALOG_FAMILY);
 
