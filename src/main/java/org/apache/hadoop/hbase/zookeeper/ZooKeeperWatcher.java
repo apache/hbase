@@ -22,9 +22,7 @@ package org.apache.hadoop.hbase.zookeeper;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 
@@ -79,9 +77,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   // Used by ZKUtil:waitForZKConnectionIfAuthenticating to wait for SASL
   // negotiation to complete
   public CountDownLatch saslLatch = new CountDownLatch(1);
-
-  // set of unassigned nodes watched
-  private Set<String> unassignedNodes = new HashSet<String>();
 
   // node names
 
@@ -177,10 +172,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
       throw new ZooKeeperConnectionException(
           prefix("Unexpected KeeperException creating base node"), e);
     }
-  }
-
-  private boolean isFinishedRetryingRecoverable(final long finished) {
-    return System.currentTimeMillis() < finished;
   }
 
   @Override

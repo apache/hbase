@@ -523,7 +523,9 @@ public class ZKUtil {
       logRetrievedMsg(zkw, znode, data, watcherSet);
       return data;
     } catch (KeeperException.NoNodeException e) {
-      LOG.debug(zkw.prefix("Unable to get data of znode " + znode + " " +
+      // This log can get pretty annoying when we cycle on 100ms waits.
+      // Enable trace if you really want to see it.
+      LOG.trace(zkw.prefix("Unable to get data of znode " + znode + " " +
         "because node does not exist (not an error)"));
       return null;
     } catch (KeeperException e) {

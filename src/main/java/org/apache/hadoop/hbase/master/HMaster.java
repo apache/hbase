@@ -24,6 +24,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,6 +44,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -51,6 +53,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -58,6 +61,7 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -154,6 +158,9 @@ Server {
 
   // RPC server for the HMaster
   private final RpcServer rpcServer;
+  // Set after we've called HBaseServer#openServer and ready to receive RPCs.
+  // Set back to false after we stop rpcServer.  Used by tests.
+  private volatile boolean rpcServerOpen = false;
 
   /**
    * This servers address.
@@ -290,17 +297,18 @@ Server {
     this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":" + isa.getPort(), this, true);
     this.rpcServer.startThreads();
     this.metrics = new MasterMetrics(getServerName().toString());
-    // initialize instant schema change settings
-    this.supportInstantSchemaChanges = conf.getBoolean(
-        "hbase.instant.schema.alter.enabled", false);
-    if (supportInstantSchemaChanges) {
-      LOG.info("Instant schema change enabled. All schema alter operations will " +
-          "happen through ZK.");
-    }
-   else {
-      LOG.info("Instant schema change disabled. All schema alter operations will " +
-          "happen normally.");
-    }
+    this.supportInstantSchemaChanges = getSupportInstantSchemaChanges(conf);
+  }
+
+  /**
+   * Get whether instant schema change is on or not.
+   * @param c
+   * @return True if instant schema enabled.
+   */
+  private boolean getSupportInstantSchemaChanges(final Configuration c) {
+    boolean b = c.getBoolean("hbase.instant.schema.alter.enabled", false);
+    LOG.debug("Instant schema change enabled=" + b + ".");
+    return b;
   }
 
   /**
@@ -418,7 +426,7 @@ Server {
    */
   private void initializeZKBasedSystemTrackers() throws IOException,
       InterruptedException, KeeperException {
-    this.catalogTracker = new CatalogTracker(this.zooKeeper, this.conf,
+    this.catalogTracker = createCatalogTracker(this.zooKeeper, this.conf,
         this, conf.getInt("hbase.master.catalog.timeout", Integer.MAX_VALUE));
     this.catalogTracker.start();
 
@@ -452,8 +460,27 @@ Server {
         ", cluster-up flag was=" + wasUp);
   }
 
+  /**
+   * Create CatalogTracker.
+   * In its own method so can intercept and mock it over in tests.
+   * @param zk If zk is null, we'll create an instance (and shut it down
+   * when {@link #stop()} is called) else we'll use what is passed.
+   * @param conf
+   * @param abortable If fatal exception we'll call abort on this.  May be null.
+   * If it is we'll use the Connection associated with the passed
+   * {@link Configuration} as our {@link Abortable}.
+   * @param defaultTimeout Timeout to use.  Pass zero for no timeout
+   * ({@link Object#wait(long)} when passed a <code>0</code> waits for ever).
+   * @throws IOException
+   */
+  CatalogTracker createCatalogTracker(final ZooKeeperWatcher zk,
+      final Configuration conf, Abortable abortable, final int defaultTimeout)
+  throws IOException {
+    return new CatalogTracker(zk, conf, abortable, defaultTimeout);
+  }
+
   // Check if we should stop every second.
-  private Sleeper stopSleeper = new Sleeper(1000, this);
+  private Sleeper stopSleeper = new Sleeper(100, this);
   private void loop() {
     while (!this.stopped) {
       stopSleeper.sleep();
@@ -505,7 +532,7 @@ Server {
 
     this.executorService = new ExecutorService(getServerName().toString());
 
-    this.serverManager = new ServerManager(this, this);
+    this.serverManager = createServerManager(this, this);
 
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
@@ -537,7 +564,7 @@ Server {
     splitLogAfterStartup(this.fileSystemManager, onlineServers);
 
     // Make sure root and meta assigned before proceeding.
-    assignRootAndMeta(status);
+    if (!assignRootAndMeta(status)) return;
     serverShutdownHandlerEnabled = true;
     this.serverManager.expireDeadNotExpiredServers();
 
@@ -596,14 +623,30 @@ Server {
   }
 
   /**
+   * Create a {@link ServerManager} instance.
+   * @param master
+   * @param services
+   * @return An instance of {@link ServerManager}
+   * @throws ZooKeeperConnectionException
+   * @throws IOException
+   */
+  ServerManager createServerManager(final Server master,
+      final MasterServices services)
+  throws IOException {
+    // We put this out here in a method so can do a Mockito.spy and stub it out
+    // w/ a mocked up ServerManager.
+    return new ServerManager(master, services);
+  }
+
+  /**
    * Check <code>-ROOT-</code> and <code>.META.</code> are assigned.  If not,
    * assign them.
    * @throws InterruptedException
    * @throws IOException
    * @throws KeeperException
-   * @return Count of regions we assigned.
+   * @return True if root and meta are healthy, assigned
    */
-  int assignRootAndMeta(MonitoredTask status)
+  boolean assignRootAndMeta(MonitoredTask status)
   throws InterruptedException, IOException, KeeperException {
     int assigned = 0;
     long timeout = this.conf.getLong("hbase.catalog.verification.timeout", 1000);
@@ -617,8 +660,9 @@ Server {
       currentRootServer = this.catalogTracker.getRootLocation();
       splitLogAndExpireIfOnline(currentRootServer);
       this.assignmentManager.assignRoot();
-      this.catalogTracker.waitForRoot();
-      //This guarantees that the transition has completed
+      // Make sure a -ROOT- location is set.
+      if (!isRootLocation()) return false;
+      // This guarantees that the transition assigning -ROOT- has completed
       this.assignmentManager.waitForAssignment(HRegionInfo.ROOT_REGIONINFO);
       assigned++;
     } else {
@@ -629,6 +673,8 @@ Server {
     // Enable the ROOT table if on process fail over the RS containing ROOT
     // was active.
     enableCatalogTables(Bytes.toString(HConstants.ROOT_TABLE_NAME));
+    // Check for stopped, just in case
+    if (this.stopped) return false;
     LOG.info("-ROOT- assigned=" + assigned + ", rit=" + rit +
       ", location=" + catalogTracker.getRootLocation());
 
@@ -658,7 +704,25 @@ Server {
     LOG.info(".META. assigned=" + assigned + ", rit=" + rit +
       ", location=" + catalogTracker.getMetaLocation());
     status.setStatus("META and ROOT assigned.");
-    return assigned;
+    return true;
+  }
+
+  /**
+   * @return True if there a root available
+   * @throws InterruptedException
+   */
+  private boolean isRootLocation() throws InterruptedException {
+    // Cycle up here in master rather than down in catalogtracker so we can
+    // check the master stopped flag every so often.
+    while (!this.stopped) {
+      try {
+        if (this.catalogTracker.waitForRoot(100) != null) break;
+      } catch (NotAllMetaRegionsOnlineException e) {
+        // Ignore.  I know -ROOT- is not online yet.
+      }
+    }
+    // We got here because we came of above loop.
+    return !this.stopped;
   }
 
   private void enableCatalogTables(String catalogTableName) {
@@ -793,7 +857,7 @@ Server {
    *  as OOMEs; it should be lightly loaded. See what HRegionServer does if
    *  need to install an unexpected exception handler.
    */
-  private void startServiceThreads() throws IOException{
+  void startServiceThreads() throws IOException{
  
    // Start the executor service pools
    this.executorService.startExecutorService(ExecutorType.MASTER_OPEN_REGION,
@@ -831,10 +895,18 @@ Server {
    
     // Start allowing requests to happen.
     this.rpcServer.openServer();
+    this.rpcServerOpen = true;
     if (LOG.isDebugEnabled()) {
       LOG.debug("Started service threads");
     }
+  }
 
+  /**
+   * Use this when trying to figure when its ok to send in rpcs.  Used by tests.
+   * @return True if we have successfully run {@link HBaseServer#openServer()}
+   */
+  boolean isRpcServerOpen() {
+    return this.rpcServerOpen;
   }
 
   private void stopServiceThreads() {
@@ -842,6 +914,7 @@ Server {
       LOG.debug("Stopping service threads");
     }
     if (this.rpcServer != null) this.rpcServer.stop();
+    this.rpcServerOpen = false;
     // Clean up and close up shop
     if (this.logCleaner!= null) this.logCleaner.interrupt();
     if (this.infoServer != null) {
@@ -908,7 +981,7 @@ Server {
     final long serverStartCode, final long serverCurrentTime)
   throws IOException {
     // Register with server manager
-    InetAddress ia = HBaseServer.getRemoteIp();
+    InetAddress ia = getRemoteInetAddress(port, serverStartCode);
     ServerName rs = this.serverManager.regionServerStartup(ia, port,
       serverStartCode, serverCurrentTime);
     // Send back some config info
@@ -916,6 +989,17 @@ Server {
     mw.put(new Text(HConstants.KEY_FOR_HOSTNAME_SEEN_BY_MASTER),
       new Text(rs.getHostname()));
     return mw;
+  }
+
+  /**
+   * @return Get remote side's InetAddress
+   * @throws UnknownHostException 
+   */
+  InetAddress getRemoteInetAddress(final int port, final long serverStartCode)
+  throws UnknownHostException {
+    // Do it out here in its own little method so can fake an address when
+    // mocking up in tests.
+    return HBaseServer.getRemoteIp();
   }
 
   /**
@@ -1255,8 +1339,6 @@ Server {
       LOG.debug("Getting AlterStatus from SchemaChangeTracker for table = "
           + Bytes.toString(tableName) + " Alter Status = "
           + alterStatus.toString());
-      int numberPending = alterStatus.getNumberOfRegionsToProcess() -
-          alterStatus.getNumberOfRegionsProcessed();
       return new Pair<Integer, Integer>(alterStatus.getNumberOfRegionsProcessed(),
           alterStatus.getNumberOfRegionsToProcess());
     } else {

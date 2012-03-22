@@ -346,6 +346,9 @@ public class AssignmentManager extends ZooKeeperListener {
     // Returns servers who have not checked in (assumed dead) and their regions
     Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers = rebuildUserRegions(onlineServers);
 
+    // This method will assign all user regions if a clean server startup or
+    // it will reconstitute master state and cleanup any leftovers from
+    // previous master process.
     processDeadServersAndRegionsInTransition(deadServers);
 
     // Recover the tables that were not fully moved to DISABLED state.
@@ -380,7 +383,8 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Process all regions that are in transition in zookeeper and also
    * processes the list of dead servers by scanning the META. 
-   * Used by master joining an cluster.
+   * Used by master joining an cluster.  If we figure this is a clean cluster
+   * startup, will assign all user regions.
    * @param deadServers
    *          Map of dead servers and their regions. Can be null.
    * @throws KeeperException
@@ -395,8 +399,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // Run through all regions.  If they are not assigned and not in RIT, then
     // its a clean cluster startup, else its a failover.
     for (Map.Entry<HRegionInfo, ServerName> e: this.regions.entrySet()) {
-      if (!e.getKey().isMetaTable()
-          && e.getValue() != null) {
+      if (!e.getKey().isMetaTable() && e.getValue() != null) {
         LOG.debug("Found " + e + " out on cluster");
         this.failover = true;
         break;
@@ -2127,7 +2130,7 @@ public class AssignmentManager extends ZooKeeperListener {
   public void waitForAssignment(HRegionInfo regionInfo)
   throws InterruptedException {
     synchronized(regions) {
-      while(!regions.containsKey(regionInfo)) {
+      while(!this.master.isStopped() && !regions.containsKey(regionInfo)) {
         // We should receive a notification, but it's
         //  better to have a timeout to recheck the condition here:
         //  it lowers the impact of a race condition if any

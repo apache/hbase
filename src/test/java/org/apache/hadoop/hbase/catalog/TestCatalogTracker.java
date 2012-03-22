@@ -340,7 +340,7 @@ public class TestCatalogTracker {
 
     // Now test waiting on root location getting set.
     Thread t = new WaitOnMetaThread(ct);
-    startWaitAliveThenWaitItLives(t, 1000);
+    startWaitAliveThenWaitItLives(t, 1);
     // Set a root location.
     hsa = setRootLocation();
     // Join the thread... should exit shortly.
@@ -511,7 +511,11 @@ public class TestCatalogTracker {
     }
 
     void doWaiting() throws InterruptedException {
-      this.ct.waitForRoot();
+      try {
+        while (this.ct.waitForRoot(100) == null);
+      } catch (NotAllMetaRegionsOnlineException e) {
+        // Ignore.
+      }
     }
   }
 
@@ -519,4 +523,3 @@ public class TestCatalogTracker {
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
-

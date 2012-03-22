@@ -185,7 +185,7 @@ public class CatalogTracker {
     this(zk, conf, HConnectionManager.getConnection(conf), abortable, defaultTimeout);
   }
 
-  CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
+  public CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
       HConnection connection, Abortable abortable, final int defaultTimeout)
   throws IOException {
     this.connection = connection;
@@ -310,16 +310,6 @@ public class CatalogTracker {
   }
 
   /**
-   * Waits indefinitely for availability of <code>-ROOT-</code>.  Used during
-   * cluster startup.
-   * @throws InterruptedException if interrupted while waiting
-   */
-  public void waitForRoot()
-  throws InterruptedException {
-    this.rootRegionTracker.blockUntilAvailable();
-  }
-
-  /**
    * Gets the current location for <code>-ROOT-</code> if available and waits
    * for up to the specified timeout if not immediately available.  Returns null
    * if the timeout elapses before root is available.
@@ -330,7 +320,7 @@ public class CatalogTracker {
    * @throws NotAllMetaRegionsOnlineException if root not available before
    * timeout
    */
-  ServerName waitForRoot(final long timeout)
+  public ServerName waitForRoot(final long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException {
     ServerName sn = rootRegionTracker.waitRootRegionLocation(timeout);
     if (sn == null) {

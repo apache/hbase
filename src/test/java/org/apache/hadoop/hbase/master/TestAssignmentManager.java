@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -145,7 +144,7 @@ public class TestAssignmentManager {
 
   /**
    * Test a balance going on at same time as a master failover
-   * 
+   *
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
@@ -383,7 +382,7 @@ public class TestAssignmentManager {
       // Make an RS Interface implementation.  Make it so a scanner can go against it.
       HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
       // Get a meta row result that has region up on SERVERNAME_A
-      Result r = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+      Result r = Mocking.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
       Mockito.when(implementation.openScanner((byte [])Mockito.any(), (Scan)Mockito.any())).
         thenReturn(System.currentTimeMillis());
       // Return a good result first and then return null to indicate end of scan
@@ -417,31 +416,6 @@ public class TestAssignmentManager {
       // Clean up all znodes
       ZKAssign.deleteAllNodes(this.watcher);
     }
-  }
-
-  /**
-   * @param sn ServerName to use making startcode and server in meta
-   * @param hri Region to serialize into HRegionInfo
-   * @return A mocked up Result that fakes a Get on a row in the
-   * <code>.META.</code> table.
-   * @throws IOException 
-   */
-  private Result getMetaTableRowResult(final HRegionInfo hri,
-      final ServerName sn)
-  throws IOException {
-    // TODO: Move to a utilities class.  More than one test case can make use
-    // of this facility.
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-      Writables.getBytes(hri)));
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-      Bytes.toBytes(sn.getHostAndPort())));
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
-      Bytes.toBytes(sn.getStartcode())));
-    return new Result(kvs);
   }
 
   /**
@@ -507,8 +481,8 @@ public class TestAssignmentManager {
    * @param region region to be created as offline
    * @param serverName server event originates from
    * @return Version of znode created.
-   * @throws KeeperException 
-   * @throws IOException 
+   * @throws KeeperException
+   * @throws IOException
    */
   // Copied from SplitTransaction rather than open the method over there in
   // the regionserver package.
@@ -567,7 +541,7 @@ public class TestAssignmentManager {
     // with an encoded name by doing a Get on .META.
     HRegionInterface ri = Mockito.mock(HRegionInterface.class);
     // Get a meta row result that has region up on SERVERNAME_A for REGIONINFO
-    Result r = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+    Result r = Mocking.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
     Mockito.when(ri .openScanner((byte[]) Mockito.any(), (Scan) Mockito.any())).
       thenReturn(System.currentTimeMillis());
     // Return good result 'r' first and then return null to indicate end of scan
