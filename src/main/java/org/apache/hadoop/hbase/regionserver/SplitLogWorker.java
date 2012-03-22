@@ -138,40 +138,45 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
 
   @Override
   public void run() {
-   try {
-    LOG.info("SplitLogWorker " + this.serverName + " starting");
-    this.watcher.registerListener(this);
-    int res;
-    // wait for master to create the splitLogZnode
-    res = -1;
-    while (res == -1) {
-      try {
-        res = ZKUtil.checkExists(watcher, watcher.splitLogZNode);
-      } catch (KeeperException e) {
-        // ignore
-        LOG.warn("Exception when checking for " + watcher.splitLogZNode +
-            " ... retrying", e);
-      }
-      if (res == -1) {
+    try {
+      LOG.info("SplitLogWorker " + this.serverName + " starting");
+      this.watcher.registerListener(this);
+      int res;
+      // wait for master to create the splitLogZnode
+      res = -1;
+      while (res == -1 && !exitWorker) {
         try {
-          LOG.info(watcher.splitLogZNode + " znode does not exist," +
-              " waiting for master to create one");
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-          LOG.debug("Interrupted while waiting for " + watcher.splitLogZNode);
-          assert exitWorker == true;
+          res = ZKUtil.checkExists(watcher, watcher.splitLogZNode);
+        } catch (KeeperException e) {
+          // ignore
+          LOG.warn("Exception when checking for " + watcher.splitLogZNode +
+              " ... retrying", e);
+        }
+        if (res == -1) {
+          try {
+            LOG.info(watcher.splitLogZNode + " znode does not exist," +
+                " waiting for master to create one");
+            Thread.sleep(1000);
+          } catch (InterruptedException e) {
+            LOG.debug("Interrupted while waiting for " + watcher.splitLogZNode
+                + (exitWorker ? "" : " (ERROR: exitWorker is not set, " +
+                "exiting anyway)"));
+            exitWorker = true;
+            break;
+          }
         }
       }
-    }
 
-    taskLoop();
-   } catch (Throwable t) {
-	   // only a logical error can cause here. Printing it out 
-	   // to make debugging easier
-	   LOG.error("unexpected error ", t);
-   } finally {
-	   LOG.info("SplitLogWorker " + this.serverName + " exiting");
-   }
+      if (!exitWorker) {
+        taskLoop();
+      }
+    } catch (Throwable t) {
+      // only a logical error can cause here. Printing it out
+      // to make debugging easier
+      LOG.error("unexpected error ", t);
+    } finally {
+      LOG.info("SplitLogWorker " + this.serverName + " exiting");
+    }
   }
 
   /**
@@ -183,7 +188,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
    * try to grab every task that has been put up
    */
   private void taskLoop() {
-    while (true) {
+    while (!exitWorker) {
       int seq_start = taskReadySeq;
       List<String> paths = getTaskList();
       if (paths == null) {
@@ -197,7 +202,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         // don't call ZKSplitLog.getNodeName() because that will lead to
         // double encoding of the path name
         grabTask(ZKUtil.joinZNode(watcher.splitLogZNode, paths.get(idx)));
-        if (exitWorker == true) {
+        if (exitWorker) {
           return;
         }
       }
@@ -207,8 +212,9 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
             taskReadyLock.wait();
           } catch (InterruptedException e) {
             LOG.info("SplitLogWorker interrupted while waiting for task," +
-              " exiting: " + e.toString());
-            assert exitWorker == true;
+                " exiting: " + e.toString() + (exitWorker ? "" :
+                " (ERROR: exitWorker is not set, exiting anyway)"));
+            exitWorker = true;
             return;
           }
         }
