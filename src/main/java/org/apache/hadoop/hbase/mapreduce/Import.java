@@ -271,6 +271,9 @@ public class Import {
     System.err.println("By default Import will load data directly into HBase. To instead generate");
     System.err.println("HFiles of data to prepare for a bulk data load, pass the option:");
     System.err.println("  -D" + BULK_OUTPUT_CONF_KEY + "=/path/for/output");
+    System.err.println("For performance consider the following options:\n"
+        + "  -Dmapred.map.tasks.speculative.execution=false\n"
+        + "  -Dmapred.reduce.tasks.speculative.execution=false");
   }
 
   /**

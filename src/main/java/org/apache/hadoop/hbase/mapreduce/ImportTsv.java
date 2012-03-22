@@ -266,7 +266,10 @@ public class ImportTsv {
       "  -D" + SKIP_LINES_CONF_KEY + "=false - fail if encountering an invalid line\n" +
       "  '-D" + SEPARATOR_CONF_KEY + "=|' - eg separate on pipes instead of tabs\n" +
       "  -D" + TIMESTAMP_CONF_KEY + "=currentTimeAsLong - use the specified timestamp for the import\n" +
-      "  -D" + MAPPER_CONF_KEY + "=my.Mapper - A user-defined Mapper to use instead of " + DEFAULT_MAPPER.getName() + "\n";
+      "  -D" + MAPPER_CONF_KEY + "=my.Mapper - A user-defined Mapper to use instead of " + DEFAULT_MAPPER.getName() + "\n" +
+      "For performance consider the following options:\n" +
+      "  -Dmapred.map.tasks.speculative.execution=false\n" +
+      "  -Dmapred.reduce.tasks.speculative.execution=false";
 
     System.err.println(usage);
   }

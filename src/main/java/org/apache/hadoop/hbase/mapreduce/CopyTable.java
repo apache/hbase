@@ -66,6 +66,7 @@ public class CopyTable {
     Job job = new Job(conf, NAME + "_" + tableName);
     job.setJarByClass(CopyTable.class);
     Scan scan = new Scan();
+    scan.setCacheBlocks(false);
     if (startTime != 0) {
       scan.setTimeRange(startTime,
           endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime);
@@ -111,7 +112,7 @@ public class CopyTable {
     if (errorMsg != null && errorMsg.length() > 0) {
       System.err.println("ERROR: " + errorMsg);
     }
-    System.err.println("Usage: CopyTable [--rs.class=CLASS] " +
+    System.err.println("Usage: CopyTable [general options] [--rs.class=CLASS] " +
         "[--rs.impl=IMPL] [--starttime=X] [--endtime=Y] " +
         "[--new.name=NEW] [--peer.adr=ADR] <tablename>");
     System.err.println();
@@ -140,6 +141,9 @@ public class CopyTable {
         "org.apache.hadoop.hbase.mapreduce.CopyTable --rs.class=org.apache.hadoop.hbase.ipc.ReplicationRegionInterface " +
         "--rs.impl=org.apache.hadoop.hbase.regionserver.replication.ReplicationRegionServer --starttime=1265875194289 --endtime=1265878794289 " +
         "--peer.adr=server1,server2,server3:2181:/hbase --families=myOldCf:myNewCf,cf2,cf3 TestTable ");
+    System.err.println("For performance consider the following general options:\n"
+        + "-Dhbase.client.scanner.caching=100\n"
+        + "-Dmapred.map.tasks.speculative.execution=false");
   }
 
   private static boolean doCommandLine(final String[] args) {
