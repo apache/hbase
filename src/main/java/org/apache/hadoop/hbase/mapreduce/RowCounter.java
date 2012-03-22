@@ -113,6 +113,7 @@ public class RowCounter {
     Job job = new Job(conf, NAME + "_" + tableName);
     job.setJarByClass(RowCounter.class);
     Scan scan = new Scan();
+    scan.setCacheBlocks(false);
     if (startKey != null && !startKey.equals("")) {
       scan.setStartRow(Bytes.toBytes(startKey));
     }
@@ -149,8 +150,11 @@ public class RowCounter {
    * Prints usage without error message
    */
   private static void printUsage() {
-    System.err.println("Usage: RowCounter <tablename> " +
+    System.err.println("Usage: RowCounter [options] <tablename> " +
         "[--range=[startKey],[endKey]] [<column1> <column2>...]");
+    System.err.println("For performance consider the following options:\n"
+        + "-Dhbase.client.scanner.caching=100\n"
+        + "-Dmapred.map.tasks.speculative.execution=false");
   }
 
   /**
