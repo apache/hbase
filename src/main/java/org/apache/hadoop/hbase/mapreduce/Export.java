@@ -166,6 +166,10 @@ public class Export {
     System.err.println("  to control/limit what is exported..");
     System.err.println("   -D " + TableInputFormat.SCAN_COLUMN_FAMILY + "=<familyName>");
     System.err.println("   -D " + RAW_SCAN + "=true");
+    System.err.println("For performance consider the following properties:\n"
+        + "   -Dhbase.client.scanner.caching=100\n"
+        + "   -Dmapred.map.tasks.speculative.execution=false\n"
+        + "   -Dmapred.reduce.tasks.speculative.execution=false");
   }
 
   /**
