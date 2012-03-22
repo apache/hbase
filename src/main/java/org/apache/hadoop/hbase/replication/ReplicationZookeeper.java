@@ -218,11 +218,11 @@ public class ReplicationZookeeper implements Closeable{
    */
   public List<ServerName> getSlavesAddresses(String peerClusterId) {
     if (this.peerClusters.size() == 0) {
-      return new ArrayList<ServerName>(0);
+      return Collections.emptyList();
     }
     ReplicationPeer peer = this.peerClusters.get(peerClusterId);
     if (peer == null) {
-      return new ArrayList<ServerName>(0);
+      return Collections.emptyList();
     }
     
     List<ServerName> addresses;
@@ -281,7 +281,7 @@ public class ReplicationZookeeper implements Closeable{
   throws KeeperException {
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, znode);
     if(children == null) {
-      return null;
+      return Collections.emptyList();
     }
     List<ServerName> addresses = new ArrayList<ServerName>(children.size());
     for (String child : children) {
