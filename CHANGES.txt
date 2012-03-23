@@ -7,6 +7,7 @@ Release 0.90.7 - Unreleased
                same region with Src and Destination as same RS. (Ram)
    HBASE-5593  Reverse DNS resolution in regionServerStartup() does not strip trailing dot
                (David S. Wang)
+   HBASE-5466  Opening a table also opens the metatable and never closes it (Ashley Taylor)
 
   IMPROVEMENT
    HBASE-5588 Deprecate/remove AssignmentManager#clearRegionFromTransition

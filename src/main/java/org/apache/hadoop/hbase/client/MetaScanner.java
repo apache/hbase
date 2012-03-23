@@ -142,25 +142,31 @@ public class MetaScanner {
       byte[] searchRow =
         HRegionInfo.createRegionName(tableName, row, HConstants.NINES,
           false);
-
-      HTable metaTable = new HTable(configuration, HConstants.META_TABLE_NAME);
-      Result startRowResult = metaTable.getRowOrBefore(searchRow,
-          HConstants.CATALOG_FAMILY);
-      if (startRowResult == null) {
-        throw new TableNotFoundException("Cannot find row in .META. for table: "
-            + Bytes.toString(tableName) + ", row=" + Bytes.toStringBinary(searchRow));
+      HTable metaTable = null;
+      try {
+        metaTable = new HTable(configuration, HConstants.META_TABLE_NAME);
+        Result startRowResult = metaTable.getRowOrBefore(searchRow,
+            HConstants.CATALOG_FAMILY);
+        if (startRowResult == null) {
+          throw new TableNotFoundException("Cannot find row in .META. for table: "
+              + Bytes.toString(tableName) + ", row=" + Bytes.toStringBinary(searchRow));
+        }
+        byte[] value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.REGIONINFO_QUALIFIER);
+        if (value == null || value.length == 0) {
+          throw new IOException("HRegionInfo was null or empty in Meta for " +
+            Bytes.toString(tableName) + ", row=" + Bytes.toStringBinary(searchRow));
+        }
+        HRegionInfo regionInfo = Writables.getHRegionInfo(value);
+  
+        byte[] rowBefore = regionInfo.getStartKey();
+        startRow = HRegionInfo.createRegionName(tableName, rowBefore,
+            HConstants.ZEROES, false);
+      } finally {
+        if (metaTable != null) {
+          metaTable.close();
+        }
       }
-      byte[] value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
-          HConstants.REGIONINFO_QUALIFIER);
-      if (value == null || value.length == 0) {
-        throw new IOException("HRegionInfo was null or empty in Meta for " +
-          Bytes.toString(tableName) + ", row=" + Bytes.toStringBinary(searchRow));
-      }
-      HRegionInfo regionInfo = Writables.getHRegionInfo(value);
-
-      byte[] rowBefore = regionInfo.getStartKey();
-      startRow = HRegionInfo.createRegionName(tableName, rowBefore,
-          HConstants.ZEROES, false);
     } else if (tableName == null || tableName.length == 0) {
       // Full META scan
       startRow = HConstants.EMPTY_START_ROW;
