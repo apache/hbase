@@ -40,7 +40,6 @@ import org.apache.hadoop.io.MultipleIOException;
  */
 public class OfflineMetaRepair {
   private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
-  HBaseFsck fsck;
 
   protected static void printUsageAndExit() {
     System.err.println("Usage: OfflineMetaRepair [opts] ");
@@ -48,6 +47,8 @@ public class OfflineMetaRepair {
     System.err
         .println("   -details          Display full report of all regions.");
     System.err.println("   -base <hdfs://>   Base Hbase Data directory");
+    System.err.println("   -fix              Auto fix as many problems as possible");
+    System.err.println("   -fixHoles         Auto fix as region holes");
     Runtime.getRuntime().exit(-2);
   }
 
@@ -63,18 +64,24 @@ public class OfflineMetaRepair {
     Configuration conf = HBaseConfiguration.create();
     conf.set("fs.defaultFS", conf.get(HConstants.HBASE_DIR));
     HBaseFsck fsck = new HBaseFsck(conf);
+    boolean fixHoles = false;
 
     // Process command-line args.
     for (int i = 0; i < args.length; i++) {
       String cmd = args[i];
       if (cmd.equals("-details")) {
-        fsck.displayFullReport();
+        fsck.setDisplayFullReport();
       } else if (cmd.equals("-base")) {
         // update hbase root dir to user-specified base
         i++;
         String path = args[i];
         conf.set(HConstants.HBASE_DIR, path);
         conf.set("fs.defaultFS", conf.get(HConstants.HBASE_DIR));
+      } else if (cmd.equals("-fixHoles")) {
+        fixHoles = true;
+      } else if (cmd.equals("-fix")) {
+        // make all fix options true
+        fixHoles = true;
       } else {
         String str = "Unknown command line option : " + cmd;
         LOG.info(str);
@@ -87,7 +94,7 @@ public class OfflineMetaRepair {
     // threads cleanly, so we do a System.exit.
     boolean success = false;
     try {
-      success = fsck.rebuildMeta();
+      success = fsck.rebuildMeta(fixHoles);
     } catch (MultipleIOException mioes) {
       for (IOException ioe : mioes.getExceptions()) {
         LOG.error("Bailed out due to:", ioe);

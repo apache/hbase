@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 
@@ -61,7 +62,7 @@ public class TestOfflineMetaRebuildHole extends OfflineMetaRebuildTestCore {
 
     // attempt to rebuild meta table from scratch
     HBaseFsck fsck = new HBaseFsck(conf);
-    assertFalse(fsck.rebuildMeta());
+    assertFalse(fsck.rebuildMeta(false));
 
     // bring up the minicluster
     TEST_UTIL.startMiniZKCluster(); // tables seem enabled by default

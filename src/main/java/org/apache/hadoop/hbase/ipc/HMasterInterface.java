@@ -217,7 +217,6 @@ public interface HMasterInterface extends VersionedProtocol {
   public void unassign(final byte [] regionName, final boolean force)
   throws IOException;
 
-  
   /**
    * Offline a region from the assignment manager's in-memory state.  The
    * region should be in a closed state and there will be no attempt to

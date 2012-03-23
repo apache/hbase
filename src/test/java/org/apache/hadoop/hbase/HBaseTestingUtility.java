@@ -1111,11 +1111,16 @@ public class HBaseTestingUtility {
     List<byte[]> rows = new ArrayList<byte[]>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
-      HRegionInfo info = Writables.getHRegionInfo(
-          result.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
+      byte[] val = result.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+      if (val == null) {
+        LOG.error("No region info for row " + Bytes.toString(result.getRow()));
+        // TODO figure out what to do for this new hosed case.
+        continue;
+      }
+      HRegionInfo info = Writables.getHRegionInfo(val);
       if (Bytes.compareTo(info.getTableName(), tableName) == 0) {
         LOG.info("getMetaTableRows: row -> " +
-            Bytes.toStringBinary(result.getRow()));
+            Bytes.toStringBinary(result.getRow()) + info);
         rows.add(result.getRow());
       }
     }

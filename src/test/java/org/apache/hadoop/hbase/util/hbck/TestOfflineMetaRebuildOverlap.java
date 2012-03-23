@@ -66,7 +66,7 @@ public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
 
     // attempt to rebuild meta table from scratch
     HBaseFsck fsck = new HBaseFsck(conf);
-    assertFalse(fsck.rebuildMeta());
+    assertFalse(fsck.rebuildMeta(false));
 
     Multimap<byte[], HbckInfo> problems = fsck.getOverlapGroups(table);
     assertEquals(1, problems.keySet().size());

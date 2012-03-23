@@ -21,6 +21,10 @@ Release 0.92.2 - Unreleased
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
    HBASE-5589  Add of the offline call to the Master Interface
 
+  NEW FEATURE
+   HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems
+
+
 Release 0.92.1 - March 17th, 2012
   INCOMPATIBLE CHANGES
    HBASE-5228  [REST] Rip out "transform" feature
