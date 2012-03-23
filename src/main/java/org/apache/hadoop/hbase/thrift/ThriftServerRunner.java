@@ -27,6 +27,7 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +50,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -357,7 +360,7 @@ public class ThriftServerRunner implements Runnable {
           tserver.getClass().getName());
     }
 
-    // login the server principal (if using secure Hadoop)   
+    // login the server principal (if using secure Hadoop)
     if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
       String machineName = Strings.domainNamePointerToHostName(
         DNS.getDefaultHost(conf.get("hbase.thrift.dns.interface", "default"),
@@ -383,7 +386,7 @@ public class ThriftServerRunner implements Runnable {
     String bindAddressStr = conf.get(BIND_CONF_KEY, DEFAULT_BIND_ADDR);
     return InetAddress.getByName(bindAddressStr);
   }
-  
+
   /**
    * The HBaseHandler is a glue object that connects Thrift RPC calls to the
    * HBase client API primarily defined in the HBaseAdmin and HTable objects.
@@ -568,23 +571,30 @@ public class ThriftServerRunner implements Runnable {
     @Override
     public List<TRegionInfo> getTableRegions(ByteBuffer tableName)
     throws IOError {
-      try{
-        List<HRegionInfo> hris =
-            this.admin.getTableRegions(toBytes(tableName));
-        List<TRegionInfo> regions = new ArrayList<TRegionInfo>();
-
-        if (hris != null) {
-          for (HRegionInfo regionInfo : hris){
-            TRegionInfo region = new TRegionInfo();
-            region.startKey = ByteBuffer.wrap(regionInfo.getStartKey());
-            region.endKey = ByteBuffer.wrap(regionInfo.getEndKey());
-            region.id = regionInfo.getRegionId();
-            region.name = ByteBuffer.wrap(regionInfo.getRegionName());
-            region.version = regionInfo.getVersion();
-            regions.add(region);
-          }
+      try {
+        HTable table = getTable(tableName);
+        Map<HRegionInfo, ServerName> regionLocations =
+            table.getRegionLocations();
+        List<TRegionInfo> results = new ArrayList<TRegionInfo>();
+        for (Map.Entry<HRegionInfo, ServerName> entry :
+            regionLocations.entrySet()) {
+          HRegionInfo info = entry.getKey();
+          ServerName serverName = entry.getValue();
+          TRegionInfo region = new TRegionInfo();
+          region.serverName = ByteBuffer.wrap(
+              Bytes.toBytes(serverName.getHostname()));
+          region.port = serverName.getPort();
+          region.startKey = ByteBuffer.wrap(info.getStartKey());
+          region.endKey = ByteBuffer.wrap(info.getEndKey());
+          region.id = info.getRegionId();
+          region.name = ByteBuffer.wrap(info.getRegionName());
+          region.version = info.getVersion();
+          results.add(region);
         }
-        return regions;
+        return results;
+      } catch (TableNotFoundException e) {
+        // Return empty list for non-existing table
+        return Collections.emptyList();
       } catch (IOException e){
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
@@ -925,7 +935,7 @@ public class ThriftServerRunner implements Runnable {
 
     @Override
     public void mutateRow(ByteBuffer tableName, ByteBuffer row,
-        List<Mutation> mutations, Map<ByteBuffer, ByteBuffer> attributes) 
+        List<Mutation> mutations, Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, IllegalArgument {
       mutateRowTs(tableName, row, mutations, HConstants.LATEST_TIMESTAMP,
                   attributes);
