@@ -8,6 +8,7 @@ Release 0.90.7 - Unreleased
    HBASE-5593  Reverse DNS resolution in regionServerStartup() does not strip trailing dot
                (David S. Wang)
    HBASE-5466  Opening a table also opens the metatable and never closes it (Ashley Taylor)
+   HBASE-5563  Add comparison of regionId to HRegionInfo#compareTo (chunhui and jmhsieh)
 
   IMPROVEMENT
    HBASE-5588 Deprecate/remove AssignmentManager#clearRegionFromTransition

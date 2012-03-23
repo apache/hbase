@@ -79,4 +79,19 @@ public class TestHRegionInfo {
     } catch (IllegalArgumentException iae) {
     }
   }
+ 
+  @Test
+  public void testComparator() {
+    String tableName = "comparatorTablename";
+    byte[] empty = new byte[0];
+    HRegionInfo older = new HRegionInfo(
+        new HTableDescriptor(tableName), empty, empty, false, 0L); 
+    HRegionInfo newer = new HRegionInfo(
+        new HTableDescriptor(tableName), empty, empty, false, 1L); 
+    assertTrue(older.compareTo(newer) < 0);
+    assertTrue(newer.compareTo(older) > 0);
+    assertTrue(older.compareTo(older) == 0);
+    assertTrue(newer.compareTo(newer) == 0);
+  }
+
 }
