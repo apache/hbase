@@ -150,7 +150,7 @@ public abstract class FSUtils {
    */
   public static FSDataOutputStream create(FileSystem fs, Path path,
       FsPermission perm, boolean overwrite) throws IOException {
-    LOG.debug("Creating file:" + path + "with permission:" + perm);
+    LOG.debug("Creating file=" + path + " with permission=" + perm);
 
     return fs.create(path, perm, overwrite,
         fs.getConf().getInt("io.file.buffer.size", 4096),

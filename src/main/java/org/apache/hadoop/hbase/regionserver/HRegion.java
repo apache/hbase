@@ -1029,19 +1029,16 @@ public class HRegion implements HeapSize { // , Writable{
     return getOpenAndCloseThreadPool(maxThreads, threadNamePrefix);
   }
 
-  private ThreadPoolExecutor getOpenAndCloseThreadPool(int maxThreads,
+  static ThreadPoolExecutor getOpenAndCloseThreadPool(int maxThreads,
       final String threadNamePrefix) {
-    ThreadPoolExecutor openAndCloseThreadPool = Threads
-        .getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
-            new ThreadFactory() {
-              private int count = 1;
+    return Threads.getBoundedCachedThreadPool(maxThreads, 30L, TimeUnit.SECONDS,
+      new ThreadFactory() {
+        private int count = 1;
 
-              public Thread newThread(Runnable r) {
-                Thread t = new Thread(r, threadNamePrefix + "-" + count++);
-                return t;
-              }
-            });
-    return openAndCloseThreadPool;
+        public Thread newThread(Runnable r) {
+          return new Thread(r, threadNamePrefix + "-" + count++);
+        }
+      });
   }
 
    /**
@@ -5235,11 +5232,11 @@ public class HRegion implements HeapSize { // , Writable{
     final HLog log = new HLog(fs, logdir, oldLogDir, c);
     try {
       processTable(fs, tableDir, log, c, majorCompact);
-     } finally {
+    } finally {
        log.close();
        // TODO: is this still right?
        BlockCache bc = new CacheConfig(c).getBlockCache();
        if (bc != null) bc.shutdown();
-     }
+    }
   }
 }
