@@ -1034,8 +1034,9 @@ public class AssignmentManager extends ZooKeeperListener {
           regionInfo = regionState.getRegion();
         } else {
           try {
-            regionInfo = MetaReader.getRegion(catalogTracker,
-                data.getRegionName()).getFirst();
+            byte[] name = data.getRegionName();
+            Pair<HRegionInfo, ServerName> p = MetaReader.getRegion(catalogTracker, name);
+            regionInfo = p.getFirst();
           } catch (IOException e) {
             LOG.info("Exception reading META doing HBCK repair operation", e);
             return;

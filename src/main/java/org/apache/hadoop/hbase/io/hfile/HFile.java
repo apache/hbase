@@ -509,8 +509,16 @@ public class HFile {
         preferredEncodingInCache, hfs);
   }
 
+  /**
+   *
+   * @param fs filesystem
+   * @param path Path to file to read
+   * @param cacheConf This must not be null.  @see {@link org.apache.hadoop.hbase.io.hfile.CacheConfig#CacheConfig(Configuration)}
+   * @return an active Reader instance.
+   */
   public static Reader createReader(
       FileSystem fs, Path path, CacheConfig cacheConf) throws IOException {
+    Preconditions.checkNotNull(cacheConf, "Cannot create Reader with null CacheConf");
     return createReaderWithEncoding(fs, path, cacheConf,
         DataBlockEncoding.NONE);
   }
