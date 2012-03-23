@@ -338,9 +338,9 @@ public class SplitTransaction {
     if (stopped || stopping) {
       // add 2nd daughter first (see HBASE-4335)
       MetaEditor.addDaughter(server.getCatalogTracker(),
-          b.getRegionInfo(), null);
+          b.getRegionInfo(), services.getServerName());
       MetaEditor.addDaughter(server.getCatalogTracker(),
-          a.getRegionInfo(), null);
+          a.getRegionInfo(), services.getServerName());
       LOG.info("Not opening daughters " +
           b.getRegionInfo().getRegionNameAsString() +
           " and " +
