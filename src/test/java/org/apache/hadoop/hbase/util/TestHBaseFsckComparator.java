@@ -26,6 +26,7 @@ import static org.mockito.Mockito.*;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
+import org.apache.hadoop.hbase.util.HBaseFsck.HdfsEntry;
 import org.apache.hadoop.hbase.util.HBaseFsck.MetaEntry;
 import org.junit.Test;
 
@@ -42,12 +43,11 @@ public class TestHBaseFsckComparator {
   byte[] keyC = Bytes.toBytes("C");
   byte[] keyEnd = Bytes.toBytes("");
 
-  static HbckInfo genHbckInfo(byte[] table, byte[] start, byte[] end, int time) {
+  static HbckInfo genHbckInfo(byte[] table, byte[] start, byte[] end, long time) {
     HTableDescriptor htd = mock(HTableDescriptor.class);
     doReturn(table).when(htd).getName();
-
-    return new HbckInfo(new MetaEntry(new HRegionInfo(htd, start, end), null, null,
-        time));
+    HRegionInfo hri = new HRegionInfo(htd, start, end, false, time);
+    return new HbckInfo(new HdfsEntry(hri), new MetaEntry(hri,null, null, time));
   }
 
   @Test

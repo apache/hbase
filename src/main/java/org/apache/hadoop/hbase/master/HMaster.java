@@ -1086,6 +1086,18 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.assignmentManager.unassign(hri, force);
     }
   }
+  
+  /**
+   * Special method, only used by hbck.
+   */
+  @Override
+  public void offline(final byte[] regionName) throws IOException {
+    Pair<HRegionInfo, HServerAddress> pair =
+      MetaReader.getRegion(this.catalogTracker, regionName);
+    if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
+    HRegionInfo hri = pair.getFirst();
+    this.assignmentManager.regionOffline(hri);
+  }
 
   /**
    * Utility for constructing an instance of the passed HMaster class.
@@ -1111,20 +1123,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
           e.getCause().getMessage(): ""), e);
     }
   }
-  
-  /**
-   * Special method, only used by hbck.
-   */
-  @Override
-  public void offline(final byte[] regionName) 
-  throws IOException {
-    Pair<HRegionInfo, HServerAddress> pair =
-      MetaReader.getRegion(this.catalogTracker, regionName);
-    if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
-    HRegionInfo hri = pair.getFirst();
-    this.assignmentManager.regionOffline(hri);    
-  }
-
 
   /**
    * @see org.apache.hadoop.hbase.master.HMasterCommandLine

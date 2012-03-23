@@ -11,8 +11,11 @@ Release 0.90.7 - Unreleased
    HBASE-5563  Add comparison of regionId to HRegionInfo#compareTo (chunhui and jmhsieh)
 
   IMPROVEMENT
-   HBASE-5588 Deprecate/remove AssignmentManager#clearRegionFromTransition
-   HBASE-5589 Add of the offline call to the Master Interface
+   HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
+   HBASE-5589  Add of the offline call to the Master Interface
+
+  NEW FEATURE
+   HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems
 
 Release 0.90.6 - March 16, 2012
   INCOMPATIBLE CHANGES

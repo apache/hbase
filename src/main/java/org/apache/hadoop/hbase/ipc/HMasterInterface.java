@@ -175,17 +175,6 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
   throws IOException;
 
   /**
-   * Run the balancer.  Will run the balancer and if regions to move, it will
-   * go ahead and do the reassignments.  Can NOT run for various reasons.  Check
-   * logs.
-   * @return True if balancer ran and was able to tell the region servers to
-   * unassign all the regions to balance (the re-assignment itself is async),
-   * false otherwise.
-   */
-  public boolean balance();
-
-  
-  /**
    * Offline a region from the assignment manager's in-memory state.  The
    * region should be in a closed state and there will be no attempt to
    * automatically reassign the region as in unassign.   This is a special
@@ -195,6 +184,16 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * @throws IOException
    */
   public void offline(final byte[] regionName) throws IOException;
+
+  /**
+   * Run the balancer.  Will run the balancer and if regions to move, it will
+   * go ahead and do the reassignments.  Can NOT run for various reasons.  Check
+   * logs.
+   * @return True if balancer ran and was able to tell the region servers to
+   * unassign all the regions to balance (the re-assignment itself is async),
+   * false otherwise.
+   */
+  public boolean balance();
 
   /**
    * Turn the load balancer on or off.

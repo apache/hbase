@@ -40,7 +40,6 @@ import org.apache.hadoop.io.MultipleIOException;
  */
 public class OfflineMetaRepair {
   private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
-  HBaseFsck fsck;
 
   protected static void printUsageAndExit() {
     System.err.println("Usage: OfflineMetaRepair [opts] ");
@@ -68,7 +67,7 @@ public class OfflineMetaRepair {
     for (int i = 0; i < args.length; i++) {
       String cmd = args[i];
       if (cmd.equals("-details")) {
-        fsck.displayFullReport();
+        fsck.setDisplayFullReport();
       } else if (cmd.equals("-base")) {
         // update hbase root dir to user-specified base
         i++;

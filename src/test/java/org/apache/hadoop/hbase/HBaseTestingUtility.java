@@ -881,7 +881,7 @@ public class HBaseTestingUtility {
       HTableDescriptor desc = info.getTableDesc();
       if (Bytes.compareTo(desc.getName(), tableName) == 0) {
         LOG.info("getMetaTableRows: row -> " +
-            Bytes.toStringBinary(result.getRow()));
+            Bytes.toStringBinary(result.getRow()) + info);
         rows.add(result.getRow());
       }
     }

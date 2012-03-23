@@ -133,6 +133,13 @@ public class AssignmentManager extends ZooKeeperListener {
    * Contains the server a given region is currently assigned to.
    * This Map and {@link #servers} are tied.  Always update this in tandem
    * with the other under a lock on {@link #regions}.
+   * 
+   * Note that HRegionInfo's compareTo/equals methods used as this map's key
+   * only compares using tablename, startkey, endkey, and offline status.
+   * This means this map doesn't handle the case where a region is deployed
+   * multiply or the case where two regions (the same everywhere but with
+   * different regionIds.
+   *
    * @see #servers
    */
   private final SortedMap<HRegionInfo,HServerInfo> regions =
@@ -604,8 +611,9 @@ public class AssignmentManager extends ZooKeeperListener {
           regionInfo = regionState.getRegion();
         } else {
           try {
-            regionInfo = MetaReader.getRegion(catalogTracker,
-                data.getRegionName()).getFirst();
+            byte[] name = data.getRegionName();
+            Pair<HRegionInfo, HServerAddress> p = MetaReader.getRegion(catalogTracker, name);
+            regionInfo = p.getFirst();
           } catch (IOException e) {
             LOG.info("Exception reading META doing HBCK repair operation", e);
             return;
