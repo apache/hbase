@@ -13,6 +13,8 @@ Release 0.92.2 - Unreleased
    HBASE-5560  Avoid RegionServer GC caused by timed-out calls (Dhruba)
    HBASE-5586  [replication] NPE in ReplicationSource when creating a stream
                to an inexistent cluster
+   HBASE-5624  Aborting regionserver when splitting region, may cause daughter
+               region not assigned by ServerShutdownHandler (Chunhui Shen)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
