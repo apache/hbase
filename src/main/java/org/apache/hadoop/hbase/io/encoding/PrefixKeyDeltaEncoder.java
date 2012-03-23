@@ -16,10 +16,14 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
@@ -91,7 +95,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public ByteBuffer uncompressKeyValues(DataInputStream source,
+  public ByteBuffer decodeKeyValues(DataInputStream source,
       int allocHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
           throws IOException {
     int decompressedSize = source.readInt();
@@ -101,7 +105,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     int prevKeyOffset = 0;
 
     while (source.available() > skipLastBytes) {
-      prevKeyOffset = uncompressKeyValue(source, buffer, prevKeyOffset);
+      prevKeyOffset = decodeKeyValue(source, buffer, prevKeyOffset);
       afterDecodingKeyValue(source, buffer, includesMemstoreTS);
     }
 
@@ -113,7 +117,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     return buffer;
   }
 
-  private int uncompressKeyValue(DataInputStream source, ByteBuffer buffer,
+  private int decodeKeyValue(DataInputStream source, ByteBuffer buffer,
       int prevKeyOffset)
           throws IOException, EncoderBufferTooSmallException {
     int keyLength = ByteBufferUtils.readCompressedInt(source);

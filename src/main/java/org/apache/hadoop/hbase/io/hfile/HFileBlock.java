@@ -33,13 +33,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
-import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
@@ -123,6 +122,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
 
   /** Just an array of bytes of the right size. */
   public static final byte[] DUMMY_HEADER = new byte[HEADER_SIZE];
+
   static final byte[] DUMMY_HEADER_NO_CHECKSUM = 
      new byte[HEADER_SIZE_NO_CHECKSUM];
 
@@ -835,10 +835,10 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       putHeader(onDiskBytesWithHeader, 0,
           onDiskBytesWithHeader.length + numBytes,
           uncompressedBytesWithHeader.length, onDiskBytesWithHeader.length);
-      //set the header for the uncompressed bytes (for cache-on-write)
+      // set the header for the uncompressed bytes (for cache-on-write)
       putHeader(uncompressedBytesWithHeader, 0,
           onDiskBytesWithHeader.length + numBytes,
-        uncompressedBytesWithHeader.length, onDiskBytesWithHeader.length);
+          uncompressedBytesWithHeader.length, onDiskBytesWithHeader.length);
 
       onDiskChecksum = new byte[numBytes];
       ChecksumUtil.generateChecksums(

@@ -41,7 +41,7 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public ByteBuffer uncompressKeyValues(DataInputStream source,
+  public ByteBuffer decodeKeyValues(DataInputStream source,
       int preserveHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
       throws IOException {
     int decompressedSize = source.readInt();

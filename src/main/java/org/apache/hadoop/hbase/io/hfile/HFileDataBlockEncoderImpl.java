@@ -221,7 +221,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
       HFileBlockEncodingContext encodeCtx) {
     DataBlockEncoder encoder = algo.getEncoder();
     try {
-      encoder.compressKeyValues(in, includesMemstoreTS, encodeCtx);
+      encoder.encodeKeyValues(in, includesMemstoreTS, encodeCtx);
     } catch (IOException e) {
       throw new RuntimeException(String.format(
           "Bug in data block encoder "

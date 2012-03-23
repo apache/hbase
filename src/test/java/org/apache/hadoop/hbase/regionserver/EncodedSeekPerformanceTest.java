@@ -173,7 +173,6 @@ public class EncodedSeekPerformanceTest {
     List<HFileDataBlockEncoder> encoders =
         new ArrayList<HFileDataBlockEncoder>();
 
-    encoders.add(new HFileDataBlockEncoderImpl(DataBlockEncoding.NONE));
     for (DataBlockEncoding encodingAlgo : DataBlockEncoding.values()) {
       encoders.add(new HFileDataBlockEncoderImpl(DataBlockEncoding.NONE,
           encodingAlgo));

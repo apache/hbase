@@ -40,9 +40,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   private static int INITIAL_KEY_BUFFER_SIZE = 512;
 
   @Override
-  public ByteBuffer uncompressKeyValues(DataInputStream source,
+  public ByteBuffer decodeKeyValues(DataInputStream source,
       boolean includesMemstoreTS) throws IOException {
-    return uncompressKeyValues(source, 0, 0, includesMemstoreTS);
+    return decodeKeyValues(source, 0, 0, includesMemstoreTS);
   }
 
   protected static class SeekerState {
@@ -329,11 +329,10 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       ByteBuffer in, boolean includesMemstoreTS) throws IOException;
 
   @Override
-  public void compressKeyValues(ByteBuffer in,
+  public void encodeKeyValues(ByteBuffer in,
       boolean includesMemstoreTS,
       HFileBlockEncodingContext blkEncodingCtx) throws IOException {
-    if (!(blkEncodingCtx.getClass().getName().equals(
-        HFileBlockDefaultEncodingContext.class.getName()))) {
+    if (blkEncodingCtx.getClass() != HFileBlockDefaultEncodingContext.class) {
       throw new IOException (this.getClass().getName() + " only accepts "
           + HFileBlockDefaultEncodingContext.class.getName() + " as the " +
           "encoding context.");

@@ -435,7 +435,7 @@ public class TestHFileBlock {
     if (encoder != null) {
       HFileBlockEncodingContext encodingCtx =
           encoder.newDataBlockEncodingContext(algo, encoding, dummyHeader);
-      encoder.compressKeyValues(rawBuf, includesMemstoreTS,
+      encoder.encodeKeyValues(rawBuf, includesMemstoreTS,
           encodingCtx);
       encodedResultWithHeader =
           encodingCtx.getUncompressedBytesWithHeader();

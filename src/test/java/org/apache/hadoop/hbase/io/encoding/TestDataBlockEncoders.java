@@ -85,7 +85,7 @@ public class TestDataBlockEncoders {
     HFileBlockEncodingContext encodingCtx =
         getEncodingContext(Compression.Algorithm.NONE, encoding);
 
-    encoder.compressKeyValues(dataset, includesMemstoreTS,
+    encoder.encodeKeyValues(dataset, includesMemstoreTS,
         encodingCtx);
 
     byte[] encodedBytesWithHeader =
@@ -106,7 +106,7 @@ public class TestDataBlockEncoders {
     DataInputStream dis = new DataInputStream(bais);
     ByteBuffer actualDataset;
     DataBlockEncoder encoder = encoding.getEncoder();
-    actualDataset = encoder.uncompressKeyValues(dis, includesMemstoreTS);
+    actualDataset = encoder.decodeKeyValues(dis, includesMemstoreTS);
 
     dataset.rewind();
     actualDataset.rewind();

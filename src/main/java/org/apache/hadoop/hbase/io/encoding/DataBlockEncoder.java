@@ -37,13 +37,13 @@ import org.apache.hadoop.io.RawComparator;
  *
  * After encoding, it also optionally compresses the encoded data if a
  * compression algorithm is specified in HFileBlockEncodingContext argument of
- * {@link #compressKeyValues(ByteBuffer, boolean, HFileBlockEncodingContext)}.
+ * {@link #encodeKeyValues(ByteBuffer, boolean, HFileBlockEncodingContext)}.
  */
 @InterfaceAudience.Private
 public interface DataBlockEncoder {
 
   /**
-   * Compress KeyValues. It will first encode key value pairs, and then
+   * Encodes KeyValues. It will first encode key value pairs, and then
    * optionally do the compression for the encoded data.
    *
    * @param in
@@ -57,24 +57,24 @@ public interface DataBlockEncoder {
    * @throws IOException
    *           If there is an error writing to output stream.
    */
-  public void compressKeyValues(
+  public void encodeKeyValues(
       ByteBuffer in, boolean includesMemstoreTS,
       HFileBlockEncodingContext encodingContext) throws IOException;
 
   /**
-   * Uncompress.
+   * Decode.
    * @param source Compressed stream of KeyValues.
    * @param includesMemstoreTS true if including memstore timestamp after every
    *          key-value pair
    * @return Uncompressed block of KeyValues.
    * @throws IOException If there is an error in source.
    */
-  public ByteBuffer uncompressKeyValues(DataInputStream source,
+  public ByteBuffer decodeKeyValues(DataInputStream source,
       boolean includesMemstoreTS) throws IOException;
 
   /**
    * Uncompress.
-   * @param source Compressed stream of KeyValues.
+   * @param source encoded stream of KeyValues.
    * @param allocateHeaderLength allocate this many bytes for the header.
    * @param skipLastBytes Do not copy n last bytes.
    * @param includesMemstoreTS true if including memstore timestamp after every
@@ -82,7 +82,7 @@ public interface DataBlockEncoder {
    * @return Uncompressed block of KeyValues.
    * @throws IOException If there is an error in source.
    */
-  public ByteBuffer uncompressKeyValues(DataInputStream source,
+  public ByteBuffer decodeKeyValues(DataInputStream source,
       int allocateHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
       throws IOException;
 

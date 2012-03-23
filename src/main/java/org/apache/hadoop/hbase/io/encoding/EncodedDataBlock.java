@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 
@@ -27,8 +29,13 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.Compressor;
+
+import com.google.common.base.Preconditions;
+import com.google.common.io.NullOutputStream;
 
 /**
  * Encapsulates a data block compressed using a particular encoding algorithm.
@@ -36,37 +43,30 @@ import org.apache.hadoop.io.compress.Compressor;
  */
 @InterfaceAudience.Private
 public class EncodedDataBlock {
-  private static final int BUFFER_SIZE = 4 * 1024;
-  protected DataBlockEncoder dataBlockEncoder;
-  ByteArrayOutputStream uncompressedOutputStream;
-  ByteBuffer uncompressedBuffer;
-  private byte[] cacheCompressData;
+  private byte[] rawKVs;
+  private ByteBuffer rawBuffer;
+  private DataBlockEncoder dataBlockEncoder;
+
+  private byte[] cachedEncodedData;
   private boolean includesMemstoreTS;
 
-  private final HFileBlockEncodingContext encodingCxt;
+  private final HFileBlockEncodingContext encodingCtx;
 
   /**
    * Create a buffer which will be encoded using dataBlockEncoder.
    * @param dataBlockEncoder Algorithm used for compression.
    * @param encoding encoding type used
+   * @param rawKVs
    */
   public EncodedDataBlock(DataBlockEncoder dataBlockEncoder,
-      boolean includesMemstoreTS, DataBlockEncoding encoding) {
+      boolean includesMemstoreTS, DataBlockEncoding encoding, byte[] rawKVs) {
+    Preconditions.checkNotNull(encoding,
+        "Cannot create encoded data block with null encoder");
     this.dataBlockEncoder = dataBlockEncoder;
-    uncompressedOutputStream = new ByteArrayOutputStream(BUFFER_SIZE);
-    encodingCxt =
+    encodingCtx =
         dataBlockEncoder.newDataBlockEncodingContext(Compression.Algorithm.NONE,
             encoding, HFileBlock.DUMMY_HEADER);
-  }
-
-  /**
-   * Add KeyValue and compress it.
-   * @param kv Item to be added and compressed.
-   */
-  public void addKv(KeyValue kv) {
-    cacheCompressData = null;
-    uncompressedOutputStream.write(
-        kv.getBuffer(), kv.getOffset(), kv.getLength());
+    this.rawKVs = rawKVs;
   }
 
   /**
@@ -74,11 +74,12 @@ public class EncodedDataBlock {
    * @return Forwards sequential iterator.
    */
   public Iterator<KeyValue> getIterator() {
-    final int uncompressedSize = uncompressedOutputStream.size();
-    final ByteArrayInputStream bais = new ByteArrayInputStream(
-        getCompressedData());
+    final int rawSize = rawKVs.length;
+    byte[] encodedDataWithHeader = getEncodedData();
+    int bytesToSkip = encodingCtx.getHeaderSize() + Bytes.SIZEOF_SHORT;
+    ByteArrayInputStream bais = new ByteArrayInputStream(encodedDataWithHeader,
+        bytesToSkip, encodedDataWithHeader.length - bytesToSkip);
     final DataInputStream dis = new DataInputStream(bais);
-
 
     return new Iterator<KeyValue>() {
       private ByteBuffer decompressedData = null;
@@ -86,7 +87,7 @@ public class EncodedDataBlock {
       @Override
       public boolean hasNext() {
         if (decompressedData == null) {
-          return uncompressedSize > 0;
+          return rawSize > 0;
         }
         return decompressedData.hasRemaining();
       }
@@ -95,7 +96,7 @@ public class EncodedDataBlock {
       public KeyValue next() {
         if (decompressedData == null) {
           try {
-            decompressedData = dataBlockEncoder.uncompressKeyValues(
+            decompressedData = dataBlockEncoder.decodeKeyValues(
                 dis, includesMemstoreTS);
           } catch (IOException e) {
             throw new RuntimeException("Problem with data block encoder, " +
@@ -129,99 +130,86 @@ public class EncodedDataBlock {
    * @return Size in bytes of compressed data.
    */
   public int getSize() {
-    return getCompressedData().length;
+    return getEncodedData().length;
   }
 
   /**
    * Find the size of compressed data assuming that buffer will be compressed
    * using given algorithm.
-   * @param compressor Algorithm used for compression.
-   * @param buffer Array to be compressed.
+   * @param algo compression algorithm
+   * @param compressor compressor already requested from codec
+   * @param inputBuffer Array to be compressed.
    * @param offset Offset to beginning of the data.
    * @param length Length to be compressed.
    * @return Size of compressed data in bytes.
+   * @throws IOException
    */
-  public static int checkCompressedSize(Compressor compressor, byte[] buffer,
-      int offset, int length) {
-    byte[] compressedBuffer = new byte[buffer.length];
-    // in fact the buffer could be of any positive size
-    compressor.setInput(buffer, offset, length);
-    compressor.finish();
-    int currentPos = 0;
-    while (!compressor.finished()) {
-      try {
-        // we don't care about compressed data,
-        // we just want to callculate number of bytes
-        currentPos += compressor.compress(compressedBuffer, 0,
-            compressedBuffer.length);
-      } catch (IOException e) {
-        throw new RuntimeException(
-            "For some reason compressor couldn't read data. " +
-            "It is likely a problem with " +
-            compressor.getClass().getName(), e);
-      }
+  public static int getCompressedSize(Algorithm algo, Compressor compressor,
+      byte[] inputBuffer, int offset, int length) throws IOException {
+    DataOutputStream compressedStream = new DataOutputStream(
+        new NullOutputStream());
+    if (compressor != null) {
+      compressor.reset();
     }
-    return currentPos;
+    OutputStream compressingStream = algo.createCompressionStream(
+        compressedStream, compressor, 0);
+
+    compressingStream.write(inputBuffer, offset, length);
+    compressingStream.flush();
+    compressingStream.close();
+
+    return compressedStream.size();
   }
 
   /**
    * Estimate size after second stage of compression (e.g. LZO).
-   * @param compressor Algorithm which will be used for compressions.
+   * @param comprAlgo compression algorithm to be used for compression
+   * @param compressor compressor corresponding to the given compression
+   *          algorithm
    * @return Size after second stage of compression.
    */
-  public int checkCompressedSize(Compressor compressor) {
-    // compress
-    byte[] compressedBytes = getCompressedData();
-    return checkCompressedSize(compressor, compressedBytes, 0,
+  public int getEncodedCompressedSize(Algorithm comprAlgo,
+      Compressor compressor) throws IOException {
+    byte[] compressedBytes = getEncodedData();
+    return getCompressedSize(comprAlgo, compressor, compressedBytes, 0,
         compressedBytes.length);
   }
 
-  private byte[] getCompressedData() {
-    // is cached
-    if (cacheCompressData != null) {
-      return cacheCompressData;
+  /** @return encoded data with header */
+  private byte[] getEncodedData() {
+    if (cachedEncodedData != null) {
+      return cachedEncodedData;
     }
-    cacheCompressData = encodeData();
-
-    return cacheCompressData;
+    cachedEncodedData = encodeData();
+    return cachedEncodedData;
   }
 
   private ByteBuffer getUncompressedBuffer() {
-    if (uncompressedBuffer == null ||
-        uncompressedBuffer.limit() < uncompressedOutputStream.size()) {
-      uncompressedBuffer = ByteBuffer.wrap(
-          uncompressedOutputStream.toByteArray());
+    if (rawBuffer == null || rawBuffer.limit() < rawKVs.length) {
+      rawBuffer = ByteBuffer.wrap(rawKVs);
     }
-    return uncompressedBuffer;
+    return rawBuffer;
   }
 
   /**
-   * Do the encoding .
-   * @return encoded byte buffer.
+   * Do the encoding, but do not cache the encoded data.
+   * @return encoded data block with header and checksum
    */
   public byte[] encodeData() {
     try {
-      this.dataBlockEncoder.compressKeyValues(
-          getUncompressedBuffer(), includesMemstoreTS, encodingCxt);
+      this.dataBlockEncoder.encodeKeyValues(
+          getUncompressedBuffer(), includesMemstoreTS, encodingCtx);
     } catch (IOException e) {
       throw new RuntimeException(String.format(
           "Bug in encoding part of algorithm %s. " +
           "Probably it requested more bytes than are available.",
           toString()), e);
     }
-    return encodingCxt.getUncompressedBytesWithHeader();
+    return encodingCtx.getUncompressedBytesWithHeader();
   }
 
   @Override
   public String toString() {
     return dataBlockEncoder.toString();
-  }
-
-  /**
-   * Get uncompressed buffer.
-   * @return The buffer.
-   */
-  public byte[] getRawKeyValues() {
-    return uncompressedOutputStream.toByteArray();
   }
 }

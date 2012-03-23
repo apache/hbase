@@ -335,7 +335,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public ByteBuffer uncompressKeyValues(DataInputStream source,
+  public ByteBuffer decodeKeyValues(DataInputStream source,
       int allocHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
       throws IOException {
     int decompressedSize = source.readInt();
