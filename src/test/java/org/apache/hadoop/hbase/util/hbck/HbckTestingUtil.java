@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util.hbck;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -28,18 +29,29 @@ import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 
 public class HbckTestingUtil {
   public static HBaseFsck doFsck(Configuration conf, boolean fix) throws Exception {
+    return doFsck(conf, fix, fix, fix, fix,fix);
+  }
+
+  public static HBaseFsck doFsck(Configuration conf, boolean fixAssignments,
+      boolean fixMeta, boolean fixHdfsHoles, boolean fixHdfsOverlaps,
+      boolean fixHdfsOrphans) throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf);
     fsck.connect();
-    fsck.displayFullReport(); // i.e. -details
+    fsck.setDisplayFullReport(); // i.e. -details
     fsck.setTimeLag(0);
-    fsck.setFixErrors(fix);
-    fsck.doWork();
+    fsck.setFixAssignments(fixAssignments);
+    fsck.setFixMeta(fixMeta);
+    fsck.setFixHdfsHoles(fixHdfsHoles);
+    fsck.setFixHdfsOverlaps(fixHdfsOverlaps);
+    fsck.setFixHdfsOrphans(fixHdfsOrphans);
+    fsck.onlineHbck();
     return fsck;
   }
 
+
   public static void assertNoErrors(HBaseFsck fsck) throws Exception {
     List<ERROR_CODE> errs = fsck.getErrors().getErrorList();
-    assertEquals(0, errs.size());
+    assertEquals(new ArrayList<ERROR_CODE>(), errs);
   }
 
   public static void assertErrors(HBaseFsck fsck, ERROR_CODE[] expectedErrors) {
