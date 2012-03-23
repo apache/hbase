@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -60,6 +62,7 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 public class TestThriftServer {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final Log LOG = LogFactory.getLog(TestThriftServer.class);
   protected static final int MAXVERSIONS = 3;
 
   private static ByteBuffer asByteBuffer(String i) {
@@ -162,13 +165,13 @@ public class TestThriftServer {
   }
 
   private static void verifyMetrics(ThriftMetrics metrics, String name, int expectValue)
-      throws Exception { 
-    MetricsContext context = MetricsUtil.getContext( 
-        ThriftMetrics.CONTEXT_NAME); 
-    metrics.doUpdates(context); 
-    OutputRecord record = context.getAllRecords().get( 
-        ThriftMetrics.CONTEXT_NAME).iterator().next(); 
-    assertEquals(expectValue, record.getMetric(name).intValue()); 
+      throws Exception {
+    MetricsContext context = MetricsUtil.getContext(
+        ThriftMetrics.CONTEXT_NAME);
+    metrics.doUpdates(context);
+    OutputRecord record = context.getAllRecords().get(
+        ThriftMetrics.CONTEXT_NAME).iterator().next();
+    assertEquals(expectValue, record.getMetric(name).intValue());
   }
 
   public static void createTestTables(Hbase.Iface handler) throws Exception {
@@ -246,7 +249,7 @@ public class TestThriftServer {
     TRowResult rowResult2 = handler.getRow(tableAname, rowBname, null).get(0);
     assertEquals(rowBname, rowResult2.row);
     assertEquals(valueCname, rowResult2.columns.get(columnAname).value);
-	  assertEquals(valueDname, rowResult2.columns.get(columnBname).value);
+    assertEquals(valueDname, rowResult2.columns.get(columnBname).value);
 
     // Apply some deletes
     handler.deleteAll(tableAname, rowAname, columnBname, null);
@@ -434,26 +437,30 @@ public class TestThriftServer {
 
   public static void doTestGetTableRegions(Hbase.Iface handler)
       throws Exception {
+    assertEquals(handler.getTableNames().size(), 0);
     handler.createTable(tableAname, getColumnDescriptors());
-    int regionCount = handler.getTableRegions(tableAname).size();
+    assertEquals(handler.getTableNames().size(), 1);
+    List<TRegionInfo> regions = handler.getTableRegions(tableAname);
+    int regionCount = regions.size();
     assertEquals("empty table should have only 1 region, " +
             "but found " + regionCount, regionCount, 1);
+    LOG.info("Region found:" + regions.get(0));
     handler.disableTable(tableAname);
     handler.deleteTable(tableAname);
     regionCount = handler.getTableRegions(tableAname).size();
     assertEquals("non-existing table should have 0 region, " +
             "but found " + regionCount, regionCount, 0);
   }
-  
+
   public void doTestFilterRegistration() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    
+
     conf.set("hbase.thrift.filters", "MyFilter:filterclass");
 
     ThriftServerRunner.registerFilters(conf);
-    
+
     Map<String, String> registeredFilters = ParseFilter.getAllFilters();
-    
+
     assertEquals("filterclass", registeredFilters.get("MyFilter"));
   }
 
