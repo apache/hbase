@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -41,8 +42,8 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
-import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
@@ -50,8 +51,8 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -330,7 +331,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    ToolRunner.run(new LoadIncrementalHFiles(), args);
+    int ret =
+      ToolRunner.run(new LoadIncrementalHFiles(HBaseConfiguration.create()),
+          args);
+    System.exit(ret);
   }
 
 }
