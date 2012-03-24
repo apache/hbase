@@ -270,7 +270,29 @@ implements WritableComparable<HServerLoad> {
     public long getWriteRequestsCount() {
       return writeRequestsCount;
     }
+    
+    /**
+     * @return The current total size of root-level indexes for the region, in KB.
+     */
+    public int getRootIndexSizeKB() {
+      return rootIndexSizeKB;
+    }
+    
+    /**
+     * @return The total size of all index blocks, not just the root level, in KB.
+     */
+    public int getTotalStaticIndexSizeKB() {
+      return totalStaticIndexSizeKB;
+    }
 
+    /**
+     * @return The total size of all Bloom filter blocks, not just loaded into the
+     * block cache, in KB.
+     */
+    public int getTotalStaticBloomSizeKB() {
+      return totalStaticBloomSizeKB;
+    }
+    
     /**
      * @return the total number of kvs in current compaction
      */

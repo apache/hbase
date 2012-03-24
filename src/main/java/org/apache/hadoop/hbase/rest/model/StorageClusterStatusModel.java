@@ -82,6 +82,13 @@ import com.google.protobuf.ByteString;
  *   &lt;attribute name="storefileSizeMB" type="int"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="memstoreSizeMB" type="int"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="storefileIndexSizeMB" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="readRequestsCount" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="writeRequestsCount" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="rootIndexSizeKB" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="totalStaticIndexSizeKB" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="totalStaticBloomSizeKB" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="totalCompactingKVs" type="int"&gt;&lt;/attribute&gt;
+ *   &lt;attribute name="currentCompactedKVs" type="int"&gt;&lt;/attribute&gt;
  * &lt;/complexType&gt;
  * </pre>
  */
@@ -105,6 +112,13 @@ public class StorageClusterStatusModel
 	    private int storefileSizeMB;
 	    private int memstoreSizeMB;
 	    private int storefileIndexSizeMB;
+	    private long readRequestsCount;
+	    private long writeRequestsCount;
+	    private int rootIndexSizeKB;
+	    private int totalStaticIndexSizeKB;
+	    private int totalStaticBloomSizeKB;
+	    private long totalCompactingKVs;
+	    private long currentCompactedKVs;
 
 	    /**
 	     * Default constructor
@@ -129,13 +143,23 @@ public class StorageClusterStatusModel
 	     * @param storefileIndexSizeMB total size of store file indexes, in MB
 	     */
 	    public Region(byte[] name, int stores, int storefiles,
-          int storefileSizeMB, int memstoreSizeMB, int storefileIndexSizeMB) {
+          int storefileSizeMB, int memstoreSizeMB, int storefileIndexSizeMB,
+          long readRequestsCount, long writeRequestsCount, int rootIndexSizeKB,
+          int totalStaticIndexSizeKB, int totalStaticBloomSizeKB,
+          long totalCompactingKVs, long currentCompactedKVs) {
         this.name = name;
         this.stores = stores;
         this.storefiles = storefiles;
         this.storefileSizeMB = storefileSizeMB;
         this.memstoreSizeMB = memstoreSizeMB;
         this.storefileIndexSizeMB = storefileIndexSizeMB;
+        this.readRequestsCount = readRequestsCount;
+        this.writeRequestsCount = writeRequestsCount;
+        this.rootIndexSizeKB = rootIndexSizeKB;
+        this.totalStaticIndexSizeKB = totalStaticIndexSizeKB;
+        this.totalStaticBloomSizeKB = totalStaticBloomSizeKB;
+        this.totalCompactingKVs = totalCompactingKVs;
+        this.currentCompactedKVs = currentCompactedKVs;
       }
 
       /**
@@ -185,7 +209,117 @@ public class StorageClusterStatusModel
       public int getStorefileIndexSizeMB() {
         return storefileIndexSizeMB;
       }
+      
+      /**
+       * @return the current total read requests made to region
+       */
+      @XmlAttribute
+      public long getReadRequestsCount() {
+        return readRequestsCount;
+      }
 
+      /**
+       * @return the current total write requests made to region
+       */
+      @XmlAttribute
+      public long getWriteRequestsCount() {
+        return writeRequestsCount;
+      }
+
+      /**
+       * @return The current total size of root-level indexes for the region, in KB.
+       */
+      @XmlAttribute
+      public int getRootIndexSizeKB() {
+        return rootIndexSizeKB;
+      }
+
+      /**
+       * @return The total size of static index, in KB
+       */
+      @XmlAttribute
+      public int getTotalStaticIndexSizeKB() {
+        return totalStaticIndexSizeKB;
+      }
+
+      /**
+       * @return The total size of static bloom, in KB
+       */
+      @XmlAttribute
+      public int getTotalStaticBloomSizeKB() {
+        return totalStaticBloomSizeKB;
+      }
+      
+      /**
+       * @return The total number of compacting key-values 
+       */
+      @XmlAttribute
+      public long getTotalCompactingKVs() {
+        return totalCompactingKVs;
+      }
+
+      /**
+       * @return The number of current compacted key-values
+       */
+      @XmlAttribute
+      public long getCurrentCompactedKVs() {
+        return currentCompactedKVs;
+      }
+
+      /**
+       * @param readRequestsCount The current total read requests made to region
+       */
+      public void setReadRequestsCount(long readRequestsCount) {
+        this.readRequestsCount = readRequestsCount;
+      }
+      
+      /**
+       * @param rootIndexSizeKB The current total size of root-level indexes
+       *                        for the region, in KB
+       */
+      public void setRootIndexSizeKB(int rootIndexSizeKB) {
+        this.rootIndexSizeKB = rootIndexSizeKB;
+      }
+      
+      /**
+       * @param writeRequestsCount The current total write requests made to region
+       */
+      public void setWriteRequestsCount(long writeRequestsCount) {
+        this.writeRequestsCount = writeRequestsCount;
+      }
+      
+      /**
+       * @param currentCompactedKVs The completed count of key values
+       *                            in currently running compaction
+       */
+      public void setCurrentCompactedKVs(long currentCompactedKVs) {
+        this.currentCompactedKVs = currentCompactedKVs;
+      }
+      
+      /**
+       * @param totalCompactingKVs The total compacting key values
+       *                           in currently running compaction
+       */
+      public void setTotalCompactingKVs(long totalCompactingKVs) {
+        this.totalCompactingKVs = totalCompactingKVs;
+      }
+      
+      /**
+       * @param totalStaticBloomSizeKB The total size of all Bloom filter blocks,
+       *                               not just loaded into the block cache, in KB.
+       */
+      public void setTotalStaticBloomSizeKB(int totalStaticBloomSizeKB) {
+        this.totalStaticBloomSizeKB = totalStaticBloomSizeKB;
+      }
+      
+      /**
+       * @param totalStaticIndexSizeKB The total size of all index blocks,
+       *                               not just the root level, in KB.
+       */
+      public void setTotalStaticIndexSizeKB(int totalStaticIndexSizeKB) {
+        this.totalStaticIndexSizeKB = totalStaticIndexSizeKB;
+      }
+      
       /**
 	     * @param name the region name
 	     */
@@ -241,9 +375,14 @@ public class StorageClusterStatusModel
      * @param name the region name
      */
     public void addRegion(byte[] name, int stores, int storefiles,
-        int storefileSizeMB, int memstoreSizeMB, int storefileIndexSizeMB) {
+        int storefileSizeMB, int memstoreSizeMB, int storefileIndexSizeMB,
+        long readRequestsCount, long writeRequestsCount, int rootIndexSizeKB,
+        int totalStaticIndexSizeKB, int totalStaticBloomSizeKB,
+        long totalCompactingKVs, long currentCompactedKVs) { 
       regions.add(new Region(name, stores, storefiles, storefileSizeMB,
-        memstoreSizeMB, storefileIndexSizeMB));
+        memstoreSizeMB, storefileIndexSizeMB, readRequestsCount,
+        writeRequestsCount, rootIndexSizeKB, totalStaticIndexSizeKB,
+        totalStaticBloomSizeKB, totalCompactingKVs, currentCompactedKVs));
     }
 
     /**
@@ -530,6 +669,20 @@ public class StorageClusterStatusModel
           sb.append(region.memstoreSizeMB);
           sb.append("\n            storefileIndexSizeMB=");
           sb.append(region.storefileIndexSizeMB);
+          sb.append("\n            readRequestsCount=");
+          sb.append(region.readRequestsCount);
+          sb.append("\n            writeRequestsCount=");
+          sb.append(region.writeRequestsCount);
+          sb.append("\n            rootIndexSizeKB=");
+          sb.append(region.rootIndexSizeKB);
+          sb.append("\n            totalStaticIndexSizeKB=");
+          sb.append(region.totalStaticIndexSizeKB);
+          sb.append("\n            totalStaticBloomSizeKB=");
+          sb.append(region.totalStaticBloomSizeKB);
+          sb.append("\n            totalCompactingKVs=");
+          sb.append(region.totalCompactingKVs);
+          sb.append("\n            currentCompactedKVs=");
+          sb.append(region.currentCompactedKVs);
           sb.append('\n');
         }
         sb.append('\n');
@@ -547,7 +700,7 @@ public class StorageClusterStatusModel
     }
 	  return sb.toString();
 	}
-
+	
   @Override
   public byte[] createProtobufOutput() {
     StorageClusterStatus.Builder builder = StorageClusterStatus.newBuilder();
@@ -571,6 +724,13 @@ public class StorageClusterStatusModel
         regionBuilder.setStorefileSizeMB(region.storefileSizeMB);
         regionBuilder.setMemstoreSizeMB(region.memstoreSizeMB);
         regionBuilder.setStorefileIndexSizeMB(region.storefileIndexSizeMB);
+        regionBuilder.setReadRequestsCount(region.readRequestsCount);
+        regionBuilder.setWriteRequestsCount(region.writeRequestsCount);
+        regionBuilder.setRootIndexSizeKB(region.rootIndexSizeKB);
+        regionBuilder.setTotalStaticIndexSizeKB(region.totalStaticIndexSizeKB);
+        regionBuilder.setTotalStaticBloomSizeKB(region.totalStaticBloomSizeKB);
+        regionBuilder.setTotalCompactingKVs(region.totalCompactingKVs);
+        regionBuilder.setCurrentCompactedKVs(region.currentCompactedKVs);
         nodeBuilder.addRegions(regionBuilder);
       }
       builder.addLiveNodes(nodeBuilder);
@@ -609,7 +769,14 @@ public class StorageClusterStatusModel
           region.getStorefiles(),
           region.getStorefileSizeMB(),
           region.getMemstoreSizeMB(),
-          region.getStorefileIndexSizeMB());
+          region.getStorefileIndexSizeMB(),
+          region.getReadRequestsCount(),
+          region.getWriteRequestsCount(),
+          region.getRootIndexSizeKB(),
+          region.getTotalStaticIndexSizeKB(),
+          region.getTotalStaticBloomSizeKB(),
+          region.getTotalCompactingKVs(),
+          region.getCurrentCompactedKVs());
       }
     }
     for (String node: builder.getDeadNodesList()) {
