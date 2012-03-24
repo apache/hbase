@@ -1667,6 +1667,7 @@ public class AssignmentManager extends ZooKeeperListener {
       HServerInfo regionLocation = region.getSecond();
       HRegionInfo regionInfo = region.getFirst();
       String tableName = regionInfo.getTableDesc().getNameAsString();
+      if (regionInfo.isOffline() && regionInfo.isSplit()) continue;
       
       if (regionLocation == null) {
         // Region not being served, add to region map with no assignment

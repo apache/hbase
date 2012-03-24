@@ -9,6 +9,7 @@ Release 0.90.7 - Unreleased
                (David S. Wang)
    HBASE-5466  Opening a table also opens the metatable and never closes it (Ashley Taylor)
    HBASE-5563  Add comparison of regionId to HRegionInfo#compareTo (chunhui and jmhsieh)
+   HBASE-5615  The master never does balance because of balancing the parent region (Xufeng)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
