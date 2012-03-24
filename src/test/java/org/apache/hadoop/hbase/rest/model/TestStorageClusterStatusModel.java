@@ -45,19 +45,25 @@ public class TestStorageClusterStatusModel extends TestCase {
       " name=\"test1\" maxHeapSizeMB=\"1024\" heapSizeMB=\"128\">" + 
         "<Region stores=\"1\" storefiles=\"1\" storefileSizeMB=\"0\"" + 
         " storefileIndexSizeMB=\"0\" name=\"LVJPT1QtLCww\"" + 
-        " memstoreSizeMB=\"0\"/></Node>" + 
+        " memstoreSizeMB=\"0\" readRequestsCount=\"1\"" +
+        " writeRequestsCount=\"2\" rootIndexSizeKB=\"1\"" +
+        " totalStaticIndexSizeKB=\"1\" totalStaticBloomSizeKB=\"1\"" +
+        " totalCompactingKVs=\"1\" currentCompactedKVs=\"1\"/></Node>" + 
       "<Node startCode=\"1245239331198\" requests=\"0\" name=\"test2\"" + 
         " maxHeapSizeMB=\"1024\" heapSizeMB=\"512\">" + 
         "<Region stores=\"1\" storefiles=\"1\" storefileSizeMB=\"0\"" +
         " storefileIndexSizeMB=\"0\" name=\"Lk1FVEEuLCwxMjQ2MDAwMDQzNzI0\"" +
-        " memstoreSizeMB=\"0\"/></Node>"+
+        " memstoreSizeMB=\"0\" readRequestsCount=\"1\"" +
+        " writeRequestsCount=\"2\" rootIndexSizeKB=\"1\"" +
+        " totalStaticIndexSizeKB=\"1\" totalStaticBloomSizeKB=\"1\"" +
+        " totalCompactingKVs=\"1\" currentCompactedKVs=\"1\"/></Node>"+
     "</LiveNodes></ClusterStatus>";
 
-  private static final String AS_PB = 
-"Ci0KBXRlc3QxEOO6i+eeJBgAIIABKIAIMhUKCS1ST09ULSwsMBABGAEgACgAMAAKOQoFdGVzdDIQ"+
-"/pKx8J4kGAAggAQogAgyIQoVLk1FVEEuLCwxMjQ2MDAwMDQzNzI0EAEYASAAKAAwABgCIAApAAAA"+
-"AAAA8D8=";
-
+  private static final String AS_PB =
+  "CjsKBXRlc3QxEOO6i+eeJBgAIIABKIAIMiMKCS1ST09ULSwsMBABGAEgACgAMAA4AUACSAFQAVgB" +
+  "YAFoAQpHCgV0ZXN0MhD+krHwniQYACCABCiACDIvChUuTUVUQS4sLDEyNDYwMDAwNDM3MjQQARgB" +
+  "IAAoADAAOAFAAkgBUAFYAWABaAEYAiAAKQAAAAAAAPA/";
+  
   private JAXBContext context;
 
   public TestStorageClusterStatusModel() throws JAXBException {
@@ -71,9 +77,10 @@ public class TestStorageClusterStatusModel extends TestCase {
     model.setRequests(0);
     model.setAverageLoad(1.0);
     model.addLiveNode("test1", 1245219839331L, 128, 1024)
-      .addRegion(Bytes.toBytes("-ROOT-,,0"), 1, 1, 0, 0, 0);
+      .addRegion(Bytes.toBytes("-ROOT-,,0"), 1, 1, 0, 0, 0, 1, 2, 1, 1, 1, 1, 1);
     model.addLiveNode("test2", 1245239331198L, 512, 1024)
-      .addRegion(Bytes.toBytes(".META.,,1246000043724"),1, 1, 0, 0, 0);
+      .addRegion(Bytes.toBytes(".META.,,1246000043724"),1, 1, 0, 0, 0,
+          1, 2, 1, 1, 1, 1, 1);
     return model;
   }
 
@@ -119,6 +126,13 @@ public class TestStorageClusterStatusModel extends TestCase {
     assertEquals(region.getStorefileSizeMB(), 0);
     assertEquals(region.getMemstoreSizeMB(), 0);
     assertEquals(region.getStorefileIndexSizeMB(), 0);
+    assertEquals(region.getReadRequestsCount(), 1);
+    assertEquals(region.getWriteRequestsCount(), 2);
+    assertEquals(region.getRootIndexSizeKB(), 1);
+    assertEquals(region.getTotalStaticIndexSizeKB(), 1);
+    assertEquals(region.getTotalStaticBloomSizeKB(), 1);
+    assertEquals(region.getTotalCompactingKVs(), 1);
+    assertEquals(region.getCurrentCompactedKVs(), 1);
     assertFalse(regions.hasNext());
     node = nodes.next();
     assertEquals(node.getName(), "test2");
@@ -133,6 +147,14 @@ public class TestStorageClusterStatusModel extends TestCase {
     assertEquals(region.getStorefileSizeMB(), 0);
     assertEquals(region.getMemstoreSizeMB(), 0);
     assertEquals(region.getStorefileIndexSizeMB(), 0);
+    assertEquals(region.getReadRequestsCount(), 1);
+    assertEquals(region.getWriteRequestsCount(), 2);
+    assertEquals(region.getRootIndexSizeKB(), 1);
+    assertEquals(region.getTotalStaticIndexSizeKB(), 1);
+    assertEquals(region.getTotalStaticBloomSizeKB(), 1);
+    assertEquals(region.getTotalCompactingKVs(), 1);
+    assertEquals(region.getCurrentCompactedKVs(), 1);
+    
     assertFalse(regions.hasNext());
     assertFalse(nodes.hasNext());
   }

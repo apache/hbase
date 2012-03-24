@@ -166,6 +166,13 @@
         <attribute name="storefileSizeMB" type="int"></attribute>
         <attribute name="memstoreSizeMB" type="int"></attribute>
         <attribute name="storefileIndexSizeMB" type="int"></attribute>
+        <attribute name="readRequestsCount" type="int"></attribute>
+        <attribute name="writeRequestsCount" type="int"></attribute>
+        <attribute name="rootIndexSizeKB" type="int"></attribute>
+        <attribute name="totalStaticIndexSizeKB" type="int"></attribute>
+        <attribute name="totalStaticBloomSizeKB" type="int"></attribute>
+        <attribute name="totalCompactingKVs" type="int"></attribute>
+        <attribute name="currentCompactedKVs" type="int"></attribute>
     </complexType>
 
 </schema>
