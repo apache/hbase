@@ -87,7 +87,11 @@ public class StorageClusterStatusResource extends ResourceBase {
         for (HServerLoad.RegionLoad region: load.getRegionsLoad().values()) {
           node.addRegion(region.getName(), region.getStores(),
             region.getStorefiles(), region.getStorefileSizeMB(),
-            region.getMemStoreSizeMB(), region.getStorefileIndexSizeMB());
+            region.getMemStoreSizeMB(), region.getStorefileIndexSizeMB(),
+            region.getReadRequestsCount(), region.getWriteRequestsCount(),
+            region.getRootIndexSizeKB(), region.getTotalStaticIndexSizeKB(),
+            region.getTotalStaticBloomSizeKB(), region.getTotalCompactingKVs(),
+            region.getCurrentCompactedKVs());
         }
       }
       for (ServerName name: status.getDeadServerNames()) {

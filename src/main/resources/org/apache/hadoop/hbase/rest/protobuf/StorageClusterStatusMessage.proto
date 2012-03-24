@@ -26,6 +26,13 @@ message StorageClusterStatus {
     optional int32 storefileSizeMB = 4;
     optional int32 memstoreSizeMB = 5;
     optional int32 storefileIndexSizeMB = 6;
+    optional int64 readRequestsCount = 7;
+    optional int64 writeRequestsCount = 8;
+    optional int32 rootIndexSizeKB = 9;
+    optional int32 totalStaticIndexSizeKB = 10;
+    optional int32 totalStaticBloomSizeKB = 11;
+    optional int64 totalCompactingKVs = 12;
+    optional int64 currentCompactedKVs = 13;
   }
   message Node {
     required string name = 1;    // name:port

@@ -92,6 +92,34 @@ public final class StorageClusterStatusMessage {
       // optional int32 storefileIndexSizeMB = 6;
       boolean hasStorefileIndexSizeMB();
       int getStorefileIndexSizeMB();
+      
+      // optional int64 readRequestsCount = 7;
+      boolean hasReadRequestsCount();
+      long getReadRequestsCount();
+      
+      // optional int64 writeRequestsCount = 8;
+      boolean hasWriteRequestsCount();
+      long getWriteRequestsCount();
+      
+      // optional int32 rootIndexSizeKB = 9;
+      boolean hasRootIndexSizeKB();
+      int getRootIndexSizeKB();
+      
+      // optional int32 totalStaticIndexSizeKB = 10;
+      boolean hasTotalStaticIndexSizeKB();
+      int getTotalStaticIndexSizeKB();
+      
+      // optional int32 totalStaticBloomSizeKB = 11;
+      boolean hasTotalStaticBloomSizeKB();
+      int getTotalStaticBloomSizeKB();
+      
+      // optional int64 totalCompactingKVs = 12;
+      boolean hasTotalCompactingKVs();
+      long getTotalCompactingKVs();
+      
+      // optional int64 currentCompactedKVs = 13;
+      boolean hasCurrentCompactedKVs();
+      long getCurrentCompactedKVs();
     }
     public static final class Region extends
         com.google.protobuf.GeneratedMessage
@@ -182,6 +210,76 @@ public final class StorageClusterStatusMessage {
         return storefileIndexSizeMB_;
       }
       
+      // optional int64 readRequestsCount = 7;
+      public static final int READREQUESTSCOUNT_FIELD_NUMBER = 7;
+      private long readRequestsCount_;
+      public boolean hasReadRequestsCount() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      public long getReadRequestsCount() {
+        return readRequestsCount_;
+      }
+      
+      // optional int64 writeRequestsCount = 8;
+      public static final int WRITEREQUESTSCOUNT_FIELD_NUMBER = 8;
+      private long writeRequestsCount_;
+      public boolean hasWriteRequestsCount() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      public long getWriteRequestsCount() {
+        return writeRequestsCount_;
+      }
+      
+      // optional int32 rootIndexSizeKB = 9;
+      public static final int ROOTINDEXSIZEKB_FIELD_NUMBER = 9;
+      private int rootIndexSizeKB_;
+      public boolean hasRootIndexSizeKB() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      public int getRootIndexSizeKB() {
+        return rootIndexSizeKB_;
+      }
+      
+      // optional int32 totalStaticIndexSizeKB = 10;
+      public static final int TOTALSTATICINDEXSIZEKB_FIELD_NUMBER = 10;
+      private int totalStaticIndexSizeKB_;
+      public boolean hasTotalStaticIndexSizeKB() {
+        return ((bitField0_ & 0x00000200) == 0x00000200);
+      }
+      public int getTotalStaticIndexSizeKB() {
+        return totalStaticIndexSizeKB_;
+      }
+      
+      // optional int32 totalStaticBloomSizeKB = 11;
+      public static final int TOTALSTATICBLOOMSIZEKB_FIELD_NUMBER = 11;
+      private int totalStaticBloomSizeKB_;
+      public boolean hasTotalStaticBloomSizeKB() {
+        return ((bitField0_ & 0x00000400) == 0x00000400);
+      }
+      public int getTotalStaticBloomSizeKB() {
+        return totalStaticBloomSizeKB_;
+      }
+      
+      // optional int64 totalCompactingKVs = 12;
+      public static final int TOTALCOMPACTINGKVS_FIELD_NUMBER = 12;
+      private long totalCompactingKVs_;
+      public boolean hasTotalCompactingKVs() {
+        return ((bitField0_ & 0x00000800) == 0x00000800);
+      }
+      public long getTotalCompactingKVs() {
+        return totalCompactingKVs_;
+      }
+      
+      // optional int64 currentCompactedKVs = 13;
+      public static final int CURRENTCOMPACTEDKVS_FIELD_NUMBER = 13;
+      private long currentCompactedKVs_;
+      public boolean hasCurrentCompactedKVs() {
+        return ((bitField0_ & 0x00001000) == 0x00001000);
+      }
+      public long getCurrentCompactedKVs() {
+        return currentCompactedKVs_;
+      }
+      
       private void initFields() {
         name_ = com.google.protobuf.ByteString.EMPTY;
         stores_ = 0;
@@ -189,6 +287,13 @@ public final class StorageClusterStatusMessage {
         storefileSizeMB_ = 0;
         memstoreSizeMB_ = 0;
         storefileIndexSizeMB_ = 0;
+        readRequestsCount_ = 0L;
+        writeRequestsCount_ = 0L;
+        rootIndexSizeKB_ = 0;
+        totalStaticIndexSizeKB_ = 0;
+        totalStaticBloomSizeKB_ = 0;
+        totalCompactingKVs_ = 0L;
+        currentCompactedKVs_ = 0L;
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
@@ -224,6 +329,27 @@ public final class StorageClusterStatusMessage {
         if (((bitField0_ & 0x00000020) == 0x00000020)) {
           output.writeInt32(6, storefileIndexSizeMB_);
         }
+        if (((bitField0_ & 0x00000040) == 0x00000040)) {
+          output.writeInt64(7, readRequestsCount_);
+        }
+        if (((bitField0_ & 0x00000080) == 0x00000080)) {
+          output.writeInt64(8, writeRequestsCount_);
+        }
+        if (((bitField0_ & 0x00000100) == 0x00000100)) {
+          output.writeInt32(9, rootIndexSizeKB_);
+        }
+        if (((bitField0_ & 0x00000200) == 0x00000200)) {
+          output.writeInt32(10, totalStaticIndexSizeKB_);
+        }
+        if (((bitField0_ & 0x00000400) == 0x00000400)) {
+          output.writeInt32(11, totalStaticBloomSizeKB_);
+        }
+        if (((bitField0_ & 0x00000800) == 0x00000800)) {
+          output.writeInt64(12, totalCompactingKVs_);
+        }
+        if (((bitField0_ & 0x00001000) == 0x00001000)) {
+          output.writeInt64(13, currentCompactedKVs_);
+        }
         getUnknownFields().writeTo(output);
       }
       
@@ -256,6 +382,34 @@ public final class StorageClusterStatusMessage {
         if (((bitField0_ & 0x00000020) == 0x00000020)) {
           size += com.google.protobuf.CodedOutputStream
             .computeInt32Size(6, storefileIndexSizeMB_);
+        }
+        if (((bitField0_ & 0x00000040) == 0x00000040)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt64Size(7, readRequestsCount_);
+        }
+        if (((bitField0_ & 0x00000080) == 0x00000080)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt64Size(8, writeRequestsCount_);
+        }
+        if (((bitField0_ & 0x00000100) == 0x00000100)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt32Size(9, rootIndexSizeKB_);
+        }
+        if (((bitField0_ & 0x00000200) == 0x00000200)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt32Size(10, totalStaticIndexSizeKB_);
+        }
+        if (((bitField0_ & 0x00000400) == 0x00000400)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt32Size(11, totalStaticBloomSizeKB_);
+        }
+        if (((bitField0_ & 0x00000800) == 0x00000800)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt64Size(12, totalCompactingKVs_);
+        }
+        if (((bitField0_ & 0x00001000) == 0x00001000)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt64Size(13, currentCompactedKVs_);
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSerializedSize = size;
@@ -393,6 +547,20 @@ public final class StorageClusterStatusMessage {
           bitField0_ = (bitField0_ & ~0x00000010);
           storefileIndexSizeMB_ = 0;
           bitField0_ = (bitField0_ & ~0x00000020);
+          readRequestsCount_ = 0L;
+          bitField0_ = (bitField0_ & ~0x00000040);
+          writeRequestsCount_ = 0L;
+          bitField0_ = (bitField0_ & ~0x00000080);
+          rootIndexSizeKB_ = 0;
+          bitField0_ = (bitField0_ & ~0x00000100);
+          totalStaticIndexSizeKB_ = 0;
+          bitField0_ = (bitField0_ & ~0x00000200);
+          totalStaticBloomSizeKB_ = 0;
+          bitField0_ = (bitField0_ & ~0x00000400);
+          totalCompactingKVs_ = 0L;
+          bitField0_ = (bitField0_ & ~0x00000800);
+          currentCompactedKVs_ = 0L;
+          bitField0_ = (bitField0_ & ~0x00001000);
           return this;
         }
         
@@ -455,6 +623,34 @@ public final class StorageClusterStatusMessage {
             to_bitField0_ |= 0x00000020;
           }
           result.storefileIndexSizeMB_ = storefileIndexSizeMB_;
+          if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+            to_bitField0_ |= 0x00000040;
+          }
+          result.readRequestsCount_ = readRequestsCount_;
+          if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+            to_bitField0_ |= 0x00000080;
+          }
+          result.writeRequestsCount_ = writeRequestsCount_;
+          if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+            to_bitField0_ |= 0x00000100;
+          }
+          result.rootIndexSizeKB_ = rootIndexSizeKB_;
+          if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
+            to_bitField0_ |= 0x00000200;
+          }
+          result.totalStaticIndexSizeKB_ = totalStaticIndexSizeKB_;
+          if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
+            to_bitField0_ |= 0x00000400;
+          }
+          result.totalStaticBloomSizeKB_ = totalStaticBloomSizeKB_;
+          if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
+            to_bitField0_ |= 0x00000800;
+          }
+          result.totalCompactingKVs_ = totalCompactingKVs_;
+          if (((from_bitField0_ & 0x00001000) == 0x00001000)) {
+            to_bitField0_ |= 0x00001000;
+          }
+          result.currentCompactedKVs_ = currentCompactedKVs_;
           result.bitField0_ = to_bitField0_;
           onBuilt();
           return result;
@@ -488,6 +684,27 @@ public final class StorageClusterStatusMessage {
           }
           if (other.hasStorefileIndexSizeMB()) {
             setStorefileIndexSizeMB(other.getStorefileIndexSizeMB());
+          }
+          if (other.hasReadRequestsCount()) {
+            setReadRequestsCount(other.getReadRequestsCount());
+          }
+          if (other.hasWriteRequestsCount()) {
+            setWriteRequestsCount(other.getWriteRequestsCount());
+          }
+          if (other.hasRootIndexSizeKB()) {
+            setRootIndexSizeKB(other.getRootIndexSizeKB());
+          }
+          if (other.hasTotalStaticIndexSizeKB()) {
+            setTotalStaticIndexSizeKB(other.getTotalStaticIndexSizeKB());
+          }
+          if (other.hasTotalStaticBloomSizeKB()) {
+            setTotalStaticBloomSizeKB(other.getTotalStaticBloomSizeKB());
+          }
+          if (other.hasTotalCompactingKVs()) {
+            setTotalCompactingKVs(other.getTotalCompactingKVs());
+          }
+          if (other.hasCurrentCompactedKVs()) {
+            setCurrentCompactedKVs(other.getCurrentCompactedKVs());
           }
           this.mergeUnknownFields(other.getUnknownFields());
           return this;
@@ -552,6 +769,41 @@ public final class StorageClusterStatusMessage {
               case 48: {
                 bitField0_ |= 0x00000020;
                 storefileIndexSizeMB_ = input.readInt32();
+                break;
+              }
+              case 56: {
+                bitField0_ |= 0x00000040;
+                readRequestsCount_ = input.readInt64();
+                break;
+              }
+              case 64: {
+                bitField0_ |= 0x00000080;
+                writeRequestsCount_ = input.readInt64();
+                break;
+              }
+              case 72: {
+                bitField0_ |= 0x00000100;
+                rootIndexSizeKB_ = input.readInt32();
+                break;
+              }
+              case 80: {
+                bitField0_ |= 0x00000200;
+                totalStaticIndexSizeKB_ = input.readInt32();
+                break;
+              }
+              case 88: {
+                bitField0_ |= 0x00000400;
+                totalStaticBloomSizeKB_ = input.readInt32();
+                break;
+              }
+              case 96: {
+                bitField0_ |= 0x00000800;
+                totalCompactingKVs_ = input.readInt64();
+                break;
+              }
+              case 104: {
+                bitField0_ |= 0x00001000;
+                currentCompactedKVs_ = input.readInt64();
                 break;
               }
             }
@@ -685,6 +937,153 @@ public final class StorageClusterStatusMessage {
         public Builder clearStorefileIndexSizeMB() {
           bitField0_ = (bitField0_ & ~0x00000020);
           storefileIndexSizeMB_ = 0;
+          onChanged();
+          return this;
+        }
+        
+        // optional int64 readRequestsCount = 7;
+        private long readRequestsCount_ ;
+        public boolean hasReadRequestsCount() {
+          return ((bitField0_ & 0x00000040) == 0x00000040);
+        }
+        public long getReadRequestsCount() {
+          return readRequestsCount_;
+        }
+        public Builder setReadRequestsCount(long value) {
+          bitField0_ |= 0x00000040;
+          readRequestsCount_ = value;
+          onChanged();
+          return this;
+        }
+        public Builder clearReadRequestsCount() {
+          bitField0_ = (bitField0_ & ~0x00000040);
+          readRequestsCount_ = 0L;
+          onChanged();
+          return this;
+        }
+        
+        // optional int64 writeRequestsCount = 8;
+        private long writeRequestsCount_ ;
+        public boolean hasWriteRequestsCount() {
+          return ((bitField0_ & 0x00000080) == 0x00000080);
+        }
+        public long getWriteRequestsCount() {
+          return writeRequestsCount_;
+        }
+        public Builder setWriteRequestsCount(long value) {
+          bitField0_ |= 0x00000080;
+          writeRequestsCount_ = value;
+          onChanged();
+          return this;
+        }
+        public Builder clearWriteRequestsCount() {
+          bitField0_ = (bitField0_ & ~0x00000080);
+          writeRequestsCount_ = 0L;
+          onChanged();
+          return this;
+        }
+        
+        // optional int32 rootIndexSizeKB = 9;
+        private int rootIndexSizeKB_ ;
+        public boolean hasRootIndexSizeKB() {
+          return ((bitField0_ & 0x00000100) == 0x00000100);
+        }
+        public int getRootIndexSizeKB() {
+          return rootIndexSizeKB_;
+        }
+        public Builder setRootIndexSizeKB(int value) {
+          bitField0_ |= 0x00000100;
+          rootIndexSizeKB_ = value;
+          onChanged();
+          return this;
+        }
+        public Builder clearRootIndexSizeKB() {
+          bitField0_ = (bitField0_ & ~0x00000100);
+          rootIndexSizeKB_ = 0;
+          onChanged();
+          return this;
+        }
+        
+        // optional int32 totalStaticIndexSizeKB = 10;
+        private int totalStaticIndexSizeKB_ ;
+        public boolean hasTotalStaticIndexSizeKB() {
+          return ((bitField0_ & 0x00000200) == 0x00000200);
+        }
+        public int getTotalStaticIndexSizeKB() {
+          return totalStaticIndexSizeKB_;
+        }
+        public Builder setTotalStaticIndexSizeKB(int value) {
+          bitField0_ |= 0x00000200;
+          totalStaticIndexSizeKB_ = value;
+          onChanged();
+          return this;
+        }
+        public Builder clearTotalStaticIndexSizeKB() {
+          bitField0_ = (bitField0_ & ~0x00000200);
+          totalStaticIndexSizeKB_ = 0;
+          onChanged();
+          return this;
+        }
+        
+        // optional int32 totalStaticBloomSizeKB = 11;
+        private int totalStaticBloomSizeKB_ ;
+        public boolean hasTotalStaticBloomSizeKB() {
+          return ((bitField0_ & 0x00000400) == 0x00000400);
+        }
+        public int getTotalStaticBloomSizeKB() {
+          return totalStaticBloomSizeKB_;
+        }
+        public Builder setTotalStaticBloomSizeKB(int value) {
+          bitField0_ |= 0x00000400;
+          totalStaticBloomSizeKB_ = value;
+          onChanged();
+          return this;
+        }
+        public Builder clearTotalStaticBloomSizeKB() {
+          bitField0_ = (bitField0_ & ~0x00000400);
+          totalStaticBloomSizeKB_ = 0;
+          onChanged();
+          return this;
+        }
+        
+        // optional int64 totalCompactingKVs = 12;
+        private long totalCompactingKVs_ ;
+        public boolean hasTotalCompactingKVs() {
+          return ((bitField0_ & 0x00000800) == 0x00000800);
+        }
+        public long getTotalCompactingKVs() {
+          return totalCompactingKVs_;
+        }
+        public Builder setTotalCompactingKVs(long value) {
+          bitField0_ |= 0x00000800;
+          totalCompactingKVs_ = value;
+          onChanged();
+          return this;
+        }
+        public Builder clearTotalCompactingKVs() {
+          bitField0_ = (bitField0_ & ~0x00000800);
+          totalCompactingKVs_ = 0L;
+          onChanged();
+          return this;
+        }
+        
+        // optional int64 currentCompactedKVs = 13;
+        private long currentCompactedKVs_ ;
+        public boolean hasCurrentCompactedKVs() {
+          return ((bitField0_ & 0x00001000) == 0x00001000);
+        }
+        public long getCurrentCompactedKVs() {
+          return currentCompactedKVs_;
+        }
+        public Builder setCurrentCompactedKVs(long value) {
+          bitField0_ |= 0x00001000;
+          currentCompactedKVs_ = value;
+          onChanged();
+          return this;
+        }
+        public Builder clearCurrentCompactedKVs() {
+          bitField0_ = (bitField0_ & ~0x00001000);
+          currentCompactedKVs_ = 0L;
           onChanged();
           return this;
         }
@@ -2412,20 +2811,25 @@ public final class StorageClusterStatusMessage {
     java.lang.String[] descriptorData = {
       "\n!StorageClusterStatusMessage.proto\022/org" +
       ".apache.hadoop.hbase.rest.protobuf.gener" +
-      "ated\"\222\004\n\024StorageClusterStatus\022]\n\tliveNod" +
+      "ated\"\333\005\n\024StorageClusterStatus\022]\n\tliveNod" +
       "es\030\001 \003(\0132J.org.apache.hadoop.hbase.rest." +
       "protobuf.generated.StorageClusterStatus." +
       "Node\022\021\n\tdeadNodes\030\002 \003(\t\022\017\n\007regions\030\003 \001(\005" +
       "\022\020\n\010requests\030\004 \001(\005\022\023\n\013averageLoad\030\005 \001(\001\032" +
-      "\211\001\n\006Region\022\014\n\004name\030\001 \002(\014\022\016\n\006stores\030\002 \001(\005" +
+      "\322\002\n\006Region\022\014\n\004name\030\001 \002(\014\022\016\n\006stores\030\002 \001(\005" +
       "\022\022\n\nstorefiles\030\003 \001(\005\022\027\n\017storefileSizeMB\030" +
       "\004 \001(\005\022\026\n\016memstoreSizeMB\030\005 \001(\005\022\034\n\024storefi",
-      "leIndexSizeMB\030\006 \001(\005\032\303\001\n\004Node\022\014\n\004name\030\001 \002" +
-      "(\t\022\021\n\tstartCode\030\002 \001(\003\022\020\n\010requests\030\003 \001(\005\022" +
-      "\022\n\nheapSizeMB\030\004 \001(\005\022\025\n\rmaxHeapSizeMB\030\005 \001" +
-      "(\005\022]\n\007regions\030\006 \003(\0132L.org.apache.hadoop." +
-      "hbase.rest.protobuf.generated.StorageClu" +
-      "sterStatus.Region"
+      "leIndexSizeMB\030\006 \001(\005\022\031\n\021readRequestsCount" +
+      "\030\007 \001(\003\022\032\n\022writeRequestsCount\030\010 \001(\003\022\027\n\017ro" +
+      "otIndexSizeKB\030\t \001(\005\022\036\n\026totalStaticIndexS" +
+      "izeKB\030\n \001(\005\022\036\n\026totalStaticBloomSizeKB\030\013 " +
+      "\001(\005\022\032\n\022totalCompactingKVs\030\014 \001(\003\022\033\n\023curre" +
+      "ntCompactedKVs\030\r \001(\003\032\303\001\n\004Node\022\014\n\004name\030\001 " +
+      "\002(\t\022\021\n\tstartCode\030\002 \001(\003\022\020\n\010requests\030\003 \001(\005" +
+      "\022\022\n\nheapSizeMB\030\004 \001(\005\022\025\n\rmaxHeapSizeMB\030\005 " +
+      "\001(\005\022]\n\007regions\030\006 \003(\0132L.org.apache.hadoop" +
+      ".hbase.rest.protobuf.generated.StorageCl",
+      "usterStatus.Region"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -2445,7 +2849,7 @@ public final class StorageClusterStatusMessage {
           internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_StorageClusterStatus_Region_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_StorageClusterStatus_Region_descriptor,
-              new java.lang.String[] { "Name", "Stores", "Storefiles", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", },
+              new java.lang.String[] { "Name", "Stores", "Storefiles", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "TotalCompactingKVs", "CurrentCompactedKVs", },
               org.apache.hadoop.hbase.rest.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region.class,
               org.apache.hadoop.hbase.rest.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus.Region.Builder.class);
           internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_StorageClusterStatus_Node_descriptor =
