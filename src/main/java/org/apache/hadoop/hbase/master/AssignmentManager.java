@@ -2464,6 +2464,7 @@ public class AssignmentManager extends ZooKeeperListener {
       ServerName regionLocation = region.getSecond();
       if (regionInfo == null) continue;
       String tableName = regionInfo.getTableNameAsString();
+      if (regionInfo.isOffline() && regionInfo.isSplit()) continue;
       if (regionLocation == null) {
         // regionLocation could be null if createTable didn't finish properly.
         // When createTable is in progress, HMaster restarts.
