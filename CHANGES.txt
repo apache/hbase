@@ -15,6 +15,7 @@ Release 0.92.2 - Unreleased
                to an inexistent cluster
    HBASE-5624  Aborting regionserver when splitting region, may cause daughter
                region not assigned by ServerShutdownHandler (Chunhui Shen)
+   HBASE-5615  The master never does balance because of balancing the parent region (Xufeng)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
