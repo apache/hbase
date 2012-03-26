@@ -69,6 +69,11 @@ public class ServerName implements Comparable<ServerName> {
       SERVERNAME_SEPARATOR + Addressing.VALID_PORT_REGEX +
       SERVERNAME_SEPARATOR + Addressing.VALID_PORT_REGEX + "$");
 
+  /**
+   * What to use if server name is unknown.
+   */
+  public static final String UNKNOWN_SERVERNAME = "#unknown#";
+
   private final String servername;
   private final String hostname;
   private final int port;
