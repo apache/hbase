@@ -30,13 +30,14 @@ import org.apache.hadoop.hbase.util.Writables;
 
 public class TestHMsg extends TestCase {
   public void testList() {
+    final long regionId = 0L; 
     List<HMsg> msgs = new ArrayList<HMsg>();
     HMsg hmsg = null;
     final int size = 10;
     for (int i = 0; i < size; i++) {
       byte [] b = Bytes.toBytes(i);
       hmsg = new HMsg(HMsg.Type.STOP_REGIONSERVER,
-        new HRegionInfo(new HTableDescriptor(Bytes.toBytes("test")), b, b));
+        new HRegionInfo(new HTableDescriptor(Bytes.toBytes("test")), b, b, false, regionId));
       msgs.add(hmsg);
     }
     assertEquals(size, msgs.size());
@@ -51,7 +52,7 @@ public class TestHMsg extends TestCase {
     // Assert that two HMsgs are same if same content.
     byte [] b = Bytes.toBytes(1);
     hmsg = new HMsg(HMsg.Type.STOP_REGIONSERVER,
-     new HRegionInfo(new HTableDescriptor(Bytes.toBytes("test")), b, b));
+     new HRegionInfo(new HTableDescriptor(Bytes.toBytes("test")), b, b, false, regionId));
     assertNotSame(-1, msgs.indexOf(hmsg));
   }
 
