@@ -143,7 +143,7 @@ public class HLog implements Syncable {
   private volatile long syncedTillHere = 0;
   private long lastDeferredTxid;
   private final Path oldLogDir;
-  private boolean logRollRunning;
+  private volatile boolean logRollRunning;
 
   private static Class<? extends Writer> logWriterClass;
   private static Class<? extends Reader> logReaderClass;
@@ -1227,10 +1227,8 @@ public class HLog implements Syncable {
     }
 
     // writes out pending entries to the HLog
-    void hlogFlush(Writer writer) throws IOException {
-      // Atomically fetch all existing pending writes. New writes
-      // will start accumulating in a new list.
-      List<Entry> pending = getPendingWrites();
+    void hlogFlush(Writer writer, List<Entry> pending) throws IOException {
+      if (pending == null) return;
 
       // write out all accumulated Entries to hdfs.
       for (Entry e : pending) {
@@ -1250,8 +1248,10 @@ public class HLog implements Syncable {
 
   // sync all transactions upto the specified txid
   private void syncer(long txid) throws IOException {
+    Writer tempWriter;
     synchronized (this.updateLock) {
       if (this.closed) return;
+      tempWriter = this.writer; // guaranteed non-null
     }
     // if the transaction that we are interested in is already 
     // synced, then return immediately.
@@ -1262,23 +1262,23 @@ public class HLog implements Syncable {
       long doneUpto = this.unflushedEntries.get();
       long now = System.currentTimeMillis();
       // Done in parallel for all writer threads, thanks to HDFS-895
-      boolean syncSuccessful = true;
+      List<Entry> pending = logSyncerThread.getPendingWrites();
       try {
         // First flush all the pending writes to HDFS. Then 
         // issue the sync to HDFS. If sync is successful, then update
         // syncedTillHere to indicate that transactions till this
         // number has been successfully synced.
-        logSyncerThread.hlogFlush(this.writer);
-        this.writer.sync();
+        logSyncerThread.hlogFlush(tempWriter, pending);
+        pending = null;
+        tempWriter.sync();
         syncBatchSize.addAndGet(doneUpto - this.syncedTillHere);
         this.syncedTillHere = Math.max(this.syncedTillHere, doneUpto);
       } catch(IOException io) {
-        syncSuccessful = false;
-      }
-      if (!syncSuccessful) {
         synchronized (this.updateLock) {
-          // HBASE-4387, retry with updateLock held
-          this.writer.sync();
+          // HBASE-4387, HBASE-5623, retry with updateLock held
+          tempWriter = this.writer;
+          logSyncerThread.hlogFlush(tempWriter, pending);
+          tempWriter.sync();
           syncBatchSize.addAndGet(doneUpto - this.syncedTillHere);
           this.syncedTillHere = doneUpto;
         }
@@ -1288,8 +1288,12 @@ public class HLog implements Syncable {
       syncTime.inc(System.currentTimeMillis() - now);
       if (!this.logRollRunning) {
         checkLowReplication();
-        if (this.writer.getLength() > this.logrollsize) {
-          requestLogRoll();
+        try {
+          if (tempWriter.getLength() > this.logrollsize) {
+            requestLogRoll();
+          }
+        } catch (IOException x) {
+          LOG.debug("Log roll failed and will be retried. (This is not an error)");
         }
       }
     } catch (IOException e) {
