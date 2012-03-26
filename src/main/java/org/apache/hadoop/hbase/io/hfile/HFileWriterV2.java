@@ -189,9 +189,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
         onDiskSize);
     totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
 
-    HFile.writeTimeNano.addAndGet(System.nanoTime() - startTimeNs);
-    HFile.writeOps.incrementAndGet();
-
+    HFile.offerWriteLatency(System.nanoTime() - startTimeNs);
+    
     if (cacheConf.shouldCacheDataOnWrite()) {
       doCacheOnWrite(lastDataBlockOffset);
     }

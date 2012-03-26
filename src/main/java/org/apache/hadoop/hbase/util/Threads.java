@@ -25,6 +25,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -179,5 +180,25 @@ public class Threads {
     // allow the core pool threads timeout and terminate
     boundedCachedThreadPool.allowCoreThreadTimeOut(true);
     return boundedCachedThreadPool;
+  }
+  
+  
+  /**
+   * Returns a {@link java.util.concurrent.ThreadFactory} that names each
+   * created thread uniquely, with a common prefix.
+   * 
+   * @param prefix  The prefix of every created Thread's name
+   * @return a {@link java.util.concurrent.ThreadFactory} that names threads
+   */
+  public static ThreadFactory getNamedThreadFactory(final String prefix) {
+    return new ThreadFactory() {
+
+      private final AtomicInteger threadNumber = new AtomicInteger(1);
+      
+      @Override
+      public Thread newThread(Runnable r) {
+        return new Thread(r, prefix + threadNumber.getAndIncrement());
+      }
+    };
   }
 }

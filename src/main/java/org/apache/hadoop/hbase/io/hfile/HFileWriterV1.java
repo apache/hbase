@@ -141,9 +141,8 @@ public class HFileWriterV1 extends AbstractHFileWriter {
     blockDataSizes.add(Integer.valueOf(size));
     this.totalUncompressedBytes += size;
 
-    HFile.writeTimeNano.addAndGet(System.nanoTime() - startTimeNs);
-    HFile.writeOps.incrementAndGet();
-
+    HFile.offerWriteLatency(System.nanoTime() - startTimeNs);
+    
     if (cacheConf.shouldCacheDataOnWrite()) {
       baosDos.flush();
       // we do not do data block encoding on disk for HFile v1

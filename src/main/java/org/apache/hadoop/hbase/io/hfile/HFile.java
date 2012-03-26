@@ -24,8 +24,12 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -48,14 +52,15 @@ import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
-import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 /**
  * File format for hbase.
@@ -165,17 +170,99 @@ public class HFile {
   public static final ChecksumType DEFAULT_CHECKSUM_TYPE = ChecksumType.CRC32;
 
   // For measuring latency of "sequential" reads and writes
-  static final AtomicInteger readOps = new AtomicInteger();
-  static final AtomicLong readTimeNano = new AtomicLong();
-  static final AtomicInteger writeOps = new AtomicInteger();
-  static final AtomicLong writeTimeNano = new AtomicLong();
+  private static final AtomicInteger readOps = new AtomicInteger();
+  private static final AtomicLong readTimeNano = new AtomicLong();
+  private static final AtomicInteger writeOps = new AtomicInteger();
+  private static final AtomicLong writeTimeNano = new AtomicLong();
 
   // For measuring latency of pread
-  static final AtomicInteger preadOps = new AtomicInteger();
-  static final AtomicLong preadTimeNano = new AtomicLong();
+  private static final AtomicInteger preadOps = new AtomicInteger();
+  private static final AtomicLong preadTimeNano = new AtomicLong();
 
   // For measuring number of checksum failures
   static final AtomicLong checksumFailures = new AtomicLong();
+
+  // For getting more detailed stats on FS latencies
+  // If, for some reason, the metrics subsystem stops polling for latencies, 
+  // I don't want data to pile up in a memory leak
+  // so, after LATENCY_BUFFER_SIZE items have been enqueued for processing,
+  // fs latency stats will be dropped (and this behavior will be logged)
+  private static final int LATENCY_BUFFER_SIZE = 5000;
+  private static final BlockingQueue<Long> fsReadLatenciesNanos = 
+      new ArrayBlockingQueue<Long>(LATENCY_BUFFER_SIZE);
+  private static final BlockingQueue<Long> fsWriteLatenciesNanos = 
+      new ArrayBlockingQueue<Long>(LATENCY_BUFFER_SIZE);
+  private static final BlockingQueue<Long> fsPreadLatenciesNanos = 
+      new ArrayBlockingQueue<Long>(LATENCY_BUFFER_SIZE);
+  private static final AtomicLong lastLoggedDataDrop = new AtomicLong(0);
+  
+  // we don't want to fill up the logs with this message, so only log it 
+  // once every 30 seconds at most
+  // I also want to avoid locks on the 'critical path' (the common case will be
+  // uncontended) - hence the CAS
+  private static void logDroppedLatencyStat() {
+    final long now = System.currentTimeMillis();      
+    final long earliestAcceptableLog = now - TimeUnit.SECONDS.toMillis(30L);
+    while (true) {
+      final long lastLog = lastLoggedDataDrop.get();
+      if (lastLog < earliestAcceptableLog) {
+        if (lastLoggedDataDrop.compareAndSet(lastLog, now)) {
+          LOG.warn("Dropping fs latency stats since buffer is full");
+          break;
+        } // otherwise (if the compaseAndSet failed) the while loop retries
+      } else {
+        break;
+      }
+    }    
+  }
+  
+  public static final void offerReadLatency(long latencyNanos, boolean pread) {
+    boolean stored = false;
+    if (pread) {
+      stored = fsPreadLatenciesNanos.offer(latencyNanos);
+      preadOps.incrementAndGet();
+      preadTimeNano.addAndGet(latencyNanos);
+    } else {
+      stored = fsReadLatenciesNanos.offer(latencyNanos);
+      readTimeNano.addAndGet(latencyNanos);
+      readOps.incrementAndGet();
+    }
+
+    if (!stored) { 
+      logDroppedLatencyStat();
+    }    
+  }
+  
+  public static final void offerWriteLatency(long latencyNanos) {
+    final boolean stored = fsWriteLatenciesNanos.offer(latencyNanos);
+    if (!stored) {
+      logDroppedLatencyStat();
+    }
+    
+    writeTimeNano.addAndGet(latencyNanos);
+    writeOps.incrementAndGet();
+  }
+  
+  public static final Collection<Long> getReadLatenciesNanos() {
+    final List<Long> latencies = 
+        Lists.newArrayListWithCapacity(fsReadLatenciesNanos.size());
+    fsReadLatenciesNanos.drainTo(latencies);
+    return latencies;
+  }
+
+  public static final Collection<Long> getPreadLatenciesNanos() {
+    final List<Long> latencies = 
+        Lists.newArrayListWithCapacity(fsPreadLatenciesNanos.size());
+    fsPreadLatenciesNanos.drainTo(latencies);
+    return latencies;
+  }
+  
+  public static final Collection<Long> getWriteLatenciesNanos() {
+    final List<Long> latencies = 
+        Lists.newArrayListWithCapacity(fsWriteLatenciesNanos.size());
+    fsWriteLatenciesNanos.drainTo(latencies);
+    return latencies;
+  }
 
   // for test purpose
   public static volatile AtomicLong dataBlockReadCnt = new AtomicLong(0);
