@@ -95,8 +95,8 @@ public abstract class SecureServer extends HBaseServer {
 
   protected class SecureCall extends HBaseServer.Call {
     public SecureCall(int id, Writable param, Connection connection,
-        Responder responder) {
-      super(id, param, connection, responder);
+        Responder responder, long size) {
+      super(id, param, connection, responder, size);
     }
 
     @Override
@@ -205,7 +205,7 @@ public abstract class SecureServer extends HBaseServer {
     private final int AUTHORIZATION_FAILED_CALLID = -1;
     // Fake 'call' for SASL context setup
     private static final int SASL_CALLID = -33;
-    private final SecureCall saslCall = new SecureCall(SASL_CALLID, null, this, null);
+    private final SecureCall saslCall = new SecureCall(SASL_CALLID, null, this, null, 0);
 
     private boolean useWrap = false;
 
@@ -414,7 +414,7 @@ public abstract class SecureServer extends HBaseServer {
             AccessControlException ae = new AccessControlException(
                 "Authentication is required");
             SecureCall failedCall = new SecureCall(AUTHORIZATION_FAILED_CALLID, null, this,
-                null);
+                null, 0);
             failedCall.setResponse(null, Status.FATAL, ae.getClass().getName(),
                 ae.getMessage());
             responder.doRespond(failedCall);
@@ -595,7 +595,7 @@ public abstract class SecureServer extends HBaseServer {
       Writable param = ReflectionUtils.newInstance(paramClass, conf);           // read param
       param.readFields(dis);
 
-      SecureCall call = new SecureCall(id, param, this, responder);
+      SecureCall call = new SecureCall(id, param, this, responder, buf.length);
 
       if (priorityCallQueue != null && getQosLevel(param) > highPriorityLevel) {
         priorityCallQueue.put(call);
@@ -623,7 +623,7 @@ public abstract class SecureServer extends HBaseServer {
         LOG.debug("Connection authorization failed: "+ae.getMessage(), ae);
         rpcMetrics.authorizationFailures.inc();
         SecureCall failedCall = new SecureCall(AUTHORIZATION_FAILED_CALLID, null, this,
-            null);
+            null, 0);
         failedCall.setResponse(null, Status.FATAL, ae.getClass().getName(),
             ae.getMessage());
         responder.doRespond(failedCall);
