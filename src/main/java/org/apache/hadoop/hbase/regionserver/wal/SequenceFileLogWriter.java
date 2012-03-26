@@ -274,7 +274,12 @@ public class SequenceFileLogWriter implements HLog.Writer {
   @Override
   public void append(HLog.Entry entry) throws IOException {
     entry.setCompressionContext(compressionContext);
-    this.writer.append(entry.getKey(), entry.getEdit());
+    try {
+      this.writer.append(entry.getKey(), entry.getEdit());
+    } catch (NullPointerException npe) {
+      // Concurrent close...
+      throw new IOException(npe);
+    }
   }
 
   @Override
@@ -309,7 +314,12 @@ public class SequenceFileLogWriter implements HLog.Writer {
 
   @Override
   public long getLength() throws IOException {
-    return this.writer.getLength();
+    try {
+      return this.writer.getLength();
+    } catch (NullPointerException npe) {
+      // Concurrent close...
+      throw new IOException(npe);
+    }
   }
 
   /**
