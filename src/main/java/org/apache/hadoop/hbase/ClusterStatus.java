@@ -67,7 +67,6 @@ public class ClusterStatus extends VersionedWritable {
    */
   private static final byte VERSION_MASTER_BACKUPMASTERS = 2;
   private static final byte VERSION = 2;
-  private static final String UNKNOWN_SERVERNAME = "unknown";
 
   private String hbaseVersion;
   private Map<ServerName, HServerLoad> liveServers;
@@ -173,11 +172,11 @@ public class ClusterStatus extends VersionedWritable {
     return (getVersion() == ((ClusterStatus)o).getVersion()) &&
       getHBaseVersion().equals(((ClusterStatus)o).getHBaseVersion()) &&
       this.liveServers.equals(((ClusterStatus)o).liveServers) &&
-      this.deadServers.equals(((ClusterStatus)o).deadServers) &&
+      this.deadServers.containsAll(((ClusterStatus)o).deadServers) &&
       Arrays.equals(this.masterCoprocessors,
                     ((ClusterStatus)o).masterCoprocessors) &&
       this.master.equals(((ClusterStatus)o).master) &&
-      this.backupMasters.equals(((ClusterStatus)o).backupMasters);
+      this.backupMasters.containsAll(((ClusterStatus)o).backupMasters);
   }
 
   /**
@@ -340,7 +339,7 @@ public class ClusterStatus extends VersionedWritable {
                                  Bytes.readByteArray(in)));
       }
     } else {
-      this.master = new ServerName(UNKNOWN_SERVERNAME, -1,
+      this.master = new ServerName(ServerName.UNKNOWN_SERVERNAME, -1,
                                    ServerName.NON_STARTCODE);
       this.backupMasters = new ArrayList<ServerName>(0);
     }
