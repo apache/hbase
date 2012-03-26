@@ -26,6 +26,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -1522,8 +1524,20 @@ Server {
     List<ServerName> backupMasters = new ArrayList<ServerName>(
                                           backupMasterStrings.size());
     for (String s: backupMasterStrings) {
-      backupMasters.add(new ServerName(s));
+      try {
+        byte[] bytes = ZKUtil.getData(this.zooKeeper, ZKUtil.joinZNode(this.zooKeeper.backupMasterAddressesZNode, s));
+        if (bytes != null) {
+          backupMasters.add(ServerName.parseVersionedServerName(bytes));
+        }
+      } catch (KeeperException e) {
+        LOG.warn(this.zooKeeper.prefix("Unable to get information about " +
+                 "backup servers"), e);
+      }
     }
+    Collections.sort(backupMasters, new Comparator<ServerName>() {
+      public int compare(ServerName s1, ServerName s2) {
+        return s1.getServerName().compareTo(s2.getServerName());
+      }});
 
     return new ClusterStatus(VersionInfo.getVersion(),
       this.fileSystemManager.getClusterId(),

@@ -168,7 +168,7 @@ class ActiveMasterManager extends ZooKeeperListener {
         LOG.info("Adding ZNode for " + backupZNode +
           " in backup master directory");
         ZKUtil.createEphemeralNodeAndWatch(this.watcher, backupZNode,
-          HConstants.EMPTY_BYTE_ARRAY);
+          this.sn.getVersionedBytes());
 
         String msg;
         byte[] bytes =
