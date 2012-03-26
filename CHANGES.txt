@@ -169,6 +169,7 @@ Bug
     [HBASE-5579] - A Delete Version could mask other values
     [HBASE-5581] - Creating a table with invalid syntax does not give an error message when it fails
     [HBASE-5586] - [replication] NPE in ReplicationSource when creating a stream to an inexistent cluster
+    [HBASE-5596] - Few minor bugs from HBASE-5209
     [HBASE-5597] - Findbugs check in test-patch.sh always fails
     [HBASE-5603] - rolling-restart.sh script hangs when attempting to detect expiration of /hbase/master znode.
     [HBASE-5613] - ThriftServer getTableRegions does not return serverName and port
@@ -176,6 +177,7 @@ Bug
     [HBASE-5623] - Race condition when rolling the HLog and hlogFlush
     [HBASE-5624] - Aborting regionserver when splitting region, may cause daughter region not assigned by ServerShutdownHandler.
     [HBASE-5633] - NPE reading ZK config in HBase
+    [HBASE-5639] - The logic used in waiting for region servers during startup is broken
 
 Improvement
 
