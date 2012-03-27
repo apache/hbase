@@ -485,8 +485,10 @@ public class SplitLogManager implements Watcher {
           new_version, workerName);
       tot_mgr_heartbeat.incrementAndGet();
     } else {
-      assert false;
-      LOG.warn("got dup heartbeat for " + path + " ver = " + new_version);
+      // duplicate heartbeats - heartbeats w/o zk node version
+      // changing - are possible. The timeout thread does
+      // getDataSetWatch() just to check whether a node still
+      // exists or not
     }
     return;
   }
