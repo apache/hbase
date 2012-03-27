@@ -335,6 +335,8 @@ to ensure well-formedness of your document after an edit session.
         java.io.IOException: No live nodes contain current block. Will get new
         block locations from namenode and retry...</code>
         <footnote><para>See <link xlink:href="http://ccgtech.blogspot.com/2010/02/hadoop-hdfs-deceived-by-xciever.html">Hadoop HDFS: Deceived by Xciever</link> for an informative rant on xceivering.</para></footnote></para>
+       <para>See also <xref linkend="casestudies.xceivers"/>
+       </para>
       </section>
      
      </section>    <!--  hadoop -->

@@ -2396,6 +2396,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="external_apis.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="performance.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="troubleshooting.xml" />
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="case_studies.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="ops_mgt.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="developer.xml" />
 
