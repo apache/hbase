@@ -33,6 +33,7 @@ Sub-task
     [HBASE-5497] - Add protobuf as M/R dependency jar (mapred)
     [HBASE-5523] - Fix Delete Timerange logic for KEEP_DELETED_CELLS
     [HBASE-5541] - Avoid holding the rowlock during HLog sync in HRegion.mutateRowWithLocks
+    [HBASE-5641] - decayingSampleTick1 prevents HBase from shutting down.
 
 Bug
 
