@@ -682,19 +682,14 @@ foo = barArray[i];
           <section xml:id="common.patch.feedback.longlines">
             <title>Long Lines</title>
             <para>
-            Keep lines less than 80 characters.
+            Keep lines less than 100 characters.
 <programlisting>
-Bar bar = foo.veryLongMethodWithManyArguments(argument1, argument2, argument3, argument4, argument5);  // don't do this
+Bar bar = foo.veryLongMethodWithManyArguments(argument1, argument2, argument3, argument4, argument5, argument6, argument7, argument8, argument9);  // don't do this
 </programlisting>
-			... do this instead ...        
-<programlisting>
-Bar bar = foo.veryLongMethodWithManyArguments(argument1,
- argument2, argument3,argument4, argument5); 
-</programlisting>
-           ... or this, whichever looks better ...
+			... do something like this instead ...        
 <programlisting>
 Bar bar = foo.veryLongMethodWithManyArguments(
- argument1, argument2, argument3,argument4, argument5); 
+ argument1, argument2, argument3,argument4, argument5, argument6, argument7, argument8, argument9); 
 </programlisting>
            </para>
           </section>
