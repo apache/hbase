@@ -587,7 +587,7 @@ public class ServerManager {
       !this.master.isStopped() &&
         slept < timeout &&
         count < maxToStart &&
-        !(lastCountChange+interval > now && count >= minToStart)
+        (lastCountChange+interval > now || count < minToStart)
       ){
 
       // Log some info at every interval time or if there is a change
