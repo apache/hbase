@@ -22,11 +22,11 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * An exponentially-decaying random sample of {@code long}s. 
@@ -44,7 +44,7 @@ public class ExponentiallyDecayingSample implements Sample {
 
   private static final ScheduledExecutorService TICK_SERVICE = 
       Executors.newScheduledThreadPool(1, 
-          Threads.getNamedThreadFactory("decayingSampleTick"));
+          getNamedDaemonThreadFactory("decayingSampleTick"));
 
   private static volatile long CURRENT_TICK = 
       TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis());
@@ -208,5 +208,19 @@ public class ExponentiallyDecayingSample implements Sample {
 
   private void unlockForRegularUsage() {
     lock.readLock().unlock();
+  }
+
+  private static ThreadFactory getNamedDaemonThreadFactory(final String prefix) {
+    return new ThreadFactory() {
+
+      private final AtomicInteger threadNumber = new AtomicInteger(1);
+      
+      @Override
+      public Thread newThread(Runnable r) {
+        Thread t= new Thread(r, prefix + threadNumber.getAndIncrement());
+        t.setDaemon(true);
+        return t;
+      }
+    };
   }
 }
