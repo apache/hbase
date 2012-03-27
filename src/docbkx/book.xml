@@ -2429,10 +2429,17 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
             </answer>
         </qandaentry>
         <qandaentry>
-                <question><para>How can I find examples of NoSQL/HBase?</para></question>
+            <question><para>How can I find examples of NoSQL/HBase?</para></question>
             <answer>
                 <para>See the link to the BigTable paper in <xref linkend="other.info" /> in the appendix, as
                 well as the other papers.
+                </para>
+            </answer>
+        </qandaentry>
+        <qandaentry>
+            <question><para>What is the history of HBase?</para></question>
+            <answer>
+                <para>See <xref linkend="hbase.history"/>.
                 </para>
             </answer>
         </qandaentry>
@@ -3226,6 +3233,19 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
          </para>
        </section>
        
+  </appendix>
+
+  <appendix xml:id="hbase.history"><title>HBase History</title>
+    <itemizedlist>
+	  <listitem>2006:  <link xlink:href="http://research.google.com/archive/bigtable.html">BigTable</link> paper published by Google.
+	  </listitem>
+	  <listitem>2006 (end of year):  HBase development starts.
+	  </listitem>
+	  <listitem>2008:  HBase becomes Hadoop sub-project.
+	  </listitem>
+	  <listitem>2010:  HBase becomes Apache top-level project.
+	  </listitem>
+	</itemizedlist>
   </appendix>
 
   <appendix xml:id="asf" ><title>HBase and the Apache Software Foundation</title>
