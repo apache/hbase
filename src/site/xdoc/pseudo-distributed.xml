@@ -29,7 +29,8 @@ Running HBase in pseudo-distributed mode
 
   <body>
       <p>This document augments what is described in the HBase 'Getting Started' in the 
- <a href="http://hbase.apache.org/docs/current/api/overview-summary.html#distributed">Distributed Operation: Pseudo- and Fully-distributed modes</a> section.
+ <a href="http://hbase.apache.org/book.html#distributed">Distributed Operation: Pseudo- and Fully-distributed modes</a> section
+ in the Reference Guide.
  In particular it describes scripts that allow you start extra masters and regionservers when running in pseudo-distributed mode.
  </p>
 
