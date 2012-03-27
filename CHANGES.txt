@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.0 - 3/26/2012
+Release 0.94.0 - 3/27/2012
 Sub-task
 
     [HBASE-4343] - Get the TestAcidGuarantee unit test to fail consistently
@@ -185,7 +185,7 @@ Improvement
     [HBASE-1744] - Thrift server to match the new java api.
     [HBASE-2418] - add support for ZooKeeper authentication
     [HBASE-3373] - Allow regions to be load-balanced by table
-    [HBASE-3433] - Remove the KV copy of every KV in Scan; introduced by HBASE-3232 (why doesn't keyonlyfilter make copies rather than mutate -- HBASE-3211)?
+    [HBASE-3433] - Remove the KV copy of every KV in Scan; introduced by HBASE-3232
     [HBASE-3512] - Coprocessors: Shell support for listing currently loaded coprocessor set
     [HBASE-3565] - Add metrics to keep track of slow HLog appends
     [HBASE-3763] - Add Bloom Block Index Support
@@ -319,7 +319,6 @@ New Feature
     [HBASE-3856] - Build a tree structure data block index inside of the HFile
     [HBASE-4102] - atomicAppend: A put that appends to the latest version of a cell; i.e. reads current value then adds the bytes offered by the client to the tail and writes out a new entry
     [HBASE-4219] - Add Per-Column Family Metrics
-    [HBASE-4256] - Intra-row scanning (part deux)
     [HBASE-4460] - Support running an embedded ThriftServer within a RegionServer
     [HBASE-4536] - Allow CF to retain deleted rows
     [HBASE-4608] - HLog Compression
@@ -334,6 +333,7 @@ New Feature
 
 Task
 
+    [HBASE-4256] - Intra-row scanning (part deux)
     [HBASE-4429] - Provide synchronous balanceSwitch()
     [HBASE-4611] - Add support for Phabricator/Differential as an alternative code review tool
     [HBASE-4712] - Document rules for writing tests
