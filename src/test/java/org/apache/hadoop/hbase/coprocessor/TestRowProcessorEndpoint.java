@@ -138,7 +138,7 @@ public class TestRowProcessorEndpoint {
     prepareTestData();
     RowProcessorProtocol protocol =
         table.coprocessorProxy(RowProcessorProtocol.class, ROW);
-    RowProcessorEndpoint.FriendsOfFriendsProcessor processor = 
+    RowProcessorEndpoint.FriendsOfFriendsProcessor processor =
         new RowProcessorEndpoint.FriendsOfFriendsProcessor(ROW, A);
     Set<String> result = protocol.process(processor);
 
@@ -176,7 +176,7 @@ public class TestRowProcessorEndpoint {
   private int incrementCounter(HTable table) throws Throwable {
     RowProcessorProtocol protocol =
         table.coprocessorProxy(RowProcessorProtocol.class, ROW);
-    RowProcessorEndpoint.IncrementCounterProcessor processor = 
+    RowProcessorEndpoint.IncrementCounterProcessor processor =
         new RowProcessorEndpoint.IncrementCounterProcessor(ROW);
     int counterValue = protocol.process(processor);
     return counterValue;
@@ -234,7 +234,7 @@ public class TestRowProcessorEndpoint {
   private void swapRows(HTable table) throws Throwable {
     RowProcessorProtocol protocol =
         table.coprocessorProxy(RowProcessorProtocol.class, ROW);
-    RowProcessorEndpoint.RowSwapProcessor processor = 
+    RowProcessorEndpoint.RowSwapProcessor processor =
         new RowProcessorEndpoint.RowSwapProcessor(ROW, ROW2);
     protocol.process(processor);
   }
@@ -244,7 +244,7 @@ public class TestRowProcessorEndpoint {
     prepareTestData();
     RowProcessorProtocol protocol =
         table.coprocessorProxy(RowProcessorProtocol.class, ROW);
-    RowProcessorEndpoint.TimeoutProcessor processor = 
+    RowProcessorEndpoint.TimeoutProcessor processor =
         new RowProcessorEndpoint.TimeoutProcessor(ROW);
     boolean exceptionCaught = false;
     try {
@@ -510,13 +510,18 @@ public class TestRowProcessorEndpoint {
         Bytes.writeByteArray(out, row1);
         Bytes.writeByteArray(out, row2);
       }
+
+      @Override
+      public String getName() {
+        return "swap";
+      }
     }
 
     public static class TimeoutProcessor extends
         BaseRowProcessor<Void> implements Writable {
 
       byte[] row = new byte[0];
-      
+
       /**
        * Empty constructor for Writable
        */
@@ -555,6 +560,11 @@ public class TestRowProcessorEndpoint {
       @Override
       public void write(DataOutput out) throws IOException {
         Bytes.writeByteArray(out, row);
+      }
+
+      @Override
+      public String getName() {
+        return "timeout";
       }
     }
 

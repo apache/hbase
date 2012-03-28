@@ -4264,6 +4264,9 @@ public class HRegion implements HeapSize { // , Writable{
   public void processRowsWithLocks(RowProcessor<?> processor, long timeout)
       throws IOException {
 
+    final long startNanoTime = System.nanoTime();
+    String metricsName = "rowprocessor." + processor.getName();
+
     for (byte[] row : processor.getRowsToLock()) {
       checkRow(row, "processRowsWithLocks");
     }
@@ -4285,12 +4288,21 @@ public class HRegion implements HeapSize { // , Writable{
         doProcessRowWithTimeout(
             processor, now, this, null, null, timeout);
         processor.postProcess(this, walEdit);
+      } catch (IOException e) {
+        long endNanoTime = System.nanoTime();
+        HRegion.incrTimeVaryingMetric(metricsName + ".error.nano",
+                                      endNanoTime - startNanoTime);
+        throw e;
       } finally {
         closeRegionOperation();
       }
+      final long endNanoTime = System.nanoTime();
+      HRegion.incrTimeVaryingMetric(metricsName + ".nano",
+                                    endNanoTime - startNanoTime);
       return;
     }
 
+    long lockedNanoTime, processDoneNanoTime, unlockedNanoTime = 0;
     MultiVersionConsistencyControl.WriteEntry writeEntry = null;
     boolean locked = false;
     boolean walSyncSuccessful = false;
@@ -4313,6 +4325,7 @@ public class HRegion implements HeapSize { // , Writable{
       // 3. Region lock
       this.updatesLock.readLock().lock();
       locked = true;
+      lockedNanoTime = System.nanoTime();
 
       long now = EnvironmentEdgeManager.currentTimeMillis();
       try {
@@ -4320,6 +4333,7 @@ public class HRegion implements HeapSize { // , Writable{
         //    waledits
         doProcessRowWithTimeout(
             processor, now, this, mutations, walEdit, timeout);
+        processDoneNanoTime = System.nanoTime();
 
         if (!mutations.isEmpty()) {
           // 5. Get a mvcc write number
@@ -4344,6 +4358,8 @@ public class HRegion implements HeapSize { // , Writable{
             this.updatesLock.readLock().unlock();
             locked = false;
           }
+          unlockedNanoTime = System.nanoTime();
+
           // 9. Release row lock(s)
           if (acquiredLocks != null) {
             for (Integer lid : acquiredLocks) {
@@ -4382,11 +4398,18 @@ public class HRegion implements HeapSize { // , Writable{
             releaseRowLock(lid);
           }
         }
+        unlockedNanoTime = unlockedNanoTime == 0 ?
+            System.nanoTime() : unlockedNanoTime;
       }
 
       // 12. Run post-process hook
       processor.postProcess(this, walEdit);
 
+    } catch (IOException e) {
+      long endNanoTime = System.nanoTime();
+      HRegion.incrTimeVaryingMetric(metricsName + ".error.nano",
+                                    endNanoTime - startNanoTime);
+      throw e;
     } finally {
       closeRegionOperation();
       if (!mutations.isEmpty() &&
@@ -4394,6 +4417,22 @@ public class HRegion implements HeapSize { // , Writable{
         requestFlush();
       }
     }
+    // Populate all metrics
+    long endNanoTime = System.nanoTime();
+    HRegion.incrTimeVaryingMetric(metricsName + ".nano",
+                                  endNanoTime - startNanoTime);
+
+    HRegion.incrTimeVaryingMetric(metricsName + ".acquirelock.nano",
+                                  lockedNanoTime - startNanoTime);
+
+    HRegion.incrTimeVaryingMetric(metricsName + ".process.nano",
+                                  processDoneNanoTime - lockedNanoTime);
+
+    HRegion.incrTimeVaryingMetric(metricsName + ".occupylock.nano",
+                                  unlockedNanoTime - lockedNanoTime);
+
+    HRegion.incrTimeVaryingMetric(metricsName + ".sync.nano",
+                                  endNanoTime - unlockedNanoTime);
   }
 
   private void doProcessRowWithTimeout(final RowProcessor<?> processor,
@@ -4795,8 +4834,9 @@ public class HRegion implements HeapSize { // , Writable{
       // Request a cache flush.  Do it outside update lock.
       requestFlush();
     }
-    if(wrongLength){
-    	throw new IOException("Attempted to increment field that isn't 64 bits wide");
+    if (wrongLength) {
+      throw new IOException(
+          "Attempted to increment field that isn't 64 bits wide");
     }
     return result;
   }
@@ -4812,7 +4852,7 @@ public class HRegion implements HeapSize { // , Writable{
       throw new NoSuchColumnFamilyException("Column family " +
           Bytes.toString(family) + " does not exist in region " + this
           + " in table " + this.htableDescriptor);
-  	}
+    }
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(

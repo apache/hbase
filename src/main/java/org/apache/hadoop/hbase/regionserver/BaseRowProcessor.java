@@ -46,4 +46,8 @@ public abstract class BaseRowProcessor<T> implements RowProcessor<T> {
     return HConstants.DEFAULT_CLUSTER_ID;
   }
 
+  @Override
+  public String getName() {
+    return this.getClass().getSimpleName().toLowerCase();
+  }
 }

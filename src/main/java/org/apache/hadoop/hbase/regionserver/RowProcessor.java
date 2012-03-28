@@ -64,7 +64,7 @@ public interface RowProcessor<T> {
 
   /**
    * HRegion handles the locks and MVCC and invokes this method properly.
-   * 
+   *
    * You should override this to create your own RowProcessor.
    *
    * If you are doing read-modify-write here, you should consider using
@@ -103,4 +103,9 @@ public interface RowProcessor<T> {
    */
   UUID getClusterId();
 
+  /**
+   * Human readable name of the processor
+   * @return The name of the processor
+   */
+  String getName();
 }
