@@ -180,7 +180,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
     try {
       encodedStream.write(HFileBlock.DUMMY_HEADER);
       algo.writeIdInBytes(dataOut);
-      encoder.compressKeyValues(dataOut, in,
+      encoder.encodeKeyValues(dataOut, in,
           includesMemstoreTS);
     } catch (IOException e) {
       throw new RuntimeException(String.format("Bug in data block encoder " +

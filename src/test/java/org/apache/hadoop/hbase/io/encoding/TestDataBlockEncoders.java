@@ -31,13 +31,13 @@ import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.junit.runners.Parameterized;
 
 /**
  * Test all of the data block encoding algorithms for correctness.
@@ -67,13 +67,13 @@ public class TestDataBlockEncoders {
     // encode
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dataOut = new DataOutputStream(baos);
-    encoder.compressKeyValues(dataOut, dataset, includesMemstoreTS);
+    encoder.encodeKeyValues(dataOut, dataset, includesMemstoreTS);
 
     // decode
     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
     DataInputStream dis = new DataInputStream(bais);
     ByteBuffer actualDataset;
-    actualDataset = encoder.uncompressKeyValues(dis, includesMemstoreTS);
+    actualDataset = encoder.decodeKeyValues(dis, includesMemstoreTS);
 
     dataset.rewind();
     actualDataset.rewind();
@@ -148,7 +148,7 @@ public class TestDataBlockEncoders {
     for (DataBlockEncoder encoder : dataBlockEncoders) {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       DataOutputStream dataOut = new DataOutputStream(baos);
-      encoder.compressKeyValues(dataOut, originalBuffer, includesMemstoreTS);
+      encoder.encodeKeyValues(dataOut, originalBuffer, includesMemstoreTS);
       ByteBuffer encodedBuffer = ByteBuffer.wrap(baos.toByteArray());
       DataBlockEncoder.EncodedSeeker seeker =
           encoder.createSeeker(KeyValue.KEY_COMPARATOR, includesMemstoreTS);
@@ -199,7 +199,7 @@ public class TestDataBlockEncoders {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       DataOutputStream dataOut = new DataOutputStream(baos);
       try {
-        encoder.compressKeyValues(dataOut, originalBuffer, includesMemstoreTS);
+        encoder.encodeKeyValues(dataOut, originalBuffer, includesMemstoreTS);
       } catch (IOException e) {
         throw new RuntimeException(String.format(
             "Bug while encoding using '%s'", encoder.toString()), e);
@@ -259,7 +259,7 @@ public class TestDataBlockEncoders {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       DataOutputStream dataOut = new DataOutputStream(baos);
       try {
-        encoder.compressKeyValues(dataOut, originalBuffer, includesMemstoreTS);
+        encoder.encodeKeyValues(dataOut, originalBuffer, includesMemstoreTS);
       } catch (IOException e) {
         throw new RuntimeException(String.format(
             "Bug while encoding using '%s'", encoder.toString()), e);

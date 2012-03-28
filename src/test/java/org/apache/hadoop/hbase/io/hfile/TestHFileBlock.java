@@ -60,8 +60,8 @@ import org.apache.hadoop.io.compress.Compressor;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.junit.runners.Parameterized;
 
 @RunWith(Parameterized.class)
 public class TestHFileBlock {
@@ -420,7 +420,7 @@ public class TestHFileBlock {
       encodedBuf = rawBuf;
     } else {
       ByteArrayOutputStream encodedOut = new ByteArrayOutputStream();
-      encoding.getEncoder().compressKeyValues(
+      encoding.getEncoder().encodeKeyValues(
           new DataOutputStream(encodedOut),
           rawBuf.duplicate(), includesMemstoreTS);
       // We need to account for the two-byte encoding algorithm ID that

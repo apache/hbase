@@ -341,7 +341,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public void compressKeyValues(DataOutputStream out,
+  public void encodeKeyValues(DataOutputStream out,
       ByteBuffer in, boolean includesMemstoreTS) throws IOException {
     in.rewind();
     ByteBufferUtils.putInt(out, in.limit());
@@ -360,7 +360,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public ByteBuffer uncompressKeyValues(DataInputStream source,
+  public ByteBuffer decodeKeyValues(DataInputStream source,
       int allocHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
           throws IOException {
     int decompressedSize = source.readInt();

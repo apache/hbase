@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.regionserver.MemStore;
@@ -1531,4 +1532,3 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
   }
 
 }
-

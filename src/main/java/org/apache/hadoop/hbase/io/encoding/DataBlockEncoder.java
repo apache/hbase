@@ -32,42 +32,42 @@ import org.apache.hadoop.io.RawComparator;
  * <li>the values are always iterated forward from beginning of block</li>
  * <li>knowledge of Key Value format</li>
  * </ul>
- * It is designed to work fast enough to be feasible as in memory compression.
+ * It is designed to work fast enough to be feasible as in memory encoding.
  */
 public interface DataBlockEncoder {
   /**
-   * Compress KeyValues and write them to output buffer.
-   * @param out Where to write compressed data.
-   * @param in Source of KeyValue for compression.
+   * Encode KeyValues and write them to output buffer.
+   * @param out Where to write encoded data.
+   * @param in Source of KeyValue for encoding.
    * @param includesMemstoreTS true if including memstore timestamp after every
    *          key-value pair
    * @throws IOException If there is an error writing to output stream.
    */
-  public void compressKeyValues(DataOutputStream out,
+  public void encodeKeyValues(DataOutputStream out,
       ByteBuffer in, boolean includesMemstoreTS) throws IOException;
 
   /**
-   * Uncompress.
-   * @param source Compressed stream of KeyValues.
+   * Decode.
+   * @param source Encoded stream of KeyValues.
    * @param includesMemstoreTS true if including memstore timestamp after every
    *          key-value pair
-   * @return Uncompressed block of KeyValues.
+   * @return decoded block of KeyValues.
    * @throws IOException If there is an error in source.
    */
-  public ByteBuffer uncompressKeyValues(DataInputStream source,
+  public ByteBuffer decodeKeyValues(DataInputStream source,
       boolean includesMemstoreTS) throws IOException;
 
   /**
-   * Uncompress.
-   * @param source Compressed stream of KeyValues.
+   * Decode.
+   * @param source encoded stream of KeyValues.
    * @param allocateHeaderLength allocate this many bytes for the header.
    * @param skipLastBytes Do not copy n last bytes.
    * @param includesMemstoreTS true if including memstore timestamp after every
    *          key-value pair
-   * @return Uncompressed block of KeyValues.
+   * @return decoded block of KeyValues.
    * @throws IOException If there is an error in source.
    */
-  public ByteBuffer uncompressKeyValues(DataInputStream source,
+  public ByteBuffer decodeKeyValues(DataInputStream source,
       int allocateHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
       throws IOException;
 

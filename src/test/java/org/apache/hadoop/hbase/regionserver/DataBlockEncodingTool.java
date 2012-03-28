@@ -20,7 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -38,14 +38,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.encoding.EncodedDataBlock;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.EncodedDataBlock;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
-import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 
@@ -60,33 +61,85 @@ public class DataBlockEncodingTool {
   private static final boolean includesMemstoreTS = true;
 
   /**
-   * How many times should benchmark run.
-   * More times means better data in terms of statistics.
-   * It has to be larger than BENCHMARK_N_OMIT.
+   * How many times to run the benchmark. More times means better data in terms
+   * of statistics but slower execution. Has to be strictly larger than
+   * {@link DEFAULT_BENCHMARK_N_OMIT}.
    */
-  public static int BENCHMARK_N_TIMES = 12;
+  private static final int DEFAULT_BENCHMARK_N_TIMES = 12;
 
   /**
-   * How many first runs should omit benchmark.
-   * Usually it is one in order to exclude setup cost.
-   * Has to be 0 or larger.
+   * How many first runs should not be included in the benchmark. Done in order
+   * to exclude setup cost.
    */
-  public static int BENCHMARK_N_OMIT = 2;
+  private static final int DEFAULT_BENCHMARK_N_OMIT = 2;
+
+  /** HFile name to be used in benchmark */
+  private static final String OPT_HFILE_NAME = "f";
+
+  /** Maximum number of key/value pairs to process in a single benchmark run */
+  private static final String OPT_KV_LIMIT = "n";
+
+  /** Whether to run a benchmark to measure read throughput */
+  private static final String OPT_MEASURE_THROUGHPUT = "b";
+
+  /** If this is specified, no correctness testing will be done */
+  private static final String OPT_OMIT_CORRECTNESS_TEST = "c";
+
+  /** What encoding algorithm to test */
+  private static final String OPT_ENCODING_ALGORITHM = "a";
+
+  /** Number of times to run each benchmark */
+  private static final String OPT_BENCHMARK_N_TIMES = "t";
+
+  /** Number of first runs of every benchmark to omit from statistics */
+  private static final String OPT_BENCHMARK_N_OMIT = "omit";
 
   /** Compression algorithm to use if not specified on the command line */
   private static final Algorithm DEFAULT_COMPRESSION =
       Compression.Algorithm.GZ;
 
-  private List<EncodedDataBlock> codecs = new ArrayList<EncodedDataBlock>();
-  private int totalPrefixLength = 0;
-  private int totalKeyLength = 0;
-  private int totalValueLength = 0;
-  private int totalKeyRedundancyLength = 0;
+  private static final DecimalFormat DELIMITED_DECIMAL_FORMAT =
+      new DecimalFormat();
 
-  final private String compressionAlgorithmName;
-  final private Algorithm compressionAlgorithm;
-  final private Compressor compressor;
-  final private Decompressor decompressor;
+  static {
+    DELIMITED_DECIMAL_FORMAT.setGroupingSize(3);
+  }
+
+  private static final String PCT_FORMAT = "%.2f %%";
+  private static final String INT_FORMAT = "%d";
+
+  private static int benchmarkNTimes = DEFAULT_BENCHMARK_N_TIMES;
+  private static int benchmarkNOmit = DEFAULT_BENCHMARK_N_OMIT;
+
+  private List<EncodedDataBlock> codecs = new ArrayList<EncodedDataBlock>();
+  private long totalPrefixLength = 0;
+  private long totalKeyLength = 0;
+  private long totalValueLength = 0;
+  private long totalKeyRedundancyLength = 0;
+  private long totalCFLength = 0;
+
+  private byte[] rawKVs;
+
+  private final String compressionAlgorithmName;
+  private final Algorithm compressionAlgorithm;
+  private final Compressor compressor;
+  private final Decompressor decompressor;
+
+  private static enum Manipulation {
+    ENCODING,
+    DECODING,
+    COMPRESSION,
+    DECOMPRESSION;
+
+    @Override
+    public String toString() {
+      String s = super.toString();
+      StringBuilder sb = new StringBuilder();
+      sb.append(s.charAt(0));
+      sb.append(s.substring(1).toLowerCase());
+      return sb.toString();
+    }
+  }
 
   /**
    * @param compressionAlgorithmName What kind of algorithm should be used
@@ -110,23 +163,21 @@ public class DataBlockEncodingTool {
       throws IOException {
     scanner.seek(KeyValue.LOWESTKEY);
 
-    KeyValue currentKv;
+    KeyValue currentKV;
 
     byte[] previousKey = null;
     byte[] currentKey;
 
-    List<DataBlockEncoder> dataBlockEncoders =
-        DataBlockEncoding.getAllEncoders();
+    DataBlockEncoding[] encodings = DataBlockEncoding.values();
 
-    for (DataBlockEncoder d : dataBlockEncoders) {
-      codecs.add(new EncodedDataBlock(d, includesMemstoreTS));
-    }
+    ByteArrayOutputStream uncompressedOutputStream =
+        new ByteArrayOutputStream();
 
     int j = 0;
-    while ((currentKv = scanner.next()) != null && j < kvLimit) {
+    while ((currentKV = scanner.next()) != null && j < kvLimit) {
       // Iterates through key/value pairs
       j++;
-      currentKey = currentKv.getKey();
+      currentKey = currentKV.getKey();
       if (previousKey != null) {
         for (int i = 0; i < previousKey.length && i < currentKey.length &&
             previousKey[i] == currentKey[i]; ++i) {
@@ -134,16 +185,30 @@ public class DataBlockEncodingTool {
         }
       }
 
-      for (EncodedDataBlock codec : codecs) {
-        codec.addKv(currentKv);
-      }
+      uncompressedOutputStream.write(currentKV.getBuffer(),
+          currentKV.getOffset(), currentKV.getLength());
 
       previousKey = currentKey;
 
-      totalPrefixLength += currentKv.getLength() - currentKv.getKeyLength() -
-          currentKv.getValueLength();
-      totalKeyLength += currentKv.getKeyLength();
-      totalValueLength += currentKv.getValueLength();
+      int kLen = currentKV.getKeyLength();
+      int vLen = currentKV.getValueLength();
+      int cfLen = currentKV.getFamilyLength(currentKV.getFamilyOffset());
+      int restLen = currentKV.getLength() - kLen - vLen;
+
+      totalKeyLength += kLen;
+      totalValueLength += vLen;
+      totalPrefixLength += restLen;
+      totalCFLength += cfLen;
+    }
+
+    rawKVs = uncompressedOutputStream.toByteArray();
+
+    for (DataBlockEncoding encoding : encodings) {
+      if (encoding == DataBlockEncoding.NONE) {
+        continue;
+      }
+      DataBlockEncoder d = encoding.getEncoder();
+      codecs.add(new EncodedDataBlock(d, includesMemstoreTS, encoding, rawKVs));
     }
   }
 
@@ -227,15 +292,14 @@ public class DataBlockEncodingTool {
   /**
    * Benchmark codec's speed.
    */
-  public void benchmarkCodecs() {
+  public void benchmarkCodecs() throws IOException {
+    LOG.info("Starting a throughput benchmark for data block encoding codecs");
     int prevTotalSize = -1;
     for (EncodedDataBlock codec : codecs) {
       prevTotalSize = benchmarkEncoder(prevTotalSize, codec);
     }
 
-    byte[] buffer = codecs.get(0).getRawKeyValues();
-
-    benchmarkDefaultCompression(prevTotalSize, buffer);
+    benchmarkDefaultCompression(prevTotalSize, rawKVs);
   }
 
   /**
@@ -251,7 +315,7 @@ public class DataBlockEncodingTool {
 
     // decompression time
     List<Long> durations = new ArrayList<Long>();
-    for (int itTime = 0; itTime < BENCHMARK_N_TIMES; ++itTime) {
+    for (int itTime = 0; itTime < benchmarkNTimes; ++itTime) {
       totalSize = 0;
 
       Iterator<KeyValue> it;
@@ -265,7 +329,7 @@ public class DataBlockEncodingTool {
         totalSize += it.next().getLength();
       }
       final long finishTime = System.nanoTime();
-      if (itTime >= BENCHMARK_N_OMIT) {
+      if (itTime >= benchmarkNOmit) {
         durations.add(finishTime - startTime);
       }
 
@@ -276,26 +340,27 @@ public class DataBlockEncodingTool {
       prevTotalSize = totalSize;
     }
 
-    // compression time
-    List<Long> compressDurations = new ArrayList<Long>();
-    for (int itTime = 0; itTime < BENCHMARK_N_TIMES; ++itTime) {
+    List<Long> encodingDurations = new ArrayList<Long>();
+    for (int itTime = 0; itTime < benchmarkNTimes; ++itTime) {
       final long startTime = System.nanoTime();
-      codec.doCompressData();
+      codec.encodeData();
       final long finishTime = System.nanoTime();
-      if (itTime >= BENCHMARK_N_OMIT) {
-        compressDurations.add(finishTime - startTime);
+      if (itTime >= benchmarkNOmit) {
+        encodingDurations.add(finishTime - startTime);
       }
     }
 
     System.out.println(codec.toString() + ":");
-    printBenchmarkResult(totalSize, compressDurations, false);
-    printBenchmarkResult(totalSize, durations, true);
+    printBenchmarkResult(totalSize, encodingDurations, Manipulation.ENCODING);
+    printBenchmarkResult(totalSize, durations, Manipulation.DECODING);
+    System.out.println();
 
     return prevTotalSize;
   }
 
-  private void benchmarkDefaultCompression(int totalSize, byte[] rawBuffer) {
-    benchmarkAlgorithm(compressionAlgorithm, compressor, decompressor,
+  private void benchmarkDefaultCompression(int totalSize, byte[] rawBuffer)
+      throws IOException {
+    benchmarkAlgorithm(compressionAlgorithm,
         compressionAlgorithmName.toUpperCase(), rawBuffer, 0, totalSize);
   }
 
@@ -308,24 +373,22 @@ public class DataBlockEncodingTool {
    * @param buffer Buffer to be compressed.
    * @param offset Position of the beginning of the data.
    * @param length Length of data in buffer.
+   * @throws IOException
    */
-  public static void benchmarkAlgorithm(
-      Compression.Algorithm algorithm,
-      Compressor compressorCodec,
-      Decompressor decompressorCodec,
-      String name,
-      byte[] buffer, int offset, int length) {
+  public void benchmarkAlgorithm(Compression.Algorithm algorithm, String name,
+      byte[] buffer, int offset, int length) throws IOException {
     System.out.println(name + ":");
 
     // compress it
     List<Long> compressDurations = new ArrayList<Long>();
     ByteArrayOutputStream compressedStream = new ByteArrayOutputStream();
-    OutputStream compressingStream;
+    CompressionOutputStream compressingStream =
+        algorithm.createPlainCompressionStream(compressedStream, compressor);
     try {
-      for (int itTime = 0; itTime < BENCHMARK_N_TIMES; ++itTime) {
+      for (int itTime = 0; itTime < benchmarkNTimes; ++itTime) {
         final long startTime = System.nanoTime();
-        compressingStream = algorithm.createCompressionStream(
-            compressedStream, compressorCodec, 0);
+        compressingStream.resetState();
+        compressedStream.reset();
         compressingStream.write(buffer, offset, length);
         compressingStream.flush();
         compressedStream.toByteArray();
@@ -333,12 +396,8 @@ public class DataBlockEncodingTool {
         final long finishTime = System.nanoTime();
 
         // add time record
-        if (itTime >= BENCHMARK_N_OMIT) {
+        if (itTime >= benchmarkNOmit) {
           compressDurations.add(finishTime - startTime);
-        }
-
-        if (itTime + 1 < BENCHMARK_N_TIMES) { // not the last one
-          compressedStream.reset();
         }
       }
     } catch (IOException e) {
@@ -346,23 +405,22 @@ public class DataBlockEncodingTool {
           "Benchmark, or encoding algorithm '%s' cause some stream problems",
           name), e);
     }
-    printBenchmarkResult(length, compressDurations, false);
-
+    compressingStream.close();
+    printBenchmarkResult(length, compressDurations, Manipulation.COMPRESSION);
 
     byte[] compBuffer = compressedStream.toByteArray();
 
     // uncompress it several times and measure performance
     List<Long> durations = new ArrayList<Long>();
-    for (int itTime = 0; itTime < BENCHMARK_N_TIMES; ++itTime) {
+    for (int itTime = 0; itTime < benchmarkNTimes; ++itTime) {
       final long startTime = System.nanoTime();
       byte[] newBuf = new byte[length + 1];
 
       try {
-
         ByteArrayInputStream downStream = new ByteArrayInputStream(compBuffer,
             0, compBuffer.length);
         InputStream decompressedStream = algorithm.createDecompressionStream(
-            downStream, decompressorCodec, 0);
+            downStream, decompressor, 0);
 
         int destOffset = 0;
         int nextChunk;
@@ -371,7 +429,7 @@ public class DataBlockEncodingTool {
         }
         decompressedStream.close();
 
-        // iterate over KeyValue
+        // iterate over KeyValues
         KeyValue kv;
         for (int pos = 0; pos < length; pos += kv.getLength()) {
           kv = new KeyValue(newBuf, pos);
@@ -397,91 +455,116 @@ public class DataBlockEncodingTool {
       }
 
       // add time record
-      if (itTime >= BENCHMARK_N_OMIT) {
+      if (itTime >= benchmarkNOmit) {
         durations.add(finishTime - startTime);
       }
     }
-    printBenchmarkResult(length, durations, true);
+    printBenchmarkResult(length, durations, Manipulation.DECOMPRESSION);
+    System.out.println();
   }
 
+  private static final double BYTES_IN_MB = 1024 * 1024.0;
+  private static final double NS_IN_SEC = 1000.0 * 1000.0 * 1000.0;
+  private static final double MB_SEC_COEF = NS_IN_SEC / BYTES_IN_MB;
+
   private static void printBenchmarkResult(int totalSize,
-      List<Long> durationsInNanoSed, boolean isDecompression) {
+      List<Long> durationsInNanoSec, Manipulation manipulation) {
+    final int n = durationsInNanoSec.size();
     long meanTime = 0;
-    for (long time : durationsInNanoSed) {
+    for (long time : durationsInNanoSec) {
       meanTime += time;
     }
-    meanTime /= durationsInNanoSed.size();
+    meanTime /= n;
 
-    long standardDev = 0;
-    for (long time : durationsInNanoSed) {
-      standardDev += (time - meanTime) * (time - meanTime);
+    double meanMBPerSec = totalSize * MB_SEC_COEF / meanTime;
+    double mbPerSecSTD = 0;
+    if (n > 0) {
+      for (long time : durationsInNanoSec) {
+        double mbPerSec = totalSize * MB_SEC_COEF / time;
+        double dev = mbPerSec - meanMBPerSec;
+        mbPerSecSTD += dev * dev;
+      }
+      mbPerSecSTD = Math.sqrt(mbPerSecSTD / n);
     }
-    standardDev = (long) Math.sqrt(standardDev / durationsInNanoSed.size());
 
-    final double million = 1000.0 * 1000.0 * 1000.0;
-    double mbPerSec = (totalSize * million) / (1024.0 * 1024.0 * meanTime);
-    double mbPerSecDev = (totalSize * million) /
-        (1024.0 * 1024.0 * (meanTime - standardDev));
+    outputTuple(manipulation + " performance", "%6.2f MB/s (+/- %.2f MB/s)",
+         meanMBPerSec, mbPerSecSTD);
+  }
 
-    System.out.println(String.format(
-        "  %s performance:%s %6.2f MB/s (+/- %.2f MB/s)",
-        isDecompression ? "Decompression" : "Compression",
-        isDecompression ? "" : "  ",
-        mbPerSec, mbPerSecDev - mbPerSec));
+  private static void outputTuple(String caption, String format,
+      Object... values) {
+    if (format.startsWith(INT_FORMAT)) {
+      format = "%s" + format.substring(INT_FORMAT.length());
+      values[0] = DELIMITED_DECIMAL_FORMAT.format(values[0]);
+    }
+
+    StringBuilder sb = new StringBuilder();
+    sb.append("  ");
+    sb.append(caption);
+    sb.append(":");
+
+    String v = String.format(format, values);
+    int padding = 60 - sb.length() - v.length();
+    for (int i = 0; i < padding; ++i) {
+      sb.append(' ');
+    }
+    sb.append(v);
+    System.out.println(sb);
   }
 
   /**
    * Display statistics of different compression algorithms.
+   * @throws IOException
    */
-  public void displayStatistics() {
-    int totalLength = totalPrefixLength + totalKeyLength + totalValueLength;
-    if (compressor != null) {  // might be null e.g. for pure-Java GZIP
-      compressor.reset();
-    }
+  public void displayStatistics() throws IOException {
+    final String comprAlgo = compressionAlgorithmName.toUpperCase();
+    long rawBytes = totalKeyLength + totalPrefixLength + totalValueLength;
 
-    for(EncodedDataBlock codec : codecs) {
+    System.out.println("Raw data size:");
+    outputTuple("Raw bytes", INT_FORMAT, rawBytes);
+    outputTuplePct("Key bytes", totalKeyLength);
+    outputTuplePct("Value bytes", totalValueLength);
+    outputTuplePct("KV infrastructure", totalPrefixLength);
+    outputTuplePct("CF overhead", totalCFLength);
+    outputTuplePct("Total key redundancy", totalKeyRedundancyLength);
+
+    int compressedSize = EncodedDataBlock.getCompressedSize(
+        compressionAlgorithm, compressor, rawKVs, 0, rawKVs.length);
+    outputTuple(comprAlgo + " only size", INT_FORMAT,
+        compressedSize);
+    outputSavings(comprAlgo + " only", compressedSize, rawBytes);
+    System.out.println();
+
+    for (EncodedDataBlock codec : codecs) {
       System.out.println(codec.toString());
-      int saved = totalKeyLength + totalPrefixLength + totalValueLength
-          - codec.getSize();
-      System.out.println(
-          String.format("  Saved bytes:                 %8d", saved));
-      double keyRatio = (saved * 100.0) / (totalPrefixLength + totalKeyLength);
-      double allRatio = (saved * 100.0) / totalLength;
-      System.out.println(
-          String.format("  Key compression ratio:        %.2f %%", keyRatio));
-      System.out.println(
-          String.format("  All compression ratio:        %.2f %%", allRatio));
+      long encodedBytes = codec.getSize();
+      outputTuple("Encoded bytes", INT_FORMAT, encodedBytes);
+      outputSavings("Key encoding", encodedBytes - totalValueLength,
+          rawBytes - totalValueLength);
+      outputSavings("Total encoding", encodedBytes, rawBytes);
 
-      String compressedSizeCaption =
-          String.format("  %s compressed size:         ",
-              compressionAlgorithmName.toUpperCase());
-      String compressOnlyRatioCaption =
-          String.format("  %s compression ratio:        ",
-              compressionAlgorithmName.toUpperCase());
+      int encodedCompressedSize = codec.getEncodedCompressedSize(
+          compressionAlgorithm, compressor);
+      outputTuple("Encoding + " + comprAlgo + " size", INT_FORMAT,
+          encodedCompressedSize);
+      outputSavings("Encoding + " + comprAlgo, encodedCompressedSize, rawBytes);
+      outputSavings("Encoding with " + comprAlgo, encodedCompressedSize,
+          compressedSize);
 
-      if (compressor != null) {
-        int compressedSize = codec.checkCompressedSize(compressor);
-        System.out.println(compressedSizeCaption +
-            String.format("%8d", compressedSize));
-        double compressOnlyRatio =
-            100.0 * (1.0 - compressedSize / (0.0 + totalLength));
-        System.out.println(compressOnlyRatioCaption
-            + String.format("%.2f %%", compressOnlyRatio));
-      } else {
-        System.out.println(compressedSizeCaption + "N/A");
-        System.out.println(compressOnlyRatioCaption + "N/A");
-      }
+      System.out.println();
     }
+  }
 
-    System.out.println(
-        String.format("Total KV prefix length:   %8d", totalPrefixLength));
-    System.out.println(
-        String.format("Total key length:         %8d", totalKeyLength));
-    System.out.println(
-        String.format("Total key redundancy:     %8d",
-            totalKeyRedundancyLength));
-    System.out.println(
-        String.format("Total value length:       %8d", totalValueLength));
+  private void outputTuplePct(String caption, long size) {
+    outputTuple(caption, INT_FORMAT + " (" + PCT_FORMAT + ")",
+        size, size * 100.0 / rawKVs.length);
+  }
+
+  private void outputSavings(String caption, long part, long whole) {
+    double pct = 100.0 * (1 - 1.0 * part / whole);
+    double times = whole * 1.0 / part;
+    outputTuple(caption + " savings", PCT_FORMAT + " (%.2f x)",
+        pct, times);
   }
 
   /**
@@ -541,22 +624,35 @@ public class DataBlockEncodingTool {
   }
 
   /**
-   * A command line interface to benchmarks.
+   * A command line interface to benchmarks. Parses command-line arguments and
+   * runs the appropriate benchmarks.
    * @param args Should have length at least 1 and holds the file path to HFile.
    * @throws IOException If you specified the wrong file.
    */
   public static void main(final String[] args) throws IOException {
     // set up user arguments
     Options options = new Options();
-    options.addOption("f", true, "HFile to analyse (REQUIRED)");
-    options.getOption("f").setArgName("FILENAME");
-    options.addOption("n", true,
-        "Limit number of KeyValue which will be analysed");
-    options.getOption("n").setArgName("NUMBER");
-    options.addOption("b", false, "Measure read throughput");
-    options.addOption("c", false, "Omit corectness tests.");
-    options.addOption("a", true,
+    options.addOption(OPT_HFILE_NAME, true, "HFile to analyse (REQUIRED)");
+    options.getOption(OPT_HFILE_NAME).setArgName("FILENAME");
+    options.addOption(OPT_KV_LIMIT, true,
+        "Maximum number of KeyValues to process. A benchmark stops running " +
+        "after iterating over this many KV pairs.");
+    options.getOption(OPT_KV_LIMIT).setArgName("NUMBER");
+    options.addOption(OPT_MEASURE_THROUGHPUT, false,
+        "Measure read throughput");
+    options.addOption(OPT_OMIT_CORRECTNESS_TEST, false,
+        "Omit corectness tests.");
+    options.addOption(OPT_ENCODING_ALGORITHM, true,
         "What kind of compression algorithm use for comparison.");
+    options.addOption(OPT_BENCHMARK_N_TIMES,
+        true, "Number of times to run each benchmark. Default value: " +
+            DEFAULT_BENCHMARK_N_TIMES);
+    options.addOption(OPT_BENCHMARK_N_OMIT, true,
+        "Number of first runs of every benchmark to exclude from "
+            + "statistics (" + DEFAULT_BENCHMARK_N_OMIT
+            + " by default, so that " + "only the last "
+            + (DEFAULT_BENCHMARK_N_TIMES - DEFAULT_BENCHMARK_N_OMIT)
+            + " times are included in statistics.)");
 
     // parse arguments
     CommandLineParser parser = new PosixParser();
@@ -570,24 +666,44 @@ public class DataBlockEncodingTool {
     }
 
     int kvLimit = Integer.MAX_VALUE;
-    if (cmd.hasOption("n")) {
-      kvLimit = Integer.parseInt(cmd.getOptionValue("n"));
+    if (cmd.hasOption(OPT_KV_LIMIT)) {
+      kvLimit = Integer.parseInt(cmd.getOptionValue(OPT_KV_LIMIT));
     }
 
     // basic argument sanity checks
-    if (!cmd.hasOption("f")) {
-      System.err.println("ERROR: Filename is required!");
+    if (!cmd.hasOption(OPT_HFILE_NAME)) {
+      LOG.error("Please specify HFile name using the " + OPT_HFILE_NAME
+          + " option");
       printUsage(options);
       System.exit(-1);
     }
 
-    String pathName = cmd.getOptionValue("f");
+    String pathName = cmd.getOptionValue(OPT_HFILE_NAME);
     String compressionName = DEFAULT_COMPRESSION.getName();
-    if (cmd.hasOption("a")) {
-      compressionName = cmd.getOptionValue("a").toLowerCase();
+    if (cmd.hasOption(OPT_ENCODING_ALGORITHM)) {
+      compressionName =
+          cmd.getOptionValue(OPT_ENCODING_ALGORITHM).toLowerCase();
     }
-    boolean doBenchmark = cmd.hasOption("b");
-    boolean doVerify = !cmd.hasOption("c");
+    boolean doBenchmark = cmd.hasOption(OPT_MEASURE_THROUGHPUT);
+    boolean doVerify = !cmd.hasOption(OPT_OMIT_CORRECTNESS_TEST);
+
+    if (cmd.hasOption(OPT_BENCHMARK_N_TIMES)) {
+      benchmarkNTimes = Integer.valueOf(cmd.getOptionValue(
+          OPT_BENCHMARK_N_TIMES));
+    }
+    if (cmd.hasOption(OPT_BENCHMARK_N_OMIT)) {
+      benchmarkNOmit =
+          Integer.valueOf(cmd.getOptionValue(OPT_BENCHMARK_N_OMIT));
+    }
+    if (benchmarkNTimes < benchmarkNOmit) {
+      LOG.error("The number of times to run each benchmark ("
+          + benchmarkNTimes
+          + ") must be greater than the number of benchmark runs to exclude "
+          + "from statistics (" + benchmarkNOmit + ")");
+      System.exit(1);
+    }
+    LOG.info("Running benchmark " + benchmarkNTimes + " times. " +
+        "Excluding the first " + benchmarkNOmit + " times from statistics.");
 
     final Configuration conf = HBaseConfiguration.create();
     try {

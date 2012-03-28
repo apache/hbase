@@ -193,7 +193,7 @@ public final class Compression {
      * Creates a compression stream without any additional wrapping into
      * buffering streams.
      */
-    CompressionOutputStream createPlainCompressionStream(
+    public CompressionOutputStream createPlainCompressionStream(
         OutputStream downStream, Compressor compressor) throws IOException {
       CompressionCodec codec = getCodec(conf);
       ((Configurable)codec).getConf().setInt("io.file.buffer.size", 32 * 1024);

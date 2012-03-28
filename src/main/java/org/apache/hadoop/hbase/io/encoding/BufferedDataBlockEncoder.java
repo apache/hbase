@@ -21,8 +21,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.RawComparator;
@@ -36,9 +36,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   private static int INITIAL_KEY_BUFFER_SIZE = 512;
 
   @Override
-  public ByteBuffer uncompressKeyValues(DataInputStream source,
+  public ByteBuffer decodeKeyValues(DataInputStream source,
       boolean includesMemstoreTS) throws IOException {
-    return uncompressKeyValues(source, 0, 0, includesMemstoreTS);
+    return decodeKeyValues(source, 0, 0, includesMemstoreTS);
   }
 
   protected static class SeekerState {
