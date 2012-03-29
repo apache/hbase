@@ -112,7 +112,8 @@ public class AggregationClient {
     if (scan == null
         || (Bytes.equals(scan.getStartRow(), scan.getStopRow()) && !Bytes
             .equals(scan.getStartRow(), HConstants.EMPTY_START_ROW))
-        || Bytes.compareTo(scan.getStartRow(), scan.getStopRow()) > 0) {
+        || ((Bytes.compareTo(scan.getStartRow(), scan.getStopRow()) > 0) &&
+        	!Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW))) {
       throw new IOException(
           "Agg client Exception: Startrow should be smaller than Stoprow");
     } else if (scan.getFamilyMap().size() != 1) {
