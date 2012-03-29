@@ -883,4 +883,15 @@
       files when hbase.data.umask.enable is true
     </description>
   </property>
+
+  <property>
+    <name>hbase.metrics.showTableName</name>
+    <value>true</value>
+    <description>Whether to include the prefix "tbl.tablename" in per-column family metrics.
+	If true, for each metric M, per-cf metrics will be reported for tbl.T.cf.CF.M, if false,
+	per-cf metrics will be aggregated by column-family across tables, and reported for cf.CF.M.
+	In both cases, the aggregated metric M across tables and cfs will be reported.
+    </description>
+  </property>
+
 </configuration>
