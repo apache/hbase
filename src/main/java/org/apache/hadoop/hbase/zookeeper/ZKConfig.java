@@ -163,8 +163,8 @@ public class ZKConfig {
       }
       // Special case for 'hbase.cluster.distributed' property being 'true'
       if (key.startsWith("server.")) {
-        if (conf.get(HConstants.CLUSTER_DISTRIBUTED).equals(HConstants.CLUSTER_IS_DISTRIBUTED)
-            && value.startsWith("localhost")) {
+        boolean mode = conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, HConstants.DEFAULT_CLUSTER_DISTRIBUTED);
+        if (mode == HConstants.CLUSTER_IS_DISTRIBUTED && value.startsWith("localhost")) {
           String msg = "The server in zoo.cfg cannot be set to localhost " +
               "in a fully-distributed setup because it won't be reachable. " +
               "See \"Getting Started\" for more information.";

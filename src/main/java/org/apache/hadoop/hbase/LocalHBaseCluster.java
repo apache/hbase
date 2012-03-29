@@ -430,8 +430,8 @@ public class LocalHBaseCluster {
    * @return True if a 'local' address in hbase.master value.
    */
   public static boolean isLocal(final Configuration c) {
-    final String mode = c.get(HConstants.CLUSTER_DISTRIBUTED);
-    return mode == null || mode.equals(HConstants.CLUSTER_IS_LOCAL);
+    boolean mode = c.getBoolean(HConstants.CLUSTER_DISTRIBUTED, HConstants.DEFAULT_CLUSTER_DISTRIBUTED);
+    return(mode == HConstants.CLUSTER_IS_LOCAL);
   }
 
   /**
