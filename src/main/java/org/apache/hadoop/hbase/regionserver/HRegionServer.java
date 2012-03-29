@@ -2326,7 +2326,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         s = r.getScanner(scan);
       }
       if (r.getCoprocessorHost() != null) {
-        s = r.getCoprocessorHost().postScannerOpen(scan, s);
+        RegionScanner savedScanner = r.getCoprocessorHost().postScannerOpen(
+            scan, s);
+        if (savedScanner == null) {
+          LOG.warn("PostScannerOpen impl returning null. "
+              + "Check the RegionObserver implementation.");
+        } else {
+          s = savedScanner;
+        }
       }
       return addScanner(s);
     } catch (Throwable t) {
