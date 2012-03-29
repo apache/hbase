@@ -82,8 +82,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
 
     Configuration conf = context.getConfiguration();
 
-    parser = new ImportTsv.TsvParser(conf.get(ImportTsv.COLUMNS_CONF_KEY),
-                           separator);
+    parser = new ImportTsv.TsvParser(conf.get(ImportTsv.COLUMNS_CONF_KEY), separator);
     if (parser.getRowKeyColumnIndex() == -1) {
       throw new RuntimeException("No row key column specified");
     }
@@ -105,10 +104,10 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
       separator = new String(Base64.decode(separator));
     }
 
-    ts = conf.getLong(ImportTsv.TIMESTAMP_CONF_KEY, System.currentTimeMillis());
+    // Should never get 0 as we are setting this to a valid value in job configuration.
+    ts = conf.getLong(ImportTsv.TIMESTAMP_CONF_KEY, 0);
 
-    skipBadLines = context.getConfiguration().getBoolean(
-        ImportTsv.SKIP_LINES_CONF_KEY, true);
+    skipBadLines = context.getConfiguration().getBoolean(ImportTsv.SKIP_LINES_CONF_KEY, true);
     badLineCount = context.getCounter("ImportTsv", "Bad Lines");
   }
 
@@ -116,22 +115,22 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
    * Convert a line of TSV text into an HBase table row.
    */
   @Override
-  public void map(LongWritable offset, Text value,
-    Context context)
-  throws IOException {
+  public void map(LongWritable offset, Text value, Context context) throws IOException {
+
     byte[] lineBytes = value.getBytes();
 
     try {
-      ImportTsv.TsvParser.ParsedLine parsed = parser.parse(
-          lineBytes, value.getLength());
-      ImmutableBytesWritable rowKey =
-        new ImmutableBytesWritable(lineBytes,
-            parsed.getRowKeyOffset(),
-            parsed.getRowKeyLength());
+      ImportTsv.TsvParser.ParsedLine parsed = parser.parse(lineBytes, value.getLength());
+      ImmutableBytesWritable rowKey = new ImmutableBytesWritable(lineBytes,
+          parsed.getRowKeyOffset(), parsed.getRowKeyLength());
+      // Retrieve timestamp if exists
+      ts = parsed.getTimestamp(ts);
 
       Put put = new Put(rowKey.copyBytes());
       for (int i = 0; i < parsed.getColumnCount(); i++) {
-        if (i == parser.getRowKeyColumnIndex()) continue;
+        if (i == parser.getRowKeyColumnIndex() || i == parser.getTimestampKeyColumnIndex()) {
+          continue;
+        }
         KeyValue kv = new KeyValue(
             lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
             parser.getFamily(i), 0, parser.getFamily(i).length,
@@ -144,9 +143,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
       context.write(rowKey, put);
     } catch (ImportTsv.TsvParser.BadTsvLineException badLine) {
       if (skipBadLines) {
-        System.err.println(
-            "Bad line at offset: " + offset.get() + ":\n" +
-            badLine.getMessage());
+        System.err.println("Bad line at offset: " + offset.get() + ":\n" + badLine.getMessage());
         incrementBadLineCount(1);
         return;
       } else {
@@ -154,9 +151,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
       }
     } catch (IllegalArgumentException e) {
       if (skipBadLines) {
-        System.err.println(
-            "Bad line at offset: " + offset.get() + ":\n" +
-            e.getMessage());
+        System.err.println("Bad line at offset: " + offset.get() + ":\n" + e.getMessage());
         incrementBadLineCount(1);
         return;
       } else {
