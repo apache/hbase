@@ -41,8 +41,7 @@ import org.apache.hadoop.io.Writable;
  * row to append to. At least one column to append must be specified using the
  * {@link #add(byte[], byte[], byte[])} method.
  */
-public class Append extends Mutation implements Row {
-  // TODO: refactor to derive from Put?
+public class Append extends Mutation {
   private static final String RETURN_RESULTS = "_rr_";
   private static final byte APPEND_VERSION = (byte)1;
 
