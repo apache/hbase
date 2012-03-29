@@ -116,9 +116,8 @@ implements Configurable {
    */
   @Override
   public void setConf(Configuration configuration) {
-    this.conf = configuration;
+    this.conf = HBaseConfiguration.create(configuration);
     try {
-      HBaseConfiguration.addHbaseResources(conf);
       this.table = new HTable(this.conf,
         configuration.get(TableOutputFormat.OUTPUT_TABLE));
     } catch (IOException e) {

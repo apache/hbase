@@ -20,6 +20,8 @@ Release 0.92.2 - Unreleased
    HBASE-5669  AggregationClient fails validation for open stoprow scan
                (Mubarak Seyed)
    HBASE-5638  Backport HBASE-5633: NPE reading ZK config in HBase (Matteo Bertozzi)
+   HBASE-4398  If HRegionPartitioner is used in MapReduce, client side configurations
+               are overwritten by hbase-site.xml (Takuya Ueshin)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
