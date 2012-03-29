@@ -616,12 +616,12 @@ public class RemoteHTable implements HTableInterface {
   }
 
   @Override
-  public void batch(List<Row> actions, Object[] results) throws IOException {
+  public void batch(List<? extends Row> actions, Object[] results) throws IOException {
     throw new IOException("batch not supported");
   }
 
   @Override
-  public Object[] batch(List<Row> actions) throws IOException {
+  public Object[] batch(List<? extends Row> actions) throws IOException {
     throw new IOException("batch not supported");
   }
 

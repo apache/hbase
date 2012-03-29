@@ -354,13 +354,13 @@ public class HTablePool implements Closeable {
     }
 
     @Override
-    public void batch(List<Row> actions, Object[] results) throws IOException,
+    public void batch(List<? extends Row> actions, Object[] results) throws IOException,
         InterruptedException {
       table.batch(actions, results);
     }
 
     @Override
-    public Object[] batch(List<Row> actions) throws IOException,
+    public Object[] batch(List<? extends Row> actions) throws IOException,
         InterruptedException {
       return table.batch(actions);
     }

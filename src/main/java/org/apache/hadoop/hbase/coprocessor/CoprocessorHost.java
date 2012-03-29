@@ -470,13 +470,13 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
 
       @Override
-      public void batch(List<Row> actions, Object[] results)
+      public void batch(List<? extends Row> actions, Object[] results)
           throws IOException, InterruptedException {
         table.batch(actions, results);
       }
 
       @Override
-      public Object[] batch(List<Row> actions)
+      public Object[] batch(List<? extends Row> actions)
           throws IOException, InterruptedException {
         return table.batch(actions);
       }

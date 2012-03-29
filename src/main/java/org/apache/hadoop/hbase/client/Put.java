@@ -48,7 +48,7 @@ import java.util.TreeMap;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Put extends Mutation
-  implements HeapSize, Writable, Row, Comparable<Row> {
+  implements HeapSize, Writable, Comparable<Row> {
   private static final byte PUT_VERSION = (byte)2;
 
   private static final long OVERHEAD = ClassSize.align(

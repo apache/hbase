@@ -45,8 +45,7 @@ import org.apache.hadoop.io.Writable;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Append extends Mutation implements Row {
-  // TODO: refactor to derive from Put?
+public class Append extends Mutation {
   private static final String RETURN_RESULTS = "_rr_";
   private static final byte APPEND_VERSION = (byte)1;
 

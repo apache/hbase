@@ -92,7 +92,7 @@ public interface HTableInterface extends Closeable {
    * @throws IOException
    * @since 0.90.0
    */
-  void batch(final List<Row> actions, final Object[] results) throws IOException, InterruptedException;
+  void batch(final List<?extends Row> actions, final Object[] results) throws IOException, InterruptedException;
 
   /**
    * Same as {@link #batch(List, Object[])}, but returns an array of
@@ -104,7 +104,7 @@ public interface HTableInterface extends Closeable {
    * @throws IOException
    * @since 0.90.0
    */
-  Object[] batch(final List<Row> actions) throws IOException, InterruptedException;
+  Object[] batch(final List<? extends Row> actions) throws IOException, InterruptedException;
 
   /**
    * Extracts certain cells from a given row.

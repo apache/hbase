@@ -69,7 +69,7 @@ import java.util.Map;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Delete extends Mutation
-  implements Writable, Row, Comparable<Row> {
+  implements Writable, Comparable<Row> {
   private static final byte DELETE_VERSION = (byte)3;
 
   /** Constructor for Writable.  DO NOT USE */

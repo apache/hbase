@@ -700,7 +700,7 @@ public class HTable implements HTableInterface {
    * {@inheritDoc}
    */
   @Override
-  public synchronized void batch(final List<Row> actions, final Object[] results)
+  public synchronized void batch(final List<?extends Row> actions, final Object[] results)
       throws InterruptedException, IOException {
     connection.processBatch(actions, tableName, pool, results);
   }
@@ -709,7 +709,7 @@ public class HTable implements HTableInterface {
    * {@inheritDoc}
    */
   @Override
-  public synchronized Object[] batch(final List<Row> actions) throws InterruptedException, IOException {
+  public synchronized Object[] batch(final List<? extends Row> actions) throws InterruptedException, IOException {
     Object[] results = new Object[actions.size()];
     connection.processBatch(actions, tableName, pool, results);
     return results;
