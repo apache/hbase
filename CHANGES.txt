@@ -11,6 +11,7 @@ Release 0.90.7 - Unreleased
    HBASE-5563  Add comparison of regionId to HRegionInfo#compareTo (chunhui and jmhsieh)
    HBASE-5615  The master never does balance because of balancing the parent region (Xufeng)
    HBASE-5637  Fix failing 0.90 TestHMsg testcase introduced by HBASE-5563
+   HBASE-5638  Backport HBASE-5633: NPE reading ZK config in HBase (Matteo Bertozzi)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition

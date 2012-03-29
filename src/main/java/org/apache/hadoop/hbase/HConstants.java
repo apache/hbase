@@ -64,10 +64,13 @@ public final class HConstants {
   public static final String CLUSTER_DISTRIBUTED = "hbase.cluster.distributed";
 
   /** Cluster is standalone or pseudo-distributed */
-  public static final String CLUSTER_IS_LOCAL = "false";
+  public static final boolean CLUSTER_IS_LOCAL = false;
 
   /** Cluster is fully-distributed */
-  public static final String CLUSTER_IS_DISTRIBUTED = "true";
+  public static final boolean CLUSTER_IS_DISTRIBUTED = true;
+
+  /** Default value for cluster distributed mode */
+  public static final boolean DEFAULT_CLUSTER_DISTRIBUTED = CLUSTER_IS_LOCAL;
 
   /** default host address */
   public static final String DEFAULT_HOST = "0.0.0.0";
