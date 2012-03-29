@@ -42,6 +42,7 @@
       <item name="Source Repository" href="source-repository.html" />
       <item name="Team" href="team-list.html" />
       <item name="Sponsors" href="sponsors.html" />
+      <item name="Blog" href="http://blogs.apache.org/hbase/" />
     </menu>
     <menu name="Documentation">
         <item name="Getting Started" href="book/quickstart.html" />
