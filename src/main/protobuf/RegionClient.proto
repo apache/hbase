@@ -1,0 +1,372 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// This file contains protocol buffers that are used for RegionClient service.
+
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "RegionClientProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
+
+import "hbase.proto";
+
+/**
+ * Container for a list of column qualifier names of a family.
+ */
+message Column {
+  required bytes family = 1;
+  repeated bytes qualifier = 2;
+}
+
+message Attribute {
+  required string name = 1;
+  optional bytes value = 2;
+}
+
+/**
+ * The protocol buffer version of Get
+ */
+message Get {
+  required bytes row = 1;
+  repeated Column column = 2;
+  repeated Attribute attribute = 3;
+  optional uint64 lockId = 4;
+  optional Parameter filter = 5;
+  optional TimeRange timeRange = 6;
+  optional uint32 maxVersions = 7 [default = 1];
+  optional bool cacheBlocks = 8 [default = true];
+}
+
+message Result {
+  repeated KeyValue value = 1;
+}
+
+/**
+ * The get request. Perform a single Get operation.
+ * Unless existenceOnly is specified, return all the requested data
+ * for the row that matches exactly, or the one that immediately
+ * precedes it if closestRowBefore is specified.
+ *
+ * If existenceOnly is set, only the existence will be returned.
+ */
+message GetRequest {
+  required RegionSpecifier region = 1;
+  required Get get = 2;
+
+  // If the row to get doesn't exist, return the
+  // closest row before.
+  optional bool closestRowBefore = 3;
+
+  // The result isn't asked for, just check for
+  // the existence. If specified, closestRowBefore
+  // will be ignored
+  optional bool existenceOnly = 4;
+}
+
+message GetResponse {
+  optional Result result = 1;
+
+  // used for Get to check existence only
+  optional bool exists = 2;
+}
+
+/**
+ * Condition to check if the value of a given cell (row,
+ * family, qualifier) matches a value via a given comparator.
+ * The value is optional since some comparator may not require
+ * a value to compare, for example, checking null.
+ *
+ * Condition is used in check and mutate operations.
+ */
+message Condition {
+  required bytes row = 1;
+  required bytes family = 2;
+  required bytes qualifier = 3;
+  required CompareType compareType = 4;
+  required Comparator comparator = 5;
+  optional bytes value = 6;
+
+  enum CompareType {
+    LESS = 0;
+    LESS_OR_EQUAL = 1;
+    EQUAL = 2;
+    NOT_EQUAL = 3;
+    GREATER_OR_EQUAL = 4;
+    GREATER = 5;
+    NO_OP = 6;
+  }
+
+  enum Comparator {
+    BINARY_COMPARATOR = 0;
+    BINARY_PREFIX_COMPARATOR = 1;
+    BIT_AND_COMPARATOR = 2;
+    BIT_OR_COMPARATOR = 3;
+    BIT_XOR_COMPARATOR = 4;
+    NULL_COMPARATOR = 5;
+    REGEX_STRING_COMPARATOR = 6;
+    SUBSTRING_COMPARATOR = 7;
+  }
+}
+
+/**
+ * A specific mutate inside a mutate request.
+ * It can be an append, increment, put or delete based
+ * on the mutate type.
+ */
+message Mutate {
+  required bytes row = 1;
+  required MutateType mutateType = 2;
+  repeated ColumnValue columnValue = 3;
+  repeated Attribute attribute = 4;
+  optional uint64 timestamp = 5;
+  optional uint64 lockId = 6;
+  optional bool writeToWAL = 7 [default = true];
+
+  // For some mutate, result may be returned, in which case,
+  // time range can be specified for potential performance gain
+  optional TimeRange timeRange = 10;
+
+  enum MutateType {
+    APPEND = 0;
+    INCREMENT = 1;
+    PUT = 2;
+    DELETE = 3;
+    DELETE_COLUMN = 4;
+    DELETE_FAMILY = 5;
+  }
+
+  message ColumnValue {
+    required bytes family = 1;
+    repeated QualifierValue qualifierValue = 2;
+
+    // Default timestamp for qalifier values,
+    // or timestamp of the column family to be deleted
+    optional uint64 timestamp = 3;
+
+    message QualifierValue {
+      required bytes qualifier = 1;
+      optional bytes value = 2;
+      optional uint64 timestamp = 3;
+    }
+  }
+}
+
+/**
+ * The mutate request. Perform a single Mutate operation.
+ *
+ * Optionally, you can specify a condition. The mutate
+ * will take place only if the condition is met.  Otherwise,
+ * the mutate will be ignored.  In the response result,
+ * parameter processed is used to indicate if the mutate
+ * actually happened.
+ */
+message MutateRequest {
+  required RegionSpecifier region = 1;
+  required Mutate mutate = 2;
+  optional Condition condition = 3;
+}
+
+message MutateResponse {
+  optional Result result = 1;
+
+  // used for mutate to indicate processed only
+  optional bool processed = 2;
+}
+
+/**
+ * Instead of get from a table, you can scan it with optional filters.
+ * You can specify the row key range, time range, the columns/families
+ * to scan and so on.
+ *
+ * This scan is used the first time in a scan request. The response of
+ * the initial scan will return a scanner id, which should be used to
+ * fetch result batches later on before it is closed.
+ */
+message Scan {
+  repeated Column column = 1;
+  repeated Attribute attribute = 2;
+  optional bytes startRow = 3;
+  optional bytes stopRow = 4;
+  optional Parameter filter = 5;
+  optional TimeRange timeRange = 6;
+  optional uint32 maxVersions = 7 [default = 1];
+  optional bool cacheBlocks = 8 [default = true];
+  optional uint32 rowsToCache = 9;
+  optional uint32 batchSize = 10;
+}
+
+/**
+ * A scan request. Initially, it should specify a scan. Later on, you
+ * can use the scanner id returned to fetch result batches with a different
+ * scan request.
+ *
+ * The scanner will remain open if there are more results, and it's not
+ * asked to be closed explicitly.
+ *
+ * You can fetch the results and ask the scanner to be closed to save
+ * a trip if you are not interested in remaining results.
+ */
+message ScanRequest {
+  optional uint64 scannerId = 1;
+  optional Scan scan = 2;
+  optional uint32 numberOfRows = 3;
+  optional bool closeScanner = 4;
+}
+
+/**
+ * The scan response. If there are no more results, moreResults will
+ * be false.  If it is not specified, it means there are more.
+ */
+message ScanResponse {
+  repeated Result result = 1;
+  optional uint64 scannerId = 2;
+  optional bool moreResults = 3;
+  optional uint32 ttl = 4;
+}
+
+message LockRowRequest {
+  required RegionSpecifier region = 1;
+  repeated bytes row = 2;
+}
+
+message LockRowResponse {
+  required uint64 lockId = 1;
+  optional uint32 ttl = 2;
+}
+
+message UnlockRowRequest {
+  required RegionSpecifier region = 1;
+  required uint64 lockId = 2;
+}
+
+message UnlockRowResponse {
+}
+
+/**
+ * Atomically bulk load multiple HFiles (say from different column families)
+ * into an open region.
+ */
+message BulkLoadHFileRequest {
+  required RegionSpecifier region = 1;
+  repeated FamilyPath familyPath = 2;
+
+  message FamilyPath {
+    required bytes family = 1;
+    required string path = 2;
+  }
+}
+
+message BulkLoadHFileResponse {
+  required bool loaded = 1;
+}
+
+message Parameter {
+  required string type = 1;
+  optional bytes binaryValue = 2;
+}
+
+message Property {
+  required string name = 1;
+  required string value = 2;
+}
+
+/**
+ * An individual coprocessor call. You must specify the protocol,
+ * the method, and the row to which the call will be executed.
+ *
+ * You can specify the configuration settings in the property list.
+ *
+ * The parameter list has the parameters used for the method.
+ * A parameter is a pair of parameter name and the binary parameter
+ * value. The name is the parameter class name.  The value is the
+ * binary format of the parameter, for example, protocol buffer
+ * encoded value.
+ */
+message Exec {
+  required bytes row = 1;
+  required string protocolName = 2;
+  required string methodName = 3;
+  repeated Property property = 4;
+  repeated Parameter parameter = 5;
+}
+
+  /**
+   * Executes a single {@link org.apache.hadoop.hbase.ipc.CoprocessorProtocol}
+   * method using the registered protocol handlers.
+   * {@link CoprocessorProtocol} implementations must be registered via the
+   * {@link org.apache.hadoop.hbase.regionserver.HRegion#registerProtocol(
+   * Class, org.apache.hadoop.hbase.ipc.CoprocessorProtocol)}
+   * method before they are available.
+ */
+message ExecCoprocessorRequest {
+  required RegionSpecifier region = 1;
+  required Exec call = 2;
+}
+
+message ExecCoprocessorResponse {
+  required bytes regionName = 1;
+  required Parameter value = 2;
+}
+
+/**
+ * You can execute a list of actions on regions assigned
+ * to the same region server, if you can't find an individual
+ * call which meets your requirement.
+ *
+ * The multi request can have a list of requests. Each request
+ * should be a protocol buffer encoded request such as GetRequest,
+ * MutateRequest, ExecCoprocessorRequest.
+ *
+ * If the list contains multiple mutate requests only, atomic can
+ * be set to make sure they can be processed atomically.
+ */
+message MultiRequest {
+  repeated Parameter request = 1;
+  optional bool atomic = 2;
+}
+
+message MultiResponse {
+  repeated Parameter response = 1;
+}
+
+service RegionClientService {
+  rpc get(GetRequest)
+    returns(GetResponse);
+
+  rpc mutate(MutateRequest)
+    returns(MutateResponse);
+
+  rpc scan(ScanRequest)
+    returns(ScanResponse);
+
+  rpc lockRow(LockRowRequest)
+    returns(LockRowResponse);
+
+  rpc unlockRow(UnlockRowRequest)
+    returns(UnlockRowResponse);
+
+  rpc bulkLoadHFile(BulkLoadHFileRequest)
+    returns(BulkLoadHFileResponse);
+
+  rpc execCoprocessor(ExecCoprocessorRequest)
+    returns(ExecCoprocessorResponse);
+
+  rpc multi(MultiRequest)
+    returns(MultiResponse);
+}
