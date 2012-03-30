@@ -56,8 +56,8 @@ public class HBaseUtils
     } catch (InterruptedException e) {
     }
   }
-
-  public static HTable getHTable(HBaseConfiguration conf, byte[] tableName) {
+  
+  public static HTable getHTable(Configuration conf, byte[] tableName) {
     HTable table = null;
     try {
       table = new HTable(conf, tableName);

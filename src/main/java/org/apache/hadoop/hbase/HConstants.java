@@ -129,6 +129,7 @@ public final class HConstants {
   /** Parameter name for ZooKeeper session time out.*/
   public static final String ZOOKEEPER_SESSION_TIMEOUT =
     "zookeeper.session.timeout";
+
   /** Default value for ZooKeeper session time out. */
   public static final int DEFAULT_ZOOKEEPER_SESSION_TIMEOUT = 60 * 1000;
 
@@ -153,6 +154,10 @@ public final class HConstants {
 
   /** default port for region server web api */
   public static final int DEFAULT_REGIONSERVER_INFOPORT = 60030;
+
+  /** A flag that enables automatic selection of regionserver info port */
+  public static final String REGIONSERVER_INFO_PORT_AUTO =
+    "hbase.regionserver.info.port.auto";
 
   /** Parameter name for what region server interface to use. */
   public static final String REGION_SERVER_CLASS = "hbase.regionserver.class";
@@ -448,6 +453,9 @@ public final class HConstants {
 
   /** The delay when re-trying a socket operation in a loop (HBASE-4712) */
   public static final int SOCKET_RETRY_WAIT_MS = 200;
+
+  /** Host name of the local machine */
+  public static final String LOCALHOST = "localhost";
 
   /** Conf key that enables distributed log splitting */
   public static final String DISTRIBUTED_LOG_SPLITTING_KEY =

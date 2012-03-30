@@ -471,6 +471,7 @@
     <hadoop.version>0.20-fb</hadoop.version>
 
     <commons-cli.version>1.2</commons-cli.version>
+    <commons-io.version>2.1</commons-io.version>
     <commons-logging.version>1.1.1</commons-logging.version>
     <jetty.version>6.1.24</jetty.version>
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
@@ -585,6 +586,11 @@
     <dependency>
       <groupId>commons-cli</groupId>
       <artifactId>commons-cli</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>${commons-io.version}</version>
     </dependency>
     <dependency>
       <groupId>commons-httpclient</groupId>

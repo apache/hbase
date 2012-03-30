@@ -26,7 +26,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1318,6 +1321,32 @@ public class HBaseTestingUtility {
     return port;
   }
 
+  public static void waitForHostPort(String host, int port)
+      throws IOException {
+    final int maxTimeMs = 10000;
+    final int maxNumAttempts = maxTimeMs / HConstants.SOCKET_RETRY_WAIT_MS;
+    IOException savedException = null;
+    LOG.info("Waiting for server at " + host + ":" + port);
+    for (int attempt = 0; attempt < maxNumAttempts; ++attempt) {
+      try {
+        Socket sock = new Socket(InetAddress.getByName(host), port);
+        sock.close();
+        savedException = null;
+        LOG.info("Server at " + host + ":" + port + " is available");
+        break;
+      } catch (UnknownHostException e) {
+        throw new IOException("Failed to look up " + host, e);
+      } catch (IOException e) {
+        savedException = e;
+      }
+      Threads.sleepWithoutInterrupt(HConstants.SOCKET_RETRY_WAIT_MS);
+    }
+
+    if (savedException != null) {
+      throw savedException;
+    }
+  }
+
   /**
    * Creates a pre-split table for load testing. If the table already exists,
    * logs a warning and continues.
@@ -1362,6 +1391,13 @@ public class HBaseTestingUtility {
           " already exists, continuing");
     }
     return totalNumberOfRegions;
+  }
+
+  public static int getMetaRSPort(Configuration conf) throws IOException {
+    HTable table = new HTable(conf, HConstants.META_TABLE_NAME);
+    HRegionLocation hloc = table.getRegionLocation(Bytes.toBytes(""));
+    table.close();
+    return hloc.getServerAddress().getPort();
   }
 
   public HRegion createTestRegion(String tableName, HColumnDescriptor hcd)
