@@ -22,8 +22,6 @@ Release 0.92.2 - Unreleased
    HBASE-5638  Backport HBASE-5633: NPE reading ZK config in HBase (Matteo Bertozzi)
    HBASE-4398  If HRegionPartitioner is used in MapReduce, client side configurations
                are overwritten by hbase-site.xml (Takuya Ueshin)
-   HBASE-5673  The OOM problem of IPC client call cause all handle block
-               (Xufeng)
    HBASE-5535  Make the functions in task monitor synchronized (Liyin Tang)
 
   IMPROVEMENTS
