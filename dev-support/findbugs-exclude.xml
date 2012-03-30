@@ -27,4 +27,9 @@
      <Match>
        <Package name="org.apache.hadoop.hbase.rest.protobuf.generated"/>
      </Match>  
+
+     <Match>
+       <Package name="org.apache.hadoop.hbase.protobuf.generated"/>
+     </Match>  
+
 </FindBugsFilter>
