@@ -373,12 +373,11 @@ public class HBaseClient {
 
         // start the receiver thread after the socket connection has been set up
         start();
-      } catch (Throwable e) {
-        IOException exception = new IOException(e);
-        markClosed(exception);
+      } catch (IOException e) {
+        markClosed(e);
         close();
 
-        throw exception;
+        throw e;
       }
     }
 
