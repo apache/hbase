@@ -26,6 +26,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -87,6 +89,17 @@ public class TestZooKeeper {
     TEST_UTIL.ensureSomeRegionServersAvailable(2);
   }
 
+
+  private ZooKeeperWatcher getZooKeeperWatcher(HConnection c) throws
+    NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+
+    Method getterZK = c.getClass().getMethod("getKeepAliveZooKeeperWatcher");
+    getterZK.setAccessible(true);
+
+    return (ZooKeeperWatcher) getterZK.invoke(c);
+  }
+
+
   /**
    * See HBASE-1232 and http://wiki.apache.org/hadoop/ZooKeeper/FAQ#4.
    * @throws IOException
@@ -102,7 +115,7 @@ public class TestZooKeeper {
 
     HConnection connection = HConnectionManager.getConnection(c);
 
-    ZooKeeperWatcher connectionZK = connection.getZooKeeperWatcher();
+    ZooKeeperWatcher connectionZK = getZooKeeperWatcher(connection);
     LOG.info("ZooKeeperWatcher= 0x"+ Integer.toHexString(
       connectionZK.hashCode()));
     LOG.info("getRecoverableZooKeeper= 0x"+ Integer.toHexString(
@@ -143,7 +156,7 @@ public class TestZooKeeper {
     Assert.assertTrue(state == States.CLOSED);
 
     // Check that the client recovered
-    ZooKeeperWatcher newConnectionZK = connection.getZooKeeperWatcher();
+    ZooKeeperWatcher newConnectionZK = getZooKeeperWatcher(connection);
 
     States state2 = newConnectionZK.getRecoverableZooKeeper().getState();
     LOG.info("After new get state=" +state2);
@@ -154,7 +167,7 @@ public class TestZooKeeper {
     while (System.currentTimeMillis() < limit2 &&
       state2 != States.CONNECTED && state2 != States.CONNECTING) {
 
-      newConnectionZK = connection.getZooKeeperWatcher();
+      newConnectionZK = getZooKeeperWatcher(connection);
       state2 = newConnectionZK.getRecoverableZooKeeper().getState();
     }
     LOG.info("After new get state loop=" + state2);
@@ -233,11 +246,13 @@ public class TestZooKeeper {
       ipMeta.exists(new Get(HConstants.LAST_ROW));
 
       // make sure they aren't the same
-      assertFalse(HConnectionManager.getConnection(localMeta.getConfiguration()).getZooKeeperWatcher()
-          == HConnectionManager.getConnection(otherConf).getZooKeeperWatcher());
-      assertFalse(HConnectionManager.getConnection(localMeta.getConfiguration())
-          .getZooKeeperWatcher().getQuorum().equals(HConnectionManager
-              .getConnection(otherConf).getZooKeeperWatcher().getQuorum()));
+      ZooKeeperWatcher z1 =
+        getZooKeeperWatcher(HConnectionManager.getConnection(localMeta.getConfiguration()));
+      ZooKeeperWatcher z2 =
+        getZooKeeperWatcher(HConnectionManager.getConnection(otherConf));
+      assertFalse(z1 == z2);
+      assertFalse(z1.getQuorum().equals(z2.getQuorum()));
+
       localMeta.close();
       ipMeta.close();
     } catch (Exception e) {

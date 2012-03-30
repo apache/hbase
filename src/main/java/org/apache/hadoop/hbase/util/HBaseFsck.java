@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -954,13 +955,15 @@ public class HBaseFsck {
     HConnectionManager.execute(new HConnectable<Void>(conf) {
       @Override
       public Void connect(HConnection connection) throws IOException {
-        ZooKeeperWatcher zkw = connection.getZooKeeperWatcher();
+        ZooKeeperWatcher zkw = createZooKeeperWatcher();
         try {
           for (String tableName : ZKTable.getDisabledOrDisablingTables(zkw)) {
             disabledTables.add(Bytes.toBytes(tableName));
           }
         } catch (KeeperException ke) {
           throw new IOException(ke);
+        } finally {
+          zkw.close();
         }
         return null;
       }
@@ -1046,8 +1049,8 @@ public class HBaseFsck {
     ServerName sn;
     try {
       sn = getRootRegionServerName();
-    } catch (InterruptedException e) {
-      throw new IOException("Interrupted", e);
+    } catch (KeeperException e) {
+      throw new IOException(e);
     }
     MetaEntry m =
       new MetaEntry(rootLocation.getRegionInfo(), sn, System.currentTimeMillis());
@@ -1056,29 +1059,35 @@ public class HBaseFsck {
     return true;
   }
 
+  private ZooKeeperWatcher createZooKeeperWatcher() throws IOException {
+    return new ZooKeeperWatcher(conf, "hbase Fsck", new Abortable() {
+      @Override
+      public void abort(String why, Throwable e) {
+        LOG.error(why, e);
+        System.exit(1);
+      }
+
+      @Override
+      public boolean isAborted() {
+        return false;
+      }
+
+    });
+  }
+
   private ServerName getRootRegionServerName()
-  throws IOException, InterruptedException {
-    RootRegionTracker rootRegionTracker =
-      new RootRegionTracker(this.connection.getZooKeeperWatcher(), new Abortable() {
-        @Override
-        public void abort(String why, Throwable e) {
-          LOG.error(why, e);
-          System.exit(1);
-        }
-        @Override
-        public boolean isAborted(){
-          return false;
-        }
-        
-      });
-    rootRegionTracker.start();
-    ServerName sn = null;
+    throws IOException, KeeperException {
+
+    ZooKeeperWatcher zkw = createZooKeeperWatcher();
+
+    byte[] data;
     try {
-      sn = rootRegionTracker.getRootRegionLocation();
+      data = ZKUtil.getData(zkw, zkw.rootServerZNode);
     } finally {
-      rootRegionTracker.stop();
+      zkw.close();
     }
-    return sn;
+
+    return RootRegionTracker.dataToServerName(data);
   }
 
   /**

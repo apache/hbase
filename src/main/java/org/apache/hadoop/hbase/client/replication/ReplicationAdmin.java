@@ -24,7 +24,10 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -66,6 +69,7 @@ import org.apache.zookeeper.KeeperException;
  * </p>
  */
 public class ReplicationAdmin implements Closeable {
+  private static final Log LOG = LogFactory.getLog(ReplicationAdmin.class);
 
   private final ReplicationZookeeper replicationZk;
   private final HConnection connection;
@@ -82,13 +86,31 @@ public class ReplicationAdmin implements Closeable {
           "enable it in order to use replication");
     }
     this.connection = HConnectionManager.getConnection(conf);
-    ZooKeeperWatcher zkw = this.connection.getZooKeeperWatcher();
+    ZooKeeperWatcher zkw = createZooKeeperWatcher();
     try {
       this.replicationZk = new ReplicationZookeeper(this.connection, conf, zkw);
     } catch (KeeperException e) {
       throw new IOException("Unable setup the ZooKeeper connection", e);
     }
   }
+
+  private ZooKeeperWatcher createZooKeeperWatcher() throws IOException {
+    return new ZooKeeperWatcher(connection.getConfiguration(),
+      "Replication Admin", new Abortable() {
+      @Override
+      public void abort(String why, Throwable e) {
+        LOG.error(why, e);
+        System.exit(1);
+      }
+
+      @Override
+      public boolean isAborted() {
+        return false;
+      }
+
+    });
+  }
+
 
   /**
    * Add a new peer cluster to replicate to.

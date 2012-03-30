@@ -132,13 +132,13 @@ public class TestSplitTransactionOnCluster {
       List<HRegion> daughters = cluster.getRegions(tableName);
       assertTrue(daughters.size() >= 2);
       // Assert the ephemeral node is up in zk.
-      String path = ZKAssign.getNodeName(t.getConnection().getZooKeeperWatcher(),
+      String path = ZKAssign.getNodeName(TESTING_UTIL.getZooKeeperWatcher(),
         hri.getEncodedName());
       Stat stats =
-        t.getConnection().getZooKeeperWatcher().getRecoverableZooKeeper().exists(path, false);
+        TESTING_UTIL.getZooKeeperWatcher().getRecoverableZooKeeper().exists(path, false);
       LOG.info("EPHEMERAL NODE BEFORE SERVER ABORT, path=" + path + ", stats=" + stats);
       RegionTransitionData rtd =
-        ZKAssign.getData(t.getConnection().getZooKeeperWatcher(),
+        ZKAssign.getData(TESTING_UTIL.getZooKeeperWatcher(),
           hri.getEncodedName());
       // State could be SPLIT or SPLITTING.
       assertTrue(rtd.getEventType().equals(EventType.RS_ZK_REGION_SPLIT) ||
@@ -158,7 +158,7 @@ public class TestSplitTransactionOnCluster {
         assertTrue(daughters.contains(r));
       }
       // Finally assert that the ephemeral SPLIT znode was cleaned up.
-      stats = t.getConnection().getZooKeeperWatcher().getRecoverableZooKeeper().exists(path, false);
+      stats = TESTING_UTIL.getZooKeeperWatcher().getRecoverableZooKeeper().exists(path, false);
       LOG.info("EPHEMERAL NODE AFTER SERVER ABORT, path=" + path + ", stats=" + stats);
       assertTrue(stats == null);
     } finally {
@@ -195,7 +195,7 @@ public class TestSplitTransactionOnCluster {
       int regionCount = server.getOnlineRegions().size();
       // Insert into zk a blocking znode, a znode of same name as region
       // so it gets in way of our splitting.
-      ZKAssign.createNodeClosing(t.getConnection().getZooKeeperWatcher(),
+      ZKAssign.createNodeClosing(TESTING_UTIL.getZooKeeperWatcher(),
         hri, new ServerName("any.old.server", 1234, -1));
       // Now try splitting.... should fail.  And each should successfully
       // rollback.
@@ -208,7 +208,7 @@ public class TestSplitTransactionOnCluster {
         assertEquals(regionCount, server.getOnlineRegions().size());
       }
       // Now clear the zknode
-      ZKAssign.deleteClosingNode(t.getConnection().getZooKeeperWatcher(), hri);
+      ZKAssign.deleteClosingNode(TESTING_UTIL.getZooKeeperWatcher(), hri);
       // Now try splitting and it should work.
       split(hri, server, regionCount);
       // Get daughters

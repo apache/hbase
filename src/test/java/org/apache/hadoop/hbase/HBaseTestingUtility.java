@@ -712,6 +712,12 @@ public class HBaseTestingUtility {
       hbaseAdmin.close();
       hbaseAdmin = null;
     }
+
+    if (zooKeeperWatcher != null) {
+      zooKeeperWatcher.close();
+      zooKeeperWatcher = null;
+    }
+
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
       // Wait till hbase is down before going on to shutdown zk.
@@ -1416,6 +1422,32 @@ public class HBaseTestingUtility {
     return hbaseAdmin;
   }
   private HBaseAdmin hbaseAdmin = null;
+
+  /**
+   * Returns a ZooKeeperWatcher instance.
+   * This instance is shared between HBaseTestingUtility instance users.
+   * Don't close it, it will be closed automatically when the
+   * cluster shutdowns
+   *
+   * @return The ZooKeeperWatcher instance.
+   * @throws IOException
+   */
+  public synchronized ZooKeeperWatcher getZooKeeperWatcher()
+    throws IOException {
+    if (zooKeeperWatcher == null) {
+      zooKeeperWatcher = new ZooKeeperWatcher(conf, "testing utility",
+        new Abortable() {
+        @Override public void abort(String why, Throwable e) {
+          throw new RuntimeException("Unexpected abort in HBaseTestingUtility:"+why, e);
+        }
+        @Override public boolean isAborted() {return false;}
+      });
+    }
+    return zooKeeperWatcher;
+  }
+  private ZooKeeperWatcher zooKeeperWatcher;
+
+
 
   /**
    * Closes the named region.

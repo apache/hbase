@@ -274,6 +274,27 @@ public class TestHCM {
     assertTrue(c2 != c3);
   }
 
+
+  /**
+   * This test checks that one can connect to the cluster with only the
+   *  ZooKeeper quorum set. Other stuff like master address will be read
+   *  from ZK by the client.
+   */
+  @Test(timeout = 10000)
+  public void testConnection() throws Exception{
+    // We create an empty config and add the ZK address.
+    Configuration c = new Configuration();
+    c.set(HConstants.ZOOKEEPER_QUORUM,
+      TEST_UTIL.getConfiguration().get(HConstants.ZOOKEEPER_QUORUM));
+    c.set(HConstants.ZOOKEEPER_CLIENT_PORT ,
+      TEST_UTIL.getConfiguration().get(HConstants.ZOOKEEPER_CLIENT_PORT));
+
+    // This should be enough to connect
+    HConnection conn = HConnectionManager.getConnection(c);
+    assertTrue( conn.isMasterRunning() );
+    conn.close();
+  }
+
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();

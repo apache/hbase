@@ -1179,12 +1179,24 @@ public class ZKUtil {
     if (zkw == null) throw new IllegalArgumentException();
     if (znode == null) throw new IllegalArgumentException();
 
-    ZooKeeperNodeTracker znt = new ZooKeeperNodeTracker(zkw, znode, new Abortable() {
-      @Override public void abort(String why, Throwable e) {}
-      @Override public boolean isAborted() {return false;}
-    }) {
-    };
+    byte[] data = null;
+    boolean finished = false;
+    final long endTime = System.currentTimeMillis() + timeout;
+    while (!finished) {
+      try {
+        data = ZKUtil.getData(zkw, znode);
+      } catch(KeeperException e) {
+        LOG.warn("Unexpected exception handling blockUntilAvailable", e);
+      }
 
-    return znt.blockUntilAvailable(timeout, true);
+      if (data == null && (System.currentTimeMillis() +
+        HConstants.SOCKET_RETRY_WAIT_MS < endTime)) {
+        Thread.sleep(HConstants.SOCKET_RETRY_WAIT_MS);
+      } else {
+        finished = true;
+      }
+    }
+
+    return data;
   }
 }
