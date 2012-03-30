@@ -55,6 +55,14 @@ import java.util.regex.Pattern;
  *       "((([\\dA-Fa-f]{1,4}:){7}[\\dA-Fa-f]{1,4})(:([\\d]{1,3}.)" +
  *         "{3}[\\d]{1,3})?)(\\/[0-9]+)?"));
  * </pre>
+ * <p>
+ * Supports {@link java.util.regex.Pattern} flags as well:
+ * <p>
+ * <pre>
+ * ValueFilter vf = new ValueFilter(CompareOp.EQUAL,
+ *     new RegexStringComparator("regex", Pattern.CASE_INSENSITIVE | Pattern.DOTALL));
+ * </pre>
+ * @see java.util.regex.Pattern;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -71,11 +79,21 @@ public class RegexStringComparator extends WritableByteArrayComparable {
 
   /**
    * Constructor
+   * Adds Pattern.DOTALL to the underlying Pattern
    * @param expr a valid regular expression
    */
   public RegexStringComparator(String expr) {
+    this(expr, Pattern.DOTALL);
+  }
+
+  /**
+   * Constructor
+   * @param expr a valid regular expression
+   * @param flags java.util.regex.Pattern flags
+   */
+  public RegexStringComparator(String expr, int flags) {
     super(Bytes.toBytes(expr));
-    this.pattern = Pattern.compile(expr, Pattern.DOTALL);
+    this.pattern = Pattern.compile(expr, flags);
   }
 
   /**
@@ -105,7 +123,8 @@ public class RegexStringComparator extends WritableByteArrayComparable {
   public void readFields(DataInput in) throws IOException {
     final String expr = in.readUTF();
     this.value = Bytes.toBytes(expr);
-    this.pattern = Pattern.compile(expr);
+    int flags = in.readInt();
+    this.pattern = Pattern.compile(expr, flags);
     final String charset = in.readUTF();
     if (charset.length() > 0) {
       try {
@@ -119,6 +138,7 @@ public class RegexStringComparator extends WritableByteArrayComparable {
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeUTF(pattern.toString());
+    out.writeInt(pattern.flags());
     out.writeUTF(charset.name());
   }
 

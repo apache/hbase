@@ -23,6 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
@@ -50,10 +51,12 @@ public class TestSingleColumnValueFilter extends TestCase {
     Bytes.toBytes("The slow grey fox trips over the lazy dog.");
   private static final String QUICK_SUBSTR = "quick";
   private static final String QUICK_REGEX = ".+quick.+";
+  private static final Pattern QUICK_PATTERN = Pattern.compile("QuIcK", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
   Filter basicFilter;
   Filter substrFilter;
   Filter regexFilter;
+  Filter regexPatternFilter;
 
   @Override
   protected void setUp() throws Exception {
@@ -61,6 +64,7 @@ public class TestSingleColumnValueFilter extends TestCase {
     basicFilter = basicFilterNew();
     substrFilter = substrFilterNew();
     regexFilter = regexFilterNew();
+    regexPatternFilter = regexFilterNew(QUICK_PATTERN);
   }
 
   private Filter basicFilterNew() {
@@ -78,6 +82,12 @@ public class TestSingleColumnValueFilter extends TestCase {
     return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
       CompareOp.EQUAL,
       new RegexStringComparator(QUICK_REGEX));
+  }
+
+  private Filter regexFilterNew(Pattern pattern) {
+    return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
+        CompareOp.EQUAL,
+        new RegexStringComparator(pattern.pattern(), pattern.flags()));
   }
 
   private void basicFilterTests(SingleColumnValueFilter filter)
@@ -131,6 +141,16 @@ public class TestSingleColumnValueFilter extends TestCase {
     assertFalse("regexFilterNotNull", filter.filterRow());
   }
 
+  private void regexPatternFilterTests(Filter filter)
+      throws Exception {
+    KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
+      FULLSTRING_1);
+    assertTrue("regexTrue",
+      filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
+    assertFalse("regexFilterAllRemaining", filter.filterAllRemaining());
+    assertFalse("regexFilterNotNull", filter.filterRow());
+  }
+
   private Filter serializationTest(Filter filter)
       throws Exception {
     // Decompose filter to bytes.
@@ -145,7 +165,6 @@ public class TestSingleColumnValueFilter extends TestCase {
       new DataInputStream(new ByteArrayInputStream(buffer));
     Filter newFilter = new SingleColumnValueFilter();
     newFilter.readFields(in);
-
     return newFilter;
   }
 
@@ -157,6 +176,7 @@ public class TestSingleColumnValueFilter extends TestCase {
     basicFilterTests((SingleColumnValueFilter)basicFilter);
     substrFilterTests(substrFilter);
     regexFilterTests(regexFilter);
+    regexPatternFilterTests(regexPatternFilter);
   }
 
   /**
@@ -170,6 +190,8 @@ public class TestSingleColumnValueFilter extends TestCase {
     substrFilterTests(newFilter);
     newFilter = serializationTest(regexFilter);
     regexFilterTests(newFilter);
+    newFilter = serializationTest(regexPatternFilter);
+    regexPatternFilterTests(newFilter);
   }
 
   @org.junit.Rule
