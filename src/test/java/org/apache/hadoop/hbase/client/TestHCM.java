@@ -23,22 +23,19 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertEquals;
 
-import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
-import java.util.Set;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.httpclient.HostConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.HTable.DaemonThreadFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -54,6 +51,7 @@ public class TestHCM {
   private static final Log LOG = LogFactory.getLog(TestHCM.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] TABLE_NAME = Bytes.toBytes("test");
+  private static final byte[] TABLE_NAME1 = Bytes.toBytes("test1");
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("bbb");
 
@@ -136,8 +134,31 @@ public class TestHCM {
     conn.deleteCachedLocation(TABLE_NAME, ROW);
     HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);
     assertNull("What is this location?? " + rl, rl);
-    conn.close();
     table.close();
+  }
+
+  /**
+   * Test that Connection or Pool are not closed when managed externally
+   * @throws Exception
+   */
+  @Test
+  public void testConnectionManagement() throws Exception{
+    TEST_UTIL.createTable(TABLE_NAME1, FAM_NAM);
+    HConnection conn = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
+    ThreadPoolExecutor pool = new ThreadPoolExecutor(1, 10,
+        60, TimeUnit.SECONDS,
+        new SynchronousQueue<Runnable>(),
+        new DaemonThreadFactory());
+
+    HTable table = new HTable(TABLE_NAME1, conn, pool);
+    table.close();
+    assertFalse(conn.isClosed());
+    assertFalse(pool.isShutdown());
+    table = new HTable(TEST_UTIL.getConfiguration(), TABLE_NAME1, pool);
+    table.close();
+    assertFalse(pool.isShutdown());
+    conn.close();
+    pool.shutdownNow();
   }
 
   /**

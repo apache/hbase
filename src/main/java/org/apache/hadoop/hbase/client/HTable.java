@@ -119,7 +119,8 @@ public class HTable implements HTableInterface {
   private boolean closed;
   private int operationTimeout;
   private static final int DOPUT_WB_CHECK = 10;    // i.e., doPut checks the writebuffer every X Puts.
-  private final boolean cleanupOnClose; // close the connection in close()
+  private final boolean cleanupPoolOnClose; // shutdown the pool in close()
+  private final boolean cleanupConnectionOnClose; // close the connection in close()
 
   /**
    * Creates an object to access a HBase table.
@@ -150,7 +151,7 @@ public class HTable implements HTableInterface {
   public HTable(Configuration conf, final byte [] tableName)
   throws IOException {
     this.tableName = tableName;
-    this.cleanupOnClose = true;
+    this.cleanupPoolOnClose = this.cleanupConnectionOnClose = true;
     if (conf == null) {
       this.connection = null;
       return;
@@ -180,6 +181,30 @@ public class HTable implements HTableInterface {
   /**
    * Creates an object to access a HBase table.
    * Shares zookeeper connection and other resources with other HTable instances
+   * created with the same <code>conf</code> instance.  Uses already-populated
+   * region cache if one is available, populated by any other HTable instances
+   * sharing this <code>conf</code> instance.
+   * Use this constructor when the ExecutorService is externally managed.
+   * @param conf Configuration object to use.
+   * @param tableName Name of the table.
+   * @param pool ExecutorService to be used.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HTable(Configuration conf, final byte[] tableName, final ExecutorService pool)
+      throws IOException {
+    this.connection = HConnectionManager.getConnection(conf);
+    this.configuration = conf;
+    this.pool = pool;
+    this.tableName = tableName;
+    this.cleanupPoolOnClose = false;
+    this.cleanupConnectionOnClose = true;
+
+    this.finishSetup();
+  }
+
+  /**
+   * Creates an object to access a HBase table.
+   * Shares zookeeper connection and other resources with other HTable instances
    * created with the same <code>connection</code> instance.
    * Use this constructor when the ExecutorService and HConnection instance are
    * externally managed.
@@ -197,7 +222,7 @@ public class HTable implements HTableInterface {
       throw new IllegalArgumentException("Connection is null or closed.");
     }
     this.tableName = tableName;
-    this.cleanupOnClose = false;
+    this.cleanupPoolOnClose = this.cleanupConnectionOnClose = false;
     this.connection = connection;
     this.configuration = connection.getConfiguration();
     this.pool = pool;
@@ -965,8 +990,10 @@ public class HTable implements HTableInterface {
       return;
     }
     flushCommits();
-    if (cleanupOnClose) {
+    if (cleanupPoolOnClose) {
       this.pool.shutdown();
+    }
+    if (cleanupConnectionOnClose) {
       if (this.connection != null) {
         this.connection.close();
       }
