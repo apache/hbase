@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -66,30 +67,33 @@ public class TestActiveMasterManager {
       "testActiveMasterManagerFromZK", null, true);
     try {
       ZKUtil.deleteNode(zk, zk.masterAddressZNode);
+      ZKUtil.deleteNode(zk, zk.clusterStateZNode);
     } catch(KeeperException.NoNodeException nne) {}
 
     // Create the master node with a dummy address
     ServerName master = new ServerName("localhost", 1, System.currentTimeMillis());
     // Should not have a master yet
-    DummyMaster dummyMaster = new DummyMaster();
-    ActiveMasterManager activeMasterManager = new ActiveMasterManager(zk,
-      master, dummyMaster);
-    zk.registerListener(activeMasterManager);
+    DummyMaster dummyMaster = new DummyMaster(zk,master);
+    ClusterStatusTracker clusterStatusTracker =
+      dummyMaster.getClusterStatusTracker();
+    ActiveMasterManager activeMasterManager =
+      dummyMaster.getActiveMasterManager();
     assertFalse(activeMasterManager.clusterHasActiveMaster.get());
 
     // First test becoming the active master uninterrupted
     MonitoredTask status = Mockito.mock(MonitoredTask.class);
-    activeMasterManager.blockUntilBecomingActiveMaster(status);
+    clusterStatusTracker.setClusterUp();
+
+    activeMasterManager.blockUntilBecomingActiveMaster(status,clusterStatusTracker);
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, master);
 
     // Now pretend master restart
-    DummyMaster secondDummyMaster = new DummyMaster();
-    ActiveMasterManager secondActiveMasterManager = new ActiveMasterManager(zk,
-      master, secondDummyMaster);
-    zk.registerListener(secondActiveMasterManager);
+    DummyMaster secondDummyMaster = new DummyMaster(zk,master);
+    ActiveMasterManager secondActiveMasterManager =
+      secondDummyMaster.getActiveMasterManager();
     assertFalse(secondActiveMasterManager.clusterHasActiveMaster.get());
-    activeMasterManager.blockUntilBecomingActiveMaster(status);
+    activeMasterManager.blockUntilBecomingActiveMaster(status,clusterStatusTracker);
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, master);
   }
@@ -105,6 +109,7 @@ public class TestActiveMasterManager {
       "testActiveMasterManagerFromZK", null, true);
     try {
       ZKUtil.deleteNode(zk, zk.masterAddressZNode);
+      ZKUtil.deleteNode(zk, zk.clusterStateZNode);
     } catch(KeeperException.NoNodeException nne) {}
 
     // Create the master node with a dummy address
@@ -114,21 +119,22 @@ public class TestActiveMasterManager {
       new ServerName("localhost", 2, System.currentTimeMillis());
 
     // Should not have a master yet
-    DummyMaster ms1 = new DummyMaster();
-    ActiveMasterManager activeMasterManager = new ActiveMasterManager(zk,
-      firstMasterAddress, ms1);
-    zk.registerListener(activeMasterManager);
+    DummyMaster ms1 = new DummyMaster(zk,firstMasterAddress);
+    ActiveMasterManager activeMasterManager =
+      ms1.getActiveMasterManager();
     assertFalse(activeMasterManager.clusterHasActiveMaster.get());
 
     // First test becoming the active master uninterrupted
+    ClusterStatusTracker clusterStatusTracker =
+      ms1.getClusterStatusTracker();
+    clusterStatusTracker.setClusterUp();
     activeMasterManager.blockUntilBecomingActiveMaster(
-        Mockito.mock(MonitoredTask.class));
+        Mockito.mock(MonitoredTask.class),clusterStatusTracker);
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, firstMasterAddress);
 
     // New manager will now try to become the active master in another thread
     WaitToBeMasterThread t = new WaitToBeMasterThread(zk, secondMasterAddress);
-    zk.registerListener(t.manager);
     t.start();
     // Wait for this guy to figure out there is another active master
     // Wait for 1 second at most
@@ -193,18 +199,20 @@ public class TestActiveMasterManager {
   public static class WaitToBeMasterThread extends Thread {
 
     ActiveMasterManager manager;
+    DummyMaster dummyMaster;
     boolean isActiveMaster;
 
     public WaitToBeMasterThread(ZooKeeperWatcher zk, ServerName address) {
-      this.manager = new ActiveMasterManager(zk, address,
-          new DummyMaster());
+      this.dummyMaster = new DummyMaster(zk,address);
+      this.manager = this.dummyMaster.getActiveMasterManager();
       isActiveMaster = false;
     }
 
     @Override
     public void run() {
       manager.blockUntilBecomingActiveMaster(
-          Mockito.mock(MonitoredTask.class));
+          Mockito.mock(MonitoredTask.class),
+          this.dummyMaster.getClusterStatusTracker());
       LOG.info("Second master has become the active master!");
       isActiveMaster = true;
     }
@@ -240,6 +248,18 @@ public class TestActiveMasterManager {
    */
   public static class DummyMaster implements Server {
     private volatile boolean stopped;
+    private ClusterStatusTracker clusterStatusTracker;
+    private ActiveMasterManager activeMasterManager;
+
+    public DummyMaster(ZooKeeperWatcher zk, ServerName master) {
+      this.clusterStatusTracker =
+        new ClusterStatusTracker(zk, this);
+      clusterStatusTracker.start();
+      
+      this.activeMasterManager =
+        new ActiveMasterManager(zk, master, this);
+      zk.registerListener(activeMasterManager);
+    }
 
     @Override
     public void abort(final String msg, final Throwable t) {}
@@ -277,6 +297,14 @@ public class TestActiveMasterManager {
     @Override
     public CatalogTracker getCatalogTracker() {
       return null;
+    }
+
+    public ClusterStatusTracker getClusterStatusTracker() {
+      return clusterStatusTracker;
+    }
+
+    public ActiveMasterManager getActiveMasterManager() {
+      return activeMasterManager;
     }
   }
 }
