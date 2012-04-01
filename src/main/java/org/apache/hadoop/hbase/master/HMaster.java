@@ -275,7 +275,15 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.activeMasterManager = new ActiveMasterManager(zooKeeper, address, this);
       this.zooKeeper.registerListener(activeMasterManager);
       stallIfBackupMaster(this.conf, this.activeMasterManager);
-      this.activeMasterManager.blockUntilBecomingActiveMaster();
+
+      // The ClusterStatusTracker is setup before the other
+      // ZKBasedSystemTrackers because it's needed by the activeMasterManager
+      // to check if the cluster should be shutdown.
+      this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
+      this.clusterStatusTracker.start();
+      this.activeMasterManager.blockUntilBecomingActiveMaster(
+        this.clusterStatusTracker);
+
       // We are either the active master or we were asked to shutdown
       if (!this.stopped) {
         finishInitialization();
@@ -361,8 +369,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     // Set the cluster as up.  If new RSs, they'll be waiting on this before
     // going ahead with their startup.
-    this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
-    this.clusterStatusTracker.start();
     boolean wasUp = this.clusterStatusTracker.isClusterUp();
     if (!wasUp) this.clusterStatusTracker.setClusterUp();
 
