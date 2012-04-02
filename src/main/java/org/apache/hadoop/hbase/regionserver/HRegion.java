@@ -3596,6 +3596,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param conf
    * @param hTableDescriptor
    * @param hlog shared HLog
+   * @param boolean initialize - true to initialize the region
    * @return new HRegion
    *
    * @throws IOException
@@ -3603,7 +3604,8 @@ public class HRegion implements HeapSize { // , Writable{
   public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
                                       final Configuration conf,
                                       final HTableDescriptor hTableDescriptor,
-                                      final HLog hlog)
+                                      final HLog hlog,
+                                      final boolean initialize)
       throws IOException {
     LOG.info("creating HRegion " + info.getTableNameAsString()
         + " HTD == " + hTableDescriptor + " RootDir = " + rootDir +
@@ -3621,8 +3623,18 @@ public class HRegion implements HeapSize { // , Writable{
     }
     HRegion region = HRegion.newHRegion(tableDir,
         effectiveHLog, fs, conf, info, hTableDescriptor, null);
-    region.initialize();
+    if (initialize) {
+      region.initialize();
+    }
     return region;
+  }
+
+  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
+                                      final Configuration conf,
+                                      final HTableDescriptor hTableDescriptor,
+                                      final HLog hlog)
+    throws IOException {
+    return createHRegion(info, rootDir, conf, hTableDescriptor, hlog, true);
   }
 
   /**

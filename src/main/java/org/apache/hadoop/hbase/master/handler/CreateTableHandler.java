@@ -150,7 +150,7 @@ public class CreateTableHandler extends EventHandler {
       // 1. Create HRegion
       HRegion region = HRegion.createHRegion(newRegion,
         this.fileSystemManager.getRootDir(), this.conf,
-        this.hTableDescriptor, hlog);
+        this.hTableDescriptor, hlog, false);
       if (hlog == null) {
         hlog = region.getLog();
       }
