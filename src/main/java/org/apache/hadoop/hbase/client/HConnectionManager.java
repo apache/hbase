@@ -32,9 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -498,11 +496,11 @@ public class HConnectionManager {
     private volatile HMasterInterface master;
     private volatile boolean masterChecked;
     // ZooKeeper reference
-    private ZooKeeperWatcher zooKeeper;
+    private volatile ZooKeeperWatcher zooKeeper;
     // ZooKeeper-based master address tracker
-    private MasterAddressTracker masterAddressTracker;
-    private RootRegionTracker rootRegionTracker;
-    private ClusterId clusterId;
+    private volatile MasterAddressTracker masterAddressTracker;
+    private volatile RootRegionTracker rootRegionTracker;
+    private volatile ClusterId clusterId;
 
     private final Object metaRegionLock = new Object();
 
@@ -574,35 +572,43 @@ public class HConnectionManager {
           HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
 
-      setupZookeeperTrackers();
-
       this.master = null;
       this.masterChecked = false;
     }
 
-    private synchronized void setupZookeeperTrackers()
-        throws ZooKeeperConnectionException{
+    private synchronized void ensureZookeeperTrackers()
+        throws ZooKeeperConnectionException {
       // initialize zookeeper and master address manager
-      this.zooKeeper = getZooKeeperWatcher();
-      masterAddressTracker = new MasterAddressTracker(this.zooKeeper, this);
-      masterAddressTracker.start();
-
-      this.rootRegionTracker = new RootRegionTracker(this.zooKeeper, this);
-      this.rootRegionTracker.start();
-
-      this.clusterId = new ClusterId(this.zooKeeper, this);
+      if (zooKeeper == null) {
+        zooKeeper = getZooKeeperWatcher();
+      }
+      if (clusterId == null) {
+        clusterId = new ClusterId(zooKeeper, this);
+      }
+      if (masterAddressTracker == null) {
+        masterAddressTracker = new MasterAddressTracker(zooKeeper, this);
+        masterAddressTracker.start();
+      }
+      if (rootRegionTracker == null) {
+        rootRegionTracker = new RootRegionTracker(zooKeeper, this);
+        rootRegionTracker.start();
+      }
     }
 
-    private synchronized void resetZooKeeperTrackers()
-        throws ZooKeeperConnectionException {
-      LOG.info("Trying to reconnect to zookeeper");
-      masterAddressTracker.stop();
-      masterAddressTracker = null;
-      rootRegionTracker.stop();
-      rootRegionTracker = null;
+    private synchronized void resetZooKeeperTrackers() {
+      if (masterAddressTracker != null) {
+        masterAddressTracker.stop();
+        masterAddressTracker = null;
+      }
+      if (rootRegionTracker != null) {
+        rootRegionTracker.stop();
+        rootRegionTracker = null;
+      }
       clusterId = null;
-      this.zooKeeper = null;
-      setupZookeeperTrackers();
+      if (zooKeeper != null) {
+        zooKeeper.close();
+        zooKeeper = null;
+      }
     }
 
     public Configuration getConfiguration() {
@@ -623,6 +629,7 @@ public class HConnectionManager {
         LOG.info("Exception contacting master. Retrying...", ute.getCause());
       }
 
+      ensureZookeeperTrackers();
       checkIfBaseNodeAvailable();
       ServerName sn = null;
       synchronized (this.masterLock) {
@@ -762,6 +769,7 @@ public class HConnectionManager {
         // The root region is always enabled
         return online;
       }
+      getZooKeeperWatcher();
       String tableNameStr = Bytes.toString(tableName);
       try {
         if (online) {
@@ -807,11 +815,10 @@ public class HConnectionManager {
         throw new IllegalArgumentException(
             "table name cannot be null or zero length");
       }
-
+      ensureZookeeperTrackers();
       if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
         try {
-          ServerName servername =
-            this.rootRegionTracker.waitRootRegionLocation(this.rpcTimeout);
+          ServerName servername = this.rootRegionTracker.getRootRegionLocation();
           LOG.debug("Looked up root region location, connection=" + this +
             "; serverName=" + ((servername == null)? "": servername.toString()));
           if (servername == null) return null;
@@ -1255,6 +1262,7 @@ public class HConnectionManager {
       } else {
         rsName = Addressing.createHostAndPortStr(hostname, port);
       }
+      ensureZookeeperTrackers();
       // See if we already have a connection (common case)
       server = this.servers.get(rsName);
       if (server == null) {
@@ -1642,25 +1650,21 @@ public class HConnectionManager {
 
     @Override
     public void abort(final String msg, Throwable t) {
-      if (t instanceof KeeperException.SessionExpiredException) {
-        try {
-          LOG.info("This client just lost it's session with ZooKeeper, trying" +
-              " to reconnect.");
-          resetZooKeeperTrackers();
-          LOG.info("Reconnected successfully. This disconnect could have been" +
+      if (t instanceof KeeperException) {
+        LOG.info("This client just lost it's session with ZooKeeper, will"
+            + " automatically reconnect when needed.");
+        if (t instanceof KeeperException.SessionExpiredException) {
+          LOG.info("ZK session expired. This disconnect could have been" +
               " caused by a network partition or a long-running GC pause," +
               " either way it's recommended that you verify your environment.");
-          return;
-        } catch (ZooKeeperConnectionException e) {
-          LOG.error("Could not reconnect to ZooKeeper after session" +
-              " expiration, aborting");
-          t = e;
+          resetZooKeeperTrackers();
         }
+        return;
       }
       if (t != null) LOG.fatal(msg, t);
       else LOG.fatal(msg);
       this.aborted = true;
-      this.closed = true;
+      close();
     }
 
     @Override
@@ -1675,6 +1679,7 @@ public class HConnectionManager {
 
     public int getCurrentNrHRS() throws IOException {
       try {
+        getZooKeeperWatcher();
         // We go to zk rather than to master to get count of regions to avoid
         // HTable having a Master dependency.  See HBase-2828
         return ZKUtil.getNumberOfChildren(this.zooKeeper,
