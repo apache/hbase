@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -920,10 +919,8 @@ public class HConnectionManager {
         try {
           LOG.debug("Looking up root region location in ZK," +
             " connection=" + this);
-          ServerName servername = RootRegionTracker.dataToServerName(
-            ZKUtil.blockUntilAvailable(
-              zkw, zkw.rootServerZNode, this.rpcTimeout)
-          );
+          ServerName servername =
+            RootRegionTracker.blockUntilAvailable(zkw, this.rpcTimeout);
 
           LOG.debug("Looked up root region location, connection=" + this +
             "; serverName=" + ((servername == null) ? "null" : servername));

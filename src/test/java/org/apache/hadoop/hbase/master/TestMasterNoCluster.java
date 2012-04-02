@@ -35,13 +35,13 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
@@ -139,7 +139,7 @@ public class TestMasterNoCluster {
     // Put some data into the servers.  Make it look like sn0 has the root
     // w/ an entry that points to sn1 as the host of .META.  Put data into sn2
     // so it looks like it has a few regions for a table named 't'.
-    RootLocationEditor.setRootLocation(rs0.getZooKeeper(), rs0.getServerName());
+    RootRegionTracker.setRootLocation(rs0.getZooKeeper(), rs0.getServerName());
     byte [] rootregion = Bytes.toBytes("-ROOT-,,0");
     rs0.setGetResult(rootregion, HRegionInfo.FIRST_META_REGIONINFO.getRegionName(),
       Mocking.getMetaTableRowResult(HRegionInfo.FIRST_META_REGIONINFO,
@@ -300,7 +300,7 @@ public class TestMasterNoCluster {
       // when its figured it just opened the root region by setting the root
       // location up into zk.  Since we're mocking regionserver, need to do this
       // ourselves.
-      RootLocationEditor.setRootLocation(rs0.getZooKeeper(), rs0.getServerName());
+      RootRegionTracker.setRootLocation(rs0.getZooKeeper(), rs0.getServerName());
       // Do same transitions for .META. (presuming master has by now assigned
       // .META. to rs1).
       Mocking.fakeRegionServerRegionOpenInZK(rs0.getZooKeeper(),

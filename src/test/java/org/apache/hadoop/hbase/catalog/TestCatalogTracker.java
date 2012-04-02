@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.Progressable;
@@ -118,12 +119,12 @@ public class TestCatalogTracker {
     HConnection connection = Mockito.mock(HConnection.class);
     constructAndStartCatalogTracker(connection);
     try {
-      RootLocationEditor.setRootLocation(this.watcher,
+      RootRegionTracker.setRootLocation(this.watcher,
         new ServerName("example.com", 1234, System.currentTimeMillis()));
     } finally {
       // Clean out root location or later tests will be confused... they presume
       // start fresh in zk.
-      RootLocationEditor.deleteRootLocation(this.watcher);
+      RootRegionTracker.deleteRootLocation(this.watcher);
     }
   }
 
@@ -201,7 +202,7 @@ public class TestCatalogTracker {
       final CatalogTracker ct = constructAndStartCatalogTracker(connection);
       try {
         // Set a location for root and meta.
-        RootLocationEditor.setRootLocation(this.watcher, SN);
+        RootRegionTracker.setRootLocation(this.watcher, SN);
         ct.setMetaLocation(SN);
         // Call the method that HBASE-4288 calls.  It will try and verify the
         // meta location and will fail on first attempt then go into a long wait.
@@ -231,7 +232,7 @@ public class TestCatalogTracker {
         // Clean out root and meta locations or later tests will be confused...
         // they presume start fresh in zk.
         ct.resetMetaLocation();
-        RootLocationEditor.deleteRootLocation(this.watcher);
+        RootRegionTracker.deleteRootLocation(this.watcher);
       }
     } finally {
       // Clear out our doctored connection or could mess up subsequent tests.
@@ -258,14 +259,14 @@ public class TestCatalogTracker {
       // Now start up the catalogtracker with our doctored Connection.
       final CatalogTracker ct = constructAndStartCatalogTracker(connection);
       try {
-        RootLocationEditor.setRootLocation(this.watcher, SN);
+        RootRegionTracker.setRootLocation(this.watcher, SN);
         long timeout = UTIL.getConfiguration().
           getLong("hbase.catalog.verification.timeout", 1000);
         Assert.assertFalse(ct.verifyMetaRegionLocation(timeout));
       } finally {
         // Clean out root location or later tests will be confused... they
         // presume start fresh in zk.
-        RootLocationEditor.deleteRootLocation(this.watcher);
+        RootRegionTracker.deleteRootLocation(this.watcher);
       }
     } finally {
       // Clear out our doctored connection or could mess up subsequent tests.
@@ -294,13 +295,13 @@ public class TestCatalogTracker {
       thenReturn(implementation);
     final CatalogTracker ct = constructAndStartCatalogTracker(connection);
     try {
-      RootLocationEditor.setRootLocation(this.watcher,
+      RootRegionTracker.setRootLocation(this.watcher,
         new ServerName("example.com", 1234, System.currentTimeMillis()));
       Assert.assertFalse(ct.verifyRootRegionLocation(100));
     } finally {
       // Clean out root location or later tests will be confused... they presume
       // start fresh in zk.
-      RootLocationEditor.deleteRootLocation(this.watcher);
+      RootRegionTracker.deleteRootLocation(this.watcher);
     }
   }
 
@@ -350,7 +351,7 @@ public class TestCatalogTracker {
   }
 
   private ServerName setRootLocation() throws KeeperException {
-    RootLocationEditor.setRootLocation(this.watcher, SN);
+    RootRegionTracker.setRootLocation(this.watcher, SN);
     return SN;
   }
 

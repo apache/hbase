@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
@@ -79,6 +78,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -2151,7 +2151,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @throws KeeperException
    */
   public void assignRoot() throws KeeperException {
-    RootLocationEditor.deleteRootLocation(this.master.getZooKeeper());
+    RootRegionTracker.deleteRootLocation(this.master.getZooKeeper());
     assign(HRegionInfo.ROOT_REGIONINFO, true);
   }
 

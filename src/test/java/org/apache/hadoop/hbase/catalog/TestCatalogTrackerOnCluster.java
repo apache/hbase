@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.catalog;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.Test;
@@ -61,7 +62,7 @@ public class TestCatalogTrackerOnCluster {
     });
     ServerName nonsense =
       new ServerName("example.org", 1234, System.currentTimeMillis());
-    RootLocationEditor.setRootLocation(zookeeper, nonsense);
+    RootRegionTracker.setRootLocation(zookeeper, nonsense);
 
     // Bring back up the hbase cluster.  See if it can deal with nonsense root
     // location. The cluster should start and be fully available.

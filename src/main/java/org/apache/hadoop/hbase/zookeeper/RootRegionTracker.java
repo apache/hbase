@@ -1,6 +1,4 @@
 /**
- * Copyright 2010 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,9 +20,15 @@ package org.apache.hadoop.hbase.zookeeper;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.catalog.RootLocationEditor;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.zookeeper.KeeperException;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Tracks the root region server location node in zookeeper.
@@ -55,12 +59,24 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
   }
 
   /**
-   * Gets the root region location, if available.  Null if not.  Does not block.
-   * @return server name
+   * Gets the root region location, if available.  Does not block.  Sets a watcher.
+   * @return server name or null if we failed to get the data.
    * @throws InterruptedException
    */
   public ServerName getRootRegionLocation() throws InterruptedException {
     return dataToServerName(super.getData(true));
+  }
+
+  /**
+   * Gets the root region location, if available.  Does not block.  Does not set
+   * a watcher (In this regard it differs from {@link #getRootRegionLocation()}.
+   * @param zkw
+   * @return server name or null if we failed to get the data.
+   * @throws KeeperException
+   */
+  public static ServerName getRootRegionLocation(final ZooKeeperWatcher zkw)
+  throws KeeperException {
+    return dataToServerName(ZKUtil.getData(zkw, zkw.rootServerZNode));
   }
 
   /**
@@ -84,16 +100,98 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
     return dataToServerName(super.blockUntilAvailable(timeout, true));
   }
 
-  /*
+  /**
+   * Sets the location of <code>-ROOT-</code> in ZooKeeper to the
+   * specified server address.
+   * @param zookeeper zookeeper reference
+   * @param location The server hosting <code>-ROOT-</code>
+   * @throws KeeperException unexpected zookeeper exception
+   */
+  public static void setRootLocation(ZooKeeperWatcher zookeeper,
+      final ServerName location)
+  throws KeeperException {
+    LOG.info("Setting ROOT region location in ZooKeeper as " + location);
+    // Make the RootRegionServer pb and then get its bytes and save this as
+    // the znode content.
+    byte [] data = getRootRegionServerZNodeContent(location);
+    try {
+      ZKUtil.createAndWatch(zookeeper, zookeeper.rootServerZNode, data);
+    } catch(KeeperException.NodeExistsException nee) {
+      LOG.debug("ROOT region location already existed, updated location");
+      ZKUtil.setData(zookeeper, zookeeper.rootServerZNode, data);
+    }
+  }
+
+  /**
+   * Build up the znode content.
+   * @param sn What to put into the znode.
+   * @return The content of the root-region-server znode
+   */
+  static byte [] getRootRegionServerZNodeContent(final ServerName sn) {
+    // ZNode content is a pb message preceeded by some pb magic.
+    HBaseProtos.ServerName pbsn =
+      HBaseProtos.ServerName.newBuilder().setHostName(sn.getHostname()).
+      setPort(sn.getPort()).setStartCode(sn.getStartcode()).build();
+    ZooKeeperProtos.RootRegionServer pbrsr =
+      ZooKeeperProtos.RootRegionServer.newBuilder().setServer(pbsn).build();
+    return ProtobufUtil.prependPBMagic(pbrsr.toByteArray());
+  }
+
+  /**
+   * Deletes the location of <code>-ROOT-</code> in ZooKeeper.
+   * @param zookeeper zookeeper reference
+   * @throws KeeperException unexpected zookeeper exception
+   */
+  public static void deleteRootLocation(ZooKeeperWatcher zookeeper)
+  throws KeeperException {
+    LOG.info("Unsetting ROOT region location in ZooKeeper");
+    try {
+      // Just delete the node.  Don't need any watches.
+      ZKUtil.deleteNode(zookeeper, zookeeper.rootServerZNode);
+    } catch(KeeperException.NoNodeException nne) {
+      // Has already been deleted
+    }
+  }
+
+  /**
+   * Wait until the root region is available.
+   * @param zkw
+   * @param timeout
+   * @return ServerName or null if we timed out.
+   * @throws InterruptedException
+   */
+  public static ServerName blockUntilAvailable(final ZooKeeperWatcher zkw,
+      final long timeout)
+  throws InterruptedException {
+    byte [] data = ZKUtil.blockUntilAvailable(zkw, zkw.rootServerZNode, timeout);
+    return dataToServerName(data);
+  }
+
+  /**
    * @param data
    * @return Returns null if <code>data</code> is null else converts passed data
    * to a ServerName instance.
    */
-  public static ServerName dataToServerName(final byte [] data) {
+  static ServerName dataToServerName(final byte [] data) {
+    if (data == null || data.length <= 0) return null;
+    if (ProtobufUtil.isPBMagicPrefix(data)) {
+      int prefixLen = ProtobufUtil.lengthOfPBMagic();
+      try {
+        RootRegionServer rss =
+          RootRegionServer.newBuilder().mergeFrom(data, prefixLen, data.length - prefixLen).build();
+        HBaseProtos.ServerName sn = rss.getServer();
+        return new ServerName(sn.getHostName(), sn.getPort(), sn.getStartCode());
+      } catch (InvalidProtocolBufferException e) {
+        // A failed parse of the znode is pretty catastrophic. Rather than loop
+        // retrying hoping the bad bytes will changes, and rather than change
+        // the signature on this method to add an IOE which will send ripples all
+        // over the code base, throw a RuntimeException.  This should "never" happen.
+        throw new RuntimeException(e);
+      }
+    }
     // The str returned could be old style -- pre hbase-1502 -- which was
     // hostname and port seperated by a colon rather than hostname, port and
     // startcode delimited by a ','.
-    if (data == null || data.length <= 0) return null;
     String str = Bytes.toString(data);
     int index = str.indexOf(ServerName.SERVERNAME_SEPARATOR);
     if (index != -1) {

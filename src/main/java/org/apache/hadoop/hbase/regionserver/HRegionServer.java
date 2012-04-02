@@ -84,7 +84,6 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -148,6 +147,7 @@ import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
+import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.SchemaChangeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
@@ -1634,7 +1634,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     // Update ZK, ROOT or META
     if (r.getRegionInfo().isRootRegion()) {
-      RootLocationEditor.setRootLocation(getZooKeeper(),
+      RootRegionTracker.setRootLocation(getZooKeeper(),
        this.serverNameFromMasterPOV);
     } else if (r.getRegionInfo().isMetaRegion()) {
       MetaEditor.updateMetaLocation(ct, r.getRegionInfo(),

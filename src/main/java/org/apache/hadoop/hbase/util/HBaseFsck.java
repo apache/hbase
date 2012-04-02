@@ -1076,18 +1076,15 @@ public class HBaseFsck {
   }
 
   private ServerName getRootRegionServerName()
-    throws IOException, KeeperException {
-
+  throws IOException, KeeperException {
     ZooKeeperWatcher zkw = createZooKeeperWatcher();
-
-    byte[] data;
+    ServerName sn = null;
     try {
-      data = ZKUtil.getData(zkw, zkw.rootServerZNode);
+      sn = RootRegionTracker.getRootRegionLocation(zkw);
     } finally {
       zkw.close();
     }
-
-    return RootRegionTracker.dataToServerName(data);
+    return sn;
   }
 
   /**
