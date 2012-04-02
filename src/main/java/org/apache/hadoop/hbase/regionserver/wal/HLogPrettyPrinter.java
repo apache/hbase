@@ -248,6 +248,7 @@ public class HLogPrettyPrinter {
         WALEdit edit = entry.getEdit();
         // begin building a transaction structure
         Map<String, Object> txn = key.toStringMap();
+        long writeTime = key.getWriteTime();
         // check output filters
         if (sequence >= 0 && ((Long) txn.get("sequence")) != sequence)
           continue;
@@ -280,14 +281,14 @@ public class HLogPrettyPrinter {
           // Pretty output, complete with indentation by atomic action
           out.println("Sequence " + txn.get("sequence") + " "
               + "from region " + txn.get("region") + " " + "in table "
-              + txn.get("table"));
+              + txn.get("table") + " at write timestamp: " + new Date(writeTime));
           for (int i = 0; i < actions.size(); i++) {
             Map op = actions.get(i);
             out.println("  Action:");
             out.println("    row: " + op.get("row"));
             out.println("    column: " + op.get("family") + ":"
                 + op.get("qualifier"));
-            out.println("    at time: "
+            out.println("    timestamp: "
                 + (new Date((Long) op.get("timestamp"))));
             if (outputValues)
               out.println("    value: " + op.get("value"));
