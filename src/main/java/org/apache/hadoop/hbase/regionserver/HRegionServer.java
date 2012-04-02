@@ -1914,8 +1914,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     try {
       for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
-        if (!r.getRegionInfo().isMetaRegion()) {
-          if (r.isClosed() || r.isClosing()) continue;
+        if (!r.getRegionInfo().isMetaRegion() && r.isAvailable()) {
           // Don't update zk with this close transition; pass false.
           closeRegion(r.getRegionInfo(), abort, false);
         }
@@ -3135,7 +3134,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   protected HRegionInfo[] getMostLoadedRegions() {
     ArrayList<HRegionInfo> regions = new ArrayList<HRegionInfo>();
     for (HRegion r : onlineRegions.values()) {
-      if (r.isClosed() || r.isClosing()) {
+      if (!r.isAvailable()) {
         continue;
       }
       if (regions.size() < numRegionsToReport) {
