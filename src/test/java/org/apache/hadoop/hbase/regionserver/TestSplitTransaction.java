@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.collect.ImmutableList;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -139,6 +141,28 @@ public class TestSplitTransaction {
     SplitTransaction st = new SplitTransaction(this.parent, GOOD_SPLIT_ROW);
     assertTrue(st.prepare());
     return st;
+  }
+
+  /**
+   * Pass a reference store
+   */
+  @Test public void testPrepareWithRegionsWithReference() throws IOException {
+    // create a mock that will act as a reference StoreFile
+    StoreFile storeFileMock  = Mockito.mock(StoreFile.class);
+    when(storeFileMock.isReference()).thenReturn(true);
+
+    // add the mock to the parent stores
+    Store storeMock = Mockito.mock(Store.class);
+    List<StoreFile> storeFileList = new ArrayList<StoreFile>(1);
+    storeFileList.add(storeFileMock);
+    when(storeMock.getStorefiles()).thenReturn(storeFileList);
+    when(storeMock.close()).thenReturn(ImmutableList.copyOf(storeFileList));
+    this.parent.stores.put(Bytes.toBytes(""), storeMock);
+
+    SplitTransaction st = new SplitTransaction(this.parent, GOOD_SPLIT_ROW);
+
+    assertFalse("a region should not be splittable if it has instances of store file references",
+                st.prepare());
   }
 
   /**

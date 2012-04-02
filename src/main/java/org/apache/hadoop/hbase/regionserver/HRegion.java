@@ -668,6 +668,16 @@ public class HRegion implements HeapSize { // , Writable{
     return this.closing.get();
   }
 
+  /** @return true if region is available (not closed and not closing) */
+  public boolean isAvailable() {
+    return !isClosed() && !isClosing();
+  }
+
+  /** @return true if region is splittable */
+  public boolean isSplittable() {
+    return isAvailable() && !hasReferences();
+  }
+
   boolean areWritesEnabled() {
     synchronized(this.writestate) {
       return this.writestate.writesEnabled;
