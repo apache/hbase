@@ -30,6 +30,7 @@ Release 0.92.2 - Unreleased
    HBASE-5592  Make it easier to get a table from shell (Ben West)
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
    HBASE-5589  Add of the offline call to the Master Interface
+   HBASE-5436  Right-size the map when reading attributes (Benoit)
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems
