@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
 
@@ -28,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -42,10 +42,14 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.RunningJob;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test Map/Reduce job over HBase tables. The map/reduce process we're testing
@@ -58,7 +62,7 @@ public class TestTableMapReduce {
     LogFactory.getLog(TestTableMapReduce.class.getName());
   private static final HBaseTestingUtility UTIL =
     new HBaseTestingUtility();
-  static final String MULTI_REGION_TABLE_NAME = "mrtest";
+  static final byte[] MULTI_REGION_TABLE_NAME = Bytes.toBytes("mrtest");
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");
 
@@ -69,12 +73,10 @@ public class TestTableMapReduce {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(MULTI_REGION_TABLE_NAME);
-    desc.addFamily(new HColumnDescriptor(INPUT_FAMILY));
-    desc.addFamily(new HColumnDescriptor(OUTPUT_FAMILY));
     UTIL.startMiniCluster();
-    HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
-    admin.createTable(desc, HBaseTestingUtility.KEYS);
+    HTable table = UTIL.createTable(MULTI_REGION_TABLE_NAME, new byte[][] {INPUT_FAMILY, OUTPUT_FAMILY});
+    UTIL.createMultiRegions(table, INPUT_FAMILY);
+    UTIL.loadTable(table, INPUT_FAMILY);
     UTIL.startMiniMapReduceCluster();
   }
 
@@ -150,7 +152,8 @@ public class TestTableMapReduce {
         IdentityTableReduce.class, jobConf);
 
       LOG.info("Started " + Bytes.toString(table.getTableName()));
-      JobClient.runJob(jobConf);
+      RunningJob job = JobClient.runJob(jobConf);
+      assertTrue(job.isSuccessful());
       LOG.info("After map/reduce completion");
 
       // verify map-reduce results
@@ -184,7 +187,7 @@ public class TestTableMapReduce {
         // continue
       }
     }
-    org.junit.Assert.assertTrue(verified);
+    assertTrue(verified);
   }
 
   /**
@@ -199,7 +202,10 @@ public class TestTableMapReduce {
     TableInputFormat.addColumns(scan, columns);
     ResultScanner scanner = table.getScanner(scan);
     try {
-      for (Result r : scanner) {
+      Iterator<Result> itr = scanner.iterator();
+      assertTrue(itr.hasNext());
+      while(itr.hasNext()) {
+        Result r = itr.next();
         if (LOG.isDebugEnabled()) {
           if (r.size() > 2 ) {
             throw new IOException("Too many results, expected 2 got " +
@@ -247,7 +253,7 @@ public class TestTableMapReduce {
                 r.getRow() + ", first value=" + first + ", second value=" +
                 second);
           }
-          org.junit.Assert.fail();
+          fail();
         }
       }
     } finally {
