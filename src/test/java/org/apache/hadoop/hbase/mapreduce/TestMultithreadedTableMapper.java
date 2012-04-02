@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
 
@@ -28,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -52,23 +52,21 @@ import static org.junit.Assert.assertTrue;
  * a particular cell, and write it back to the table.
  */
 @Category(LargeTests.class)
-public class TestMulitthreadedTableMapper {
-  private static final Log LOG = LogFactory.getLog(TestMulitthreadedTableMapper.class);
+public class TestMultithreadedTableMapper {
+  private static final Log LOG = LogFactory.getLog(TestMultithreadedTableMapper.class);
   private static final HBaseTestingUtility UTIL =
       new HBaseTestingUtility();
-  static final String MULTI_REGION_TABLE_NAME = "mrtest";
+  static final byte[] MULTI_REGION_TABLE_NAME = Bytes.toBytes("mrtest");
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");
   static final int    NUMBER_OF_THREADS = 10;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor(MULTI_REGION_TABLE_NAME);
-    desc.addFamily(new HColumnDescriptor(INPUT_FAMILY));
-    desc.addFamily(new HColumnDescriptor(OUTPUT_FAMILY));
     UTIL.startMiniCluster();
-    HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
-    admin.createTable(desc, HBaseTestingUtility.KEYS);
+    HTable table = UTIL.createTable(MULTI_REGION_TABLE_NAME, new byte[][] {INPUT_FAMILY, OUTPUT_FAMILY});
+    UTIL.createMultiRegions(table, INPUT_FAMILY);
+    UTIL.loadTable(table, INPUT_FAMILY);
     UTIL.startMiniMapReduceCluster();
   }
 
@@ -149,7 +147,7 @@ public class TestMulitthreadedTableMapper {
           IdentityTableReducer.class, job);
       FileOutputFormat.setOutputPath(job, new Path("test"));
       LOG.info("Started " + Bytes.toString(table.getTableName()));
-      job.waitForCompletion(true);
+      assertTrue(job.waitForCompletion(true));
       LOG.info("After map/reduce completion");
       // verify map-reduce results
       verify(Bytes.toString(table.getTableName()));
@@ -203,7 +201,10 @@ public class TestMulitthreadedTableMapper {
     scan.addFamily(OUTPUT_FAMILY);
     ResultScanner scanner = table.getScanner(scan);
     try {
-      for (Result r : scanner) {
+      Iterator<Result> itr = scanner.iterator();
+      assertTrue(itr.hasNext());
+      while(itr.hasNext()) {
+        Result r = itr.next();
         if (LOG.isDebugEnabled()) {
           if (r.size() > 2 ) {
             throw new IOException("Too many results, expected 2 got " +
