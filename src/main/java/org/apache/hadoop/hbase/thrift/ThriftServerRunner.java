@@ -829,8 +829,8 @@ public class ThriftServerRunner implements Runnable {
                 get.addColumn(famAndQf[0], famAndQf[1]);
               }
             }
-            get.setTimeRange(Long.MIN_VALUE, timestamp);
           }
+          get.setTimeRange(Long.MIN_VALUE, timestamp);
           gets.add(get);
         }
         Result[] result = table.get(gets);
