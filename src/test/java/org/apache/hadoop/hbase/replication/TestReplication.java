@@ -26,7 +26,14 @@ import static org.junit.Assert.fail;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -445,8 +452,107 @@ public class TestReplication {
   }
 
   /**
+   * Test disable/enable replication, trying to insert, make sure nothing's
+   * replicated, enable it, the insert should be replicated
+   *
+   * @throws Exception
+   */
+  @Test(timeout = 300000)
+  public void testDisableEnable() throws Exception {
+
+    // Test disabling replication
+    admin.disablePeer("2");
+
+    byte[] rowkey = Bytes.toBytes("disable enable");
+    Put put = new Put(rowkey);
+    put.add(famName, row, row);
+    htable1.put(put);
+
+    Get get = new Get(rowkey);
+    for (int i = 0; i < NB_RETRIES; i++) {
+      Result res = htable2.get(get);
+      if (res.size() >= 1) {
+        fail("Replication wasn't disabled");
+      } else {
+        LOG.info("Row not replicated, let's wait a bit more...");
+        Thread.sleep(SLEEP_TIME);
+      }
+    }
+
+    // Test enable replication
+    admin.enablePeer("2");
+
+    for (int i = 0; i < NB_RETRIES; i++) {
+      Result res = htable2.get(get);
+      if (res.size() == 0) {
+        LOG.info("Row not available");
+        Thread.sleep(SLEEP_TIME);
+      } else {
+        assertArrayEquals(res.value(), row);
+        return;
+      }
+    }
+    fail("Waited too much time for put replication");
+  }
+
+  /**
+   * Test disabling an inactive peer. Add a peer which is inactive, trying to
+   * insert, disable the peer, then activate the peer and make sure nothing is
+   * replicated. In Addition, enable the peer and check the updates are
+   * replicated.
+   *
+   * @throws Exception
+   */
+  @Test(timeout = 600000)
+  public void testDisableInactivePeer() throws Exception {
+
+    // enabling and shutdown the peer
+    admin.enablePeer("2");
+    utility2.shutdownMiniHBaseCluster();
+
+    byte[] rowkey = Bytes.toBytes("disable inactive peer");
+    Put put = new Put(rowkey);
+    put.add(famName, row, row);
+    htable1.put(put);
+
+    // wait for the sleep interval of the master cluster to become long
+    Thread.sleep(SLEEP_TIME * NB_RETRIES);
+
+    // disable and start the peer
+    admin.disablePeer("2");
+    utility2.startMiniHBaseCluster(1, 1);
+    Get get = new Get(rowkey);
+    for (int i = 0; i < NB_RETRIES; i++) {
+      Result res = htable2.get(get);
+      if (res.size() >= 1) {
+        fail("Replication wasn't disabled");
+      } else {
+        LOG.info("Row not replicated, let's wait a bit more...");
+        Thread.sleep(SLEEP_TIME);
+      }
+    }
+
+    // Test enable replication
+    admin.enablePeer("2");
+    // wait since the sleep interval would be long
+    Thread.sleep(SLEEP_TIME * NB_RETRIES);
+    for (int i = 0; i < NB_RETRIES; i++) {
+      Result res = htable2.get(get);
+      if (res.size() == 0) {
+        LOG.info("Row not available");
+        Thread.sleep(SLEEP_TIME * NB_RETRIES);
+      } else {
+        assertArrayEquals(res.value(), row);
+        return;
+      }
+    }
+    fail("Waited too much time for put replication");
+  }
+
+  /**
    * Integration test for TestReplicationAdmin, removes and re-add a peer
    * cluster
+   *
    * @throws Exception
    */
   @Test(timeout=300000)

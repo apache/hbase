@@ -138,9 +138,6 @@ public class ReplicationSource extends Thread
   private volatile boolean running = true;
   // Metrics for this source
   private ReplicationSourceMetrics metrics;
-  // If source is enabled, replication happens. If disabled, nothing will be
-  // replicated but HLogs will still be queued
-  private AtomicBoolean sourceEnabled = new AtomicBoolean();
 
   /**
    * Instantiation method used by region servers
@@ -274,7 +271,7 @@ public class ReplicationSource extends Thread
     // Loop until we close down
     while (isActive()) {
       // Sleep until replication is enabled again
-      if (!this.replicating.get() || !this.sourceEnabled.get()) {
+      if (!isPeerEnabled()) {
         if (sleepForRetries("Replication is disabled", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -601,6 +598,12 @@ public class ReplicationSource extends Thread
       return;
     }
     while (this.isActive()) {
+      if (!isPeerEnabled()) {
+        if (sleepForRetries("Replication is disabled", sleepMultiplier)) {
+          sleepMultiplier++;
+        }
+        continue;
+      }
       try {
         HRegionInterface rrs = getRS();
         LOG.debug("Replicating " + currentNbEntries);
@@ -657,6 +660,15 @@ public class ReplicationSource extends Thread
         }
       }
     }
+  }
+
+  /**
+   * check whether the peer is enabled or not
+   *
+   * @return true if the peer is enabled, otherwise false
+   */
+  protected boolean isPeerEnabled() {
+    return this.replicating.get() && this.zkHelper.getPeerEnabled(peerId);
   }
 
   /**
@@ -763,10 +775,6 @@ public class ReplicationSource extends Thread
 
   public Path getCurrentPath() {
     return this.currentPath;
-  }
-
-  public void setSourceEnabled(boolean status) {
-    this.sourceEnabled.set(status);
   }
 
   private boolean isActive() {

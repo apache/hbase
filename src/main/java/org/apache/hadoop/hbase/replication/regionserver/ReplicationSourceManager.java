@@ -35,7 +35,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -47,6 +46,8 @@ import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * This class is responsible to manage all the replication
@@ -203,8 +204,6 @@ public class ReplicationSourceManager {
   public ReplicationSourceInterface addSource(String id) throws IOException {
     ReplicationSourceInterface src =
         getReplicationSource(this.conf, this.fs, this, stopper, replicating, id);
-    // TODO set it to what's in ZK
-    src.setSourceEnabled(true);
     synchronized (this.hlogsById) {
       this.sources.add(src);
       this.hlogsById.put(id, new TreeSet<String>());
@@ -585,8 +584,6 @@ public class ReplicationSourceManager {
           for (String hlog : entry.getValue()) {
             src.enqueueLog(new Path(oldLogDir, hlog));
           }
-          // TODO set it to what's in ZK
-          src.setSourceEnabled(true);
           src.startup();
         } catch (IOException e) {
           // TODO manage it

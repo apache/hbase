@@ -50,18 +50,20 @@ import org.apache.zookeeper.KeeperException.ConnectionLossException;
 import org.apache.zookeeper.KeeperException.SessionExpiredException;
 
 /**
- * This class serves as a helper for all things related to zookeeper
- * in replication.
+ * This class serves as a helper for all things related to zookeeper in
+ * replication.
  * <p/>
- * The layout looks something like this under zookeeper.znode.parent
- * for the master cluster:
+ * The layout looks something like this under zookeeper.znode.parent for the
+ * master cluster:
  * <p/>
+ *
  * <pre>
  * replication/
  *  state      {contains true or false}
  *  clusterId  {contains a byte}
  *  peers/
  *    1/   {contains a full cluster address}
+ *      peer-state  {contains ENABLED or DISABLED}
  *    2/
  *    ...
  *  rs/ {lists all RS that replicate}
@@ -82,6 +84,12 @@ public class ReplicationZookeeper implements Closeable{
     LogFactory.getLog(ReplicationZookeeper.class);
   // Name of znode we use to lock when failover
   private final static String RS_LOCK_ZNODE = "lock";
+
+  // Values of znode which stores state of a peer
+  public static enum PeerState {
+    ENABLED, DISABLED
+  };
+
   // Our handle on zookeeper
   private final ZooKeeperWatcher zookeeper;
   // Map of peer clusters keyed by their id
@@ -96,6 +104,8 @@ public class ReplicationZookeeper implements Closeable{
   private String rsServerNameZnode;
   // Name node if the replicationState znode
   private String replicationStateNodeName;
+  // Name of zk node which stores peer state
+  private String peerStateNodeName;
   private final Configuration conf;
   // Is this cluster replicating at the moment?
   private AtomicBoolean replicating;
@@ -150,6 +160,8 @@ public class ReplicationZookeeper implements Closeable{
         conf.get("zookeeper.znode.replication", "replication");
     String peersZNodeName =
         conf.get("zookeeper.znode.replication.peers", "peers");
+    this.peerStateNodeName = conf.get(
+        "zookeeper.znode.replication.peers.state", "peer-state");
     this.replicationStateNodeName =
         conf.get("zookeeper.znode.replication.state", "state");
     String rsZNodeName =
@@ -339,8 +351,10 @@ public class ReplicationZookeeper implements Closeable{
       return null;
     }
 
-    return new ReplicationPeer(otherConf, peerId,
+    ReplicationPeer peer = new ReplicationPeer(otherConf, peerId,
         otherClusterKey);
+    peer.startStateTracker(this.zookeeper, this.getPeerStateNode(peerId));
+    return peer;
   }
 
   /**
@@ -366,7 +380,8 @@ public class ReplicationZookeeper implements Closeable{
       if (!peerExists(id)) {
         throw new IllegalArgumentException("Cannot remove inexisting peer");
       }
-      ZKUtil.deleteNode(this.zookeeper, ZKUtil.joinZNode(this.peersZNode, id));
+      ZKUtil.deleteNodeRecursively(this.zookeeper,
+          ZKUtil.joinZNode(this.peersZNode, id));
     } catch (KeeperException e) {
       throw new IOException("Unable to remove a peer", e);
     }
@@ -388,6 +403,8 @@ public class ReplicationZookeeper implements Closeable{
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
       ZKUtil.createAndWatch(this.zookeeper,
           ZKUtil.joinZNode(this.peersZNode, id), Bytes.toBytes(clusterKey));
+      ZKUtil.createAndWatch(this.zookeeper, getPeerStateNode(id),
+          Bytes.toBytes(PeerState.ENABLED.name())); // enabled by default
     } catch (KeeperException e) {
       throw new IOException("Unable to add peer", e);
     }
@@ -396,6 +413,82 @@ public class ReplicationZookeeper implements Closeable{
   private boolean peerExists(String id) throws KeeperException {
     return ZKUtil.checkExists(this.zookeeper,
           ZKUtil.joinZNode(this.peersZNode, id)) >= 0;
+  }
+
+  /**
+   * Enable replication to the peer
+   *
+   * @param id peer's identifier
+   * @throws IllegalArgumentException
+   *           Thrown when the peer doesn't exist
+   */
+  public void enablePeer(String id) throws IOException {
+    changePeerState(id, PeerState.ENABLED);
+    LOG.info("peer " + id + " is enabled");
+  }
+
+  /**
+   * Disable replication to the peer
+   *
+   * @param id peer's identifier
+   * @throws IllegalArgumentException
+   *           Thrown when the peer doesn't exist
+   */
+  public void disablePeer(String id) throws IOException {
+    changePeerState(id, PeerState.DISABLED);
+    LOG.info("peer " + id + " is disabled");
+  }
+
+  private void changePeerState(String id, PeerState state) throws IOException {
+    try {
+      if (!peerExists(id)) {
+        throw new IllegalArgumentException("peer " + id + " is not registered");
+      }
+      String peerStateZNode = getPeerStateNode(id);
+      if (ZKUtil.checkExists(this.zookeeper, peerStateZNode) != -1) {
+        ZKUtil.setData(this.zookeeper, peerStateZNode,
+          Bytes.toBytes(state.name()));
+      } else {
+        ZKUtil.createAndWatch(zookeeper, peerStateZNode,
+            Bytes.toBytes(state.name()));
+      }
+      LOG.info("state of the peer " + id + " changed to " + state.name());
+    } catch (KeeperException e) {
+      throw new IOException("Unable to change state of the peer " + id, e);
+    }
+  }
+
+  /**
+   * Get state of the peer. This method checks the state by connecting to ZK.
+   *
+   * @param id peer's identifier
+   * @return current state of the peer
+   */
+  public PeerState getPeerState(String id) throws KeeperException {
+    byte[] peerStateBytes = ZKUtil
+        .getData(this.zookeeper, getPeerStateNode(id));
+    return PeerState.valueOf(Bytes.toString(peerStateBytes));
+  }
+
+  /**
+   * Check whether the peer is enabled or not. This method checks the atomic
+   * boolean of ReplicationPeer locally.
+   *
+   * @param id peer identifier
+   * @return true if the peer is enabled, otherwise false
+   * @throws IllegalArgumentException
+   *           Thrown when the peer doesn't exist
+   */
+  public boolean getPeerEnabled(String id) {
+    if (!this.peerClusters.containsKey(id)) {
+      throw new IllegalArgumentException("peer " + id + " is not registered");
+    }
+    return this.peerClusters.get(id).getPeerEnabled().get();
+  }
+
+  private String getPeerStateNode(String id) {
+    return ZKUtil.joinZNode(this.peersZNode,
+        ZKUtil.joinZNode(id, this.peerStateNodeName));
   }
 
   /**

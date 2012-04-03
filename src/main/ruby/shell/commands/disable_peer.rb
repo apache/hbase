@@ -26,8 +26,6 @@ module Shell
 Stops the replication stream to the specified cluster, but still
 keeps track of new edits to replicate.
 
-CURRENTLY UNSUPPORTED
-
 Examples:
 
   hbase> disable_peer '1'
