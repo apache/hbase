@@ -21,8 +21,7 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.hadoop.hbase.StopStatus;
 
 /**
  * Sleeper for current thread.
@@ -33,7 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Sleeper {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   private final int period;
-  private final AtomicBoolean stop;
+  private final StopStatus stop;
   private static final long MINIMAL_DELTA_FOR_LOGGING = 10000;
 
   private final Object sleepLock = new Object();
@@ -43,7 +42,7 @@ public class Sleeper {
    * @param sleep sleep time in milliseconds
    * @param stop flag for when we stop
    */
-  public Sleeper(final int sleep, final AtomicBoolean stop) {
+  public Sleeper(final int sleep, final StopStatus stop) {
     this.period = sleep;
     this.stop = stop;
   }
@@ -72,7 +71,7 @@ public class Sleeper {
    * will be docked current time minus passed <code>startTime<code>.
    */
   public void sleep(final long startTime) {
-    if (this.stop.get()) {
+    if (stop.isStopped()) {
       return;
     }
     long now = System.currentTimeMillis();
@@ -101,7 +100,7 @@ public class Sleeper {
       } catch(InterruptedException iex) {
         // We we interrupted because we're meant to stop?  If not, just
         // continue ignoring the interruption
-        if (this.stop.get()) {
+        if (stop.isStopped()) {
           return;
         }
       }

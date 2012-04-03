@@ -41,6 +41,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -74,6 +75,8 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.StopStatus;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -131,7 +134,7 @@ import com.google.common.collect.Lists;
  * @see Watcher
  */
 public class HMaster extends Thread implements HMasterInterface,
-    HMasterRegionInterface, Watcher {
+    HMasterRegionInterface, Watcher, StoppableMaster {
   // MASTER is name of the webapp and the attribute name used stuffing this
   //instance into web context.
   public static final String MASTER = "master";
@@ -151,8 +154,8 @@ public class HMaster extends Thread implements HMasterInterface,
   /**
    * This flag indicates that cluster shutdown has been requested. This is
    * different from {@link #closed} in that it is initially false, but is
-   * set to true at shutdown and remains true from then on. For killing one
-   * instance of the master, see {@link #killed}.
+   * set to true at shutdown and remains true from then on. For stopping one
+   * instance of the master, see {@link #stopped}.
    */
   private final AtomicBoolean clusterShutdownRequested =
       new AtomicBoolean(false);
@@ -203,8 +206,8 @@ public class HMaster extends Thread implements HMasterInterface,
   private long applyPreferredAssignmentPeriod = 0l;
   private long holdRegionForBestLocalityPeriod = 0l;
 
-  /** True if the master is being killed. No cluster shutdown is done. */
-  private volatile boolean killed = false;
+  /** True if the master is being stopped. No cluster shutdown is done. */
+  private volatile boolean stopped = false;
 
   /** Flag set after we become the active master (used for testing). */
   private volatile boolean isActiveMaster = false;
@@ -217,6 +220,16 @@ public class HMaster extends Thread implements HMasterInterface,
   private List<String> logDirsSplitOnStartup;
 
   private boolean shouldAssignRegionsWithFavoredNodes = false;
+
+  /**
+   * The number of dead server log split requests received. This is not
+   * incremented during log splitting on startup. This field is never
+   * decremented. Used in unit tests.
+   */
+  private final AtomicInteger numDeadServerLogSplitRequests =
+      new AtomicInteger();
+
+  private String stopReason = "not stopping";
 
   /**
    * Constructor
@@ -246,7 +259,7 @@ public class HMaster extends Thread implements HMasterInterface,
     this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
         10 * 1000);
 
-    this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
+    this.sleeper = new Sleeper(this.threadWakeFrequency, getStopper());
     this.connection = ServerConnectionManager.getConnection(conf);
 
     // hack! Maps DFSClient => Master for logs.  HDFS made this
@@ -283,7 +296,7 @@ public class HMaster extends Thread implements HMasterInterface,
     // TODO: Bring up the UI to redirect to active Master.
     zooKeeperWrapper.registerListener(this);
     this.zkMasterAddressWatcher =
-      new ZKMasterAddressWatcher(this.zooKeeperWrapper, this.clusterShutdownRequested);
+        new ZKMasterAddressWatcher(this.zooKeeperWrapper, this);
     zooKeeperWrapper.registerListener(zkMasterAddressWatcher);
 
     // if we're a backup master, stall until a primary to writes his address
@@ -306,7 +319,8 @@ public class HMaster extends Thread implements HMasterInterface,
       }
     }
 
-    // initilize the thread pool for log splitting.
+    final String masterName = getServerName();
+    // initialize the thread pool for non-distributed log splitting.
     int maxSplitLogThread =
       conf.getInt("hbase.master.splitLogThread.max", 1000);
     logSplitThreadPool = Threads.getBoundedCachedThreadPool(
@@ -314,7 +328,8 @@ public class HMaster extends Thread implements HMasterInterface,
         new ThreadFactory() {
           private int count = 1;
           public Thread newThread(Runnable r) {
-            Thread t = new Thread(r, "LogSplittingThread" + "-" + count++);
+            Thread t = new Thread(r, masterName + "-LogSplittingThread" + "-"
+                + count++);
             if (!t.isDaemon())
               t.setDaemon(true);
             return t;
@@ -351,7 +366,7 @@ public class HMaster extends Thread implements HMasterInterface,
     isActiveMaster = true;
 
     this.regionServerOperationQueue =
-      new RegionServerOperationQueue(this.conf, this.closed);
+      new RegionServerOperationQueue(this.conf, getClosedStatus());
 
     synchronized(this) {
       serverManager = new ServerManager(this);
@@ -432,12 +447,12 @@ public class HMaster extends Thread implements HMasterInterface,
 
             @Override
             public void abort(String why, Throwable e) {
-              killMaster();
+              stop("ZK session expired");
             }
 
             @Override
             public boolean isAborted() {
-              return isKilled();
+              return stopped;
             }
           });
     }
@@ -571,7 +586,7 @@ public class HMaster extends Thread implements HMasterInterface,
         FSUtils.checkFileSystemAvailable(this.fs);
       } catch (IOException e) {
         LOG.fatal("Shutting down HBase cluster: file system not available", e);
-        this.closed.set(true);
+        shutdownClusterNow();
         this.fsOk = false;
       }
     }
@@ -633,10 +648,6 @@ public class HMaster extends Thread implements HMasterInterface,
 
   FileSystem getFileSystem() {
     return this.fs;
-  }
-
-  public AtomicBoolean getClusterShutdownRequested() {
-    return this.clusterShutdownRequested;
   }
 
   AtomicBoolean getClosed() {
@@ -752,27 +763,15 @@ public class HMaster extends Thread implements HMasterInterface,
         }
       }
     } catch (Throwable t) {
-      LOG.fatal("Unhandled exception. Starting shutdown.", t);
+      LOG.fatal("Unhandled exception. Starting cluster shutdown.", t);
       startupStatus.cleanup();
-      this.closed.set(true);
+      shutdownClusterNow();
     }
+    closed.set(true);
 
-    startupStatus.cleanup();
-    if (!this.clusterShutdownRequested.get()) {  // shutdown not by request
-      if (!killed) {
-        // This would trigger a cluster shutdown, so we are not doing this when
-        // the master is being "killed" in a unit test.
-        shutdown();
-      }
+    startShutdown();
 
-      // Get started with shutdown: stop scanners, etc. This does not lead to
-      // a cluster shutdown.
-      startShutdown();
-    } else if (killed) {
-      startShutdown();
-    }
-
-    if (!killed) {
+    if (clusterShutdownRequested.get()) {
       // Wait for all the remaining region servers to report in. Only doing
       // this when the cluster is shutting down.
       this.serverManager.letRegionServersShutdown();
@@ -792,9 +791,10 @@ public class HMaster extends Thread implements HMasterInterface,
     }
     this.rpcServer.stop();
 
+    logSplitThreadPool.shutdown();
+
     regionManager.joinThreads();
-    if (!killed) {
-      // We are shutting down the cluster.
+    if (clusterShutdownRequested.get()) {
       zooKeeperWrapper.clearRSDirectory();
     }
 
@@ -1053,7 +1053,9 @@ public class HMaster extends Thread implements HMasterInterface,
     return (isSplitLogAfterStartupDone.get());
   }
 
-  public void splitLog(final String serverName) throws IOException {
+  public void splitDeadServerLog(final String serverName) throws IOException {
+    // Maintain the number of dead server split log requests for testing.
+    numDeadServerLogSplitRequests.incrementAndGet();
     List<String> serverNames = new ArrayList<String>();
     serverNames.add(serverName);
     splitLog(serverNames);
@@ -1107,7 +1109,7 @@ public class HMaster extends Thread implements HMasterInterface,
         this.splitLogLock.lock();
         try {
           HLog.splitLog(this.rootdir, logDir, oldLogDir, this.fs,
-              getConfiguration());
+              getConfiguration(), HLog.DEFAULT_LATEST_TS_TO_INCLUDE, this);
         } finally {
           this.splitLogLock.unlock();
         }
@@ -1117,6 +1119,20 @@ public class HMaster extends Thread implements HMasterInterface,
     if (this.metrics != null) {
       this.metrics.addSplit(splitTime, splitCount, splitLogSize);
     }
+  }
+
+  /**
+   * @return true if the master is shutting down (with or without shutting down
+   *         the cluster)
+   */
+  @Override
+  public boolean isStopped() {
+    return stopped;
+  }
+
+  @Override
+  public String getStopReason() {
+    return stopReason;
   }
 
   /*
@@ -1141,7 +1157,7 @@ public class HMaster extends Thread implements HMasterInterface,
         // splitLogManager must be started before starting rpcServer because
         // region-servers dying will trigger log splitting
         this.splitLogManager = new SplitLogManager(zooKeeperWrapper, conf,
-            this.clusterShutdownRequested, address.toString());
+            getStopper(), address.toString());
         this.splitLogManager.finishInitialization();
       }
       // Start the server so that region servers are running before we start
@@ -1174,6 +1190,9 @@ public class HMaster extends Thread implements HMasterInterface,
     this.regionManager.stopScanners();
     this.regionServerOperationQueue.shutdown();
     this.serverManager.notifyServers();
+    if (splitLogManager != null) {
+      splitLogManager.stop();
+    }
   }
 
   @Override
@@ -1232,14 +1251,38 @@ public class HMaster extends Thread implements HMasterInterface,
     return !this.closed.get();
   }
 
+  /**
+   * This method's name should indicate that it will shut down the whole
+   * cluster, but renaming it may break client/server compatibility on
+   * upgrades.
+   */
   @Override
   public void shutdown() {
-    LOG.info("Cluster shutdown requested. Starting to quiesce servers");
-    this.clusterShutdownRequested.set(true);
-    this.zooKeeperWrapper.setClusterState(false);
-    if (splitLogManager != null) {
-      this.splitLogManager.stop();
+    requestClusterShutdown();
+  }
+
+  /**
+   * Request a shutdown the whole HBase cluster. This only modifies state
+   * flags in memory and in ZK, so it is safe to be called multiple times.
+   */
+  public void requestClusterShutdown() {
+    if (!clusterShutdownRequested.compareAndSet(false, true)) {
+      // Only request cluster shutdown once.
+      return;
     }
+
+    if (!closed.get()) {
+      LOG.info("Cluster shutdown requested. Starting to quiesce servers");
+    }
+    this.zooKeeperWrapper.setClusterState(false);
+    stopped = true;
+    stopReason = "cluster shutdown";
+  }
+
+  /** Shutdown the cluster quickly, don't quiesce regionservers */
+  private void shutdownClusterNow() {
+    closed.set(true);
+    requestClusterShutdown();
   }
 
   @Override
@@ -1994,7 +2037,12 @@ public class HMaster extends Thread implements HMasterInterface,
   }
 
   public String getServerName() {
-    return address.toString();
+    return HMaster.class.getSimpleName() + "-" + address.toString();
+  }
+
+  @Override
+  public String toString() {
+    return getServerName();
   }
 
   /**
@@ -2011,9 +2059,20 @@ public class HMaster extends Thread implements HMasterInterface,
     LOG.info("Cleared region " + region + " from transition map");
   }
 
-  public void stopMaster() {
-    LOG.info("Master stop requested, isActiveMaster=" + isActiveMaster);
+  /**
+   * Stop master without shutting down the cluster. Gets out of the master loop
+   * quickly. Does not quiesce regionservers.
+   */
+  @Override
+  public void stop(String why) {
+    LOG.info("Master stop requested, isActiveMaster=" + isActiveMaster
+        + ", reason=" + why);
+    stopped = true;
+    stopReason = why;
+
+    // Get out of the master loop.
     closed.set(true);
+
     // If we are a backup master, we need to interrupt wait
     if (!isActiveMaster) {
       zkMasterAddressWatcher.cancelMasterZNodeWait();
@@ -2026,18 +2085,8 @@ public class HMaster extends Thread implements HMasterInterface,
     }
   }
 
-  public void killMaster() {
-    LOG.info("Killing master without shutting down the cluster");
-    killed = true;
-    stopMaster();
-  }
-
-  public boolean isKilled() {
-    return killed;
-  }
-
   String getZKWrapperName() {
-    return getClass().getSimpleName() + "-" + getServerName();
+    return getServerName();
   }
 
   public SplitLogManager getSplitLogManager() {
@@ -2046,6 +2095,27 @@ public class HMaster extends Thread implements HMasterInterface,
 
   List<String> getLogDirsSplitOnStartup() {
     return logDirsSplitOnStartup;
+  }
+
+  int getNumDeadServerLogSplitRequests() {
+    return numDeadServerLogSplitRequests.get();
+  }
+
+  public boolean isClusterShutdownRequested() {
+    return clusterShutdownRequested.get();
+  }
+
+  public StoppableMaster getStopper() {
+    return this;
+  }
+
+  public StopStatus getClosedStatus() {
+    return new StopStatus() {
+      @Override
+      public boolean isStopped() {
+        return closed.get();
+      }
+    };
   }
 
 }

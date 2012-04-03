@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -124,7 +125,7 @@ public class ServerManager {
    * TODO: Make this a metric; dump metrics into log.
    */
   class ServerMonitor extends Chore {
-    ServerMonitor(final int period, final AtomicBoolean stop) {
+    ServerMonitor(final int period, final Stoppable stop) {
       super("ServerMonitor", period, stop);
     }
 
@@ -167,14 +168,13 @@ public class ServerManager {
       60 * 1000);
     this.minimumServerCount = c.getInt("hbase.regions.server.count.min", 0);
     this.serverMonitorThread = new ServerMonitor(metaRescanInterval,
-      this.master.getClusterShutdownRequested());
+      master.getStopper());
     String n = Thread.currentThread().getName();
     Threads.setDaemonThreadRunning(this.serverMonitorThread,
       n + ".serverMonitor");
     this.oldLogCleaner = new OldLogsCleaner(
       c.getInt("hbase.master.meta.thread.rescanfrequency",60 * 1000),
-        this.master.getClusterShutdownRequested(), c,
-        master.getFileSystem(), master.getOldLogDir());
+        master.getStopper(), c, master.getFileSystem(), master.getOldLogDir());
     Threads.setDaemonThreadRunning(oldLogCleaner,
       n + ".oldLogCleaner");
     rackManager = new RackManager(c);
@@ -304,7 +304,7 @@ public class ServerManager {
         this.quiescedServers.incrementAndGet();
       }
     }
-    if (this.master.getClusterShutdownRequested().get()) {
+    if (this.master.isClusterShutdownRequested()) {
       if (quiescedServers.get() >= serversToServerInfo.size()) {
         // If the only servers we know about are meta servers, then we can
         // proceed with shutdown
@@ -322,7 +322,7 @@ public class ServerManager {
         return new HMsg [] {HMsg.REGIONSERVER_QUIESCE};
       }
     }
-    if (this.master.isClosed() && !master.isKilled()) {
+    if (this.master.isClosed() && master.isClusterShutdownRequested()) {
       // Tell server to shut down if we are shutting down.  This should
       // happen after check of MSG_REPORT_EXITING above, since region server
       // will send us one of these messages after it gets MSG_REGIONSERVER_STOP

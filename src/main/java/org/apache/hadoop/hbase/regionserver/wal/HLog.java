@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -140,6 +141,9 @@ public class HLog implements Syncable {
   private static final String RECOVERED_EDITS_DIR = "recovered.edits";
   private static final Pattern EDITFILES_NAME_PATTERN =
     Pattern.compile("-?[0-9]+");
+
+  /** We include all timestamps by default */
+  public static final long DEFAULT_LATEST_TS_TO_INCLUDE = Long.MAX_VALUE;
 
   private final FileSystem fs;
   private final Path dir;
@@ -1296,23 +1300,14 @@ public class HLog implements Syncable {
   }
 
   /**
-   * Split up a bunch of regionserver commit log files that are no longer
-   * being written to, into new files, one per region for region to replay on
-   * startup. Delete the old log files when finished.
-   *
-   * @param rootDir qualified root directory of the HBase instance
-   * @param srcDir Directory of log files to split: e.g.
-   *                <code>${ROOTDIR}/log_HOST_PORT</code>
-   * @param oldLogDir directory where processed (split) logs will be archived to
-   * @param fs FileSystem
-   * @param conf Configuration
-   * @throws IOException will throw if corrupted hlogs aren't tolerated
-   * @return the list of splits
+   * @see the more general method {@link #splitLog(Path, Path, Path,
+   * FileSystem, Configuration, long, Stoppable)}
    */
   public static List<Path> splitLog(final Path rootDir, final Path srcDir,
     Path oldLogDir, final FileSystem fs, final Configuration conf)
   throws IOException {
-    return splitLog(rootDir, srcDir, oldLogDir, fs, conf, Long.MAX_VALUE);
+    return splitLog(rootDir, srcDir, oldLogDir, fs, conf,
+        DEFAULT_LATEST_TS_TO_INCLUDE, null);
   }
 
   /**
@@ -1332,7 +1327,7 @@ public class HLog implements Syncable {
    */
   public static List<Path> splitLog(final Path rootDir, final Path srcDir,
     Path oldLogDir, final FileSystem fs, final Configuration conf,
-    long maxWriteTime)
+    long maxWriteTime, Stoppable shutdownStatus)
   throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Splitting logs in " + srcDir);
@@ -1354,7 +1349,8 @@ public class HLog implements Syncable {
       LOG.info("Splitting " + logfiles.length + " hlog(s) in " +
         srcDir.toString());
       status.setStatus("Performing split");
-      splits = splitLog(rootDir, srcDir, oldLogDir, logfiles, fs, conf, maxWriteTime);
+      splits = splitLog(rootDir, srcDir, oldLogDir, logfiles, fs, conf,
+          maxWriteTime, shutdownStatus);
       try {
         FileStatus[] files = fs.listStatus(srcDir);
         if (files == null) {
@@ -1438,12 +1434,13 @@ public class HLog implements Syncable {
    * @param fs
    * @param conf
    * @param maxWriteTime ignore entries with ts greater than this
+   * @param shutdownStatus a way to find out if the server is shutting down
    * @return
    * @throws IOException
    */
   private static List<Path> splitLog(final Path rootDir, final Path srcDir,
     Path oldLogDir, final FileStatus[] logfiles, final FileSystem fs,
-    final Configuration conf, long maxWriteTime)
+    final Configuration conf, long maxWriteTime, Stoppable shutdownStatus)
   throws IOException {
     List<Path> processedLogs = new ArrayList<Path>();
     List<Path> corruptedLogs = new ArrayList<Path>();
@@ -1472,6 +1469,7 @@ public class HLog implements Syncable {
           final Map<byte[], LinkedList<Entry>> editsByRegion =
             new TreeMap<byte[], LinkedList<Entry>>(Bytes.BYTES_COMPARATOR);
           for (int j = 0; j < logFilesPerStep; j++) {
+            checkForShutdown(shutdownStatus);
             i++;
             if (i == logfiles.length) {
               break;
@@ -1484,7 +1482,8 @@ public class HLog implements Syncable {
               ": " + logPath + ", length=" + logLength );
             try {
               recoverFileLease(fs, logPath, conf);
-              parseHLog(log, editsByRegion, fs, conf, maxWriteTime);
+              parseHLog(log, editsByRegion, fs, conf, maxWriteTime,
+                  shutdownStatus);
               processedLogs.add(logPath);
             } catch (EOFException eof) {
               // truncated files are expected if a RS crashes (see HBASE-2643)
@@ -1513,7 +1512,7 @@ public class HLog implements Syncable {
             }
           }
           writeEditsBatchToRegions(editsByRegion, logWriters,
-              rootDir, fs, conf);
+              rootDir, fs, conf, shutdownStatus);
         }
         Preconditions.checkNotNull(fs);
         Preconditions.checkNotNull(srcDir);
@@ -1660,7 +1659,8 @@ public class HLog implements Syncable {
   private static void writeEditsBatchToRegions(
     final Map<byte[], LinkedList<Entry>> splitLogsMap,
     final Map<byte[], WriterAndPath> logWriters,
-    final Path rootDir, final FileSystem fs, final Configuration conf)
+    final Path rootDir, final FileSystem fs, final Configuration conf,
+    Stoppable shutdownStatus)
   throws IOException {
     // Number of threads to use when log splitting to rewrite the logs.
     // More means faster but bigger mem consumption.
@@ -1669,12 +1669,15 @@ public class HLog implements Syncable {
     boolean skipErrors = conf.getBoolean("hbase.skip.errors", false);
     HashMap<byte[], Future> writeFutureResult = new HashMap<byte[], Future>();
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
-    tfb.setNameFormat("SplitWriter-%1$d");
+    tfb.setNameFormat((shutdownStatus == null ? "" : shutdownStatus + "-")
+        + "SplitWriter-%1$d");
     tfb.setThreadFactory(Executors.defaultThreadFactory());
     ThreadFactory f  = tfb.build();
-    ThreadPoolExecutor threadPool = (ThreadPoolExecutor)Executors.newFixedThreadPool(logWriterThreads, f);
+    ThreadPoolExecutor threadPool = (ThreadPoolExecutor)
+        Executors.newFixedThreadPool(logWriterThreads, f);
     for (final byte [] region : splitLogsMap.keySet()) {
-      Callable splitter = createNewSplitter(rootDir, logWriters, splitLogsMap, region, fs, conf);
+      Callable splitter = createNewSplitter(rootDir, logWriters, splitLogsMap,
+          region, fs, conf, shutdownStatus);
       writeFutureResult.put(region, threadPool.submit(splitter));
     }
 
@@ -1727,7 +1730,7 @@ public class HLog implements Syncable {
    */
   private static void parseHLog(final FileStatus logfile,
     final Map<byte[], LinkedList<Entry>> splitLogsMap, final FileSystem fs,
-    final Configuration conf, long maxWriteTime)
+    final Configuration conf, long maxWriteTime, Stoppable shutdownStatus)
   throws IOException {
     // Check for possibly empty file. With appends, currently Hadoop reports a
     // zero length even if the file has been sync'd. Revisit if HDFS-376 or
@@ -1756,6 +1759,7 @@ public class HLog implements Syncable {
     try {
       Entry entry;
       while ((entry = in.next()) != null) {
+        checkForShutdown(shutdownStatus);
         //Ignore entries that have a ts greater than maxWriteTime
         if (entry.getKey().getWriteTime() > maxWriteTime) continue;
         byte[] region = entry.getKey().getRegionName();
@@ -1782,7 +1786,8 @@ public class HLog implements Syncable {
   private static Callable<Void> createNewSplitter(final Path rootDir,
     final Map<byte[], WriterAndPath> logWriters,
     final Map<byte[], LinkedList<Entry>> logEntries,
-    final byte[] region, final FileSystem fs, final Configuration conf) {
+    final byte[] region, final FileSystem fs, final Configuration conf,
+    final Stoppable shutdownStatus) {
     return new Callable<Void>() {
       public String getName() {
         return "Split writer thread for region " + Bytes.toStringBinary(region);
@@ -1797,6 +1802,7 @@ public class HLog implements Syncable {
           int editsCount = 0;
           WriterAndPath wap = logWriters.get(region);
           for (Entry logEntry: entries) {
+            checkForShutdown(shutdownStatus);
             if (wap == null) {
               Path regionedits = getRegionSplitEditsPath(fs, logEntry, rootDir,
                   true);
@@ -2043,7 +2049,16 @@ public class HLog implements Syncable {
     }
   }
 
-  private static void split(final Configuration conf, final Path p)
+  private static void checkForShutdown(Stoppable shutdownStatus)
+      throws IOException {
+    if (shutdownStatus != null &&
+        shutdownStatus.isStopped()) {
+      throw new InterruptedIOException("Aborting log splitting: "
+          + shutdownStatus.getStopReason());
+    }
+  }
+
+  private static void splitFromCmdLine(final Configuration conf, final Path p)
   throws IOException {
     FileSystem fs = FileSystem.get(conf);
     if (!fs.exists(p)) {
@@ -2054,7 +2069,8 @@ public class HLog implements Syncable {
     if (!fs.getFileStatus(p).isDir()) {
       throw new IOException(p + " is not a directory");
     }
-    splitLog(baseDir, p, oldLogDir, fs, conf);
+    splitLog(baseDir, p, oldLogDir, fs, conf, DEFAULT_LATEST_TS_TO_INCLUDE,
+        null);
   }
 
   /**
@@ -2079,7 +2095,7 @@ public class HLog implements Syncable {
           conf.set("fs.default.name", args[i]);
           conf.set("fs.defaultFS", args[i]);
           Path logPath = new Path(args[i]);
-          split(conf, logPath);
+          splitFromCmdLine(conf, logPath);
         } catch (Throwable t) {
           t.printStackTrace(System.err);
           System.exit(-1);
@@ -2089,5 +2105,10 @@ public class HLog implements Syncable {
       usage();
       System.exit(-1);
     }
+  }
+
+  /** Used in a simulated kill of a regionserver */
+  public void kill() {
+    logSyncerThread.interrupt();
   }
 }

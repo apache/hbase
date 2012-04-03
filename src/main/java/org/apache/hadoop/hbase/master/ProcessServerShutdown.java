@@ -292,7 +292,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       @Override
       public void run() {
         try {
-          master.splitLog(deadServer);
+          master.splitDeadServerLog(deadServer);
           logSplitResult = LogSplitResult.SUCCESS;
         } catch (Exception e) {
           LOG.error(

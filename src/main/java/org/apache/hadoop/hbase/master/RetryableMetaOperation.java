@@ -51,7 +51,7 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
     this.m = m;
     this.master = master;
     this.sleeper = new Sleeper(this.master.getThreadWakeFrequency(),
-      this.master.getClosed());
+      master.getStopper());
   }
 
   protected T doWithRetries()

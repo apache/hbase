@@ -25,13 +25,13 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -68,7 +68,24 @@ public class TestSplitLogManager {
   private final static HBaseTestingUtility TEST_UTIL =
     new HBaseTestingUtility();
 
-  static AtomicBoolean stopper = new AtomicBoolean();
+  private volatile boolean stopped = false;
+
+  private Stoppable stopper = new Stoppable() {
+    @Override
+    public boolean isStopped() {
+      return stopped;
+    }
+
+    @Override
+    public void stop(String why) {
+      stopped = true;
+    }
+
+    @Override
+    public String getStopReason() {
+      return "test";
+    }
+  };
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -82,7 +99,6 @@ public class TestSplitLogManager {
 
   @Before
   public void setup() throws Exception {
-    stopper.set(false);
     conf = TEST_UTIL.getConfiguration();
     zkw = ZooKeeperWrapper.createInstance(conf, "split-log-manager-tests");
     zkw.deleteChildrenRecursively(zkw.parentZNode);
@@ -98,7 +114,7 @@ public class TestSplitLogManager {
 
   @After
   public void teardown() throws IOException, KeeperException {
-    stopper.set(true);
+    stopped = true;
     zkw.close();
     slm.stop();
   }

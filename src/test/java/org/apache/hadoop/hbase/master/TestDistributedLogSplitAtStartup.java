@@ -58,7 +58,7 @@ public class TestDistributedLogSplitAtStartup {
 
   @Test
   public void testDistributedLogSplitAtStartup() throws Exception {
-    DataLoader dataLoader = new DataLoader(conf);
+    DataLoader dataLoader = new DataLoader(conf, TEST_UTIL);
     new Thread(dataLoader).start();
     dataLoader.waitUntilHalfRowsLoaded();
     MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
@@ -75,6 +75,7 @@ public class TestDistributedLogSplitAtStartup {
 
     LOG.info("Starting new region server");
     cluster.startRegionServer();
+    dataLoader.waitUntilRegionsAssigned();
     dataLoader.waitUntilFinishedOrFailed();
     dataLoader.join();
     dataLoader.assertSuccess();

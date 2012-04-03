@@ -224,7 +224,7 @@ public class RegionManager {
 
   void reassignRootRegion() {
     unsetRootRegion();
-    if (!master.getClusterShutdownRequested().get()) {
+    if (!master.isClusterShutdownRequested()) {
       synchronized (regionsInTransition) {
         String regionName = HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString();
         byte[] data = null;
@@ -1519,8 +1519,7 @@ public class RegionManager {
    */
   public void waitForRootRegionLocation() {
     synchronized (rootRegionLocation) {
-      while (!master.getClusterShutdownRequested().get() &&
-          !master.isClosed() && rootRegionLocation.get() == null) {
+      while (!master.isStopped() && rootRegionLocation.get() == null) {
         // rootRegionLocation will be filled in when we get an 'open region'
         // regionServerReport message from the HRegionServer that has been
         // allocated the ROOT region below.

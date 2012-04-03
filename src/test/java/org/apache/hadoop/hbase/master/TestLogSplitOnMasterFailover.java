@@ -65,13 +65,15 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
 
   private static final int NUM_MASTERS = 2;
   private static final int NUM_RS = 2;
-  private static final int NUM_ROWS = 8000;
+  private static final int NUM_ROWS = 6000;
   private static final int COLS_PER_ROW = 30;
 
   private static final byte[] TABLE_BYTES = Bytes.toBytes("myTable");
   private static final byte[] CF_BYTES = Bytes.toBytes("myCF");
 
   private static Compression.Algorithm COMPRESSION = Compression.Algorithm.GZ;
+
+  private Set<String> logsSplitByNewMaster = new HashSet<String>();
 
   /**
    * A worker that inserts data into HBase on a separate thread. This is the
@@ -88,12 +90,17 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
 
     private Semaphore halfRowsLoaded = new Semaphore(0);
     private Semaphore dataLoadVerifyFinished = new Semaphore(0);
+    private Semaphore newMasterAssignedRegions = new Semaphore(0);
 
     private final Configuration conf;
-    private volatile Thread myThread;
+    private final HBaseTestingUtility testUtil;
 
-    public DataLoader(Configuration conf) {
+    private volatile Thread myThread;
+    private volatile int numUserRegions;
+
+    public DataLoader(Configuration conf, HBaseTestingUtility testUtil) {
       this.conf = conf;
+      this.testUtil = testUtil;
     }
 
     @Override
@@ -101,7 +108,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
       myThread = Thread.currentThread();
       myThread.setName(getClass().getSimpleName());
       try {
-        HBaseTestingUtility.createPreSplitLoadTestTable(conf,
+        numUserRegions = HBaseTestingUtility.createPreSplitLoadTestTable(conf,
             TABLE_BYTES, CF_BYTES, COMPRESSION, DataBlockEncoding.NONE);
         t = new HTable(conf, TABLE_BYTES);
 
@@ -122,7 +129,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
       }
     }
 
-    private void loadData() throws IOException {
+    private void loadData() throws IOException, InterruptedException {
       Random rand = new Random(190879817L);
       int bytesInserted = 0;
       for (int i = 0; i < NUM_ROWS; ++i) {
@@ -153,6 +160,8 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
           LOG.info("Loaded half of the rows (" + rowsLoaded
               + "), waking up main thread");
           halfRowsLoaded.release();
+          newMasterAssignedRegions.acquire();
+          LOG.info("All regions assigned, proceeding with load test");
         }
       }
       LOG.info("Approximate number of bytes inserted: " + bytesInserted);
@@ -193,6 +202,11 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
       LOG.debug("Waiting until half of the rows are loaded");
       halfRowsLoaded.acquire();
     }
+
+    public void notifyThatNewMasterAssignedRegions() {
+      newMasterAssignedRegions.release();
+    }
+
     public void requestShutdown() {
       shutdownRequested = true;
     }
@@ -209,12 +223,21 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     public void join() throws InterruptedException {
       myThread.join();
     }
+
+    public void waitUntilRegionsAssigned() throws IOException{
+      header("Waiting until all " + numUserRegions
+          + " regions are online with new master");
+      testUtil.waitUntilAllRegionsAssigned(numUserRegions);
+      // Tell the load test to proceed.
+      notifyThatNewMasterAssignedRegions();
+    }
   }
 
   @Test(timeout=180000)
   public void testWithRegularLogSplitting() throws Exception {
     ZooKeeperWrapper.setNamespaceForTesting();
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, false);
+    conf.setInt(HConstants.ZOOKEEPER_SESSION_TIMEOUT, 30000);
     runTest();
   }
 
@@ -235,8 +258,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     List<HMaster> masters = miniCluster().getMasters();
 
     header("Starting data loader");
-    DataLoader dataLoader =
-        new DataLoader(conf);
+    DataLoader dataLoader = new DataLoader(conf, TEST_UTIL);
     Thread inserterThread = new Thread(dataLoader);
     inserterThread.start();
     dataLoader.waitUntilHalfRowsLoaded();
@@ -253,9 +275,16 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
           miniCluster().getRegionServer(i).getServerInfo().getServerName());
     }
     rsToKill.kill();
-    // Wait until the regionserver actually goes down.
-    while (miniCluster().getLiveRegionServerThreads().size() == NUM_RS) {
-      Threads.sleep(HConstants.SOCKET_RETRY_WAIT_MS);
+
+    // Wait until the regionserver actually goes down. Furthermore, to make
+    // things more interesting, wait until the active master starts splitting
+    // the logs before we kill it. We have to do this in a tight polling loop
+    // because with distributed log splitting the active master might actually
+    // be able to split the dead regionserver's logs really quickly.
+    HMaster activeMaster = miniCluster().getMaster(activeIndex);
+    while (activeMaster.getNumDeadServerLogSplitRequests() == 0 ||
+        miniCluster().getLiveRegionServerThreads().size() == NUM_RS) {
+      Threads.sleepWithoutInterrupt(10);
     }
 
     // Check that we have some logs.
@@ -283,6 +312,8 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     HMaster master = masters.get(0);
     assertTrue(master.isActiveMaster());
 
+    dataLoader.waitUntilRegionsAssigned();
+
     dataLoader.waitUntilFinishedOrFailed();
     dataLoader.join();
     dataLoader.assertSuccess();
@@ -291,16 +322,22 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     List<String> logDirsSplitAtStartup = master.getLogDirsSplitOnStartup();
     LOG.info("Log dirs split at startup: " + logDirsSplitAtStartup);
 
-    Set<String> logsSplit = new HashSet<String>();
-    logsSplit.addAll(logDirsSplitAtStartup);
-    String logDirToBeSplit = killedRsName + "-splitting";
+    logsSplitByNewMaster.addAll(logDirsSplitAtStartup);
+    String logDirToBeSplit = killedRsName + HConstants.HLOG_SPLITTING_EXT;
     assertTrue("Log directory " + logDirToBeSplit + " was not split " +
         "on startup. Logs split: " + logDirsSplitAtStartup,
-        logsSplit.contains(logDirToBeSplit));
-    for (String logNotToSplit : otherRsNames) {
-      assertFalse("Log directory " + logNotToSplit
-          + " should not have been split", logsSplit.contains(logNotToSplit));
+        logWasSplit(logDirToBeSplit));
+    for (String logDirNotToSplit : otherRsNames) {
+      assertFalse("Log directory " + logDirNotToSplit
+          + " should not have been split: " + logDirsSplitAtStartup,
+          logWasSplit(logDirNotToSplit));
     }
+  }
+
+  private boolean logWasSplit(String rsName) {
+    return logsSplitByNewMaster.contains(rsName)
+        || logsSplitByNewMaster.contains(rsName
+            + HConstants.HLOG_SPLITTING_EXT);
   }
 
 }

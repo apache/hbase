@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,12 +39,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskFinisher.Status;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
-import org.apache.hadoop.hbase.regionserver.wal.OrphanHLogAfterSplitException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
@@ -93,7 +92,7 @@ import org.apache.zookeeper.data.Stat;
 public class SplitLogManager implements Watcher {
   private static final Log LOG = LogFactory.getLog(SplitLogManager.class);
 
-  private final AtomicBoolean stopper;
+  private final Stoppable stopper;
   private final String serverName;
   private final TaskFinisher taskFinisher;
   private FileSystem fs;
@@ -129,7 +128,7 @@ public class SplitLogManager implements Watcher {
    * @param service
    */
   public SplitLogManager(ZooKeeperWrapper zkw, final Configuration conf,
-      AtomicBoolean stopper, String serverName) {
+      Stoppable stopper, String serverName) {
     this(zkw, conf, stopper, serverName, new TaskFinisher() {
       @Override
       public Status finish(String workerName, String logfile) {
@@ -159,7 +158,7 @@ public class SplitLogManager implements Watcher {
    * @param tf task finisher
    */
   public SplitLogManager(ZooKeeperWrapper zkw, Configuration conf,
-      AtomicBoolean stopper, String serverName, TaskFinisher tf) {
+      Stoppable stopper, String serverName, TaskFinisher tf) {
     this.watcher = zkw;
     this.watcher.createZNodeIfNotExists(this.watcher.splitLogZNode, new byte[0],
         CreateMode.PERSISTENT, false /* set watch? */);
@@ -323,7 +322,7 @@ public class SplitLogManager implements Watcher {
               + " done=" + batch.done
               + " error=" + batch.error);
           batch.wait(100);
-          if (stopper.get()) {
+          if (stopper.isStopped()) {
             LOG.warn("Stopped while waiting for log splits to be completed");
             return;
           }
@@ -849,7 +848,7 @@ public class SplitLogManager implements Watcher {
   private class TimeoutMonitor extends Chore {
     private int reported_tot = -1;
     private int reported_unassigned = -1;
-    public TimeoutMonitor(final int period, AtomicBoolean stopper) {
+    public TimeoutMonitor(final int period, Stoppable stopper) {
       super("SplitLogManager Timeout Monitor", period, stopper);
     }
 
@@ -1019,6 +1018,13 @@ public class SplitLogManager implements Watcher {
     public void processResult(int rc, String path, Object ctx) {
       tot_mgr_node_delete_result.incrementAndGet();
       if (rc != 0) {
+        if (rc == KeeperException.Code.SESSIONEXPIRED.intValue()) {
+          // If we keep retrying, we will spin in an infinite loop until the master dies.
+          // Therefore, we just bail out in this case.
+          LOG.error("ZK session expired, cannot delete " + path + ". Master must be killed " +
+              "in this case.");
+          return;
+        }
         if (rc != KeeperException.Code.NONODE.intValue()) {
           tot_mgr_node_delete_err.incrementAndGet();
           Long retry_count = (Long) ctx;

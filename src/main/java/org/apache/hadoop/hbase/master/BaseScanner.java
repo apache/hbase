@@ -131,11 +131,11 @@ abstract class BaseScanner extends Chore {
   // mid-scan
   final Object scannerLock = new Object();
 
-  BaseScanner(final HMaster master, final boolean rootRegion,
-      final AtomicBoolean stop) {
+  BaseScanner(final HMaster master, final boolean rootRegion) {
     super("Scanner for " + (rootRegion ? "-ROOT-":".META.") + " table",
         master.getConfiguration().
-        getInt("hbase.master.meta.thread.rescanfrequency", 60 * 1000), stop);
+        getInt("hbase.master.meta.thread.rescanfrequency", 60 * 1000),
+        master);
     this.rootRegion = rootRegion;
     this.master = master;
     this.initialScanComplete = false;

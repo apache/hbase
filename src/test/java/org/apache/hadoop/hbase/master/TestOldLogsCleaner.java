@@ -31,6 +31,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.StoppableImpl;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.conf.Configuration;
@@ -82,7 +83,7 @@ public class TestOldLogsCleaner {
     String fakeMachineName = URLEncoder.encode("regionserver:60020", "UTF8");
 
     FileSystem fs = FileSystem.get(c);
-    AtomicBoolean stop = new AtomicBoolean(false);
+    StoppableImpl stop = new StoppableImpl();
     OldLogsCleaner cleaner = new OldLogsCleaner(1000, stop,c, fs, oldLogDir);
 
     // Create 2 invalid files, 1 "recent" file, 1 very new file and 30 old files

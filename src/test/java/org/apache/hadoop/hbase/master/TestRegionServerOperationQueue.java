@@ -20,10 +20,8 @@
 package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.*;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.StopStatus;
 import org.apache.hadoop.hbase.master.RegionServerOperationQueue.ProcessingResultCode;
 import org.junit.After;
 import org.junit.Before;
@@ -37,13 +35,17 @@ import org.junit.Test;
 public class TestRegionServerOperationQueue {
   private RegionServerOperationQueue queue;
   private Configuration conf;
-  private AtomicBoolean closed;
+  private StopStatus stopStatus = new StopStatus() {
+    @Override
+    public boolean isStopped() {
+      return false;
+    }
+  };
 
   @Before
   public void setUp() throws Exception {
-    this.closed = new AtomicBoolean(false);
     this.conf = new Configuration();
-    this.queue = new RegionServerOperationQueue(this.conf, this.closed);
+    this.queue = new RegionServerOperationQueue(this.conf, stopStatus);
   }
 
   @After

@@ -47,6 +47,6 @@ public class RackManager {
       return racks.get(0);
     }
 
-    return HConstants.UNKOWN_RACK;
+    return HConstants.UNKNOWN_RACK;
   }
 }

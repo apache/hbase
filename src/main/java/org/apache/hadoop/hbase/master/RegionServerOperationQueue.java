@@ -26,7 +26,6 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.StopStatus;
 import org.apache.hadoop.hbase.master.RegionServerOperation.RegionServerOperationResult;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.ipc.RemoteException;
@@ -52,6 +52,8 @@ import org.apache.hadoop.ipc.RemoteException;
 public class RegionServerOperationQueue {
   // TODO: Build up the junit test of this class.
   private final Log LOG = LogFactory.getLog(this.getClass());
+
+  private final StopStatus stop;
 
   /**
    * Enums returned by {@link RegionServerOperationQueue#process()};
@@ -91,13 +93,12 @@ public class RegionServerOperationQueue {
   private final Set<RegionServerOperationListener> listeners =
     new CopyOnWriteArraySet<RegionServerOperationListener>();
   private final int threadWakeFrequency;
-  private final AtomicBoolean closed;
   private final Sleeper sleeper;
 
-  RegionServerOperationQueue(final Configuration c, final AtomicBoolean closed) {
+  RegionServerOperationQueue(final Configuration c, StopStatus stop) {
     this.threadWakeFrequency = c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
-    this.closed = closed;
-    this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
+    this.stop = stop;
+    this.sleeper = new Sleeper(this.threadWakeFrequency, stop);
   }
 
   public void put(final RegionServerOperation op) {
@@ -133,7 +134,7 @@ public class RegionServerOperationQueue {
 
     // At this point, if there's still no todo operation, or we're supposed to
     // be closed, return.
-    if (op == null || closed.get()) {
+    if (op == null || stop.isStopped()) {
       return ProcessingResultCode.NOOP;
     }
 

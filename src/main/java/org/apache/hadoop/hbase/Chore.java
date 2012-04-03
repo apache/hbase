@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.util.Sleeper;
@@ -39,12 +37,7 @@ public abstract class Chore extends Thread {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private final Sleeper sleeper;
 
-  /**
-   * This variable might belong to someone else, e.g. HMaster. Setting this
-   * variable might trigger cluster shutdown. To shut down this thread only,
-   * use {@link #threadShouldStop}.
-   */
-  protected volatile AtomicBoolean stop;
+  private Stoppable stop;
 
   /**
    * Unlike {@link #stop}, this indicates that the current thread should shut
@@ -59,7 +52,7 @@ public abstract class Chore extends Thread {
    * @param s When this flag is set to true, this thread will cleanup and exit
    * cleanly.
    */
-  public Chore(String name, final int p, final AtomicBoolean s) {
+  public Chore(String name, final int p, final Stoppable s) {
     super(name);
     this.sleeper = new Sleeper(p, s);
     this.stop = s;
@@ -72,7 +65,7 @@ public abstract class Chore extends Thread {
   public void run() {
     try {
       boolean initialChoreComplete = false;
-      while (!this.stop.get() && !threadShouldStop) {
+      while (!stop.isStopped() && !threadShouldStop) {
         long startTime = System.currentTimeMillis();
         try {
           if (!initialChoreComplete) {
@@ -82,15 +75,15 @@ public abstract class Chore extends Thread {
           }
         } catch (Exception e) {
           LOG.error("Caught exception", e);
-          if (this.stop.get()) {
+          if (stop.isStopped()) {
             continue;
           }
         }
         this.sleeper.sleep(startTime);
       }
     } catch (Throwable t) {
-      LOG.fatal("Caught error. Starting shutdown.", t);
-      this.stop.set(true);
+      LOG.fatal("Caught error. Shutting down the master.", t);
+      stop.stop("Error in " + getName() + ": " + t.getMessage());
     } finally {
       LOG.info(getName() + " exiting");
     }

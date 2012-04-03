@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -43,15 +44,16 @@ class ZKMasterAddressWatcher implements Watcher {
   private static final Log LOG = LogFactory.getLog(ZKMasterAddressWatcher.class);
 
   private ZooKeeperWrapper zookeeper;
-  private final AtomicBoolean requestShutdown;
+  private final StoppableMaster stoppable;
 
   /**
    * Create this watcher using passed ZooKeeperWrapper instance.
    * @param zk ZooKeeper
    * @param flag Flag to set to request shutdown.
    */
-  ZKMasterAddressWatcher(final ZooKeeperWrapper zk, final AtomicBoolean flag) {
-    this.requestShutdown = flag;
+  ZKMasterAddressWatcher(final ZooKeeperWrapper zk,
+      final StoppableMaster stoppable) {
+    this.stoppable = stoppable;
     this.zookeeper = zk;
   }
 
@@ -65,7 +67,7 @@ class ZKMasterAddressWatcher implements Watcher {
       if (event.getPath().equals(this.zookeeper.clusterStateZNode)) {
         LOG.info("Cluster shutdown while waiting, shutting down" +
           " this master.");
-        this.requestShutdown.set(true);
+        this.stoppable.requestClusterShutdown();
       } else if (event.getPath().equals(this.zookeeper.masterElectionZNode)){
         LOG.info("Master address ZNode deleted, notifying waiting masters");
         notifyAll();
@@ -90,7 +92,7 @@ class ZKMasterAddressWatcher implements Watcher {
    * blocks until the master address ZNode gets deleted.
    */
   private synchronized void waitForMasterAddressAvailability() {
-    while (!requestShutdown.get() &&
+    while (!stoppable.isStopped() &&
            zookeeper.readMasterAddress(zookeeper) != null) {
       try {
         LOG.debug("Waiting for master address ZNode to be deleted " +
@@ -113,7 +115,7 @@ class ZKMasterAddressWatcher implements Watcher {
     do {
       waitForMasterAddressAvailability();
       // Check if we need to shutdown instead of taking control
-      if (this.requestShutdown.get()) {
+      if (stoppable.isStopped()) {
         LOG.debug("Won't start Master because of requested shutdown");
         return false;
       }
@@ -137,7 +139,6 @@ class ZKMasterAddressWatcher implements Watcher {
   }
 
   synchronized void cancelMasterZNodeWait() {
-    requestShutdown.set(true);
     notifyAll();
   }
 

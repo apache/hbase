@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -52,14 +53,19 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.NoServerForRegionException;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -276,6 +282,7 @@ public class HBaseTestingUtility {
    */
   public void shutdownMiniDFSCluster() throws Exception {
     if (this.dfsCluster != null) {
+      FileSystem.closeAll();
       // The below throws an exception per dn, AsynchronousCloseException.
       this.dfsCluster.shutdown();
     }
@@ -390,8 +397,21 @@ public class HBaseTestingUtility {
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
     startMiniHBaseCluster(numMasters, numSlaves);
+
     // Don't leave here till we've done a successful scan of the .META.
-    HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME);
+    HTable t = null;
+    for (int i = 0; i < 10; ++i) {
+      try {
+        t = new HTable(this.conf, HConstants.META_TABLE_NAME);
+      } catch (NoServerForRegionException ex) {
+        LOG.error("META is not online, sleeping");
+        Threads.sleepWithoutInterrupt(2000);
+      }
+    }
+    if (t == null) {
+      throw new IOException("Could not open META on cluster startup");
+    }
+
     ResultScanner s = t.getScanner(new Scan());
     while (s.next() != null) continue;
     LOG.info("Minicluster is up");
@@ -1123,23 +1143,59 @@ public class HBaseTestingUtility {
   public void waitUntilAllRegionsAssigned(final int countOfRegions)
   throws IOException {
     HTable meta = new HTable(getConfiguration(), HConstants.META_TABLE_NAME);
+    HConnection connection = ServerConnectionManager.getConnection(conf);
+TOP_LOOP:
     while (true) {
       int rows = 0;
       Scan scan = new Scan();
       scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-      ResultScanner s = meta.getScanner(scan);
+      ResultScanner s;
+      try {
+        s = meta.getScanner(scan);
+      } catch (RetriesExhaustedException ex) {
+        // This function has infinite patience.
+        Threads.sleepWithoutInterrupt(2000);
+        continue;
+      }
+      Map<String, HRegionInfo[]> regionAssignment =
+          new HashMap<String, HRegionInfo[]>();
+REGION_LOOP:
       for (Result r = null; (r = s.next()) != null;) {
         byte [] b =
           r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
         if (b == null || b.length <= 0) break;
-        rows++;
+        // Make sure the regionserver really has this region.
+        String serverAddress = Bytes.toString(b);
+        if (!regionAssignment.containsKey(serverAddress)) {
+          HRegionInterface hri =
+            connection.getHRegionConnection(new HServerAddress(serverAddress),
+                false);
+          HRegionInfo[] regions;
+          try {
+            regions = hri.getRegionsAssignment();
+          } catch (IOException ex) {
+            LOG.info("Could not contact regionserver " + serverAddress);
+            Threads.sleepWithoutInterrupt(1000);
+            continue TOP_LOOP;
+          }
+          regionAssignment.put(serverAddress, regions);
+        }
+        String regionName = Bytes.toString(r.getRow());
+        for (HRegionInfo regInfo : regionAssignment.get(serverAddress)) {
+          String regNameOnRS = Bytes.toString(regInfo.getRegionName());
+          if (regNameOnRS.equals(regionName)) {
+            rows++;
+            continue REGION_LOOP;
+          }
+        }
       }
       s.close();
       // If I get to here and all rows have a Server, then all have been assigned.
-      if (rows == countOfRegions) break;
+      if (rows == countOfRegions)
+        break;
       LOG.info("Found " + rows + " open regions, waiting for " +
           countOfRegions);
-      Threads.sleep(1000);
+      Threads.sleepWithoutInterrupt(1000);
     }
   }
 

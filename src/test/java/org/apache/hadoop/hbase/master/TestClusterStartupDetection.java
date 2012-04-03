@@ -34,7 +34,7 @@ public class TestClusterStartupDetection extends MultiMasterTest {
     assertEquals(activeMaster, getActiveMasterIndex());
 
     header("Killing the master");
-    miniCluster().getMaster().killMaster();
+    miniCluster().killActiveMaster();
     localCluster().waitOnMasterStop(0);
 
     killRegionServerWithMeta();
@@ -44,6 +44,7 @@ public class TestClusterStartupDetection extends MultiMasterTest {
 
     assertFalse("Incorrectly identified a cluster restart as a fresh " +
         "cluster startup", newMaster.isClusterStartup());
+    waitUntilRegionServersCheckIn(numRS - 1);
   }
 
   @Test(timeout=240000)
@@ -67,6 +68,7 @@ public class TestClusterStartupDetection extends MultiMasterTest {
     final HMaster newMaster = miniCluster().startNewMaster();
     assertFalse("The second master started after a delay thinks this is a " +
         "fresh cluster startup", newMaster.isClusterStartup());
+    waitUntilRegionServersCheckIn(numRS);
   }
 
   @Test(timeout=240000)
@@ -91,7 +93,7 @@ public class TestClusterStartupDetection extends MultiMasterTest {
       final HMaster activeMaster = miniCluster().getMasters().get(activeIndex);
       header("Killing master");
       oldActiveName = activeMaster.getServerName();
-      activeMaster.killMaster();
+      activeMaster.stop("killing master");
       localCluster().waitOnMasterStop(activeIndex);
     }
 
@@ -108,6 +110,7 @@ public class TestClusterStartupDetection extends MultiMasterTest {
     // startup anymore.
     assertFalse("The new active master incorrectly thinks that this is a " +
         "fresh cluster startup.", newActiveMaster.isClusterStartup());
+    waitUntilRegionServersCheckIn(numRS);
   }
 
 }

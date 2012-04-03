@@ -466,7 +466,10 @@ public final class HConstants {
   /** The number of favored nodes for each region */
   public static final int FAVORED_NODES_NUM = 3;
 
-  public static final String UNKOWN_RACK = "Unkown Rack";
+  public static final String UNKNOWN_RACK = "Unknown Rack";
+
+  /** Delay when waiting for a variable (HBASE-4712) */
+  public static final int VARIABLE_WAIT_TIME_MS = 40;
 
   private HConstants() {
     // Can't be instantiated with this ctor.

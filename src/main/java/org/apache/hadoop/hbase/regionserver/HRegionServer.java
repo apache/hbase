@@ -84,6 +84,8 @@ import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.StopStatus;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
@@ -285,6 +287,8 @@ public class HRegionServer implements HRegionInterface,
   // Cache configuration and block cache reference
   private final CacheConfig cacheConfig;
 
+  private String stopReason = "not stopping";
+
   /**
    * Starts a HRegionServer at the default location
    * @param conf
@@ -320,7 +324,7 @@ public class HRegionServer implements HRegionInterface,
     this.msgInterval = conf.getInt("hbase.regionserver.msginterval",
         HConstants.REGION_SERVER_MSG_INTERVAL);
 
-    sleeper = new Sleeper(this.msgInterval, this.stopRequested);
+    sleeper = new Sleeper(this.msgInterval, this);
 
     this.maxScannerResultSize = conf.getLong(
             HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
@@ -421,7 +425,7 @@ public class HRegionServer implements HRegionInterface,
     int multiplier = this.conf.getInt(HConstants.THREAD_WAKE_FREQUENCY +
         ".multiplier", 1000);
     this.majorCompactionChecker = new MajorCompactionChecker(this,
-      this.threadWakeFrequency * multiplier,  this.stopRequested);
+      this.threadWakeFrequency * multiplier);
 
     this.leases = new Leases(
         (int) conf.getLong(HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
@@ -665,6 +669,7 @@ public class HRegionServer implements HRegionInterface,
 
     if (killed) {
       // Just skip out w/o closing regions.
+      hlog.kill();
     } else if (abortRequested) {
       if (this.fsOk) {
         // Only try to clean up if the file system is available
@@ -1004,8 +1009,8 @@ public class HRegionServer implements HRegionInterface,
     private final HRegionServer instance;
 
     MajorCompactionChecker(final HRegionServer h,
-        final int sleepTime, final AtomicBoolean stopper) {
-      super("MajorCompactionChecker", sleepTime, stopper);
+        final int sleepTime) {
+      super("MajorCompactionChecker", sleepTime, h);
       this.instance = h;
       LOG.info("Runs every " + sleepTime + "ms");
     }
@@ -1296,8 +1301,7 @@ public class HRegionServer implements HRegionInterface,
     if (!(leases.isAlive() &&
         cacheFlusher.isAlive() && hlogRoller.isAlive() &&
         workerThread.isAlive() && this.majorCompactionChecker.isAlive())) {
-      // One or more threads are no longer alive - shut down
-      stop();
+      stop("One or more threads are no longer alive");
       return false;
     }
     return true;
@@ -1352,8 +1356,9 @@ public class HRegionServer implements HRegionInterface,
    * in an orderly fashion.  Used by unit tests.
    */
   @Override
-  public void stop() {
+  public void stop(String why) {
     this.stopRequested.set(true);
+    stopReason = why;
     synchronized(this) {
       // Wakes run() if it is sleeping
       notifyAll(); // FindBugs NN_NAKED_NOTIFY
@@ -1367,7 +1372,7 @@ public class HRegionServer implements HRegionInterface,
   public void stopForRestart() {
     restartRequested = true;
     LOG.info("Going down for a restart");
-    stop();
+    stop("stop for restart");
   }
 
   /**
@@ -1390,7 +1395,7 @@ public class HRegionServer implements HRegionInterface,
     if (this.metrics != null) {
       LOG.info("Dump of metrics: " + this.metrics);
     }
-    stop();
+    stop("aborted: " + reason);
   }
 
   /**
@@ -3037,4 +3042,14 @@ public class HRegionServer implements HRegionInterface,
         HRegionServer.class);
     doMain(args, regionServerClass);
   }
+
+  @Override
+  public boolean isStopped() {
+    return stopRequested.get();
+  }
+
+  public String getStopReason() {
+    return stopReason;
+  }
+
 }

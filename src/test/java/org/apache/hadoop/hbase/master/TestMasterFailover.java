@@ -71,6 +71,8 @@ public class TestMasterFailover extends MultiMasterTest {
 
     killActiveMasterAndWaitToStop();
     assertEquals(1, masters.size());
+
+    waitForActiveMasterAndVerify();
   }
 
 }

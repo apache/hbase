@@ -175,7 +175,7 @@ public class JVMClusterUtil {
           t.shutdown();
         } else {
           // This will only stop this particular master.
-          t.stopMaster();
+          t.stop("normal shutdown");
         }
       }
     }

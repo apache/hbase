@@ -338,7 +338,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
           logMsg("Killing master right before it can process the event "
               + eventType + " for region " + openedRegion);
           HBaseEventHandler.unregisterListener(this);
-          localCluster().getActiveMaster().killMaster();
+          miniCluster().killActiveMaster();
           terminateEventThread = true;
         } else {
           logMsg("Skipping event for region " + openedRegion

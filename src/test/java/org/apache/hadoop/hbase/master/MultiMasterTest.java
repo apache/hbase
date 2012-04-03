@@ -28,12 +28,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.junit.After;
@@ -143,6 +145,16 @@ public class MultiMasterTest {
     return cluster;
   }
 
+  public void waitUntilRegionServersCheckIn(int numRS) {
+    while (true) {
+      HMaster master = cluster.getHBaseCluster().getActiveMaster();
+      if (master != null && master.getServerManager().numServers() >= numRS) {
+        return;
+      }
+      Threads.sleepWithoutInterrupt(HConstants.SOCKET_RETRY_WAIT_MS);
+    }
+  }
+
   protected void waitForActiveMasterAndVerify() throws InterruptedException {
     final List<HMaster> masters = miniCluster().getMasters();
     // wait for an active master to show up and be ready
@@ -159,7 +171,7 @@ public class MultiMasterTest {
       throws InterruptedException {
     HMaster master = cluster.getMaster(masterIndex);
     HServerAddress address = master.getHServerAddress();
-    master.killMaster();
+    master.stop("killing master in test");
     cluster.getHBaseCluster().waitOnMasterStop(masterIndex);
     return address;
   }

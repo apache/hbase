@@ -340,7 +340,7 @@ public class MiniHBaseCluster {
     JVMClusterUtil.RegionServerThread server =
       hbaseCluster.getRegionServers().get(serverNumber);
     LOG.info("Stopping " + server.toString());
-    server.getRegionServer().stop();
+    server.getRegionServer().stop("normal shutdown");
     return server;
   }
 
@@ -535,8 +535,13 @@ public class MiniHBaseCluster {
   public HMaster killMaster(int serverNumber) {
     HMaster server = hbaseCluster.getMasters().get(serverNumber);
     LOG.info("Killing master " + server.toString());
-    server.killMaster();
+    server.stop("killing master");
     return server;
+  }
+
+  public void killActiveMaster() {
+    LOG.info("Killing active master");
+    hbaseCluster.getActiveMaster().stop("killing master");
   }
 
   /**
