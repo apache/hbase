@@ -38,9 +38,7 @@ public class RegionServerDynamicStatistics extends MetricsDynamicMBeanBase {
 
   public RegionServerDynamicStatistics(MetricsRegistry registry) {
     super(registry, "RegionServerDynamicStatistics");
-    mbeanName = MBeanUtil.registerMBean("RegionServerDynamic",
-                                        "RegionServerDynamicStatistics",
-                                        this);
+    mbeanName = MBeanUtil.registerMBean("RegionServer", "RegionServerDynamicStatistics", this);
   }
 
   public void shutdown() {
