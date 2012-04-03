@@ -23,7 +23,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -114,16 +113,16 @@ public class ReplicationAdmin implements Closeable {
    * Restart the replication stream to the specified peer.
    * @param id a short that identifies the cluster
    */
-  public void enablePeer(String id) {
-    throw new NotImplementedException("Not implemented");
+  public void enablePeer(String id) throws IOException {
+    this.replicationZk.enablePeer(id);
   }
 
   /**
    * Stop the replication stream to the specified peer.
    * @param id a short that identifies the cluster
    */
-  public void disablePeer(String id) {
-    throw new NotImplementedException("Not implemented");
+  public void disablePeer(String id) throws IOException {
+    this.replicationZk.disablePeer(id);
   }
 
   /**
@@ -140,6 +139,20 @@ public class ReplicationAdmin implements Closeable {
    */
   public Map<String, String> listPeers() {
     return this.replicationZk.listPeers();
+  }
+
+  /**
+   * Get state of the peer
+   *
+   * @param id peer's identifier
+   * @return current state of the peer
+   */
+  public String getPeerState(String id) throws IOException {
+    try {
+      return this.replicationZk.getPeerState(id).name();
+    } catch (KeeperException e) {
+      throw new IOException("Couldn't get the state of the peer " + id, e);
+    }
   }
 
   /**
