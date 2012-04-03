@@ -24,7 +24,8 @@ Release 0.92.2 - Unreleased
                are overwritten by hbase-site.xml (Takuya Ueshin)
    HBASE-5535  Make the functions in task monitor synchronized (Liyin Tang)
    HBASE-5213  "hbase master stop" does not bring down backup masters (Gregory) 
-
+   HBASE-5606  SplitLogManger async delete node hangs log splitting when ZK connection is lost
+               (Prakash)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
