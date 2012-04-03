@@ -93,9 +93,4 @@ public interface ReplicationSourceInterface {
    */
   public String getPeerClusterId();
 
-  /**
-   * Set if this source is enabled or disabled
-   * @param status the new status
-   */
-  public void setSourceEnabled(boolean status);
 }

@@ -33,10 +33,11 @@ EOF
         now = Time.now
         peers = replication_admin.list_peers
 
-        formatter.header(["PEER ID", "CLUSTER KEY"])
+        formatter.header(["PEER_ID", "CLUSTER_KEY", "STATE"])
 
         peers.entrySet().each do |e|
-          formatter.row([ e.key, e.value ])
+          state = replication_admin.get_peer_state(e.key)
+          formatter.row([ e.key, e.value, state ])
         end
 
         formatter.footer(now)

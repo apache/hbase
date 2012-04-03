@@ -19,15 +19,15 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
-
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Source that does nothing at all, helpful to test ReplicationSourceManager
@@ -81,10 +81,4 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   public String getPeerClusterId() {
     return peerClusterId;
   }
-
-  @Override
-  public void setSourceEnabled(boolean status) {
-
-  }
-
 }

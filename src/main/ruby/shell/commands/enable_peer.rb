@@ -26,8 +26,6 @@ module Shell
 Restarts the replication to the specified peer cluster,
 continuing from where it was disabled.
 
-CURRENTLY UNSUPPORTED
-
 Examples:
 
   hbase> enable_peer '1'

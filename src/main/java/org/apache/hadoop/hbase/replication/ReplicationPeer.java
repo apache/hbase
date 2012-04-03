@@ -29,7 +29,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.replication.ReplicationZookeeper.PeerState;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * This class acts as a wrapper for all the objects used to identify and
@@ -47,6 +52,8 @@ public class ReplicationPeer implements Abortable {
   private ZooKeeperWatcher zkw;
   private final Configuration conf;
 
+  private PeerStateTracker peerStateTracker;
+
   /**
    * Constructor that takes all the objects required to communicate with the
    * specified peer, except for the region server addresses.
@@ -60,6 +67,31 @@ public class ReplicationPeer implements Abortable {
     this.clusterKey = key;
     this.id = id;
     this.reloadZkWatcher();
+  }
+
+  /**
+   * start a state tracker to check whether this peer is enabled or not
+   *
+   * @param zookeeper zk watcher for the local cluster
+   * @param peerStateNode path to zk node which stores peer state
+   * @throws KeeperException
+   */
+  public void startStateTracker(ZooKeeperWatcher zookeeper, String peerStateNode)
+      throws KeeperException {
+    if (ZKUtil.checkExists(zookeeper, peerStateNode) == -1) {
+      ZKUtil.createAndWatch(zookeeper, peerStateNode,
+          Bytes.toBytes(PeerState.ENABLED.name())); // enabled by default
+    }
+    this.peerStateTracker = new PeerStateTracker(peerStateNode, zookeeper,
+        this);
+    this.peerStateTracker.start();
+    this.readPeerStateZnode();
+  }
+
+  private void readPeerStateZnode() {
+    String currentState = Bytes.toString(peerStateTracker.getData(false));
+    this.peerEnabled.set(PeerState.ENABLED.equals(PeerState
+        .valueOf(currentState)));
   }
 
   /**
@@ -141,5 +173,24 @@ public class ReplicationPeer implements Abortable {
     // Currently the replication peer is never "Aborted", we just log when the
     // abort method is called.
     return false;
+  }
+
+  /**
+   * Tracker for state of this peer
+   */
+  public class PeerStateTracker extends ZooKeeperNodeTracker {
+
+    public PeerStateTracker(String peerStateZNode, ZooKeeperWatcher watcher,
+        Abortable abortable) {
+      super(watcher, peerStateZNode, abortable);
+    }
+
+    @Override
+    public synchronized void nodeDataChanged(String path) {
+      if (path.equals(node)) {
+        super.nodeDataChanged(path);
+        readPeerStateZnode();
+      }
+    }
   }
 }
