@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -90,6 +91,8 @@ public class TestMiniClusterLoadSequential {
 
   @Before
   public void setUp() throws Exception {
+    ZooKeeperWrapper.setNamespaceForTesting("multiPut_" + isMultiPut
+        + "_encoding_" + dataBlockEncoding + "_");
     LOG.debug("Test setup: isMultiPut=" + isMultiPut);
     TEST_UTIL.startMiniCluster(1, NUM_RS);
   }

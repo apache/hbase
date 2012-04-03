@@ -319,7 +319,10 @@ public class HBaseTestingUtility {
    * @see #startMiniZKCluster()
    */
   public void shutdownMiniZKCluster() throws IOException {
-    if (this.zkCluster != null) this.zkCluster.shutdown();
+    if (this.zkCluster != null) {
+      this.zkCluster.shutdown();
+      zkCluster = null;
+    }
   }
 
   /**

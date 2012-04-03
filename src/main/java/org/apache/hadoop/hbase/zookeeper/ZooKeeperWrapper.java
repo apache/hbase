@@ -1811,6 +1811,10 @@ public class ZooKeeperWrapper implements Watcher {
     currentNamespaceForTesting = namespace;
   }
 
+  public static void setNamespaceForTesting(String namespace) {
+    currentNamespaceForTesting = namespace;
+  }
+
   /**
    * Used in unit testing.
    * @return whether all ZK wrappers in the current unit test's "namespace"
