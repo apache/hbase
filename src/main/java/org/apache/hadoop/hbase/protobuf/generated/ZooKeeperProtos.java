@@ -11,7 +11,7 @@ public final class ZooKeeperProtos {
   public interface RootRegionServerOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .ServerName server = 2;
+    // required .ServerName server = 1;
     boolean hasServer();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder();
@@ -45,8 +45,8 @@ public final class ZooKeeperProtos {
     }
     
     private int bitField0_;
-    // required .ServerName server = 2;
-    public static final int SERVER_FIELD_NUMBER = 2;
+    // required .ServerName server = 1;
+    public static final int SERVER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_;
     public boolean hasServer() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -82,7 +82,7 @@ public final class ZooKeeperProtos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(2, server_);
+        output.writeMessage(1, server_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -95,7 +95,7 @@ public final class ZooKeeperProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, server_);
+          .computeMessageSize(1, server_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -365,7 +365,7 @@ public final class ZooKeeperProtos {
               }
               break;
             }
-            case 18: {
+            case 10: {
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder();
               if (hasServer()) {
                 subBuilder.mergeFrom(getServer());
@@ -380,7 +380,7 @@ public final class ZooKeeperProtos {
       
       private int bitField0_;
       
-      // required .ServerName server = 2;
+      // required .ServerName server = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverBuilder_;
@@ -496,7 +496,7 @@ public final class ZooKeeperProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\017ZooKeeper.proto\032\013hbase.proto\"/\n\020RootRe" +
-      "gionServer\022\033\n\006server\030\002 \002(\0132\013.ServerNameB" +
+      "gionServer\022\033\n\006server\030\001 \002(\0132\013.ServerNameB" +
       "E\n*org.apache.hadoop.hbase.protobuf.gene" +
       "ratedB\017ZooKeeperProtosH\001\210\001\001\240\001\001"
     };
