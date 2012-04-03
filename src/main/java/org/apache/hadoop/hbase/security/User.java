@@ -24,6 +24,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
@@ -162,6 +164,33 @@ public abstract class User {
       return new SecureHadoopUser(ugi);
     }
     return new HadoopUser(ugi);
+  }
+
+  public static User createUser(ConnectionHeader head) {
+    UserGroupInformation ugi = null;
+
+    if (!head.hasUserInfo()) {
+      return create(null);
+    }
+    UserInformation userInfoProto = head.getUserInfo();
+    String effectiveUser = null;
+    if (userInfoProto.hasEffectiveUser()) {
+      effectiveUser = userInfoProto.getEffectiveUser();
+    }
+    String realUser = null;
+    if (userInfoProto.hasRealUser()) {
+      realUser = userInfoProto.getRealUser();
+    }
+    if (effectiveUser != null) {
+      if (realUser != null) {
+        UserGroupInformation realUserUgi =
+            UserGroupInformation.createRemoteUser(realUser);
+        ugi = UserGroupInformation.createProxyUser(effectiveUser, realUserUgi);
+      } else {
+        ugi = UserGroupInformation.createRemoteUser(effectiveUser);
+      }
+    }
+    return create(ugi);
   }
 
   /**

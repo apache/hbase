@@ -59,22 +59,28 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.DataOutputOutputStream;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.WritableWithSize;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.protobuf.ByteString;
 
 import org.cliffc.high_scale_lib.Counter;
 
@@ -94,7 +100,7 @@ public abstract class HBaseServer implements RpcServer {
    * The first four bytes of Hadoop RPC connections
    */
   public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
-  public static final byte CURRENT_VERSION = 3;
+  public static final byte CURRENT_VERSION = 5;
 
   /**
    * How many calls/handler are allowed in the queue.
@@ -333,40 +339,27 @@ public abstract class HBaseServer implements RpcServer {
       ByteBufferOutputStream buf = new ByteBufferOutputStream(size);
       DataOutputStream out = new DataOutputStream(buf);
       try {
+        RpcResponse.Builder builder = RpcResponse.newBuilder();
         // Call id.
-        out.writeInt(this.id);
-        // Write flag.
-        byte flag = (error != null)?
-          ResponseFlag.getErrorAndLengthSet(): ResponseFlag.getLengthSetOnly();
-        out.writeByte(flag);
-        // Place holder for length set later below after we
-        // fill the buffer with data.
-        out.writeInt(0xdeadbeef);
-        out.writeInt(status.state);
-      } catch (IOException e) {
-        errorClass = e.getClass().getName();
-        error = StringUtils.stringifyException(e);
-      }
-
-      try {
-        if (error == null) {
-          result.write(out);
+        builder.setCallId(this.id);
+        builder.setError(error != null);
+        if (error != null) {
+          RpcException.Builder b = RpcException.newBuilder();
+          b.setExceptionName(errorClass);
+          b.setStackTrace(error);
+          builder.setException(b.build());
         } else {
-          WritableUtils.writeString(out, errorClass);
-          WritableUtils.writeString(out, error);
+          DataOutputBuffer d = new DataOutputBuffer(size);
+          result.write(d);
+          byte[] response = d.getData();
+          builder.setResponse(ByteString.copyFrom(response));
         }
+        builder.build().writeDelimitedTo(
+            DataOutputOutputStream.constructOutputStream(out));
       } catch (IOException e) {
-        LOG.warn("Error sending response to call: ", e);
+        LOG.warn("Exception while creating response " + e);
       }
-
-      // Set the length into the ByteBuffer after call id and after
-      // byte flag.
       ByteBuffer bb = buf.getByteBuffer();
-      int bufSiz = bb.remaining();
-      // Move to the size location in our ByteBuffer past call.id
-      // and past the byte flag.
-      bb.position(Bytes.SIZEOF_INT + Bytes.SIZEOF_BYTE); 
-      bb.putInt(bufSiz);
       bb.position(0);
       this.response = bb;
     }
@@ -1065,9 +1058,9 @@ public abstract class HBaseServer implements RpcServer {
     // disconnected, we can say where it used to connect to.
     protected String hostAddress;
     protected int remotePort;
-    ConnectionHeader header = new ConnectionHeader();
+    ConnectionHeader header;
     Class<? extends VersionedProtocol> protocol;
-    protected User ticket = null;
+    protected User user = null;
 
     public Connection(SocketChannel channel, long lastContact) {
       this.channel = channel;
@@ -1231,26 +1224,21 @@ public abstract class HBaseServer implements RpcServer {
 
     /// Reads the connection header following version
     private void processHeader() throws IOException {
-      DataInputStream in =
-        new DataInputStream(new ByteArrayInputStream(data.array()));
-      header.readFields(in);
+      header = ConnectionHeader.parseFrom(new ByteArrayInputStream(data.array()));
       try {
         String protocolClassName = header.getProtocol();
-        if (protocolClassName == null) {
-          protocolClassName = "org.apache.hadoop.hbase.ipc.HRegionInterface";
-        }
         protocol = getProtocolClass(protocolClassName, conf);
       } catch (ClassNotFoundException cnfe) {
         throw new IOException("Unknown protocol: " + header.getProtocol());
       }
 
-      ticket = header.getUser();
+      user = User.createUser(header);
     }
 
     protected void processData(byte[] buf) throws  IOException, InterruptedException {
-      DataInputStream dis =
-        new DataInputStream(new ByteArrayInputStream(buf));
-      int id = dis.readInt();                    // try to read an id
+      RpcRequest request = RpcRequest.parseFrom(buf);
+      int id = request.getCallId();
+      ByteString clientRequest = request.getRequest();
       long callSize = buf.length;
 
       if (LOG.isDebugEnabled()) {
@@ -1271,6 +1259,8 @@ public abstract class HBaseServer implements RpcServer {
 
       Writable param;
       try {
+        DataInputStream dis =
+            new DataInputStream(clientRequest.newInput());
         param = ReflectionUtils.newInstance(paramClass, conf);//read param
         param.readFields(dis);
       } catch (Throwable t) {
@@ -1372,12 +1362,12 @@ public abstract class HBaseServer implements RpcServer {
               throw new ServerNotRunningYetException("Server is not running yet");
 
             if (LOG.isDebugEnabled()) {
-              User remoteUser = call.connection.ticket;
+              User remoteUser = call.connection.user;
               LOG.debug(getName() + ": call #" + call.id + " executing as "
                   + (remoteUser == null ? "NULL principal" : remoteUser.getName()));
             }
 
-            RequestContext.set(call.connection.ticket, getRemoteIp(),
+            RequestContext.set(call.connection.user, getRemoteIp(),
                 call.connection.protocol);
             // make the call
             value = call(call.connection.protocol, call.param, call.timestamp, 

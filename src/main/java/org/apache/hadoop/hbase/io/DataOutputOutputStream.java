@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * OutputStream implementation that wraps a DataOutput.
  */
 @InterfaceAudience.Private
-class DataOutputOutputStream extends OutputStream {
+public class DataOutputOutputStream extends OutputStream {
 
   private final DataOutput out;
 

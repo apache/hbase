@@ -46,17 +46,22 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.hbase.io.DataOutputOutputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.ReflectionUtils;
+
+import com.google.protobuf.ByteString;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -233,8 +238,9 @@ public class HBaseClient {
       User ticket = remoteId.getTicket();
       Class<? extends VersionedProtocol> protocol = remoteId.getProtocol();
 
-      header = new ConnectionHeader(
-          protocol == null ? null : protocol.getName(), ticket);
+      ConnectionHeader.Builder builder = ConnectionHeader.newBuilder();
+      builder.setProtocol(protocol == null ? "" : protocol.getName());
+      this.header = builder.build();
 
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
         remoteId.getAddress().toString() +
@@ -436,13 +442,8 @@ public class HBaseClient {
     private void writeHeader() throws IOException {
       out.write(HBaseServer.HEADER.array());
       out.write(HBaseServer.CURRENT_VERSION);
-      //When there are more fields we can have ConnectionHeader Writable.
-      DataOutputBuffer buf = new DataOutputBuffer();
-      header.write(buf);
-
-      int bufLen = buf.getLength();
-      out.writeInt(bufLen);
-      out.write(buf.getData(), 0, bufLen);
+      out.writeInt(header.getSerializedSize());
+      header.writeTo(out);
     }
 
     /* wait till someone signals us to start reading RPC response or
@@ -451,7 +452,6 @@ public class HBaseClient {
      *
      * Return true if it is time to read a response; false otherwise.
      */
-    @SuppressWarnings({"ThrowableInstanceNeverThrown"})
     protected synchronized boolean waitForWork() {
       if (calls.isEmpty() && !shouldCloseConnection.get()  && running.get())  {
         long timeout = maxIdleTime-
@@ -526,32 +526,24 @@ public class HBaseClient {
       if (shouldCloseConnection.get()) {
         return;
       }
-
-      // For serializing the data to be written.
-
-      final DataOutputBuffer d = new DataOutputBuffer();
       try {
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " sending #" + call.id);
-
-        d.writeInt(0xdeadbeef); // placeholder for data length
-        d.writeInt(call.id);
-        call.param.write(d);
-        byte[] data = d.getData();
-        int dataLength = d.getLength();
-        // fill in the placeholder
-        Bytes.putInt(data, 0, dataLength - 4);
+        RpcRequest.Builder builder = RPCProtos.RpcRequest.newBuilder();
+        builder.setCallId(call.id);
+        Invocation invocation = (Invocation)call.param;
+        DataOutputBuffer d = new DataOutputBuffer();
+        invocation.write(d);
+        builder.setRequest(ByteString.copyFrom(d.getData()));
         //noinspection SynchronizeOnNonFinalField
         synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
-          out.write(data, 0, dataLength);
-          out.flush();
+          RpcRequest obj = builder.build();
+          this.out.writeInt(obj.getSerializedSize());
+          obj.writeTo(DataOutputOutputStream.constructOutputStream(this.out));
+          this.out.flush();
         }
       } catch(IOException e) {
         markClosed(e);
-      } finally {
-        //the buffer is just an in-memory buffer, but it is still polite to
-        // close early
-        IOUtils.closeStream(d);
       }
     }
 
@@ -566,33 +558,31 @@ public class HBaseClient {
 
       try {
         // See HBaseServer.Call.setResponse for where we write out the response.
-        // It writes the call.id (int), a flag byte, then optionally the length
-        // of the response (int) followed by data.
+        // It writes the call.id (int), a boolean signifying any error (and if 
+        // so the exception name/trace), and the response bytes
 
         // Read the call id.
-        int id = in.readInt();
+        RpcResponse response = RpcResponse.parseDelimitedFrom(in);
+        int id = response.getCallId();
 
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + id);
         Call call = calls.remove(id);
 
-        // Read the flag byte
-        byte flag = in.readByte();
-        boolean isError = ResponseFlag.isError(flag);
-        if (ResponseFlag.isLength(flag)) {
-          // Currently length if present is unused.
-          in.readInt();
-        }
-        int state = in.readInt(); // Read the state.  Currently unused.
+        boolean isError = response.getError();
         if (isError) {
           if (call != null) {
             //noinspection ThrowableInstanceNeverThrown
-            call.setException(new RemoteException(WritableUtils.readString(in),
-                WritableUtils.readString(in)));
+            call.setException(new RemoteException(
+                response.getException().getExceptionName(),
+                response.getException().getStackTrace()));
           }
         } else {
+          ByteString responseObj = response.getResponse();
+          DataInputStream dis =
+              new DataInputStream(responseObj.newInput());
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
-          value.readFields(in);                 // read value
+          value.readFields(dis);                 // read value
           // it's possible that this call may have been cleaned up due to a RPC
           // timeout, so check if it still exists before setting the value.
           if (call != null) {
