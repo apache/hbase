@@ -24,8 +24,12 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -45,6 +49,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
+
+import com.google.common.collect.Lists;
 
 /**
  * File format for hbase.
@@ -139,10 +145,50 @@ public class HFile {
     DEFAULT_COMPRESSION_ALGORITHM.getName();
 
   // For measuring latency of "typical" reads and writes
-  static volatile AtomicLong readOps = new AtomicLong();
-  static volatile AtomicLong readTimeNano = new AtomicLong();
-  static volatile AtomicLong writeOps = new AtomicLong();
-  static volatile AtomicLong writeTimeNano = new AtomicLong();
+  private static final AtomicLong readOps = new AtomicLong();
+  private static final AtomicLong readTimeNano = new AtomicLong();
+  private static final AtomicLong writeOps = new AtomicLong();
+  private static final AtomicLong writeTimeNano = new AtomicLong();
+
+  // For getting more detailed stats on FS latencies
+  // If, for some reason, the metrics subsystem stops polling for latencies, 
+  // I don't want data to pile up in a memory leak
+  // so, after LATENCY_BUFFER_SIZE items have been enqueued for processing,
+  // fs latency stats will be dropped (and this behavior will be logged)
+  private static final int LATENCY_BUFFER_SIZE = 5000;
+  private static final BlockingQueue<Long> fsReadLatenciesNanos = 
+      new ArrayBlockingQueue<Long>(LATENCY_BUFFER_SIZE);
+  private static final BlockingQueue<Long> fsWriteLatenciesNanos = 
+      new ArrayBlockingQueue<Long>(LATENCY_BUFFER_SIZE);
+  
+  
+  public static final void offerReadLatency(long latencyNanos) {
+    fsReadLatenciesNanos.offer(latencyNanos); // might be silently dropped, if the queue is full
+    
+    readTimeNano.addAndGet(latencyNanos);
+    readOps.incrementAndGet();
+  }
+  
+  public static final void offerWriteLatency(long latencyNanos) {
+    fsWriteLatenciesNanos.offer(latencyNanos); // might be silently dropped, if the queue is full
+    
+    writeTimeNano.addAndGet(latencyNanos);
+    writeOps.incrementAndGet();
+  }
+  
+  public static final Collection<Long> getReadLatenciesNanos() {
+    final List<Long> latencies = 
+        Lists.newArrayListWithCapacity(fsReadLatenciesNanos.size());
+    fsReadLatenciesNanos.drainTo(latencies);
+    return latencies;
+  }
+
+  public static final Collection<Long> getWriteLatenciesNanos() {
+    final List<Long> latencies = 
+        Lists.newArrayListWithCapacity(fsWriteLatenciesNanos.size());
+    fsWriteLatenciesNanos.drainTo(latencies);
+    return latencies;
+  }
 
   public static final long getReadOps() {
     return readOps.getAndSet(0);

@@ -201,9 +201,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
       HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset,
           blockSize, -1, true);
 
-      HFile.readTimeNano.addAndGet(System.nanoTime() - startTimeNs);
-      HFile.readOps.incrementAndGet();
-
+      final long latency = System.nanoTime() - startTimeNs;
+      HFile.offerReadLatency(latency);
+      
       // Cache the block
       if (cacheBlock) {
         cacheConf.getBlockCache().cacheBlock(cacheKey, metaBlock,
@@ -267,9 +267,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
           onDiskBlockSize, -1, pread);
       BlockCategory blockCategory = hfileBlock.getBlockType().getCategory();
 
-      HFile.readTimeNano.addAndGet(System.nanoTime() - startTimeNs);
-      HFile.readOps.incrementAndGet();
-
+      final long latency = System.nanoTime() - startTimeNs;
+      HFile.offerReadLatency(latency);
+      
       // Cache the block
       if (cacheBlock && cacheConf.shouldCacheBlockOnRead(
         hfileBlock.getBlockType().getCategory())) {

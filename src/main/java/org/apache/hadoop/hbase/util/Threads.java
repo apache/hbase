@@ -25,6 +25,8 @@ import java.io.PrintWriter;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Thread Utility
@@ -126,5 +128,27 @@ public class Threads {
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
+  }
+  
+  
+  /**
+   * Returns a {@link java.util.concurrent.ThreadFactory} that names each
+   * created thread uniquely, with a common prefix.
+   * 
+   * @param prefix  The prefix of every created Thread's name
+   * @return a {@link java.util.concurrent.ThreadFactory} that names threads
+   */
+  public static ThreadFactory getNamedThreadFactory(final String prefix, final boolean daemon) {
+    return new ThreadFactory() {
+
+      private final AtomicInteger threadNumber = new AtomicInteger(1);
+      
+      @Override
+      public Thread newThread(Runnable r) {
+        final Thread t = new Thread(r, prefix + threadNumber.getAndIncrement());
+        t.setDaemon(daemon);
+        return t;
+      }
+    };
   }
 }

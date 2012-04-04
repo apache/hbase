@@ -234,6 +234,7 @@ public class HLog implements Syncable {
    * Keep the number of logs tidy.
    */
   private final int maxLogs;
+    
 
   /**
    * Thread that handles optional sync'ing
@@ -266,6 +267,15 @@ public class HLog implements Syncable {
   // For measuring latency of syncs
   private static volatile long syncOps;
   private static volatile long syncTime;
+  
+  // For measuring the current number of HLog files
+  private static volatile int logCount = 0;
+
+  public static int getLogCount() {
+    // the logCount var is updated from the logFiles map, which doesn't include the current hlog file
+    // hence the + 1
+    return logCount + 1;    
+  }
   
   public static long getWriteOps() {
     long ret = writeOps;
@@ -712,8 +722,9 @@ public class HLog implements Syncable {
     // If too many log files, figure which regions we need to flush.
     // Array is an array of encoded region names.
     byte [][] regions = null;
-    int logCount = this.outputfiles == null? 0: this.outputfiles.size();
-    if (logCount > this.maxLogs && logCount > 0) {
+    int curLogCount = this.outputfiles == null? 0: this.outputfiles.size();
+    this.logCount = curLogCount;
+    if (curLogCount > this.maxLogs && curLogCount > 0) {
       // This is an array of encoded region names.
       regions = findMemstoresWithEditsEqualOrOlderThan(this.outputfiles.firstKey(),
         this.lastSeqWritten);
@@ -723,7 +734,7 @@ public class HLog implements Syncable {
           if (i > 0) sb.append(", ");
           sb.append(Bytes.toStringBinary(regions[i]));
         }
-        LOG.info("Too many hlogs: logs=" + logCount + ", maxlogs=" +
+        LOG.info("Too many hlogs: logs=" + curLogCount + ", maxlogs=" +
            this.maxLogs + "; forcing flush of " + regions.length + " regions(s): " +
            sb.toString());
       }

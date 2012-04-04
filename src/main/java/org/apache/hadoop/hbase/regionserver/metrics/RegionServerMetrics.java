@@ -19,12 +19,20 @@
  */
 package org.apache.hadoop.hbase.regionserver.metrics;
 
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.metrics.ExactCounterMetric;
 import org.apache.hadoop.hbase.metrics.HBaseInfo;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
 import org.apache.hadoop.hbase.metrics.PersistentMetricsTimeVaryingRate;
+import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
+import org.apache.hadoop.hbase.metrics.histogram.Snapshot;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Strings;
@@ -39,11 +47,6 @@ import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.util.StringUtils;
-
-import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryUsage;
-import java.util.List;
 
 /**
  * This class is for maintaining the various regionserver statistics
@@ -75,44 +78,71 @@ public class RegionServerMetrics implements Updater {
   /**
    * Block cache size.
    */
-  public final MetricsLongValue blockCacheSize = new MetricsLongValue("blockCacheSize", registry);
+  public final MetricsLongValue blockCacheSize = 
+      new MetricsLongValue("blockCacheSize", registry);
 
   /**
    * Block cache free size.
    */
-  public final MetricsLongValue blockCacheFree = new MetricsLongValue("blockCacheFree", registry);
+  public final MetricsLongValue blockCacheFree = 
+      new MetricsLongValue("blockCacheFree", registry);
 
   /**
    * Block cache item count.
    */
-  public final MetricsLongValue blockCacheCount = new MetricsLongValue("blockCacheCount", registry);
+  public final MetricsLongValue blockCacheCount = 
+      new MetricsLongValue("blockCacheCount", registry);
 
   /**
    * Block cache hit count.
    */
-  public final MetricsLongValue blockCacheHitCount = new MetricsLongValue("blockCacheHitCount", registry);
+  public final MetricsLongValue blockCacheHitCount = 
+      new MetricsLongValue("blockCacheHitCount", registry);
 
   /**
    * Block cache miss count.
    */
-  public final MetricsLongValue blockCacheMissCount = new MetricsLongValue("blockCacheMissCount", registry);
+  public final MetricsLongValue blockCacheMissCount = 
+      new MetricsLongValue("blockCacheMissCount", registry);
 
   /**
    * Block cache evict count.
    */
-  public final MetricsLongValue blockCacheEvictedCount = new MetricsLongValue("blockCacheEvictedCount", registry);
+  public final MetricsLongValue blockCacheEvictedCount = 
+      new MetricsLongValue("blockCacheEvictedCount", registry);
 
   /**
    * Block hit ratio.
    */
-  public final MetricsIntValue blockCacheHitRatio = new MetricsIntValue("blockCacheHitRatio", registry);
+  public final MetricsIntValue blockCacheHitRatio = 
+      new MetricsIntValue("blockCacheHitRatio", registry);
 
   /**
    * Block hit caching ratio.  This only includes the requests to the block
    * cache where caching was turned on.  See HBASE-2253.
    */
-  public final MetricsIntValue blockCacheHitCachingRatio = new MetricsIntValue("blockCacheHitCachingRatio", registry);
+  public final MetricsIntValue blockCacheHitCachingRatio = 
+      new MetricsIntValue("blockCacheHitCachingRatio", registry);
 
+  /**
+   * a latency histogram on 'get' requests
+   */
+  public final MetricsHistogram getLatencies = 
+      new MetricsHistogram("getRequestLatency", registry);
+ 
+  /**
+   * a latency histogram on 'delete' requests
+   */
+  public final MetricsHistogram deleteLatencies = 
+      new MetricsHistogram("deleteRequestLatency", registry);
+ 
+  /**
+   * a latency histogram on 'put' requests
+   */
+  public final MetricsHistogram putLatencies = 
+      new MetricsHistogram("putRequestLatency", registry);
+ 
+  
   /*
    * Count of requests to the regionservers since last call to metrics update
    */
@@ -126,17 +156,20 @@ public class RegionServerMetrics implements Updater {
   /**
    * Count of storefiles open on the regionserver.
    */
-  public final MetricsIntValue storefiles = new MetricsIntValue("storefiles", registry);
+  public final MetricsIntValue storefiles = 
+      new MetricsIntValue("storefiles", registry);
 
   /**
    * Count of read requests
    */
-  public final MetricsLongValue readRequestsCount = new MetricsLongValue("readRequestsCount", registry);
+  public final MetricsLongValue readRequestsCount = 
+      new MetricsLongValue("readRequestsCount", registry);
 
   /**
    * Count of write requests
    */
-  public final MetricsLongValue writeRequestsCount = new MetricsLongValue("writeRequestsCount", registry);
+  public final MetricsLongValue writeRequestsCount = 
+      new MetricsLongValue("writeRequestsCount", registry);
 
   /**
    */
@@ -180,6 +213,28 @@ public class RegionServerMetrics implements Updater {
     new MetricsIntValue("flushQueueSize", registry);
 
   /**
+   * Metrics on the distribution of filesystem read latencies (improved version of fsReadLatency)
+   */
+  public final MetricsHistogram fsReadLatencyHistogram = 
+      new MetricsHistogram("fsReadLatencyHistogram", registry);
+
+  /**
+   * Metrics on the distribution of filesystem write latencies (improved version of fsWriteLatency)
+   */
+  public final MetricsHistogram fsWriteLatencyHistogram = 
+      new MetricsHistogram("fsWriteLatencyHistogram", registry);
+
+  
+  /**
+   * Metrics on the distribution of region operations 
+   * (how many 'operations' on each region). I'm using an exact counter since 
+   * each RegionServer is, at most, responsible for a few hundred regions.
+   * If that weren't the case, we'd have to use a lossy stream counter.
+   */
+  public final ExactCounterMetric regionAccessCounter = 
+      new ExactCounterMetric("regionAccessCounter", registry);
+  
+  /**
    * filesystem read latency
    */
   public final MetricsTimeVaryingRate fsReadLatency =
@@ -197,6 +252,12 @@ public class RegionServerMetrics implements Updater {
   public final MetricsTimeVaryingRate fsSyncLatency =
     new MetricsTimeVaryingRate("fsSyncLatency", registry);
 
+  /**
+   * HLog file count
+   */
+  public final MetricsIntValue hlogFileCount = 
+      new MetricsIntValue("hlogFileCount", registry);
+  
   /**
    * time each scheduled compaction takes
    */
@@ -289,7 +350,10 @@ public class RegionServerMetrics implements Updater {
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
       this.blockCacheHitCachingRatio.pushMetric(this.metricsRecord);
       this.hdfsBlocksLocalityIndex.pushMetric(this.metricsRecord);
-
+      this.putLatencies.pushMetric(this.metricsRecord);
+      this.deleteLatencies.pushMetric(this.metricsRecord);
+      this.getLatencies.pushMetric(this.metricsRecord);
+      
       // Mix in HFile and HLog metrics
       // Be careful. Here is code for MTVR from up in hadoop:
       // public synchronized void inc(final int numOps, final long time) {
@@ -309,9 +373,24 @@ public class RegionServerMetrics implements Updater {
       ops = (int)HLog.getSyncOps();
       if (ops != 0) this.fsSyncLatency.inc(ops, HLog.getSyncTime());
 
+      for(Long latency : HFile.getReadLatenciesNanos()) {
+        this.fsReadLatencyHistogram.update(latency);
+      }
+      for(Long latency : HFile.getWriteLatenciesNanos()) {
+        this.fsWriteLatencyHistogram.update(latency);
+      }
+      
+      this.hlogFileCount.set(HLog.getLogCount());
+      
+
       // push the result
+      this.hlogFileCount.pushMetric(this.metricsRecord);
+      
       this.fsReadLatency.pushMetric(this.metricsRecord);
       this.fsWriteLatency.pushMetric(this.metricsRecord);
+      this.fsReadLatencyHistogram.pushMetric(this.metricsRecord);
+      this.fsWriteLatencyHistogram.pushMetric(this.metricsRecord);
+      
       this.fsSyncLatency.pushMetric(this.metricsRecord);
       this.compactionTime.pushMetric(this.metricsRecord);
       this.compactionSize.pushMetric(this.metricsRecord);
@@ -416,6 +495,34 @@ public class RegionServerMetrics implements Updater {
         Long.valueOf(this.blockCacheHitCachingRatio.get())+"%");
     sb = Strings.appendKeyValue(sb, this.hdfsBlocksLocalityIndex.getName(),
         Long.valueOf(this.hdfsBlocksLocalityIndex.get()));
+    sb = appendHistogram(sb, this.deleteLatencies);
+    sb = appendHistogram(sb, this.getLatencies);
+    sb = appendHistogram(sb, this.putLatencies);
+    sb = appendHistogram(sb, this.fsReadLatencyHistogram);
+    sb = appendHistogram(sb, this.fsWriteLatencyHistogram);
+
     return sb.toString();
+  }
+  
+  private StringBuilder appendHistogram(StringBuilder sb, 
+      MetricsHistogram histogram) {
+    sb = Strings.appendKeyValue(sb, 
+        histogram.getName() + "Mean", 
+        StringUtils.limitDecimalTo2(histogram.getMean()));
+    sb = Strings.appendKeyValue(sb, 
+        histogram.getName() + "Count", 
+        StringUtils.limitDecimalTo2(histogram.getCount()));
+    final Snapshot s = histogram.getSnapshot();
+    sb = Strings.appendKeyValue(sb, 
+        histogram.getName() + "Median", StringUtils.limitDecimalTo2(s.getMedian()));
+    sb = Strings.appendKeyValue(sb, 
+        histogram.getName() + "75th", StringUtils.limitDecimalTo2(s.get75thPercentile()));
+    sb = Strings.appendKeyValue(sb, 
+        histogram.getName() + "95th", StringUtils.limitDecimalTo2(s.get95thPercentile()));
+    sb = Strings.appendKeyValue(sb, 
+        histogram.getName() + "99th", StringUtils.limitDecimalTo2(s.get99thPercentile()));
+    sb = Strings.appendKeyValue(sb, 
+        histogram.getName() + "999th", StringUtils.limitDecimalTo2(s.get999thPercentile()));
+    return sb;
   }
 }

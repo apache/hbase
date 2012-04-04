@@ -1778,12 +1778,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   /** {@inheritDoc} */
   public Result get(byte[] regionName, Get get) throws IOException {
     checkOpen();
+    final long startTime = System.nanoTime();
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
       return region.get(get, getLockFromId(get.getLockId()));
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
+    } finally {
+      this.metrics.getLatencies.update(System.nanoTime() - startTime);
     }
   }
 
@@ -1815,6 +1818,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       throw new IllegalArgumentException("update has null row");
     }
 
+    final long startTime = System.nanoTime();
     checkOpen();
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
@@ -1826,6 +1830,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       region.put(put, getLockFromId(put.getLockId()), writeToWAL);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
+    } finally {
+      this.metrics.putLatencies.update(System.nanoTime() - startTime);
     }
   }
 
@@ -1833,6 +1839,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       throws IOException {
     checkOpen();
     HRegion region = null;
+    int i = 0;
+
+    final long startTime = System.nanoTime();
     try {
       region = getRegion(regionName);
       if (!region.getRegionInfo().isMetaTable()) {
@@ -1842,7 +1851,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       @SuppressWarnings("unchecked")
       Pair<Put, Integer>[] putsWithLocks = new Pair[puts.size()];
 
-      int i = 0;
       for (Put p : puts) {
         Integer lock = getLockFromId(p.getLockId());
         putsWithLocks[i++] = new Pair<Put, Integer>(p, lock);
@@ -1858,6 +1866,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       return -1;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
+    } finally {
+      // going to count this as puts.size() PUTs for latency calculations
+      final long totalTime = System.nanoTime() - startTime;
+      final long putCount = i;
+      final long perPutTime = totalTime / putCount;
+      for (int request = 0; request < putCount; request++) {
+        this.metrics.putLatencies.update(perPutTime);
+      }
     }
   }
 
@@ -2257,6 +2273,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public void delete(final byte[] regionName, final Delete delete)
       throws IOException {
     checkOpen();
+    final long startTime = System.nanoTime();
     try {
       boolean writeToWAL = delete.getWriteToWAL();
       this.requestCount.incrementAndGet();
@@ -2268,6 +2285,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       region.delete(delete, lid, writeToWAL);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
+    } finally {
+      this.metrics.deleteLatencies.update(System.nanoTime() - startTime);
     }
   }
 
@@ -2285,10 +2304,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       int size = deletes.size();
       Integer[] locks = new Integer[size];
       for (Delete delete : deletes) {
+        final long startTime = System.nanoTime();
         this.requestCount.incrementAndGet();
         locks[i] = getLockFromId(delete.getLockId());
         region.delete(delete, locks[i], delete.getWriteToWAL());
         i++;
+        this.metrics.deleteLatencies.update(System.nanoTime() - startTime);
       }
     } catch (WrongRegionException ex) {
       LOG.debug("Batch deletes: " + i, ex);
@@ -2796,6 +2817,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public HRegion getFromOnlineRegions(final String encodedRegionName) {
     HRegion r = null;
     r = this.onlineRegions.get(encodedRegionName);
+
+    // all accesses to a region (get/put/delete/scan/etc) go through here, so
+    // this is a (very rough) way to determine which regions are most accessed.
+    // ideally, we'll later break down accesses by operation type but this will
+    // do for a first pass
+    if (r != null) {
+      this.metrics.regionAccessCounter.update(encodedRegionName);
+    }
+    
     return r;
   }
 
