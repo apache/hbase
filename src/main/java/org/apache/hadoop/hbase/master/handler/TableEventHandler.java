@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -69,6 +70,7 @@ public abstract class TableEventHandler extends EventHandler {
   protected final byte [] tableName;
   protected final String tableNameStr;
   protected boolean instantAction = false;
+  protected boolean persistedToZk = false;
 
   public TableEventHandler(EventType eventType, byte [] tableName, Server server,
       MasterServices masterServices, HMasterInterface masterInterface,
@@ -97,6 +99,9 @@ public abstract class TableEventHandler extends EventHandler {
       LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
     } catch (KeeperException e) {
       LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
+    } finally {
+      // notify the waiting thread that we're done persisting the request
+      setPersist();
     }
   }
 
@@ -124,6 +129,7 @@ public abstract class TableEventHandler extends EventHandler {
       throws IOException {
     if (canPerformSchemaChange()) {
       this.masterServices.getAssignmentManager().setRegionsToReopen(regions);
+      setPersist();
       if (reOpenAllRegions(regions)) {
         LOG.info("Completed table operation " + eventType + " on table " +
             Bytes.toString(tableName));
@@ -206,6 +212,30 @@ public abstract class TableEventHandler extends EventHandler {
       }
     }
     return false;
+  }
+
+  /**
+   * Table modifications are processed asynchronously, but provide an API for
+   * you to query their status.
+   *
+   * @throws IOException
+   */
+  public synchronized void waitForPersist() throws IOException {
+    if (!persistedToZk) {
+      try {
+        wait();
+      } catch (InterruptedException ie) {
+        throw (IOException) new InterruptedIOException().initCause(ie);
+      }
+      assert persistedToZk;
+    }
+  }
+
+  private synchronized void setPersist() {
+    if (!persistedToZk) {
+      persistedToZk = true;
+      notify();
+    }
   }
 
   /**

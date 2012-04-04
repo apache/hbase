@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
+import org.apache.hadoop.hbase.master.handler.TableEventHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
@@ -1314,6 +1315,10 @@ Server {
    */
   public Pair<Integer, Integer> getAlterStatus(byte[] tableName)
   throws IOException {
+    // TODO: currently, we query using the table name on the client side. this
+    // may overlap with other table operations or the table operation may
+    // have completed before querying this API. We need to refactor to a
+    // transaction system in the future to avoid these ambiguities.
     if (supportInstantSchemaChanges) {
       return getAlterStatusFromSchemaChangeTracker(tableName);
     }
@@ -1465,8 +1470,11 @@ Server {
     if (cpHost != null) {
       cpHost.preModifyTable(tableName, htd);
     }
-    this.executorService.submit(new ModifyTableHandler(tableName, htd, this,
-      this, this, supportInstantSchemaChanges));
+    TableEventHandler tblHandle = new ModifyTableHandler(tableName, htd, this,
+        this, this, supportInstantSchemaChanges);
+    this.executorService.submit(tblHandle);
+    tblHandle.waitForPersist();
+
     if (cpHost != null) {
       cpHost.postModifyTable(tableName, htd);
     }
