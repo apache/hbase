@@ -432,9 +432,6 @@ public class HBaseTestingUtility {
     // It's also deprecated
     System.setProperty("test.cache.data", this.clusterTestDir.toString());
 
-    // Set the permissions for dfs data directories
-    this.conf.set("dfs.datanode.data.dir.perm", "700");
-    
     // Ok, now we can start
     this.dfsCluster = new MiniDFSCluster(0, this.conf, servers, true, true,
       true, null, null, hosts, null);
