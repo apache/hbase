@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
@@ -31,6 +33,7 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.MetaComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.WritableUtils;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
@@ -405,6 +408,25 @@ public class TestKeyValue extends TestCase {
     System.err.println("kvFromKey=" + kvFromKey);
     assertEquals(kvFromKey.toString(),
         kv.toString().replaceAll("=[0-9]+", "=0"));
+  }
+
+  /**
+   * The row cache is cleared and re-read for the new value
+   *
+   * @throws IOException
+   */
+  public void testReadFields() throws IOException {
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("cf1"),
+        Bytes.toBytes("qualifier1"), 12345L, Bytes.toBytes("value1"));
+    kv1.getRow(); // set row cache of kv1
+    KeyValue kv2 = new KeyValue(Bytes.toBytes("row2"), Bytes.toBytes("cf2"),
+        Bytes.toBytes("qualifier2"), 12345L, Bytes.toBytes("value2"));
+    kv1.readFields(new DataInputStream(new ByteArrayInputStream(WritableUtils
+        .toByteArray(kv2))));
+    // check equality
+    assertEquals(kv1, kv2);
+    // check cache state (getRow() return the cached value if the cache is set)
+    assertTrue(Bytes.equals(kv1.getRow(), kv2.getRow()));
   }
 
   @org.junit.Rule
