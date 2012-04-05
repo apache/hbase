@@ -8,5 +8,6 @@
   "arcanist_configuration" : "ArcJIRAConfiguration",
   "jira_project" : "HBASE",
   "jira_api_url" : "https://issues.apache.org/jira/si/",
-  "lint_engine" : "JavaLintEngine"
+  "lint_engine" : "JavaLintEngine",
+  "max_line_length" : 100
 }
