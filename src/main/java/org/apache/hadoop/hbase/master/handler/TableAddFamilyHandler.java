@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.master.MasterServices;
 
 /**
@@ -40,10 +39,8 @@ public class TableAddFamilyHandler extends TableEventHandler {
   private final HColumnDescriptor familyDesc;
 
   public TableAddFamilyHandler(byte[] tableName, HColumnDescriptor familyDesc,
-      Server server, final MasterServices masterServices,
-      HMasterInterface masterInterface, boolean instantChange) throws IOException {
-    super(EventType.C_M_ADD_FAMILY, tableName, server, masterServices,
-        masterInterface, instantChange);
+      Server server, final MasterServices masterServices) throws IOException {
+    super(EventType.C_M_ADD_FAMILY, tableName, server, masterServices);
     HTableDescriptor htd = getTableDescriptor();
     if (htd.hasFamily(familyDesc.getName())) {
       throw new InvalidFamilyOperationException("Family '" +

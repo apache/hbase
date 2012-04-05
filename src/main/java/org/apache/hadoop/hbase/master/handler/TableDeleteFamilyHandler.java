@@ -26,7 +26,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -39,10 +38,8 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
   private final byte [] familyName;
 
   public TableDeleteFamilyHandler(byte[] tableName, byte [] familyName,
-      Server server, final MasterServices masterServices,
-      HMasterInterface masterInterface, boolean instantChange) throws IOException {
-    super(EventType.C_M_ADD_FAMILY, tableName, server, masterServices,
-        masterInterface, instantChange);
+      Server server, final MasterServices masterServices) throws IOException {
+    super(EventType.C_M_ADD_FAMILY, tableName, server, masterServices);
     HTableDescriptor htd = getTableDescriptor();
     this.familyName = hasColumnFamily(htd, familyName);
   }

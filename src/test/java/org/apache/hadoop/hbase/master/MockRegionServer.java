@@ -361,6 +361,12 @@ class MockRegionServer implements HRegionInterface, RegionServerServices {
   }
 
   @Override
+  public List<HRegion> getOnlineRegions(byte[] tableName) throws IOException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
   public HServerInfo getHServerInfo() throws IOException {
     // TODO Auto-generated method stub
     return null;
@@ -511,17 +517,6 @@ class MockRegionServer implements HRegionInterface, RegionServerServices {
   public HRegion getFromOnlineRegions(String encodedRegionName) {
     // TODO Auto-generated method stub
     return null;
-  }
-
-  @Override
-  public List<HRegion> getOnlineRegions(byte[] tableName) throws IOException {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public void refreshRegion(HRegion hRegion) throws IOException {
-    // TODO Auto-generated method stub
   }
 
   @Override

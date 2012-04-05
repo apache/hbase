@@ -309,10 +309,12 @@ public class LocalHBaseCluster {
    */
   public HMaster getActiveMaster() {
     for (JVMClusterUtil.MasterThread mt : masterThreads) {
-      // Ensure that the current active master is not stopped.
-      // We don't want to return a stopping master as an active master.
-      if (mt.getMaster().isActiveMaster()  && !mt.getMaster().isStopped()) {
-        return mt.getMaster();
+      if (mt.getMaster().isActiveMaster()) {
+        // Ensure that the current active master is not stopped.
+        // We don't want to return a stopping master as an active master.
+        if (mt.getMaster().isActiveMaster()  && !mt.getMaster().isStopped()) {
+          return mt.getMaster();
+        }
       }
     }
     return null;

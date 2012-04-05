@@ -51,15 +51,12 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.zookeeper.MasterSchemaChangeTracker;
-import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -156,6 +153,11 @@ public class TestCatalogJanitor {
     }
 
     @Override
+    public void checkTableModifiable(byte[] tableName) throws IOException {
+      //no-op
+    }
+
+    @Override
     public void createTable(HTableDescriptor desc, byte[][] splitKeys)
         throws IOException {
       // no-op
@@ -169,11 +171,6 @@ public class TestCatalogJanitor {
     @Override
     public ExecutorService getExecutorService() {
       return null;
-    }
-
-    public void checkTableModifiable(byte[] tableName,
-                                     EventHandler.EventType eventType)
-        throws IOException {
     }
 
     @Override
@@ -261,14 +258,6 @@ public class TestCatalogJanitor {
           
         }
       };
-    }
-
-    public MasterSchemaChangeTracker getSchemaChangeTracker() {
-      return null;
-    }
-
-    public RegionServerTracker getRegionServerTracker() {
-      return null;
     }
 
     @Override

@@ -514,7 +514,7 @@ public class MasterFileSystem {
    */
   public HTableDescriptor addColumn(byte[] tableName, HColumnDescriptor hcd)
       throws IOException {
-    LOG.debug("AddColumn. Table = " + Bytes.toString(tableName) + " HCD = " +
+    LOG.info("AddColumn. Table = " + Bytes.toString(tableName) + " HCD = " +
       hcd.toString());
     HTableDescriptor htd = this.services.getTableDescriptors().get(tableName);
     if (htd == null) {

@@ -345,15 +345,6 @@ public class ServerManager {
     }
   }
 
-  /**
-   * Exclude a RS from any pending schema change process.
-   * @param serverName
-   */
-  private void excludeRegionServerFromSchemaChanges(final ServerName serverName) {
-    this.services.getSchemaChangeTracker()
-        .excludeRegionServerForSchemaChanges(serverName.getServerName());
-  }
-
   /*
    * Expire the passed server.  Add it to list of deadservers and queue a
    * shutdown processing.
@@ -365,7 +356,6 @@ public class ServerManager {
       this.deadNotExpiredServers.add(serverName);
       return;
     }
-    excludeRegionServerFromSchemaChanges(serverName);
     if (!this.onlineServers.containsKey(serverName)) {
       LOG.warn("Received expiration of " + serverName +
         " but server is not currently online");

@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.zookeeper.MasterSchemaChangeTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 
 /**
@@ -56,15 +55,12 @@ public interface MasterServices extends Server {
   public ExecutorService getExecutorService();
 
   /**
-   * Check table modifiable. i.e not ROOT or META and offlined for all commands except
-   * alter commands
-   * @param tableName
-   * @param eventType
-   * @throws IOException
+   * Check table is modifiable; i.e. exists and is offline.
+   * @param tableName Name of table to check.
+   * @throws TableNotDisabledException
+   * @throws TableNotFoundException 
    */
-  public void checkTableModifiable(final byte [] tableName,
-                                   EventHandler.EventType eventType)
-      throws IOException;
+  public void checkTableModifiable(final byte [] tableName) throws IOException;
 
   /**
    * Create a table using the given table definition.
@@ -81,20 +77,7 @@ public interface MasterServices extends Server {
   public TableDescriptors getTableDescriptors();
 
   /**
-   * Get Master Schema change tracker
-   * @return
-   */
-  public MasterSchemaChangeTracker getSchemaChangeTracker();
-
-  /**
-   * Return the Region server tracker.
-   * @return RegionServerTracker
-   */
-  public RegionServerTracker getRegionServerTracker();
-
-  /**
    * @return true if master enables ServerShutdownHandler;
    */
   public boolean isServerShutdownHandlerEnabled();
-
 }
