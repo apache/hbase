@@ -26,6 +26,7 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -35,17 +36,19 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.EmptyWatcher;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.KeeperException.NoNodeException;
+import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 
@@ -596,11 +599,13 @@ public class ZKUtil {
       ZooKeeperWatcher zkw, String baseNode) throws KeeperException {
     List<String> nodes =
       ZKUtil.listChildrenAndWatchForNewChildren(zkw, baseNode);
-    List<NodeAndData> newNodes = new ArrayList<NodeAndData>();
-    for (String node: nodes) {
-      String nodePath = ZKUtil.joinZNode(baseNode, node);
-      byte [] data = ZKUtil.getDataAndWatch(zkw, nodePath);
-      newNodes.add(new NodeAndData(nodePath, data));
+    List<NodeAndData> newNodes = Collections.emptyList();
+    if (nodes != null) {
+      for (String node : nodes) {
+        String nodePath = ZKUtil.joinZNode(baseNode, node);
+        byte[] data = ZKUtil.getDataAndWatch(zkw, nodePath);
+        newNodes.add(new NodeAndData(nodePath, data));
+      }
     }
     return newNodes;
   }
