@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.MetaComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.WritableUtils;
 
 public class TestKeyValue extends TestCase {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
@@ -401,8 +402,7 @@ public class TestKeyValue extends TestCase {
     kv1.getRow(); // set row cache of kv1
     KeyValue kv2 = new KeyValue(Bytes.toBytes("row2"), Bytes.toBytes("cf2"),
         Bytes.toBytes("qualifier2"), 12345L, Bytes.toBytes("value2"));
-    kv1.readFields(new DataInputStream(new ByteArrayInputStream(WritableUtils
-        .toByteArray(kv2))));
+    kv1.readFields(new DataInputStream(new ByteArrayInputStream(WritableUtils.toByteArray(kv2))));
     // check equality
     assertEquals(kv1, kv2);
     // check cache state (getRow() return the cached value if the cache is set)
