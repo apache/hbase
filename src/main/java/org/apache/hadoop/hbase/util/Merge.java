@@ -45,6 +45,8 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.google.common.base.Preconditions;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -152,12 +154,14 @@ public class Merge extends Configured implements Tool {
     Get get = new Get(region1);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     List<KeyValue> cells1 =  rootRegion.get(get, null).list();
-    HRegionInfo info1 = Writables.getHRegionInfo((cells1 == null)? null: cells1.get(0).getValue());
+    Preconditions.checkState(cells1 != null, "First region cells can not be null");
+    HRegionInfo info1 = Writables.getHRegionInfo(cells1.get(0).getValue());
 
     get = new Get(region2);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     List<KeyValue> cells2 =  rootRegion.get(get, null).list();
-    HRegionInfo info2 = Writables.getHRegionInfo((cells2 == null)? null: cells2.get(0).getValue());
+    Preconditions.checkState(cells2 != null, "Second region cells can not be null");
+    HRegionInfo info2 = Writables.getHRegionInfo(cells2.get(0).getValue());
     HRegion merged = merge(HTableDescriptor.META_TABLEDESC, info1, rootRegion, info2, rootRegion);
     LOG.info("Adding " + merged.getRegionInfo() + " to " +
         rootRegion.getRegionInfo());
@@ -221,8 +225,9 @@ public class Merge extends Configured implements Tool {
     Get get = new Get(region1);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     List<KeyValue> cells1 =  metaRegion1.get(get, null).list();
-    HRegionInfo info1 =
-      Writables.getHRegionInfo((cells1 == null)? null: cells1.get(0).getValue());
+    Preconditions.checkState(cells1 != null,
+        "First region cells can not be null");
+    HRegionInfo info1 = Writables.getHRegionInfo(cells1.get(0).getValue());
     if (info1 == null) {
       throw new NullPointerException("info1 is null using key " +
           Bytes.toStringBinary(region1) + " in " + meta1);
@@ -237,7 +242,9 @@ public class Merge extends Configured implements Tool {
     get = new Get(region2);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     List<KeyValue> cells2 =  metaRegion2.get(get, null).list();
-    HRegionInfo info2 = Writables.getHRegionInfo((cells2 == null)? null: cells2.get(0).getValue());
+    Preconditions.checkState(cells2 != null,
+        "Second region cells can not be null");
+    HRegionInfo info2 = Writables.getHRegionInfo(cells2.get(0).getValue());
     if (info2 == null) {
       throw new NullPointerException("info2 is null using key " + meta2);
     }

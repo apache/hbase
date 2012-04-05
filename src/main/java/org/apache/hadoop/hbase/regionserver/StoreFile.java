@@ -1758,12 +1758,15 @@ public class StoreFile extends SchemaConfigured {
     /**
      * FILE_SIZE = descending sort StoreFiles (largest --> smallest in size)
      */
-    static final Comparator<StoreFile> FILE_SIZE =
-      Ordering.natural().reverse().onResultOf(new Function<StoreFile, Long>() {
-        @Override
-        public Long apply(StoreFile sf) {
-          return sf.getReader().length();
-        }
-      });
+    static final Comparator<StoreFile> FILE_SIZE = Ordering.natural().reverse()
+        .onResultOf(new Function<StoreFile, Long>() {
+          @Override
+          public Long apply(StoreFile sf) {
+            if (sf == null) {
+              throw new IllegalArgumentException("StorFile can not be null");
+            }
+            return sf.getReader().length();
+          }
+        });
   }
 }

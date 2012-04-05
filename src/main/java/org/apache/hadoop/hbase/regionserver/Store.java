@@ -494,10 +494,10 @@ public class Store extends SchemaConfigured implements HeapSize {
       reader.loadFileInfo();
 
       byte[] firstKey = reader.getFirstRowKey();
+      Preconditions.checkState(firstKey != null, "First key can not be null");
       byte[] lk = reader.getLastKey();
-      byte[] lastKey =
-          (lk == null) ? null :
-              KeyValue.createKeyValueFromKey(lk).getRow();
+      Preconditions.checkState(lk != null, "Last key can not be null");
+      byte[] lastKey =  KeyValue.createKeyValueFromKey(lk).getRow();
 
       LOG.debug("HFile bounds: first=" + Bytes.toStringBinary(firstKey) +
           " last=" + Bytes.toStringBinary(lastKey));

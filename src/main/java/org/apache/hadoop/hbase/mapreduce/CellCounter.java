@@ -23,27 +23,30 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.*;
+import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.filter.RegexStringComparator;
+import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.lib.reduce.IntSumReducer;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+import com.google.common.base.Preconditions;
 
 
 /**
@@ -102,17 +105,16 @@ public class CellCounter {
     public void map(ImmutableBytesWritable row, Result values,
                     Context context)
         throws IOException {
+      Preconditions.checkState(values != null,
+          "values passed to the map is null");
       String currentFamilyName = null;
       String currentQualifierName = null;
       String currentRowKey = null;
       Configuration config = context.getConfiguration();
       String separator = config.get("ReportSeparator",":");
-
       try {
-        if (values != null) {
-          context.getCounter(Counters.ROWS).increment(1);
-          context.write(new Text("Total ROWS"), new IntWritable(1));
-        }
+        context.getCounter(Counters.ROWS).increment(1);
+        context.write(new Text("Total ROWS"), new IntWritable(1));
 
         for (KeyValue value : values.list()) {
           currentRowKey = Bytes.toStringBinary(value.getRow());

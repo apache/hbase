@@ -746,12 +746,13 @@ public class HTable implements HTableInterface {
   @Override
   public void delete(final Delete delete)
   throws IOException {
-    new ServerCallable<Boolean>(connection, tableName, delete.getRow(), operationTimeout) {
-          public Boolean call() throws IOException {
-            server.delete(location.getRegionInfo().getRegionName(), delete);
-            return null; // FindBugs NP_BOOLEAN_RETURN_NULL
-          }
-        }.withRetries();
+    new ServerCallable<Void>(connection, tableName, delete.getRow(),
+        operationTimeout) {
+      public Void call() throws IOException {
+        server.delete(location.getRegionInfo().getRegionName(), delete);
+        return null;
+      }
+    }.withRetries();
   }
 
   /**
@@ -1038,13 +1039,14 @@ public class HTable implements HTableInterface {
   @Override
   public void unlockRow(final RowLock rl)
   throws IOException {
-    new ServerCallable<Boolean>(connection, tableName, rl.getRow(), operationTimeout) {
-        public Boolean call() throws IOException {
-          server.unlockRow(location.getRegionInfo().getRegionName(),
-              rl.getLockId());
-          return null; // FindBugs NP_BOOLEAN_RETURN_NULL
-        }
-      }.withRetries();
+    new ServerCallable<Void>(connection, tableName, rl.getRow(),
+        operationTimeout) {
+      public Void call() throws IOException {
+        server.unlockRow(location.getRegionInfo().getRegionName(), rl
+            .getLockId());
+        return null;
+      }
+    }.withRetries();
   }
 
   /**

@@ -634,8 +634,9 @@ public class HRegion implements HeapSize { // , Writable{
     // being split but we crashed in the middle of it all.
     SplitTransaction.cleanupAnySplitDetritus(this);
     FSUtils.deleteDirectory(this.fs, new Path(regiondir, MERGEDIR));
-
-    this.writestate.setReadOnly(this.htableDescriptor.isReadOnly());
+    if (this.htableDescriptor != null) {
+      this.writestate.setReadOnly(this.htableDescriptor.isReadOnly());
+    }
 
     this.writestate.flushRequested = false;
     this.writestate.compacting = 0;
@@ -4987,7 +4988,7 @@ public class HRegion implements HeapSize { // , Writable{
       // detect the actual protocol class
       protocol  = protocolHandlerNames.get(protocolName);
       if (protocol == null) {
-        throw new HBaseRPC.UnknownProtocolException(protocol,
+        throw new HBaseRPC.UnknownProtocolException(null,
             "No matching handler for protocol "+protocolName+
             " in region "+Bytes.toStringBinary(getRegionName()));
       }

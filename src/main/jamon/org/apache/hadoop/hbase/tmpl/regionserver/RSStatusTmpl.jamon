@@ -44,12 +44,8 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 <%java>
   HServerInfo serverInfo = null;
   ServerName serverName = null;
-  try {
-    serverInfo = regionServer.getHServerInfo();
-    serverName = regionServer.getServerName();
-  } catch (IOException e) {
-    e.printStackTrace();
-  }
+  serverInfo = regionServer.getHServerInfo();
+  serverName = regionServer.getServerName();
   RegionServerMetrics metrics = regionServer.getMetrics();
   List<HRegionInfo> onlineRegions = regionServer.getOnlineRegions();
   int interval = regionServer.getConfiguration().getInt("hbase.regionserver.msginterval", 3000)/1000;

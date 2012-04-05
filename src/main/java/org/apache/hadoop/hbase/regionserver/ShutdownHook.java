@@ -168,6 +168,12 @@ public class ShutdownHook {
           break;
         }
       }
+
+      if (cache == null) {
+        throw new RuntimeException(
+            "This should not happen. Could not find the cache class in FileSystem.");
+      }
+
       Field field = null;
       try {
         field = cache.getDeclaredField(CLIENT_FINALIZER_DATA_METHOD);

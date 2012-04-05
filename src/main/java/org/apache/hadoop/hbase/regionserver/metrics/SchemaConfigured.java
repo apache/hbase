@@ -157,8 +157,12 @@ public class SchemaConfigured implements HeapSize, SchemaAware {
   public SchemaConfigured(Configuration conf, String tableName, String cfName)
   {
     this(conf);
-    this.tableName = tableName != null ? tableName.intern() : tableName;
-    this.cfName = cfName != null ? cfName.intern() : cfName;
+    if (tableName != null) {
+      this.tableName = tableName.intern();
+    }
+    if (cfName != null) {
+      this.cfName = cfName.intern();
+    }
   }
 
   public SchemaConfigured(SchemaAware that) {

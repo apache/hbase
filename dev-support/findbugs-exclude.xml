@@ -30,6 +30,22 @@
 
      <Match>
        <Package name="org.apache.hadoop.hbase.protobuf.generated"/>
-     </Match>  
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost" />
+       <Or>
+         <Method name="preExists" />
+         <Method name="preCheckAndPut" />
+         <Method name="preCheckAndDelete" />
+         <Method name="preScannerNext" />
+       </Or>
+       <Bug pattern="NP_BOOLEAN_RETURN_NULL" />
+     </Match>
+
+    <Match>
+       <Class name="org.apache.hadoop.hbase.regionserver.StoreFile$Writer" />
+       <Bug pattern="NP_NULL_PARAM_DEREF" />
+     </Match>
 
 </FindBugsFilter>
