@@ -198,6 +198,7 @@ public abstract class SecureServer extends HBaseServer {
     private ByteBuffer rpcHeaderBuffer;
     private ByteBuffer unwrappedData;
     private ByteBuffer unwrappedDataLengthBuffer;
+    private SecureConnectionHeader header;
 
     public UserGroupInformation attemptingUser = null; // user name before auth
 
@@ -333,10 +334,10 @@ public abstract class SecureServer extends HBaseServer {
               + saslServer.getNegotiatedProperty(Sasl.QOP));
           String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
           useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
-          ticket = getAuthorizedUgi(saslServer.getAuthorizationID());
-          LOG.debug("SASL server successfully authenticated client: " + ticket);
+          user = getAuthorizedUgi(saslServer.getAuthorizationID());
+          LOG.debug("SASL server successfully authenticated client: " + user);
           rpcMetrics.authenticationSuccesses.inc();
-          AUDITLOG.trace(AUTH_SUCCESSFUL_FOR + ticket);
+          AUDITLOG.trace(AUTH_SUCCESSFUL_FOR + user);
           saslContextEstablished = true;
         }
       } else {
@@ -497,33 +498,33 @@ public abstract class SecureServer extends HBaseServer {
 
       User protocolUser = header.getUser();
       if (!useSasl) {
-        ticket = protocolUser;
-        if (ticket != null) {
-          ticket.getUGI().setAuthenticationMethod(AuthMethod.SIMPLE.authenticationMethod);
+        user = protocolUser;
+        if (user != null) {
+          user.getUGI().setAuthenticationMethod(AuthMethod.SIMPLE.authenticationMethod);
         }
       } else {
         // user is authenticated
-        ticket.getUGI().setAuthenticationMethod(authMethod.authenticationMethod);
+        user.getUGI().setAuthenticationMethod(authMethod.authenticationMethod);
         //Now we check if this is a proxy user case. If the protocol user is
         //different from the 'user', it is a proxy user scenario. However,
         //this is not allowed if user authenticated with DIGEST.
         if ((protocolUser != null)
-            && (!protocolUser.getName().equals(ticket.getName()))) {
+            && (!protocolUser.getName().equals(user.getName()))) {
           if (authMethod == AuthMethod.DIGEST) {
             // Not allowed to doAs if token authentication is used
-            throw new AccessControlException("Authenticated user (" + ticket
+            throw new AccessControlException("Authenticated user (" + user
                 + ") doesn't match what the client claims to be ("
                 + protocolUser + ")");
           } else {
             // Effective user can be different from authenticated user
             // for simple auth or kerberos auth
             // The user is the real user. Now we create a proxy user
-            UserGroupInformation realUser = ticket.getUGI();
-            ticket = User.create(
+            UserGroupInformation realUser = user.getUGI();
+            user = User.create(
                 UserGroupInformation.createProxyUser(protocolUser.getName(),
                     realUser));
             // Now the user is a proxy user, set Authentication method Proxy.
-            ticket.getUGI().setAuthenticationMethod(AuthenticationMethod.PROXY);
+            user.getUGI().setAuthenticationMethod(AuthenticationMethod.PROXY);
           }
         }
       }
@@ -578,7 +579,7 @@ public abstract class SecureServer extends HBaseServer {
         if (!authorizeConnection()) {
           throw new AccessControlException("Connection from " + this
               + " for protocol " + header.getProtocol()
-              + " is unauthorized for user " + ticket);
+              + " is unauthorized for user " + user);
         }
       }
     }
@@ -610,11 +611,11 @@ public abstract class SecureServer extends HBaseServer {
         // real user for the effective user, therefore not required to
         // authorize real user. doAs is allowed only for simple or kerberos
         // authentication
-        if (ticket != null && ticket.getUGI().getRealUser() != null
+        if (user != null && user.getUGI().getRealUser() != null
             && (authMethod != AuthMethod.DIGEST)) {
-          ProxyUsers.authorize(ticket.getUGI(), this.getHostAddress(), conf);
+          ProxyUsers.authorize(user.getUGI(), this.getHostAddress(), conf);
         }
-        authorize(ticket, header, getHostInetAddress());
+        authorize(user, header, getHostInetAddress());
         if (LOG.isDebugEnabled()) {
           LOG.debug("Successfully authorized " + header);
         }
