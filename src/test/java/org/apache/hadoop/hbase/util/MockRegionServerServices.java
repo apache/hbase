@@ -63,9 +63,6 @@ public class MockRegionServerServices implements RegionServerServices {
     return null;
   }
 
-  public void refreshRegion(HRegion hRegion) throws IOException {
-  }
-
   @Override
   public void addToOnlineRegions(HRegion r) {
     this.regions.put(r.getRegionInfo().getEncodedName(), r);

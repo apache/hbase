@@ -266,12 +266,4 @@ public interface HMasterInterface extends VersionedProtocol {
    * @return array of HTableDescriptor
    */
   public HTableDescriptor[] getHTableDescriptors(List<String> tableNames);
-
-  /**
-   * Returns the current running status of load balancer.
-   * @return True if LoadBalancer is running now else False.
-   */
-  public boolean isLoadBalancerRunning();
-
-
 }
