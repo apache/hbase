@@ -26,8 +26,6 @@ Release 0.92.2 - Unreleased
    HBASE-5213  "hbase master stop" does not bring down backup masters (Gregory) 
    HBASE-5606  SplitLogManger async delete node hangs log splitting when ZK connection is lost
                (Prakash)
-   HBASE-5711  Tests are failing with incorrect data directory permissions
-               (Uma Maheswara Rao G)
    HBASE-5724  Row cache of KeyValue should be cleared in readFields().
                (Teruyoshi Zenmyo)
 
