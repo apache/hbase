@@ -1516,7 +1516,7 @@
         </property>
       </activation>
       <properties>
-        <hadoop.version>1.0.0</hadoop.version>
+        <hadoop.version>1.0.2</hadoop.version>
       </properties>
       <dependencies>
         <dependency>
@@ -1587,7 +1587,7 @@
     <profile>
       <id>security</id>
       <properties>
-        <hadoop.version>1.0.0</hadoop.version>
+        <hadoop.version>1.0.2</hadoop.version>
       </properties>
       <build>
         <finalName>${project.artifactId}-${project.version}-security</finalName>
