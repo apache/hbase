@@ -66,7 +66,6 @@ import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -85,6 +84,7 @@ import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
+import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -101,7 +101,6 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
-import org.apache.hadoop.hbase.zookeeper.MasterSchemaChangeTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -174,10 +173,7 @@ Server {
   private CatalogTracker catalogTracker;
   // Cluster status zk tracker and local setter
   private ClusterStatusTracker clusterStatusTracker;
-
-  // Schema change tracker
-  private MasterSchemaChangeTracker schemaChangeTracker;
-
+  
   // buffer for "fatal error" notices from region servers
   // in the cluster. This is only used for assisting
   // operations/debugging.
@@ -205,17 +201,11 @@ Server {
 
   private CatalogJanitor catalogJanitorChore;
   private LogCleaner logCleaner;
-  private Thread schemaJanitorChore;
 
   private MasterCoprocessorHost cpHost;
   private final ServerName serverName;
 
   private TableDescriptors tableDescriptors;
-
-  // Whether or not schema alter changes go through ZK or not.
-  private boolean supportInstantSchemaChanges = false;
-
-  private volatile boolean loadBalancerRunning = false;
 
   // Time stamps for when a hmaster was started and when it became active
   private long masterStartTime;
@@ -290,17 +280,6 @@ Server {
     this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":" + isa.getPort(), this, true);
     this.rpcServer.startThreads();
     this.metrics = new MasterMetrics(getServerName().toString());
-    // initialize instant schema change settings
-    this.supportInstantSchemaChanges = conf.getBoolean(
-        "hbase.instant.schema.alter.enabled", false);
-    if (supportInstantSchemaChanges) {
-      LOG.info("Instant schema change enabled. All schema alter operations will " +
-          "happen through ZK.");
-    }
-   else {
-      LOG.info("Instant schema change disabled. All schema alter operations will " +
-          "happen normally.");
-    }
   }
 
   /**
@@ -440,12 +419,6 @@ Server {
     boolean wasUp = this.clusterStatusTracker.isClusterUp();
     if (!wasUp) this.clusterStatusTracker.setClusterUp();
 
-    // initialize schema change tracker
-    this.schemaChangeTracker = new MasterSchemaChangeTracker(getZooKeeper(),
-        this, this,
-        conf.getInt("hbase.instant.schema.alter.timeout", 60000));
-    this.schemaChangeTracker.start();
-
     LOG.info("Server active/primary master; " + this.serverName +
         ", sessionid=0x" +
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()) +
@@ -565,9 +538,6 @@ Server {
     this.balancerChore = getAndStartBalancerChore(this);
     this.catalogJanitorChore = new CatalogJanitor(this, this);
     Threads.setDaemonThreadRunning(catalogJanitorChore.getThread());
-
-    // Schema janitor chore.
-    this.schemaJanitorChore = getAndStartSchemaJanitorChore(this);
 
     registerMBean();
 
@@ -744,15 +714,6 @@ Server {
     return this.tableDescriptors;
   }
 
-  @Override
-  public MasterSchemaChangeTracker getSchemaChangeTracker() {
-    return this.schemaChangeTracker;
-  }
-
-  public RegionServerTracker getRegionServerTracker() {
-    return this.regionServerTracker;
-  }
-
   /** @return InfoServer object. Maybe null.*/
   public InfoServer getInfoServer() {
     return this.infoServer;
@@ -855,28 +816,7 @@ Server {
     if (this.executorService != null) this.executorService.shutdown();
   }
 
-  /**
-   * Start the schema janitor. This Janitor will periodically sweep the failed/expired schema
-   * changes.
-   * @param master
-   * @return
-   */
-  private Thread getAndStartSchemaJanitorChore(final HMaster master) {
-    String name = master.getServerName() + "-SchemaJanitorChore";
-    int schemaJanitorPeriod =
-      master.getConfiguration().getInt("hbase.instant.schema.janitor.period", 120000);
-    // Start up the schema janitor chore
-    Chore chore = new Chore(name, schemaJanitorPeriod, master) {
-      @Override
-      protected void chore() {
-        master.getSchemaChangeTracker().handleFailedOrExpiredSchemaChanges();
-      }
-    };
-    return Threads.setDaemonThreadRunning(chore.getThread());
-  }
-
-
-  private Thread getAndStartBalancerChore(final HMaster master) {
+  private static Thread getAndStartBalancerChore(final HMaster master) {
     String name = master.getServerName() + "-BalancerChore";
     int balancerPeriod =
       master.getConfiguration().getInt("hbase.balancer.period", 300000);
@@ -897,10 +837,6 @@ Server {
     if (this.catalogJanitorChore != null) {
       this.catalogJanitorChore.interrupt();
     }
-    if (this.schemaJanitorChore != null) {
-      this.schemaJanitorChore.interrupt();
-    }
-
   }
 
   @Override
@@ -971,15 +907,6 @@ Server {
     return balancerCutoffTime;
   }
 
-
-  /**
-   * Check whether the Load Balancer is currently running.
-   * @return true if the Load balancer is currently running.
-   */
-  public boolean isLoadBalancerRunning() {
-    return loadBalancerRunning;
-  }
-
   @Override
   public boolean balance() {
     // If balance not true, don't run balancer.
@@ -987,33 +914,23 @@ Server {
     // Do this call outside of synchronized block.
     int maximumBalanceTime = getBalancerCutoffTime();
     long cutoffTime = System.currentTimeMillis() + maximumBalanceTime;
-    boolean balancerRan = false;
+    boolean balancerRan;
     synchronized (this.balancer) {
-      if (loadBalancerRunning) {
-        LOG.debug("Load balancer is currently running. Skipping the current execution.");
-        return false;
-      }
-
       // Only allow one balance run at at time.
       if (this.assignmentManager.isRegionsInTransition()) {
         LOG.debug("Not running balancer because " +
-            this.assignmentManager.getRegionsInTransition().size() +
-            " region(s) in transition: " +
-            org.apache.commons.lang.StringUtils.
+          this.assignmentManager.getRegionsInTransition().size() +
+          " region(s) in transition: " +
+          org.apache.commons.lang.StringUtils.
             abbreviate(this.assignmentManager.getRegionsInTransition().toString(), 256));
         return false;
       }
       if (this.serverManager.areDeadServersInProgress()) {
         LOG.debug("Not running balancer because processing dead regionserver(s): " +
-            this.serverManager.getDeadServers());
+          this.serverManager.getDeadServers());
         return false;
       }
-      if (schemaChangeTracker.isSchemaChangeInProgress()) {
-        LOG.debug("Schema change operation is in progress. Waiting for " +
-        "it to complete before running the load balancer.");
-        return false;
-      }
-      loadBalancerRunning = true;
+
       if (this.cpHost != null) {
         try {
           if (this.cpHost.preBalance()) {
@@ -1048,7 +965,7 @@ Server {
               // if performing next balance exceeds cutoff time, exit the loop
               (System.currentTimeMillis() + (totalRegPlanExecTime / rpCount)) > cutoffTime) {
             LOG.debug("No more balancing till next balance run; maximumBalanceTime=" +
-                maximumBalanceTime);
+              maximumBalanceTime);
             break;
           }
         }
@@ -1061,7 +978,6 @@ Server {
           LOG.error("Error invoking master coprocessor postBalance()", ioe);
         }
       }
-      loadBalancerRunning = false;
     }
     return balancerRan;
   }
@@ -1211,9 +1127,7 @@ Server {
     if (cpHost != null) {
       cpHost.preDeleteTable(tableName);
     }
-    this.executorService.submit(new DeleteTableHandler(tableName, this, this, this,
-        supportInstantSchemaChanges));
-
+    this.executorService.submit(new DeleteTableHandler(tableName, this, this));
     if (cpHost != null) {
       cpHost.postDeleteTable(tableName);
     }
@@ -1225,48 +1139,12 @@ Server {
    * @return Pair indicating the number of regions updated Pair.getFirst is the
    *         regions that are yet to be updated Pair.getSecond is the total number
    *         of regions of the table
+   * @throws IOException 
    */
   public Pair<Integer, Integer> getAlterStatus(byte[] tableName)
   throws IOException {
-    if (supportInstantSchemaChanges) {
-      return getAlterStatusFromSchemaChangeTracker(tableName);
-    }
     return this.assignmentManager.getReopenStatus(tableName);
   }
-
-  /**
-   * Used by the client to identify if all regions have the schema updates
-   *
-   * @param tableName
-   * @return Pair indicating the status of the alter command
-   * @throws IOException
-   */
-  private Pair<Integer, Integer> getAlterStatusFromSchemaChangeTracker(byte[] tableName)
-      throws IOException {
-    MasterSchemaChangeTracker.MasterAlterStatus alterStatus = null;
-    try {
-      alterStatus =
-          this.schemaChangeTracker.getMasterAlterStatus(Bytes.toString(tableName));
-    } catch (KeeperException ke) {
-      LOG.error("KeeperException while getting schema alter status for table = "
-      + Bytes.toString(tableName), ke);
-    }
-    if (alterStatus != null) {
-      LOG.debug("Getting AlterStatus from SchemaChangeTracker for table = "
-          + Bytes.toString(tableName) + " Alter Status = "
-          + alterStatus.toString());
-      int numberPending = alterStatus.getNumberOfRegionsToProcess() -
-          alterStatus.getNumberOfRegionsProcessed();
-      return new Pair<Integer, Integer>(alterStatus.getNumberOfRegionsProcessed(),
-          alterStatus.getNumberOfRegionsToProcess());
-    } else {
-      LOG.debug("MasterAlterStatus is NULL for table = "
-          + Bytes.toString(tableName));
-      // should we throw IOException here as it makes more sense?
-      return new Pair<Integer, Integer>(0,0);
-    }
-  }
-
 
   public void addColumn(byte [] tableName, HColumnDescriptor column)
   throws IOException {
@@ -1276,8 +1154,7 @@ Server {
         return;
       }
     }
-    new TableAddFamilyHandler(tableName, column, this, this,
-        this, supportInstantSchemaChanges).process();
+    new TableAddFamilyHandler(tableName, column, this, this).process();
     if (cpHost != null) {
       cpHost.postAddColumn(tableName, column);
     }
@@ -1291,8 +1168,7 @@ Server {
         return;
       }
     }
-    new TableModifyFamilyHandler(tableName, descriptor, this, this,
-        this, supportInstantSchemaChanges).process();
+    new TableModifyFamilyHandler(tableName, descriptor, this, this).process();
     if (cpHost != null) {
       cpHost.postModifyColumn(tableName, descriptor);
     }
@@ -1306,8 +1182,7 @@ Server {
         return;
       }
     }
-    new TableDeleteFamilyHandler(tableName, c, this, this,
-        this, supportInstantSchemaChanges).process();
+    new TableDeleteFamilyHandler(tableName, c, this, this).process();
     if (cpHost != null) {
       cpHost.postDeleteColumn(tableName, c);
     }
@@ -1319,7 +1194,7 @@ Server {
       cpHost.preEnableTable(tableName);
     }
     this.executorService.submit(new EnableTableHandler(this, tableName,
-        catalogTracker, assignmentManager, false));
+      catalogTracker, assignmentManager, false));
 
     if (cpHost != null) {
       cpHost.postEnableTable(tableName);
@@ -1381,33 +1256,14 @@ Server {
     if (cpHost != null) {
       cpHost.preModifyTable(tableName, htd);
     }
-    this.executorService.submit(new ModifyTableHandler(tableName, htd, this,
-      this, this, supportInstantSchemaChanges));
+    this.executorService.submit(new ModifyTableHandler(tableName, htd, this, this));
     if (cpHost != null) {
       cpHost.postModifyTable(tableName, htd);
     }
   }
 
-  private boolean isOnlineSchemaChangeAllowed() {
-    return conf.getBoolean(
-        "hbase.online.schema.update.enable", false);
-  }
-  
   @Override
-  public void checkTableModifiable(final byte [] tableName,
-                                   EventHandler.EventType eventType)
-  throws IOException {
-    preCheckTableModifiable(tableName);
-    if (!eventType.isSchemaChangeEvent() ||
-        !isOnlineSchemaChangeAllowed()) {
-      if (!getAssignmentManager().getZKTable().
-          isDisabledTable(Bytes.toString(tableName))) {
-        throw new TableNotDisabledException(tableName);
-      }
-    }
-  }
-
-  private void preCheckTableModifiable(final byte[] tableName)
+  public void checkTableModifiable(final byte [] tableName)
   throws IOException {
     String tableNameStr = Bytes.toString(tableName);
     if (isCatalogTable(tableName)) {
@@ -1415,6 +1271,10 @@ Server {
     }
     if (!MetaReader.tableExists(getCatalogTracker(), tableNameStr)) {
       throw new TableNotFoundException(tableNameStr);
+    }
+    if (!getAssignmentManager().getZKTable().
+        isDisabledTable(Bytes.toString(tableName))) {
+      throw new TableNotDisabledException(tableName);
     }
   }
 
