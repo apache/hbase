@@ -28,6 +28,8 @@ Release 0.92.2 - Unreleased
                (Prakash)
    HBASE-5711  Tests are failing with incorrect data directory permissions
                (Uma Maheswara Rao G)
+   HBASE-5724  Row cache of KeyValue should be cleared in readFields().
+               (Teruyoshi Zenmyo)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)

@@ -27,7 +27,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.google.common.primitives.Longs;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -36,6 +35,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
+
+import com.google.common.primitives.Longs;
 
 /**
  * An HBase Key/Value.  This is the fundamental HBase Type.
@@ -2005,6 +2006,7 @@ public class KeyValue implements Writable, HeapSize {
   // and it expects the length of the KeyValue to be explicitly passed
   // to it.
   public void readFields(int length, final DataInput in) throws IOException {
+    this.rowCache = null;
     this.length = length;
     this.offset = 0;
     this.bytes = new byte[this.length];
