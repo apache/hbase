@@ -307,7 +307,7 @@ public class TestAssignmentManager {
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     // Create an AM.
     AssignmentManager am =
-      new AssignmentManager(this.server, this.serverManager, ct, executor);
+      new AssignmentManager(this.server, this.serverManager, ct, executor, null);
     try {
       // Make sure our new AM gets callbacks; once registered, can't unregister.
       // Thats ok because we make a new zk watcher for each test.
@@ -372,7 +372,7 @@ public class TestAssignmentManager {
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     // Create an AM.
     AssignmentManager am =
-      new AssignmentManager(this.server, this.serverManager, ct, executor);
+      new AssignmentManager(this.server, this.serverManager, ct, executor, null);
     try {
       // Make sure our new AM gets callbacks; once registered, can't unregister.
       // Thats ok because we make a new zk watcher for each test.
@@ -446,7 +446,7 @@ public class TestAssignmentManager {
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     // Create an AM.
     AssignmentManager am =
-      new AssignmentManager(this.server, this.serverManager, ct, null);
+      new AssignmentManager(this.server, this.serverManager, ct, null, null);
     try {
       // First make sure my mock up basically works.  Unassign a region.
       unassign(am, SERVERNAME_A, hri);
@@ -578,7 +578,7 @@ public class TestAssignmentManager {
         final ServerManager serverManager,
         final CatalogTracker catalogTracker, final ExecutorService service)
     throws KeeperException, IOException {
-      super(master, serverManager, catalogTracker, service);
+      super(master, serverManager, catalogTracker, service, null);
       this.es = service;
       this.ct = catalogTracker;
     }

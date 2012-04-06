@@ -651,6 +651,9 @@ public final class HConstants {
   public static final String ENABLE_WAL_COMPRESSION =
     "hbase.regionserver.wal.enablecompression";
 
+/** Region in Transition metrics threshold time */
+  public static final String METRICS_RIT_STUCK_WARNING_THRESHOLD="hbase.metrics.rit.stuck.warning.threshold";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

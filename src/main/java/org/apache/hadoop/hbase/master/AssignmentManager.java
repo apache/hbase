@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
+import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
@@ -184,6 +185,9 @@ public class AssignmentManager extends ZooKeeperListener {
   private Map<String, HRegionInfo> failoverProcessedRegions =
     new HashMap<String, HRegionInfo>();
 
+   // metrics instance to send metrics for RITs
+   MasterMetrics masterMetrics;
+
   /**
    * Constructs a new assignment manager.
    *
@@ -195,7 +199,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @throws IOException 
    */
   public AssignmentManager(Server master, ServerManager serverManager,
-      CatalogTracker catalogTracker, final ExecutorService service)
+      CatalogTracker catalogTracker, final ExecutorService service, MasterMetrics metrics)
   throws KeeperException, IOException {
     super(master.getZooKeeper());
     this.master = master;
@@ -216,6 +220,7 @@ public class AssignmentManager extends ZooKeeperListener {
       this.master.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10);
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.threadPoolExecutorService = Executors.newCachedThreadPool();
+    this.masterMetrics = metrics;// can be null only with tests.
   }
 
   /**
@@ -2703,6 +2708,38 @@ public class AssignmentManager extends ZooKeeperListener {
   public NavigableMap<String, RegionState> getRegionsInTransition() {
     synchronized (this.regionsInTransition) {
       return new TreeMap<String, RegionState>(this.regionsInTransition);
+    }
+  }
+
+  /**
+   * Set Regions in transitions metrics.
+   * This takes an iterator on the RegionInTransition map (CLSM), and is not synchronized.
+   * This iterator is not fail fast, wich may lead to stale read; but that's better than
+   * creating a copy of the map for metrics computation, as this method will be invoked
+   * on a frequent interval.
+   */
+  public void updateRegionsInTransitionMetrics() {
+    long currentTime = System.currentTimeMillis();
+    int totalRITs = 0;
+    int totalRITsOverThreshold = 0;
+    long oldestRITTime = 0;
+    int ritThreshold = this.master.getConfiguration().
+      getInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 60000);
+    for (Map.Entry<String, RegionState> e : this.regionsInTransition.
+        entrySet()) {
+      totalRITs++;
+      long ritTime = currentTime - e.getValue().getStamp();
+      if (ritTime > ritThreshold) { // more than the threshold
+        totalRITsOverThreshold++;
+      }
+      if (oldestRITTime < ritTime) {
+        oldestRITTime = ritTime;
+      }
+    }
+    if (this.masterMetrics != null) {
+      this.masterMetrics.updateRITOldestAge(oldestRITTime);
+      this.masterMetrics.updateRITCount(totalRITs);
+      this.masterMetrics.updateRITCountOverThreshold(totalRITsOverThreshold);
     }
   }
 

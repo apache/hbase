@@ -21,6 +21,9 @@ limitations under the License.
 org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.master.AssignmentManager;
 org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
+org.apache.hadoop.conf.Configuration;
+org.apache.hadoop.hbase.HBaseConfiguration;
+org.apache.hadoop.hbase.HConstants;
 java.util.Iterator;
 java.util.Map;
 </%import>
@@ -30,6 +33,23 @@ int limit = 100;
 </%args>
 <%java>
 Map<String, RegionState> rit = assignmentManager.getRegionsInTransition();
+// process the map to find region in transition details
+Configuration conf = HBaseConfiguration.create();
+int ritThreshold = conf.getInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 60000);
+int numOfRITOverThreshold = 0;
+long maxRITTime = Long.MIN_VALUE;
+long currentTime = System.currentTimeMillis();
+String regionIDForOldestRIT = ""; // avoiding null
+for (Map.Entry<String, RegionState> e : rit.entrySet()) {
+  long ritTime = currentTime - e.getValue().getStamp();
+  if(ritTime > ritThreshold) {
+     numOfRITOverThreshold++;
+   }
+   if(maxRITTime < ritTime) {
+     maxRITTime = ritTime;
+     regionIDForOldestRIT = e.getKey();
+   }
+}
 
 int toRemove = rit.size() - limit;
 int removed = 0;
@@ -42,8 +62,8 @@ if (toRemove > 0) {
     if (HRegionInfo.FIRST_META_REGIONINFO.getEncodedName().equals(
           e.getKey()) ||
         HRegionInfo.ROOT_REGIONINFO.getEncodedName().equals(
-          e.getKey())) {
-      // don't remove the meta regions, they're too interesting!
+          e.getKey()) || regionIDForOldestRIT.equals(e.getKey())) {
+      // don't remove the meta & the oldest rit regions, they're too interesting!
       continue;
     } 
     it.remove();
@@ -58,13 +78,23 @@ if (toRemove > 0) {
 <%if rit.isEmpty() %>
 No regions in transition.
 <%else>
-	<table>
-		<tr><th>Region</th><th>State</th></tr>
-		<%for Map.Entry<String, RegionState> entry : rit.entrySet() %>
-		<tr><td><% entry.getKey() %></td><td><% entry.getValue().toDescriptiveString() %></td>
-		</%for>
-	</table>
-	<%if removed > 0 %>
-	(<% removed %> more regions in transition not shown) 
-	</%if>
+        <table>
+                <tr><th>Region</th><th>State</th><th>RIT time (ms)</th></tr>
+                <%for Map.Entry<String, RegionState> entry : rit.entrySet() %>
+                <%if regionIDForOldestRIT.equals(entry.getKey()) %>
+                        <tr BGCOLOR="#FE2E2E" >
+                <%else>
+                        <tr>
+                </%if>
+                <td><% entry.getKey() %></td><td><% entry.getValue().toDescriptiveString() %></td>
+		<td><% (currentTime - entry.getValue().getStamp()) %> </td></tr>
+                </%for>
+                <tr BGCOLOR="#D7DF01"> <td>Total number of Regions in Transition for more than <% ritThreshold %> milliseconds</td><td> <% numOfRITOverThreshold %></td><td></td>
+                </tr>
+		<tr> <td> Total number of Regions in Transition</td><td><% rit.size() %> </td><td></td>
+        </table>
+        <%if removed > 0 %>
+        (<% removed %> more regions in transition not shown)
+        </%if>
 </%if>
+

@@ -221,6 +221,8 @@ Server {
   private long masterStartTime;
   private long masterActiveTime;
 
+  /** time interval for emitting metrics values */
+  private final int msgInterval;
   /**
    * MX Bean for MasterInfo
    */
@@ -290,6 +292,8 @@ Server {
     this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":" + isa.getPort(), this, true);
     this.rpcServer.startThreads();
     this.metrics = new MasterMetrics(getServerName().toString());
+    // metrics interval: using the same property as region server.
+    this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
   }
 
   /**
@@ -412,7 +416,7 @@ Server {
     this.catalogTracker.start();
 
     this.assignmentManager = new AssignmentManager(this, serverManager,
-        this.catalogTracker, this.executorService);
+        this.catalogTracker, this.executorService, this.metrics);
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     zooKeeper.registerListenerFirst(assignmentManager);
 
@@ -456,13 +460,33 @@ Server {
 
   // Check if we should stop every 100ms
   private Sleeper stopSleeper = new Sleeper(100, this);
+
   private void loop() {
+    long lastMsgTs = 0l;
+    long now = 0l;
     while (!this.stopped) {
+      now = System.currentTimeMillis();
+      if ((now - lastMsgTs) >= this.msgInterval) {
+        doMetrics();
+        lastMsgTs = System.currentTimeMillis();
+      }
       stopSleeper.sleep();
     }
   }
 
   /**
+   * Emit the HMaster metrics, such as region in transition metrics.
+   * Surrounding in a try block just to be sure metrics doesn't abort HMaster.
+   */
+  private void doMetrics() {
+    try {
+      this.assignmentManager.updateRegionsInTransitionMetrics();
+    } catch (Throwable e) {
+      LOG.error("Couldn't update metrics: " + e.getMessage());
+    }
+  }
+
+/**
    * Finish initialization of HMaster after becoming the primary master.
    *
    * <ol>

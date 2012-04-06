@@ -31,6 +31,7 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.metrics.util.MetricsIntValue;
 import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 
@@ -65,6 +66,18 @@ public class MasterMetrics implements Updater {
   /** Size of HLog files being split */
   final PersistentMetricsTimeVaryingRate splitSize =
     new PersistentMetricsTimeVaryingRate("splitSize", registry);
+
+  /**
+    * Regions in Transition metrics such as number of RIT regions, oldest
+    * RIT time and number of such regions that are in transition
+    * for more than a specified threshold.
+    */
+  public final MetricsIntValue ritCount =
+    new MetricsIntValue("ritCount", registry);
+  public final MetricsIntValue ritCountOverThreshold =
+    new MetricsIntValue("ritCountOverThreshold", registry);
+  public final MetricsLongValue ritOldestAge =
+    new MetricsLongValue("ritOldestAge", registry);
 
   public MasterMetrics(final String name) {
     MetricsContext context = MetricsUtil.getContext("hbase");
@@ -117,6 +130,9 @@ public class MasterMetrics implements Updater {
       this.cluster_requests.pushMetric(metricsRecord);
       this.splitTime.pushMetric(metricsRecord);
       this.splitSize.pushMetric(metricsRecord);
+      this.ritCount.pushMetric(metricsRecord);
+      this.ritCountOverThreshold.pushMetric(metricsRecord);
+      this.ritOldestAge.pushMetric(metricsRecord);
     }
     this.metricsRecord.update();
   }
@@ -147,5 +163,29 @@ public class MasterMetrics implements Updater {
    */
   public void incrementRequests(final int inc) {
     this.cluster_requests.inc(inc);
+  }
+
+  /**
+   * set new value for number of regions in transition.
+   * @param ritCount
+   */
+  public void updateRITCount(int ritCount) {
+    this.ritCount.set(ritCount);
+  }
+
+  /**
+   * update RIT count that are in this state for more than the threshold
+   * as defined by the property rit.metrics.threshold.time.
+   * @param ritCountOverThreshold
+   */
+  public void updateRITCountOverThreshold(int ritCountOverThreshold) {
+    this.ritCountOverThreshold.set(ritCountOverThreshold);
+  }
+  /**
+   * update the timestamp for oldest region in transition metrics.
+   * @param timestamp
+   */
+  public void updateRITOldestAge(long timestamp) {
+    this.ritOldestAge.set(timestamp);
   }
 }
