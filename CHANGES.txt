@@ -19,6 +19,7 @@ Release 0.90.7 - Unreleased
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
    HBASE-5589  Add of the offline call to the Master Interface
+   HBASE-5734  Change hbck sideline root (Jimmy Xiang)
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems
