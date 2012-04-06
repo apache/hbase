@@ -824,7 +824,8 @@ public class HBaseFsck {
 
   private Path getSidelineDir() throws IOException {
     Path hbaseDir = FSUtils.getRootDir(conf);
-    Path backupDir = new Path(hbaseDir.getParent(), hbaseDir.getName() + "-"
+    Path hbckDir = new Path(hbaseDir.getParent(), "hbck");
+    Path backupDir = new Path(hbckDir, hbaseDir.getName() + "-"
         + startMillis);
     return backupDir;
   }
