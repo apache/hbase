@@ -399,6 +399,13 @@ public class SplitLogManager implements Watcher {
     tot_mgr_get_data_queued.incrementAndGet();
   }
 
+  private void tryGetDataSetWatch(String path) {
+    // A negative retry count will lead to ignoring all error processing.
+    this.watcher.getZooKeeper().getData(path, this.watcher,
+        new GetDataAsyncCallback(), new Long(-1) /* retry count */);
+    tot_mgr_get_data_queued.incrementAndGet();
+  }
+
   private void getDataSetWatchSuccess(String path, byte[] data, int version) {
     if (data == null) {
       if (version == Integer.MIN_VALUE) {
@@ -916,11 +923,13 @@ public class SplitLogManager implements Watcher {
         for (Map.Entry<String, Task> e : tasks.entrySet()) {
           String path = e.getKey();
           Task task = e.getValue();
-          // we have to do this check again because tasks might have
-          // been asynchronously assigned.
-          if (task.isUnassigned()) {
+          // we have to do task.isUnassigned() check again because tasks might
+          // have been asynchronously assigned. There is no locking required
+          // for these checks ... it is OK even if tryGetDataSetWatch() is
+          // called unnecessarily for a task
+          if (task.isUnassigned() && (task.status != FAILURE)) {
             // We just touch the znode to make sure its still there
-            getDataSetWatch(path, zkretries);
+            tryGetDataSetWatch(path);
           }
         }
         createRescanNode(Long.MAX_VALUE);
@@ -991,6 +1000,12 @@ public class SplitLogManager implements Watcher {
           return;
         }
         Long retry_count = (Long) ctx;
+
+        if (retry_count < 0) {
+          LOG.warn("getdata rc = " + KeeperException.Code.get(rc) + " " +
+              path + ". Ignoring error. No error handling. No retrying.");
+          return;
+        }
         LOG.warn("getdata rc = " + KeeperException.Code.get(rc) + " " +
             path + " retry=" + retry_count);
         if (retry_count == 0) {
