@@ -334,7 +334,8 @@ applyPatch () {
   echo ""
   echo ""
  
-  $PATCH -p0 -E < $PATCH_DIR/patch
+  export PATCH
+  $BASEDIR/dev-support/smart-apply-patch.sh $PATCH_DIR/patch
   if [[ $? != 0 ]] ; then
     echo "PATCH APPLICATION FAILED"
     JIRA_COMMENT="$JIRA_COMMENT
