@@ -34,3 +34,11 @@ message RootRegionServer {
   // The ServerName hosting the root region currently.
   required ServerName server = 1;
 }
+
+/**
+ * Content of the master znode.
+ */
+message Master {
+  // The ServerName of the current Master
+  required ServerName master = 1;
+}

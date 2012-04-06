@@ -29,14 +29,17 @@ import java.util.concurrent.Semaphore;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -66,7 +69,7 @@ public class TestActiveMasterManager {
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       "testActiveMasterManagerFromZK", null, true);
     try {
-      ZKUtil.deleteNode(zk, zk.masterAddressZNode);
+      ZKUtil.deleteNode(zk, zk.getMasterAddressZNode());
       ZKUtil.deleteNode(zk, zk.clusterStateZNode);
     } catch(KeeperException.NoNodeException nne) {}
 
@@ -108,7 +111,7 @@ public class TestActiveMasterManager {
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       "testActiveMasterManagerFromZK", null, true);
     try {
-      ZKUtil.deleteNode(zk, zk.masterAddressZNode);
+      ZKUtil.deleteNode(zk, zk.getMasterAddressZNode());
       ZKUtil.deleteNode(zk, zk.clusterStateZNode);
     } catch(KeeperException.NoNodeException nne) {}
 
@@ -154,11 +157,11 @@ public class TestActiveMasterManager {
     ms1.stop("stopping first server");
 
     // Use a listener to capture when the node is actually deleted
-    NodeDeletionListener listener = new NodeDeletionListener(zk, zk.masterAddressZNode);
+    NodeDeletionListener listener = new NodeDeletionListener(zk, zk.getMasterAddressZNode());
     zk.registerListener(listener);
 
     LOG.info("Deleting master node");
-    ZKUtil.deleteNode(zk, zk.masterAddressZNode);
+    ZKUtil.deleteNode(zk, zk.getMasterAddressZNode());
 
     // Wait for the node to be deleted
     LOG.info("Waiting for active master manager to be notified");
@@ -178,7 +181,7 @@ public class TestActiveMasterManager {
     assertTrue(t.isActiveMaster);
 
     LOG.info("Deleting master node");
-    ZKUtil.deleteNode(zk, zk.masterAddressZNode);
+    ZKUtil.deleteNode(zk, zk.getMasterAddressZNode());
   }
 
   /**
@@ -186,12 +189,12 @@ public class TestActiveMasterManager {
    * @param zk
    * @param thisMasterAddress
    * @throws KeeperException
+   * @throws IOException 
    */
   private void assertMaster(ZooKeeperWatcher zk,
       ServerName expectedAddress)
-  throws KeeperException {
-    ServerName readAddress =
-      ServerName.parseVersionedServerName(ZKUtil.getData(zk, zk.masterAddressZNode));
+  throws KeeperException, IOException {
+    ServerName readAddress = MasterAddressTracker.getMasterAddress(zk);
     assertNotNull(readAddress);
     assertTrue(expectedAddress.equals(readAddress));
   }

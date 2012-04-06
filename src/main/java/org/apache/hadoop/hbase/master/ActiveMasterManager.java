@@ -19,21 +19,21 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
-import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 
 /**
  * Handles everything on master-side related to master election.
@@ -70,14 +70,16 @@ class ActiveMasterManager extends ZooKeeperListener {
 
   @Override
   public void nodeCreated(String path) {
-    if(path.equals(watcher.masterAddressZNode) && !master.isStopped()) {
-      handleMasterNodeChange();
-    }
+    handle(path);
   }
 
   @Override
   public void nodeDeleted(String path) {
-    if(path.equals(watcher.masterAddressZNode) && !master.isStopped()) {
+    handle(path);
+  }
+
+  void handle(final String path) {
+    if (path.equals(watcher.getMasterAddressZNode()) && !master.isStopped()) {
       handleMasterNodeChange();
     }
   }
@@ -99,7 +101,7 @@ class ActiveMasterManager extends ZooKeeperListener {
     // Watch the node and check if it exists.
     try {
       synchronized(clusterHasActiveMaster) {
-        if(ZKUtil.watchAndCheckExists(watcher, watcher.masterAddressZNode)) {
+        if (ZKUtil.watchAndCheckExists(watcher, watcher.getMasterAddressZNode())) {
           // A master node exists, there is an active master
           LOG.debug("A master is now available");
           clusterHasActiveMaster.set(true);
@@ -136,14 +138,11 @@ class ActiveMasterManager extends ZooKeeperListener {
       // Try to become the active master, watch if there is another master.
       // Write out our ServerName as versioned bytes.
       try {
-        String backupZNode = ZKUtil.joinZNode(
-          this.watcher.backupMasterAddressesZNode, this.sn.toString());
-        if (ZKUtil.createEphemeralNodeAndWatch(this.watcher,
-          this.watcher.masterAddressZNode, this.sn.getVersionedBytes())) {
+        String backupZNode = ZKUtil.joinZNode(this.watcher.backupMasterAddressesZNode, this.sn.toString());
+        if (MasterAddressTracker.setMasterAddress(this.watcher, this.watcher.getMasterAddressZNode(), this.sn)) {
           // If we were a backup master before, delete our ZNode from the backup
           // master directory since we are the active now
-          LOG.info("Deleting ZNode for " + backupZNode +
-            " from backup master directory");
+          LOG.info("Deleting ZNode for " + backupZNode + " from backup master directory");
           ZKUtil.deleteNodeFailSilent(this.watcher, backupZNode);
 
           // We are the master, return
@@ -165,24 +164,22 @@ class ActiveMasterManager extends ZooKeeperListener {
         * this node explicitly.  If we crash before then, ZooKeeper will delete
         * this node for us since it is ephemeral.
         */
-        LOG.info("Adding ZNode for " + backupZNode +
-          " in backup master directory");
-        ZKUtil.createEphemeralNodeAndWatch(this.watcher, backupZNode,
-          this.sn.getVersionedBytes());
+        LOG.info("Adding ZNode for " + backupZNode + " in backup master directory");
+        MasterAddressTracker.setMasterAddress(this.watcher, backupZNode, this.sn);
 
         String msg;
         byte[] bytes =
-          ZKUtil.getDataAndWatch(this.watcher, this.watcher.masterAddressZNode);
+          ZKUtil.getDataAndWatch(this.watcher, this.watcher.getMasterAddressZNode());
         if (bytes == null) {
           msg = ("A master was detected, but went down before its address " +
             "could be read.  Attempting to become the next active master");
         } else {
-          ServerName currentMaster = ServerName.parseVersionedServerName(bytes);
+          ServerName currentMaster = ZKUtil.znodeContentToServerName(bytes);
           if (ServerName.isSameHostnameAndPort(currentMaster, this.sn)) {
             msg = ("Current master has this master's address, " +
               currentMaster + "; master was restarted? Deleting node.");
             // Hurry along the expiration of the znode.
-            ZKUtil.deleteNode(this.watcher, this.watcher.masterAddressZNode);
+            ZKUtil.deleteNode(this.watcher, this.watcher.getMasterAddressZNode());
           } else {
             msg = "Another master is the active master, " + currentMaster +
               "; waiting to become the next active master";
@@ -221,10 +218,10 @@ class ActiveMasterManager extends ZooKeeperListener {
    */
   public boolean isActiveMaster() {
     try {
-      if (ZKUtil.checkExists(watcher, watcher.masterAddressZNode) >= 0) {
+      if (ZKUtil.checkExists(watcher, watcher.getMasterAddressZNode()) >= 0) {
         return true;
       }
-    } 
+    }
     catch (KeeperException ke) {
       LOG.info("Received an unexpected KeeperException when checking " +
           "isActiveMaster : "+ ke);
@@ -235,12 +232,14 @@ class ActiveMasterManager extends ZooKeeperListener {
   public void stop() {
     try {
       // If our address is in ZK, delete it on our way out
-      byte [] bytes =
-        ZKUtil.getDataAndWatch(watcher, watcher.masterAddressZNode);
-      // TODO: redo this to make it atomic (only added for tests)
-      ServerName master = ServerName.parseVersionedServerName(bytes);
-      if (master != null &&  master.equals(this.sn)) {
-        ZKUtil.deleteNode(watcher, watcher.masterAddressZNode);
+      ServerName activeMaster = null;
+      try {
+        activeMaster = MasterAddressTracker.getMasterAddress(this.watcher);
+      } catch (IOException e) {
+        LOG.warn("Failed get of master address: " + e.toString());
+      }
+      if (activeMaster != null &&  activeMaster.equals(this.sn)) {
+        ZKUtil.deleteNode(watcher, watcher.getMasterAddressZNode());
       }
     } catch (KeeperException e) {
       LOG.error(this.watcher.prefix("Error deleting our own master address node"), e);

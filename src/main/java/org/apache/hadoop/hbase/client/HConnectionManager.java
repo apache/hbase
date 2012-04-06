@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -654,14 +655,7 @@ public class HConnectionManager {
       try {
 
         checkIfBaseNodeAvailable(zkw);
-
-        byte[] masterAddress = ZKUtil.getData(zkw, zkw.masterAddressZNode);
-        if (masterAddress == null){
-          throw new IOException("Can't get master address from ZooKeeper");
-        }
-
-        ServerName sn = ServerName.parseVersionedServerName(masterAddress);
-
+        ServerName sn = MasterAddressTracker.getMasterAddress(zkw);
         if (sn == null) {
           String msg =
             "ZooKeeper available but no active master location found";

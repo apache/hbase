@@ -40,6 +40,10 @@ import org.apache.hadoop.hbase.EmptyWatcher;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.AsyncCallback;
@@ -51,6 +55,8 @@ import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Internal HBase utility class for ZooKeeper.
@@ -724,7 +730,7 @@ public class ZKUtil {
     if (isSecureZooKeeper(zkw.getConfiguration())) {
       // Certain znodes must be readable by non-authenticated clients
       if ((node.equals(zkw.rootServerZNode) == true) ||
-          (node.equals(zkw.masterAddressZNode) == true) ||
+          (node.equals(zkw.getMasterAddressZNode()) == true) ||
           (node.equals(zkw.clusterIdZNode) == true)) {
         return ZooKeeperWatcher.CREATOR_ALL_AND_WORLD_READABLE;
       }
@@ -1041,8 +1047,12 @@ public class ZKUtil {
     StringBuilder sb = new StringBuilder();
     try {
       sb.append("HBase is rooted at ").append(zkw.baseZNode);
-      sb.append("\nActive master address: ").append(
-          ServerName.parseVersionedServerName(getData(zkw, zkw.masterAddressZNode)));
+      sb.append("\nActive master address: ");
+      try {
+        sb.append(MasterAddressTracker.getMasterAddress(zkw));
+      } catch (IOException e) {
+        sb.append("<<FAILED LOOKUP: " + e.getMessage() + ">>");
+      }
       sb.append("\nBackup master addresses:");
       for (String child : listChildrenNoWatch(zkw,
                                               zkw.backupMasterAddressesZNode)) {
@@ -1203,5 +1213,48 @@ public class ZKUtil {
     }
 
     return data;
+  }
+
+
+  /**
+   * Get a ServerName from the passed in znode data bytes.
+   * @param data ZNode data with a server name in it; can handle the old style
+   * servername where servername was host and port.  Works too with data that
+   * begins w/ the pb 'PBUF' magic and that its then followed by a protobuf that
+   * has a serialized {@link ServerName} in it.
+   * @return Returns null if <code>data</code> is null else converts passed data
+   * to a ServerName instance.
+   */
+  public static ServerName znodeContentToServerName(final byte [] data) {
+    if (data == null || data.length <= 0) return null;
+    if (ProtobufUtil.isPBMagicPrefix(data)) {
+      int prefixLen = ProtobufUtil.lengthOfPBMagic();
+      try {
+        RootRegionServer rss =
+          RootRegionServer.newBuilder().mergeFrom(data, prefixLen, data.length - prefixLen).build();
+        HBaseProtos.ServerName sn = rss.getServer();
+        return new ServerName(sn.getHostName(), sn.getPort(), sn.getStartCode());
+      } catch (InvalidProtocolBufferException e) {
+        // A failed parse of the znode is pretty catastrophic. Rather than loop
+        // retrying hoping the bad bytes will changes, and rather than change
+        // the signature on this method to add an IOE which will send ripples all
+        // over the code base, throw a RuntimeException.  This should "never" happen.
+        // Fail fast if it does.
+        throw new RuntimeException(e);
+      }
+    }
+    // The str returned could be old style -- pre hbase-1502 -- which was
+    // hostname and port seperated by a colon rather than hostname, port and
+    // startcode delimited by a ','.
+    String str = Bytes.toString(data);
+    int index = str.indexOf(ServerName.SERVERNAME_SEPARATOR);
+    if (index != -1) {
+      // Presume its ServerName serialized with versioned bytes.
+      return ServerName.parseVersionedServerName(data);
+    }
+    // Presume it a hostname:port format.
+    String hostname = Addressing.parseHostname(str);
+    int port = Addressing.parsePort(str);
+    return new ServerName(hostname, port, -1L);
   }
 }

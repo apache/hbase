@@ -89,7 +89,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   // znode containing ephemeral nodes of the draining regionservers
   public String drainingZNode;
   // znode of currently active master
-  public String masterAddressZNode;
+  private String masterAddressZNode;
   // znode of this master in backup master directory, if not the active master
   public String backupMasterAddressesZNode;
   // znode containing the current cluster state
@@ -454,5 +454,12 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   @Override
   public boolean isAborted() {
     return this.abortable.isAborted();
+  }
+
+  /**
+   * @return Path to the currently active master.
+   */
+  public String getMasterAddressZNode() {
+    return this.masterAddressZNode;
   }
 }

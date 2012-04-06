@@ -1430,7 +1430,7 @@ Server {
       try {
         byte[] bytes = ZKUtil.getData(this.zooKeeper, ZKUtil.joinZNode(this.zooKeeper.backupMasterAddressesZNode, s));
         if (bytes != null) {
-          backupMasters.add(ServerName.parseVersionedServerName(bytes));
+          backupMasters.add(ZKUtil.znodeContentToServerName(bytes));
         }
       } catch (KeeperException e) {
         LOG.warn(this.zooKeeper.prefix("Unable to get information about " +

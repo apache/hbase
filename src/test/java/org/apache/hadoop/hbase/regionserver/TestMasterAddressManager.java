@@ -27,6 +27,7 @@ import java.util.concurrent.Semaphore;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -69,7 +70,7 @@ public class TestMasterAddressManager {
     zk.registerListener(addressManager);
 
     // Use a listener to capture when the node is actually created
-    NodeCreationListener listener = new NodeCreationListener(zk, zk.masterAddressZNode);
+    NodeCreationListener listener = new NodeCreationListener(zk, zk.getMasterAddressZNode());
     zk.registerListener(listener);
 
     // Create the master node with a dummy address
@@ -77,7 +78,7 @@ public class TestMasterAddressManager {
     int port = 1234;
     ServerName sn = new ServerName(host, port, System.currentTimeMillis());
     LOG.info("Creating master node");
-    ZKUtil.createEphemeralNodeAndWatch(zk, zk.masterAddressZNode, sn.getVersionedBytes());
+    MasterAddressTracker.setMasterAddress(zk, zk.getMasterAddressZNode(), sn);
 
     // Wait for the node to be created
     LOG.info("Waiting for master address manager to be notified");

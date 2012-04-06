@@ -64,7 +64,7 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
    * @throws InterruptedException
    */
   public ServerName getRootRegionLocation() throws InterruptedException {
-    return dataToServerName(super.getData(true));
+    return ZKUtil.znodeContentToServerName(super.getData(true));
   }
 
   /**
@@ -76,7 +76,7 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
    */
   public static ServerName getRootRegionLocation(final ZooKeeperWatcher zkw)
   throws KeeperException {
-    return dataToServerName(ZKUtil.getData(zkw, zkw.rootServerZNode));
+    return ZKUtil.znodeContentToServerName(ZKUtil.getData(zkw, zkw.rootServerZNode));
   }
 
   /**
@@ -97,7 +97,7 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
       LOG.error(errorMsg);
       throw new IllegalArgumentException(errorMsg);
     }
-    return dataToServerName(super.blockUntilAvailable(timeout, true));
+    return ZKUtil.znodeContentToServerName(super.blockUntilAvailable(timeout, true));
   }
 
   /**
@@ -164,43 +164,6 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
       final long timeout)
   throws InterruptedException {
     byte [] data = ZKUtil.blockUntilAvailable(zkw, zkw.rootServerZNode, timeout);
-    return dataToServerName(data);
-  }
-
-  /**
-   * @param data
-   * @return Returns null if <code>data</code> is null else converts passed data
-   * to a ServerName instance.
-   */
-  static ServerName dataToServerName(final byte [] data) {
-    if (data == null || data.length <= 0) return null;
-    if (ProtobufUtil.isPBMagicPrefix(data)) {
-      int prefixLen = ProtobufUtil.lengthOfPBMagic();
-      try {
-        RootRegionServer rss =
-          RootRegionServer.newBuilder().mergeFrom(data, prefixLen, data.length - prefixLen).build();
-        HBaseProtos.ServerName sn = rss.getServer();
-        return new ServerName(sn.getHostName(), sn.getPort(), sn.getStartCode());
-      } catch (InvalidProtocolBufferException e) {
-        // A failed parse of the znode is pretty catastrophic. Rather than loop
-        // retrying hoping the bad bytes will changes, and rather than change
-        // the signature on this method to add an IOE which will send ripples all
-        // over the code base, throw a RuntimeException.  This should "never" happen.
-        throw new RuntimeException(e);
-      }
-    }
-    // The str returned could be old style -- pre hbase-1502 -- which was
-    // hostname and port seperated by a colon rather than hostname, port and
-    // startcode delimited by a ','.
-    String str = Bytes.toString(data);
-    int index = str.indexOf(ServerName.SERVERNAME_SEPARATOR);
-    if (index != -1) {
-      // Presume its ServerName.toString() format.
-      return ServerName.parseServerName(str);
-    }
-    // Presume it a hostname:port format.
-    String hostname = Addressing.parseHostname(str);
-    int port = Addressing.parsePort(str);
-    return new ServerName(hostname, port, -1L);
+    return ZKUtil.znodeContentToServerName(data);
   }
 }
