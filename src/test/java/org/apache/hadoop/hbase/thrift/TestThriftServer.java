@@ -203,13 +203,9 @@ public class TestThriftServer {
    * @throws Exception
    */
   public void doTestTableMutations() throws Exception {
+    // Setup
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
-    doTestTableMutations(handler);
-  }
-
-  public static void doTestTableMutations(Hbase.Iface handler) throws Exception {
-    // Setup
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply a few Mutations to rowA
@@ -265,7 +261,7 @@ public class TestThriftServer {
     handler.mutateRow(tableAname, rowAname, mutations, null);
     TRowResult rowResult3 = handler.getRow(tableAname, rowAname, null).get(0);
     assertEquals(rowAname, rowResult3.row);
-    assertEquals(0, rowResult3.columns.get(columnAname).value.remaining());
+    assertEquals(0, rowResult3.columns.get(columnAname).value.array().length);
 
     // Teardown
     handler.disableTable(tableAname);
@@ -516,7 +512,7 @@ public class TestThriftServer {
    * (rowB, columnA): place valueC
    * (rowB, columnB): place valueD
    */
-  private static List<BatchMutation> getBatchMutations() {
+  private List<BatchMutation> getBatchMutations() {
     List<BatchMutation> batchMutations = new ArrayList<BatchMutation>();
 
     // Mutations to rowA.  You can't mix delete and put anymore.
