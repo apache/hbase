@@ -1,3 +1,22 @@
+/**
+ * Copyright 2010 The Apache Software Foundation
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.commons.logging.Log;
@@ -12,33 +31,27 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.data.Stat;
-
-import static org.junit.Assert.*;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestHRegionClose {
-  final Log LOG = LogFactory.getLog(getClass());
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static byte[][] FAMILIES = { Bytes.toBytes("f1"),
+  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected static byte[][] FAMILIES = { Bytes.toBytes("f1"),
       Bytes.toBytes("f2"), Bytes.toBytes("f3"), Bytes.toBytes("f4") };
+  protected HRegionServer server;
+  protected ZooKeeperWrapper zkWrapper;
+  protected HRegionInfo regionInfo;
+  protected String regionZNode;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(3);
-  }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @Test
-  public void testCloseHRegion() throws Exception {
     // Build some data.
-    byte[] tableName = Bytes.toBytes("testCloseHRegion");
+    byte[] tableName = Bytes.toBytes(getClass().getSimpleName());
     TEST_UTIL.createTable(tableName, FAMILIES);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     for (int i = 0; i < FAMILIES.length; i++) {
@@ -49,16 +62,27 @@ public class TestHRegionClose {
 
     // Pick a regionserver.
     Configuration conf = TEST_UTIL.getConfiguration();
-    HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
+    server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
 
     HRegion[] region = server.getOnlineRegionsAsArray();
-    HRegionInfo regionInfo = region[0].getRegionInfo();
+    regionInfo = region[0].getRegionInfo();
 
     // Some initializtion relevant to zk.
-    ZooKeeperWrapper zkWrapper = server.getZooKeeperWrapper();
-    String regionZNode = zkWrapper.getZNode(
+    zkWrapper = server.getZooKeeperWrapper();
+    regionZNode = zkWrapper.getZNode(
         zkWrapper.getRegionInTransitionZNode(), regionInfo.getEncodedName());
+  }
 
+  @After
+  public void tearDown() throws Exception {
+    server = null;
+    zkWrapper = null;
+    regionInfo = null;
+    regionZNode = null;
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  protected void tryCloseRegion() throws Exception {
     server.closeRegion(regionInfo, true);
 
     byte[] data = zkWrapper.readZNode(regionZNode, new Stat());
@@ -68,5 +92,10 @@ public class TestHRegionClose {
     // Verify region is closed.
     assertNull(server.getOnlineRegion(regionInfo.getRegionName()));
     assertEquals(HBaseEventType.RS2ZK_REGION_CLOSED, rsData.getHbEvent());
+  }
+
+  @Test
+  public void mainTest() throws Exception {
+    tryCloseRegion();
   }
 }

@@ -75,6 +75,20 @@ public class RSZookeeperUpdater {
         LOG.error(msg);
         throw new IOException(msg);
       }
+      // if the master sends a region close message right after we actually
+      //  finished closing the region (on the region server), we shouldn't move
+      //  from a closed state to a closing state, so log and throw to abort
+      if (rsData.getHbEvent() == HBaseEventType.RS2ZK_REGION_CLOSED) {
+        String msg = "ZNode " + regionZNode
+            + " is already closed. Master sent a close request for " +
+            rsData.getRsName() + " after regionserver " +
+            regionServerName + " already closed it";
+        LOG.warn(msg);
+
+        // since we already closed the region, we can just return to
+        // closeRegion() and nothing else should be executed
+        return;
+      }
       this.zkVersion = stat.getVersion();
     } else {
       // create the region node in the unassigned directory first
