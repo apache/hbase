@@ -20,25 +20,12 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.io.WritableWithSize;
-import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.ObjectWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
-
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -57,12 +44,32 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.WritableWithSize;
+import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.ObjectWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.compress.Compressor;
+import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -82,7 +89,11 @@ public abstract class HBaseServer {
 
   // 1 : Introduce ping and server does not throw away RPCs
   // 3 : RPC was refactored in 0.19
-  public static final byte CURRENT_VERSION = 3;
+  public static final byte VERSION_3 = 3;
+  // 4 : includes support for compression on RPCs
+  public static final byte VERSION_COMPRESSED_RPC = 4;
+
+  public static final byte CURRENT_VERSION = VERSION_COMPRESSED_RPC;
 
   /**
    * How many calls/handler are allowed in the queue.
@@ -207,6 +218,9 @@ public abstract class HBaseServer {
     protected long timestamp;      // the time received when response is null
                                    // the time served when response is not null
     protected ByteBuffer response;                // the response for this call
+    protected Compression.Algorithm compressionAlgo =
+      Compression.Algorithm.NONE;
+    protected int version = CURRENT_VERSION;     // version used for the call
 
     public Call(int id, Writable param, Connection connection) {
       this.id = id;
@@ -214,6 +228,22 @@ public abstract class HBaseServer {
       this.connection = connection;
       this.timestamp = System.currentTimeMillis();
       this.response = null;
+    }
+
+    public void setVersion(int version) {
+     this.version = version;
+    }
+
+    public int getVersion() {
+      return version;
+    }
+
+    public void setRPCCompression(Compression.Algorithm compressionAlgo) {
+      this.compressionAlgo = compressionAlgo;
+    }
+
+    public Compression.Algorithm getRPCCompression() {
+      return this.compressionAlgo;
     }
 
     @Override
@@ -711,6 +741,7 @@ public abstract class HBaseServer {
   private class Connection {
     private boolean versionRead = false; //if initial signature and
                                          //version are read
+    private int version = -1;
     private boolean headerRead = false;  //if the connection header that
                                          //follows version is read.
     protected SocketChannel channel;
@@ -810,15 +841,18 @@ public abstract class HBaseServer {
           if (count <= 0) {
             return count;
           }
-          int version = versionBuffer.get(0);
+          version = versionBuffer.get(0);
 
           dataLengthBuffer.flip();
-          if (!HEADER.equals(dataLengthBuffer) || version != CURRENT_VERSION) {
+          if (!HEADER.equals(dataLengthBuffer) ||
+              version < VERSION_3 || version > CURRENT_VERSION) {
             //Warning is ok since this is not supposed to happen.
             LOG.warn("Incorrect header or version mismatch from " +
                      hostAddress + ":" + remotePort +
-                     " got version " + version +
-                     " expected version " + CURRENT_VERSION);
+                     " got header " + dataLengthBuffer +
+                     ", version " + version +
+                     " supported versions [" + VERSION_3 +
+                     " ... " + CURRENT_VERSION + "]");
             return -1;
           }
           dataLengthBuffer.clear();
@@ -868,17 +902,45 @@ public abstract class HBaseServer {
     }
 
     private void processData() throws  IOException, InterruptedException {
-      DataInputStream dis =
+      DataInputStream uncompressedIs =
         new DataInputStream(new ByteArrayInputStream(data.array()));
-      int id = dis.readInt();                    // try to read an id
+      Compression.Algorithm rxCompression = Algorithm.NONE;
+      Compression.Algorithm txCompression = Algorithm.NONE;
+      DataInputStream dis = uncompressedIs;
 
+      // 1. read the call id uncompressed
+      int id = uncompressedIs.readInt();
       if (LOG.isDebugEnabled())
         LOG.debug(" got #" + id);
 
-      Writable param = ReflectionUtils.newInstance(paramClass, conf);           // read param
+      if (version >= VERSION_COMPRESSED_RPC) {
+
+        // 2. read the compression used for the request
+        String rxCompressionAlgoName = uncompressedIs.readUTF();
+        rxCompression =
+          Compression.getCompressionAlgorithmByName(rxCompressionAlgoName);
+
+        // 3. read the compression requested for the response
+        String txCompressionAlgoName = uncompressedIs.readUTF();
+        txCompression =
+          Compression.getCompressionAlgorithmByName(txCompressionAlgoName);
+
+        // 4. set up a decompressor to read the rest of the request
+        if (rxCompression != Compression.Algorithm.NONE) {
+          Decompressor decompressor = rxCompression.getDecompressor();
+          InputStream is = rxCompression.createDecompressionStream(
+              uncompressedIs, decompressor, 0);
+          dis = new DataInputStream(is);
+        }
+      }
+
+      // 5. read the rest of the params
+      Writable param = ReflectionUtils.newInstance(paramClass, conf);
       param.readFields(dis);
 
       Call call = new Call(id, param, this);
+      call.setRPCCompression(txCompression);
+      call.setVersion(version);
       callQueue.put(call);              // queue the call; maybe blocked here
     }
 
@@ -960,10 +1022,29 @@ public abstract class HBaseServer {
             }
           }
           ByteBufferOutputStream buf = new ByteBufferOutputStream(size);
-          DataOutputStream out = new DataOutputStream(buf);
-          out.writeInt(call.id);                // write call id
-          out.writeBoolean(error != null);      // write error flag
+          DataOutputStream rawOS = new DataOutputStream(buf);
+          DataOutputStream out = rawOS;
 
+          // 1. write call id uncompressed
+          out.writeInt(call.id);
+
+          // 2. write error flag uncompressed
+          out.writeBoolean(error != null);
+
+          if (call.getVersion() >= VERSION_COMPRESSED_RPC) {
+            // 3. write the compression type for the rest of the response
+            out.writeUTF(call.getRPCCompression().getName());
+
+            // 4. create a compressed output stream if compression was enabled
+            if (call.getRPCCompression() != Compression.Algorithm.NONE) {
+              Compressor compressor = call.getRPCCompression().getCompressor();
+              OutputStream compressedOutputStream =
+                call.getRPCCompression().createCompressionStream(rawOS, compressor, 0);
+              out = new DataOutputStream(compressedOutputStream);
+            }
+          }
+
+          // 5. write the output as per the compression
           if (error == null) {
             value.write(out);
           } else {
@@ -971,6 +1052,8 @@ public abstract class HBaseServer {
             WritableUtils.writeString(out, error);
           }
 
+          out.flush();
+          buf.flush();
           call.setResponse(buf.getByteBuffer());
           responder.doRespond(call);
         } catch (InterruptedException e) {

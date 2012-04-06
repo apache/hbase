@@ -27,9 +27,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -237,6 +239,8 @@ public class HBaseRPC {
     private HBaseClient client;
     private boolean isClosed = false;
     final private int rpcTimeout;
+    private Compression.Algorithm rpcCompression =
+      HConstants.DEFAULT_HBASE_RPC_COMPRESSION;
 
     /**
      * @param address address for invoker
@@ -250,6 +254,11 @@ public class HBaseRPC {
       this.ticket = ticket;
       this.client = CLIENTS.getClient(conf, factory);
       this.rpcTimeout = rpcTimeout;
+      String compressionAlgo = conf.get(HConstants.HBASE_RPC_COMPRESSION_KEY);
+      if (compressionAlgo != null) {
+        rpcCompression =
+          Compression.getCompressionAlgorithmByName(compressionAlgo);
+      }
     }
 
     public Object invoke(Object proxy, Method method, Object[] args)
@@ -260,7 +269,8 @@ public class HBaseRPC {
         startTime = System.currentTimeMillis();
       }
       HbaseObjectWritable value = (HbaseObjectWritable)
-        client.call(new Invocation(method, args), address, ticket, rpcTimeout);
+        client.call(new Invocation(method, args), address, ticket,
+            rpcTimeout, rpcCompression);
       if (logDebug) {
         long callTime = System.currentTimeMillis() - startTime;
         LOG.debug("Call: " + method.getName() + " " + callTime);
@@ -477,8 +487,14 @@ public class HBaseRPC {
     for (int i = 0; i < params.length; i++)
       invocations[i] = new Invocation(method, params[i]);
     HBaseClient client = CLIENTS.getClient(conf);
+    Compression.Algorithm rpcCompression = Compression.Algorithm.NONE;
+    String compressionAlgo = conf.get(HConstants.HBASE_RPC_COMPRESSION_KEY);
+    if (compressionAlgo != null) {
+      rpcCompression =
+          Compression.getCompressionAlgorithmByName(compressionAlgo);
+    }
     try {
-    Writable[] wrappedValues = client.call(invocations, addrs);
+    Writable[] wrappedValues = client.call(invocations, addrs, rpcCompression);
 
     if (method.getReturnType() == Void.TYPE) {
       return null;

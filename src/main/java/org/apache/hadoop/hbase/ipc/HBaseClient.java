@@ -22,11 +22,13 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -43,11 +45,14 @@ import javax.net.SocketFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.compress.Compressor;
+import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -143,6 +148,9 @@ public class HBaseClient {
     Writable value;                               // value, null if error
     IOException error;                            // exception, null if value
     boolean done;                                 // true when call is done
+    protected Compression.Algorithm compressionAlgo =
+      Compression.Algorithm.NONE;
+    protected int version = HBaseServer.CURRENT_VERSION;
 
     protected Call(Writable param) {
       this.param = param;
@@ -177,6 +185,22 @@ public class HBaseClient {
       this.value = value;
       callComplete();
     }
+
+    public void setVersion(int version) {
+      this.version = version;
+    }
+
+    public int getVersion() {
+      return version;
+    }
+
+    public void setRPCCompression(Compression.Algorithm compressionAlgo) {
+      this.compressionAlgo = compressionAlgo;
+    }
+
+    public Compression.Algorithm getRPCCompression() {
+      return this.compressionAlgo;
+    }
   }
 
   /** Thread that reads responses and notifies callers.  Each connection owns a
@@ -193,10 +217,6 @@ public class HBaseClient {
     private final AtomicLong lastActivity = new AtomicLong();// last I/O activity time
     protected final AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
     private IOException closeException; // close reason
-
-    public Connection(InetSocketAddress address) throws IOException {
-      this(new ConnectionId(address, null, 0));
-    }
 
     public Connection(ConnectionId remoteId) throws IOException {
       if (remoteId.getAddress().isUnresolved()) {
@@ -292,7 +312,7 @@ public class HBaseClient {
      * the connection thread that waits for responses.
      * @throws java.io.IOException e
      */
-    protected synchronized void setupIOstreams() throws IOException {
+    protected synchronized void setupIOstreams(byte version) throws IOException {
       if (socket != null || shouldCloseConnection.get()) {
         return;
       }
@@ -325,7 +345,7 @@ public class HBaseClient {
             (new PingInputStream(NetUtils.getInputStream(socket))));
         this.out = new DataOutputStream
             (new BufferedOutputStream(NetUtils.getOutputStream(socket)));
-        writeHeader();
+        writeHeader(version);
 
         // update last activity time
         touch();
@@ -386,9 +406,9 @@ public class HBaseClient {
     /* Write the header for each connection
      * Out is not synchronized because only the first thread does this.
      */
-    private void writeHeader() throws IOException {
+    private void writeHeader(byte version) throws IOException {
       out.write(HBaseServer.HEADER.array());
-      out.write(HBaseServer.CURRENT_VERSION);
+      out.write(version);
       //When there are more fields we can have ConnectionHeader Writable.
       DataOutputBuffer buf = new DataOutputBuffer();
       ObjectWritable.writeObject(buf, remoteId.getTicket(),
@@ -480,20 +500,43 @@ public class HBaseClient {
         return;
       }
 
-      DataOutputBuffer d=null;
+      DataOutputStream uncompressedOS = null;
+      DataOutputStream outOS = null;
       try {
         //noinspection SynchronizeOnNonFinalField
         synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + " sending #" + call.id);
 
-          //for serializing the
-          //data to be written
-          d = new DataOutputBuffer();
-          d.writeInt(call.id);
-          call.param.write(d);
-          byte[] data = d.getData();
-          int dataLength = d.getLength();
+          ByteArrayOutputStream baos = new ByteArrayOutputStream();
+          uncompressedOS = new DataOutputStream(baos);
+          outOS = uncompressedOS;
+
+          // 1. write the call id uncompressed
+          uncompressedOS.writeInt(call.id);
+
+          // preserve backwards compatibility
+          if (call.getRPCCompression() != Compression.Algorithm.NONE) {
+            // 2. write the compression algo used to compress the request being sent
+            uncompressedOS.writeUTF(call.getRPCCompression().getName());
+
+            // 3. write the compression algo to use for the response
+            uncompressedOS.writeUTF(call.getRPCCompression().getName());
+
+            // 4. setup the compressor
+            Compressor compressor = call.getRPCCompression().getCompressor();
+            OutputStream compressedOutputStream =
+              call.getRPCCompression().createCompressionStream(
+                uncompressedOS, compressor, 0);
+            outOS = new DataOutputStream(compressedOutputStream);
+          }
+
+          // 5. write the output params with the correct compression type
+          call.param.write(outOS);
+          outOS.flush();
+          baos.flush();
+          byte[] data = baos.toByteArray();
+          int dataLength = data.length;
           out.writeInt(dataLength);      //first put the data length
           out.write(data, 0, dataLength);//write the data
           out.flush();
@@ -503,7 +546,10 @@ public class HBaseClient {
       } finally {
         //the buffer is just an in-memory buffer, but it is still polite to
         // close early
-        IOUtils.closeStream(d);
+        if (outOS != uncompressedOS) {
+          IOUtils.closeStream(outOS);
+        }
+        IOUtils.closeStream(uncompressedOS);
       }
     }
 
@@ -517,22 +563,41 @@ public class HBaseClient {
       touch();
 
       try {
-        int id = in.readInt();                    // try to read an id
+        DataInputStream localIn = in;
 
+        // 1. Read the call id uncompressed which is an int
+        int id = localIn.readInt();
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + id);
-
         Call call = calls.get(id);
 
-        boolean isError = in.readBoolean();     // read if error
+        // 2. read the error boolean uncompressed
+        boolean isError = localIn.readBoolean();
+
+        if (call.getVersion() >= HBaseServer.VERSION_COMPRESSED_RPC) {
+          // 3. read the compression type used for the rest of the response
+          String compressionAlgoName = localIn.readUTF();
+          Compression.Algorithm rpcCompression =
+            Compression.getCompressionAlgorithmByName(compressionAlgoName);
+
+          // 4. setup the correct decompressor (if any)
+          if (rpcCompression != Compression.Algorithm.NONE) {
+            Decompressor decompressor = rpcCompression.getDecompressor();
+            InputStream is = rpcCompression.createDecompressionStream(
+                  in, decompressor, 0);
+            localIn = new DataInputStream(is);
+          }
+        }
+
+        // 5. read the rest of the value
         if (isError) {
           //noinspection ThrowableInstanceNeverThrown
-          call.setException(new RemoteException( WritableUtils.readString(in),
-              WritableUtils.readString(in)));
+          call.setException(new RemoteException( WritableUtils.readString(localIn),
+              WritableUtils.readString(localIn)));
           calls.remove(id);
         } else {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
-          value.readFields(in);                 // read value
+          value.readFields(localIn);                 // read value
           call.setValue(value);
           calls.remove(id);
         }
@@ -725,13 +790,15 @@ public class HBaseClient {
    */
   public Writable call(Writable param, InetSocketAddress address)
   throws IOException {
-      return call(param, address, null, 0);
+      return call(param, address, null, 0, Compression.Algorithm.NONE);
   }
 
   public Writable call(Writable param, InetSocketAddress addr,
-                       UserGroupInformation ticket, int rpcTimeout)
+                       UserGroupInformation ticket, int rpcTimeout,
+                       Compression.Algorithm rpcCompression)
                        throws IOException {
     Call call = new Call(param);
+    call.setRPCCompression(rpcCompression);
     Connection connection = getConnection(addr, ticket, rpcTimeout, call);
     connection.sendParam(call);                 // send the parameter
     boolean interrupted = false;
@@ -804,7 +871,8 @@ public class HBaseClient {
    * @return  Writable[]
    * @throws IOException e
    */
-  public Writable[] call(Writable[] params, InetSocketAddress[] addresses)
+  public Writable[] call(Writable[] params, InetSocketAddress[] addresses,
+      Compression.Algorithm rpcCompression)
     throws IOException {
     if (addresses.length == 0) return new Writable[0];
 
@@ -814,6 +882,7 @@ public class HBaseClient {
     synchronized (results) {
       for (int i = 0; i < params.length; i++) {
         ParallelCall call = new ParallelCall(params[i], results, i);
+        call.setRPCCompression(rpcCompression);
         try {
           Connection connection = getConnection(addresses[i], null, 0, call);
           connection.sendParam(call);             // send each parameter
@@ -845,12 +914,20 @@ public class HBaseClient {
       // the client is stopped
       throw new IOException("The client is stopped");
     }
+    // RPC compression is only supported from version 4, so make backward compatible
+    byte version = HBaseServer.CURRENT_VERSION;
+    if (call.getRPCCompression() == Compression.Algorithm.NONE) {
+      version = HBaseServer.VERSION_3;
+    }
+    call.setVersion(version);
+
     Connection connection;
     /* we could avoid this allocation for each RPC by having a
      * connectionsId object and with set() method. We need to manage the
      * refs for keys in HashMap properly. For now its ok.
      */
-    ConnectionId remoteId = new ConnectionId(addr, ticket, rpcTimeout);
+    ConnectionId remoteId = new ConnectionId(addr, ticket, rpcTimeout,
+        call.getVersion());
     do {
       synchronized (connections) {
         connection = connections.get(remoteId);
@@ -865,24 +942,27 @@ public class HBaseClient {
     //block above. The reason for that is if the server happens to be slow,
     //it will take longer to establish a connection and that will slow the
     //entire system down.
-    connection.setupIOstreams();
+    connection.setupIOstreams(version);
     return connection;
   }
 
   /**
    * This class holds the address and the user ticket. The client connections
-   * to servers are uniquely identified by <remoteAddress, ticket>
+   * to servers are uniquely identified by
+   * <remoteAddress, ticket, RPC version>
    */
   private static class ConnectionId {
     final InetSocketAddress address;
     final UserGroupInformation ticket;
     final private int rpcTimeout;
+    final private int version;
 
     ConnectionId(InetSocketAddress address, UserGroupInformation ticket,
-        int rpcTimeout) {
+        int rpcTimeout, int version) {
       this.address = address;
       this.ticket = ticket;
       this.rpcTimeout = rpcTimeout;
+      this.version = version;
     }
 
     InetSocketAddress getAddress() {
@@ -897,7 +977,7 @@ public class HBaseClient {
      if (obj instanceof ConnectionId) {
        ConnectionId id = (ConnectionId) obj;
        return address.equals(id.address) && ticket == id.ticket &&
-       rpcTimeout == id.rpcTimeout;
+       rpcTimeout == id.rpcTimeout && version == id.version;
        //Note : ticket is a ref comparision.
      }
      return false;
@@ -905,7 +985,8 @@ public class HBaseClient {
 
     @Override
     public int hashCode() {
-      return address.hashCode() ^ System.identityHashCode(ticket) ^ rpcTimeout;
+      return address.hashCode() ^ System.identityHashCode(ticket) ^
+          rpcTimeout ^ version;
     }
   }
 }

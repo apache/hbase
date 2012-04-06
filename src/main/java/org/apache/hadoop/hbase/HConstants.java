@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -439,6 +440,13 @@ public final class HConstants {
    * Default value of {@link #HBASE_RPC_TIMEOUT_KEY}
    */
   public static int DEFAULT_HBASE_RPC_TIMEOUT = 60000;
+
+  /**
+   * compression for each RPC and its default value
+   */
+  public static String HBASE_RPC_COMPRESSION_KEY = "hbase.rpc.compression";
+  public static Compression.Algorithm DEFAULT_HBASE_RPC_COMPRESSION =
+    Compression.Algorithm.NONE;
 
   public static final String
       REPLICATION_ENABLE_KEY = "hbase.replication";
