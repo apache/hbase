@@ -142,7 +142,7 @@
 
   <property>
     <name>zookeeper.session.timeout</name>
-    <value>1000</value>
+    <value>60000</value>
   </property>
 
   <property>
@@ -150,4 +150,11 @@
     <value>false</value>
   </property>
 
+  <property>
+    <name>hbase.client.retries.number</name>
+    <value>100</value>
+    <description>
+    Use a lot of retries in unit tests.
+    </description>
+  </property>
 </configuration>

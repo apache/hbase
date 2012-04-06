@@ -34,7 +34,8 @@ public class TestScannerResets extends HBaseTestCase {
   }
 
   HRegion region = null;
-  private final String DIR = HBaseTestingUtility.getTestDir() + "/TestScannerResets/";
+  private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final String DIR = TEST_UTIL.getTestDir() + "/TestScannerResets/";
 
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()

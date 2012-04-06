@@ -60,6 +60,8 @@ public class TestHFileSeek extends TestCase {
   private RandomDistribution.DiscreteRNG keyLenGen;
   private KVGenerator kvGen;
 
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
   @Override
   public void setUp() throws IOException {
     if (options == null) {
@@ -239,7 +241,7 @@ public class TestHFileSeek extends TestCase {
     int maxWordLen = 20;
 
     String rootDir =
-      HBaseTestingUtility.getTestDir("TestTFileSeek").toString();
+      TEST_UTIL.getTestDir("TestTFileSeek").toString();
     String file = "TestTFileSeek";
     // String compress = "lzo"; DISABLED
     String compress = "none";

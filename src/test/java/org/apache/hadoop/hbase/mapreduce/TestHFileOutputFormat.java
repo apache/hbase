@@ -56,12 +56,10 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -74,7 +72,6 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -156,11 +153,6 @@ public class TestHFileOutputFormat  {
         }
       }
     }
-  }
-
-  @Before
-  public void cleanupDir() throws IOException {
-    util.cleanupTestDir();
   }
 
   private void setupRandomGeneratorMapper(Job job) {
@@ -255,7 +247,7 @@ public class TestHFileOutputFormat  {
     conf.setInt("io.sort.mb", 20);
     conf.setInt("mapred.map.tasks", 1);
 
-    Path dir = HBaseTestingUtility.getTestDir("testRowSortReducer");
+    Path dir = util.getTestDir("testRowSortReducer");
 
     try {
       Job job = new Job(conf);
@@ -403,7 +395,7 @@ public class TestHFileOutputFormat  {
     RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
     TaskAttemptContext context = null;
     Path dir =
-      HBaseTestingUtility.getTestDir("test_LATEST_TIMESTAMP_isReplaced");
+      util.getTestDir("test_LATEST_TIMESTAMP_isReplaced");
     try {
       Job job = new Job(conf);
       FileOutputFormat.setOutputPath(job, dir);
@@ -442,7 +434,7 @@ public class TestHFileOutputFormat  {
   @Test
   public void testWritingPEData() throws Exception {
     Configuration conf = util.getConfiguration();
-    Path testDir = HBaseTestingUtility.getTestDir("testWritingPEData");
+    Path testDir = util.getTestDir("testWritingPEData");
     FileSystem fs = testDir.getFileSystem(conf);
 
     // Set down this value or we OOME in eclipse.
@@ -496,18 +488,21 @@ public class TestHFileOutputFormat  {
 
   @Test
   public void testMRIncrementalLoad() throws Exception {
+    LOG.info("\nStarting test testMRIncrementalLoad\n");
     doIncrementalLoadTest(false);
   }
 
   @Test
   public void testMRIncrementalLoadWithSplit() throws Exception {
+    LOG.info("\nStarting test testMRIncrementalLoadWithSplit\n");
     doIncrementalLoadTest(true);
   }
 
   private void doIncrementalLoadTest(
       boolean shouldChangeRegions) throws Exception {
+    util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
-    Path testDir = HBaseTestingUtility.getTestDir("testLocalMRIncrementalLoad");
+    Path testDir = util.getTestDir("testLocalMRIncrementalLoad");
     byte[][] startKeys = generateRandomStartKeys(5);
 
     try {
@@ -566,9 +561,7 @@ public class TestHFileOutputFormat  {
           expectedRows, util.countRows(table));
       Scan scan = new Scan();
       ResultScanner results = table.getScanner(scan);
-      int count = 0;
       for (Result res : results) {
-        count++;
         assertEquals(FAMILIES.length, res.raw().length);
         KeyValue first = res.raw()[0];
         for (KeyValue kv : res.raw()) {
@@ -692,7 +685,7 @@ public class TestHFileOutputFormat  {
     RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
     TaskAttemptContext context = null;
     Path dir =
-        HBaseTestingUtility.getTestDir("testColumnFamilyCompression");
+        util.getTestDir("testColumnFamilyCompression");
 
     HTable table = Mockito.mock(HTable.class);
 
@@ -812,7 +805,7 @@ public class TestHFileOutputFormat  {
     RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
     TaskAttemptContext context = null;
     Path dir =
-        HBaseTestingUtility.getTestDir("testColumnFamilyBloomFilter");
+        util.getTestDir("testColumnFamilyBloomFilter");
 
     HTable table = Mockito.mock(HTable.class);
 

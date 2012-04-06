@@ -73,8 +73,9 @@ class RawKeyValue implements Comparable<RawKeyValue> {
  * instead.</p>
  */
 public class TestHFilePerformance extends TestCase {
+  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static String ROOT_DIR =
-    HBaseTestingUtility.getTestDir("TestHFilePerformance").toString();
+    TEST_UTIL.getTestDir("TestHFilePerformance").toString();
   private FileSystem fs;
   private Configuration conf;
   private long startTimeEpoch;

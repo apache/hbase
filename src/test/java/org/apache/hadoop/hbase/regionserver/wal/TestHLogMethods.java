@@ -43,7 +43,7 @@ public class TestHLogMethods {
    */
   @Test public void testGetSplitEditFilesSorted() throws IOException {
     FileSystem fs = FileSystem.get(util.getConfiguration());
-    Path regiondir = HBaseTestingUtility.getTestDir("regiondir");
+    Path regiondir = util.getTestDir("regiondir");
     fs.delete(regiondir, true);
     fs.mkdirs(regiondir);
     Path recoverededits = HLog.getRegionDirRecoveredEditsDir(regiondir);

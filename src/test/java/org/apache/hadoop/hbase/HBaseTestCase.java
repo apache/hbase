@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
@@ -53,9 +52,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 public abstract class HBaseTestCase extends TestCase {
   private static final Log LOG = LogFactory.getLog(HBaseTestCase.class);
 
-  /** configuration parameter name for test directory */
-  public static final String TEST_DIRECTORY_KEY = "test.build.data";
-
   protected final static byte [] fam1 = Bytes.toBytes("colfamily1");
   protected final static byte [] fam2 = Bytes.toBytes("colfamily2");
   protected final static byte [] fam3 = Bytes.toBytes("colfamily3");
@@ -73,9 +69,7 @@ public abstract class HBaseTestCase extends TestCase {
   protected String START_KEY;
   protected static final int MAXVERSIONS = 3;
 
-  static {
-    initialize();
-  }
+  protected final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
   public volatile HBaseConfiguration conf;
 
@@ -147,8 +141,7 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   protected Path getUnitTestdir(String testName) {
-    return new Path(
-        conf.get(TEST_DIRECTORY_KEY, "target/test/data"), testName);
+    return testUtil.getTestDir(testName);
   }
 
   protected HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
@@ -598,21 +591,6 @@ public abstract class HBaseTestCase extends TestCase {
         }
       }
     }
-
-  /**
-   * Initializes parameters used in the test environment:
-   *
-   * Sets the configuration parameter TEST_DIRECTORY_KEY if not already set.
-   * Sets the boolean debugging if "DEBUGGING" is set in the environment.
-   * If debugging is enabled, reconfigures logging so that the root log level is
-   * set to WARN and the logging level for the package is set to DEBUG.
-   */
-  public static void initialize() {
-    if (System.getProperty(TEST_DIRECTORY_KEY) == null) {
-      System.setProperty(TEST_DIRECTORY_KEY, new File(
-          "build/hbase/test").getAbsolutePath());
-    }
-  }
 
   /**
    * Common method to close down a MiniDFSCluster and the associated file system

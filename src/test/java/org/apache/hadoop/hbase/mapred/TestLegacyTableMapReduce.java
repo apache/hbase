@@ -19,20 +19,23 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MultiRegionTable;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobClient;
@@ -126,7 +129,9 @@ public class TestLegacyTableMapReduce extends MultiRegionTable {
   }
 
   private void runTestOnTable(HTable table) throws IOException {
-    MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
+    HBaseTestingUtility testUtil = new HBaseTestingUtility();
+    testUtil.setupClusterTestBuildDir();
+    MiniMRCluster mrCluster = testUtil.startMiniMapReduceCluster();
 
     JobConf jobConf = null;
     try {
@@ -148,9 +153,6 @@ public class TestLegacyTableMapReduce extends MultiRegionTable {
       verify(Bytes.toString(table.getTableName()));
     } finally {
       mrCluster.shutdown();
-      if (jobConf != null) {
-        FileUtil.fullyDelete(new File(jobConf.get("hadoop.tmp.dir")));
-      }
     }
   }
 

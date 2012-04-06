@@ -43,7 +43,9 @@ public class TestBlocksRead extends HBaseTestCase {
   }
 
   HRegion region = null;
-  private final String DIR = HBaseTestingUtility.getTestDir() + "/TestHRegion/";
+
+  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private final String DIR = testUtil.getTestDir() + "/TestHRegion/";
 
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()

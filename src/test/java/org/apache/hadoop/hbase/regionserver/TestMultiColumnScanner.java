@@ -354,7 +354,7 @@ public class TestMultiColumnScanner {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     HRegion region = HRegion.createHRegion(
-        info, HBaseTestingUtility.getTestDir(), TEST_UTIL.getConfiguration());
+        info, TEST_UTIL.getTestDir(), TEST_UTIL.getConfiguration());
     return region;
   }
 

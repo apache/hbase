@@ -90,7 +90,7 @@ public class TestLoadIncrementalHFiles {
 
   private void runTest(String testName, byte[][][] hfileRanges)
   throws Exception {
-    Path dir = HBaseTestingUtility.getTestDir(testName);
+    Path dir = util.getTestDir(testName);
     FileSystem fs = util.getTestFileSystem();
     dir = dir.makeQualified(fs);
     Path familyDir = new Path(dir, Bytes.toString(FAMILY));
@@ -126,7 +126,7 @@ public class TestLoadIncrementalHFiles {
 
   @Test
   public void testSplitStoreFile() throws IOException {
-    Path dir = HBaseTestingUtility.getTestDir("testSplitHFile");
+    Path dir = util.getTestDir("testSplitHFile");
     FileSystem fs = util.getTestFileSystem();
     Path testIn = new Path(dir, "testhfile");
     HColumnDescriptor familyDesc = new HColumnDescriptor(FAMILY);

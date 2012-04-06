@@ -112,9 +112,9 @@ public class TestReplicationSourceManager {
         server.getZooKeeperWrapper(), conf,
         REPLICATING, "123456789");
     fs = FileSystem.get(conf);
-    oldLogDir = new Path(HBaseTestingUtility.getTestDir(),
+    oldLogDir = new Path(utility.getTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
-    logDir = new Path(HBaseTestingUtility.getTestDir(),
+    logDir = new Path(utility.getTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
 
     manager = new ReplicationSourceManager(helper,

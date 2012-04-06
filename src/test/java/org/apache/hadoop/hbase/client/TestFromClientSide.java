@@ -3822,7 +3822,7 @@ public class TestFromClientSide {
      // Create multiple regions for this table
      TEST_UTIL.createMultiRegions(table, FAMILY);
 
-     Path tempPath = new Path(HBaseTestingUtility.getTestDir(), "regions.dat");
+     Path tempPath = new Path(TEST_UTIL.getTestDir(), "regions.dat");
 
      final String tempFileName = tempPath.toString();
 

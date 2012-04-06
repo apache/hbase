@@ -59,6 +59,7 @@ public class TestFullLogReconstruction {
     c.setInt("ipc.client.connect.max.retries", 1);
     c.setInt("dfs.client.block.recovery.retries", 1);
     c.setInt("hbase.regionserver.flushlogentries", 1);
+    c.setInt(HConstants.ZOOKEEPER_SESSION_TIMEOUT, 1000);
     TEST_UTIL.startMiniCluster(NUM_REGIONSERVER);
   }
 
@@ -118,8 +119,10 @@ public class TestFullLogReconstruction {
     }
 
     TEST_UTIL.expireRegionServerSession(0);
+
     // wait for meta region comes online
-    Thread.sleep(1000);
+    TEST_UTIL.waitTableAvailable(HConstants.META_TABLE_NAME, 10000);
+
     scan = new Scan();
     results = table.getScanner(scan);
     int newCount = 0;

@@ -1582,21 +1582,25 @@ public class HRegionServer implements HRegionInterface,
 
             case MSG_REGION_OPEN:
               // Open a region
+              boolean requeued = false;
               if (!haveRootRegion.get() && !info.isRootRegion()) {
                 // root region is not online yet. requeue this task
                 LOG.info("putting region open request back into queue because" +
                     " root region is not yet available");
                 try {
                   toDo.put(e);
+                  requeued = true;
                 } catch (InterruptedException ex) {
                   LOG.warn("insertion into toDo queue was interrupted", ex);
                   break;
                 }
               }
-              if (e.msg.getMessage() != null && e.msg.getMessage().length > 0) {
-                openRegion(info, new String(e.msg.getMessage()));
-              } else {
-                openRegion(info, null);
+              if (!requeued) {
+                if (e.msg.getMessage() != null && e.msg.getMessage().length > 0) {
+                  openRegion(info, new String(e.msg.getMessage()));
+                } else {
+                  openRegion(info, null);
+                }
               }
               break;
 

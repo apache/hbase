@@ -295,7 +295,7 @@ public class TestCompoundBloomFilter {
 
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConf, fs,
         BLOCK_SIZES[t])
-            .withOutputDir(HBaseTestingUtility.getTestDir())
+            .withOutputDir(TEST_UTIL.getTestDir())
             .withBloomType(bt)
             .build();
 

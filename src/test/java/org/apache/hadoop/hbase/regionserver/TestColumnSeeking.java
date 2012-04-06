@@ -65,7 +65,7 @@ public class TestColumnSeeking {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     HRegion region =
-        HRegion.createHRegion(info, HBaseTestingUtility.getTestDir(), TEST_UTIL
+        HRegion.createHRegion(info, TEST_UTIL.getTestDir(), TEST_UTIL
             .getConfiguration());
 
     List<String> rows = generateRandomWords(10, "row");
@@ -169,7 +169,7 @@ public class TestColumnSeeking {
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     HRegion region =
-        HRegion.createHRegion(info, HBaseTestingUtility.getTestDir(), TEST_UTIL
+        HRegion.createHRegion(info, TEST_UTIL.getTestDir(), TEST_UTIL
             .getConfiguration());
 
     List<String> rows = generateRandomWords(10, "row");

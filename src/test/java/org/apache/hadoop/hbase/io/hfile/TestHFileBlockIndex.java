@@ -114,7 +114,7 @@ public class TestHFileBlockIndex {
 
   @Test
   public void testBlockIndex() throws IOException {
-    path = new Path(HBaseTestingUtility.getTestDir(), "block_index_" + compr);
+    path = new Path(TEST_UTIL.getTestDir(), "block_index_" + compr);
     writeWholeIndex();
     readIndex();
   }
@@ -461,7 +461,7 @@ public class TestHFileBlockIndex {
    */
   @Test
   public void testHFileWriterAndReader() throws IOException {
-    Path hfilePath = new Path(HBaseTestingUtility.getTestDir(),
+    Path hfilePath = new Path(TEST_UTIL.getTestDir(),
         "hfile_for_block_index");
     CacheConfig cacheConf = new CacheConfig(conf);
     BlockCache blockCache = cacheConf.getBlockCache();

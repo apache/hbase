@@ -1789,7 +1789,7 @@ public class RegionManager {
 
     LoadBalancer() {
       Configuration conf = master.getConfiguration();
-      float confSlop = conf.getFloat("hbase.regions.slop", (float)0.3);
+      float confSlop = conf.getFloat(HConstants.LOAD_BALANCER_SLOP_KEY, (float) 0.3);
       this.slop = confSlop <= 0 ? 1 : confSlop;
       this.maxRegToClose = conf.getInt("hbase.regions.close.max", -1);
     }

@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -118,7 +119,9 @@ public class TestTableMapReduce extends MultiRegionTable {
 
   private void runTestOnTable(HTable table)
   throws IOException, InterruptedException, ClassNotFoundException {
-    MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
+    HBaseTestingUtility testUtil = new HBaseTestingUtility();
+    testUtil.setFileSystemURI(fs.getUri().toString());
+    MiniMRCluster mrCluster = testUtil.startMiniMapReduceCluster();
     LOG.debug("ZK client port before runing MR job: " +
         ZooKeeperWrapper.getZKClientPort(conf));
 
@@ -147,10 +150,7 @@ public class TestTableMapReduce extends MultiRegionTable {
       verify(Bytes.toString(table.getTableName()));
     } finally {
       mrCluster.shutdown();
-      if (job != null) {
-        FileUtil.fullyDelete(
-          new File(job.getConfiguration().get("hadoop.tmp.dir")));
-      }
+      testUtil.cleanupTestDir();
     }
   }
 

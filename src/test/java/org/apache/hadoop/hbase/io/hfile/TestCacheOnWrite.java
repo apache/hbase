@@ -260,7 +260,7 @@ public class TestCacheOnWrite {
   }
 
   public void writeStoreFile() throws IOException {
-    Path storeFileParentDir = new Path(HBaseTestingUtility.getTestDir(),
+    Path storeFileParentDir = new Path(TEST_UTIL.getTestDir(),
         "test_cache_on_write");
     StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf, cacheConf, fs,
         DATA_BLOCK_SIZE)

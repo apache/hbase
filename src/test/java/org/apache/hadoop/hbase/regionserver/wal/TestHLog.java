@@ -338,9 +338,8 @@ public class TestHLog  {
     }
     // Now call sync to send the data to HDFS datanodes
     wal.sync(true);
-     int namenodePort = cluster.getNameNodePort();
+    int namenodePort = cluster.getNameNodePort();
     final Path walPath = wal.computeFilename();
-
 
     // Stop the cluster.  (ensure restart since we're sharing MiniDFSCluster)
     try {
@@ -361,10 +360,12 @@ public class TestHLog  {
         LOG.error("Waiting for cluster to go down");
         Thread.sleep(1000);
       }
-      cluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null, null, null, null);
+      LOG.info("Waiting a few seconds before re-starting HDFS");
+      Thread.sleep(5000);
+      cluster = TEST_UTIL.startMiniDFSClusterForTestHLog(namenodePort);
       cluster.waitActive();
       fs = cluster.getFileSystem();
-      LOG.info("START second instance.");
+      LOG.info("STARTED second instance.");
     }
 
     // set the lease period to be 1 second so that the

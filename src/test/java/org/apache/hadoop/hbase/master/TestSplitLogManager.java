@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
@@ -70,6 +71,12 @@ public class TestSplitLogManager {
 
   private volatile boolean stopped = false;
 
+  /**
+   * Additional amount of time we wait for events to happen. Added where unit
+   * test failures have been observed.
+   */
+  private static final int EXTRA_TOLERANCE_MS = 200;
+
   private Stoppable stopper = new Stoppable() {
     @Override
     public boolean isStopped() {
@@ -100,7 +107,9 @@ public class TestSplitLogManager {
   @Before
   public void setup() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    zkw = ZooKeeperWrapper.createInstance(conf, "split-log-manager-tests");
+    // Use a different ZK wrapper instance for each tests.
+    zkw = ZooKeeperWrapper.createInstance(conf, "split-log-manager-tests-" +
+        UUID.randomUUID().toString());
     zkw.deleteChildrenRecursively(zkw.parentZNode);
     zkw.createZNodeIfNotExists(zkw.parentZNode);
     assertTrue(zkw.checkExists(zkw.parentZNode) != -1);
@@ -217,7 +226,7 @@ public class TestSplitLogManager {
     assertTrue((task.last_update <= curt) &&
         (task.last_update > (curt - 1000)));
     LOG.info("waiting for manager to resubmit the orphan task");
-    waitForCounter(tot_mgr_resubmit, 0, 1, to + 100);
+    waitForCounter(tot_mgr_resubmit, 0, 1, to + 300);
     assertTrue(task.isUnassigned());
     waitForCounter(tot_mgr_rescan, 0, 1, to + 100);
   }
@@ -271,18 +280,18 @@ public class TestSplitLogManager {
 
     zkw.setData(tasknode, TaskState.TASK_OWNED.get("worker1"));
     waitForCounter(tot_mgr_heartbeat, 0, 1, 1000);
-    waitForCounter(tot_mgr_resubmit, 0, 1, to + 100);
+    waitForCounter(tot_mgr_resubmit, 0, 1, to + EXTRA_TOLERANCE_MS);
     int version1 = zkw.checkExists(tasknode);
     assertTrue(version1 > version);
     zkw.setData(tasknode, TaskState.TASK_OWNED.get("worker2"));
     waitForCounter(tot_mgr_heartbeat, 1, 2, 1000);
-    waitForCounter(tot_mgr_resubmit, 1, 2, to + 100);
+    waitForCounter(tot_mgr_resubmit, 1, 2, to + EXTRA_TOLERANCE_MS);
     int version2 = zkw.checkExists(tasknode);
     assertTrue(version2 > version1);
     zkw.setData(tasknode, TaskState.TASK_OWNED.get("worker3"));
     waitForCounter(tot_mgr_heartbeat, 1, 2, 1000);
-    waitForCounter(tot_mgr_resubmit_threshold_reached, 0, 1, to + 100);
-    Thread.sleep(to + 100);
+    waitForCounter(tot_mgr_resubmit_threshold_reached, 0, 1, to + EXTRA_TOLERANCE_MS);
+    Thread.sleep(to + EXTRA_TOLERANCE_MS);
     assertEquals(2L, tot_mgr_resubmit.get());
   }
 

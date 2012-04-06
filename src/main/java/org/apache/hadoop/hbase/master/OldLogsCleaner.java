@@ -95,6 +95,10 @@ public class OldLogsCleaner extends Chore {
   protected void chore() {
     try {
       FileStatus[] files = this.fs.listStatus(this.oldLogDir);
+      if (files == null) {
+        // We don't have any files to process.
+        return;
+      }
       int nbDeletedLog = 0;
       for (FileStatus file : files) {
         Path filePath = file.getPath();

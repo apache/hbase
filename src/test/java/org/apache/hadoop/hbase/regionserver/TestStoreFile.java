@@ -68,6 +68,7 @@ public class TestStoreFile extends HBaseTestCase {
   private MiniDFSCluster cluster;
   private CacheConfig cacheConf;
   private Map<String, Long> startingMetrics;
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Override
   public void setUp() throws Exception {
@@ -352,7 +353,7 @@ public class TestStoreFile extends HBaseTestCase {
   }
 
   private static String ROOT_DIR =
-    HBaseTestingUtility.getTestDir("TestStoreFile").toString();
+    TEST_UTIL.getTestDir("TestStoreFile").toString();
   private static String localFormatter = "%010d";
 
   private void bloomWriteRead(StoreFile.Writer writer, FileSystem fs)

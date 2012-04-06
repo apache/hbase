@@ -63,7 +63,7 @@ public class TestScannerSelectionUsingTTL {
   private static String FAMILY = "myCF";
   private static byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
 
-  private static final int TTL_SECONDS = 2;
+  private static final int TTL_SECONDS = 10;
   private static final int TTL_MS = TTL_SECONDS * 1000;
 
   private static final int NUM_EXPIRED_FILES = 2;
@@ -103,7 +103,7 @@ public class TestScannerSelectionUsingTTL {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
     HRegion region = HRegion.createHRegion(
-        info, HBaseTestingUtility.getTestDir(), TEST_UTIL.getConfiguration());
+        info, TEST_UTIL.getTestDir(), TEST_UTIL.getConfiguration());
 
     for (int iFile = 0; iFile < totalNumFiles; ++iFile) {
       if (iFile == NUM_EXPIRED_FILES) {

@@ -52,7 +52,7 @@ public class TestCompactSelection extends TestCase {
   private Configuration conf;
   private Store store;
   private static final String DIR
-    = HBaseTestingUtility.getTestDir() + "/TestCompactSelection/";
+    = TEST_UTIL.getTestDir() + "/TestCompactSelection/";
   private static Path TEST_FILE;
 
   private static final int minFiles = 3;

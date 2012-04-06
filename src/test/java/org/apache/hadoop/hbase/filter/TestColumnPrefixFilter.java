@@ -38,8 +38,8 @@ public class TestColumnPrefixFilter {
     HTableDescriptor htd = new HTableDescriptor("TestColumnPrefixFilter");
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
-    HRegion region = HRegion.createHRegion(info, HBaseTestingUtility.
-        getTestDir(), TEST_UTIL.getConfiguration());
+    HRegion region = HRegion.createHRegion(info,
+        TEST_UTIL.getTestDir(), TEST_UTIL.getConfiguration());
     String row;
     Put p;
     row = "001";
@@ -73,8 +73,8 @@ public class TestColumnPrefixFilter {
     HTableDescriptor htd = new HTableDescriptor("TestColumnPrefixFilter");
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
-    HRegion region = HRegion.createHRegion(info, HBaseTestingUtility.
-        getTestDir(), TEST_UTIL.getConfiguration());
+    HRegion region = HRegion.createHRegion(info,
+        TEST_UTIL.getTestDir(), TEST_UTIL.getConfiguration());
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");
@@ -129,8 +129,8 @@ public class TestColumnPrefixFilter {
     HTableDescriptor htd = new HTableDescriptor("TestColumnPrefixFilter");
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd, null, null, false);
-    HRegion region = HRegion.createHRegion(info, HBaseTestingUtility.
-        getTestDir(), TEST_UTIL.getConfiguration());
+    HRegion region = HRegion.createHRegion(info,
+        TEST_UTIL.getTestDir(), TEST_UTIL.getConfiguration());
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");

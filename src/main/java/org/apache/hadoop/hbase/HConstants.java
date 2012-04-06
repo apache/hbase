@@ -479,6 +479,8 @@ public final class HConstants {
   /** Delay when waiting for a variable (HBASE-4712) */
   public static final int VARIABLE_WAIT_TIME_MS = 40;
 
+  public static final String LOAD_BALANCER_SLOP_KEY = "hbase.regions.slop";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

@@ -1005,6 +1005,10 @@ public class SplitLogManager implements Watcher {
       byte[] newData = RecoverableZooKeeper.removeMetaData(data);
       tot_mgr_get_data_result.incrementAndGet();
       if (rc != 0) {
+        if (rc == KeeperException.Code.SESSIONEXPIRED.intValue()) {
+          LOG.error("ZK session expired. Master is expected to shut down. Abandoning retries.");
+          return;
+        }
         if (rc == KeeperException.Code.NONODE.intValue()) {
           tot_mgr_get_data_nonode.incrementAndGet();
           // The task znode has been deleted. Must be some pending delete
@@ -1093,6 +1097,10 @@ public class SplitLogManager implements Watcher {
     @Override
     public void processResult(int rc, String path, Object ctx, String name) {
       if (rc != 0) {
+        if (rc == KeeperException.Code.SESSIONEXPIRED.intValue()) {
+          LOG.error("ZK session expired. Master is expected to shut down. Abandoning retries.");
+          return;
+        }
         Long retry_count = (Long)ctx;
         LOG.warn("rc=" + KeeperException.Code.get(rc) + " for "+ path +
             " retry=" + retry_count);

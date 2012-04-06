@@ -89,7 +89,8 @@ public class TestStore extends TestCase {
   long id = System.currentTimeMillis();
   Get get = new Get(row);
 
-  private static final String DIR = HBaseTestingUtility.getTestDir() + "/TestStore/";
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final String DIR = TEST_UTIL.getTestDir() + "/TestStore/";
 
   private static final int MAX_VERSION = 4;
 

@@ -85,7 +85,8 @@ public class TestHRegion extends HBaseTestCase {
   private static final String COLUMN_FAMILY = "MyCF";
 
   HRegion region = null;
-  private final String DIR = HBaseTestingUtility.getTestDir() +
+  private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final String DIR = TEST_UTIL.getTestDir() +
     "/TestHRegion/";
 
   private final int MAX_VERSIONS = 2;
