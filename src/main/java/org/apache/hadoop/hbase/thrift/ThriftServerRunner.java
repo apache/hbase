@@ -974,11 +974,11 @@ public class ThriftServerRunner implements Runnable {
           } else {
             if(famAndQf.length == 1) {
               put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY,
-                  m.value != null ? m.value.array()
+                  m.value != null ? getBytes(m.value)
                       : HConstants.EMPTY_BYTE_ARRAY);
             } else {
               put.add(famAndQf[0], famAndQf[1],
-                  m.value != null ? m.value.array()
+                  m.value != null ? getBytes(m.value)
                       : HConstants.EMPTY_BYTE_ARRAY);
             }
             put.setWriteToWAL(m.writeToWAL);
@@ -1032,11 +1032,11 @@ public class ThriftServerRunner implements Runnable {
           } else {
             if(famAndQf.length == 1) {
               put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY,
-                  m.value != null ? m.value.array()
+                  m.value != null ? getBytes(m.value)
                       : HConstants.EMPTY_BYTE_ARRAY);
             } else {
               put.add(famAndQf[0], famAndQf[1],
-                  m.value != null ? m.value.array()
+                  m.value != null ? getBytes(m.value)
                       : HConstants.EMPTY_BYTE_ARRAY);
             }
             put.setWriteToWAL(m.writeToWAL);
@@ -1401,8 +1401,8 @@ public class ThriftServerRunner implements Runnable {
       return;
     }
     for (Map.Entry<ByteBuffer, ByteBuffer> entry : attributes.entrySet()) {
-      String name = Bytes.toStringBinary(entry.getKey());
-      byte[] value =  Bytes.toBytes(entry.getValue());
+      String name = Bytes.toStringBinary(getBytes(entry.getKey()));
+      byte[] value =  getBytes(entry.getValue());
       op.setAttribute(name, value);
     }
   }
