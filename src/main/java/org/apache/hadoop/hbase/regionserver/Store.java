@@ -66,7 +66,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -1222,6 +1221,7 @@ public class Store extends SchemaConfigured implements HeapSize {
 
       // exclude bulk import files from minor compactions, if configured
       if (conf.getBoolean("hbase.hstore.compaction.exclude.bulk", false)) {
+        int previous = compactSelection.getFilesToCompact().size();
         compactSelection.getFilesToCompact().removeAll(Collections2.filter(
             compactSelection.getFilesToCompact(),
             new Predicate<StoreFile>() {
@@ -1230,6 +1230,9 @@ public class Store extends SchemaConfigured implements HeapSize {
                 return input.isBulkLoadResult();
               }
             }));
+        LOG.debug("Exclude " +
+            (compactSelection.getFilesToCompact().size() - previous) +
+            " store files from compaction");
       }
 
       // skip selection algorithm if we don't have enough files

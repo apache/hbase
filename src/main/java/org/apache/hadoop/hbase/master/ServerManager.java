@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.RegionManager.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.RackManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -894,6 +893,19 @@ public class ServerManager {
   public SortedMap<HServerLoad, Set<String>> getLoadToServers() {
     synchronized (this.loadToServers) {
       return Collections.unmodifiableSortedMap(this.loadToServers);
+    }
+  }
+
+  /**
+   * @return the list of the HServerAddress for all the online region servers.
+   */
+  public List<HServerAddress> getOnlineRegionServerList() {
+    synchronized(this.serversToServerInfo) {
+      List<HServerAddress> serverList = new ArrayList<HServerAddress>();
+      for (HServerInfo serverInfo: this.serversToServerInfo.values()) {
+        serverList.add(serverInfo.getServerAddress());
+      }
+      return serverList;
     }
   }
 

@@ -1062,6 +1062,9 @@ class FSRegionScanner implements Runnable {
           // skip because this is not a CF directory
           continue;
         }
+        if (cfStatus.getPath().getName().startsWith(".")) {
+          continue;
+        }
         FileStatus[] storeFileLists = fs.listStatus(cfStatus.getPath());
         if (null == storeFileLists) {
           continue;

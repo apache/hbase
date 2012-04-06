@@ -29,8 +29,10 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -42,7 +44,8 @@ import org.apache.hadoop.io.Writable;
  */
 public class AssignmentPlan implements Writable{
   protected static final Log LOG = LogFactory.getLog(
-      AssignmentPlan.class);
+      AssignmentPlan.class.getName());
+
   private static final int VERSION = 1;
 
   /** the map between each region and its favored region server list */
@@ -64,6 +67,42 @@ public class AssignmentPlan implements Writable{
     assignmentUpdateTS = new HashMap<HRegionInfo, Long>();
   }
 
+  /**
+   * Initialize the assignment plan with the existing primary region server map
+   * and the existing secondary/tertiary region server map
+   *
+   * if any regions cannot find the proper secondary / tertiary region server
+   * for whatever reason, just do NOT update the assignment plan for this region
+   * @param primaryRSMap
+   * @param secondaryAndTiteraryRSMap
+   */
+  public void initialize(Map<HRegionInfo, HServerAddress> primaryRSMap,
+      Map<HRegionInfo, Pair<HServerAddress, HServerAddress>> secondaryAndTertiaryRSMap) {
+    for (Map.Entry<HRegionInfo, Pair<HServerAddress, HServerAddress>> entry :
+      secondaryAndTertiaryRSMap.entrySet()) {
+      // Get the region info and their secondary/tertiary region server
+      HRegionInfo regionInfo = entry.getKey();
+      Pair<HServerAddress, HServerAddress> secondaryAndTertiaryPair =
+        entry.getValue();
+
+      // Get the primary region server
+      HServerAddress primaryRS = primaryRSMap.get(regionInfo);
+      if (primaryRS == null) {
+        LOG.error("No primary region server for region " +
+            regionInfo.getRegionNameAsString());
+        continue;
+      }
+
+      // Update the assignment plan with the favored nodes
+      List<HServerAddress> serverList = new ArrayList<HServerAddress>();
+      serverList.add(POSITION.PRIMARY.ordinal(), primaryRS);
+      serverList.add(POSITION.SECONDARY.ordinal(),
+          secondaryAndTertiaryPair.getFirst());
+      serverList.add(POSITION.TERTIARY.ordinal(),
+          secondaryAndTertiaryPair.getSecond());
+      this.updateAssignmentPlan(regionInfo, serverList);
+    }
+  }
   /**
    * Add an assignment to the plan
    * @param region
@@ -223,5 +262,19 @@ public class AssignmentPlan implements Writable{
      }
    }
    return true;
+ }
+
+ public static AssignmentPlan.POSITION getFavoredServerPosition(
+     List<HServerAddress> favoredNodes, HServerAddress server) {
+   if (favoredNodes == null || server == null ||
+       favoredNodes.size() != HConstants.FAVORED_NODES_NUM) {
+     return null;
+   }
+   for (AssignmentPlan.POSITION p : AssignmentPlan.POSITION.values()) {
+     if (favoredNodes.get(p.ordinal()).equals(server)) {
+       return p;
+     }
+   }
+   return null;
  }
 }

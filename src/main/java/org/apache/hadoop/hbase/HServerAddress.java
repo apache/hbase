@@ -34,10 +34,12 @@ import org.apache.hadoop.io.WritableComparable;
 public class HServerAddress implements WritableComparable<HServerAddress> {
   private InetSocketAddress address;
   private String stringValue;
+  private String hostAddress;
 
   public HServerAddress() {
     this.address = null;
     this.stringValue = null;
+    this.hostAddress = null;
   }
 
   /**
@@ -110,6 +112,9 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
 
   /** @return Bind address */
   public String getBindAddress() {
+    if (this.hostAddress != null)
+      return hostAddress;
+
     final InetAddress addr = address.getAddress();
     if (addr != null) {
       return addr.getHostAddress();
@@ -121,7 +126,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
   }
 
   private void checkBindAddressCanBeResolved() {
-    if (getBindAddress() == null) {
+    if ((this.hostAddress = getBindAddress()) == null) {
       throw new IllegalArgumentException("Could not resolve the"
           + " DNS name of " + stringValue);
     }

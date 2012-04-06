@@ -1076,9 +1076,10 @@ public class RegionManager {
     // 3.2 Put the favorite nodes into meta.
     if (favoriteNodeList != null) {
       String favoredNodes = RegionPlacement.getFavoredNodes(favoriteNodeList);
-      favoredNodes = favoredNodes.substring(0, favoredNodes.length() - 1);
       put.add(HConstants.CATALOG_FAMILY, HConstants.FAVOREDNODES_QUALIFIER,
           EnvironmentEdgeManager.currentTimeMillis(), favoredNodes.getBytes());
+      LOG.info("Create the region " + info.getRegionNameAsString() +
+          " with favored nodes " + favoredNodes);
     }
 
     server.put(metaRegionName, put);

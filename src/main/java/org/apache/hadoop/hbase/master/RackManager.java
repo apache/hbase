@@ -1,4 +1,4 @@
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.master;
 
 import java.util.Arrays;
 import java.util.List;
@@ -7,6 +7,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.IPv4AddressTruncationMapping;
@@ -40,9 +41,23 @@ public class RackManager {
    * @return the rack name of the server
    */
   public String getRack(HServerInfo info) {
+    if (info == null)
+      return HConstants.UNKNOWN_RACK;
+    return this.getRack(info.getServerAddress());
+  }
+
+  /**
+   * Get the name of the rack containing a server, according to the DNS to
+   * switch mapping.
+   * @param server the server for which to get the rack name
+   * @return the rack name of the server
+   */
+  public String getRack(HServerAddress server) {
+    if (server == null)
+      return HConstants.UNKNOWN_RACK;
+
     List<String> racks = switchMapping.resolve(Arrays.asList(
-        new String[]{info.getServerAddress().getInetSocketAddress()
-            .getAddress().getHostAddress()}));
+        new String[]{server.getBindAddress()}));
     if (racks != null && racks.size() > 0) {
       return racks.get(0);
     }
