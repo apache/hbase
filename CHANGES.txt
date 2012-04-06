@@ -15,7 +15,6 @@ Release 0.92.2 - Unreleased
                to an inexistent cluster
    HBASE-5624  Aborting regionserver when splitting region, may cause daughter
                region not assigned by ServerShutdownHandler (Chunhui Shen)
-   HBASE-5615  The master never does balance because of balancing the parent region (Xufeng)
    HBASE-5596  Few minor bugs from HBASE-5209 (David S. Wang)
    HBASE-5669  AggregationClient fails validation for open stoprow scan
                (Mubarak Seyed)
