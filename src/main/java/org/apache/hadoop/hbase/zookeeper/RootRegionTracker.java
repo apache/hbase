@@ -113,7 +113,7 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
     LOG.info("Setting ROOT region location in ZooKeeper as " + location);
     // Make the RootRegionServer pb and then get its bytes and save this as
     // the znode content.
-    byte [] data = getRootRegionServerZNodeContent(location);
+    byte [] data = getZNodeData(location);
     try {
       ZKUtil.createAndWatch(zookeeper, zookeeper.rootServerZNode, data);
     } catch(KeeperException.NodeExistsException nee) {
@@ -127,7 +127,7 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
    * @param sn What to put into the znode.
    * @return The content of the root-region-server znode
    */
-  static byte [] getRootRegionServerZNodeContent(final ServerName sn) {
+  static byte [] getZNodeData(final ServerName sn) {
     // ZNode content is a pb message preceeded by some pb magic.
     HBaseProtos.ServerName pbsn =
       HBaseProtos.ServerName.newBuilder().setHostName(sn.getHostname()).

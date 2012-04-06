@@ -42,3 +42,21 @@ message Master {
   // The ServerName of the current Master
   required ServerName master = 1;
 }
+
+// TODO: Put these two cluster attributes into the one znode.
+/**
+ * Content of the '/hbase/hbaseid', cluster id, znode.
+ */
+message ClusterId {
+  // This is the cluster id, a uuid as a String
+  required string clusterId = 1;
+}
+
+/**
+ * Content of the '/hbase/shutdown', cluster state, znode.
+ */
+message ClusterUp {
+  // If this znode is present, cluster is up.  Currently
+  // the data is cluster startDate.
+  required string startDate = 1;
+}

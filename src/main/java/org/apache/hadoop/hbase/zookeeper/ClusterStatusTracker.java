@@ -24,8 +24,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Tracker on cluster settings up in zookeeper.
@@ -52,7 +56,8 @@ public class ClusterStatusTracker extends ZooKeeperNodeTracker {
 
   /**
    * Checks if cluster is up.
-   * @return true if root region location is available, false if not
+   * @return true if the cluster up ('shutdown' is its name up in zk) znode
+   * exists with data, false if not
    */
   public boolean isClusterUp() {
     return super.getData(false) != null;
@@ -64,7 +69,7 @@ public class ClusterStatusTracker extends ZooKeeperNodeTracker {
    */
   public void setClusterUp()
   throws KeeperException {
-    byte [] upData = Bytes.toBytes(new java.util.Date().toString());
+    byte [] upData = getZNodeData();
     try {
       ZKUtil.createAndWatch(watcher, watcher.clusterStateZNode, upData);
     } catch(KeeperException.NodeExistsException nee) {
@@ -84,5 +89,16 @@ public class ClusterStatusTracker extends ZooKeeperNodeTracker {
       LOG.warn("Attempted to set cluster as down but already down, cluster " +
           "state node (" + watcher.clusterStateZNode + ") not found");
     }
+  }
+
+  /**
+   * @return Content of the clusterup znode as a serialized pb with the pb
+   * magic as prefix.
+   */
+  static byte [] getZNodeData() {
+    ZooKeeperProtos.ClusterUp.Builder builder =
+      ZooKeeperProtos.ClusterUp.newBuilder();
+    builder.setStartDate(new java.util.Date().toString());
+    return ProtobufUtil.prependPBMagic(builder.build().toByteArray());
   }
 }

@@ -22,8 +22,11 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.zookeeper.KeeperException;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Publishes and synchronizes a unique identifier specific to a given HBase
@@ -61,9 +64,9 @@ public class ClusterId {
   public static String readClusterIdZNode(ZooKeeperWatcher watcher)
       throws KeeperException {
     if (ZKUtil.checkExists(watcher, watcher.clusterIdZNode) != -1) {
-      byte[] data = ZKUtil.getData(watcher, watcher.clusterIdZNode);
+      byte [] data = ZKUtil.getData(watcher, watcher.clusterIdZNode);
       if (data != null) {
-        return Bytes.toString(data);
+        return getZNodeClusterId(data);
       }
     }
     return null;
@@ -71,6 +74,37 @@ public class ClusterId {
 
   public static void setClusterId(ZooKeeperWatcher watcher, String id)
       throws KeeperException {
-    ZKUtil.createSetData(watcher, watcher.clusterIdZNode, Bytes.toBytes(id));
+    ZKUtil.createSetData(watcher, watcher.clusterIdZNode, getZNodeData(id));
+  }
+
+  /**
+   * @param clusterid
+   * @return Content of the clusterid znode as a serialized pb with the pb
+   * magic as prefix.
+   */
+  static byte [] getZNodeData(final String clusterid) {
+    ZooKeeperProtos.ClusterId.Builder builder =
+      ZooKeeperProtos.ClusterId.newBuilder();
+    builder.setClusterId(clusterid);
+    return ProtobufUtil.prependPBMagic(builder.build().toByteArray());
+  }
+
+  /**
+   * @param data
+   * @return The clusterid extracted from the passed znode <code>data</code>
+   */
+  static String getZNodeClusterId(final byte [] data) {
+    if (data == null || data.length <= 0) return null;
+    // If no magic, something is seriously wrong.  Fail fast.
+    if (!ProtobufUtil.isPBMagicPrefix(data)) throw new RuntimeException("No magic preamble");
+    int prefixLen = ProtobufUtil.lengthOfPBMagic();
+    try {
+      ZooKeeperProtos.ClusterId clusterid =
+        ZooKeeperProtos.ClusterId.newBuilder().mergeFrom(data, prefixLen, data.length - prefixLen).build();
+      return clusterid.getClusterId();
+    } catch (InvalidProtocolBufferException e) {
+      // A failed parse of the znode is pretty catastrophic. Fail fast.
+      throw new RuntimeException(e);
+    }
   }
 }
