@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -35,28 +34,20 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
-import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
-import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
-import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
-import org.apache.hadoop.hbase.thrift.generated.Mutation;
-import org.apache.hadoop.hbase.thrift.generated.TCell;
-import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
+import org.apache.hadoop.hbase.thrift.TBoundedThreadPoolServer;
+import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift.ThriftServer;
-import org.apache.hadoop.hbase.thrift.ThriftServer.HBaseHandler;
 import org.apache.hadoop.hbase.thrift.ThriftUtilities;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.server.THsHaServer;
 import org.apache.thrift.server.TNonblockingServer;
 import org.apache.thrift.server.TServer;
-import org.apache.thrift.server.TThreadPoolServer;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TNonblockingServerTransport;
@@ -278,10 +269,20 @@ public class HRegionThriftServer extends Thread {
         } else {
           transportFactory = new TTransportFactory();
         }
-        LOG.info("starting HRegionServer ThreadPool Thrift server on " +
-                 listenAddress + ":" + this.port);
-        tserver = new TThreadPoolServer(processor, serverTransport,
-                                       transportFactory, protocolFactory);
+
+        TBoundedThreadPoolServer.Options serverOptions =
+            new TBoundedThreadPoolServer.Options(conf);
+
+        LOG.info("starting " + ThriftServer.THREAD_POOL_SERVER_CLASS.getSimpleName() + " on "
+            + listenAddress + ":" + Integer.toString(port)
+            + "; minimum number of worker threads="
+            + serverOptions.minWorkerThreads
+            + ", maximum number of worker threads="
+            + serverOptions.maxWorkerThreads + ", queued requests="
+            + serverOptions.maxQueuedRequests);
+        ThriftMetrics metrics = new ThriftMetrics(port, conf);
+        tserver = new TBoundedThreadPoolServer(processor, serverTransport,
+                                       transportFactory, protocolFactory, serverOptions, metrics);
       }
       tserver.serve();
     } catch (Exception e) {

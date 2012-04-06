@@ -49,7 +49,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 /**
  * A thread pool server customized for HBase.
  */
-public class HBaseThreadPoolServer extends TServer {
+public class TBoundedThreadPoolServer extends TServer {
 
   private static final String QUEUE_FULL_MSG =
       "Queue is full, closing connection";
@@ -75,7 +75,7 @@ public class HBaseThreadPoolServer extends TServer {
       "hbase.thrift.maxQueuedRequests";
 
   private static final Log LOG = LogFactory.getLog(
-      HBaseThreadPoolServer.class.getName());
+      TBoundedThreadPoolServer.class.getName());
 
   /**
    * Time to wait after interrupting all worker threads. This is after a clean
@@ -109,7 +109,7 @@ public class HBaseThreadPoolServer extends TServer {
 
   private final ThriftMetrics metrics;
 
-  public HBaseThreadPoolServer(TProcessor processor,
+  public TBoundedThreadPoolServer(TProcessor processor,
       TServerTransport serverTransport,
       TTransportFactory transportFactory,
       TProtocolFactory protocolFactory,
@@ -150,7 +150,7 @@ public class HBaseThreadPoolServer extends TServer {
     Runtime.getRuntime().addShutdownHook(new Thread(getClass().getSimpleName() + "-shutdown-hook") {
       @Override
       public void run() {
-        HBaseThreadPoolServer.this.stop();
+        TBoundedThreadPoolServer.this.stop();
       }
     });
 

@@ -92,8 +92,8 @@ import org.apache.thrift.transport.TTransportFactory;
  */
 public class ThriftServer {
 
-  private static final Class<? extends TServer>
-      THREAD_POOL_SERVER_CLASS = HBaseThreadPoolServer.class;
+  public static final Class<? extends TServer>
+      THREAD_POOL_SERVER_CLASS = TBoundedThreadPoolServer.class;
 
   /**
    * The HBaseHandler is a glue object that connects Thrift RPC calls to the
@@ -1123,23 +1123,23 @@ public class ThriftServer {
 
     // Make optional changes to the configuration based on command-line options
     if (cmd.hasOption("minWorkers")) {
-      conf.set(HBaseThreadPoolServer.MIN_WORKER_THREADS_CONF_KEY,
+      conf.set(TBoundedThreadPoolServer.MIN_WORKER_THREADS_CONF_KEY,
           cmd.getOptionValue("minWorkers"));
     }
 
     if (cmd.hasOption("workers")) {
-      conf.set(HBaseThreadPoolServer.MAX_WORKER_THREADS_CONF_KEY,
+      conf.set(TBoundedThreadPoolServer.MAX_WORKER_THREADS_CONF_KEY,
           cmd.getOptionValue("workers"));
     }
 
     if (cmd.hasOption("queue")) {
-      conf.set(HBaseThreadPoolServer.MAX_QUEUED_REQUESTS_CONF_KEY,
+      conf.set(TBoundedThreadPoolServer.MAX_QUEUED_REQUESTS_CONF_KEY,
           cmd.getOptionValue("queue"));
     }
 
     // Only instantiate this when finished modifying the configuration
-    HBaseThreadPoolServer.Options serverOptions =
-      new HBaseThreadPoolServer.Options(conf);
+    TBoundedThreadPoolServer.Options serverOptions =
+      new TBoundedThreadPoolServer.Options(conf);
 
     // Construct correct ProtocolFactory
     TProtocolFactory protocolFactory;
@@ -1187,7 +1187,8 @@ public class ThriftServer {
       } else {
         listenAddress = InetAddress.getLocalHost();
       }
-      TServerTransport serverTransport = new TServerSocket(new InetSocketAddress(listenAddress, listenPort));
+      TServerTransport serverTransport =
+          new TServerSocket(new InetSocketAddress(listenAddress, listenPort));
 
       // Construct correct TransportFactory
       TTransportFactory transportFactory;
@@ -1206,7 +1207,7 @@ public class ThriftServer {
           + serverOptions.maxWorkerThreads + ", queued requests="
           + serverOptions.maxQueuedRequests);
 
-      server = new HBaseThreadPoolServer(processor, serverTransport,
+      server = new TBoundedThreadPoolServer(processor, serverTransport,
           transportFactory, protocolFactory, serverOptions, metrics);
 
       if (server.getClass() != THREAD_POOL_SERVER_CLASS) {
