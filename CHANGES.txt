@@ -1,4 +1,4 @@
-SHBase Change Log
+HBase Change Log
 
 Release 0.90.7 - Unreleased
   BUG FIXES
@@ -15,6 +15,7 @@ Release 0.90.7 - Unreleased
    HBASE-5213  "hbase master stop" does not bring down backup masters (Gregory) 
    HBASE-5724  Row cache of KeyValue should be cleared in readFields().
                (Teruyoshi Zenmyo)
+   HBASE-5680  Improve compatibility warning about HBase with Hadoop 0.23.x
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition

@@ -290,7 +290,17 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         loop();
       }
     } catch (Throwable t) {
-      abort("Unhandled exception. Starting shutdown.", t);
+      // HBASE-5680: Likely hadoop23 vs hadoop 20.x/1.x incompatibility
+      if (t instanceof NoClassDefFoundError && 
+          t.getMessage().contains("org/apache/hadoop/hdfs/protocol/FSConstants$SafeModeAction")) {
+          // improved error message for this special case
+          abort("HBase is having a problem with its Hadoop jars.  You may need to "
+              + "recompile HBase against Hadoop version "
+              +  org.apache.hadoop.util.VersionInfo.getVersion()
+              + " or change your hadoop jars to start properly", t);
+      } else {
+        abort("Unhandled exception. Starting shutdown.", t);
+      }
     } finally {
       stopChores();
       // Wait for all the remaining region servers to report in IFF we were
