@@ -27,6 +27,7 @@ Release 0.92.2 - Unreleased
                (Prakash)
    HBASE-5724  Row cache of KeyValue should be cleared in readFields().
                (Teruyoshi Zenmyo)
+   HBASE-5680  Improve compatibilty warning about HBase with Hadoop 0.23.x
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
