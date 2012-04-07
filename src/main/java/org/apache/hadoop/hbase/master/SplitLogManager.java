@@ -539,12 +539,18 @@ public class SplitLogManager extends ZooKeeperListener {
           version) == false) {
         LOG.debug("failed to resubmit task " + path +
             " version changed");
+        task.heartbeatNoDetails(EnvironmentEdgeManager.currentTimeMillis());
         return false;
       }
     } catch (NoNodeException e) {
       LOG.warn("failed to resubmit because znode doesn't exist " + path +
           " task done (or forced done by removing the znode)");
       getDataSetWatchSuccess(path, null, Integer.MIN_VALUE);
+      return false;
+    } catch (KeeperException.BadVersionException e) {
+      LOG.debug("failed to resubmit task " + path +
+          " version changed");
+      task.heartbeatNoDetails(EnvironmentEdgeManager.currentTimeMillis());
       return false;
     } catch (KeeperException e) {
       tot_mgr_resubmit_failed.incrementAndGet();
@@ -716,7 +722,12 @@ public class SplitLogManager extends ZooKeeperListener {
 
   @Override
   public void nodeDataChanged(String path) {
-    if (tasks.get(path) != null || ZKSplitLog.isRescanNode(watcher, path)) {
+    Task task;
+    task = tasks.get(path);
+    if (task != null || ZKSplitLog.isRescanNode(watcher, path)) {
+      if (task != null) {
+        task.heartbeatNoDetails(EnvironmentEdgeManager.currentTimeMillis());
+      }
       getDataSetWatch(path, zkretries);
     }
   }
@@ -812,7 +823,11 @@ public class SplitLogManager extends ZooKeeperListener {
     }
 
     public boolean isUnassigned() {
-      return (last_update == -1);
+      return (cur_worker_name == null);
+    }
+
+    public void heartbeatNoDetails(long time) {
+      last_update = time;
     }
 
     public void heartbeat(long time, int version, String worker) {
