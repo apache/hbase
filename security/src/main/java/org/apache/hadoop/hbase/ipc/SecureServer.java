@@ -47,6 +47,8 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.collect.ImmutableSet;
+
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
@@ -83,6 +85,7 @@ public abstract class SecureServer extends HBaseServer {
   // 3 : Introduce the protocol into the RPC connection header
   // 4 : Introduced SASL security layer
   public static final byte CURRENT_VERSION = 4;
+  public static final Set<Byte> INSECURE_VERSIONS = ImmutableSet.of((byte) 3);
 
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.ipc.SecureServer");
   private static final Log AUDITLOG =
@@ -400,10 +403,17 @@ public abstract class SecureServer extends HBaseServer {
           dataLengthBuffer.flip();
           if (!HEADER.equals(dataLengthBuffer) || version != CURRENT_VERSION) {
             //Warning is ok since this is not supposed to happen.
-            LOG.warn("Incorrect header or version mismatch from " +
-                     hostAddress + ":" + remotePort +
-                     " got version " + version +
-                     " expected version " + CURRENT_VERSION);
+            if (INSECURE_VERSIONS.contains(version)) {
+              LOG.warn("An insecure client (version '" + version + "') is attempting to connect " +
+                  " to this version '" + CURRENT_VERSION + "' secure server from " +
+                  hostAddress + ":" + remotePort);
+            } else {
+              LOG.warn("Incorrect header or version mismatch from " +
+                  hostAddress + ":" + remotePort +
+                  " got version " + version +
+                  " expected version " + CURRENT_VERSION);              
+            }
+            
             return -1;
           }
           dataLengthBuffer.clear();
