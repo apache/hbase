@@ -2718,7 +2718,6 @@ public class HRegion implements HeapSize { // , Writable{
     long seqid = minSeqId;
     NavigableSet<Path> files = HLog.getSplitEditFilesSorted(this.fs, regiondir);
     if (files == null || files.isEmpty()) return seqid;
-    boolean checkSafeToSkip = true;
     for (Path edits: files) {
       if (edits == null || !this.fs.exists(edits)) {
         LOG.warn("Null or non-existent edits file: " + edits);
@@ -2726,22 +2725,15 @@ public class HRegion implements HeapSize { // , Writable{
       }
       if (isZeroLengthThenDelete(this.fs, edits)) continue;
 
-      if (checkSafeToSkip) {
-        Path higher = files.higher(edits);
-        long maxSeqId = Long.MAX_VALUE;
-        if (higher != null) {
-          // Edit file name pattern, HLog.EDITFILES_NAME_PATTERN: "-?[0-9]+"
-          String fileName = higher.getName();
-          maxSeqId = Math.abs(Long.parseLong(fileName));
-        }
-        if (maxSeqId <= minSeqId) {
-          String msg = "Maximum possible sequenceid for this log is " + maxSeqId
-              + ", skipped the whole file, path=" + edits;
-          LOG.debug(msg);
-          continue;
-        } else {
-          checkSafeToSkip = false;
-        }
+      long maxSeqId = Long.MAX_VALUE;
+      String fileName = edits.getName();
+      maxSeqId = Math.abs(Long.parseLong(fileName));
+      if (maxSeqId <= minSeqId) {
+        String msg = "Maximum sequenceid for this log is " + maxSeqId
+            + " and minimum sequenceid for the region is " + minSeqId
+            + ", skipped the whole file, path=" + edits;
+        LOG.debug(msg);
+        continue;
       }
 
       try {

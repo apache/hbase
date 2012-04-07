@@ -426,6 +426,7 @@ public class HLogSplitter {
           }
         }
         wap.w.append(entry);
+        outputSink.updateRegionMaximumEditLogSeqNum(entry);
         editsCount++;
         // If sufficient edits have passed OR we've opened a few files, check if
         // we should report progress.
@@ -455,7 +456,8 @@ public class HLogSplitter {
       throw e;
     } finally {
       int n = 0;
-      for (Object o : logWriters.values()) {
+      for (Map.Entry<byte[], Object> logWritersEntry : logWriters.entrySet()) {
+        Object o = logWritersEntry.getValue();
         long t1 = EnvironmentEdgeManager.currentTimeMillis();
         if ((t1 - last_report_at) > period) {
           last_report_at = t;
@@ -471,7 +473,8 @@ public class HLogSplitter {
         WriterAndPath wap = (WriterAndPath)o;
         wap.w.close();
         LOG.debug("Closed " + wap.p);
-        Path dst = getCompletedRecoveredEditsFilePath(wap.p);
+        Path dst = getCompletedRecoveredEditsFilePath(wap.p, outputSink
+            .getRegionMaximumEditLogSeqNum(logWritersEntry.getKey()));
         if (!dst.equals(wap.p) && fs.exists(dst)) {
           LOG.warn("Found existing old edits file. It could be the "
               + "result of a previous failed split attempt. Deleting " + dst
@@ -488,6 +491,7 @@ public class HLogSplitter {
           if (!fs.rename(wap.p, dst)) {
             throw new IOException("Failed renaming " + wap.p + " to " + dst);
           }
+          LOG.debug("Rename " + wap.p + " to " + dst);
         }
       }
       String msg = "Processed " + editsCount + " edits across " + n + " regions" +
@@ -681,16 +685,16 @@ public class HLogSplitter {
   }
 
   /**
-   * Convert path to a file under RECOVERED_EDITS_DIR directory without
-   * RECOVERED_LOG_TMPFILE_SUFFIX
+   * Get the completed recovered edits file path, renaming it to be by last edit
+   * in the file from its first edit. Then we could use the name to skip
+   * recovered edits when doing {@link HRegion#replayRecoveredEditsIfAny}.
    * @param srcPath
-   * @return dstPath without RECOVERED_LOG_TMPFILE_SUFFIX
+   * @param maximumEditLogSeqNum
+   * @return dstPath take file's last edit log seq num as the name
    */
-  static Path getCompletedRecoveredEditsFilePath(Path srcPath) {
-    String fileName = srcPath.getName();
-    if (fileName.endsWith(HLog.RECOVERED_LOG_TMPFILE_SUFFIX)) {
-      fileName = fileName.split(HLog.RECOVERED_LOG_TMPFILE_SUFFIX)[0];
-    }
+  static Path getCompletedRecoveredEditsFilePath(Path srcPath,
+      Long maximumEditLogSeqNum) {
+    String fileName = formatRecoveredEditsFileName(maximumEditLogSeqNum);
     return new Path(srcPath.getParent(), fileName);
   }
 
@@ -1027,6 +1031,7 @@ public class HLogSplitter {
       }
     }
 
+
     private void writeBuffer(RegionEntryBuffer buffer) throws IOException {
       List<Entry> entries = buffer.entryBuffer;
       if (entries.isEmpty()) {
@@ -1050,6 +1055,7 @@ public class HLogSplitter {
             }
           }
           wap.w.append(logEntry);
+          outputSink.updateRegionMaximumEditLogSeqNum(logEntry);
           editsCount++;
         }
         // Pass along summary statistics
@@ -1138,6 +1144,8 @@ public class HLogSplitter {
   class OutputSink {
     private final Map<byte[], WriterAndPath> logWriters = Collections.synchronizedMap(
           new TreeMap<byte[], WriterAndPath>(Bytes.BYTES_COMPARATOR));
+    private final Map<byte[], Long> regionMaximumEditLogSeqNum = Collections
+        .synchronizedMap(new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR));
     private final List<WriterThread> writerThreads = Lists.newArrayList();
 
     /* Set of regions which we've decided should not output edits */
@@ -1204,8 +1212,11 @@ public class HLogSplitter {
       List<Path> paths = new ArrayList<Path>();
       List<IOException> thrown = Lists.newArrayList();
       closeLogWriters(thrown);
-      for (WriterAndPath wap : logWriters.values()) {
-        Path dst = getCompletedRecoveredEditsFilePath(wap.p);
+      for (Map.Entry<byte[], WriterAndPath> logWritersEntry : logWriters
+          .entrySet()) {
+        WriterAndPath wap = logWritersEntry.getValue();
+        Path dst = getCompletedRecoveredEditsFilePath(wap.p,
+            regionMaximumEditLogSeqNum.get(logWritersEntry.getKey()));
         try {
           if (!dst.equals(wap.p) && fs.exists(dst)) {
             LOG.warn("Found existing old edits file. It could be the "
@@ -1223,6 +1234,7 @@ public class HLogSplitter {
             if (!fs.rename(wap.p, dst)) {
               throw new IOException("Failed renaming " + wap.p + " to " + dst);
             }
+            LOG.debug("Rename " + wap.p + " to " + dst);
           }
         } catch (IOException ioe) {
           LOG.error("Couldn't rename " + wap.p + " to " + dst, ioe);
@@ -1287,6 +1299,18 @@ public class HLogSplitter {
       }
       logWriters.put(region, ret);
       return ret;
+    }
+
+    /**
+     * Update region's maximum edit log SeqNum.
+     */
+    void updateRegionMaximumEditLogSeqNum(Entry entry) {
+      regionMaximumEditLogSeqNum.put(entry.getKey().getEncodedRegionName(),
+          entry.getKey().getLogSeqNum());
+    }
+
+    Long getRegionMaximumEditLogSeqNum(byte[] region) {
+      return regionMaximumEditLogSeqNum.get(region);
     }
 
     /**
