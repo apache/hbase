@@ -40,6 +40,7 @@ Release 0.92.2 - Unreleased
    HBASE-5436  Right-size the map when reading attributes (Benoit)
    HBASE-5533  Add more metrics to HBase (Shaneal Manek)
    HBASE-5734  Change hbck sideline root (Jimmy Xiang)
+   HBASE-5656  LoadIncrementalHFiles createTable should detect and set compression algorithm(Cosmin Lehene)
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems

@@ -643,6 +643,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
             new CacheConfig(getConf()));
         final byte[] first, last;
         try {
+          if (hcd.getCompressionType() != reader.getCompressionAlgorithm()) {
+            hcd.setCompressionType(reader.getCompressionAlgorithm());
+            LOG.info("Setting compression " + hcd.getCompressionType().name() +
+                     " for family " + hcd.toString());
+          }
           reader.loadFileInfo();
           first = reader.getFirstRowKey();
           last =  reader.getLastRowKey();
