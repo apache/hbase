@@ -2073,6 +2073,23 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
   }
 
   /**
+   * Return the appropriate DUMMY_HEADER for the minor version
+   */
+  public byte[] getDummyHeaderForVersion() {
+    return getDummyHeaderForVersion(minorVersion);
+  }
+
+  /**
+   * Return the appropriate DUMMY_HEADER for the minor version
+   */
+  static private byte[] getDummyHeaderForVersion(int minorVersion) {
+    if (minorVersion < MINOR_VERSION_WITH_CHECKSUM) {
+      return DUMMY_HEADER_NO_CHECKSUM;
+    }
+    return DUMMY_HEADER;
+  }
+
+  /**
    * Convert the contents of the block header into a human readable string.
    * This is mostly helpful for debugging. This assumes that the block
    * has minor version > 0.

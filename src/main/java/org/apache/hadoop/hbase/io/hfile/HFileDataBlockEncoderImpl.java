@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -65,19 +66,26 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   public static HFileDataBlockEncoder createFromFileInfo(
       FileInfo fileInfo, DataBlockEncoding preferredEncodingInCache)
       throws IOException {
-    byte[] dataBlockEncodingType =
-        fileInfo.get(StoreFile.DATA_BLOCK_ENCODING);
-    if (dataBlockEncodingType == null) {
+    
+    boolean hasPreferredCacheEncoding = preferredEncodingInCache != null
+        && preferredEncodingInCache != DataBlockEncoding.NONE;
+
+    byte[] dataBlockEncodingType = fileInfo.get(StoreFile.DATA_BLOCK_ENCODING);
+    if (dataBlockEncodingType == null && !hasPreferredCacheEncoding) {
       return NoOpDataBlockEncoder.INSTANCE;
     }
 
-    String dataBlockEncodingStr = Bytes.toString(dataBlockEncodingType);
     DataBlockEncoding onDisk;
-    try {
-      onDisk = DataBlockEncoding.valueOf(dataBlockEncodingStr);
-    } catch (IllegalArgumentException ex) {
-      throw new IOException("Invalid data block encoding type in file info: " +
-          dataBlockEncodingStr, ex);
+    if (dataBlockEncodingType == null) {
+      onDisk = DataBlockEncoding.NONE;
+    }else {
+      String dataBlockEncodingStr = Bytes.toString(dataBlockEncodingType);
+      try {
+        onDisk = DataBlockEncoding.valueOf(dataBlockEncodingStr);
+      } catch (IllegalArgumentException ex) {
+        throw new IOException("Invalid data block encoding type in file info: "
+            + dataBlockEncodingStr, ex);
+      }
     }
 
     DataBlockEncoding inCache;
@@ -194,7 +202,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
       DataBlockEncoding algo, boolean includesMemstoreTS) {
     ByteBuffer compressedBuffer = encodeBufferToHFileBlockBuffer(
         block.getBufferWithoutHeader(), algo, includesMemstoreTS,
-        HFileBlock.DUMMY_HEADER);
+        block.getDummyHeaderForVersion());
     int sizeWithoutHeader = compressedBuffer.limit() - block.headerSize();
     HFileBlock encodedBlock = new HFileBlock(BlockType.ENCODED_DATA,
         block.getOnDiskSizeWithoutHeader(),
