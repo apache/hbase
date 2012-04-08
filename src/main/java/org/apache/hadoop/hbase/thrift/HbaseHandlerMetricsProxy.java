@@ -63,7 +63,7 @@ public class HbaseHandlerMetricsProxy implements InvocationHandler {
     try {
       long start = now();
       result = m.invoke(handler, args);
-      int processTime = (int)(now() - start);
+      long processTime = now() - start;
       metrics.incMethodTime(m.getName(), processTime);
     } catch (InvocationTargetException e) {
       throw e.getTargetException();

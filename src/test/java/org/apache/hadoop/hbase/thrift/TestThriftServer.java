@@ -28,10 +28,12 @@ import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
+import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -105,12 +107,27 @@ public class TestThriftServer extends HBaseClusterTestCase {
     handler.deleteTable(tableAname);
   }
 
+  public static final class MySlowHBaseHandler extends ThriftServer.HBaseHandler
+      implements Hbase.Iface {
+
+    protected MySlowHBaseHandler(Configuration c, ThriftMetrics metrics)
+        throws IOException {
+      super(c, metrics);
+    }
+
+    @Override
+    public List<byte[]> getTableNames() throws IOError {
+      Threads.sleepWithoutInterrupt(3000);
+      return super.getTableNames();
+    }
+  }
+
   /**
    * Tests if the metrics for thrift handler work correctly
    */
   public void doTestThriftMetrics() throws Exception {
     ThriftMetrics metrics = getMetrics(conf);
-    Hbase.Iface handler = getHandler(metrics, conf);
+    Hbase.Iface handler = getHandlerForMetricsTest(metrics, conf);
     handler.createTable(tableAname, getColumnDescriptors());
     handler.disableTable(tableAname);
     handler.deleteTable(tableAname);
@@ -120,12 +137,16 @@ public class TestThriftServer extends HBaseClusterTestCase {
     verifyMetrics(metrics, "createTable_num_ops", 2);
     verifyMetrics(metrics, "deleteTable_num_ops", 2);
     verifyMetrics(metrics, "disableTable_num_ops", 2);
+    handler.getTableNames(); // This will have an artificial delay.
+
+    // 3 to 6 seconds (to account for potential slowness), measured in nanoseconds.
+    verifyMetricRange(metrics, "getTableNames_avg_time", 3L * 1000 * 1000 * 1000,
+        6L * 1000 * 1000 * 1000);
   }
 
-  private static Hbase.Iface getHandler(ThriftMetrics metrics, Configuration conf)
+  private static Hbase.Iface getHandlerForMetricsTest(ThriftMetrics metrics, Configuration conf)
       throws Exception {
-    Hbase.Iface handler =
-      new ThriftServer.HBaseHandler(conf);
+    Hbase.Iface handler = new MySlowHBaseHandler(conf, metrics);
     return HbaseHandlerMetricsProxy.newInstance(handler, metrics, conf);
   }
 
@@ -143,14 +164,29 @@ public class TestThriftServer extends HBaseClusterTestCase {
                .createRecord(ThriftMetrics.CONTEXT_NAME).remove();
   }
 
-  private static void verifyMetrics(ThriftMetrics metrics, String name, int expectValue)
+  private static void verifyMetrics(ThriftMetrics metrics, String name, long expectValue)
       throws Exception {
+    long metricVal = getMetricValue(metrics, name);
+    assertEquals(expectValue, metricVal);
+  }
+
+  private static void verifyMetricRange(ThriftMetrics metrics, String name,
+      long minValue, long maxValue)
+      throws Exception {
+    long metricVal = getMetricValue(metrics, name);
+    if (metricVal < minValue || metricVal > maxValue) {
+      throw new AssertionError("Value of metric " + name + " is outside of the expected " +
+          "range [" +  minValue + ", " + maxValue + "]: " + metricVal);
+    }
+  }
+
+  private static long getMetricValue(ThriftMetrics metrics, String name) {
     MetricsContext context = MetricsUtil.getContext(
         ThriftMetrics.CONTEXT_NAME);
     metrics.doUpdates(context);
     OutputRecord record = context.getAllRecords().get(
         ThriftMetrics.CONTEXT_NAME).iterator().next();
-    assertEquals(expectValue, record.getMetric(name).intValue());
+    return record.getMetric(name).longValue();
   }
 
   /**
