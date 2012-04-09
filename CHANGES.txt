@@ -32,6 +32,7 @@ Release 0.92.2 - Unreleased
                secure HBase server (Shaneal Manek)
    HBASE-5618  SplitLogManager - prevent unnecessary attempts to resubmits
                (Prakash Khemani)
+   HBASE-5748  Enable lib directory in jar file for coprocessor (Takuya Ueshin)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
