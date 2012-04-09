@@ -26,6 +26,7 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -594,11 +595,13 @@ public class ZKUtil {
       ZooKeeperWatcher zkw, String baseNode) throws KeeperException {
     List<String> nodes =
       ZKUtil.listChildrenAndWatchForNewChildren(zkw, baseNode);
-    List<NodeAndData> newNodes = new ArrayList<NodeAndData>();
-    for (String node: nodes) {
-      String nodePath = ZKUtil.joinZNode(baseNode, node);
-      byte [] data = ZKUtil.getDataAndWatch(zkw, nodePath);
-      newNodes.add(new NodeAndData(nodePath, data));
+    List<NodeAndData> newNodes = Collections.emptyList();
+    if (nodes != null) {
+      for (String node : nodes) {
+        String nodePath = ZKUtil.joinZNode(baseNode, node);
+        byte[] data = ZKUtil.getDataAndWatch(zkw, nodePath);
+        newNodes.add(new NodeAndData(nodePath, data));
+      }
     }
     return newNodes;
   }
