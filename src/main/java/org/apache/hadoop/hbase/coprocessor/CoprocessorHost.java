@@ -39,12 +39,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.io.IOUtils;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 /**
  * Provides the common setup framework and runtime services for coprocessor
@@ -195,6 +199,21 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       // method which returns URLs for as long as it is available
       List<URL> paths = new ArrayList<URL>();
       paths.add(new File(dst.toString()).getCanonicalFile().toURL());
+
+      JarFile jarFile = new JarFile(dst.toString());
+      Enumeration<JarEntry> entries = jarFile.entries();
+      while (entries.hasMoreElements()) {
+        JarEntry entry = entries.nextElement();
+        if (entry.getName().matches("/lib/[^/]+\\.jar")) {
+          File file = new File(System.getProperty("java.io.tmpdir") +
+              java.io.File.separator +"." + pathPrefix +
+              "." + className + "." + System.currentTimeMillis() + "." + entry.getName().substring(5));
+          IOUtils.copyBytes(jarFile.getInputStream(entry), new FileOutputStream(file), conf, true);
+          file.deleteOnExit();
+          paths.add(file.toURL());
+        }
+      }
+
       StringTokenizer st = new StringTokenizer(cp, File.pathSeparator);
       while (st.hasMoreTokens()) {
         paths.add((new File(st.nextToken())).getCanonicalFile().toURL());
