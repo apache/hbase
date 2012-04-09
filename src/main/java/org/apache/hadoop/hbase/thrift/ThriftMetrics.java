@@ -98,16 +98,16 @@ public class ThriftMetrics implements Updater {
     numRowKeysInBatchMutate.inc(diff);
   }
 
-  public void incMethodTime(String name, int time) {
-    MetricsTimeVaryingRate methodTimeMetrc = getMethodTimeMetrics(name);
-    if (methodTimeMetrc == null) {
+  public void incMethodTime(String name, long time) {
+    MetricsTimeVaryingRate methodTimeMetric = getMethodTimeMetrics(name);
+    if (methodTimeMetric == null) {
       LOG.warn(
           "Got incMethodTime() request for method that doesnt exist: " + name);
       return; // ignore methods that dont exist.
     }
 
     // inc method specific processTime
-    methodTimeMetrc.inc(time);
+    methodTimeMetric.inc(time);
 
     // inc general processTime
     thriftCall.inc(time);
