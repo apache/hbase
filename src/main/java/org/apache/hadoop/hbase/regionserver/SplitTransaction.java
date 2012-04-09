@@ -229,9 +229,9 @@ public class SplitTransaction {
 
     // If true, no cluster to write meta edits to or to update znodes in.
     boolean testing = server == null? true:
-      server.getConfiguration().getBoolean("hbase.testing.nocluster", false);
+        server.getConfiguration().getBoolean("hbase.testing.nocluster", false);
     this.fileSplitTimeout = testing ? this.fileSplitTimeout :
-      server.getConfiguration().getLong("hbase.regionserver.fileSplitTimeout",
+        server.getConfiguration().getLong("hbase.regionserver.fileSplitTimeout",
           this.fileSplitTimeout);
 
     // Set ephemeral SPLITTING znode up in zk.  Mocked servers sometimes don't
@@ -686,7 +686,7 @@ public class SplitTransaction {
     Path regionDir = getSplitDirForDaughter(this.parent.getFilesystem(),
       this.splitdir, hri);
     HRegion r = HRegion.newHRegion(this.parent.getTableDir(),
-      this.parent.getLog(), fs, this.parent.getConf(),
+      this.parent.getLog(), fs, this.parent.getBaseConf(),
       hri, this.parent.getTableDesc(), rsServices);
     r.readRequestsCount.set(this.parent.getReadRequestsCount() / 2);
     r.writeRequestsCount.set(this.parent.getWriteRequestsCount() / 2);

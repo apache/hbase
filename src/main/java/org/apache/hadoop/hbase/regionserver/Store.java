@@ -171,9 +171,10 @@ public class Store extends SchemaConfigured implements HeapSize {
    * @throws IOException
    */
   protected Store(Path basedir, HRegion region, HColumnDescriptor family,
-    FileSystem fs, Configuration conf)
+      FileSystem fs, Configuration confParam)
   throws IOException {
-    super(conf, region.getRegionInfo().getTableNameAsString(),
+    super(new CompoundConfiguration().add(confParam).add(
+        family.getValues()), region.getRegionInfo().getTableNameAsString(),
         Bytes.toString(family.getName()));
     HRegionInfo info = region.getRegionInfo();
     this.fs = fs;
@@ -183,7 +184,10 @@ public class Store extends SchemaConfigured implements HeapSize {
     this.homedir = createStoreHomeDir(this.fs, p);
     this.region = region;
     this.family = family;
-    this.conf = conf;
+    // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
+    this.conf = new CompoundConfiguration()
+      .add(confParam)
+      .add(family.getValues());
     this.blocksize = family.getBlocksize();
 
     this.dataBlockEncoder =
@@ -209,6 +213,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     this.minFilesToCompact = Math.max(2,
       conf.getInt("hbase.hstore.compaction.min",
         /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
+    LOG.info("hbase.hstore.compaction.min = " + this.minFilesToCompact);
 
     // Setting up cache configuration for this family
     this.cacheConf = new CacheConfig(conf, family);

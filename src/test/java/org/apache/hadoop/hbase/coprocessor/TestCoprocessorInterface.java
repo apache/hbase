@@ -258,9 +258,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
   HRegion reopenRegion(final HRegion closedRegion, Class<?> implClass)
       throws IOException {
     //HRegionInfo info = new HRegionInfo(tableName, null, null, false);
-    HRegion r = new HRegion(closedRegion.getTableDir(), closedRegion.getLog(),
-        closedRegion.getFilesystem(), closedRegion.getConf(),
-        closedRegion.getRegionInfo(), closedRegion.getTableDesc(), null);
+    HRegion r = new HRegion(closedRegion);
     r.initialize();
 
     // this following piece is a hack. currently a coprocessorHost
