@@ -605,7 +605,7 @@ public class ZKUtil {
       ZooKeeperWatcher zkw, String baseNode) throws KeeperException {
     List<String> nodes =
       ZKUtil.listChildrenAndWatchForNewChildren(zkw, baseNode);
-    List<NodeAndData> newNodes = Collections.emptyList();
+    List<NodeAndData> newNodes = new ArrayList<NodeAndData>();
     if (nodes != null) {
       for (String node : nodes) {
         String nodePath = ZKUtil.joinZNode(baseNode, node);

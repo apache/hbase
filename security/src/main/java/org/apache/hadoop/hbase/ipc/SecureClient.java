@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.security.TokenInfo;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSelector;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.RemoteException;
@@ -152,6 +153,39 @@ public class SecureClient extends HBaseClient {
         } catch (IOException ioe) {
           LOG.info("Error disposing of SASL client", ioe);
         }
+      }
+    }
+    
+    @Override
+    protected void sendParam(Call call) {
+      if (shouldCloseConnection.get()) {
+        return;
+      }
+      // For serializing the data to be written.
+
+      final DataOutputBuffer d = new DataOutputBuffer();
+      try {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(getName() + " sending #" + call.id);
+        }
+        d.writeInt(0xdeadbeef); // placeholder for data length
+        d.writeInt(call.id);
+        call.param.write(d);
+        byte[] data = d.getData();
+        int dataLength = d.getLength();
+        // fill in the placeholder
+        Bytes.putInt(data, 0, dataLength - 4);
+        //noinspection SynchronizeOnNonFinalField
+        synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
+          out.write(data, 0, dataLength);
+          out.flush();
+        }
+      } catch(IOException e) {
+        markClosed(e);
+      } finally {
+        //the buffer is just an in-memory buffer, but it is still polite to
+        // close early
+        IOUtils.closeStream(d);
       }
     }
 
