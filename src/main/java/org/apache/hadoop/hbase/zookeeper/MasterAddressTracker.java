@@ -68,7 +68,19 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    * @return Server name or null if timed out.
    */
   public ServerName getMasterAddress() {
-    return ZKUtil.znodeContentToServerName(super.getData(false));
+    return getMasterAddress(false);
+  }
+
+  /**
+   * Get the address of the current master if one is available.  Returns null
+   * if no current master. If refresh is set, try to load the data from ZK again,
+   * otherwise, cached data will be used.
+   *
+   * @param refresh whether to refresh the data by calling ZK directly.
+   * @return Server name or null if timed out.
+   */
+  public ServerName getMasterAddress(final boolean refresh) {
+    return ZKUtil.znodeContentToServerName(super.getData(refresh));
   }
 
   /**

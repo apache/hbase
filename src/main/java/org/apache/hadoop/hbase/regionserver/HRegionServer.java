@@ -1774,8 +1774,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     ServerName masterServerName = null;
     long previousLogTime = 0;
     HMasterRegionInterface master = null;
+    boolean refresh = false; // for the first time, use cached data
     while (keepLooping() && master == null) {
-      masterServerName = this.masterAddressManager.getMasterAddress();
+      masterServerName = this.masterAddressManager.getMasterAddress(refresh);
       if (masterServerName == null) {
         if (!keepLooping()) {
           // give up with no connection.
@@ -1784,6 +1785,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         }
         LOG.debug("No master found; retry");
         previousLogTime = System.currentTimeMillis();
+        refresh = true; // let's try pull it from ZK directly
 
         sleeper.sleep();
         continue;
