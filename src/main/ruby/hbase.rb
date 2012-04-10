@@ -44,6 +44,7 @@ module HBaseConstants
   NAME = HConstants::NAME
   VERSIONS = HConstants::VERSIONS
   IN_MEMORY = HConstants::IN_MEMORY
+  CONFIG = HConstants::CONFIG
   STOPROW = "STOPROW"
   STARTROW = "STARTROW"
   ENDROW = STOPROW

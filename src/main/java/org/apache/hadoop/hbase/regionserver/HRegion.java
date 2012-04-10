@@ -192,6 +192,7 @@ public class HRegion implements HeapSize {
   final HLog log;
   final FileSystem fs;
   final Configuration conf;
+  final Configuration baseConf;
   final HRegionInfo regionInfo;
   final Path regiondir;
   KeyValue.KVComparator comparator;
@@ -401,6 +402,7 @@ public class HRegion implements HeapSize {
     this.tableDir = null;
     this.blockingMemStoreSize = 0L;
     this.conf = null;
+    this.baseConf = null;
     this.flushListener = null;
     this.fs = null;
     this.timestampTooNew = HConstants.LATEST_TIMESTAMP;
@@ -410,6 +412,16 @@ public class HRegion implements HeapSize {
     this.regionInfo = null;
     this.threadWakeFrequency = 0L;
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
+  }
+
+  /**
+   * HRegion copy constructor. Useful when reopening a closed region (normally
+   * for unit tests)
+   * @param other original object
+   */
+  public HRegion(HRegion other) {
+    this(other.getTableDir(), other.getLog(), other.getFilesystem(),
+        other.baseConf, other.getRegionInfo(), null);
   }
 
   /**
@@ -438,13 +450,21 @@ public class HRegion implements HeapSize {
    * @see HRegion#newHRegion(Path, HLog, FileSystem, Configuration, org.apache.hadoop.hbase.HRegionInfo, FlushRequester)
 
    */
-  public HRegion(Path tableDir, HLog log, FileSystem fs, Configuration conf,
-      final HRegionInfo regionInfo, FlushRequester flushListener) {
+  public HRegion(Path tableDir, HLog log, FileSystem fs,
+      Configuration confParam, final HRegionInfo regionInfo,
+      FlushRequester flushListener) {
     this.tableDir = tableDir;
     this.comparator = regionInfo.getComparator();
     this.log = log;
     this.fs = fs;
-    this.conf = conf;
+    if (confParam instanceof CompoundConfiguration) {
+      throw new IllegalArgumentException("Need original base configuration");
+    }
+    // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
+    this.baseConf = confParam;
+    this.conf = new CompoundConfiguration()
+        .add(confParam)
+        .add(regionInfo.getTableDesc().getValues());
     this.regionInfo = regionInfo;
     this.flushListener = flushListener;
     this.threadWakeFrequency = conf.getLong(HConstants.THREAD_WAKE_FREQUENCY,
@@ -928,11 +948,6 @@ public class HRegion implements HeapSize {
     return this.log;
   }
 
-  /** @return Configuration object */
-  public Configuration getConf() {
-    return this.conf;
-  }
-
   /** @return region directory Path */
   public Path getRegionDir() {
     return this.regiondir;
@@ -1051,10 +1066,10 @@ public class HRegion implements HeapSize {
       // Create a region instance and then move the splits into place under
       // regionA and regionB.
       HRegion regionA =
-        HRegion.newHRegion(tableDir, log, fs, conf, regionAInfo, null);
+        HRegion.newHRegion(tableDir, log, fs, baseConf, regionAInfo, null);
       moveInitialFilesIntoPlace(this.fs, dirA, regionA.getRegionDir());
       HRegion regionB =
-        HRegion.newHRegion(tableDir, log, fs, conf, regionBInfo, null);
+        HRegion.newHRegion(tableDir, log, fs, baseConf, regionBInfo, null);
       moveInitialFilesIntoPlace(this.fs, dirB, regionB.getRegionDir());
 
       return new HRegion [] {regionA, regionB};
@@ -3421,7 +3436,7 @@ public class HRegion implements HeapSize {
       listPaths(fs, b.getRegionDir());
     }
 
-    Configuration conf = a.getConf();
+    Configuration conf = a.baseConf;
     HTableDescriptor tabledesc = a.getTableDesc();
     HLog log = a.getLog();
     Path tableDir = a.getTableDir();

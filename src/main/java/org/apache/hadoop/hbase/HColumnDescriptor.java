@@ -24,7 +24,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -155,9 +157,14 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public static final int DEFAULT_REPLICATION_SCOPE = HConstants.REPLICATION_SCOPE_LOCAL;
 
-  private final static Map<String, String> DEFAULT_VALUES = new HashMap<String, String>();
+  private final static Map<String, String> DEFAULT_VALUES
+    = new HashMap<String, String>();
+  private final static Set<ImmutableBytesWritable> RESERVED_KEYWORDS
+    = new HashSet<ImmutableBytesWritable>();
   static {
       DEFAULT_VALUES.put(BLOOMFILTER, DEFAULT_BLOOMFILTER);
+      DEFAULT_VALUES.put(BLOOMFILTER_ERRORRATE,
+          String.valueOf(DEFAULT_BLOOMFILTER_ERROR_RATE));
       DEFAULT_VALUES.put(REPLICATION_SCOPE, String.valueOf(DEFAULT_REPLICATION_SCOPE));
       DEFAULT_VALUES.put(HConstants.VERSIONS, String.valueOf(DEFAULT_VERSIONS));
       DEFAULT_VALUES.put(COMPRESSION, DEFAULT_COMPRESSION);
@@ -169,14 +176,16 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
           String.valueOf(DEFAULT_ENCODE_ON_DISK));
       DEFAULT_VALUES.put(DATA_BLOCK_ENCODING,
           String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
+      for (String s : DEFAULT_VALUES.keySet()) {
+        RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
+      }
   }
-
 
   // Column family name
   private byte [] name;
 
   // Column metadata
-  protected Map<ImmutableBytesWritable,ImmutableBytesWritable> values =
+  protected final Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
     new HashMap<ImmutableBytesWritable,ImmutableBytesWritable>();
 
   /*
@@ -415,6 +424,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return All values.
    */
   public Map<ImmutableBytesWritable,ImmutableBytesWritable> getValues() {
+    // shallow pointer copy
     return Collections.unmodifiableMap(values);
   }
 
@@ -442,7 +452,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setValue(String key, String value) {
-    setValue(Bytes.toBytes(key), Bytes.toBytes(value));
+    if (value == null) {
+      remove(Bytes.toBytes(key));
+    } else {
+      setValue(Bytes.toBytes(key), Bytes.toBytes(value));
+    }
     return this;
   }
 
@@ -700,16 +714,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     s.append(" => '");
     s.append(Bytes.toString(name));
     s.append("'");
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-        values.entrySet()) {
-      String key = Bytes.toString(e.getKey().get());
-      String value = Bytes.toString(e.getValue().get());
-      s.append(", ");
-      s.append(key);
-      s.append(" => '");
-      s.append(value);
-      s.append("'");
-    }
+    s.append(getValues(true));
     s.append('}');
     return s.toString();
   }
@@ -722,36 +727,61 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     s.append(" => '");
     s.append(Bytes.toString(name));
     s.append("'");
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-        values.entrySet()) {
-      String key = Bytes.toString(e.getKey().get());
-      String value = Bytes.toString(e.getValue().get());
-      if(defaults.get(key) == null || !defaults.get(key).equalsIgnoreCase(value)) {
-        s.append(", ");
-        s.append(key);
-        s.append(" => '");
-        s.append(value);
-        s.append("'");
-      }
-    }
+    s.append(getValues(false));
     s.append('}');
     return s.toString();
   }
 
+  private StringBuilder getValues(boolean printDefaults) {
+    StringBuilder s = new StringBuilder();
 
-  public static Map<String, String>getDefaultValues() {
-    Map<String, String> defaultValues = new HashMap<String, String>();
+    boolean hasAdvancedKeys = false;
 
-    defaultValues.put(BLOOMFILTER, DEFAULT_BLOOMFILTER);
-    defaultValues.put(REPLICATION_SCOPE, String.valueOf(DEFAULT_REPLICATION_SCOPE));
-    defaultValues.put(HConstants.VERSIONS, String.valueOf(DEFAULT_VERSIONS));
-    defaultValues.put(COMPRESSION, DEFAULT_COMPRESSION);
-    defaultValues.put(TTL, String.valueOf(DEFAULT_TTL));
-    defaultValues.put(BLOCKSIZE, String.valueOf(DEFAULT_BLOCKSIZE));
-    defaultValues.put(HConstants.IN_MEMORY, String.valueOf(DEFAULT_IN_MEMORY));
-    defaultValues.put(BLOOMFILTER_ERRORRATE, String.valueOf(DEFAULT_BLOOMFILTER_ERROR_RATE));
-    defaultValues.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
-    return defaultValues;
+    // print all reserved keys first
+    for (ImmutableBytesWritable k : values.keySet()) {
+      if (!RESERVED_KEYWORDS.contains(k)) {
+        hasAdvancedKeys = true;
+        continue;
+      }
+      String key = Bytes.toString(k.get());
+      String value = Bytes.toString(values.get(k).get());
+      if (printDefaults
+          || !DEFAULT_VALUES.containsKey(key)
+          || !DEFAULT_VALUES.get(key).equalsIgnoreCase(value)) {
+        s.append(", ");
+        s.append(key);
+        s.append(" => ");
+        s.append('\'').append(value).append('\'');
+      }
+    }
+
+    // print all other keys as advanced options
+    if (hasAdvancedKeys) {
+      s.append(", ");
+      s.append("{").append(HConstants.CONFIG).append(" => ");
+      s.append('{');
+      boolean printComma = false;
+      for (ImmutableBytesWritable k : values.keySet()) {
+        if (RESERVED_KEYWORDS.contains(k)) {
+          continue;
+        }
+        String key = Bytes.toString(k.get());
+        String value = Bytes.toString(values.get(k).get());
+        if (printComma) {
+          s.append(", ");
+        }
+        printComma = true;
+        s.append('\'').append(key).append('\'');
+        s.append(" => ");
+        s.append('\'').append(value).append('\'');
+      }
+      s.append('}');
+    }
+    return s;
+  }
+
+  public static Map<String, String> getDefaultValues() {
+    return Collections.unmodifiableMap(DEFAULT_VALUES);
   }
 
   /**

@@ -164,9 +164,10 @@ public class Store extends SchemaConfigured implements HeapSize {
    * @throws IOException
    */
   protected Store(Path basedir, HRegion region, HColumnDescriptor family,
-    FileSystem fs, Configuration conf)
+      FileSystem fs, Configuration confParam)
   throws IOException {
-    super(conf, region.getTableDesc().getNameAsString(),
+    super(new CompoundConfiguration().add(confParam).add(
+        family.getValues()), region.getTableDesc().getNameAsString(),
         Bytes.toString(family.getName()));
     HRegionInfo info = region.regionInfo;
     this.fs = fs;
@@ -178,7 +179,10 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
     this.region = region;
     this.family = family;
-    this.conf = conf;
+    // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
+    this.conf = new CompoundConfiguration()
+      .add(confParam)
+      .add(family.getValues());
     this.blockcache = family.isBlockCacheEnabled();
     this.blocksize = family.getBlocksize();
     this.compression = family.getCompression();

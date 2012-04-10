@@ -38,7 +38,7 @@ class SplitRequest implements Runnable {
   public void run() {
     HRegionServer server = region.getRegionServer();
     try {
-      Configuration conf = region.getConf();
+      Configuration conf = server.getConfiguration();
       final HRegionInfo oldRegionInfo = region.getRegionInfo();
       final long startTime = System.currentTimeMillis();
       final HRegion[] newRegions = region.splitRegion(midKey);

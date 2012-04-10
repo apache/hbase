@@ -159,16 +159,43 @@ module Hbase
           raise(ArgumentError, "#{arg.class} of #{arg.inspect} is not of Hash or String type")
         end
 
-        if arg.kind_of?(Hash) and (arg.has_key?(NUMREGIONS) or arg.has_key?(SPLITALGO))
-          raise(ArgumentError, "Column family configuration should be specified in a separate clause") if arg.has_key?(NAME)
-          raise(ArgumentError, "Number of regions must be specified") unless arg.has_key?(NUMREGIONS)
-          raise(ArgumentError, "Split algorithm must be specified") unless arg.has_key?(SPLITALGO)
-          raise(ArgumentError, "Number of regions must be greater than 1") unless arg[NUMREGIONS] > 1
-          num_regions = arg[NUMREGIONS]
-          split_algo = RegionSplitter.newSplitAlgoInstance(@conf, arg[SPLITALGO])
-        else
-          # Add column to the table
+        if arg.kind_of?(String)
+          # the arg is a string, default action is to add a column to the table
           htd.addFamily(hcd(arg, htd))
+        else
+          # arg is a hash.  3 possibilities:
+          if (arg.has_key?(NUMREGIONS) or arg.has_key?(SPLITALGO))
+            # (1) deprecated region pre-split API
+            raise(ArgumentError, "Column family configuration should be specified in a separate clause") if arg.has_key?(NAME)
+            raise(ArgumentError, "Number of regions must be specified") unless arg.has_key?(NUMREGIONS)
+            raise(ArgumentError, "Split algorithm must be specified") unless arg.has_key?(SPLITALGO)
+            raise(ArgumentError, "Number of regions must be greater than 1") unless arg[NUMREGIONS] > 1
+            num_regions = arg[NUMREGIONS]
+            split_algo = RegionSplitter.newSplitAlgoInstance(@conf, arg[SPLITALGO])
+          elsif (method = arg.delete(METHOD))
+            # (2) table_attr modification
+            raise(ArgumentError, "table_att is currently the only supported method") unless method == 'table_att'
+            raise(ArgumentError, "NUMREGIONS & SPLITALGO must both be specified") unless arg.has_key?(NUMREGIONS) == arg.has_key?(split_algo)
+            htd.setMaxFileSize(JLong.valueOf(arg[MAX_FILESIZE])) if arg[MAX_FILESIZE]
+            htd.setReadOnly(JBoolean.valueOf(arg[READONLY])) if arg[READONLY]
+            htd.setMemStoreFlushSize(JLong.valueOf(arg[MEMSTORE_FLUSHSIZE])) if arg[MEMSTORE_FLUSHSIZE]
+            htd.setDeferredLogFlush(JBoolean.valueOf(arg[DEFERRED_LOG_FLUSH])) if arg[DEFERRED_LOG_FLUSH]
+            if arg[NUMREGIONS]
+              raise(ArgumentError, "Number of regions must be greater than 1") unless arg[NUMREGIONS] > 1
+              num_regions = arg[NUMREGIONS]
+              split_algo = RegionSplitter.newSplitAlgoInstance(@conf, arg[SPLITALGO])
+            end
+            if arg[CONFIG]
+              raise(ArgumentError, "#{CONFIG} must be a Hash type") unless arg.kind_of?(Hash)
+              for k,v in arg[CONFIG]
+                v = v.to_s unless v.nil?
+                htd.setValue(k, v)
+              end
+            end
+          else
+            # (3) column family spec
+            htd.addFamily(hcd(arg, htd))
+          end
         end
       end
 
@@ -317,6 +344,13 @@ module Hbase
           htd.setReadOnly(JBoolean.valueOf(arg[READONLY])) if arg[READONLY]
           htd.setMemStoreFlushSize(JLong.valueOf(arg[MEMSTORE_FLUSHSIZE])) if arg[MEMSTORE_FLUSHSIZE]
           htd.setDeferredLogFlush(JBoolean.valueOf(arg[DEFERRED_LOG_FLUSH])) if arg[DEFERRED_LOG_FLUSH]
+          if arg[CONFIG]
+            raise(ArgumentError, "#{CONFIG} must be a Hash type") unless arg.kind_of?(Hash)
+            for k,v in arg[CONFIG]
+              v = v.to_s unless v.nil?
+              htd.setValue(k, v)
+            end
+          end
           @admin.modifyTable(table_name.to_java_bytes, htd)
           next
         end
@@ -417,6 +451,14 @@ module Hbase
       family.setEncodeOnDisk(JBoolean.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::ENCODE_ON_DISK])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::ENCODE_ON_DISK)
       family.setBlocksize(JInteger.valueOf(arg[HColumnDescriptor::BLOCKSIZE])) if arg.include?(HColumnDescriptor::BLOCKSIZE)
       family.setMaxVersions(JInteger.valueOf(arg[VERSIONS])) if arg.include?(HColumnDescriptor::VERSIONS)
+      if arg[CONFIG]
+        raise(ArgumentError, "#{CONFIG} must be a Hash type") unless arg.kind_of?(Hash)
+        for k,v in arg[CONFIG]
+            v = v.to_s unless v.nil?
+          end
+          family.setValue(k, v)
+        end
+      end
 
       return family
     end
