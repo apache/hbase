@@ -39,7 +39,6 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Random;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -85,6 +84,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
@@ -1277,10 +1277,16 @@ public class HBaseTestingUtility {
    */
   public void startMiniMapReduceCluster(final int servers) throws IOException {
     LOG.info("Starting mini mapreduce cluster...");
+    if (dataTestDir == null) {
+      setupDataTestDir();
+    }
+
     // These are needed for the new and improved Map/Reduce framework
     conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));
-    mrCluster = new MiniMRCluster(servers,
-      FileSystem.get(conf).getUri().toString(), 1);
+    mrCluster = new MiniMRCluster(0, 0, servers,
+      FileSystem.get(conf).getUri().toString(), 1, null, null, null, new JobConf(conf));
+    mrCluster.getJobTrackerRunner().getJobTracker().getConf().set("mapred.local.dir",
+        conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
     LOG.info("Mini mapreduce cluster started");
     conf.set("mapred.job.tracker",
         mrCluster.createJobConf().get("mapred.job.tracker"));

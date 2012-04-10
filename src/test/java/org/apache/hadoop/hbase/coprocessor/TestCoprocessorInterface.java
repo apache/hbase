@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,11 +30,21 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -42,14 +54,12 @@ import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-import static org.mockito.Mockito.when;
-
 @Category(SmallTests.class)
 public class TestCoprocessorInterface extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestCoprocessorInterface.class);
-  static final String DIR = "test/build/data/TestCoprocessorInterface/";
   private static final HBaseTestingUtility TEST_UTIL =
     new HBaseTestingUtility();
+  static final Path DIR = TEST_UTIL.getDataTestDir();
 
   private static class CustomScanner implements RegionScanner {
 
@@ -63,9 +73,9 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     public boolean next(List<KeyValue> results) throws IOException {
       return delegate.next(results);
     }
-    
+
     @Override
-    public boolean next(List<KeyValue> results, String metric) 
+    public boolean next(List<KeyValue> results, String metric)
         throws IOException {
       return delegate.next(results, metric);
     }
@@ -74,9 +84,9 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     public boolean next(List<KeyValue> result, int limit) throws IOException {
       return delegate.next(result, limit);
     }
-    
+
     @Override
-    public boolean next(List<KeyValue> result, int limit, String metric) 
+    public boolean next(List<KeyValue> result, int limit, String metric)
         throws IOException {
       return delegate.next(result, limit, metric);
     }

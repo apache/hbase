@@ -20,6 +20,11 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -29,8 +34,24 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
@@ -39,18 +60,14 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.*;
-
 @Category(MediumTests.class)
 public class TestRegionObserverInterface {
   static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
-  static final String DIR = "test/build/data/TestRegionObserver/";
 
   public static final byte[] TEST_TABLE = Bytes.toBytes("TestTable");
   public final static byte[] A = Bytes.toBytes("a");
@@ -299,21 +316,21 @@ public class TestRegionObserverInterface {
         public boolean next(List<KeyValue> results) throws IOException {
           return next(results, -1);
         }
-        
+
         @Override
-        public boolean next(List<KeyValue> results, String metric) 
+        public boolean next(List<KeyValue> results, String metric)
             throws IOException {
           return next(results, -1, metric);
         }
 
         @Override
-        public boolean next(List<KeyValue> results, int limit) 
+        public boolean next(List<KeyValue> results, int limit)
             throws IOException{
           return next(results, limit, null);
         }
 
         @Override
-        public boolean next(List<KeyValue> results, int limit, String metric) 
+        public boolean next(List<KeyValue> results, int limit, String metric)
             throws IOException {
           List<KeyValue> internalResults = new ArrayList<KeyValue>();
           boolean hasMore;

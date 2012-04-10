@@ -33,17 +33,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.Callable;
 import java.util.Random;
+import java.util.concurrent.Callable;
 
 import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -272,7 +280,7 @@ public class TestHFileOutputFormat  {
       // verify that the file has the proper FileInfo.
       writer.close(context);
 
-      // the generated file lives 1 directory down from the attempt directory 
+      // the generated file lives 1 directory down from the attempt directory
       // and is the only file, e.g.
       // _attempt__0000_r_000000_0/b/1979617994050536795
       FileSystem fs = FileSystem.get(conf);
@@ -341,7 +349,8 @@ public class TestHFileOutputFormat  {
 
   @Test
   public void testJobConfiguration() throws Exception {
-    Job job = new Job();
+    Job job = new Job(util.getConfiguration());
+    job.setWorkingDirectory(util.getDataTestDir("testJobConfiguration"));
     HTable table = Mockito.mock(HTable.class);
     setupMockStartKeys(table);
     HFileOutputFormat.configureIncrementalLoad(job, table);
@@ -466,6 +475,7 @@ public class TestHFileOutputFormat  {
       Configuration conf, HTable table, Path outDir)
   throws Exception {
     Job job = new Job(conf, "testLocalMRIncrementalLoad");
+    job.setWorkingDirectory(util.getDataTestDir("runIncrementalPELoad"));
     setupRandomGeneratorMapper(job);
     HFileOutputFormat.configureIncrementalLoad(job, table);
     FileOutputFormat.setOutputPath(job, outDir);
@@ -586,6 +596,7 @@ public class TestHFileOutputFormat  {
       // pollutes the GZip codec pool with an incompatible compressor.
       conf.set("io.seqfile.compression.type", "NONE");
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
+      job.setWorkingDirectory(util.getDataTestDir("testColumnFamilyCompression"));
       setupRandomGeneratorMapper(job);
       HFileOutputFormat.configureIncrementalLoad(job, table);
       FileOutputFormat.setOutputPath(job, dir);
