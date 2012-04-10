@@ -4898,7 +4898,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      31 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
+      32 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
       (6 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
