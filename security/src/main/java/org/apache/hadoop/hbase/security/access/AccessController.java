@@ -191,7 +191,7 @@ public class AccessController extends BaseRegionObserver
       String tableName = Bytes.toString(table);
       ListMultimap<String,TablePermission> perms = t.getValue();
       byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms,
-          e.getRegion().getConf());
+          regionEnv.getConfiguration());
       this.authManager.getZKPermissionWatcher().writeToZookeeper(tableName,
         serialized);
     }
@@ -223,7 +223,7 @@ public class AccessController extends BaseRegionObserver
           AccessControlLists.getTablePermissions(regionEnv.getConfiguration(),
               Bytes.toBytes(tableName));
         byte[] serialized = AccessControlLists.writePermissionsAsBytes(
-            perms, e.getRegion().getConf());
+            perms, regionEnv.getConfiguration());
         this.authManager.getZKPermissionWatcher().writeToZookeeper(tableName,
           serialized);
       } catch (IOException ex) {
@@ -654,7 +654,7 @@ public class AccessController extends BaseRegionObserver
     try {
       this.authManager = TableAuthManager.get(
           e.getRegionServerServices().getZooKeeper(),
-          e.getRegion().getConf());
+          regionEnv.getConfiguration());
     } catch (IOException ioe) {
       // pass along as a RuntimeException, so that the coprocessor is unloaded
       throw new RuntimeException("Error obtaining TableAuthManager", ioe);
