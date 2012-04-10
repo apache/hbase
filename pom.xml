@@ -986,7 +986,7 @@
     <commons-logging.version>1.1.1</commons-logging.version>
     <commons-math.version>2.1</commons-math.version>
     <commons-configuration.version>1.6</commons-configuration.version>
-    <guava.version>r09</guava.version>
+    <guava.version>11.0.2</guava.version>
     <jackson.version>1.5.5</jackson.version>
     <jasper.version>5.5.23</jasper.version>
     <jaxb-api.version>2.1</jaxb-api.version>
