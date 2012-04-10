@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterId;
@@ -248,9 +249,9 @@ Server {
     // Set how many times to retry talking to another server over HConnection.
     HConnectionManager.setServerSideHConnectionRetries(this.conf, LOG);
     // Server to handle client requests.
-    String hostname = DNS.getDefaultHost(
+    String hostname = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
       conf.get("hbase.master.dns.interface", "default"),
-      conf.get("hbase.master.dns.nameserver", "default"));
+      conf.get("hbase.master.dns.nameserver", "default")));
     int port = conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
     // Creation of a HSA will force a resolve.
     InetSocketAddress initialIsa = new InetSocketAddress(hostname, port);

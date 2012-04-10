@@ -143,6 +143,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
@@ -394,9 +395,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.stopped = false;
 
     // Server to handle client requests.
-    String hostname = DNS.getDefaultHost(
+    String hostname = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
       conf.get("hbase.regionserver.dns.interface", "default"),
-      conf.get("hbase.regionserver.dns.nameserver", "default"));
+      conf.get("hbase.regionserver.dns.nameserver", "default")));
     int port = conf.getInt(HConstants.REGIONSERVER_PORT,
       HConstants.DEFAULT_REGIONSERVER_PORT);
     // Creation of a HSA will force a resolve.
