@@ -24,6 +24,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -563,6 +564,11 @@ public class HBaseClient {
 
         // Read the call id.
         RpcResponse response = RpcResponse.parseDelimitedFrom(in);
+        if (response == null) {
+          // When the stream is closed, protobuf doesn't raise an EOFException,
+          // instead, it returns a null message object. 
+          throw new EOFException();
+        }
         int id = response.getCallId();
 
         if (LOG.isDebugEnabled())
