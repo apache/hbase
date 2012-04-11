@@ -29,12 +29,12 @@ import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 
 public class HbckTestingUtil {
   public static HBaseFsck doFsck(Configuration conf, boolean fix) throws Exception {
-    return doFsck(conf, fix, fix, fix, fix,fix);
+    return doFsck(conf, fix, fix, fix, fix,fix, fix);
   }
 
   public static HBaseFsck doFsck(Configuration conf, boolean fixAssignments,
       boolean fixMeta, boolean fixHdfsHoles, boolean fixHdfsOverlaps,
-      boolean fixHdfsOrphans) throws Exception {
+      boolean fixHdfsOrphans, boolean fixVersionFile) throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf);
     fsck.connect();
     fsck.setDisplayFullReport(); // i.e. -details
@@ -44,6 +44,7 @@ public class HbckTestingUtil {
     fsck.setFixHdfsHoles(fixHdfsHoles);
     fsck.setFixHdfsOverlaps(fixHdfsOverlaps);
     fsck.setFixHdfsOrphans(fixHdfsOrphans);
+    fsck.setFixVersionFile(fixVersionFile);
     fsck.onlineHbck();
     return fsck;
   }

@@ -117,7 +117,7 @@ extends RetriesExhaustedException {
     addrs.append("servers with issues: ");
     Set<String> uniqAddr = new HashSet<String>();
     uniqAddr.addAll(hostnamePort);
-    
+
     for(String addr : uniqAddr) {
       addrs.append(addr).append(", ");
     }
