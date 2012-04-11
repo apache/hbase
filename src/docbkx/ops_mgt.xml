@@ -142,7 +142,13 @@
 </programlisting>
        </para>
     </section>
-    <section xml:id="rowcounter">
+    <section xml:id="bulk.loading">
+       <title>Bulk Loading</title>
+       <para>For imformation about bulk-loading HFiles into HBase, see <link xlink:href="http://hbase.apache.org/bulk-loads.html">Bulk Loads</link>.
+       This page currently exists on the website and will eventually be migrated into the RefGuide.
+       </para>
+    </section>
+\    <section xml:id="rowcounter">
        <title>RowCounter</title>
        <para>RowCounter is a utility that will count all the rows of a table.  This is a good utility to use
        as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
