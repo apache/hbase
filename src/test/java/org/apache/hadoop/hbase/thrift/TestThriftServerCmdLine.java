@@ -59,7 +59,7 @@ import com.google.common.base.Joiner;
 @RunWith(Parameterized.class)
 public class TestThriftServerCmdLine {
 
-  public static final Log LOG = 
+  public static final Log LOG =
       LogFactory.getLog(TestThriftServerCmdLine.class);
 
   private final ImplType implType;
@@ -72,7 +72,7 @@ public class TestThriftServerCmdLine {
 
   private Thread cmdLineThread;
   private volatile Exception cmdLineException;
-  
+
   private Exception clientSideException;
 
   private ThriftServer thriftServer;
@@ -139,7 +139,7 @@ public class TestThriftServerCmdLine {
     cmdLineThread.start();
   }
 
-  @Test(timeout=30 * 1000)
+  @Test(timeout=60 * 1000)
   public void testRunThriftServer() throws Exception {
     List<String> args = new ArrayList<String>();
     if (implType != null) {
@@ -204,6 +204,7 @@ public class TestThriftServerCmdLine {
       Hbase.Client client = new Hbase.Client(prot);
       TestThriftServer.doTestTableCreateDrop(client);
       TestThriftServer.doTestGetTableRegions(client);
+      TestThriftServer.doTestTableMutations(client);
     } finally {
       sock.close();
     }
