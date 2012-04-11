@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
-import org.apache.hadoop.hbase.regionserver.wal.OrphanHLogAfterSplitException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -408,7 +407,7 @@ public class SplitLogManager extends ZooKeeperListener {
     // A negative retry count will lead to ignoring all error processing.
     this.watcher.getRecoverableZooKeeper().getZooKeeper().
         getData(path, this.watcher,
-        new GetDataAsyncCallback(), new Long(-1) /* retry count */);
+        new GetDataAsyncCallback(), Long.valueOf(-1) /* retry count */);
     tot_mgr_get_data_queued.incrementAndGet();
   }
 

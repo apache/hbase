@@ -362,7 +362,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
     // the maximum size somebody will ever try to cache, then we multiply by
     // 10
     // so we have finer grained stats.
-    final int MULTIPLIER = 10;
+    static final int MULTIPLIER = 10;
     final int NUMDIVISIONS = (int) (Math.log(Integer.MAX_VALUE) * MULTIPLIER);
     private final AtomicLong[] counts = new AtomicLong[NUMDIVISIONS];
 

@@ -186,7 +186,7 @@
         urlRegionServer =
             "http://" + addr.getHostname().toString() + ":" + infoPort + "/";
         Integer i = regDistribution.get(urlRegionServer);
-        if (null == i) i = new Integer(0);
+        if (null == i) i = Integer.valueOf(0);
         regDistribution.put(urlRegionServer, i+1);
       }
     }

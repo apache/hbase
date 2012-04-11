@@ -113,11 +113,13 @@ extends RetriesExhaustedException {
                                List<Row> actions,
                                List<String> hostnamePort) {
     String s = getDesc(classifyExs(exceptions));
-    s += "servers with issues: ";
+    StringBuilder addrs = new StringBuilder(s);
+    addrs.append("servers with issues: ");
     Set<String> uniqAddr = new HashSet<String>();
     uniqAddr.addAll(hostnamePort);
+    
     for(String addr : uniqAddr) {
-      s += addr + ", ";
+      addrs.append(addr).append(", ");
     }
     return s;
   }
@@ -143,12 +145,16 @@ extends RetriesExhaustedException {
   }
 
   public static String getDesc(Map<String,Integer> classificaton) {
-    String s = "";
+    StringBuilder classificatons =new StringBuilder(11);
     for (Map.Entry<String, Integer> e : classificaton.entrySet()) {
-      s += e.getKey() + ": " + e.getValue() + " time" +
-          pluralize(e.getValue()) + ", ";
+      classificatons.append(e.getKey());
+      classificatons.append(": ");
+      classificatons.append(e.getValue());
+      classificatons.append(" time");
+      classificatons.append(pluralize(e.getValue()));
+      classificatons.append(", ");
     }
-    return s;
+    return classificatons.toString();
   }
 
 }

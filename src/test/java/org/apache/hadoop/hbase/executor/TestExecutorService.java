@@ -124,7 +124,7 @@ public class TestExecutorService {
     }
 
     // Make sure threads are still around even after their timetolive expires.
-    Thread.sleep(executor.keepAliveTimeInMillis * 2);
+    Thread.sleep(ExecutorService.Executor.keepAliveTimeInMillis * 2);
     assertEquals(maxThreads, pool.getPoolSize());
 
     executorService.shutdown();

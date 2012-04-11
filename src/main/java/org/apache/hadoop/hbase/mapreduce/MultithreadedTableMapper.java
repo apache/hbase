@@ -235,7 +235,6 @@ public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
   private class MapRunner implements Runnable {
     private Mapper<ImmutableBytesWritable, Result, K2,V2> mapper;
     private Context subcontext;
-    private Throwable throwable;
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     MapRunner(Context context) throws IOException, InterruptedException {
@@ -295,7 +294,7 @@ public class MultithreadedTableMapper<K2, V2> extends TableMapper<K2, V2> {
       try {
         mapper.run(subcontext);
       } catch (Throwable ie) {
-        throwable = ie;
+        LOG.error("Problem in running map.", ie);
       }
     }
   }

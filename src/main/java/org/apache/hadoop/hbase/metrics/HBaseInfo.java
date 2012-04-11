@@ -63,29 +63,31 @@ public class HBaseInfo {
       return theInstance;
   }
   
-  // HBase jar info
-  private MetricsString date = new MetricsString("date", registry,
-      org.apache.hadoop.hbase.util.VersionInfo.getDate());
-  private MetricsString revision = new MetricsString("revision", registry, 
-      org.apache.hadoop.hbase.util.VersionInfo.getRevision());
-  private MetricsString url = new MetricsString("url", registry,
-      org.apache.hadoop.hbase.util.VersionInfo.getUrl());
-  private MetricsString user = new MetricsString("user", registry,
-      org.apache.hadoop.hbase.util.VersionInfo.getUser());
-  private MetricsString version = new MetricsString("version", registry,
-      org.apache.hadoop.hbase.util.VersionInfo.getVersion());
+  {
+    // HBase jar info
+    new MetricsString("date", registry,
+        org.apache.hadoop.hbase.util.VersionInfo.getDate());
+    new MetricsString("revision", registry,
+        org.apache.hadoop.hbase.util.VersionInfo.getRevision());
+    new MetricsString("url", registry, org.apache.hadoop.hbase.util.VersionInfo
+        .getUrl());
+    new MetricsString("user", registry,
+        org.apache.hadoop.hbase.util.VersionInfo.getUser());
+    new MetricsString("version", registry,
+        org.apache.hadoop.hbase.util.VersionInfo.getVersion());
 
-  // Info on the HDFS jar that HBase has (aka: HDFS Client)
-  private MetricsString hdfsDate = new MetricsString("hdfsDate", registry,
-      org.apache.hadoop.util.VersionInfo.getDate());
-  private MetricsString hdfsRev = new MetricsString("hdfsRevision", registry,
-      org.apache.hadoop.util.VersionInfo.getRevision());
-  private MetricsString hdfsUrl = new MetricsString("hdfsUrl", registry,
-      org.apache.hadoop.util.VersionInfo.getUrl());
-  private MetricsString hdfsUser = new MetricsString("hdfsUser", registry,
-      org.apache.hadoop.util.VersionInfo.getUser());
-  private MetricsString hdfsVer = new MetricsString("hdfsVersion", registry,
-      org.apache.hadoop.util.VersionInfo.getVersion());
+    // Info on the HDFS jar that HBase has (aka: HDFS Client)
+    new MetricsString("hdfsDate", registry, org.apache.hadoop.util.VersionInfo
+        .getDate());
+    new MetricsString("hdfsRevision", registry,
+        org.apache.hadoop.util.VersionInfo.getRevision());
+    new MetricsString("hdfsUrl", registry, org.apache.hadoop.util.VersionInfo
+        .getUrl());
+    new MetricsString("hdfsUser", registry, org.apache.hadoop.util.VersionInfo
+        .getUser());
+    new MetricsString("hdfsVersion", registry,
+        org.apache.hadoop.util.VersionInfo.getVersion());
+  }
 
   protected HBaseInfo() {
     MetricsContext context = MetricsUtil.getContext("hbase");

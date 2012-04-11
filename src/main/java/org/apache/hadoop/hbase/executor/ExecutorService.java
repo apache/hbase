@@ -277,7 +277,7 @@ public class ExecutorService {
    */
   static class Executor {
     // how long to retain excess threads
-    final long keepAliveTimeInMillis = 1000;
+    static final long keepAliveTimeInMillis = 1000;
     // the thread pool executor that services the requests
     final TrackingThreadPoolExecutor threadPoolExecutor;
     // work queue to use - unbounded queue

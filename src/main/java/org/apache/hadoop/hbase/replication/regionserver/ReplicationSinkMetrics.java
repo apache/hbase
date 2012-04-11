@@ -37,7 +37,6 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
 public class ReplicationSinkMetrics implements Updater {
   private final MetricsRecord metricsRecord;
   private MetricsRegistry registry = new MetricsRegistry();
-  private static ReplicationSinkMetrics instance;
 
   /** Rate of operations applied by the sink */
   public final MetricsRate appliedOpsRate =

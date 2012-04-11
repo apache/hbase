@@ -254,7 +254,6 @@ class WritableRpcEngine implements RpcEngine {
     private Class<?> implementation;
     private Class<?>[] ifaces;
     private boolean verbose;
-    private boolean authorize = false;
 
     // for JSON encoding
     private static ObjectMapper mapper = new ObjectMapper();
@@ -307,10 +306,6 @@ class WritableRpcEngine implements RpcEngine {
       // create metrics for the advertised interfaces this server implements.
       String [] metricSuffixes = new String [] {ABOVE_ONE_SEC_METRIC};
       this.rpcMetrics.createMetrics(this.ifaces, false, metricSuffixes);
-
-      this.authorize =
-        conf.getBoolean(
-            ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, false);
 
       this.warnResponseTime = conf.getInt(WARN_RESPONSE_TIME,
           DEFAULT_WARN_RESPONSE_TIME);

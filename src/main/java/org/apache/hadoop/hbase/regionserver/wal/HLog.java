@@ -735,9 +735,8 @@ public class HLog implements Syncable {
     Long oldestOutstandingSeqNum = getOldestOutstandingSeqNum();
     // Get the set of all log files whose last sequence number is smaller than
     // the oldest edit's sequence number.
-    TreeSet<Long> sequenceNumbers =
-      new TreeSet<Long>(this.outputfiles.headMap(
-        (Long.valueOf(oldestOutstandingSeqNum.longValue()))).keySet());
+    TreeSet<Long> sequenceNumbers = new TreeSet<Long>(this.outputfiles.headMap(
+        oldestOutstandingSeqNum).keySet());
     // Now remove old log files (if any)
     int logsToRemove = sequenceNumbers.size();
     if (logsToRemove > 0) {
@@ -757,7 +756,7 @@ public class HLog implements Syncable {
     // If too many log files, figure which regions we need to flush.
     // Array is an array of encoded region names.
     byte [][] regions = null;
-    int logCount = this.outputfiles == null? 0: this.outputfiles.size();
+    int logCount = this.outputfiles.size();
     if (logCount > this.maxLogs && logCount > 0) {
       // This is an array of encoded region names.
       regions = findMemstoresWithEditsEqualOrOlderThan(this.outputfiles.firstKey(),

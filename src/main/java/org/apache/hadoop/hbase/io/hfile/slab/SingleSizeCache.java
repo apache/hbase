@@ -333,7 +333,7 @@ public class SingleSizeCache implements BlockCache, HeapSize {
   }
 
   /* Just a pair class, holds a reference to the parent cacheable */
-  private class CacheablePair implements HeapSize {
+  private static class CacheablePair implements HeapSize {
     final CacheableDeserializer<Cacheable> deserializer;
     ByteBuffer serializedData;
     AtomicLong recentlyAccessed;

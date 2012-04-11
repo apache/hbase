@@ -121,7 +121,7 @@ public class DefaultLoadBalancer implements LoadBalancer {
 
    RegionInfoComparator riComparator = new RegionInfoComparator();
    
-   private class RegionPlanComparator implements Comparator<RegionPlan> {
+   private static class RegionPlanComparator implements Comparator<RegionPlan> {
     @Override
     public int compare(RegionPlan l, RegionPlan r) {
       long diff = r.getRegionInfo().getRegionId() - l.getRegionInfo().getRegionId();
