@@ -135,6 +135,13 @@
 </programlisting>
        </para>
     </section>
+    <section xml:id="importtsv">
+       <title>ImportTsv</title>
+       <para>Import is a utility that will load data in TSV format into HBase.  Invoke via:
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.ImportTsv -Dimporttsv.columns=a,b,c &lt;tablename&gt; &lt;inputdir&gt;
+</programlisting>
+       </para>
+    </section>
     <section xml:id="rowcounter">
        <title>RowCounter</title>
        <para>RowCounter is a utility that will count all the rows of a table.  This is a good utility to use
