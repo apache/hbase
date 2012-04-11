@@ -1253,6 +1253,8 @@ if (!b) {
       map-tasks which will double-write your data to HBase; this is probably
       not what you want.
   </para>
+  <para>See <xref linkend="spec.ex"/> for more information.
+  </para>
   </section>
   </chapter>  <!--  mapreduce -->
 

@@ -1585,6 +1585,13 @@ of all regions.
       <para>For more information about compactions and the compaction file selection process, see <xref linkend="compaction"/></para>
       </section>
       
+      <section xml:id="spec.ex"><title>Speculative Execution</title>
+        <para>Speculative Execution of MapReduce tasks is on by default, and for HBase clusters it is generally advised to turn off 
+        Speculative Execution at a system-level unless you need it for a specific case, where it can be configured per-job.
+        Set the properties <varname>mapred.map.tasks.speculative.execution</varname> and 
+        <varname>mapred.reduce.tasks.speculative.execution</varname> to false.
+        </para>
+      </section>
       </section>
 
       <section xml:id="other_configuration"><title>Other Configurations</title>
@@ -1602,6 +1609,7 @@ of all regions.
            on the size you need by surveying regionserver UIs; you'll see index block size accounted near the
            top of the webpage).</para>
          </section>
+         
       </section>
       
       </section> <!--  important config -->
