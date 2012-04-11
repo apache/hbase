@@ -23,6 +23,7 @@ Release 0.90.7 - Unreleased
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems
+   HBASE-5599  [hbck] handle NO_VERSION_FILE and SHOULD_NOT_BE_DEPLOYED inconsistencies (fulin wang)
 
 Release 0.90.6 - March 16, 2012
   INCOMPATIBLE CHANGES

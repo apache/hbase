@@ -156,6 +156,7 @@ public class HBaseFsck {
   private boolean fixHdfsHoles = false; // fix fs holes?
   private boolean fixHdfsOverlaps = false; // fix fs overlaps (risky)
   private boolean fixHdfsOrphans = false; // fix fs holes (missing .regioninfo)
+  private boolean fixVersionFile = false; // fix missing hbase.version file in hdfs
 
   // limit fixes to listed tables, if empty atttempt to fix all
   private List<byte[]> tablesToFix = new ArrayList<byte[]>();
@@ -976,6 +977,13 @@ public class HBaseFsck {
     if (!foundVersionFile) {
       errors.reportError(ERROR_CODE.NO_VERSION_FILE,
           "Version file does not exist in root dir " + rootDir);
+      if (shouldFixVersionFile()) {
+        LOG.info("Trying to create a new " + HConstants.VERSION_FILE_NAME
+            + " file.");
+        setShouldRerun();
+        FSUtils.setVersion(fs, rootDir,
+            conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
+      }
     }
 
     // level 1:  <HBASE_DIR>/*
@@ -1303,10 +1311,14 @@ public class HBaseFsck {
           + " not deployed on any region server.");
       tryAssignmentRepair(hbi, "Trying to fix unassigned region...");
     } else if (inMeta && inHdfs && isDeployed && !shouldBeDeployed) {
-      errors.reportError(ERROR_CODE.SHOULD_NOT_BE_DEPLOYED, "UNHANDLED CASE:" +
-          " Region " + descriptiveName + " should not be deployed according " +
+      errors.reportError(ERROR_CODE.SHOULD_NOT_BE_DEPLOYED, 
+          "Region " + descriptiveName + " should not be deployed according " +
           "to META, but is deployed on " + Joiner.on(", ").join(hbi.deployedOn));
-      // TODO test and handle this case.
+      if (shouldFixAssignments()) {
+        errors.print("Trying to close the region " + descriptiveName);
+        setShouldRerun();
+        HBaseFsckRepair.fixMultiAssignment(admin, hbi.metaEntry, hbi.deployedOn);
+      }
     } else if (inMeta && inHdfs && isMultiplyDeployed) {
       errors.reportError(ERROR_CODE.MULTI_DEPLOYED, "Region " + descriptiveName
           + " is listed in META on region server " + hbi.metaEntry.regionServer
@@ -2715,6 +2727,14 @@ public class HBaseFsck {
   boolean shouldFixHdfsOrphans() {
     return fixHdfsOrphans;
   }
+  
+  public void setFixVersionFile(boolean shouldFix) {
+    fixVersionFile = shouldFix;
+  }
+
+  public boolean shouldFixVersionFile() {
+    return fixVersionFile;
+  }
 
   /**
    * @param mm maximum number of regions to merge into a single region.
@@ -2774,9 +2794,10 @@ public class HBaseFsck {
     System.err.println("   -fixHdfsHoles     Try to fix region holes in hdfs.");
     System.err.println("   -fixHdfsOrphans   Try to fix region dirs with no .regioninfo file in hdfs");
     System.err.println("   -fixHdfsOverlaps  Try to fix region overlaps in hdfs.");
+    System.err.println("   -fixVersionFile   Try to fix missing hbase.version file in hdfs.");
     System.err.println("   -maxMerge <n>     When fixing region overlaps, allow at most <n> regions to merge. (n=" + DEFAULT_MAX_MERGE +" by default)");
     System.err.println("");
-    System.err.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles -fixHdfsOrphans -fixHdfsOverlaps");
+    System.err.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles -fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile");
     System.err.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles -fixHdfsOrphans");
 
     Runtime.getRuntime().exit(-2);
@@ -2839,6 +2860,8 @@ public class HBaseFsck {
         fsck.setFixHdfsOrphans(true);
       } else if (cmd.equals("-fixHdfsOverlaps")) {
         fsck.setFixHdfsOverlaps(true);
+      } else if (cmd.equals("-fixVersionFile")) {
+        fsck.setFixVersionFile(true);
       } else if (cmd.equals("-repair")) {
         // this attempts to merge overlapping hdfs regions, needs testing
         // under load
@@ -2847,6 +2870,7 @@ public class HBaseFsck {
         fsck.setFixMeta(true);
         fsck.setFixAssignments(true);
         fsck.setFixHdfsOverlaps(true);
+        fsck.setFixVersionFile(true);
       } else if (cmd.equals("-repairHoles")) {
         // this will make all missing hdfs regions available but may lose data
         fsck.setFixHdfsHoles(true);
@@ -2898,6 +2922,7 @@ public class HBaseFsck {
       fsck.setFixHdfsHoles(false);
       fsck.setFixHdfsOverlaps(false);
       fsck.setFixHdfsOrphans(false);
+      fsck.setFixVersionFile(false);
       fsck.errors.resetErrors();
       code = fsck.onlineHbck();
     }

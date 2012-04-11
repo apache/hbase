@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertNoErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -36,9 +37,9 @@ import java.util.Map.Entry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -54,9 +56,15 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.executor.RegionTransitionData;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -70,6 +78,7 @@ public class TestHBaseFsck {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static Configuration conf = TEST_UTIL.getConfiguration();
   private final static byte[] FAM = Bytes.toBytes("fam");
+  private final static int REGION_ONLINE_TIMEOUT = 300;
 
   // for the instance, reset every test run
   private HTable tbl;
@@ -788,5 +797,95 @@ public class TestHBaseFsck {
       return;
     }
     fail("Should have failed with IOException");
+  }
+  
+  /**
+   * when the hbase.version file missing, It is fix the fault.
+   */
+  @Test
+  public void testNoVersionFile() throws Exception {
+    // delete the hbase.version file
+    Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
+    FileSystem fs = rootDir.getFileSystem(conf);
+    Path versionFile = new Path(rootDir, HConstants.VERSION_FILE_NAME);
+    fs.delete(versionFile, true);
+
+    // test
+    HBaseFsck hbck = doFsck(conf, false);
+    assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.NO_VERSION_FILE });
+    // fix hbase.version missing
+    doFsck(conf, true);
+
+    // no version file fixed
+    assertNoErrors(doFsck(conf, false));
+  }
+ 
+  /**
+   * the region is not deployed when the table is disabled.
+   */
+  @Test
+  public void testRegionShouldNotDeployed() throws Exception {
+    String table = "tableRegionShouldNotDeployed";
+    try {
+      LOG.info("Starting testRegionShouldNotDeployed.");
+      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      assertTrue(cluster.waitForActiveAndReadyMaster());
+
+      // Create a ZKW to use in the test
+      ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+          "hbckUnitTest", new Abortable() {
+            @Override
+            public void abort(String why, Throwable e) {
+              throw new RuntimeException("Fatal ZK error, why=" + why, e);
+            }
+          });
+
+      byte[][] SPLIT_KEYS = new byte[][] { new byte[0], Bytes.toBytes("aaa"),
+          Bytes.toBytes("bbb"), Bytes.toBytes("ccc"), Bytes.toBytes("ddd") };
+      HTableDescriptor htdDisabled = new HTableDescriptor(Bytes.toBytes(table));
+      htdDisabled.addFamily(new HColumnDescriptor(FAM));
+      List<HRegionInfo> disabledRegions = TEST_UTIL.createMultiRegionsInMeta(
+          TEST_UTIL.getConfiguration(), htdDisabled, SPLIT_KEYS);
+
+      // Let's just assign everything to first RS
+      HRegionServer hrs = cluster.getRegionServer(0);
+      String serverName = hrs.getServerName();
+
+      // create region files.
+      TEST_UTIL.getHBaseAdmin().disableTable(table);
+      TEST_UTIL.getHBaseAdmin().enableTable(table);
+
+      // Region of disable table was opened on RS
+      TEST_UTIL.getHBaseAdmin().disableTable(table);
+      HRegionInfo region = disabledRegions.remove(0);
+      ZKAssign.createNodeOffline(zkw, region, serverName);
+      hrs.openRegion(region);
+
+      int iTimes = 0;
+      while (true) {
+        RegionTransitionData rtd = ZKAssign.getData(zkw,
+            region.getEncodedName());
+        if (rtd != null && rtd.getEventType() == EventType.RS_ZK_REGION_OPENED) {
+          break;
+        }
+        Thread.sleep(100);
+        iTimes++;
+        if (iTimes >= REGION_ONLINE_TIMEOUT) {
+          break;
+        }
+      }
+      assertTrue(iTimes < REGION_ONLINE_TIMEOUT);
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.SHOULD_NOT_BE_DEPLOYED });
+      
+      // fix this fault
+      doFsck(conf, true);
+
+      // check result
+      assertNoErrors(doFsck(conf, false));
+    } finally {
+      deleteTable(table);
+    }
   }
 }
