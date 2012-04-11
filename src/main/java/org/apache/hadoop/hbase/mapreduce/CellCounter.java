@@ -127,8 +127,8 @@ public class CellCounter {
               new IntWritable(1));
             context.write(new Text(thisRowFamilyName), new IntWritable(1));
           }
-          String thisRowQualifierName =
-            thisRowFamilyName + separator + Bytes.toStringBinary(value.getQualifier());
+          String thisRowQualifierName = thisRowFamilyName + separator
+              + Bytes.toStringBinary(value.getQualifier());
           if (thisRowQualifierName != null &&
               !thisRowQualifierName.equals(currentQualifierName)) {
             currentQualifierName = thisRowQualifierName;
@@ -139,16 +139,16 @@ public class CellCounter {
             // Intialize versions
             context.getCounter("QL_VERSIONS", currentRowKey + separator +
               thisRowQualifierName).increment(1);
-            context.write(new Text(currentRowKey + separator + thisRowQualifierName +
-              "_Versions"), new IntWritable(1));
+            context.write(new Text(currentRowKey + separator
+                + thisRowQualifierName + "_Versions"), new IntWritable(1));
 
           } else {
             // Increment versions
             currentQualifierName = thisRowQualifierName;
             context.getCounter("QL_VERSIONS", currentRowKey + separator +
               thisRowQualifierName).increment(1);
-            context.write(new Text(currentRowKey + separator + thisRowQualifierName + "_Versions"),
-              new IntWritable(1));
+            context.write(new Text(currentRowKey + separator
+                + thisRowQualifierName + "_Versions"), new IntWritable(1));
           }
         }
       } catch (InterruptedException e) {

@@ -791,11 +791,6 @@ public class ReplicationSource extends Thread
       return Long.valueOf(getTS(o1)).compareTo(getTS(o2));
     }
 
-    @Override
-    public boolean equals(Object o) {
-      return true;
-    }
-
     /**
      * Split a path to get the start time
      * For example: 10.20.20.171%3A60020.1277499063250

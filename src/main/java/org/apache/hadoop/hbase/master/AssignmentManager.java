@@ -927,7 +927,7 @@ public class AssignmentManager extends ZooKeeperListener {
       return p.getFirst();
     } catch (IOException e) {
       master.abort("Aborting because error occoured while reading "
-          + data.getRegionName() + " from .META.", e);
+          + Bytes.toStringBinary(data.getRegionName()) + " from .META.", e);
       return null;
     }
   }
@@ -1756,7 +1756,6 @@ public class AssignmentManager extends ZooKeeperListener {
   boolean asyncSetOfflineInZooKeeper(final RegionState state,
       final AsyncCallback.StringCallback cb, final Object ctx) {
     if (!state.isClosed() && !state.isOffline()) {
-        new RuntimeException("Unexpected state trying to OFFLINE; " + state);
       this.master.abort("Unexpected state trying to OFFLINE; " + state,
         new IllegalStateException());
       return false;

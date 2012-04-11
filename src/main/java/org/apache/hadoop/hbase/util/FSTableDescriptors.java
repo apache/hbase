@@ -273,7 +273,7 @@ public class FSTableDescriptors implements TableDescriptors {
         Path p = status[i].getPath();
         // Clean up old versions
         if (!fs.delete(p, false)) {
-          LOG.warn("Failed cleanup of " + status);
+          LOG.warn("Failed cleanup of " + p);
         } else {
           LOG.debug("Cleaned up old tableinfo file " + p);
         }

@@ -259,9 +259,8 @@ public class MemStoreLAB {
 
     @Override
     public String toString() {
-      return "Allocation(data=" + data +
-        " with capacity=" + data.length +
-        ", off=" + offset + ")";
+      return "Allocation(" + "capacity=" + data.length + ", off=" + offset
+          + ")";
     }
 
     byte[] getData() {

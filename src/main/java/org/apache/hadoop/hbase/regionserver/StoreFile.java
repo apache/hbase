@@ -963,7 +963,7 @@ public class StoreFile extends SchemaConfigured {
           .withPath(fs, path)
           .withBlockSize(blocksize)
           .withCompression(compress)
-          .withDataBlockEncoder(dataBlockEncoder)
+          .withDataBlockEncoder(this.dataBlockEncoder)
           .withComparator(comparator.getRawComparator())
           .withChecksumType(checksumType)
           .withBytesPerChecksum(bytesPerChecksum)

@@ -691,8 +691,8 @@ public class DefaultLoadBalancer implements LoadBalancer {
           get(Bytes.toString(tableName));
       }
     } catch (FileNotFoundException fnfe) {
-      LOG.debug("FileNotFoundException during getTableDescriptors." +
-        " Current table name = " + tableName , fnfe);
+      LOG.debug("FileNotFoundException during getTableDescriptors."
+          + " Current table name = " + Bytes.toStringBinary(tableName), fnfe);
     }
 
     return tableDescriptor;

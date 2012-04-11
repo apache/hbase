@@ -558,9 +558,7 @@ public class HFile {
       hfs = (HFileSystem)fs;
       // open a stream to read data without checksum verification in
       // the filesystem
-      if (hfs != null) {
-        fsdisNoFsChecksum = hfs.getNoChecksumFs().open(path);
-      }
+      fsdisNoFsChecksum = hfs.getNoChecksumFs().open(path);
     }
     return pickReaderVersion(path, fsdis, fsdisNoFsChecksum,
         fs.getFileStatus(path).getLen(), closeIStream, cacheConf,

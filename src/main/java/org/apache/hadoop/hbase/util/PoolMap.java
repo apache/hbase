@@ -192,8 +192,8 @@ public class PoolMap<K, V> implements Map<K, V> {
     for (Map.Entry<K, Pool<V>> poolEntry : pools.entrySet()) {
       final K poolKey = poolEntry.getKey();
       final Pool<V> pool = poolEntry.getValue();
-      for (final V poolValue : pool.values()) {
-        if (pool != null) {
+      if (pool != null) {
+        for (final V poolValue : pool.values()) {
           entries.add(new Map.Entry<K, V>() {
             @Override
             public K getKey() {

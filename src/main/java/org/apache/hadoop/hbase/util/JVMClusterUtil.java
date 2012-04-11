@@ -231,9 +231,8 @@ public class JVMClusterUtil {
         }
       }
     }
-    // regionServerThreads can never be null because they are initialized when
-    // the class is constructed.
-      for(RegionServerThread t: regionservers) {
+    if (regionservers != null) {
+      for (RegionServerThread t : regionservers) {
         if (t.isAlive()) {
           try {
             t.getRegionServer().stop("Shutdown requested");
@@ -243,6 +242,7 @@ public class JVMClusterUtil {
           }
         }
       }
+    }
     if (masters != null) {
       for (JVMClusterUtil.MasterThread t : masters) {
         while (t.master.isAlive()) {

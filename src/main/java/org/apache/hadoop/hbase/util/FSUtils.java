@@ -832,7 +832,7 @@ public abstract class FSUtils {
     public boolean accept(Path p) {
       boolean isValid = false;
       try {
-        if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(p)) {
+        if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(p.toString())) {
           isValid = false;
         } else {
             isValid = this.fs.getFileStatus(p).isDir();

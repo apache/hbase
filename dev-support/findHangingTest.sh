@@ -38,4 +38,3 @@ cat jenkins.out | while read line; do
   prevLine=$line
  fi
 done
-rm jenkins.out
