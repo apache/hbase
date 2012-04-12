@@ -98,6 +98,7 @@ public class ServerManager {
   private final DeadServer deadservers;
 
   private final long maxSkew;
+  private final long warningSkew;
 
   /**
    * Set of region servers which are dead but not expired immediately. If one
@@ -124,6 +125,7 @@ public class ServerManager {
     this.services = services;
     Configuration c = master.getConfiguration();
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
+    warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
     this.deadservers = new DeadServer();
     this.connection = connect ? HConnectionManager.getConnection(c) : null;
   }
@@ -196,14 +198,14 @@ public class ServerManager {
   }
 
   /**
-   * Checks if the clock skew between the server and the master. If the clock
-   * skew is too much it will throw an Exception.
+   * Checks if the clock skew between the server and the master. If the clock skew exceeds the 
+   * configured max, it will throw an exception; if it exceeds the configured warning threshold, 
+   * it will log a warning but start normally.
    * @param serverName Incoming servers's name
    * @param serverCurrentTime
-   * @throws ClockOutOfSyncException
+   * @throws ClockOutOfSyncException if the skew exceeds the configured max value
    */
-  private void checkClockSkew(final ServerName serverName,
-      final long serverCurrentTime)
+  private void checkClockSkew(final ServerName serverName, final long serverCurrentTime)
   throws ClockOutOfSyncException {
     long skew = System.currentTimeMillis() - serverCurrentTime;
     if (skew > maxSkew) {
@@ -212,6 +214,11 @@ public class ServerManager {
         "Time difference of " + skew + "ms > max allowed of " + maxSkew + "ms";
       LOG.warn(message);
       throw new ClockOutOfSyncException(message);
+    } else if (skew > warningSkew){
+      String message = "Reported time for server " + serverName + " is out of sync with master " +
+        "by " + skew + "ms. (Warning threshold is " + warningSkew + "ms; " + 
+        "error threshold is " + maxSkew + "ms)";
+      LOG.warn(message);
     }
   }
 
