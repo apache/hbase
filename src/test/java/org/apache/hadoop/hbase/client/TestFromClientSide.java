@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.generated.master.table_jsp;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -4186,6 +4187,27 @@ public class TestFromClientSide {
     assertEquals(0, Bytes.compareTo(Bytes.add(v2,v1), r.getValue(FAMILY, QUALIFIERS[1])));
   }
  
+  @Test
+  public void testIncrementWithDeletes() throws Exception {
+    LOG.info("Starting testIncrement");
+    final byte [] TABLENAME = Bytes.toBytes("testIncrementWithDeletes");
+    HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    final byte[] COLUMN = Bytes.toBytes("column");
+
+    ht.incrementColumnValue(ROW, FAMILY, COLUMN, 5);
+    TEST_UTIL.flush(TABLENAME);
+
+    Delete del = new Delete(ROW);
+    ht.delete(del);
+
+    ht.incrementColumnValue(ROW, FAMILY, COLUMN, 5);
+
+    Get get = new Get(ROW);
+    Result r = ht.get(get);
+    assertEquals(1, r.size());
+    assertEquals(5, Bytes.toLong(r.getValue(FAMILY, COLUMN)));
+  }
+
   @Test
   public void testIncrement() throws Exception {
     LOG.info("Starting testIncrement");

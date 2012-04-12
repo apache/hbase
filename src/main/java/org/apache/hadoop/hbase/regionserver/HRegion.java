@@ -33,7 +33,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -4134,89 +4133,6 @@ public class HRegion implements HeapSize { // , Writable{
     return new Result(results);
   }
 
-  /**
-   * An optimized version of {@link #get(Get)} that checks MemStore first for
-   * the specified query.
-   * <p>
-   * This is intended for use by increment operations where we have the
-   * guarantee that versions are never inserted out-of-order so if a value
-   * exists in MemStore it is the latest value.
-   * <p>
-   * It only makes sense to use this method without a TimeRange and maxVersions
-   * equal to 1.
-   * @param get
-   * @return result
-   * @throws IOException
-   */
-  private List<KeyValue> getLastIncrement(final Get get) throws IOException {
-    InternalScan iscan = new InternalScan(get);
-
-    List<KeyValue> results = new ArrayList<KeyValue>();
-
-    // memstore scan
-    iscan.checkOnlyMemStore();
-    RegionScanner scanner = null;
-    try {
-      scanner = getScanner(iscan);
-      scanner.next(results);
-    } finally {
-      if (scanner != null)
-        scanner.close();
-    }
-
-    // count how many columns we're looking for
-    int expected = 0;
-    Map<byte[], NavigableSet<byte[]>> familyMap = get.getFamilyMap();
-    for (NavigableSet<byte[]> qfs : familyMap.values()) {
-      expected += qfs.size();
-    }
-
-    // found everything we were looking for, done
-    if (results.size() == expected) {
-      return results;
-    }
-
-    // still have more columns to find
-    if (results != null && !results.isEmpty()) {
-      // subtract what was found in memstore
-      for (KeyValue kv : results) {
-        byte [] family = kv.getFamily();
-        NavigableSet<byte[]> qfs = familyMap.get(family);
-        qfs.remove(kv.getQualifier());
-        if (qfs.isEmpty()) familyMap.remove(family);
-        expected--;
-      }
-      // make a new get for just what is left
-      Get newGet = new Get(get.getRow());
-      for (Map.Entry<byte[], NavigableSet<byte[]>> f : familyMap.entrySet()) {
-        byte [] family = f.getKey();
-        for (byte [] qualifier : f.getValue()) {
-          newGet.addColumn(family, qualifier);
-        }
-      }
-      newGet.setTimeRange(get.getTimeRange().getMin(),
-          get.getTimeRange().getMax());
-      iscan = new InternalScan(newGet);
-    }
-
-    // check store files for what is left
-    List<KeyValue> fileResults = new ArrayList<KeyValue>();
-    iscan.checkOnlyStoreFiles();
-    scanner = null;
-    try {
-      scanner = getScanner(iscan);
-      scanner.next(fileResults);
-    } finally {
-      if (scanner != null)
-        scanner.close();
-    }
-
-    // combine and return
-    results.addAll(fileResults);
-    Collections.sort(results, KeyValue.COMPARATOR);
-    return results;
-  }
-
   /*
    * Do a get based on the get parameter.
    * @param withCoprocessor invoke coprocessor or not. We don't want to
@@ -4713,7 +4629,7 @@ public class HRegion implements HeapSize { // , Writable{
             get.addColumn(family.getKey(), column.getKey());
           }
           get.setTimeRange(tr.getMin(), tr.getMax());
-          List<KeyValue> results = getLastIncrement(get);
+          List<KeyValue> results = get(get, false);
 
           // Iterate the input columns and update existing values if they were
           // found, otherwise add new column initialized to the increment amount
@@ -4813,7 +4729,7 @@ public class HRegion implements HeapSize { // , Writable{
 
         // we don't want to invoke coprocessor in this case; ICV is wrapped
         // in HRegionServer, so we leave getLastIncrement alone
-        List<KeyValue> results = getLastIncrement(get);
+        List<KeyValue> results = get(get, false);
 
         if (!results.isEmpty()) {
           KeyValue kv = results.get(0);
