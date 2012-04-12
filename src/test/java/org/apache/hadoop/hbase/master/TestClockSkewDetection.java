@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.fail;
+
 import java.net.InetAddress;
 
 import junit.framework.Assert;
@@ -82,18 +84,25 @@ public class TestClockSkewDetection {
     InetAddress ia1 = InetAddress.getLocalHost();
     sm.regionServerStartup(ia1, 1234, -1, System.currentTimeMillis());
 
-    long maxSkew = 30000;
+    final Configuration c = HBaseConfiguration.create();
+    long maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
+    long warningSkew = c.getLong("hbase.master.warningclockskew", 1000);
 
     try {
       LOG.debug("regionServerStartup 2");
       InetAddress ia2 = InetAddress.getLocalHost();
       sm.regionServerStartup(ia2, 1235, -1, System.currentTimeMillis() - maxSkew * 2);
-      Assert.assertTrue("HMaster should have thrown an ClockOutOfSyncException "
-        + "but didn't.", false);
+      fail("HMaster should have thrown an ClockOutOfSyncException but didn't.");
     } catch(ClockOutOfSyncException e) {
       //we want an exception
       LOG.info("Recieved expected exception: "+e);
     }
+    
+    // make sure values above warning threshold but below max threshold don't kill
+    LOG.debug("regionServerStartup 3");
+    InetAddress ia3 = InetAddress.getLocalHost();
+    sm.regionServerStartup(ia3, 1236, -1, System.currentTimeMillis() - warningSkew * 2);
+    
   }
 
   @org.junit.Rule
