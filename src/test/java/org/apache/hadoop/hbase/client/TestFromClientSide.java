@@ -4485,30 +4485,74 @@ public class TestFromClientSide {
 
     // Create multiple regions for this table
     int numOfRegions = TEST_UTIL.createMultiRegions(ht, FAMILY);
+    // Create 3 rows in the table, with rowkeys starting with "z*" so that
+    // scan are forced to hit all the regions.
+    Put put1 = new Put(Bytes.toBytes("z1"));
+    put1.add(FAMILY, QUALIFIER, VALUE);
+    Put put2 = new Put(Bytes.toBytes("z2"));
+    put2.add(FAMILY, QUALIFIER, VALUE);
+    Put put3 = new Put(Bytes.toBytes("z3"));
+    put3.add(FAMILY, QUALIFIER, VALUE);
+    ht.put(Arrays.asList(put1, put2, put3));
 
     Scan scan1 = new Scan();
+    int numRecords = 0;
     for(Result result : ht.getScanner(scan1)) {
+      numRecords++;
     }
+    LOG.info("test data has " + numRecords + " records.");
 
     // by default, scan metrics collection is turned off
-    assertEquals(null, scan1.getAttribute(
-      Scan.SCAN_ATTRIBUTES_METRICS_DATA));
+    assertEquals(null, scan1.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA));
 
     // turn on scan metrics
     Scan scan = new Scan();
-    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE,
-      Bytes.toBytes(Boolean.TRUE));
-    for(Result result : ht.getScanner(scan)) {
+    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
+    ResultScanner scanner = ht.getScanner(scan);
+    // per HBASE-5717, this should still collect even if you don't run all the way to
+    // the end of the scanner. So this is asking for 2 of the 3 rows we inserted.
+    for (Result result : scanner.next(numRecords - 1)) {
     }
+    scanner.close();
 
-    byte[] serializedMetrics = scan.getAttribute(
-      Scan.SCAN_ATTRIBUTES_METRICS_DATA);
+    ScanMetrics scanMetrics = getScanMetrics(scan);
+    assertEquals("Did not access all the regions in the table", numOfRegions,
+        scanMetrics.countOfRegions.getCurrentIntervalValue());
+
+    // now, test that the metrics are still collected even if you don't call close, but do 
+    // run past the end of all the records
+    Scan scanWithoutClose = new Scan();
+    scanWithoutClose.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
+    ResultScanner scannerWithoutClose = ht.getScanner(scanWithoutClose);
+    for (Result result : scannerWithoutClose.next(numRecords + 1)) {
+    }
+    ScanMetrics scanMetricsWithoutClose = getScanMetrics(scanWithoutClose);
+    assertEquals("Did not access all the regions in the table", numOfRegions,
+        scanMetricsWithoutClose.countOfRegions.getCurrentIntervalValue());
+
+    // finally, test that the metrics are collected correctly if you both run past all the records,
+    // AND close the scanner
+    Scan scanWithClose = new Scan();
+    scanWithClose.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
+    ResultScanner scannerWithClose = ht.getScanner(scanWithClose);
+    for (Result result : scannerWithClose.next(numRecords + 1)) {
+    }
+    scannerWithClose.close();
+    ScanMetrics scanMetricsWithClose = getScanMetrics(scanWithClose);
+    assertEquals("Did not access all the regions in the table", numOfRegions,
+        scanMetricsWithClose.countOfRegions.getCurrentIntervalValue());
+
+  }
+  
+  private ScanMetrics getScanMetrics(Scan scan) throws Exception {
+    byte[] serializedMetrics = scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
+    assertTrue("Serialized metrics were not found.", serializedMetrics != null);
 
     DataInputBuffer in = new DataInputBuffer();
     in.reset(serializedMetrics, 0, serializedMetrics.length);
     ScanMetrics scanMetrics = new ScanMetrics();
     scanMetrics.readFields(in);
-    assertEquals(numOfRegions, scanMetrics.countOfRegions.getCurrentIntervalValue());
+    return scanMetrics;
   }
 
   /**

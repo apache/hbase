@@ -228,20 +228,17 @@ public class ClientScanner extends AbstractClientScanner {
     }
 
     /**
-     * publish the scan metrics
-     * For now, we use scan.setAttribute to pass the metrics for application
-     * or TableInputFormat to consume
-     * Later, we could push it to other systems
-     * We don't use metrics framework because it doesn't support
-     * multi instances of the same metrics on the same machine; for scan/map
-     * reduce scenarios, we will have multiple scans running at the same time
+     * Publish the scan metrics. For now, we use scan.setAttribute to pass the metrics back to the
+     * application or TableInputFormat.Later, we could push it to other systems. We don't use metrics
+     * framework because it doesn't support multi-instances of the same metrics on the same machine;
+     * for scan/map reduce scenarios, we will have multiple scans running at the same time.
+     *
+     * By default, scan metrics are disabled; if the application wants to collect them, this behavior
+     * can be turned on by calling calling:
+     *
+     * scan.setAttribute(SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE))
      */
-    private void writeScanMetrics() throws IOException
-    {
-      // by default, scanMetrics is null
-      // if application wants to collect scanMetrics, it can turn it on by
-      // calling scan.setAttribute(SCAN_ATTRIBUTES_METRICS_ENABLE,
-      // Bytes.toBytes(Boolean.TRUE))
+    private void writeScanMetrics() throws IOException {
       if (this.scanMetrics == null) {
         return;
       }
@@ -251,10 +248,8 @@ public class ClientScanner extends AbstractClientScanner {
     }
 
     public Result next() throws IOException {
-      // If the scanner is closed but there is some rows left in the cache,
-      // it will first empty it before returning null
+      // If the scanner is closed and there's nothing left in the cache, next is a no-op.
       if (cache.size() == 0 && this.closed) {
-        writeScanMetrics();
         return null;
       }
       if (cache.size() == 0) {
@@ -316,8 +311,7 @@ public class ClientScanner extends AbstractClientScanner {
           }
           long currentTime = System.currentTimeMillis();
           if (this.scanMetrics != null ) {
-            this.scanMetrics.sumOfMillisSecBetweenNexts.inc(
-              currentTime-lastNext);
+            this.scanMetrics.sumOfMillisSecBetweenNexts.inc(currentTime-lastNext);
           }
           lastNext = currentTime;
           if (values != null && values.length > 0) {
@@ -337,6 +331,8 @@ public class ClientScanner extends AbstractClientScanner {
       if (cache.size() > 0) {
         return cache.poll();
       }
+
+      // if we exhausted this scanner before calling close, write out the scan metrics
       writeScanMetrics();
       return null;
     }
@@ -374,6 +370,13 @@ public class ClientScanner extends AbstractClientScanner {
           // have since decided that it's not nice for a scanner's close to
           // throw exceptions. Chances are it was just an UnknownScanner
           // exception due to lease time out.
+        } finally {
+          // we want to output the scan metrics even if an error occurred on close
+          try {
+            writeScanMetrics();
+          } catch (IOException e) {
+            // As above, we still don't want the scanner close() method to throw.
+          }
         }
         callable = null;
       }
