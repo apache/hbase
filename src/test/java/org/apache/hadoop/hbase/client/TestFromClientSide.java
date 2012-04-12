@@ -4116,6 +4116,27 @@ public class TestFromClientSide {
   }
  
   @Test
+  public void testIncrementWithDeletes() throws Exception {
+    LOG.info("Starting testIncrement");
+    final byte [] TABLENAME = Bytes.toBytes("testIncrementWithDeletes");
+    HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    final byte[] COLUMN = Bytes.toBytes("column");
+
+    ht.incrementColumnValue(ROW, FAMILY, COLUMN, 5);
+    TEST_UTIL.flush(TABLENAME);
+
+    Delete del = new Delete(ROW);
+    ht.delete(del);
+
+    ht.incrementColumnValue(ROW, FAMILY, COLUMN, 5);
+
+    Get get = new Get(ROW);
+    Result r = ht.get(get);
+    assertEquals(1, r.size());
+    assertEquals(5, Bytes.toLong(r.getValue(FAMILY, COLUMN)));
+  }
+
+  @Test
   public void testIncrement() throws Exception {
     LOG.info("Starting testIncrement");
     final byte [] TABLENAME = Bytes.toBytes("testIncrement");
