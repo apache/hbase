@@ -35,6 +35,8 @@ Release 0.92.2 - Unreleased
    HBASE-5748  Enable lib directory in jar file for coprocessor (Takuya Ueshin)
    HBASE-5758  Forward port "HBASE-4109 Hostname returned via reverse dns lookup
                contains trailing period if configured interface is not 'default'"
+   HBASE-5773  HtablePool constructor not reading config files in certain cases
+               (Ioan Eugen Stan)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
