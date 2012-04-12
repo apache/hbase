@@ -19,9 +19,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
@@ -94,7 +97,7 @@ public class RegionSplitCalculator<R extends KeyRange> {
    * 
    * @return ENDKEY if end key is empty, else normal endkey.
    */
-  private byte[] specialEndKey(R range) {
+  private static <R extends KeyRange> byte[] specialEndKey(R range) {
     byte[] end = range.getEndKey();
     if (end.length == 0) {
       return ENDKEY;
@@ -159,4 +162,75 @@ public class RegionSplitCalculator<R extends KeyRange> {
     return starts;
   }
 
+  /**
+   * Find specified number of top ranges in a big overlap group.
+   * It could return less if there are not that many top ranges.
+   * Once these top ranges are excluded, the big overlap group will
+   * be broken into ranges with no overlapping, or smaller overlapped
+   * groups, and most likely some holes.
+   *
+   * @param bigOverlap a list of ranges that overlap with each other
+   * @param count the max number of ranges to find
+   * @return a list of ranges that overlap with most others
+   */
+  public static <R extends KeyRange> List<R>
+      findBigRanges(Collection<R> bigOverlap, int count) {
+    List<R> bigRanges = new ArrayList<R>();
+
+    // The key is the count of overlaps,
+    // The value is a list of ranges that have that many overlaps
+    TreeMap<Integer, List<R>> overlapRangeMap = new TreeMap<Integer, List<R>>();
+    for (R r: bigOverlap) {
+      // Calculates the # of overlaps for each region
+      // and populates rangeOverlapMap
+      byte[] startKey = r.getStartKey();
+      byte[] endKey = specialEndKey(r);
+
+      int overlappedRegions = 0;
+      for (R rr: bigOverlap) {
+        byte[] start = rr.getStartKey();
+        byte[] end = specialEndKey(rr);
+
+        if (BYTES_COMPARATOR.compare(startKey, end) < 0
+            && BYTES_COMPARATOR.compare(endKey, start) > 0) {
+          overlappedRegions++;
+        }
+      }
+
+      // One region always overlaps with itself,
+      // so overlappedRegions should be more than 1
+      // for actual overlaps.
+      if (overlappedRegions > 1) {
+        Integer key = Integer.valueOf(overlappedRegions);
+        List<R> ranges = overlapRangeMap.get(key);
+        if (ranges == null) {
+          ranges = new ArrayList<R>();
+          overlapRangeMap.put(key, ranges);
+        }
+        ranges.add(r);
+      }
+    }
+    int toBeAdded = count;
+    for (Integer key: overlapRangeMap.descendingKeySet()) {
+      List<R> chunk = overlapRangeMap.get(key);
+      int chunkSize = chunk.size();
+      if (chunkSize <= toBeAdded) {
+        bigRanges.addAll(chunk);
+        toBeAdded -= chunkSize;
+        if (toBeAdded > 0) continue;
+      } else {
+        // Try to use the middle chunk in case the overlapping is
+        // chained, for example: [a, c), [b, e), [d, g), [f h)...
+        // In such a case, sideline the middle chunk will break
+        // the group efficiently.
+        int start = (chunkSize - toBeAdded)/2;
+        int end = start + toBeAdded;
+        for (int i = start; i < end; i++) {
+          bigRanges.add(chunk.get(i));
+        }
+      }
+      break;
+    }
+    return bigRanges;
+  }
 }
