@@ -279,7 +279,12 @@ public class TestZooKeeper {
       assertNotNull(ZKUtil.getDataNoWatch(zkw, "/l1/l2/l3/l4", null));
     }
     ZKUtil.deleteNodeRecursively(zkw, "/l1/l2");
+    // make sure it really is deleted
     assertNull(ZKUtil.getDataNoWatch(zkw, "/l1/l2/l3/l4", null));
+
+    // do the same delete again and make sure it doesn't crash
+    ZKUtil.deleteNodeRecursively(zkw, "/l1/l2");
+
     ZKUtil.deleteNode(zkw, "/l1");
     assertNull(ZKUtil.getDataNoWatch(zkw, "/l1/l2", null));
   }

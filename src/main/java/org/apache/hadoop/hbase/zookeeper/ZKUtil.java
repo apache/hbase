@@ -1004,14 +1004,19 @@ public class ZKUtil {
 
   /**
    * Delete the specified node and all of it's children.
-   *
-   * Sets no watches.  Throws all exceptions besides dealing with deletion of
+   * <p>
+   * If the node does not exist, just returns.
+   * <p>
+   * Sets no watches. Throws all exceptions besides dealing with deletion of
    * children.
    */
   public static void deleteNodeRecursively(ZooKeeperWatcher zkw, String node)
   throws KeeperException {
     try {
       List<String> children = ZKUtil.listChildrenNoWatch(zkw, node);
+      // the node is already deleted, so we just finish
+      if (children == null) return;
+
       if(!children.isEmpty()) {
         for(String child : children) {
           deleteNodeRecursively(zkw, joinZNode(node, child));
