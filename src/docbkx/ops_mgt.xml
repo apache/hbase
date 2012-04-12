@@ -148,7 +148,24 @@
        This page currently exists on the website and will eventually be migrated into the RefGuide.
        </para>
     </section>
-\    <section xml:id="rowcounter">
+    <section xml:id="walplayer">
+       <title>WALPlayer</title>
+       <para>WALPlayer is a utility to replay WAL files into HBase.
+       </para>
+       <para>The WAL can be replayed for a set of tables or all tables, and a timerange can be provided (in milliseconds). The WAL is filtered to this set of tables. The output can optionally be mapped to another set of tables.
+       </para>
+       <para>WALPlayer can also generate HFiles for later bulk importing, in that case only a single table and no mapping can be specified.
+       </para>
+       <para>Invoke via:
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.WALPlayer [options] &lt;wal inputdir&gt; &lt;tables&gt; [&lt;tableMappings>]&gt;
+</programlisting>
+       </para>
+       <para>For example:
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.WALPlayer /backuplogdir oldTable1,oldTable2 newTable1,newTable2
+</programlisting>
+       </para>
+    </section>
+    <section xml:id="rowcounter">
        <title>RowCounter</title>
        <para>RowCounter is a utility that will count all the rows of a table.  This is a good utility to use
        as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
