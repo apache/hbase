@@ -20,9 +20,12 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.List;
 import java.util.SortedSet;
 
 import org.apache.commons.logging.Log;
@@ -346,5 +349,41 @@ public class TestRegionSplitCalculator {
     checkDepths(sc.getSplits(), regions, 1, 1, 1, 0);
     assertEquals(res, ":\t[, A]\t\n" + "A:\t[A, B]\t\n" + "B:\t[B, ]\t\n"
         + "null:\t\n");
+  }
+
+  @Test
+  public void testBigRanges() {
+    SimpleRange ai = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("I"));
+    SimpleRange ae = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("E"));
+    SimpleRange ac = new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("C"));
+
+    Collection<SimpleRange> bigOverlap = new ArrayList<SimpleRange>();
+    bigOverlap.add(new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("E")));
+    bigOverlap.add(new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("C")));
+    bigOverlap.add(new SimpleRange(Bytes.toBytes("A"), Bytes.toBytes("B")));
+    bigOverlap.add(new SimpleRange(Bytes.toBytes("B"), Bytes.toBytes("C")));
+    bigOverlap.add(new SimpleRange(Bytes.toBytes("E"), Bytes.toBytes("H")));
+    bigOverlap.add(ai);
+    bigOverlap.add(ae);
+    bigOverlap.add(ac);
+
+    // Expect 1 range to be returned: ai
+    List<SimpleRange> bigRanges = RegionSplitCalculator.findBigRanges(bigOverlap, 1);
+    assertEquals(1, bigRanges.size());
+    assertEquals(ai, bigRanges.get(0));
+
+    // Expect 3 ranges to be returned: ai, ae and ac
+    bigRanges = RegionSplitCalculator.findBigRanges(bigOverlap, 3);
+    assertEquals(3, bigRanges.size());
+    assertEquals(ai, bigRanges.get(0));
+
+    SimpleRange r1 = bigRanges.get(1);
+    SimpleRange r2 = bigRanges.get(2);
+    assertEquals(Bytes.toString(r1.start), "A");
+    assertEquals(Bytes.toString(r2.start), "A");
+    String r1e = Bytes.toString(r1.end);
+    String r2e = Bytes.toString(r2.end);
+    assertTrue((r1e.equals("C") && r2e.equals("E"))
+      || (r1e.equals("E") && r2e.equals("C")));
   }
 }
