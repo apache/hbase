@@ -207,7 +207,7 @@
     </section>
     <section name="More Information">
       <p>
-      For more information, see the <a href="book.html#client">client architecture</a> or <a href="book.html#datamodel">data model</a> sections in the HBase book. 
+      For more information, see the <a href="book.html#client">client architecture</a> or <a href="book.html#datamodel">data model</a> sections in the HBase Reference Guide. 
       </p>
     </section>
     

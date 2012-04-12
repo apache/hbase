@@ -139,7 +139,7 @@ export HBASE_REGIONSERVER_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.p
       </section>
       <section name="Understanding HBase Metrics">
       <p>
-      For more information on understanding HBase metrics, see the <a href="book.html#hbase_metrics">metrics section</a> in the HBase book. 
+      For more information on understanding HBase metrics, see the <a href="book.html#hbase_metrics">metrics section</a> in the HBase Reference Guide. 
       </p>
       </section>
     </section>
