@@ -136,7 +136,7 @@ public class HTablePool implements Closeable {
       final HTableInterfaceFactory tableFactory, PoolType poolType) {
     // Make a new configuration instance so I can safely cleanup when
     // done with the pool.
-    this.config = config == null ? new Configuration() : config;
+    this.config = config == null ? HBaseConfiguration.create() : config;
     this.maxSize = maxSize;
     this.tableFactory = tableFactory == null ? new HTableFactory()
         : tableFactory;
