@@ -132,7 +132,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
   public void init(FileSystem fs, Path path, Configuration conf)
   throws IOException {
     // Should we do our custom WAL compression?
-    boolean compress = conf.getBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
+    boolean compress = conf.getBoolean(HConstants.ENABLE_WAL_COMPRESSION, false);
     if (compress) {
       try {
         if (this.compressionContext == null) {
