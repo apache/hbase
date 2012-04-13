@@ -16,6 +16,8 @@ Release 0.90.7 - Unreleased
                (Teruyoshi Zenmyo)
    HBASE-5680  Improve compatibility warning about HBase with Hadoop 0.23.x
    HBASE-5488  OfflineMetaRepair doesn't support hadoop 0.20's fs.default.name property (gaojinchao)
+   HBASE-5773  HtablePool constructor not reading config files in certain cases
+               (Ioan Eugen Stan)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
