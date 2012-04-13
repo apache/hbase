@@ -28,6 +28,7 @@
   </properties>
   <body>
   <section name="Old News">
+            <p>March 27th, 2012 <a href="http://www.meetup.com/hbaseusergroup/events/56021562/">Meetup @ StumbleUpon</a> in San Francisco</p>
 
             <p>January 19th, 2012 <a href="http://www.meetup.com/hbaseusergroup/events/46702842/">Meetup @ EBay</a></p>
             <p>January 23rd, 2012 HBase 0.92.0 released. <a href="http://www.apache.org/dyn/closer.cgi/hbase/">Download it!</a></p>

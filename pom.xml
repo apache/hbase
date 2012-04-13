@@ -336,6 +336,13 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
           <version>${maven.site.version}</version>
+          <dependencies>
+            <dependency><!-- add support for ssh/scp -->
+              <groupId>org.apache.maven.wagon</groupId>
+              <artifactId>wagon-ssh</artifactId>
+              <version>2.2</version>
+            </dependency>
+          </dependencies>
           <configuration>
             <inputEncoding>UTF-8</inputEncoding>
             <outputEncoding>UTF-8</outputEncoding>
@@ -2278,4 +2285,19 @@
       </plugin>
     </plugins>
   </reporting>
+  <distributionManagement>
+    <!--Build and deploy the site with the below command
+
+      $ ~/bin/apache-maven-3.0.4/bin/mvn -X clean site:site site:deploy
+
+      You may need a settings.xml file under you ~/.m2/ directory as
+      described here: http://www.apache.org/dev/publishing-maven-artifacts.html
+      We should use the below going forward because it ensures permissions up
+      in apache making it so other members of hbase group can deploy w/o issue.
+     -->
+    <site>
+      <id>apache.website</id>
+      <url>scp://people.apache.org/www/hbase.apache.org/</url>
+    </site>
+  </distributionManagement>
 </project>
