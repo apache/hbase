@@ -62,7 +62,10 @@ public class OfflineMetaRepair {
 
     // create a fsck object
     Configuration conf = HBaseConfiguration.create();
+    // Cover both bases, the old way of setting default fs and the new.
+    // We're supposed to run on 0.20 and 0.21 anyways.
     conf.set("fs.defaultFS", conf.get(HConstants.HBASE_DIR));
+    conf.set("fs.default.name", conf.get(HConstants.HBASE_DIR));
     HBaseFsck fsck = new HBaseFsck(conf);
     boolean fixHoles = false;
 
@@ -77,6 +80,7 @@ public class OfflineMetaRepair {
         String path = args[i];
         conf.set(HConstants.HBASE_DIR, path);
         conf.set("fs.defaultFS", conf.get(HConstants.HBASE_DIR));
+        conf.set("fs.default.name", conf.get(HConstants.HBASE_DIR));
       } else if (cmd.equals("-fixHoles")) {
         fixHoles = true;
       } else if (cmd.equals("-fix")) {
