@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.0 - 3/27/2012
+Release 0.94.0 - 4/13/2012
 Sub-task
 
     [HBASE-4343] - Get the TestAcidGuarantee unit test to fail consistently
@@ -33,11 +33,13 @@ Sub-task
     [HBASE-5497] - Add protobuf as M/R dependency jar (mapred)
     [HBASE-5523] - Fix Delete Timerange logic for KEEP_DELETED_CELLS
     [HBASE-5541] - Avoid holding the rowlock during HLog sync in HRegion.mutateRowWithLocks
+    [HBASE-5638] - Backport to 0.90 and 0.92 - NPE reading ZK config in HBase
     [HBASE-5641] - decayingSampleTick1 prevents HBase from shutting down.
 
 Bug
 
     [HBASE-2856] - TestAcidGuarantee broken on trunk
+    [HBASE-3443] - ICV optimization to look in memstore first and then store files (HBASE-3082) does not work when deletes are in the mix
     [HBASE-3690] - Option to Exclude Bulk Import Files from Minor Compaction
     [HBASE-3987] - Fix a NullPointerException on a failure to load Bloom filter data
     [HBASE-4065] - TableOutputFormat ignores failure to create table instance
@@ -46,6 +48,7 @@ Bug
     [HBASE-4116] - [stargate] StringIndexOutOfBoundsException in row spec parse
     [HBASE-4326] - Tests that use HBaseTestingUtility.startMiniCluster(n) should shutdown with HBaseTestingUtility.shutdownMiniCluster.
     [HBASE-4397] - -ROOT-, .META. tables stay offline for too long in recovery phase after all RSs are shutdown at the same time
+    [HBASE-4398] - If HRegionPartitioner is used in MapReduce, client side configurations are overwritten by hbase-site.xml.
     [HBASE-4476] - Compactions must fail if column tracker gets columns out of order
     [HBASE-4496] - HFile V2 does not honor setCacheBlocks when scanning.
     [HBASE-4607] - Split log worker should terminate properly when waiting for znode
@@ -97,6 +100,7 @@ Bug
     [HBASE-5085] - fix test-patch script from setting the ulimit
     [HBASE-5088] - A concurrency issue on SoftValueSortedMap
     [HBASE-5091] - [replication] Update replication doc to reflect current znode structure
+    [HBASE-5097] - RegionObserver implementation whose preScannerOpen and postScannerOpen Impl return null can stall the system initialization through NPE
     [HBASE-5099] - ZK event thread waiting for root region assignment may block server shutdown handler for the region sever the root region was on
     [HBASE-5100] - Rollback of split could cause closed region to be opened again
     [HBASE-5103] - Fix improper master znode deserialization
@@ -114,6 +118,7 @@ Bug
     [HBASE-5200] - AM.ProcessRegionInTransition() and AM.handleRegion() race thus leaving the region assignment inconsistent
     [HBASE-5206] - Port HBASE-5155 to 0.92, 0.94, and TRUNK
     [HBASE-5212] - Fix test TestTableMapReduce against 0.23.
+    [HBASE-5213] - "hbase master stop" does not bring down backup masters
     [HBASE-5221] - bin/hbase script doesn't look for Hadoop jars in the right place in trunk layout
     [HBASE-5228] - [REST] Rip out "transform" feature
     [HBASE-5267] - Add a configuration to disable the slab cache by default
@@ -150,6 +155,7 @@ Bug
     [HBASE-5481] - Uncaught UnknownHostException prevents HBase from starting
     [HBASE-5484] - Spelling mistake in error message in HMasterCommandLine
     [HBASE-5485] - LogCleaner refers to non-existant SnapshotLogCleaner
+    [HBASE-5488] - OfflineMetaRepair doesn't support hadoop 0.20's fs.default.name property
     [HBASE-5499] - dev-support/test-patch.sh does not have execute perms
     [HBASE-5502] - region_mover.rb fails to load regions back to original server for regions only containing empty tables.
     [HBASE-5507] - ThriftServerRunner.HbaseHandler.getRegionInfo() and getTableRegions() do not use ByteBuffer correctly
@@ -173,12 +179,29 @@ Bug
     [HBASE-5596] - Few minor bugs from HBASE-5209
     [HBASE-5597] - Findbugs check in test-patch.sh always fails
     [HBASE-5603] - rolling-restart.sh script hangs when attempting to detect expiration of /hbase/master znode.
+    [HBASE-5606] - SplitLogManger async delete node hangs log splitting when ZK connection is lost
     [HBASE-5613] - ThriftServer getTableRegions does not return serverName and port
-    [HBASE-5615] - the master never does balance because of balancing the parent region
     [HBASE-5623] - Race condition when rolling the HLog and hlogFlush
     [HBASE-5624] - Aborting regionserver when splitting region, may cause daughter region not assigned by ServerShutdownHandler.
     [HBASE-5633] - NPE reading ZK config in HBase
+    [HBASE-5636] - TestTableMapReduce doesn't work properly.
     [HBASE-5639] - The logic used in waiting for region servers during startup is broken
+    [HBASE-5656] - LoadIncrementalHFiles createTable should detect and set compression algorithm
+    [HBASE-5663] - MultithreadedTableMapper doesn't work.
+    [HBASE-5665] - Repeated split causes HRegionServer failures and breaks table
+    [HBASE-5669] - AggregationClient fails validation for open stoprow scan
+    [HBASE-5680] - Improve compatibility warning about HBase with Hadoop 0.23.x
+    [HBASE-5689] - Skipping RecoveredEdits may cause data loss
+    [HBASE-5690] - compression does not work in Store.java of 0.94
+    [HBASE-5694] - getRowsWithColumnsTs() in Thrift service handles timestamps incorrectly
+    [HBASE-5701] - Put RegionServerDynamicStatistics under RegionServer in MBean hierarchy rather than have it as a peer.
+    [HBASE-5717] - Scanner metrics are only reported if you get to the end of a scanner
+    [HBASE-5720] - HFileDataBlockEncoderImpl uses wrong header size when reading HFiles with no checksums
+    [HBASE-5722] - NPE in ZKUtil#getChildDataAndWatchForNewChildren when ZK not available or NW down.
+    [HBASE-5724] - Row cache of KeyValue should be cleared in readFields().
+    [HBASE-5736] - ThriftServerRunner.HbaseHandler.mutateRow() does not use ByteBuffer correctly
+    [HBASE-5743] - Support GIT patches
+    [HBASE-5773] - HtablePool constructor not reading config files in certain cases
 
 Improvement
 
@@ -311,10 +334,21 @@ Improvement
     [HBASE-5588] - Deprecate/remove AssignmentManager#clearRegionFromTransition
     [HBASE-5589] - Add of the offline call to the Master Interface
     [HBASE-5592] - Make it easier to get a table from shell
+    [HBASE-5618] - SplitLogManager - prevent unnecessary attempts to resubmits
+    [HBASE-5670] - Have Mutation implement the Row interface.
+    [HBASE-5671] - hbase.metrics.showTableName should be true by default
+    [HBASE-5682] - Allow HConnectionImplementation to recover from ZK connection loss (for 0.94 only)
+    [HBASE-5706] - "Dropping fs latency stats since buffer is full" spam
+    [HBASE-5734] - Change hbck sideline root
+    [HBASE-5735] - Clearer warning message when connecting a non-secure HBase client to a secure HBase server
+    [HBASE-5748] - Enable lib directory in jar file for coprocessor
+    [HBASE-5770] - Add a clock skew warning threshold
+    [HBASE-5775] - ZKUtil doesn't handle deleteRecurisively cleanly
 
 New Feature
 
     [HBASE-2947] - MultiIncrement/MultiAppend (MultiGet functionality for increments and appends)
+    [HBASE-3134] - [replication] Add the ability to enable/disable streams
     [HBASE-3584] - Allow atomic put/delete in one call
     [HBASE-3856] - Build a tree structure data block index inside of the HFile
     [HBASE-4102] - atomicAppend: A put that appends to the latest version of a cell; i.e. reads current value then adds the bytes offered by the client to the tail and writes out a new entry
@@ -330,6 +364,9 @@ New Feature
     [HBASE-5177] - HTable needs a non cached version of getRegionLocation
     [HBASE-5229] - Provide basic building blocks for "multi-row" local transactions.
     [HBASE-5526] - Configurable file and directory based umask
+    [HBASE-5599] - [hbck] handle NO_VERSION_FILE and SHOULD_NOT_BE_DEPLOYED inconsistencies
+    [HBASE-5604] - M/R tool to replay WAL files
+    [HBASE-5719] - Enhance hbck to sideline overlapped mega regions
 
 Task
 
@@ -340,6 +377,7 @@ Task
     [HBASE-4751] - Make TestAdmin#testEnableTableRoundRobinAssignment friendly to concurrent tests
     [HBASE-4968] - Add to troubleshooting workaround for direct buffer oome's.
     [HBASE-5011] - Move test-util.sh from src/test/bin to dev-tools
+    [HBASE-5084] - Allow different HTable instances to share one ExecutorService
     [HBASE-5111] - Upgrade zookeeper to 3.4.2 release
     [HBASE-5173] - Commit hbase-4480 findHangingTest.sh script under dev-support
     [HBASE-5264] - Add 0.92.0 upgrade guide
@@ -347,6 +385,9 @@ Task
     [HBASE-5400] - Some tests does not have annotations for (Small|Medium|Large)Tests
     [HBASE-5427] - Upgrade our zk to 3.4.3
     [HBASE-5511] - More doc on maven release process
+    [HBASE-5715] - Revert 'Instant schema alter' for now, HBASE-4213
+    [HBASE-5721] - Update bundled hadoop to be 1.0.2 (it was just released)
+    [HBASE-5758] - Forward port "HBASE-4109 Hostname returned via reverse dns lookup contains trailing period if configured interface is not 'default'"
 
 Test
 
