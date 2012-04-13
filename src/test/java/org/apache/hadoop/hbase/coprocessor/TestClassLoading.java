@@ -176,6 +176,8 @@ public class TestClassLoading {
     String classpath =
         currentDir + Path.SEPARATOR + "target"+ Path.SEPARATOR + "classes" +
         System.getProperty("path.separator") +
+        // Note that the below trick only works if mvn is running the test;
+        // doesn't work in eclipse for example.
         System.getProperty("surefire.test.class.path");
     options.add(classpath);
     LOG.debug("Setting classpath to: "+classpath);

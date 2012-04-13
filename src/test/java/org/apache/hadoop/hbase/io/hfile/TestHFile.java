@@ -52,7 +52,9 @@ import org.junit.experimental.categories.Category;
 public class TestHFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestHFile.class);
 
-  private String ROOT_DIR;
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static String ROOT_DIR =
+    TEST_UTIL.getDataTestDir("TestHFile").toString();
   private final int minBlockSize = 512;
   private static String localFormatter = "%010d";
   private static CacheConfig cacheConf = null;
@@ -61,7 +63,6 @@ public class TestHFile extends HBaseTestCase {
   @Override
   public void setUp() throws Exception {
     startingMetrics = SchemaMetrics.getMetricsSnapshot();
-    ROOT_DIR = this.getUnitTestdir("TestHFile").toString();
     super.setUp();
   }
 

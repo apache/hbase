@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -66,7 +65,7 @@ public class TestScannerSelectionUsingTTL {
   private static String FAMILY = "myCF";
   private static byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
 
-  private static final int TTL_SECONDS = 2;
+  private static final int TTL_SECONDS = 10;
   private static final int TTL_MS = TTL_SECONDS * 1000;
 
   private static final int NUM_EXPIRED_FILES = 2;
@@ -106,7 +105,7 @@ public class TestScannerSelectionUsingTTL {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(Bytes.toBytes(TABLE));
     HRegion region =
-        HRegion.createHRegion(info, TEST_UTIL.getClusterTestDir(),
+        HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(info.getEncodedName()),
             TEST_UTIL.getConfiguration(), htd);
 
     for (int iFile = 0; iFile < totalNumFiles; ++iFile) {

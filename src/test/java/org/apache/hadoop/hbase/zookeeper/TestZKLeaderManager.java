@@ -93,7 +93,7 @@ public class TestZKLeaderManager {
 
         while (master.get() && !stopped) {
           try {
-            Thread.sleep(200);
+            Thread.sleep(10);
           } catch (InterruptedException ignored) {}
         }
       }
@@ -204,8 +204,8 @@ public class TestZKLeaderManager {
   private MockLeader getCurrentLeader() throws Exception {
     MockLeader currentLeader = null;
     outer:
-    // wait up to 2 secs for initial leader
-    for (int i = 0; i < 20; i++) {
+    // Wait up to 10 secs for initial leader
+    for (int i = 0; i < 1000; i++) {
       for (int j = 0; j < CANDIDATES.length; j++) {
         if (CANDIDATES[j].isMaster()) {
           // should only be one leader
@@ -218,7 +218,7 @@ public class TestZKLeaderManager {
       if (currentLeader != null) {
         break outer;
       }
-      Thread.sleep(100);
+      Thread.sleep(10);
     }
     return currentLeader;
   }

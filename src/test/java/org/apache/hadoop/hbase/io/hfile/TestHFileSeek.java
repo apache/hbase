@@ -66,6 +66,8 @@ public class TestHFileSeek extends TestCase {
   private RandomDistribution.DiscreteRNG keyLenGen;
   private KVGenerator kvGen;
 
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
   @Override
   public void setUp() throws IOException {
     if (options == null) {

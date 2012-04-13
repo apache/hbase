@@ -69,6 +69,12 @@ public class TestSplitLogManager {
   private final static HBaseTestingUtility TEST_UTIL =
     new HBaseTestingUtility();
 
+  /**
+   * Additional amount of time we wait for events to happen. Added where unit
+   * test failures have been observed.
+   */
+  private static final int EXTRA_TOLERANCE_MS = 200;
+
   static Stoppable stopper = new Stoppable() {
     @Override
     public void stop(String why) {
@@ -94,7 +100,8 @@ public class TestSplitLogManager {
   public void setup() throws Exception {
     TEST_UTIL.startMiniZKCluster();
     conf = TEST_UTIL.getConfiguration();
-    zkw = new ZooKeeperWatcher(conf, "split-log-manager-tests", null);
+    // Use a different ZK wrapper instance for each tests.
+    zkw = new ZooKeeperWatcher(conf, "split-log-manager-tests" + UUID.randomUUID().toString(), null);
     ZKUtil.deleteChildrenRecursively(zkw, zkw.baseZNode);
     ZKUtil.createAndFailSilent(zkw, zkw.baseZNode);
     assertTrue(ZKUtil.checkExists(zkw, zkw.baseZNode) != -1);
@@ -211,7 +218,7 @@ public class TestSplitLogManager {
     assertTrue((task.last_update <= curt) &&
         (task.last_update > (curt - 1000)));
     LOG.info("waiting for manager to resubmit the orphan task");
-    waitForCounter(tot_mgr_resubmit, 0, 1, to + 100);
+    waitForCounter(tot_mgr_resubmit, 0, 1, to + 300);
     assertTrue(task.isUnassigned());
     waitForCounter(tot_mgr_rescan, 0, 1, to + 100);
   }
@@ -265,7 +272,7 @@ public class TestSplitLogManager {
 
     ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker1"));
     waitForCounter(tot_mgr_heartbeat, 0, 1, 1000);
-    waitForCounter(tot_mgr_resubmit, 0, 1, to + 100);
+    waitForCounter(tot_mgr_resubmit, 0, 1, to + EXTRA_TOLERANCE_MS);
     int version1 = ZKUtil.checkExists(zkw, tasknode);
     assertTrue(version1 > version);
     ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker2"));
@@ -275,8 +282,8 @@ public class TestSplitLogManager {
     assertTrue(version2 > version1);
     ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker3"));
     waitForCounter(tot_mgr_heartbeat, 1, 2, 1000);
-    waitForCounter(tot_mgr_resubmit_threshold_reached, 0, 1, to + 100);
-    Thread.sleep(to + 100);
+    waitForCounter(tot_mgr_resubmit_threshold_reached, 0, 1, to + EXTRA_TOLERANCE_MS);
+    Thread.sleep(to + EXTRA_TOLERANCE_MS);
     assertEquals(2L, tot_mgr_resubmit.get());
   }
 

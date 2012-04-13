@@ -79,14 +79,6 @@ public class TestHFileDataBlockEncoder {
   }
 
   /**
-   * Cleanup after JUnit test.
-   */
-  @After
-  public void tearDown() throws IOException {
-    TEST_UTIL.cleanupTestDir();
-  }
-
-  /**
    * Test putting and taking out blocks into cache with different
    * encoding options.
    */

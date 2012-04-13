@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -84,8 +85,8 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.mapred.TaskLog;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.WatchedEvent;
@@ -124,11 +125,15 @@ public class HBaseTestingUtility {
   private MiniHBaseCluster hbaseCluster = null;
   private MiniMRCluster mrCluster = null;
 
-  // Directory where we put the data for this instance of HBaseTestingUtility
+  /** If there is a mini cluster running for this testing utility instance. */
+  private boolean miniClusterRunning;
+
+  private String hadoopLogDir;
+
+  // Directory where we put the data for this instance of HBaseTestingUtility.
   private File dataTestDir = null;
 
-  // Directory (usually a subdirectory of dataTestDir) used by the dfs cluster
-  //  if any
+  // Directory (a subdirectory of dataTestDir) used by the dfs cluster if any
   private File clusterTestDir = null;
 
   /**
@@ -150,6 +155,9 @@ public class HBaseTestingUtility {
    * Default base directory for test output.
    */
   public static final String DEFAULT_BASE_TEST_DIRECTORY = "target/test-data";
+
+  /** Filesystem URI used for map-reduce mini-cluster setup */
+  private static String FS_URI;
 
   /** Compression algorithms to use in parameterized JUnit 4 tests */
   public static final List<Object[]> COMPRESSION_ALGORITHMS_PARAMETERIZED =
@@ -236,22 +244,40 @@ public class HBaseTestingUtility {
    * @see #getTestFileSystem()
    */
   public Path getDataTestDir() {
-    if (dataTestDir == null){
+    if (this.dataTestDir == null){
       setupDataTestDir();
     }
-    return new Path(dataTestDir.getAbsolutePath());
+    return new Path(this.dataTestDir.getAbsolutePath());
   }
 
   /**
    * @return Where the DFS cluster will write data on the local subsystem.
-   * Creates it if it does not exist already.
+   * Creates it if it does not exist already.  A subdir of {@link #getBaseTestDir()}
    * @see #getTestFileSystem()
    */
-  public Path getClusterTestDir() {
+  Path getClusterTestDir() {
     if (clusterTestDir == null){
       setupClusterTestDir();
     }
     return new Path(clusterTestDir.getAbsolutePath());
+  }
+
+  /**
+   * Creates a directory for the DFS cluster, under the test data
+   */
+  private void setupClusterTestDir() {
+    if (clusterTestDir != null) {
+      return;
+    }
+
+    // Using randomUUID ensures that multiple clusters can be launched by
+    //  a same test, if it stops & starts them
+    Path testDir = getDataTestDir("dfscluster_" + UUID.randomUUID().toString());
+    clusterTestDir = new File(testDir.toString()).getAbsoluteFile();
+    // Have it cleaned up on exit
+    clusterTestDir.deleteOnExit();
+    conf.set(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
+    LOG.info("Created new mini-cluster data directory: " + clusterTestDir);
   }
 
   /**
@@ -281,7 +307,7 @@ public class HBaseTestingUtility {
    * @return The calculated data test build directory.
    */
   private void setupDataTestDir() {
-    if (dataTestDir != null) {
+    if (this.dataTestDir != null) {
       LOG.warn("Data test dir already setup in " +
         dataTestDir.getAbsolutePath());
       return;
@@ -290,8 +316,8 @@ public class HBaseTestingUtility {
     String randomStr = UUID.randomUUID().toString();
     Path testPath= new Path(getBaseTestDir(), randomStr);
 
-    dataTestDir = new File(testPath.toString()).getAbsoluteFile();
-    dataTestDir.deleteOnExit();
+    this.dataTestDir = new File(testPath.toString()).getAbsoluteFile();
+    this.dataTestDir.deleteOnExit();
 
     createSubDirAndSystemProperty(
       "hadoop.log.dir",
@@ -329,7 +355,7 @@ public class HBaseTestingUtility {
       // There is already a value set. So we do nothing but hope
       //  that there will be no conflicts
       LOG.info("System.getProperty(\""+propertyName+"\") already set to: "+
-        sysValue + " so I do NOT create it in "+dataTestDir.getAbsolutePath());
+        sysValue + " so I do NOT create it in " + this.dataTestDir.getAbsolutePath());
       String confValue = conf.get(propertyName);
       if (confValue != null && !confValue.endsWith(sysValue)){
        LOG.warn(
@@ -344,33 +370,6 @@ public class HBaseTestingUtility {
       createSubDir(propertyName, parent, subDirName);
       System.setProperty(propertyName, conf.get(propertyName));
     }
-  }
-
-  /**
-   * Creates a directory for the DFS cluster, under the test data
-   */
-  private void setupClusterTestDir() {
-    if (clusterTestDir != null) {
-      LOG.warn("Cluster test dir already setup in " +
-        clusterTestDir.getAbsolutePath());
-      return;
-    }
-
-    // Using randomUUID ensures that multiple clusters can be launched by
-    //  a same test, if it stops & starts them
-    Path testDir = getDataTestDir("dfscluster_" + UUID.randomUUID().toString());
-    clusterTestDir = new File(testDir.toString()).getAbsoluteFile();
-    // Have it cleaned up on exit
-    clusterTestDir.deleteOnExit();
-  }
-
-  /**
-   * @throws IOException If a cluster -- zk, dfs, or hbase -- already running.
-   */
-  public void isRunningCluster() throws IOException {
-    if (dfsCluster == null) return;
-    throw new IOException("Cluster already running at " +
-      this.clusterTestDir);
   }
 
   /**
@@ -396,7 +395,7 @@ public class HBaseTestingUtility {
    * @return The mini dfs cluster created.
    */
   public MiniDFSCluster startMiniDFSCluster(final String hosts[])
-    throws Exception {
+  throws Exception {
     if ( hosts != null && hosts.length != 0) {
       return startMiniDFSCluster(hosts.length, hosts);
     } else {
@@ -415,24 +414,7 @@ public class HBaseTestingUtility {
    */
   public MiniDFSCluster startMiniDFSCluster(int servers, final String hosts[])
   throws Exception {
-
-    // Check that there is not already a cluster running
-    isRunningCluster();
-
-    // Initialize the local directory used by the MiniDFS
-    if (clusterTestDir == null) {
-      setupClusterTestDir();
-    }
-
-    // We have to set this property as it is used by MiniCluster
-    System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestDir.toString());
-
-    // Some tests also do this:
-    //  System.getProperty("test.cache.data", "build/test/cache");
-    // It's also deprecated
-    System.setProperty("test.cache.data", this.clusterTestDir.toString());
-
-    // Ok, now we can start
+    createDirsAndSetProperties();
     this.dfsCluster = new MiniDFSCluster(0, this.conf, servers, true, true,
       true, null, null, hosts, null);
 
@@ -448,18 +430,46 @@ public class HBaseTestingUtility {
     return this.dfsCluster;
   }
 
+  public MiniDFSCluster startMiniDFSClusterForTestHLog(int namenodePort) throws IOException {
+    createDirsAndSetProperties();
+    dfsCluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null,
+        null, null, null);
+    return dfsCluster;
+  }
+
+  /** This is used before starting HDFS and map-reduce mini-clusters */
+  private void createDirsAndSetProperties() {
+    setupClusterTestDir();
+    System.setProperty(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
+    createDirAndSetProperty("cache_data", "test.cache.data");
+    createDirAndSetProperty("hadoop_tmp", "hadoop.tmp.dir");
+    hadoopLogDir = createDirAndSetProperty("hadoop_logs", "hadoop.log.dir");
+    createDirAndSetProperty("mapred_output", "mapred.output.dir");
+    createDirAndSetProperty("mapred_local", "mapred.local.dir");
+    createDirAndSetProperty("mapred_system", "mapred.system.dir");
+    createDirAndSetProperty("mapred_temp", "mapred.temp.dir");
+  }
+
+  private String createDirAndSetProperty(final String relPath, String property) {
+    String path = clusterTestDir.getPath() + "/" + relPath;
+    System.setProperty(property, path);
+    conf.set(property, path);
+    new File(path).mkdirs();
+    LOG.info("Setting " + property + " to " + path + " in system properties and HBase conf");
+    return path;
+  }
+
   /**
    * Shuts down instance created by call to {@link #startMiniDFSCluster(int)}
    * or does nothing.
-   * @throws Exception
+   * @throws IOException
    */
-  public void shutdownMiniDFSCluster() throws Exception {
+  public void shutdownMiniDFSCluster() throws IOException {
     if (this.dfsCluster != null) {
       // The below throws an exception per dn, AsynchronousCloseException.
       this.dfsCluster.shutdown();
       dfsCluster = null;
     }
-
   }
 
   /**
@@ -483,8 +493,8 @@ public class HBaseTestingUtility {
    */
   public MiniZooKeeperCluster startMiniZKCluster(int zooKeeperServerNum)
       throws Exception {
-    File zkClusterFile = new File(getClusterTestDir().toString());
-    return startMiniZKCluster(zkClusterFile, zooKeeperServerNum);
+    setupClusterTestDir();
+    return startMiniZKCluster(clusterTestDir, zooKeeperServerNum);
   }
 
   private MiniZooKeeperCluster startMiniZKCluster(final File dir)
@@ -597,7 +607,13 @@ public class HBaseTestingUtility {
         numSlaves + " regionserver(s) and " + numDataNodes + " datanode(s)");
 
     // If we already put up a cluster, fail.
-    isRunningCluster();
+    if (miniClusterRunning) {
+      throw new IllegalStateException("A mini-cluster is already running");
+    }
+    miniClusterRunning = true;
+
+    setupClusterTestDir();
+    System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestDir.getPath());
 
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
@@ -691,15 +707,8 @@ public class HBaseTestingUtility {
     }
     shutdownMiniDFSCluster();
 
-    // Clean up our directory.
-    if (this.clusterTestDir != null && this.clusterTestDir.exists()) {
-      // Need to use deleteDirectory because File.delete required dir is empty.
-      if (!FSUtils.deleteDirectory(FileSystem.getLocal(this.conf),
-          new Path(this.clusterTestDir.toString()))) {
-        LOG.warn("Failed delete of " + this.clusterTestDir.toString());
-      }
-      this.clusterTestDir = null;
-    }
+    cleanupTestDir();
+    miniClusterRunning = false;
     LOG.info("Minicluster is down");
   }
 
@@ -1265,28 +1274,59 @@ public class HBaseTestingUtility {
    *
    * @throws IOException When starting the cluster fails.
    */
-  public void startMiniMapReduceCluster() throws IOException {
+  public MiniMRCluster startMiniMapReduceCluster() throws IOException {
     startMiniMapReduceCluster(2);
+    return mrCluster;
   }
 
   /**
-   * Starts a <code>MiniMRCluster</code>.
-   *
+   * Tasktracker has a bug where changing the hadoop.log.dir system property
+   * will not change its internal static LOG_DIR variable.
+   */
+  private void forceChangeTaskLogDir() {
+    Field logDirField;
+    try {
+      logDirField = TaskLog.class.getDeclaredField("LOG_DIR");
+      logDirField.setAccessible(true);
+
+      Field modifiersField = Field.class.getDeclaredField("modifiers");
+      modifiersField.setAccessible(true);
+      modifiersField.setInt(logDirField, logDirField.getModifiers() & ~Modifier.FINAL);
+
+      logDirField.set(null, new File(hadoopLogDir, "userlogs"));
+    } catch (SecurityException e) {
+      throw new RuntimeException(e);
+    } catch (NoSuchFieldException e) {
+      // TODO Auto-generated catch block
+      throw new RuntimeException(e);
+    } catch (IllegalArgumentException e) {
+      throw new RuntimeException(e);
+    } catch (IllegalAccessException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Starts a <code>MiniMRCluster</code>. Call {@link #setFileSystemURI(String)} to use a different
+   * filesystem.
    * @param servers  The number of <code>TaskTracker</code>'s to start.
    * @throws IOException When starting the cluster fails.
    */
-  public void startMiniMapReduceCluster(final int servers) throws IOException {
-    LOG.info("Starting mini mapreduce cluster...");
-    if (dataTestDir == null) {
-      setupDataTestDir();
+  private void startMiniMapReduceCluster(final int servers) throws IOException {
+    if (mrCluster != null) {
+      throw new IllegalStateException("MiniMRCluster is already running");
     }
+    LOG.info("Starting mini mapreduce cluster...");
+    setupClusterTestDir();
+    createDirsAndSetProperties();
 
-    // These are needed for the new and improved Map/Reduce framework
-    conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));
-    mrCluster = new MiniMRCluster(0, 0, servers,
-      FileSystem.get(conf).getUri().toString(), 1, null, null, null, new JobConf(conf));
+    forceChangeTaskLogDir();
+
+    // Allow the user to override FS URI for this map-reduce cluster to use.
+    mrCluster = new MiniMRCluster(servers,
+      FS_URI != null ? FS_URI : FileSystem.get(conf).getUri().toString(), 1);
     mrCluster.getJobTrackerRunner().getJobTracker().getConf().set("mapred.local.dir",
-        conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
+      conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
     LOG.info("Mini mapreduce cluster started");
     conf.set("mapred.job.tracker",
         mrCluster.createJobConf().get("mapred.job.tracker"));
@@ -1524,17 +1564,15 @@ public class HBaseTestingUtility {
   }
 
   /**
-   * @return True if we removed the test dir
+   * @return True if we removed the test dirs
    * @throws IOException
    */
-  public boolean cleanupTestDir() throws IOException {
-    if (dataTestDir == null ){
-      return false;
-    } else {
-      boolean ret = deleteDir(getDataTestDir());
-      dataTestDir = null;
-      return ret;
+  boolean cleanupTestDir() throws IOException {
+    if (deleteDir(this.dataTestDir)) {
+      this.dataTestDir = null;
+      return true;
     }
+    return false;
   }
 
   /**
@@ -1542,11 +1580,11 @@ public class HBaseTestingUtility {
    * @return True if we removed the test dir
    * @throws IOException
    */
-  public boolean cleanupTestDir(final String subdir) throws IOException {
-    if (dataTestDir == null){
+  boolean cleanupTestDir(final String subdir) throws IOException {
+    if (this.dataTestDir == null){
       return false;
     }
-    return deleteDir(getDataTestDir(subdir));
+    return deleteDir(new File(this.dataTestDir, subdir));
   }
 
   /**
@@ -1554,10 +1592,15 @@ public class HBaseTestingUtility {
    * @return True if we deleted it.
    * @throws IOException
    */
-  public boolean deleteDir(final Path dir) throws IOException {
-    FileSystem fs = getTestFileSystem();
-    if (fs.exists(dir)) {
-      return fs.delete(getDataTestDir(), true);
+  boolean deleteDir(final File dir) throws IOException {
+    if (dir != null && dir.exists()) {
+      // Need to use deleteDirectory because File.delete required dir is empty.
+      if (!FSUtils.deleteDirectory(FileSystem.getLocal(this.conf),
+          new Path(dir.getAbsolutePath()))) {
+        LOG.warn("Failed delete of " + dir.toString());
+      } else {
+        return true;
+      }
     }
     return false;
   }
@@ -2037,4 +2080,7 @@ public class HBaseTestingUtility {
     return region;
   }
 
+  public void setFileSystemURI(String fsURI) {
+    FS_URI = fsURI;
+  }
 }

@@ -19,10 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -51,7 +48,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.log4j.Level;
@@ -405,6 +401,7 @@ public class TestHLog  {
         LOG.error("Waiting for cluster to go down");
         Thread.sleep(1000);
       }
+      assertFalse(cluster.isClusterUp());
 
       // Workaround a strange issue with Hadoop's RPC system - if we don't
       // sleep here, the new datanodes will pick up a cached IPC connection to
@@ -412,11 +409,12 @@ public class TestHLog  {
       // the idle time threshold configured in the conf above
       Thread.sleep(2000);
 
-      cluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null, null, null, null);
-      TEST_UTIL.setDFSCluster(cluster);
+      LOG.info("Waiting a few seconds before re-starting HDFS");
+      Thread.sleep(5000);
+      cluster = TEST_UTIL.startMiniDFSClusterForTestHLog(namenodePort);
       cluster.waitActive();
       fs = cluster.getFileSystem();
-      LOG.info("START second instance.");
+      LOG.info("STARTED second instance.");
     }
 
     // set the lease period to be 1 second so that the

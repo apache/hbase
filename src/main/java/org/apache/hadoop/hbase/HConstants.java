@@ -103,6 +103,10 @@ public final class HConstants {
   /** by default every master is a possible primary master unless the conf explicitly overrides it */
   public static final boolean DEFAULT_MASTER_TYPE_BACKUP = false;
 
+  /** Parameter name for ZooKeeper session time out.*/
+  public static final String ZOOKEEPER_SESSION_TIMEOUT =
+    "zookeeper.session.timeout";
+
   /** Name of ZooKeeper quorum configuration parameter. */
   public static final String ZOOKEEPER_QUORUM = "hbase.zookeeper.quorum";
 
@@ -654,6 +658,8 @@ public final class HConstants {
 
 /** Region in Transition metrics threshold time */
   public static final String METRICS_RIT_STUCK_WARNING_THRESHOLD="hbase.metrics.rit.stuck.warning.threshold";
+
+  public static final String LOAD_BALANCER_SLOP_KEY = "hbase.regions.slop";
 
   private HConstants() {
     // Can't be instantiated with this ctor.

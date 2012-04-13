@@ -24,9 +24,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,10 +35,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -194,7 +187,7 @@ public class TestHBaseTestingUtility {
 
   @Test public void testMiniDFSCluster() throws Exception {
     HBaseTestingUtility hbt = new HBaseTestingUtility();
-    MiniDFSCluster cluster = hbt.startMiniDFSCluster(1);
+    MiniDFSCluster cluster = hbt.startMiniDFSCluster(null);
     FileSystem dfs = cluster.getFileSystem();
     Path dir = new Path("dir");
     Path qualifiedDir = dfs.makeQualified(dir);
@@ -213,12 +206,11 @@ public class TestHBaseTestingUtility {
 
     assertFalse(fs.exists(testdir));
 
-    hbt.startMiniDFSCluster(1);
+    hbt.startMiniDFSCluster(null);
     assertTrue(fs.exists(testdir));
 
     hbt.shutdownMiniCluster();
     assertFalse(fs.exists(testdir));
-
   }
 
   @Test public void testTestDir() throws Exception {

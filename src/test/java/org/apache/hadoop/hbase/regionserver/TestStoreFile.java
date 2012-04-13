@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Scan;
@@ -66,8 +67,10 @@ import com.google.common.collect.Lists;
 @Category(SmallTests.class)
 public class TestStoreFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestStoreFile.class);
-  private CacheConfig cacheConf =  new CacheConfig(conf);
-  private String ROOT_DIR;
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private CacheConfig cacheConf =  new CacheConfig(TEST_UTIL.getConfiguration());
+  private static String ROOT_DIR =
+    TEST_UTIL.getDataTestDir("TestStoreFile").toString();
   private Map<String, Long> startingMetrics;
 
   private static final ChecksumType CKTYPE = ChecksumType.CRC32;
@@ -77,7 +80,6 @@ public class TestStoreFile extends HBaseTestCase {
   public void setUp() throws Exception {
     super.setUp();
     startingMetrics = SchemaMetrics.getMetricsSnapshot();
-    ROOT_DIR = new Path(this.testDir, "TestStoreFile").toString();
   }
 
   @Override

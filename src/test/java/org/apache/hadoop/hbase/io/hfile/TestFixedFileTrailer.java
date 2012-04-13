@@ -130,8 +130,7 @@ public class TestFixedFileTrailer {
     }
 
     // Now check what happens if the trailer is corrupted.
-    Path trailerPath = new Path(util.getDataTestDir(), "trailer_"
-        + version);
+    Path trailerPath = new Path(util.getDataTestDir(), "trailer_" + version);
 
     {
       for (byte invalidVersion : new byte[] { HFile.MIN_FORMAT_VERSION - 1,

@@ -77,7 +77,6 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -158,12 +157,6 @@ public class TestHFileOutputFormat  {
       }
     }
   }
-
-  @Before
-  public void cleanupDir() throws IOException {
-    util.cleanupTestDir();
-  }
-
 
   private void setupRandomGeneratorMapper(Job job) {
     job.setInputFormatClass(NMapInputFormat.class);
@@ -370,16 +363,19 @@ public class TestHFileOutputFormat  {
 
   @Test
   public void testMRIncrementalLoad() throws Exception {
+    LOG.info("\nStarting test testMRIncrementalLoad\n");
     doIncrementalLoadTest(false);
   }
 
   @Test
   public void testMRIncrementalLoadWithSplit() throws Exception {
+    LOG.info("\nStarting test testMRIncrementalLoadWithSplit\n");
     doIncrementalLoadTest(true);
   }
 
   private void doIncrementalLoadTest(
       boolean shouldChangeRegions) throws Exception {
+    util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
     Path testDir = util.getDataTestDir("testLocalMRIncrementalLoad");
     byte[][] startKeys = generateRandomStartKeys(5);
@@ -442,9 +438,7 @@ public class TestHFileOutputFormat  {
           expectedRows, util.countRows(table));
       Scan scan = new Scan();
       ResultScanner results = table.getScanner(scan);
-      int count = 0;
       for (Result res : results) {
-        count++;
         assertEquals(FAMILIES.length, res.raw().length);
         KeyValue first = res.raw()[0];
         for (KeyValue kv : res.raw()) {

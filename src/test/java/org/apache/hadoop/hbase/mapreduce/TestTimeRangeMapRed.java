@@ -165,7 +165,7 @@ public class TestTimeRangeMapRed {
 
   private void runTestOnTable()
   throws IOException, InterruptedException, ClassNotFoundException {
-    UTIL.startMiniMapReduceCluster(1);
+    UTIL.startMiniMapReduceCluster();
     Job job = null;
     try {
       job = new Job(UTIL.getConfiguration(), "test123");

@@ -58,6 +58,7 @@ public class TestFullLogReconstruction {
     // faster failover with cluster.shutdown();fs.close() idiom
     c.setInt("ipc.client.connect.max.retries", 1);
     c.setInt("dfs.client.block.recovery.retries", 1);
+    c.setInt(HConstants.ZOOKEEPER_SESSION_TIMEOUT, 1000);
     TEST_UTIL.startMiniCluster(2);
   }
 
@@ -129,4 +130,3 @@ public class TestFullLogReconstruction {
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
-
