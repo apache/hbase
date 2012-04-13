@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionKey;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.protobuf.ClientProtocol;
 import org.mockito.Mockito;
 
 /**
@@ -92,7 +93,8 @@ public class HConnectionTestingUtility {
    * @throws IOException
    */
   public static HConnection getMockedConnectionAndDecorate(final Configuration conf,
-      final HRegionInterface implementation, final ServerName sn, final HRegionInfo hri)
+      final HRegionInterface implementation, final ClientProtocol client,
+      final ServerName sn, final HRegionInfo hri)
   throws IOException {
     HConnection c = HConnectionTestingUtility.getMockedConnection(conf);
     Mockito.doNothing().when(c).close();
@@ -107,6 +109,11 @@ public class HConnectionTestingUtility {
       // If a call to getHRegionConnection, return this implementation.
       Mockito.when(c.getHRegionConnection(Mockito.anyString(), Mockito.anyInt())).
         thenReturn(implementation);
+    }
+    if (client != null) {
+      // If a call to getClient, return this client.
+      Mockito.when(c.getClient(Mockito.anyString(), Mockito.anyInt())).
+        thenReturn(client);
     }
     return c;
   }

@@ -101,3 +101,16 @@ message ServerName {
   optional uint32 port = 2;
   optional uint64 startCode = 3;
 }
+
+// Comment data structures
+
+message NameStringPair {
+  required string name = 1;
+  required string value = 2;
+}
+
+message NameBytesPair {
+  required string name = 1;
+  optional bytes value = 2;
+}
+

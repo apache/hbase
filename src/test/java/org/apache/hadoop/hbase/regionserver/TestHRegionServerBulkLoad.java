@@ -39,6 +39,9 @@ import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Test;
@@ -145,7 +148,9 @@ public class TestHRegionServerBulkLoad {
           LOG.debug("Going to connect to server " + location + " for row "
               + Bytes.toStringBinary(row));
           byte[] regionName = location.getRegionInfo().getRegionName();
-          server.bulkLoadHFiles(famPaths, regionName);
+          BulkLoadHFileRequest request =
+            RequestConverter.buildBulkLoadHFileRequest(famPaths, regionName);
+          server.bulkLoadHFile(null, request);
           return null;
         }
       }.withRetries();
@@ -159,6 +164,8 @@ public class TestHRegionServerBulkLoad {
           public Void call() throws Exception {
             LOG.debug("compacting " + location + " for row "
                 + Bytes.toStringBinary(row));
+            HRegionInterface server = connection.getHRegionConnection(
+              location.getHostname(), location.getPort());
             server.compactRegion(location.getRegionInfo(), true);
             numCompactions.incrementAndGet();
             return null;

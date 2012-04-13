@@ -307,6 +307,7 @@ public class ClientScanner extends AbstractClientScanner {
             }
             // Clear region
             this.currentRegion = null;
+            callable = null;
             continue;
           }
           long currentTime = System.currentTimeMillis();

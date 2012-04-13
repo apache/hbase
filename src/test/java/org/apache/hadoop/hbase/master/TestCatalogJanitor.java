@@ -54,6 +54,10 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ClientProtocol;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
@@ -61,6 +65,9 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 @Category(SmallTests.class)
 public class TestCatalogJanitor {
@@ -76,12 +83,22 @@ public class TestCatalogJanitor {
     MockServer(final HBaseTestingUtility htu)
     throws NotAllMetaRegionsOnlineException, IOException, InterruptedException {
       this.c = htu.getConfiguration();
+      ClientProtocol ri = Mockito.mock(ClientProtocol.class);
+      MutateResponse.Builder builder = MutateResponse.newBuilder();
+      builder.setProcessed(true);
+      try {
+        Mockito.when(ri.mutate(
+          (RpcController)Mockito.any(), (MutateRequest)Mockito.any())).
+            thenReturn(builder.build());
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      }
       // Mock an HConnection and a HRegionInterface implementation.  Have the
       // HConnection return the HRI.  Have the HRI return a few mocked up responses
       // to make our test work.
       this.connection =
         HConnectionTestingUtility.getMockedConnectionAndDecorate(this.c,
-          Mockito.mock(HRegionInterface.class),
+          Mockito.mock(HRegionInterface.class), ri,
           new ServerName("example.org,12345,6789"),
           HRegionInfo.FIRST_META_REGIONINFO);
       // Set hbase.rootdir into test dir.

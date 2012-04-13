@@ -19,6 +19,33 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -46,6 +73,13 @@ import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.VersionedProtocol;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ClientProtocol;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -61,32 +95,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.google.protobuf.ServiceException;
 
 /**
  * A non-instantiable class that manages {@link HConnection}s.
@@ -145,6 +154,12 @@ public class HConnectionManager {
   static final Map<HConnectionKey, HConnectionImplementation> HBASE_INSTANCES;
 
   public static final int MAX_CACHED_HBASE_INSTANCES;
+
+  /** Parameter name for what client protocol to use. */
+  public static final String CLIENT_PROTOCOL_CLASS = "hbase.clientprotocol.class";
+
+  /** Default client protocol class name. */
+  public static final String DEFAULT_CLIENT_PROTOCOL_CLASS = ClientProtocol.class.getName();
 
   private static final Log LOG = LogFactory.getLog(HConnectionManager.class);
 
@@ -493,6 +508,7 @@ public class HConnectionManager {
   static class HConnectionImplementation implements HConnection, Closeable {
     static final Log LOG = LogFactory.getLog(HConnectionImplementation.class);
     private final Class<? extends HRegionInterface> serverInterfaceClass;
+    private final Class<? extends ClientProtocol> clientClass;
     private final long pause;
     private final int numRetries;
     private final int maxRPCAttempts;
@@ -521,8 +537,8 @@ public class HConnectionManager {
     private final Configuration conf;
     // Known region HServerAddress.toString() -> HRegionInterface
 
-    private final Map<String, HRegionInterface> servers =
-      new ConcurrentHashMap<String, HRegionInterface>();
+    private final ConcurrentHashMap<String, Map<String, VersionedProtocol>> servers =
+      new ConcurrentHashMap<String, Map<String, VersionedProtocol>>();
     private final ConcurrentHashMap<String, String> connectionLock =
       new ConcurrentHashMap<String, String>();
 
@@ -569,6 +585,15 @@ public class HConnectionManager {
       } catch (ClassNotFoundException e) {
         throw new UnsupportedOperationException(
             "Unable to find region server interface " + serverClassName, e);
+      }
+      String clientClassName = conf.get(CLIENT_PROTOCOL_CLASS,
+        DEFAULT_CLIENT_PROTOCOL_CLASS);
+      try {
+        this.clientClass =
+          (Class<? extends ClientProtocol>) Class.forName(clientClassName);
+      } catch (ClassNotFoundException e) {
+        throw new UnsupportedOperationException(
+            "Unable to find client protocol " + clientClassName, e);
       }
       this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
           HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
@@ -1329,18 +1354,28 @@ public class HConnectionManager {
     }
 
     @Override
+    public ClientProtocol getClient(
+        final String hostname, final int port) throws IOException {
+      return (ClientProtocol)getProtocol(hostname, port,
+        clientClass, ClientProtocol.VERSION);
+    }
+
+    @Override
     @Deprecated
     public HRegionInterface getHRegionConnection(HServerAddress hsa,
         boolean master)
     throws IOException {
-      return getHRegionConnection(null, -1, hsa.getInetSocketAddress(), master);
+      String hostname = hsa.getInetSocketAddress().getHostName();
+      int port = hsa.getInetSocketAddress().getPort();
+      return getHRegionConnection(hostname, port, master);
     }
 
     @Override
     public HRegionInterface getHRegionConnection(final String hostname,
         final int port, final boolean master)
     throws IOException {
-      return getHRegionConnection(hostname, port, null, master);
+      return (HRegionInterface)getProtocol(hostname, port,
+        serverInterfaceClass, HRegionInterface.VERSION);
     }
 
     /**
@@ -1348,43 +1383,44 @@ public class HConnectionManager {
      * can be but not both.
      * @param hostname
      * @param port
-     * @param isa
-     * @param master
+     * @param protocolClass
+     * @param version
      * @return Proxy.
      * @throws IOException
      */
-    HRegionInterface getHRegionConnection(final String hostname, final int port,
-        final InetSocketAddress isa, final boolean master)
-    throws IOException {
-      HRegionInterface server;
-      String rsName = null;
-      if (isa != null) {
-        rsName = Addressing.createHostAndPortStr(isa.getHostName(),
-            isa.getPort());
-      } else {
-        rsName = Addressing.createHostAndPortStr(hostname, port);
-      }
+    VersionedProtocol getProtocol(final String hostname,
+        final int port, final Class <? extends VersionedProtocol> protocolClass,
+        final long version) throws IOException {
+      String rsName = Addressing.createHostAndPortStr(hostname, port);
       // See if we already have a connection (common case)
-      server = this.servers.get(rsName);
+      Map<String, VersionedProtocol> protocols = this.servers.get(rsName);
+      if (protocols == null) {
+        protocols = new HashMap<String, VersionedProtocol>();
+        Map<String, VersionedProtocol> existingProtocols =
+          this.servers.putIfAbsent(rsName, protocols);
+        if (existingProtocols != null) {
+          protocols = existingProtocols;
+        }
+      }
+      String protocol = protocolClass.getName();
+      VersionedProtocol server = protocols.get(protocol);
       if (server == null) {
-        // create a unique lock for this RS (if necessary)
-        this.connectionLock.putIfAbsent(rsName, rsName);
+        // create a unique lock for this RS + protocol (if necessary)
+        String lockKey = protocol + "@" + rsName;
+        this.connectionLock.putIfAbsent(lockKey, lockKey);
         // get the RS lock
-        synchronized (this.connectionLock.get(rsName)) {
+        synchronized (this.connectionLock.get(lockKey)) {
           // do one more lookup in case we were stalled above
-          server = this.servers.get(rsName);
+          server = protocols.get(protocol);
           if (server == null) {
             try {
               // Only create isa when we need to.
-              InetSocketAddress address = isa != null? isa:
-                new InetSocketAddress(hostname, port);
+              InetSocketAddress address = new InetSocketAddress(hostname, port);
               // definitely a cache miss. establish an RPC for this RS
-              server = (HRegionInterface) HBaseRPC.waitForProxy(
-                  serverInterfaceClass, HRegionInterface.VERSION,
-                  address, this.conf,
+              server = HBaseRPC.waitForProxy(
+                  protocolClass, version, address, this.conf,
                   this.maxRPCAttempts, this.rpcTimeout, this.rpcTimeout);
-              this.servers.put(Addressing.createHostAndPortStr(
-                  address.getHostName(), address.getPort()), server);
+              protocols.put(protocol, server);
             } catch (RemoteException e) {
               LOG.warn("RemoteException connecting to RS", e);
               // Throw what the RemoteException was carrying.
@@ -1679,11 +1715,42 @@ public class HConnectionManager {
          ServerCallable<MultiResponse> callable =
            new ServerCallable<MultiResponse>(connection, tableName, null) {
              public MultiResponse call() throws IOException {
-               return server.multi(multi);
+               try {
+                 MultiResponse response = new MultiResponse();
+                 for (Map.Entry<byte[], List<Action<R>>> e: multi.actions.entrySet()) {
+                   byte[] regionName = e.getKey();
+                   int rowMutations = 0;
+                   List<Action<R>> actions = e.getValue();
+                   for (Action<R> action: actions) {
+                     Row row = action.getAction();
+                     if (row instanceof RowMutations) {
+                       MultiRequest request =
+                         RequestConverter.buildMultiRequest(regionName, (RowMutations)row);
+                       server.multi(null, request);
+                       response.add(regionName, action.getOriginalIndex(), new Result());
+                       rowMutations++;
+                     }
+                   }
+                   if (actions.size() > rowMutations) {
+                     MultiRequest request =
+                       RequestConverter.buildMultiRequest(regionName, actions);
+                     ClientProtos.MultiResponse
+                       proto = server.multi(null, request);
+                     List<Object> results = ResponseConverter.getResults(proto);
+                     for (int i = 0, n = results.size(); i < n; i++) {
+                       int originalIndex = actions.get(i).getOriginalIndex();
+                       response.add(regionName, originalIndex, results.get(i));
+                     }
+                   }
+                 }
+                 return response;
+               } catch (ServiceException se) {
+                 throw ProtobufUtil.getRemoteException(se);
+               }
              }
              @Override
              public void connect(boolean reload) throws IOException {
-               server = connection.getHRegionConnection(
+               server = connection.getClient(
                  loc.getHostname(), loc.getPort());
              }
            };
@@ -1885,7 +1952,7 @@ public class HConnectionManager {
               }
             }
           } catch (ExecutionException e) {
-            LOG.warn("Failed all from " + loc, e);
+            LOG.debug("Failed all from " + loc, e);
           }
         }
 
@@ -2077,8 +2144,10 @@ public class HConnectionManager {
       delayedClosing.stop("Closing connection");
       if (stopProxy) {
         closeMaster();
-        for (HRegionInterface i : servers.values()) {
-          HBaseRPC.stopProxy(i);
+        for (Map<String, VersionedProtocol> i : servers.values()) {
+          for (VersionedProtocol server: i.values()) {
+            HBaseRPC.stopProxy(server);
+          }
         }
       }
       closeZooKeeperWatcher();

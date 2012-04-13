@@ -41,6 +41,9 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.protobuf.ClientProtocol;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
@@ -57,6 +60,9 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 /**
  * Test {@link CatalogTracker}
@@ -131,13 +137,16 @@ public class TestCatalogTracker {
   /**
    * Test interruptable while blocking wait on root and meta.
    * @throws IOException
+   * @throws ServiceException
    * @throws InterruptedException
    */
   @Test public void testInterruptWaitOnMetaAndRoot()
-  throws IOException, InterruptedException {
-    HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
-    HConnection connection = mockConnection(implementation);
+  throws IOException, InterruptedException, ServiceException {
+    final ClientProtocol client = Mockito.mock(ClientProtocol.class);
+    HConnection connection = mockConnection(null, client);
     try {
+      Mockito.when(client.get((RpcController)Mockito.any(), (GetRequest)Mockito.any())).
+      thenReturn(GetResponse.newBuilder().build());
       final CatalogTracker ct = constructAndStartCatalogTracker(connection);
       ServerName hsa = ct.getRootLocation();
       Assert.assertNull(hsa);
@@ -176,10 +185,11 @@ public class TestCatalogTracker {
    */
   @Test
   public void testServerNotRunningIOException()
-  throws IOException, InterruptedException, KeeperException {
+  throws IOException, InterruptedException, KeeperException, ServiceException {
     // Mock an HRegionInterface.
     final HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
-    HConnection connection = mockConnection(implementation);
+    final ClientProtocol client = Mockito.mock(ClientProtocol.class);
+    HConnection connection = mockConnection(implementation, client);
     try {
       // If a 'getRegionInfo' is called on mocked HRegionInterface, throw IOE
       // the first time.  'Succeed' the second time we are called.
@@ -198,6 +208,8 @@ public class TestCatalogTracker {
       Mockito.when(connection.getRegionServerWithRetries((ServerCallable<Result>)Mockito.any())).
         thenReturn(getMetaTableRowResult());
 
+      Mockito.when(client.get((RpcController)Mockito.any(), (GetRequest)Mockito.any())).
+        thenReturn(GetResponse.newBuilder().build());
       // Now start up the catalogtracker with our doctored Connection.
       final CatalogTracker ct = constructAndStartCatalogTracker(connection);
       try {
@@ -245,17 +257,18 @@ public class TestCatalogTracker {
    * @throws IOException
    * @throws InterruptedException
    * @throws KeeperException
+   * @throws ServiceException
    */
   @Test
   public void testGetMetaServerConnectionFails()
-  throws IOException, InterruptedException, KeeperException {
-    // Mock an HRegionInterface.
-    final HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
-    HConnection connection = mockConnection(implementation);
+  throws IOException, InterruptedException, KeeperException, ServiceException {
+    // Mock an ClientProtocol.
+    final ClientProtocol implementation = Mockito.mock(ClientProtocol.class);
+    HConnection connection = mockConnection(null, implementation);
     try {
       // If a 'get' is called on mocked interface, throw connection refused.
-      Mockito.when(implementation.get((byte[]) Mockito.any(), (Get) Mockito.any())).
-        thenThrow(new ConnectException("Connection refused"));
+      Mockito.when(implementation.get((RpcController) Mockito.any(), (GetRequest) Mockito.any())).
+        thenThrow(new ServiceException(new ConnectException("Connection refused")));
       // Now start up the catalogtracker with our doctored Connection.
       final CatalogTracker ct = constructAndStartCatalogTracker(connection);
       try {
@@ -371,7 +384,7 @@ public class TestCatalogTracker {
     // to make our test work.
     // Mock an HRegionInterface.
     final HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
-    HConnection connection = mockConnection(implementation);
+    HConnection connection = mockConnection(implementation, null);
     try {
       // Now the ct is up... set into the mocks some answers that make it look
       // like things have been getting assigned. Make it so we'll return a
@@ -419,6 +432,7 @@ public class TestCatalogTracker {
   /**
    * @param implementation An {@link HRegionInterface} instance; you'll likely
    * want to pass a mocked HRS; can be null.
+   * @param client A mocked ClientProtocol instance, can be null
    * @return Mock up a connection that returns a {@link Configuration} when
    * {@link HConnection#getConfiguration()} is called, a 'location' when
    * {@link HConnection#getRegionLocation(byte[], byte[], boolean)} is called,
@@ -429,7 +443,8 @@ public class TestCatalogTracker {
    * when done with this mocked Connection.
    * @throws IOException
    */
-  private HConnection mockConnection(final HRegionInterface implementation)
+  private HConnection mockConnection(
+      final HRegionInterface implementation, final ClientProtocol client)
   throws IOException {
     HConnection connection =
       HConnectionTestingUtility.getMockedConnection(UTIL.getConfiguration());
@@ -448,6 +463,11 @@ public class TestCatalogTracker {
       // If a call to getHRegionConnection, return this implementation.
       Mockito.when(connection.getHRegionConnection(Mockito.anyString(), Mockito.anyInt())).
         thenReturn(implementation);
+    }
+    if (client != null) {
+      // If a call to getClient, return this implementation.
+      Mockito.when(connection.getClient(Mockito.anyString(), Mockito.anyInt())).
+        thenReturn(client);
     }
     return connection;
   }

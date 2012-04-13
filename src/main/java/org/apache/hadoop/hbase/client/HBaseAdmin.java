@@ -19,6 +19,17 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.net.SocketTimeoutException;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -45,6 +56,12 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ClientProtocol;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -54,16 +71,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.net.SocketTimeoutException;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
+import com.google.protobuf.ServiceException;
 
 /**
  * Provides an interface to manage HBase database table metadata + general
@@ -497,23 +505,27 @@ public class HBaseAdmin implements Abortable, Closeable {
     });
 
     // Wait until all regions deleted
-    HRegionInterface server =
-      connection.getHRegionConnection(firstMetaServer.getHostname(), firstMetaServer.getPort());
+    ClientProtocol server =
+      connection.getClient(firstMetaServer.getHostname(), firstMetaServer.getPort());
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
-      long scannerId = -1L;
       try {
 
         Scan scan = MetaReader.getScanForTableName(tableName);
-        scan.addColumn(HConstants.CATALOG_FAMILY,
-            HConstants.REGIONINFO_QUALIFIER);
-        scannerId = server.openScanner(
-          firstMetaServer.getRegionInfo().getRegionName(), scan);
+        scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+        ScanRequest request = RequestConverter.buildScanRequest(
+          firstMetaServer.getRegionInfo().getRegionName(), scan, 1, true);
+        Result[] values = null;
         // Get a batch at a time.
-        Result values = server.next(scannerId);
+        try {
+          ScanResponse response = server.scan(null, request);
+          values = ResponseConverter.getResults(response);
+        } catch (ServiceException se) {
+          throw ProtobufUtil.getRemoteException(se);
+        }
 
         // let us wait until .META. table is updated and
         // HMaster removes the table from its HTableDescriptors
-        if (values == null) {
+        if (values == null || values.length == 0) {
           boolean tableExists = false;
           HTableDescriptor[] htds;
           MasterKeepAliveConnection master = connection.getKeepAliveMaster();
@@ -540,14 +552,6 @@ public class HBaseAdmin implements Abortable, Closeable {
             throw ((RemoteException) ex).unwrapRemoteException();
           }else {
             throw ex;
-          }
-        }
-      } finally {
-        if (scannerId != -1L) {
-          try {
-            server.close(scannerId);
-          } catch (IOException ex) {
-            LOG.warn(ex);
           }
         }
       }

@@ -99,6 +99,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
 import com.google.protobuf.Message;
+import com.google.protobuf.RpcController;
 
 @Category(SmallTests.class)
 public class TestHbaseObjectWritable extends TestCase {
@@ -523,6 +524,7 @@ public class TestHbaseObjectWritable extends TestCase {
     assertEquals(80,HbaseObjectWritable.getClassCode(Message.class).intValue());
 
     assertEquals(81,HbaseObjectWritable.getClassCode(Array.class).intValue());
+    assertEquals(82,HbaseObjectWritable.getClassCode(RpcController.class).intValue());
   }
 
   /**
@@ -531,7 +533,7 @@ public class TestHbaseObjectWritable extends TestCase {
    * note on the test above. 
    */
   public void testGetNextObjectCode(){
-    assertEquals(82,HbaseObjectWritable.getNextClassCode());
+    assertEquals(83,HbaseObjectWritable.getNextClassCode());
   }
 
   @org.junit.Rule

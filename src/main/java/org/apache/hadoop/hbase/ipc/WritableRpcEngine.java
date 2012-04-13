@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Objects;
@@ -51,6 +52,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.*;
 
 import org.codehaus.jackson.map.ObjectMapper;
+
+import com.google.protobuf.ServiceException;
 
 /** An RpcEngine implementation for Writable data. */
 @InterfaceAudience.Private
@@ -406,6 +409,9 @@ class WritableRpcEngine implements RpcEngine {
         Throwable target = e.getTargetException();
         if (target instanceof IOException) {
           throw (IOException)target;
+        }
+        if (target instanceof ServiceException) {
+          throw ProtobufUtil.getRemoteException((ServiceException)target);
         }
         IOException ioe = new IOException(target.toString());
         ioe.setStackTrace(target.getStackTrace());

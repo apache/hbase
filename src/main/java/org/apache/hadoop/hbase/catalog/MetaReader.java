@@ -31,18 +31,15 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * Reads region and assignment information from <code>.META.</code>.
@@ -253,19 +250,6 @@ public class MetaReader {
   }
 
   /**
-   * Reads the location of META from ROOT.
-   * @param metaServer connection to server hosting ROOT
-   * @return location of META in ROOT where location, or null if not available
-   * @throws IOException
-   * @deprecated Does not retry; use #getMetaRegionLocation(CatalogTracker)
-   */
-  public static ServerName readMetaLocation(HRegionInterface metaServer)
-  throws IOException {
-    return readLocation(metaServer, CatalogTracker.ROOT_REGION_NAME,
-        CatalogTracker.META_REGION_NAME);
-  }
-
-  /**
    * Gets the location of <code>.META.</code> region by reading content of
    * <code>-ROOT-</code>.
    * @param ct
@@ -290,50 +274,6 @@ public class MetaReader {
   throws IOException {
     Pair<HRegionInfo, ServerName> pair = getRegion(catalogTracker, regionName);
     return (pair == null || pair.getSecond() == null)? null: pair.getSecond();
-  }
-
-  // TODO: Remove when deprecated dependencies are removed.
-  private static ServerName readLocation(HRegionInterface metaServer,
-      byte [] catalogRegionName, byte [] regionName)
-  throws IOException {
-    Result r = null;
-    try {
-      r = metaServer.get(catalogRegionName,
-        new Get(regionName).
-        addColumn(HConstants.CATALOG_FAMILY,
-          HConstants.SERVER_QUALIFIER).
-        addColumn(HConstants.CATALOG_FAMILY,
-          HConstants.STARTCODE_QUALIFIER));
-    } catch (java.net.SocketTimeoutException e) {
-      // Treat this exception + message as unavailable catalog table. Catch it
-      // and fall through to return a null
-    } catch (java.net.SocketException e) {
-      // Treat this exception + message as unavailable catalog table. Catch it
-      // and fall through to return a null
-    } catch (RemoteException re) {
-      IOException ioe = re.unwrapRemoteException();
-      if (ioe instanceof NotServingRegionException) {
-        // Treat this NSRE as unavailable table.  Catch and fall through to
-        // return null below
-      } else if (ioe.getMessage().contains("Server not running")) {
-        // Treat as unavailable table.
-      } else {
-        throw re;
-      }
-    } catch (IOException e) {
-      if (e.getCause() != null && e.getCause() instanceof IOException &&
-          e.getCause().getMessage() != null &&
-          e.getCause().getMessage().contains("Connection reset by peer")) {
-        // Treat this exception + message as unavailable catalog table. Catch it
-        // and fall through to return a null
-      } else {
-        throw e;
-      }
-    }
-    if (r == null || r.isEmpty()) {
-      return null;
-    }
-    return getServerNameFromCatalogResult(r);
   }
 
   /**
@@ -652,35 +592,6 @@ public class MetaReader {
       }
     };
     fullScan(catalogTracker, v);
-  }
-
-  /**
-   * Fully scan a given region, on a given server starting with given row.
-   * @param hRegionInterface region server
-   * @param visitor visitor
-   * @param regionName name of region
-   * @param startrow start row
-   * @throws IOException
-   * @deprecated Does not retry; use fullScan xxx instead.
-   x
-   */
-  public static void fullScan(HRegionInterface hRegionInterface,
-                              Visitor visitor, final byte[] regionName,
-                              byte[] startrow) throws IOException {
-    if (hRegionInterface == null) return;
-    Scan scan = new Scan();
-    if (startrow != null) scan.setStartRow(startrow);
-    scan.addFamily(HConstants.CATALOG_FAMILY);
-    long scannerid = hRegionInterface.openScanner(regionName, scan);
-    try {
-      Result data;
-      while((data = hRegionInterface.next(scannerid)) != null) {
-        if (!data.isEmpty()) visitor.visit(data);
-      }
-    } finally {
-      hRegionInterface.close(scannerid);
-    }
-    return;
   }
 
   /**

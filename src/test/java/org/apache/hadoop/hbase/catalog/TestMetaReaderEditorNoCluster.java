@@ -31,8 +31,10 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ClientProtocol;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -41,6 +43,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 /**
  * Test MetaReader/Editor but without spinning up a cluster.
@@ -82,7 +87,8 @@ public class TestMetaReaderEditorNoCluster {
    * @throws InterruptedException 
    */
   @Test
-  public void testRideOverServerNotRunning() throws IOException, InterruptedException {
+  public void testRideOverServerNotRunning()
+      throws IOException, InterruptedException, ServiceException {
     // Need a zk watcher.
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(UTIL.getConfiguration(),
       this.getClass().getSimpleName(), ABORTABLE, true);
@@ -92,27 +98,16 @@ public class TestMetaReaderEditorNoCluster {
     HConnection connection = null;
     CatalogTracker ct = null;
     try {
-      // Mock an HRegionInterface. Our mock implementation will fail a few
+      // Mock an ClientProtocol. Our mock implementation will fail a few
       // times when we go to open a scanner.
-      final HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
-      // When openScanner called throw IOE 'Server not running' a few times
+      final ClientProtocol implementation = Mockito.mock(ClientProtocol.class);
+      // When scan called throw IOE 'Server not running' a few times
       // before we return a scanner id.  Whats WEIRD is that these
       // exceptions do not show in the log because they are caught and only
       // printed if we FAIL.  We eventually succeed after retry so these don't
       // show.  We will know if they happened or not because we will ask
-      // mockito at the end of this test to verify that openscanner was indeed
+      // mockito at the end of this test to verify that scan was indeed
       // called the wanted number of times.
-      final long scannerid = 123L;
-      Mockito.when(implementation.openScanner((byte [])Mockito.any(),
-          (Scan)Mockito.any())).
-        thenThrow(new IOException("Server not running (1 of 3)")).
-        thenThrow(new IOException("Server not running (2 of 3)")).
-        thenThrow(new IOException("Server not running (3 of 3)")).
-        thenReturn(scannerid);
-      // Make it so a verifiable answer comes back when next is called.  Return
-      // the verifiable answer and then a null so we stop scanning.  Our
-      // verifiable answer is something that looks like a row in META with
-      // a server and startcode that is that of the above defined servername.
       List<KeyValue> kvs = new ArrayList<KeyValue>();
       final byte [] rowToVerify = Bytes.toBytes("rowToVerify");
       kvs.add(new KeyValue(rowToVerify,
@@ -124,10 +119,19 @@ public class TestMetaReaderEditorNoCluster {
       kvs.add(new KeyValue(rowToVerify,
         HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
         Bytes.toBytes(sn.getStartcode())));
-      final Result [] result = new Result [] {new Result(kvs)};
-      Mockito.when(implementation.next(Mockito.anyLong(), Mockito.anyInt())).
-        thenReturn(result).
-        thenReturn(null);
+      final Result [] results = new Result [] {new Result(kvs)};
+      ScanResponse.Builder builder = ScanResponse.newBuilder();
+      for (Result result: results) {
+        builder.addResult(ProtobufUtil.toResult(result));
+      }
+      Mockito.when(implementation.scan(
+        (RpcController)Mockito.any(), (ScanRequest)Mockito.any())).
+          thenThrow(new ServiceException("Server not running (1 of 3)")).
+          thenThrow(new ServiceException("Server not running (2 of 3)")).
+          thenThrow(new ServiceException("Server not running (3 of 3)")).
+          thenReturn(ScanResponse.newBuilder().setScannerId(1234567890L).build())
+            .thenReturn(builder.build()).thenReturn(
+              ScanResponse.newBuilder().setMoreResults(false).build());
 
       // Associate a spied-upon HConnection with UTIL.getConfiguration.  Need
       // to shove this in here first so it gets picked up all over; e.g. by
@@ -150,7 +154,7 @@ public class TestMetaReaderEditorNoCluster {
 
       // Now shove our HRI implementation into the spied-upon connection.
       Mockito.doReturn(implementation).
-        when(connection).getHRegionConnection(Mockito.anyString(), Mockito.anyInt());
+        when(connection).getClient(Mockito.anyString(), Mockito.anyInt());
 
       // Now start up the catalogtracker with our doctored Connection.
       ct = new CatalogTracker(zkw, null, connection, ABORTABLE, 0);
@@ -160,10 +164,10 @@ public class TestMetaReaderEditorNoCluster {
       assertTrue(hris.size() == 1);
       assertTrue(hris.firstEntry().getKey().equals(HRegionInfo.FIRST_META_REGIONINFO));
       assertTrue(Bytes.equals(rowToVerify, hris.firstEntry().getValue().getRow()));
-      // Finally verify that openscanner was called four times -- three times
-      // with exception and then on 4th attempt we succeed.
-      Mockito.verify(implementation, Mockito.times(4)).
-        openScanner((byte [])Mockito.any(), (Scan)Mockito.any());
+      // Finally verify that scan was called four times -- three times
+      // with exception and then on 4th, 5th and 6th attempt we succeed
+      Mockito.verify(implementation, Mockito.times(6)).
+        scan((RpcController)Mockito.any(), (ScanRequest)Mockito.any());
     } finally {
       if (ct != null) ct.stop();
       HConnectionManager.deleteConnection(UTIL.getConfiguration(), true);

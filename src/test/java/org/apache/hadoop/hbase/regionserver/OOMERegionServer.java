@@ -25,6 +25,11 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
+
+import com.google.protobuf.ServiceException;
 
 /**
  * A region server that will OOME.
@@ -42,10 +47,16 @@ public class OOMERegionServer extends HRegionServer {
 
   public void put(byte [] regionName, Put put)
   throws IOException {
-    super.put(regionName, put);
-    for (int i = 0; i < 30; i++) {
-      // Add the batch update 30 times to bring on the OOME faster.
-      this.retainer.add(put);
+    try {
+      MutateRequest request =
+        RequestConverter.buildMutateRequest(regionName, put);
+      super.mutate(null, request);
+      for (int i = 0; i < 30; i++) {
+        // Add the batch update 30 times to bring on the OOME faster.
+        this.retainer.add(put);
+      }
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
     }
   }
 

@@ -40,11 +40,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -119,7 +117,7 @@ import org.apache.hadoop.hbase.ipc.Invocation;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.protobuf.ClientProtocol;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
@@ -139,7 +137,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
@@ -170,49 +167,28 @@ import com.google.common.collect.Lists;
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
 @InterfaceAudience.Private
-public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
-    Runnable, RegionServerServices {
+public class HRegionServer extends RegionServer
+    implements HRegionInterface, HBaseRPCErrorHandler {
 
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
-
-  // Set when a report to the master comes back with a message asking us to
-  // shutdown. Also set by call to stop when debugging or running unit tests
-  // of HRegionServer in isolation.
-  protected volatile boolean stopped = false;
 
   // A state before we go into stopped state.  At this stage we're closing user
   // space regions.
   private boolean stopping = false;
 
-  // Go down hard. Used if file system becomes unavailable and also in
-  // debugging and unit tests.
-  protected volatile boolean abortRequested;
-
   private volatile boolean killed = false;
-
-  // If false, the file system has become unavailable
-  protected volatile boolean fsOk;
 
   protected final Configuration conf;
 
   protected final AtomicBoolean haveRootRegion = new AtomicBoolean(false);
-  private HFileSystem fs;
   private boolean useHBaseChecksum; // verify hbase checksums?
   private Path rootDir;
-  private final Random rand = new Random();
 
   //RegionName vs current action in progress
   //true - if open region action in progress
   //false - if close region action in progress
   private final ConcurrentSkipListMap<byte[], Boolean> regionsInTransitionInRS =
       new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
-
-  /**
-   * Map of regions currently being served by this region server. Key is the
-   * encoded region name.  All access should be synchronized.
-   */
-  protected final Map<String, HRegion> onlineRegions =
-    new ConcurrentHashMap<String, HRegion>();
 
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -222,8 +198,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   protected final int numRegionsToReport;
 
-  private final long maxScannerResultSize;
-
   // Remote HMaster
   private HMasterRegionInterface hbaseMaster;
 
@@ -232,13 +206,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   RpcServer rpcServer;
 
   private final InetSocketAddress isa;
-
-  // Leases
-  private Leases leases;
-
-  // Request counter.
-  // Do we need this?  Can't we just sum region counters?  St.Ack 20110412
-  private AtomicInteger requestCount = new AtomicInteger();
 
   // Info server. Default access so can be used by unit tests. REGIONSERVER
   // is name of the webapp and the attribute name used stuffing this instance
@@ -263,9 +230,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // Compactions
   public CompactSplitThread compactSplitThread;
 
-  // Cache flushing
-  MemStoreFlusher cacheFlusher;
-
   /*
    * Check for compactions requests.
    */
@@ -278,9 +242,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
-
-  final Map<String, RegionScanner> scanners =
-    new ConcurrentHashMap<String, RegionScanner>();
 
   // zookeeper connection and watcher
   private ZooKeeperWatcher zooKeeper;
@@ -405,8 +366,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (initialIsa.getAddress() == null) {
       throw new IllegalArgumentException("Failed resolve of " + initialIsa);
     }
+
     this.rpcServer = HBaseRPC.getServer(this,
-      new Class<?>[]{HRegionInterface.class, HBaseRPCErrorHandler.class,
+      new Class<?>[]{HRegionInterface.class, ClientProtocol.class,
+        HBaseRPCErrorHandler.class,
         OnlineRegions.class},
         initialIsa.getHostName(), // BindAddress is IP we got for this server.
         initialIsa.getPort(),
@@ -445,12 +408,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
-  private static final int NORMAL_QOS = 0;
-  private static final int QOS_THRESHOLD = 10;  // the line between low and high qos
-  private static final int HIGH_QOS = 100;
-
   @Retention(RetentionPolicy.RUNTIME)
-  private @interface QosPriority {
+  protected @interface QosPriority {
     int priority() default 0;
   }
 
@@ -648,7 +607,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     // Create the thread for the ThriftServer.
     if (conf.getBoolean("hbase.regionserver.export.thrift", false)) {
-      thriftServer = new HRegionThriftServer(this, conf);
+      thriftServer = new HRegionThriftServer((RegionServer)this, conf);
       thriftServer.start();
       LOG.info("Started Thrift API from Region Server.");
     }
@@ -1078,110 +1037,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     HRegion r = null;
     r = this.onlineRegions.get(encodedRegionName);
     return r != null ? createRegionLoad(r) : null;
-  }
-
-  /*
-   * Cleanup after Throwable caught invoking method. Converts <code>t</code> to
-   * IOE if it isn't already.
-   *
-   * @param t Throwable
-   *
-   * @return Throwable converted to an IOE; methods can only let out IOEs.
-   */
-  private Throwable cleanup(final Throwable t) {
-    return cleanup(t, null);
-  }
-
-  /*
-   * Cleanup after Throwable caught invoking method. Converts <code>t</code> to
-   * IOE if it isn't already.
-   *
-   * @param t Throwable
-   *
-   * @param msg Message to log in error. Can be null.
-   *
-   * @return Throwable converted to an IOE; methods can only let out IOEs.
-   */
-  private Throwable cleanup(final Throwable t, final String msg) {
-    // Don't log as error if NSRE; NSRE is 'normal' operation.
-    if (t instanceof NotServingRegionException) {
-      LOG.debug("NotServingRegionException; " +  t.getMessage());
-      return t;
-    }
-    if (msg == null) {
-      LOG.error("", RemoteExceptionHandler.checkThrowable(t));
-    } else {
-      LOG.error(msg, RemoteExceptionHandler.checkThrowable(t));
-    }
-    if (!checkOOME(t)) {
-      checkFileSystem();
-    }
-    return t;
-  }
-
-  /*
-   * @param t
-   *
-   * @return Make <code>t</code> an IOE if it isn't already.
-   */
-  private IOException convertThrowableToIOE(final Throwable t) {
-    return convertThrowableToIOE(t, null);
-  }
-
-  /*
-   * @param t
-   *
-   * @param msg Message to put in new IOE if passed <code>t</code> is not an IOE
-   *
-   * @return Make <code>t</code> an IOE if it isn't already.
-   */
-  private IOException convertThrowableToIOE(final Throwable t, final String msg) {
-    return (t instanceof IOException ? (IOException) t : msg == null
-        || msg.length() == 0 ? new IOException(t) : new IOException(msg, t));
-  }
-
-  /*
-   * Check if an OOME and, if so, abort immediately to avoid creating more objects.
-   *
-   * @param e
-   *
-   * @return True if we OOME'd and are aborting.
-   */
-  public boolean checkOOME(final Throwable e) {
-    boolean stop = false;
-    try {
-      if (e instanceof OutOfMemoryError
-          || (e.getCause() != null && e.getCause() instanceof OutOfMemoryError)
-          || (e.getMessage() != null && e.getMessage().contains(
-              "java.lang.OutOfMemoryError"))) {
-        stop = true;
-        LOG.fatal(
-          "Run out of memory; HRegionServer will abort itself immediately", e);
-      }
-    } finally {
-      if (stop) {
-        Runtime.getRuntime().halt(1);
-      }
-    }
-    return stop;
-  }
-
-  /**
-   * Checks to see if the file system is still accessible. If not, sets
-   * abortRequested and stopRequested
-   *
-   * @return false if file system is not available
-   */
-  public boolean checkFileSystem() {
-    if (this.fsOk && this.fs != null) {
-      try {
-        FSUtils.checkFileSystemAvailable(this.fs);
-      } catch (IOException e) {
-        abort("File System not available", e);
-        this.fsOk = false;
-      }
-    }
-    return this.fsOk;
   }
 
   /*
@@ -2334,15 +2189,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
-  protected long addScanner(RegionScanner s) throws LeaseStillHeldException {
-    long scannerId = -1L;
-    scannerId = rand.nextLong();
-    String scannerName = String.valueOf(scannerId);
-    scanners.put(scannerName, s);
-    this.leases.createLease(scannerName, new ScannerListener(scannerName));
-    return scannerId;
-  }
-
   public Result next(final long scannerId) throws IOException {
     Result[] res = next(scannerId, 1);
     if (res == null || res.length == 0) {
@@ -2468,42 +2314,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
-  /**
-   * Instantiated as a scanner lease. If the lease times out, the scanner is
-   * closed
-   */
-  private class ScannerListener implements LeaseListener {
-    private final String scannerName;
-
-    ScannerListener(final String n) {
-      this.scannerName = n;
-    }
-
-    public void leaseExpired() {
-      RegionScanner s = scanners.remove(this.scannerName);
-      if (s != null) {
-        LOG.info("Scanner " + this.scannerName + " lease expired on region "
-            + s.getRegionInfo().getRegionNameAsString());
-        try {
-          HRegion region = getRegion(s.getRegionInfo().getRegionName());
-          if (region != null && region.getCoprocessorHost() != null) {
-            region.getCoprocessorHost().preScannerClose(s);
-          }
-
-          s.close();
-          if (region != null && region.getCoprocessorHost() != null) {
-            region.getCoprocessorHost().postScannerClose(s);
-          }
-        } catch (IOException e) {
-          LOG.error("Closing scanner for "
-              + s.getRegionInfo().getRegionNameAsString(), e);
-        }
-      } else {
-        LOG.info("Scanner " + this.scannerName + " lease expired");
-      }
-    }
-  }
-
   //
   // Methods that do the actual work for the remote API
   //
@@ -2585,39 +2395,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
-  protected long addRowLock(Integer r, HRegion region)
-      throws LeaseStillHeldException {
-    long lockId = -1L;
-    lockId = rand.nextLong();
-    String lockName = String.valueOf(lockId);
-    rowlocks.put(lockName, r);
-    this.leases.createLease(lockName, new RowLockListener(lockName, region));
-    return lockId;
-  }
-
-  /**
-   * Method to get the Integer lock identifier used internally from the long
-   * lock identifier used by the client.
-   *
-   * @param lockId
-   *          long row lock identifier from client
-   * @return intId Integer row lock used internally in HRegion
-   * @throws IOException
-   *           Thrown if this is not a valid client lock id.
-   */
-  Integer getLockFromId(long lockId) throws IOException {
-    if (lockId == -1L) {
-      return null;
-    }
-    String lockName = String.valueOf(lockId);
-    Integer rl = rowlocks.get(lockName);
-    if (rl == null) {
-      throw new UnknownRowLockException("Invalid row lock");
-    }
-    this.leases.renewLease(lockName);
-    return rl;
-  }
-
   @Override
   @QosPriority(priority=HIGH_QOS)
   public void unlockRow(byte[] regionName, long lockId) throws IOException {
@@ -2661,30 +2438,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     checkOpen();
     HRegion region = getRegion(regionName);
     return region.bulkLoadHFiles(familyPaths);
-  }
-
-  Map<String, Integer> rowlocks = new ConcurrentHashMap<String, Integer>();
-
-  /**
-   * Instantiated as a row lock lease. If the lease times out, the row lock is
-   * released
-   */
-  private class RowLockListener implements LeaseListener {
-    private final String lockName;
-    private final HRegion region;
-
-    RowLockListener(final String lockName, final HRegion region) {
-      this.lockName = lockName;
-      this.region = region;
-    }
-
-    public void leaseExpired() {
-      LOG.info("Row Lock " + this.lockName + " lease expired");
-      Integer r = rowlocks.remove(this.lockName);
-      if (r != null) {
-        region.releaseRowLock(r);
-      }
-    }
   }
 
   // Region open/close direct RPCs
@@ -3057,15 +2810,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return r;
   }
 
-  /**
-   * @param regionName
-   * @return HRegion for the passed binary <code>regionName</code> or null if
-   *         named region is not member of the online regions.
-   */
-  public HRegion getOnlineRegion(final byte[] regionName) {
-    return getFromOnlineRegions(HRegionInfo.encodeRegionName(regionName));
-  }
-
   /** @return the request count */
   public AtomicInteger getRequestCount() {
     return this.requestCount;
@@ -3081,25 +2825,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   /** @return reference to FlushRequester */
   public FlushRequester getFlushRequester() {
     return this.cacheFlusher;
-  }
-
-  /**
-   * Protected utility method for safely obtaining an HRegion handle.
-   *
-   * @param regionName
-   *          Name of online {@link HRegion} to return
-   * @return {@link HRegion} for <code>regionName</code>
-   * @throws NotServingRegionException
-   */
-  protected HRegion getRegion(final byte[] regionName)
-      throws NotServingRegionException {
-    HRegion region = null;
-    region = getOnlineRegion(regionName);
-    if (region == null) {
-      throw new NotServingRegionException("Region is not online: " +
-        Bytes.toStringBinary(regionName));
-    }
-    return region;
   }
 
   /**
@@ -3123,21 +2848,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return regions.toArray(new HRegionInfo[regions.size()]);
   }
 
-  /**
-   * Called to verify that this server is up and running.
-   *
-   * @throws IOException
-   */
-  protected void checkOpen() throws IOException {
-    if (this.stopped || this.abortRequested) {
-      throw new RegionServerStoppedException("Server " + getServerName() +
-        " not running" + (this.abortRequested ? ", aborting" : ""));
-    }
-    if (!fsOk) {
-      throw new RegionServerStoppedException("File system not available");
-    }
-  }
-
   @Override
   @QosPriority(priority=HIGH_QOS)
   public ProtocolSignature getProtocolSignature(
@@ -3145,6 +2855,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   throws IOException {
     if (protocol.equals(HRegionInterface.class.getName())) {
       return new ProtocolSignature(HRegionInterface.VERSION, null);
+    } else if (protocol.equals(ClientProtocol.class.getName())) {
+      return new ProtocolSignature(ClientProtocol.VERSION, null);
     }
     throw new IOException("Unknown protocol: " + protocol);
   }
@@ -3155,6 +2867,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   throws IOException {
     if (protocol.equals(HRegionInterface.class.getName())) {
       return HRegionInterface.VERSION;
+    } else if (protocol.equals(ClientProtocol.class.getName())) {
+      return ClientProtocol.VERSION;
     }
     throw new IOException("Unknown protocol: " + protocol);
   }

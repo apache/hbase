@@ -53,12 +53,26 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.CompareType;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowRequest;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
+
+import com.google.protobuf.ServiceException;
 
 /**
  * <p>Used to communicate with a single HBase table.
@@ -648,8 +662,15 @@ public class HTable implements HTableInterface {
    throws IOException {
      return new ServerCallable<Result>(connection, tableName, row, operationTimeout) {
        public Result call() throws IOException {
-         return server.getClosestRowBefore(location.getRegionInfo().getRegionName(),
-           row, family);
+         try {
+           GetRequest request = RequestConverter.buildGetRequest(
+               location.getRegionInfo().getRegionName(), row, family, true);
+           GetResponse response = server.get(null, request);
+           if (!response.hasResult()) return null;
+           return ProtobufUtil.toResult(response.getResult());
+         } catch (ServiceException se) {
+           throw ProtobufUtil.getRemoteException(se);
+         }
        }
      }.withRetries();
    }
@@ -694,7 +715,14 @@ public class HTable implements HTableInterface {
   public Result get(final Get get) throws IOException {
     return new ServerCallable<Result>(connection, tableName, get.getRow(), operationTimeout) {
           public Result call() throws IOException {
-            return server.get(location.getRegionInfo().getRegionName(), get);
+            try {
+              GetRequest request = RequestConverter.buildGetRequest(
+                  location.getRegionInfo().getRegionName(), get);
+              GetResponse response = server.get(null, request);
+              return ProtobufUtil.toResult(response.getResult());
+            } catch (ServiceException se) {
+              throw ProtobufUtil.getRemoteException(se);
+            }
           }
         }.withRetries();
   }
@@ -746,13 +774,18 @@ public class HTable implements HTableInterface {
   @Override
   public void delete(final Delete delete)
   throws IOException {
-    new ServerCallable<Void>(connection, tableName, delete.getRow(),
-        operationTimeout) {
-      public Void call() throws IOException {
-        server.delete(location.getRegionInfo().getRegionName(), delete);
-        return null;
-      }
-    }.withRetries();
+    new ServerCallable<Boolean>(connection, tableName, delete.getRow(), operationTimeout) {
+          public Boolean call() throws IOException {
+            try {
+              MutateRequest request = RequestConverter.buildMutateRequest(
+                location.getRegionInfo().getRegionName(), delete);
+              MutateResponse response = server.mutate(null, request);
+              return Boolean.valueOf(response.getProcessed());
+            } catch (ServiceException se) {
+              throw ProtobufUtil.getRemoteException(se);
+            }
+          }
+        }.withRetries();
   }
 
   /**
@@ -821,7 +854,13 @@ public class HTable implements HTableInterface {
     new ServerCallable<Void>(connection, tableName, rm.getRow(),
         operationTimeout) {
       public Void call() throws IOException {
-        server.mutateRow(location.getRegionInfo().getRegionName(), rm);
+        try {
+          MultiRequest request = RequestConverter.buildMultiRequest(
+            location.getRegionInfo().getRegionName(), rm);
+          server.multi(null, request);
+        } catch (ServiceException se) {
+          throw ProtobufUtil.getRemoteException(se);
+        }
         return null;
       }
     }.withRetries();
@@ -838,8 +877,15 @@ public class HTable implements HTableInterface {
     }
     return new ServerCallable<Result>(connection, tableName, append.getRow(), operationTimeout) {
           public Result call() throws IOException {
-            return server.append(
+            try {
+              MutateRequest request = RequestConverter.buildMutateRequest(
                 location.getRegionInfo().getRegionName(), append);
+              MutateResponse response = server.mutate(null, request);
+              if (!response.hasResult()) return null;
+              return ProtobufUtil.toResult(response.getResult());
+            } catch (ServiceException se) {
+              throw ProtobufUtil.getRemoteException(se);
+            }
           }
         }.withRetries();
   }
@@ -855,8 +901,14 @@ public class HTable implements HTableInterface {
     }
     return new ServerCallable<Result>(connection, tableName, increment.getRow(), operationTimeout) {
           public Result call() throws IOException {
-            return server.increment(
+            try {
+              MutateRequest request = RequestConverter.buildMutateRequest(
                 location.getRegionInfo().getRegionName(), increment);
+              MutateResponse response = server.mutate(null, request);
+              return ProtobufUtil.toResult(response.getResult());
+            } catch (ServiceException se) {
+              throw ProtobufUtil.getRemoteException(se);
+            }
           }
         }.withRetries();
   }
@@ -890,9 +942,16 @@ public class HTable implements HTableInterface {
     }
     return new ServerCallable<Long>(connection, tableName, row, operationTimeout) {
           public Long call() throws IOException {
-            return server.incrementColumnValue(
+            try {
+              MutateRequest request = RequestConverter.buildMutateRequest(
                 location.getRegionInfo().getRegionName(), row, family,
                 qualifier, amount, writeToWAL);
+              MutateResponse response = server.mutate(null, request);
+              Result result = ProtobufUtil.toResult(response.getResult());
+              return Long.valueOf(Bytes.toLong(result.getValue(family, qualifier)));
+            } catch (ServiceException se) {
+              throw ProtobufUtil.getRemoteException(se);
+            }
           }
         }.withRetries();
   }
@@ -907,8 +966,15 @@ public class HTable implements HTableInterface {
   throws IOException {
     return new ServerCallable<Boolean>(connection, tableName, row, operationTimeout) {
           public Boolean call() throws IOException {
-            return server.checkAndPut(location.getRegionInfo().getRegionName(),
-                row, family, qualifier, value, put) ? Boolean.TRUE : Boolean.FALSE;
+            try {
+              MutateRequest request = RequestConverter.buildMutateRequest(
+                location.getRegionInfo().getRegionName(), row, family, qualifier,
+                new BinaryComparator(value), CompareType.EQUAL, put);
+              MutateResponse response = server.mutate(null, request);
+              return Boolean.valueOf(response.getProcessed());
+            } catch (ServiceException se) {
+              throw ProtobufUtil.getRemoteException(se);
+            }
           }
         }.withRetries();
   }
@@ -924,10 +990,15 @@ public class HTable implements HTableInterface {
   throws IOException {
     return new ServerCallable<Boolean>(connection, tableName, row, operationTimeout) {
           public Boolean call() throws IOException {
-            return server.checkAndDelete(
-                location.getRegionInfo().getRegionName(),
-                row, family, qualifier, value, delete)
-            ? Boolean.TRUE : Boolean.FALSE;
+            try {
+              MutateRequest request = RequestConverter.buildMutateRequest(
+                location.getRegionInfo().getRegionName(), row, family, qualifier,
+                new BinaryComparator(value), CompareType.EQUAL, delete);
+              MutateResponse response = server.mutate(null, request);
+              return Boolean.valueOf(response.getProcessed());
+            } catch (ServiceException se) {
+              throw ProtobufUtil.getRemoteException(se);
+            }
           }
         }.withRetries();
   }
@@ -939,8 +1010,14 @@ public class HTable implements HTableInterface {
   public boolean exists(final Get get) throws IOException {
     return new ServerCallable<Boolean>(connection, tableName, get.getRow(), operationTimeout) {
           public Boolean call() throws IOException {
-            return server.
-                exists(location.getRegionInfo().getRegionName(), get);
+            try {
+              GetRequest request = RequestConverter.buildGetRequest(
+                  location.getRegionInfo().getRegionName(), get, true);
+              GetResponse response = server.get(null, request);
+              return response.getExists();
+            } catch (ServiceException se) {
+              throw ProtobufUtil.getRemoteException(se);
+            }
           }
         }.withRetries();
   }
@@ -1026,9 +1103,14 @@ public class HTable implements HTableInterface {
   throws IOException {
     return new ServerCallable<RowLock>(connection, tableName, row, operationTimeout) {
         public RowLock call() throws IOException {
-          long lockId =
-              server.lockRow(location.getRegionInfo().getRegionName(), row);
-          return new RowLock(row,lockId);
+          try {
+            LockRowRequest request = RequestConverter.buildLockRowRequest(
+              location.getRegionInfo().getRegionName(), row);
+            LockRowResponse response = server.lockRow(null, request);
+            return new RowLock(row, response.getLockId());
+          } catch (ServiceException se) {
+            throw ProtobufUtil.getRemoteException(se);
+          }
         }
       }.withRetries();
   }
@@ -1039,14 +1121,18 @@ public class HTable implements HTableInterface {
   @Override
   public void unlockRow(final RowLock rl)
   throws IOException {
-    new ServerCallable<Void>(connection, tableName, rl.getRow(),
-        operationTimeout) {
-      public Void call() throws IOException {
-        server.unlockRow(location.getRegionInfo().getRegionName(), rl
-            .getLockId());
-        return null;
-      }
-    }.withRetries();
+    new ServerCallable<Boolean>(connection, tableName, rl.getRow(), operationTimeout) {
+        public Boolean call() throws IOException {
+          try {
+            UnlockRowRequest request = RequestConverter.buildUnlockRowRequest(
+              location.getRegionInfo().getRegionName(), rl.getLockId());
+            server.unlockRow(null, request);
+            return Boolean.TRUE;
+          } catch (ServiceException se) {
+            throw ProtobufUtil.getRemoteException(se);
+          }
+        }
+      }.withRetries();
   }
 
   /**

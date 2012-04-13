@@ -110,6 +110,14 @@ public class TimeRange implements Writable {
   }
 
   /**
+   * Check if it is for all time
+   * @return true if it is for all time
+   */
+  public boolean isAllTime() {
+    return allTime;
+  }
+
+  /**
    * Check if the specified timestamp is within this TimeRange.
    * <p>
    * Returns true if within interval [minStamp, maxStamp), false

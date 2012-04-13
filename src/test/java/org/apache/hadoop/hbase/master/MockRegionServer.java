@@ -50,6 +50,23 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ClientProtocol;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowResponse;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -64,6 +81,9 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
+
 /**
  * A mock RegionServer implementation.
  * Use this when you can't bend Mockito to your liking (e.g. return null result
@@ -72,7 +92,7 @@ import org.apache.zookeeper.KeeperException;
  * {@link #setGetResult(byte[], byte[], Result)} for how to fill the backing data
  * store that the get pulls from.
  */
-class MockRegionServer implements HRegionInterface, RegionServerServices {
+class MockRegionServer implements HRegionInterface, ClientProtocol, RegionServerServices {
   private final ServerName sn;
   private final ZooKeeperWatcher zkw;
   private final Configuration conf;
@@ -245,9 +265,8 @@ class MockRegionServer implements HRegionInterface, RegionServerServices {
 
   @Override
   public Result get(byte[] regionName, Get get) throws IOException {
-    Map<byte [], Result> m = this.gets.get(regionName);
-    if (m == null) return null;
-    return m.get(get.getRow());
+    // TODO Auto-generated method stub
+    return null;
   }
 
   @Override
@@ -596,5 +615,88 @@ class MockRegionServer implements HRegionInterface, RegionServerServices {
   @Override
   public void mutateRow(byte[] regionName, RowMutations rm) throws IOException {
     // TODO Auto-generated method stub
+  }
+
+  @Override
+  public GetResponse get(RpcController controller, GetRequest request)
+      throws ServiceException {
+    byte[] regionName = request.getRegion().getValue().toByteArray();
+    Map<byte [], Result> m = this.gets.get(regionName);
+    GetResponse.Builder builder = GetResponse.newBuilder();
+    if (m != null) {
+      byte[] row = request.getGet().getRow().toByteArray();
+      builder.setResult(ProtobufUtil.toResult(m.get(row)));
+    }
+    return builder.build();
+  }
+
+  @Override
+  public MutateResponse mutate(RpcController controller, MutateRequest request)
+      throws ServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public ScanResponse scan(RpcController controller, ScanRequest request)
+      throws ServiceException {
+    ScanResponse.Builder builder = ScanResponse.newBuilder();
+    try {
+      if (request.hasScan()) {
+        byte[] regionName = request.getRegion().getValue().toByteArray();
+        builder.setScannerId(openScanner(regionName, null));
+        builder.setMoreResults(true);
+      }
+      else {
+        long scannerId = request.getScannerId();
+        Result result = next(scannerId);
+        if (result != null) {
+          builder.addResult(ProtobufUtil.toResult(result));
+          builder.setMoreResults(true);
+        }
+        else {
+          builder.setMoreResults(false);
+          close(scannerId);
+        }
+      }
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+    return builder.build();
+  }
+
+  @Override
+  public LockRowResponse lockRow(RpcController controller,
+      LockRowRequest request) throws ServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public UnlockRowResponse unlockRow(RpcController controller,
+      UnlockRowRequest request) throws ServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public BulkLoadHFileResponse bulkLoadHFile(RpcController controller,
+      BulkLoadHFileRequest request) throws ServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public ExecCoprocessorResponse execCoprocessor(RpcController controller,
+      ExecCoprocessorRequest request) throws ServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse multi(
+      RpcController controller, MultiRequest request) throws ServiceException {
+    // TODO Auto-generated method stub
+    return null;
   }
 }

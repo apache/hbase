@@ -19,17 +19,22 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorResponse;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 
 /**
  * Backs a {@link CoprocessorProtocol} subclass proxy and forwards method
@@ -74,8 +79,13 @@ public class ExecRPCInvoker implements InvocationHandler {
       ServerCallable<ExecResult> callable =
           new ServerCallable<ExecResult>(connection, table, row) {
             public ExecResult call() throws Exception {
-              return server.execCoprocessor(location.getRegionInfo().getRegionName(),
-                  exec);
+              byte[] regionName = location.getRegionInfo().getRegionName();
+              ExecCoprocessorRequest request =
+                RequestConverter.buildExecCoprocessorRequest(regionName, exec);
+              ExecCoprocessorResponse response =
+                server.execCoprocessor(null, request);
+              Object value = ProtobufUtil.toObject(response.getValue());
+              return new ExecResult(regionName, value);
             }
           };
       ExecResult result = callable.withRetries();

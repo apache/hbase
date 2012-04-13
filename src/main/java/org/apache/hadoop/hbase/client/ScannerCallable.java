@@ -25,14 +25,21 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
+
+import com.google.protobuf.ServiceException;
 
 /**
  * Retries scanner operations such as create, next, etc.
@@ -107,41 +114,58 @@ public class ScannerCallable extends ServerCallable<Result[]> {
    * @see java.util.concurrent.Callable#call()
    */
   public Result [] call() throws IOException {
-    if (scannerId != -1L && closed) {
-      close();
-    } else if (scannerId == -1L && !closed) {
-      this.scannerId = openScanner();
-    } else {
-      Result [] rrs = null;
-      try {
-        incRPCcallsMetrics();
-        rrs = server.next(scannerId, caching);
-        updateResultsMetrics(rrs);
-      } catch (IOException e) {
-        IOException ioe = null;
-        if (e instanceof RemoteException) {
-          ioe = RemoteExceptionHandler.decodeRemoteException((RemoteException)e);
-        }
-        if (ioe == null) throw new IOException(e);
-        if (ioe instanceof NotServingRegionException) {
-          // Throw a DNRE so that we break out of cycle of calling NSRE
-          // when what we need is to open scanner against new location.
-          // Attach NSRE to signal client that it needs to resetup scanner.
-          if (this.scanMetrics != null) {
-            this.scanMetrics.countOfNSRE.inc();
-          }
-          throw new DoNotRetryIOException("Reset scanner", ioe);
-        } else if (ioe instanceof RegionServerStoppedException) {
-          // Throw a DNRE so that we break out of cycle of calling RSSE
-          // when what we need is to open scanner against new location.
-          // Attach RSSE to signal client that it needs to resetup scanner.
-          throw new DoNotRetryIOException("Reset scanner", ioe);
-        } else {
-          // The outer layers will retry
-          throw ioe;
-        }
+    if (closed) {
+      if (scannerId != -1) {
+        close();
       }
-      return rrs;
+    } else {
+      if (scannerId == -1L) {
+        this.scannerId = openScanner();
+      } else {
+        Result [] rrs = null;
+        try {
+          incRPCcallsMetrics();
+          ScanRequest request =
+            RequestConverter.buildScanRequest(scannerId, caching, false);
+          try {
+            ScanResponse response = server.scan(null, request);
+            rrs = ResponseConverter.getResults(response);
+            if (response.hasMoreResults()
+                && !response.getMoreResults()) {
+              scannerId = -1L;
+              closed = true;
+              return null;
+            }
+          } catch (ServiceException se) {
+            throw ProtobufUtil.getRemoteException(se);
+          }
+          updateResultsMetrics(rrs);
+        } catch (IOException e) {
+          IOException ioe = null;
+          if (e instanceof RemoteException) {
+            ioe = RemoteExceptionHandler.decodeRemoteException((RemoteException)e);
+          }
+          if (ioe == null) throw new IOException(e);
+          if (ioe instanceof NotServingRegionException) {
+            // Throw a DNRE so that we break out of cycle of calling NSRE
+            // when what we need is to open scanner against new location.
+            // Attach NSRE to signal client that it needs to resetup scanner.
+            if (this.scanMetrics != null) {
+              this.scanMetrics.countOfNSRE.inc();
+            }
+            throw new DoNotRetryIOException("Reset scanner", ioe);
+          } else if (ioe instanceof RegionServerStoppedException) {
+            // Throw a DNRE so that we break out of cycle of calling RSSE
+            // when what we need is to open scanner against new location.
+            // Attach RSSE to signal client that it needs to resetup scanner.
+            throw new DoNotRetryIOException("Reset scanner", ioe);
+          } else {
+            // The outer layers will retry
+            throw ioe;
+          }
+        }
+        return rrs;
+      }
     }
     return null;
   }
@@ -161,10 +185,12 @@ public class ScannerCallable extends ServerCallable<Result[]> {
       return;
     }
     for (Result rr : rrs) {
-      this.scanMetrics.countOfBytesInResults.inc(rr.getBytes().getLength());
-      if (isRegionServerRemote) {
-        this.scanMetrics.countOfBytesInRemoteResults.inc(
-          rr.getBytes().getLength());
+      if (rr.getBytes() != null) {
+        this.scanMetrics.countOfBytesInResults.inc(rr.getBytes().getLength());
+        if (isRegionServerRemote) {
+          this.scanMetrics.countOfBytesInRemoteResults.inc(
+            rr.getBytes().getLength());
+        }
       }
     }
   }
@@ -175,7 +201,13 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     }
     try {
       incRPCcallsMetrics();
-      this.server.close(this.scannerId);
+      ScanRequest request =
+        RequestConverter.buildScanRequest(this.scannerId, 0, true);
+      try {
+        server.scan(null, request);
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      }
     } catch (IOException e) {
       LOG.warn("Ignore, probably already closed", e);
     }
@@ -184,8 +216,16 @@ public class ScannerCallable extends ServerCallable<Result[]> {
 
   protected long openScanner() throws IOException {
     incRPCcallsMetrics();
-    return this.server.openScanner(this.location.getRegionInfo().getRegionName(),
-      this.scan);
+    ScanRequest request =
+      RequestConverter.buildScanRequest(
+        this.location.getRegionInfo().getRegionName(),
+        this.scan, 0, false);
+    try {
+      ScanResponse response = server.scan(null, request);
+      return response.getScannerId();
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
   }
 
   protected Scan getScan() {

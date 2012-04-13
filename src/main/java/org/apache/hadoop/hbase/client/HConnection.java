@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.protobuf.ClientProtocol;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
@@ -218,6 +219,19 @@ public interface HConnection extends Abortable, Closeable {
    *
    */
   public HRegionInterface getHRegionConnection(final String hostname, final int port)
+  throws IOException;
+
+  /**
+   * Establishes a connection to the region server at the specified address, and return
+   * a region client protocol.
+   *
+   * @param hostname RegionServer hostname
+   * @param port RegionServer port
+   * @return ClientProtocol proxy for RegionServer
+   * @throws IOException if a remote or network exception occurs
+   *
+   */
+  public ClientProtocol getClient(final String hostname, final int port)
   throws IOException;
 
   /**

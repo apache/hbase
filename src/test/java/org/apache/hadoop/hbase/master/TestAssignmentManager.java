@@ -31,23 +31,25 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ClientProtocol;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -64,6 +66,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 
 /**
@@ -151,7 +156,7 @@ public class TestAssignmentManager {
    */
   @Test(timeout = 5000)
   public void testBalanceOnMasterFailoverScenarioWithOpenedNode()
-      throws IOException, KeeperException, InterruptedException {
+      throws IOException, KeeperException, InterruptedException, ServiceException {
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -194,7 +199,7 @@ public class TestAssignmentManager {
 
   @Test(timeout = 5000)
   public void testBalanceOnMasterFailoverScenarioWithClosedNode()
-      throws IOException, KeeperException, InterruptedException {
+      throws IOException, KeeperException, InterruptedException, ServiceException {
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -238,7 +243,7 @@ public class TestAssignmentManager {
 
   @Test(timeout = 5000)
   public void testBalanceOnMasterFailoverScenarioWithOfflineNode()
-      throws IOException, KeeperException, InterruptedException {
+      throws IOException, KeeperException, InterruptedException, ServiceException {
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -363,7 +368,8 @@ public class TestAssignmentManager {
    * @throws IOException
    */
   @Test
-  public void testShutdownHandler() throws KeeperException, IOException {
+  public void testShutdownHandler()
+      throws KeeperException, IOException, ServiceException {
     // Create and startup an executor.  This is used by AssignmentManager
     // handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("testShutdownHandler");
@@ -380,19 +386,20 @@ public class TestAssignmentManager {
 
       // Need to set up a fake scan of meta for the servershutdown handler
       // Make an RS Interface implementation.  Make it so a scanner can go against it.
-      HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
+      ClientProtocol implementation = Mockito.mock(ClientProtocol.class);
       // Get a meta row result that has region up on SERVERNAME_A
       Result r = Mocking.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
-      Mockito.when(implementation.openScanner((byte [])Mockito.any(), (Scan)Mockito.any())).
-        thenReturn(System.currentTimeMillis());
-      // Return a good result first and then return null to indicate end of scan
-      Mockito.when(implementation.next(Mockito.anyLong(), Mockito.anyInt())).
-        thenReturn(new Result [] {r}, (Result [])null);
+      ScanResponse.Builder builder = ScanResponse.newBuilder();
+      builder.setMoreResults(false);
+      builder.addResult(ProtobufUtil.toResult(r));
+      Mockito.when(implementation.scan(
+        (RpcController)Mockito.any(), (ScanRequest)Mockito.any())).
+          thenReturn(builder.build());
 
       // Get a connection w/ mocked up common methods.
       HConnection connection =
         HConnectionTestingUtility.getMockedConnectionAndDecorate(HTU.getConfiguration(),
-          implementation, SERVERNAME_B, REGIONINFO);
+          null, implementation, SERVERNAME_B, REGIONINFO);
 
       // Make it so we can get a catalogtracker from servermanager.. .needed
       // down in guts of server shutdown handler.
@@ -531,7 +538,7 @@ public class TestAssignmentManager {
    */
   private AssignmentManagerWithExtrasForTesting setUpMockedAssignmentManager(final Server server,
       final ServerManager manager)
-  throws IOException, KeeperException {
+  throws IOException, KeeperException, ServiceException {
     // We need a mocked catalog tracker. Its used by our AM instance.
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     // Make an RS Interface implementation. Make it so a scanner can go against
@@ -539,21 +546,24 @@ public class TestAssignmentManager {
     // messing with. Needed when "new master" joins cluster. AM will try and
     // rebuild its list of user regions and it will also get the HRI that goes
     // with an encoded name by doing a Get on .META.
-    HRegionInterface ri = Mockito.mock(HRegionInterface.class);
+    ClientProtocol ri = Mockito.mock(ClientProtocol.class);
     // Get a meta row result that has region up on SERVERNAME_A for REGIONINFO
     Result r = Mocking.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
-    Mockito.when(ri .openScanner((byte[]) Mockito.any(), (Scan) Mockito.any())).
-      thenReturn(System.currentTimeMillis());
-    // Return good result 'r' first and then return null to indicate end of scan
-    Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt())).
-      thenReturn(new Result[] { r }, (Result[]) null);
+    ScanResponse.Builder builder = ScanResponse.newBuilder();
+    builder.setMoreResults(false);
+    builder.addResult(ProtobufUtil.toResult(r));
+    Mockito.when(ri.scan(
+      (RpcController)Mockito.any(), (ScanRequest)Mockito.any())).
+        thenReturn(builder.build());
     // If a get, return the above result too for REGIONINFO
-    Mockito.when(ri.get((byte[]) Mockito.any(), (Get) Mockito.any())).
-      thenReturn(r);
+    GetResponse.Builder getBuilder = GetResponse.newBuilder();
+    getBuilder.setResult(ProtobufUtil.toResult(r));
+    Mockito.when(ri.get((RpcController)Mockito.any(), (GetRequest) Mockito.any())).
+      thenReturn(getBuilder.build());
     // Get a connection w/ mocked up common methods.
     HConnection connection = HConnectionTestingUtility.
-      getMockedConnectionAndDecorate(HTU.getConfiguration(), ri, SERVERNAME_B,
-        REGIONINFO);
+      getMockedConnectionAndDecorate(HTU.getConfiguration(), null,
+        ri, SERVERNAME_B, REGIONINFO);
     // Make it so we can get the connection from our mocked catalogtracker
     Mockito.when(ct.getConnection()).thenReturn(connection);
     // Create and startup an executor. Used by AM handling zk callbacks.

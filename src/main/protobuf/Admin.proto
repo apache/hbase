@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-// This file contains protocol buffers that are used for RegionAdmin service.
+// This file contains protocol buffers that are used for Admin service.
 
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
-option java_outer_classname = "RegionAdminProtos";
+option java_outer_classname = "AdminProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
@@ -146,7 +146,7 @@ message WALEntry {
   }
 
   message WALEdit {
-    repeated KeyValue keyValue = 1;
+    repeated bytes keyValue = 1;
     repeated FamilyScope familyScope = 2;
 
     enum ScopeType {
@@ -197,7 +197,7 @@ message GetServerInfoResponse {
   required ServerName serverName = 1;
 }
 
-service RegionAdminService {
+service AdminService {
   rpc getRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
 

@@ -194,7 +194,7 @@ public class TestMasterNoCluster {
         // associate so the below mocking of a connection will fail.
         HConnection connection =
           HConnectionTestingUtility.getMockedConnectionAndDecorate(TESTUTIL.getConfiguration(),
-            rs0, rs0.getServerName(), HRegionInfo.ROOT_REGIONINFO);
+            rs0, rs0, rs0.getServerName(), HRegionInfo.ROOT_REGIONINFO);
         return new CatalogTracker(zk, conf, connection, abortable, defaultTimeout);
       }
     };
@@ -271,7 +271,7 @@ public class TestMasterNoCluster {
         // of a connection will fail.
         HConnection connection =
           HConnectionTestingUtility.getMockedConnectionAndDecorate(TESTUTIL.getConfiguration(),
-            rs0, rs0.getServerName(), HRegionInfo.ROOT_REGIONINFO);
+            rs0, rs0, rs0.getServerName(), HRegionInfo.ROOT_REGIONINFO);
         return new CatalogTracker(zk, conf, connection, abortable, defaultTimeout);
       }
     };

@@ -19,18 +19,22 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.io.VersionMismatchException;
-import org.apache.hadoop.io.VersionedWritable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.protobuf.ClientProtocol;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.io.VersionMismatchException;
+import org.apache.hadoop.io.VersionedWritable;
 
 /** A method invocation, including the method name and its parameters.*/
 @InterfaceAudience.Private
@@ -43,6 +47,17 @@ public class Invocation extends VersionedWritable implements Configurable {
   private long clientVersion;
   private int clientMethodsHash;
 
+
+  // For generated protocol classes which don't have VERSION field,
+  // such as protobuf interfaces.
+  private static final Map<Class<?>, Long>
+    PROTOCOL_VERSION = new HashMap<Class<?>, Long>();
+
+  static {
+    PROTOCOL_VERSION.put(ClientService.BlockingInterface.class,
+      Long.valueOf(ClientProtocol.VERSION));
+  }
+
   private static byte RPC_VERSION = 1;
 
   public Invocation() {}
@@ -51,22 +66,28 @@ public class Invocation extends VersionedWritable implements Configurable {
     this.methodName = method.getName();
     this.parameterClasses = method.getParameterTypes();
     this.parameters = parameters;
-    if (method.getDeclaringClass().equals(VersionedProtocol.class)) {
+    Class<?> declaringClass = method.getDeclaringClass();
+    if (declaringClass.equals(VersionedProtocol.class)) {
       //VersionedProtocol is exempted from version check.
       clientVersion = 0;
       clientMethodsHash = 0;
     } else {
       try {
-        Field versionField = method.getDeclaringClass().getField("VERSION");
-        versionField.setAccessible(true);
-        this.clientVersion = versionField.getLong(method.getDeclaringClass());
+        Long version = PROTOCOL_VERSION.get(declaringClass);
+        if (version != null) {
+          this.clientVersion = version.longValue();
+        } else {
+          Field versionField = declaringClass.getField("VERSION");
+          versionField.setAccessible(true);
+          this.clientVersion = versionField.getLong(declaringClass);
+        }
       } catch (NoSuchFieldException ex) {
-        throw new RuntimeException("The " + method.getDeclaringClass(), ex);
+        throw new RuntimeException("The " + declaringClass, ex);
       } catch (IllegalAccessException ex) {
         throw new RuntimeException(ex);
       }
-      this.clientMethodsHash = ProtocolSignature.getFingerprint(method
-          .getDeclaringClass().getMethods());
+      this.clientMethodsHash = ProtocolSignature.getFingerprint(
+        declaringClass.getMethods());
     }
   }
 

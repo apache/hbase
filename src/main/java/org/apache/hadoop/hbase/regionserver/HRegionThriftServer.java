@@ -36,10 +36,16 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner;
 import org.apache.hadoop.hbase.thrift.ThriftUtilities;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
+
+import com.google.protobuf.ServiceException;
 
 /**
  * HRegionThriftServer - this class starts up a Thrift server in the same
@@ -56,14 +62,14 @@ public class HRegionThriftServer extends Thread {
 
   public static final Log LOG = LogFactory.getLog(HRegionThriftServer.class);
 
-  private final HRegionServer rs;
+  private final RegionServer rs;
   private final ThriftServerRunner serverRunner;
 
   /**
    * Create an instance of the glue object that connects the
    * RegionServer with the standard ThriftServer implementation
    */
-  HRegionThriftServer(HRegionServer regionServer, Configuration conf)
+  HRegionThriftServer(RegionServer regionServer, Configuration conf)
       throws IOException {
     super("Region Thrift Server");
     this.rs = regionServer;
@@ -130,7 +136,10 @@ public class HRegionThriftServer extends Thread {
         if (columns == null) {
           Get get = new Get(row);
           get.setTimeRange(Long.MIN_VALUE, timestamp);
-          Result result = rs.get(regionName, get);
+          GetRequest request =
+            RequestConverter.buildGetRequest(regionName, get);
+          GetResponse response = rs.get(null, request);
+          Result result = ProtobufUtil.toResult(response.getResult());
           return ThriftUtilities.rowResultFromHBase(result);
         }
         Get get = new Get(row);
@@ -143,7 +152,10 @@ public class HRegionThriftServer extends Thread {
           }
         }
         get.setTimeRange(Long.MIN_VALUE, timestamp);
-        Result result = rs.get(regionName, get);
+        GetRequest request =
+          RequestConverter.buildGetRequest(regionName, get);
+        GetResponse response = rs.get(null, request);
+        Result result = ProtobufUtil.toResult(response.getResult());
         return ThriftUtilities.rowResultFromHBase(result);
       } catch (NotServingRegionException e) {
         if (!redirect) {
@@ -153,6 +165,10 @@ public class HRegionThriftServer extends Thread {
         LOG.debug("ThriftServer redirecting getRowWithColumnsTs");
         return super.getRowWithColumnsTs(tableName, rowb, columns, timestamp,
                                          attributes);
+      } catch (ServiceException se) {
+        IOException e = ProtobufUtil.getRemoteException(se);
+        LOG.warn(e.getMessage(), e);
+        throw new IOError(e.getMessage());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());

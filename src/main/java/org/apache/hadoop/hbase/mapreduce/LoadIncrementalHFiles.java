@@ -68,10 +68,13 @@ import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
@@ -486,7 +489,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         LOG.debug("Going to connect to server " + location + " for row "
             + Bytes.toStringBinary(row));
         byte[] regionName = location.getRegionInfo().getRegionName();
-        return server.bulkLoadHFiles(famPaths, regionName);
+        BulkLoadHFileRequest request =
+          RequestConverter.buildBulkLoadHFileRequest(famPaths, regionName);
+        BulkLoadHFileResponse response =
+          server.bulkLoadHFile(null, request);
+        return response.getLoaded();
       }
     };
 

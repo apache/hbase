@@ -100,6 +100,7 @@ import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableUtils;
 
 import com.google.protobuf.Message;
+import com.google.protobuf.RpcController;
 
 /**
  * This is a customized version of the polymorphic hadoop
@@ -268,6 +269,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     GENERIC_ARRAY_CODE = code++;
     addToMap(Array.class, GENERIC_ARRAY_CODE);
 
+    addToMap(RpcController.class, code++);
+
     // make sure that this is the last statement in this static block
     NEXT_CLASS_CODE = code;
   }
@@ -357,7 +360,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     }
   }
 
-  static Integer getClassCode(final Class<?> c)
+  public static Integer getClassCode(final Class<?> c)
   throws IOException {
     Integer code = CLASS_TO_CODE.get(c);
     if (code == null ) {
@@ -726,7 +729,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
    * @return the instantiated Message instance
    * @throws IOException if an IO problem occurs
    */
-  private static Message tryInstantiateProtobuf(
+  public static Message tryInstantiateProtobuf(
       Class<?> protoClass,
       DataInput dataIn) throws IOException {
 

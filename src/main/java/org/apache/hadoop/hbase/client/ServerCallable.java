@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.protobuf.ClientProtocol;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -57,7 +57,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
   protected final byte [] tableName;
   protected final byte [] row;
   protected HRegionLocation location;
-  protected HRegionInterface server;
+  protected ClientProtocol server;
   protected int callTimeout;
   protected long startTime, endTime;
 
@@ -84,8 +84,8 @@ public abstract class ServerCallable<T> implements Callable<T> {
    */
   public void connect(final boolean reload) throws IOException {
     this.location = connection.getRegionLocation(tableName, row, reload);
-    this.server = connection.getHRegionConnection(location.getHostname(),
-      location.getPort());
+    this.server = connection.getClient(location.getHostname(),
+        location.getPort());
   }
 
   /** @return the server name
@@ -224,7 +224,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
     }
   }
 
-  private static Throwable translateException(Throwable t) throws IOException {
+  protected static Throwable translateException(Throwable t) throws IOException {
     if (t instanceof UndeclaredThrowableException) {
       t = t.getCause();
     }

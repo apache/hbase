@@ -55,7 +55,7 @@ import java.io.IOException;
 @InterfaceAudience.Private
 public class Leases extends HasThread {
   private static final Log LOG = LogFactory.getLog(Leases.class.getName());
-  private final int leasePeriod;
+  protected final int leasePeriod;
   private final int leaseCheckFrequency;
   private volatile DelayQueue<Lease> leaseQueue = new DelayQueue<Lease>();
   protected final Map<String, Lease> leases = new HashMap<String, Lease>();
