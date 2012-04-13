@@ -37,6 +37,7 @@ Release 0.92.2 - Unreleased
                contains trailing period if configured interface is not 'default'"
    HBASE-5773  HtablePool constructor not reading config files in certain cases
                (Ioan Eugen Stan)
+   HBASE-5488  OfflineMetaRepair doesn't support hadoop 0.20's fs.default.name property (gaojinchao)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
