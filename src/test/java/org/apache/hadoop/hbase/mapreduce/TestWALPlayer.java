@@ -100,25 +100,4 @@ public class TestWALPlayer {
     assertEquals(1, r.size());
     assertTrue(Bytes.equals(COLUMN2, r.raw()[0].getQualifier()));
   }
-
-  /**
-   * Simple test for data parsing
-   * @throws Exception
-   */
-  @Test
-  public void testTimeFormat() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    WALPlayer player = new WALPlayer(TEST_UTIL.getConfiguration());
-    player.setupTime(conf, HLogInputFormat.END_TIME_KEY);
-    // make sure if nothing is specified nothing is set
-    assertNull(conf.get(HLogInputFormat.END_TIME_KEY));
-    // test a textual data (including ms)
-    conf.set(HLogInputFormat.END_TIME_KEY, "2012-4-10T14:21:01.01");
-    player.setupTime(conf, HLogInputFormat.END_TIME_KEY);
-    assertEquals(1334092861001L, conf.getLong(HLogInputFormat.END_TIME_KEY, 0));
-    // test with mss as a long
-    conf.set(HLogInputFormat.END_TIME_KEY, "1334092861010");
-    player.setupTime(conf, HLogInputFormat.END_TIME_KEY);
-    assertEquals(1334092861010L, conf.getLong(HLogInputFormat.END_TIME_KEY, 0));
-  }
 }
