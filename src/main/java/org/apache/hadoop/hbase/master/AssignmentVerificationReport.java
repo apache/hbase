@@ -62,12 +62,28 @@ public class AssignmentVerificationReport {
   private float actualLocalitySummary = 0;
 
   // For region balancing information
-  private int avgRegionsOnRS = 0;
+  private float avgRegionsOnRS = 0;
   private int maxRegionsOnRS = 0;
   private int minRegionsOnRS = Integer.MAX_VALUE;
   private Set<HServerAddress> mostLoadedRSSet =
     new HashSet<HServerAddress>();
   private Set<HServerAddress> leastLoadedRSSet =
+    new HashSet<HServerAddress>();
+
+  private float avgDispersionScore = 0;
+  private float maxDispersionScore = 0;
+  private Set<HServerAddress> maxDispersionScoreServerSet =
+    new HashSet<HServerAddress>();
+  private float minDispersionScore = Float.MAX_VALUE;
+  private Set<HServerAddress> minDispersionScoreServerSet =
+    new HashSet<HServerAddress>();
+
+  private float avgDispersionNum = 0;
+  private float maxDispersionNum = 0;
+  private Set<HServerAddress> maxDispersionNumServerSet =
+    new HashSet<HServerAddress>();
+  private float minDispersionNum = Float.MAX_VALUE;
+  private Set<HServerAddress> minDispersionNumServerSet =
     new HashSet<HServerAddress>();
 
   public void fillUp(String tableName, RegionAssignmentSnapshot snapshot,
@@ -90,6 +106,10 @@ public class AssignmentVerificationReport {
     Map<HServerAddress, Integer> serverToHostingRegionCounterMap =
       new HashMap<HServerAddress, Integer>();
 
+    Map<HServerAddress, Integer> primaryRSToRegionCounterMap =
+      new HashMap<HServerAddress, Integer>();
+    Map<HServerAddress, Set<HServerAddress>> primaryToSecTerRSMap =
+      new HashMap<HServerAddress, Set<HServerAddress>>();
 
     // Check the favored nodes and its locality information
     // Also keep tracker of the most loaded and least loaded region servers
@@ -117,6 +137,30 @@ public class AssignmentVerificationReport {
           regionsWithoutValidFavoredNodes.add(region);
           continue;
         }
+        // Get the primary, secondary and tertiary region server
+        HServerAddress primaryRS =
+          favoredNodes.get(AssignmentPlan.POSITION.PRIMARY.ordinal());
+        HServerAddress secondaryRS =
+          favoredNodes.get(AssignmentPlan.POSITION.SECONDARY.ordinal());
+        HServerAddress tertiaryRS =
+          favoredNodes.get(AssignmentPlan.POSITION.TERTIARY.ordinal());
+
+        // Update the primary rs to its region set map
+        Integer regionCounter = primaryRSToRegionCounterMap.get(primaryRS);
+        if (regionCounter == null) {
+          regionCounter = new Integer(0);
+        }
+        regionCounter = regionCounter.intValue() + 1;
+        primaryRSToRegionCounterMap.put(primaryRS, regionCounter);
+
+        // Update the primary rs to secondary and tertiary rs map
+        Set<HServerAddress> secAndTerSet = primaryToSecTerRSMap.get(primaryRS);
+        if (secAndTerSet == null) {
+          secAndTerSet = new HashSet<HServerAddress>();
+        }
+        secAndTerSet.add(secondaryRS);
+        secAndTerSet.add(tertiaryRS);
+        primaryToSecTerRSMap.put(primaryRS, secAndTerSet);
 
         // Get the position of the current region server in the favored nodes list
         AssignmentPlan.POSITION favoredNodePosition =
@@ -154,7 +198,6 @@ public class AssignmentVerificationReport {
             }
           }
 
-
           // Get the locality summary for the current region server
           Float actualLocality =
             regionDegreeLocalityMap.get(currentRS.getHostname());
@@ -167,6 +210,71 @@ public class AssignmentVerificationReport {
             ((region == null) ? " null " : region.getRegionNameAsString()) +
             "becuase of " + e);
       }
+    }
+
+    int dispersionScoreSummary = 0;
+    int dispersionNumSummary = 0;
+    // Calculate the secondary score for each primary region server
+    for (Map.Entry<HServerAddress, Integer> entry :
+      primaryRSToRegionCounterMap.entrySet()) {
+      HServerAddress primaryRS = entry.getKey();
+      Integer regionsOnPrimary = entry.getValue();
+
+      // Process the dispersion number and score
+      float dispersionScore = 0;
+      int dispersionNum = 0;
+      if (primaryToSecTerRSMap.get(primaryRS) != null
+          && regionsOnPrimary.intValue() != 0) {
+        dispersionNum = primaryToSecTerRSMap.get(primaryRS).size();
+        dispersionScore = dispersionNum /
+          ((float) regionsOnPrimary.intValue() * 2);
+      }
+      // Update the max dispersion score
+      if (dispersionScore > this.maxDispersionScore) {
+        this.maxDispersionScoreServerSet.clear();
+        this.maxDispersionScoreServerSet.add(primaryRS);
+        this.maxDispersionScore = dispersionScore;
+      } else if (dispersionScore == this.maxDispersionScore) {
+        this.maxDispersionScoreServerSet.add(primaryRS);
+      }
+
+      // Update the max dispersion num
+      if (dispersionNum > this.maxDispersionNum) {
+        this.maxDispersionNumServerSet.clear();
+        this.maxDispersionNumServerSet.add(primaryRS);
+        this.maxDispersionNum = dispersionNum;
+      } else if (dispersionNum == this.maxDispersionNum) {
+        this.maxDispersionNumServerSet.add(primaryRS);
+      }
+
+      // Update the min dispersion score
+      if (dispersionScore < this.minDispersionScore) {
+        this.minDispersionScoreServerSet.clear();
+        this.minDispersionScoreServerSet.add(primaryRS);
+        this.minDispersionScore = dispersionScore;
+      } else if (dispersionScore == this.minDispersionScore) {
+        this.minDispersionScoreServerSet.add(primaryRS);
+      }
+
+      // Update the min dispersion num
+      if (dispersionNum < this.minDispersionNum) {
+        this.minDispersionNumServerSet.clear();
+        this.minDispersionNumServerSet.add(primaryRS);
+        this.minDispersionNum = dispersionNum;
+      } else if (dispersionNum == this.minDispersionNum) {
+        this.minDispersionNumServerSet.add(primaryRS);
+      }
+
+      dispersionScoreSummary += dispersionScore;
+      dispersionNumSummary += dispersionNum;
+    }
+
+    // Update the avg dispersion score
+    if (primaryRSToRegionCounterMap.keySet().size() != 0) {
+      this.avgDispersionScore = dispersionScoreSummary /
+         (float) primaryRSToRegionCounterMap.keySet().size();
+      this.avgDispersionNum = dispersionNumSummary /
+         (float) primaryRSToRegionCounterMap.keySet().size();
     }
 
     // Fill up the most loaded and least loaded region server information
@@ -197,8 +305,7 @@ public class AssignmentVerificationReport {
     // and total region servers
     this.totalRegionServers = serverToHostingRegionCounterMap.keySet().size();
     this.avgRegionsOnRS = (totalRegionServers == 0) ? 0 :
-      (totalRegions / totalRegionServers);
-
+      (totalRegions / (float) totalRegionServers);
     // Set the isFilledUp as true
     isFilledUp = true;
   }
@@ -270,38 +377,74 @@ public class AssignmentVerificationReport {
         totalRegionServers);
     // Print the region balance information
     if (totalRegionServers != 0) {
-      System.out.println("\tAvg regions/region server: " + avgRegionsOnRS +
+      System.out.println(
+          "\tAvg dispersion num: " +df.format(avgDispersionNum) +
+          " hosts;\tMax dispersion num: " + df.format(maxDispersionNum) +
+          " hosts;\tMin dispersion num: " + df.format(minDispersionNum) +
+          " hosts;");
+
+      System.out.println("\t\tThe number of the region servers with the max" +
+		" dispersion num: " + this.maxDispersionNumServerSet.size());
+      if (isDetailMode) {
+        printHServerAddressSet(maxDispersionNumServerSet);
+      }
+
+      System.out.println("\t\tThe number of the region servers with the min" +
+          " dispersion num: " + this.minDispersionNumServerSet.size());
+      if (isDetailMode) {
+        printHServerAddressSet(maxDispersionNumServerSet);
+      }
+
+      System.out.println(
+          "\tAvg dispersion score: " + df.format(avgDispersionScore) +
+          ";\tMax dispersion score: " + df.format(maxDispersionScore) +
+          ";\tMin dispersion score: " + df.format(minDispersionScore) + ";");
+
+      System.out.println("\t\tThe number of the region servers with the max" +
+          " dispersion score: " + this.maxDispersionScoreServerSet.size());
+      if (isDetailMode) {
+        printHServerAddressSet(maxDispersionScoreServerSet);
+      }
+
+      System.out.println("\t\tThe number of the region servers with the min" +
+          " dispersion score: " + this.minDispersionScoreServerSet.size());
+      if (isDetailMode) {
+        printHServerAddressSet(minDispersionScoreServerSet);
+      }
+
+      System.out.println(
+          "\tAvg regions/region server: " + df.format(avgRegionsOnRS) +
           ";\tMax regions/region server: " + maxRegionsOnRS +
-          ";\tMin regions/region server: " + minRegionsOnRS);
+          ";\tMin regions/region server: " + minRegionsOnRS + ";");
 
       // Print the details about the most loaded region servers
-      System.out.println("\tThe number of the most loaded region servers: "
+      System.out.println("\t\tThe number of the most loaded region servers: "
           + mostLoadedRSSet.size());
       if (isDetailMode) {
-        int i = 0;
-        for (HServerAddress addr : mostLoadedRSSet){
-          if ((i++) % 3 == 0) {
-            System.out.print("\n\t\t");
-          }
-          System.out.print(addr.getHostNameWithPort() + " ; ");
-        }
-        System.out.println("\n");
+        printHServerAddressSet(mostLoadedRSSet);
       }
 
       // Print the details about the least loaded region servers
-      System.out.println("\tThe number of the least loaded region servers: "
+      System.out.println("\t\tThe number of the least loaded region servers: "
           + leastLoadedRSSet.size());
       if (isDetailMode) {
-        int i = 0;
-        for (HServerAddress addr : leastLoadedRSSet){
-          if ((i++) % 3 == 0) {
-            System.out.print("\n\t\t");
-          }
-          System.out.print(addr.getHostNameWithPort() + " ; ");
-        }
-        System.out.println();
+        printHServerAddressSet(leastLoadedRSSet);
       }
     }
     System.out.println("==============================");
+  }
+
+  private void printHServerAddressSet(Set<HServerAddress> serverSet) {
+    if (serverSet == null) {
+      return ;
+    }
+    int i = 0;
+    for (HServerAddress addr : serverSet){
+      if ((i++) % 3 == 0) {
+        System.out.print("\n\t\t\t");
+      }
+      System.out.print(addr.getHostNameWithPort() + " ; ");
+    }
+    System.out.println("\n");
   }
 }
