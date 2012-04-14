@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Test;
 
 /**
@@ -159,9 +160,10 @@ public class TestFSErrorsExposed {
    * removes the data from HDFS underneath it, and ensures that
    * errors are bubbled to the client.
    */
-  @Test
+  @Test(timeout=5 * 60 * 1000)
   public void testFullSystemBubblesFSErrors() throws Exception {
     try {
+      util.getConfiguration().setInt("hbase.client.retries.number", 3);
       util.startMiniCluster(1);
       byte[] tableName = Bytes.toBytes("table");
       byte[] fam = Bytes.toBytes("fam");
@@ -193,7 +195,11 @@ public class TestFSErrorsExposed {
         assertTrue(e.getMessage().contains("Could not seek"));
       }
 
+      // Restart data nodes so that HBase can shut down cleanly.
+      util.getDFSCluster().restartDataNodes();
+
     } finally {
+      util.getMiniHBaseCluster().killAll();
       util.shutdownMiniCluster();
     }
   }

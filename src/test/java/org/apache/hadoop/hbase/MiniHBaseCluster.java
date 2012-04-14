@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.security.UnixUserGroupInformation;
@@ -577,4 +578,12 @@ public class MiniHBaseCluster {
     return hbaseCluster.getActiveMaster();
   }
 
+  public void killAll() {
+    for (RegionServerThread rst : getRegionServerThreads()) {
+      rst.getRegionServer().kill();
+    }
+    for (HMaster master : getMasters()) {
+      master.stop("killMiniHBaseCluster");
+    }
+  }
 }
