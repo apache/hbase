@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -63,7 +64,7 @@ public class AssignmentPlan implements Writable{
   };
 
   public AssignmentPlan() {
-    assignmentMap = new HashMap<HRegionInfo, List<HServerAddress>>();
+    assignmentMap = new TreeMap<HRegionInfo, List<HServerAddress>>();
     assignmentUpdateTS = new HashMap<HRegionInfo, Long>();
   }
 

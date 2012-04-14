@@ -48,6 +48,9 @@ public class RegionAssignmentSnapshot {
   private final Map<String, List<HRegionInfo>> tableToRegionMap;
   /** the region to region server map */
   private final Map<HRegionInfo, HServerAddress> regionToRegionServerMap;
+  /** the region name to region info map */
+  private final Map<String, HRegionInfo> regionNameToRegionInfoMap;
+
   /** the regionServer to region map */
   private final Map<HServerAddress, List<HRegionInfo>> regionServerToRegionMap;
   /** the existing assignment plan in the META region */
@@ -60,6 +63,7 @@ public class RegionAssignmentSnapshot {
     tableToRegionMap = new HashMap<String, List<HRegionInfo>>();
     regionToRegionServerMap = new HashMap<HRegionInfo, HServerAddress>();
     regionServerToRegionMap = new HashMap<HServerAddress, List<HRegionInfo>>();
+    regionNameToRegionInfoMap = new HashMap<String, HRegionInfo>();
     exsitingAssignmentPlan = new AssignmentPlan();
     globalAssignmentDomain = new AssignmentDomain(conf);
   }
@@ -125,6 +129,9 @@ public class RegionAssignmentSnapshot {
   private void addRegion(HRegionInfo regionInfo) {
     if (regionInfo == null)
       return;
+    // Process the region name to region info map
+    regionNameToRegionInfoMap.put(regionInfo.getRegionNameAsString(), regionInfo);
+
     // Process the table to region map
     String tableName = regionInfo.getTableDesc().getNameAsString();
     List<HRegionInfo> regionList = tableToRegionMap.get(tableName);
@@ -149,6 +156,10 @@ public class RegionAssignmentSnapshot {
       regionList.add(regionInfo);
       regionServerToRegionMap.put(server, regionList);
     }
+  }
+
+  public Map<String, HRegionInfo> getRegionNameToRegionInfoMap() {
+    return this.regionNameToRegionInfoMap;
   }
 
   public Map<String, List<HRegionInfo>> getTableToRegionMap() {
