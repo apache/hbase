@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.net.URL;
@@ -30,8 +32,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertTrue;
 
 /**
  * Testing, info servers are disabled.  This test enables then and checks that
@@ -46,8 +46,8 @@ public class TestInfoServers {
   public static void beforeClass() throws Exception {
     // The info servers do not run in tests by default.
     // Set them to ephemeral ports so they will start
-    UTIL.getConfiguration().setInt("hbase.master.info.port", 0);
-    UTIL.getConfiguration().setInt("hbase.regionserver.info.port", 0);
+    UTIL.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, 0);
+    UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_INFO_PORT, 0);
     UTIL.startMiniCluster();
   }
 
@@ -113,4 +113,3 @@ public class TestInfoServers {
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
-

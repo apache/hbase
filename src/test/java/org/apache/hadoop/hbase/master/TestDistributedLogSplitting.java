@@ -29,12 +29,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,8 +54,8 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -89,6 +89,9 @@ public class TestDistributedLogSplitting {
     conf.getLong("hbase.splitlog.max.resubmit", 0);
     // Make the failure test faster
     conf.setInt("zookeeper.recovery.retry", 0);
+    conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
+    conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, (float) 100.0); // no load balancing
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, true);
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, num_rs);
     cluster = TEST_UTIL.getHBaseCluster();
@@ -159,7 +162,7 @@ public class TestDistributedLogSplitting {
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
-    
+
     Path rootdir = FSUtils.getRootDir(conf);
 
     installTable(new ZooKeeperWatcher(conf, "table-creation", null),
@@ -174,7 +177,7 @@ public class TestDistributedLogSplitting {
     }
     final Path logDir = new Path(rootdir, HLog.getHLogDirectoryName(hrs
         .getServerName().toString()));
-    
+
     LOG.info("#regions = " + regions.size());
     Iterator<HRegionInfo> it = regions.iterator();
     while (it.hasNext()) {
@@ -250,19 +253,19 @@ public class TestDistributedLogSplitting {
     long waitTime = 80000;
     long endt = curt + waitTime;
     while (curt < endt) {
-      if ((tot_wkr_task_resigned.get() + tot_wkr_task_err.get() + 
+      if ((tot_wkr_task_resigned.get() + tot_wkr_task_err.get() +
           tot_wkr_final_transistion_failed.get() + tot_wkr_task_done.get() +
           tot_wkr_preempt_task.get()) == 0) {
         Thread.yield();
         curt = System.currentTimeMillis();
       } else {
-        assertEquals(1, (tot_wkr_task_resigned.get() + tot_wkr_task_err.get() + 
+        assertEquals(1, (tot_wkr_task_resigned.get() + tot_wkr_task_err.get() +
             tot_wkr_final_transistion_failed.get() + tot_wkr_task_done.get() +
             tot_wkr_preempt_task.get()));
         return;
       }
     }
-    fail("none of the following counters went up in " + waitTime + 
+    fail("none of the following counters went up in " + waitTime +
         " milliseconds - " +
         "tot_wkr_task_resigned, tot_wkr_task_err, " +
         "tot_wkr_final_transistion_failed, tot_wkr_task_done, " +
@@ -483,4 +486,3 @@ public class TestDistributedLogSplitting {
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
-

@@ -82,7 +82,7 @@ public final class HConstants {
   /** Cluster is fully-distributed */
   public static final boolean CLUSTER_IS_DISTRIBUTED = true;
 
-  /** Default value for cluster distributed mode */  
+  /** Default value for cluster distributed mode */
   public static final boolean DEFAULT_CLUSTER_DISTRIBUTED = CLUSTER_IS_LOCAL;
 
   /** default host address */
@@ -96,6 +96,9 @@ public final class HConstants {
 
   /** default port for master web api */
   public static final int DEFAULT_MASTER_INFOPORT = 60010;
+
+  /** Configuration key for master web API port */
+  public static final String MASTER_INFO_PORT = "hbase.master.info.port";
 
   /** Parameter name for the master type being backup (waits for primary to go inactive). */
   public static final String MASTER_TYPE_BACKUP = "hbase.master.backup";
@@ -173,9 +176,13 @@ public final class HConstants {
   /** default port for region server web api */
   public static final int DEFAULT_REGIONSERVER_INFOPORT = 60030;
 
+  /** A configuration key for regionserver info port */
+  public static final String REGIONSERVER_INFO_PORT =
+    "hbase.regionserver.info.port";
+
   /** A flag that enables automatic selection of regionserver info port */
   public static final String REGIONSERVER_INFO_PORT_AUTO =
-    "hbase.regionserver.info.port.auto";
+      REGIONSERVER_INFO_PORT + ".auto";
 
   /** Parameter name for what region server interface to use. */
   public static final String REGION_SERVER_CLASS = "hbase.regionserver.class";
@@ -194,13 +201,13 @@ public final class HConstants {
 
   /** Default value for thread wake frequency */
   public static final int DEFAULT_THREAD_WAKE_FREQUENCY = 10 * 1000;
-  
+
   /** Parameter name for how often we should try to write a version file, before failing */
   public static final String VERSION_FILE_WRITE_ATTEMPTS = "hbase.server.versionfile.writeattempts";
 
   /** Parameter name for how often we should try to write a version file, before failing */
   public static final int DEFAULT_VERSION_FILE_WRITE_ATTEMPTS = 3;
-  
+
   /** Parameter name for how often a region should should perform a major compaction */
   public static final String MAJOR_COMPACTION_PERIOD = "hbase.hregion.majorcompaction";
 
@@ -308,11 +315,11 @@ public final class HConstants {
 
   /** The RegionInfo qualifier as a string */
   public static final String REGIONINFO_QUALIFIER_STR = "regioninfo";
-  
+
   /** The regioninfo column qualifier */
-  public static final byte [] REGIONINFO_QUALIFIER = 
+  public static final byte [] REGIONINFO_QUALIFIER =
     Bytes.toBytes(REGIONINFO_QUALIFIER_STR);
-  
+
   /** The server column qualifier */
   public static final byte [] SERVER_QUALIFIER = Bytes.toBytes("server");
 
@@ -618,10 +625,10 @@ public final class HConstants {
   /** Host name of the local machine */
   public static final String LOCALHOST = "localhost";
 
-  /** 
+  /**
    * If this parameter is set to true, then hbase will read
-   * data and then verify checksums. Checksum verification 
-   * inside hdfs will be switched off.  However, if the hbase-checksum 
+   * data and then verify checksums. Checksum verification
+   * inside hdfs will be switched off.  However, if the hbase-checksum
    * verification fails, then it will switch back to using
    * hdfs checksums for verifiying data that is being read from storage.
    *
@@ -629,8 +636,14 @@ public final class HConstants {
    * verify any checksums, instead it will depend on checksum verification
    * being done in the hdfs client.
    */
-  public static final String HBASE_CHECKSUM_VERIFICATION = 
+  public static final String HBASE_CHECKSUM_VERIFICATION =
       "hbase.regionserver.checksum.verify";
+
+  public static final String LOCALHOST_IP = "127.0.0.1";
+
+  /** Conf key that enables distributed log splitting */
+  public static final String DISTRIBUTED_LOG_SPLITTING_KEY =
+      "hbase.master.distributed.log.splitting";
 
   /**
    * The name of the configuration parameter that specifies

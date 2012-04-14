@@ -28,6 +28,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -44,7 +45,6 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.junit.experimental.categories.Category;
@@ -86,7 +86,7 @@ public class TestScanner extends HBaseTestCase {
 
   private HRegion r;
   private HRegionIncommon region;
-  
+
   private byte[] firstRowBytes, secondRowBytes, thirdRowBytes;
   final private byte[] col1, col2;
 
@@ -270,7 +270,7 @@ public class TestScanner extends HBaseTestCase {
 
       // Store some new information
 
-      String address = "www.example.com:1234";
+      String address = HConstants.LOCALHOST_IP + ":" + HBaseTestingUtility.randomFreePort();
 
       put = new Put(ROW_KEY, System.currentTimeMillis(), null);
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
@@ -607,4 +607,3 @@ public class TestScanner extends HBaseTestCase {
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
-

@@ -101,7 +101,7 @@ public class MasterFileSystem {
     conf.set("fs.default.name", fsUri);
     conf.set("fs.defaultFS", fsUri);
     this.distributedLogSplitting =
-      conf.getBoolean("hbase.master.distributed.log.splitting", true);
+      conf.getBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, true);
     if (this.distributedLogSplitting) {
       this.splitLogManager = new SplitLogManager(master.getZooKeeper(),
           master.getConfiguration(), master, master.getServerName().toString());
