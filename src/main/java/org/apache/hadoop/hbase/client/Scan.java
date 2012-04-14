@@ -83,13 +83,14 @@ import java.util.TreeSet;
  * execute {@link #setCacheBlocks(boolean)}.
  */
 public class Scan extends Operation implements Writable {
-  private static final byte SCAN_VERSION = (byte)2;
+  private static final byte SCAN_VERSION = (byte)3;
 
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
   private int batch = -1;
   private int storeLimit = -1;
+  private int storeOffset = 0;
   private int caching = -1;
   private boolean cacheBlocks = true;
   private Filter filter = null;
@@ -140,6 +141,7 @@ public class Scan extends Operation implements Writable {
     maxVersions = scan.getMaxVersions();
     batch = scan.getBatch();
     storeLimit = scan.getMaxResultsPerColumnFamily();
+    storeOffset = scan.getRowOffsetPerColumnFamily();
     caching = scan.getCaching();
     cacheBlocks = scan.getCacheBlocks();
     filter = scan.getFilter(); // clone?
@@ -169,6 +171,7 @@ public class Scan extends Operation implements Writable {
     this.filter = get.getFilter();
     this.maxVersions = get.getMaxVersions();
     this.storeLimit = get.getMaxResultsPerColumnFamily();
+    this.storeOffset = get.getRowOffsetPerColumnFamily();
     this.tr = get.getTimeRange();
     this.familyMap = get.getFamilyMap();
   }
@@ -308,6 +311,14 @@ public class Scan extends Operation implements Writable {
   }
 
   /**
+   * Set offset for the row per Column Family.
+   * @param offset is the number of kvs that will be skipped.
+   */
+  public void setRowOffsetPerColumnFamily(int offset) {
+    this.storeOffset = offset;
+  }
+
+  /**
    * Set the number of rows for caching that will be passed to scanners.
    * If not set, the default setting from {@link HTable#getScannerCaching()} will apply.
    * Higher caching values will enable faster scanners but will use more memory.
@@ -405,6 +416,15 @@ public class Scan extends Operation implements Writable {
    */
   public int getMaxResultsPerColumnFamily() {
     return this.storeLimit;
+  }
+
+  /**
+   * Method for retrieving the scan's offset per row per column
+   * family (#kvs to be skipped)
+   * @return row offset
+   */
+  public int getRowOffsetPerColumnFamily() {
+    return this.storeOffset;
   }
 
   /**
@@ -562,6 +582,9 @@ public class Scan extends Operation implements Writable {
     if (version > 1) {
       this.storeLimit = in.readInt();
     }
+    if (version > 2) {
+      this.storeOffset = in.readInt();
+    }
     this.caching = in.readInt();
     this.cacheBlocks = in.readBoolean();
     if(in.readBoolean()) {
@@ -587,17 +610,22 @@ public class Scan extends Operation implements Writable {
 
   public void write(final DataOutput out)
   throws IOException {
-    if (this.storeLimit != -1) {
-      out.writeByte(SCAN_VERSION);
-    } else {
-      out.writeByte((byte)1);
+    byte version = (byte)1;
+    if (this.storeOffset != 0) {
+      version = SCAN_VERSION;
+    } else if (this.storeLimit != -1) {
+      version = 2;
     }
+    out.writeByte(version);
     Bytes.writeByteArray(out, this.startRow);
     Bytes.writeByteArray(out, this.stopRow);
     out.writeInt(this.maxVersions);
     out.writeInt(this.batch);
-    if (this.storeLimit != -1) {
+    if (version > 1) {
       out.writeInt(this.storeLimit);
+    }
+    if (version > 2) {
+      out.writeInt(this.storeOffset);
     }
     out.writeInt(this.caching);
     out.writeBoolean(this.cacheBlocks);

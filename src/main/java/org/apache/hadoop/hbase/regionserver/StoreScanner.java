@@ -45,7 +45,8 @@ class StoreScanner extends NonLazyKeyValueScanner
   private KeyValueHeap heap;
   private boolean cacheBlocks;
   private int countPerRow = 0;
-  private int storeLimit;
+  private int storeLimit = -1;
+  private int storeOffset = 0;
   private String metricNamePrefix;
   // Used to indicate that the scanner has closed (see HBASE-1107)
   // Doesnt need to be volatile because it's always accessed via synchronized methods
@@ -124,6 +125,9 @@ class StoreScanner extends NonLazyKeyValueScanner
 
     // set storeLimit
     this.storeLimit = scan.getMaxResultsPerColumnFamily();
+
+    // set rowOffset
+    this.storeOffset = scan.getRowOffsetPerColumnFamily();
 
     // Combine all seeked scanners with a heap
     heap = new KeyValueHeap(scanners, store.comparator);
@@ -332,7 +336,8 @@ class StoreScanner extends NonLazyKeyValueScanner
         case INCLUDE_AND_SEEK_NEXT_ROW:
         case INCLUDE_AND_SEEK_NEXT_COL:
           this.countPerRow++;
-          if (storeLimit > 0 && this.countPerRow > storeLimit) {
+          if (storeLimit > -1 &&
+              this.countPerRow > (storeLimit + storeOffset)) {
             // do what SEEK_NEXT_ROW does.
             if (!matcher.moreRowsMayExistAfter(kv)) {
               outResult.addAll(results);
@@ -342,12 +347,15 @@ class StoreScanner extends NonLazyKeyValueScanner
             break LOOP;
           }
 
-          if (metric != null) {
-            HRegion.incrNumericMetric(this.metricNamePrefix + metric,
+          // add to results only if we have skipped #rowOffset kvs
+          // also update metric accordingly
+          if (this.countPerRow > storeOffset) {
+            if (metric != null) {
+              HRegion.incrNumericMetric(this.metricNamePrefix + metric,
                 copyKv.getLength());
+            }
+            results.add(copyKv);
           }
-
-          results.add(copyKv);
 
           if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
             if (!matcher.moreRowsMayExistAfter(kv)) {

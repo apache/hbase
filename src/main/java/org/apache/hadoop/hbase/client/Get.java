@@ -67,12 +67,13 @@ import java.util.TreeSet;
  * To add a filter, execute {@link #setFilter(Filter) setFilter}.
  */
 public class Get extends Operation implements Writable, Row, Comparable<Row> {
-  private static final byte GET_VERSION = (byte)2;
+  private static final byte GET_VERSION = (byte)3;
 
   private byte [] row = null;
   private long lockId = -1L;
   private int maxVersions = 1;
   private int storeLimit = -1;
+  private int storeOffset = 0;
   private Filter filter = null;
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
@@ -200,6 +201,16 @@ public class Get extends Operation implements Writable, Row, Comparable<Row> {
   }
 
   /**
+   * Set offset for the row per Column Family.
+   * @param offset is the number of kvs that will be skipped.
+   * @return this for invocation chaining
+   */
+  public Get setRowOffsetPerColumnFamily(int offset) {
+    this.storeOffset = offset;
+    return this;
+  }
+
+  /**
    * Apply the specified server-side filter when performing the Get.
    * Only {@link Filter#filterKeyValue(KeyValue)} is called AFTER all tests
    * for ttl, column match, deletes and max versions have been run.
@@ -259,6 +270,15 @@ public class Get extends Operation implements Writable, Row, Comparable<Row> {
    */
   public int getMaxResultsPerColumnFamily() {
     return this.storeLimit;
+  }
+
+  /**
+   * Method for retrieving the get's offset per row per column
+   * family (#kvs to be skipped)
+   * @return the row offset
+   */
+  public int getRowOffsetPerColumnFamily() {
+    return this.storeOffset;
   }
 
   /**
@@ -389,6 +409,9 @@ public class Get extends Operation implements Writable, Row, Comparable<Row> {
     if (version > 1) {
       this.storeLimit = in.readInt();
     }
+    if (version > 2) {
+      this.storeOffset = in.readInt();
+    }
     boolean hasFilter = in.readBoolean();
     if (hasFilter) {
       this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
@@ -417,16 +440,21 @@ public class Get extends Operation implements Writable, Row, Comparable<Row> {
 
   public void write(final DataOutput out)
   throws IOException {
-    if (this.storeLimit != -1) {
-      out.writeByte(GET_VERSION);
-    } else {
-      out.writeByte((byte)1);
+    byte version = (byte)1;
+    if (this.storeOffset != 0) {
+      version = GET_VERSION;
+    } else if (this.storeLimit != -1) {
+      version = (byte)2;
     }
+    out.writeByte(version);
     Bytes.writeByteArray(out, this.row);
     out.writeLong(this.lockId);
     out.writeInt(this.maxVersions);
-    if (this.storeLimit != -1) {
+    if (version > 1) {
       out.writeInt(this.storeLimit);
+    }
+    if (version > 2) {
+      out.writeInt(this.storeOffset);
     }
     if(this.filter == null) {
       out.writeBoolean(false);

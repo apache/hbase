@@ -182,10 +182,11 @@ public class TestFromClientSide2 {
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[1], 1, VALUE));
     verifyResult(result, kvListExp, toLog, "Testing basic setMaxResults");
 
-    // Filters: ColumnRangeFiltero
+    // Filters: ColumnRangeFilter
     get = new Get(ROW);
     get.setMaxResultsPerColumnFamily(5);
-    get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, QUALIFIERS[5], true));
+    get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, QUALIFIERS[5],
+                                        true));
     result = ht.get(get);
     kvListExp = new ArrayList<KeyValue>();
     kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[2], 1, VALUE));
@@ -310,13 +311,112 @@ public class TestFromClientSide2 {
 
   }
 
-  private void verifyResult(Result result, List<KeyValue> kvList, boolean toLog, String msg) {
+  /**
+   * Test from client side for get with rowOffset
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testGetRowOffset() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testGetRowOffset");
+    byte [][] FAMILIES = makeNAscii(FAMILY, 3);
+    byte [][] QUALIFIERS = makeNAscii(QUALIFIER, 20);
+
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+
+    Get get;
+    Put put;
+    Result result;
+    boolean toLog = true;
+    List<KeyValue> kvListExp;
+
+    // Insert one CF for row
+    kvListExp = new ArrayList<KeyValue>();
+    put = new Put(ROW);
+    for (int i=0; i < 10; i++) {
+      KeyValue kv = new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE);
+      put.add(kv);
+      // skipping first two kvs
+      if (i < 2) continue;
+      kvListExp.add(kv);
+    }
+    ht.put(put);
+
+    //setting offset to 2
+    get = new Get(ROW);
+    get.setRowOffsetPerColumnFamily(2);
+    result = ht.get(get);
+    verifyResult(result, kvListExp, toLog, "Testing basic setRowOffset");
+
+    //setting offset to 20
+    get = new Get(ROW);
+    get.setRowOffsetPerColumnFamily(20);
+    result = ht.get(get);
+    kvListExp = new ArrayList<KeyValue>();
+    verifyResult(result, kvListExp, toLog, "Testing offset > #kvs");
+
+    //offset + maxResultPerCF
+    get = new Get(ROW);
+    get.setRowOffsetPerColumnFamily(4);
+    get.setMaxResultsPerColumnFamily(5);
+    result = ht.get(get);
+    kvListExp = new ArrayList<KeyValue>();
+    for (int i=4; i < 9; i++) {
+      kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[i], 1, VALUE));
+    }
+    verifyResult(result, kvListExp, toLog,
+      "Testing offset + setMaxResultsPerCF");
+
+    // Filters: ColumnRangeFilter
+    get = new Get(ROW);
+    get.setRowOffsetPerColumnFamily(1);
+    get.setFilter(new ColumnRangeFilter(QUALIFIERS[2], true, QUALIFIERS[5],
+                                        true));
+    result = ht.get(get);
+    kvListExp = new ArrayList<KeyValue>();
+    kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[3], 1, VALUE));
+    kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[4], 1, VALUE));
+    kvListExp.add(new KeyValue(ROW, FAMILIES[0], QUALIFIERS[5], 1, VALUE));
+    verifyResult(result, kvListExp, toLog, "Testing offset with CRF");
+
+    // Insert into two more CFs for row
+    // 10 columns for CF2, 10 columns for CF1
+    for(int j=2; j > 0; j--) {
+      put = new Put(ROW);
+      for (int i=0; i < 10; i++) {
+        KeyValue kv = new KeyValue(ROW, FAMILIES[j], QUALIFIERS[i], 1, VALUE);
+        put.add(kv);
+      }
+      ht.put(put);
+    }
+
+    get = new Get(ROW);
+    get.setRowOffsetPerColumnFamily(4);
+    get.setMaxResultsPerColumnFamily(2);
+    get.addFamily(FAMILIES[1]);
+    get.addFamily(FAMILIES[2]);
+    result = ht.get(get);
+    kvListExp = new ArrayList<KeyValue>();
+    //Exp: CF1:q4, q5, CF2: q4, q5
+    kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[4], 1, VALUE));
+    kvListExp.add(new KeyValue(ROW, FAMILIES[1], QUALIFIERS[5], 1, VALUE));
+    kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[4], 1, VALUE));
+    kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[5], 1, VALUE));
+    verifyResult(result, kvListExp, toLog,
+       "Testing offset + multiple CFs + maxResults");
+
+  }
+
+  private void verifyResult(Result result, List<KeyValue> kvList, boolean toLog,
+    String msg) {
     int i =0;
 
     LOG.info(msg);
     LOG.info("Exp cnt: " + kvList.size());
     LOG.info("True cnt is: " + result.size());
     assertEquals(kvList.size(), result.size());
+
+    if (kvList.size() == 0) return;
 
     for (KeyValue kv : result.sorted()) {
       KeyValue kvExp = kvList.get(i++);
