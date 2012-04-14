@@ -89,7 +89,7 @@ public class TestDistributedLogSplitting {
     ZKSplitLog.Counters.resetCounters();
     LOG.info("Starting cluster");
     conf = HBaseConfiguration.create();
-    conf.setInt("hbase.regionserver.info.port", -1);
+    conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
     conf.setFloat("hbase.regions.slop", (float)100.0); // no load balancing
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, true);
     TEST_UTIL = new HBaseTestingUtility(conf);

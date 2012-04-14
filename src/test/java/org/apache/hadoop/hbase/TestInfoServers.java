@@ -38,8 +38,8 @@ public class TestInfoServers extends HBaseClusterTestCase {
   protected void preHBaseClusterSetup() {
     // The info servers do not run in tests by default.
     // Set them to ephemeral ports so they will start
-    conf.setInt("hbase.master.info.port", 0);
-    conf.setInt("hbase.regionserver.info.port", 0);
+    conf.setInt(HConstants.MASTER_INFO_PORT, 0);
+    conf.setInt(HConstants.REGIONSERVER_INFO_PORT, 0);
   }
 
   /**

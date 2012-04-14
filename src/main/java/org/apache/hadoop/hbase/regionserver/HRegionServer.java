@@ -366,7 +366,7 @@ public class HRegionServer implements HRegionInterface,
     this.serverInfo = new HServerInfo(new HServerAddress(
       new InetSocketAddress(address.getBindAddress(),
       this.server.getListenerAddress().getPort())), System.currentTimeMillis(),
-      this.conf.getInt("hbase.regionserver.info.port", 60030), machineName);
+      this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 60030), machineName);
     if (this.serverInfo.getServerAddress() == null) {
       throw new NullPointerException("Server address cannot be null; " +
         "hbase-958 debugging");
@@ -1246,7 +1246,7 @@ public class HRegionServer implements HRegionInterface,
     this.leases.setName(n + ".leaseChecker");
     this.leases.start();
     // Put up info server.
-    int port = this.conf.getInt("hbase.regionserver.info.port", 60030);
+    int port = this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 60030);
     // -1 is for disabling info server
     if (port >= 0) {
       String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");

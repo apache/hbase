@@ -115,9 +115,19 @@ HBASE_JMX_OPTS="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ss
 HBASE_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.authenticate=false"
 # HBASE_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.password.file=$HBASE_HOME/conf/jmxremote.passwd"
 # HBASE_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.access.file=$HBASE_HOME/conf/jmxremote.access"
-HBASE_MASTER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=8090"
-HBASE_REGIONSERVER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=8091"
-HBASE_ZOOKEEPER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=8092"
+
+# JMX options. Set default values if not overridden in hbase-env.sh.
+if [ -z "$HBASE_MASTER_JMX_OPTS" ]; then
+  HBASE_MASTER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=8090"
+fi
+
+if [ -z "$HBASE_REGIONSERVER_JMX_OPTS" ]; then
+  HBASE_REGIONSERVER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=8091"
+fi
+
+if [ -z "$HBASE_ZOOKEEPER_JMX_OPTS" ]; then
+  HBASE_ZOOKEEPER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=8092"
+fi
 
 # YourKit Java Profiling
 # Note that you need to have yjpagent.so & yjp.jar on your computer and have
@@ -131,20 +141,27 @@ HBASE_GC_OPTIONS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc
 HBASE_MASTER_JDWP_OPTIONS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8070"
 HBASE_REGIONSERVER_JDWP_OPTIONS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8071"
 
-# Java debugging options.
-# By default, local hbase instances are setup with the remote debugging
-# enabled for the HMaster (which also functions as regionserver) on port 1044
-# Zookeeper debug is configured on port 1045
-HBASE_MASTER_DBG_OPTS="$HBASE_MASTER_JDWP_OPTIONS $HBASE_GC_OPTIONS"
-HBASE_REGIONSERVER_DBG_OPTS="$HBASE_REGIONSERVER_JDWP_OPTIONS $HBASE_GC_OPTIONS"
-HBASE_ZOOKEEPER_DBG_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8072"
+# Java debugging options. Set default values if not overridden in hbase-env.sh.
+if [ -z "$HBASE_MASTER_DBG_OPTS" ]; then
+  HBASE_MASTER_DBG_OPTS="$HBASE_MASTER_JDWP_OPTIONS $HBASE_GC_OPTIONS"
+fi
+
+if [ -z "$HBASE_REGIONSERVER_DBG_OPTS" ]; then
+  HBASE_REGIONSERVER_DBG_OPTS="$HBASE_REGIONSERVER_JDWP_OPTIONS $HBASE_GC_OPTIONS"
+fi
+
+if [ -z "$HBASE_ZOOKEEPER_DBG_OPTS" ]; then
+  HBASE_ZOOKEEPER_DBG_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8072"
+fi
 
 if [ -z "$HBASE_MASTER_OPTS" ]; then
   export HBASE_MASTER_OPTS="$HBASE_MASTER_DBG_OPTS $HBASE_MASTER_JMX_OPTS"
 fi
+
 if [ -z "$HBASE_REGIONSERVER_OPTS" ]; then
   export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_DBG_OPTS $HBASE_REGIONSERVER_JMX_OPTS"
 fi
+
 if [ -z "$HBASE_ZOOKEEPER_OPTS" ]; then
   export HBASE_ZOOKEEPER_OPTS="$HBASE_ZOOKEEPER_DBG_OPTS $HBASE_ZOOKEEPER_JMX_OPTS"
 fi

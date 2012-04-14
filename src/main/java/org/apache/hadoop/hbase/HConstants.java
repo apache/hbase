@@ -82,6 +82,9 @@ public final class HConstants {
   /** default port for master web api */
   public static final int DEFAULT_MASTER_INFOPORT = 60010;
 
+  /** Configuration key for master web API port */
+  public static final String MASTER_INFO_PORT = "hbase.master.info.port";
+
   /** Parameter name for the master type being backup (waits for primary to go inactive). */
   public static final String MASTER_TYPE_BACKUP = "hbase.master.backup";
 
@@ -156,9 +159,13 @@ public final class HConstants {
   /** default port for region server web api */
   public static final int DEFAULT_REGIONSERVER_INFOPORT = 60030;
 
+  /** A configuration key for regionserver info port */
+  public static final String REGIONSERVER_INFO_PORT =
+    "hbase.regionserver.info.port";
+
   /** A flag that enables automatic selection of regionserver info port */
   public static final String REGIONSERVER_INFO_PORT_AUTO =
-    "hbase.regionserver.info.port.auto";
+      REGIONSERVER_INFO_PORT + ".auto";
 
   /** Parameter name for what region server interface to use. */
   public static final String REGION_SERVER_CLASS = "hbase.regionserver.class";
@@ -465,6 +472,8 @@ public final class HConstants {
 
   /** Host name of the local machine */
   public static final String LOCALHOST = "localhost";
+
+  public static final String LOCALHOST_IP = "127.0.0.1";
 
   /** Conf key that enables distributed log splitting */
   public static final String DISTRIBUTED_LOG_SPLITTING_KEY =

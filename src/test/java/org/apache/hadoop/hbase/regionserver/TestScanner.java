@@ -267,7 +267,7 @@ public class TestScanner extends HBaseTestCase {
 
       // Store some new information
 
-      HServerAddress address = new HServerAddress("127.0.0.1:" +
+      HServerAddress address = new HServerAddress(HConstants.LOCALHOST_IP + ":" +
           HBaseTestingUtility.randomFreePort());
 
       put = new Put(ROW_KEY, System.currentTimeMillis(), null);

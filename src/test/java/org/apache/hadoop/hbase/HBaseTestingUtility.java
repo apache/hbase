@@ -37,11 +37,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -137,6 +140,9 @@ public class HBaseTestingUtility {
 
   /** Filesystem URI used for map-reduce mini-cluster setup */
   private static String fsURI;
+
+  /** A set of ports that have been claimed using {@link #randomFreePort()}. */
+  private static final Set<Integer> takenRandomPorts = new HashSet<Integer>();
 
   /** Compression algorithms to use in parameterized JUnit 4 tests */
   public static final List<Object[]> COMPRESSION_ALGORITHMS_PARAMETERIZED =
@@ -1348,7 +1354,10 @@ REGION_LOOP:
         Bytes.toBytes(String.format(keyFormat, splitStartKey)),
         Bytes.toBytes(String.format(keyFormat, splitEndKey)),
         numRegions);
-    hbaseCluster.flushcache(HConstants.META_TABLE_NAME);
+
+    if (hbaseCluster != null) {
+      hbaseCluster.flushcache(HConstants.META_TABLE_NAME);
+    }
 
     for (int iFlush = 0; iFlush < numFlushes; ++iFlush) {
       for (int iRow = 0; iRow < numRowsPerFlush; ++iRow) {
@@ -1383,7 +1392,9 @@ REGION_LOOP:
       }
       LOG.info("Initiating flush #" + iFlush + " for table " + tableName);
       table.flushCommits();
-      hbaseCluster.flushcache(tableNameBytes);
+      if (hbaseCluster != null) {
+        hbaseCluster.flushcache(tableNameBytes);
+      }
     }
 
     return table;
@@ -1401,10 +1412,19 @@ REGION_LOOP:
         + new Random().nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
   }
 
+  /**
+   * Returns a random free port and marks that port as taken. Not thread-safe. Expected to be
+   * called from single-threaded test setup code/
+   */
   public static int randomFreePort() {
     int port = 0;
     do {
       port = randomPort();
+      if (takenRandomPorts.contains(port)) {
+        continue;
+      }
+      takenRandomPorts.add(port);
+
       try {
         ServerSocket sock = new ServerSocket(port);
         sock.close();

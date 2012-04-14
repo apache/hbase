@@ -1148,7 +1148,7 @@ public class HMaster extends Thread implements HMasterInterface,
     try {
       this.regionManager.start();
       // Put up info server.
-      int port = this.conf.getInt("hbase.master.info.port", 60010);
+      int port = this.conf.getInt(HConstants.MASTER_INFO_PORT, 60010);
       if (port >= 0) {
         String a = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
         this.infoServer = new InfoServer(MASTER, a, port, false, conf);

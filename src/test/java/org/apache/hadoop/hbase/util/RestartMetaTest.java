@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.io.File;
 import java.io.IOException;
 
 import org.apache.commons.cli.CommandLine;
@@ -52,13 +51,11 @@ public class RestartMetaTest extends AbstractHBaseTool {
   /** The actual number of region servers */
   private int numRegionServers;
 
-  /** HBase home source tree home directory */
-  private String hbaseHome;
-
-  private static final String OPT_HBASE_HOME = "hbase_home";
   private static final String OPT_NUM_RS = "num_rs";
-  
+
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("testCF");
+
+  private static final int NUM_DATANODES = 3;
 
   /** Loads data into the table using the multi-threaded writer. */
   private void loadData() throws IOException {
@@ -93,10 +90,11 @@ public class RestartMetaTest extends AbstractHBaseTool {
   @Override
   protected void doWork() throws IOException {
     ProcessBasedLocalHBaseCluster hbaseCluster =
-        new ProcessBasedLocalHBaseCluster(conf, hbaseHome, numRegionServers);
+        new ProcessBasedLocalHBaseCluster(conf, NUM_DATANODES, numRegionServers);
+    hbaseCluster.startMiniDFS();
 
     // start the process based HBase cluster
-    hbaseCluster.start();
+    hbaseCluster.startHBase();
 
     // create tables if needed
     HBaseTestingUtility.createPreSplitLoadTestTable(conf, TABLE_NAME,
@@ -136,19 +134,11 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
   @Override
   protected void addOptions() {
-    addRequiredOptWithArg(OPT_HBASE_HOME, "HBase home directory");
     addOptWithArg(OPT_NUM_RS, "Number of Region Servers");
   }
 
   @Override
   protected void processOptions(CommandLine cmd) {
-    hbaseHome = cmd.getOptionValue(OPT_HBASE_HOME);
-    if (hbaseHome == null || !new File(hbaseHome).isDirectory()) {
-      throw new IllegalArgumentException("Invalid HBase home directory: " +
-          hbaseHome);
-    }
-
-    LOG.info("Using HBase home directory " + hbaseHome);
     numRegionServers = Integer.parseInt(cmd.getOptionValue(OPT_NUM_RS,
         String.valueOf(DEFAULT_NUM_RS)));
   }
