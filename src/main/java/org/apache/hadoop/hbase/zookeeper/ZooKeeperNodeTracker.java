@@ -71,6 +71,12 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
    * or {@link #getData(boolean)} to get the data of the node if it is available.
    */
   public synchronized void start() {
+    try {
+      ZKUtil.waitForZKConnectionIfAuthenticating(watcher);
+    } catch (InterruptedException e) {
+      throw new IllegalStateException("ZookeeperNodeTracker on " + this.node 
+          + " interuppted while waiting for SASL Authentication", e);
+    }
     this.watcher.registerListener(this);
     try {
       if(ZKUtil.watchAndCheckExists(watcher, node)) {
