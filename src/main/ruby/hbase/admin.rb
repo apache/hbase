@@ -454,8 +454,7 @@ module Hbase
       if arg[CONFIG]
         raise(ArgumentError, "#{CONFIG} must be a Hash type") unless arg.kind_of?(Hash)
         for k,v in arg[CONFIG]
-            v = v.to_s unless v.nil?
-          end
+          v = v.to_s unless v.nil?
           family.setValue(k, v)
         end
       end
