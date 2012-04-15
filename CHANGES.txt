@@ -18,6 +18,8 @@ Release 0.90.7 - Unreleased
    HBASE-5488  OfflineMetaRepair doesn't support hadoop 0.20's fs.default.name property (gaojinchao)
    HBASE-5773  HtablePool constructor not reading config files in certain cases
                (Ioan Eugen Stan)
+   HBASE-5781  Zookeeper session got closed while trying to assign the region to RS using hbck -fix
+
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
