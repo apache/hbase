@@ -117,38 +117,28 @@ public class HBaseFsckRepair {
    */
   public static void waitUntilAssigned(HBaseAdmin admin,
       HRegionInfo region) throws IOException, InterruptedException {
-    HConnection connection = admin.getConnection();
-
-    try {
-      long timeout = admin.getConfiguration().getLong("hbase.hbck.assign.timeout", 120000);
-      long expiration = timeout + System.currentTimeMillis();
-      while (System.currentTimeMillis() < expiration) {
-        try {
-          Map<String, RegionState> rits=
+    long timeout = admin.getConfiguration().getLong("hbase.hbck.assign.timeout", 120000);
+    long expiration = timeout + System.currentTimeMillis();
+    while (System.currentTimeMillis() < expiration) {
+      try {
+        Map<String, RegionState> rits=
             admin.getClusterStatus().getRegionsInTransition();
 
-          if (rits.keySet() != null && !rits.keySet().contains(region.getEncodedName())) {
-            // yay! no longer RIT
-            return;
-          }
-          // still in rit
-          LOG.info("Region still in transition, waiting for "
-              + "it to become assigned: " + region);
-        } catch (IOException e) {
-          LOG.warn("Exception when waiting for region to become assigned,"
-              + " retrying", e);
+        if (rits.keySet() != null && !rits.keySet().contains(region.getEncodedName())) {
+          // yay! no longer RIT
+          return;
         }
-        Thread.sleep(1000);
+        // still in rit
+        LOG.info("Region still in transition, waiting for "
+            + "it to become assigned: " + region);
+      } catch (IOException e) {
+        LOG.warn("Exception when waiting for region to become assigned,"
+            + " retrying", e);
       }
-      throw new IOException("Region " + region + " failed to move out of " +
-          "transition within timeout " + timeout + "ms");
-    } finally {
-      try {
-        connection.close();
-      } catch (IOException ioe) {
-        throw ioe;
-      }
+      Thread.sleep(1000);
     }
+    throw new IOException("Region " + region + " failed to move out of " +
+        "transition within timeout " + timeout + "ms");
   }
 
   /**
