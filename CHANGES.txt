@@ -40,6 +40,7 @@ Release 0.92.2 - Unreleased
    HBASE-5488  OfflineMetaRepair doesn't support hadoop 0.20's fs.default.name property (gaojinchao)
    HBASE-5781  Zookeeper session got closed while trying to assign the region to RS using hbck -fix
    HBASE-5793  TestHBaseFsck#TestNoHdfsTable test hangs after client retries increased
+   HBASE-5780  Fix race in HBase regionserver startup vs ZK SASL authentication (Shaneal Manek)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
