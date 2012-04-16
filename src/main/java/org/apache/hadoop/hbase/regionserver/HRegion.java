@@ -529,7 +529,6 @@ public class HRegion implements HeapSize { // , Writable{
 
   void setHTableSpecificConf() {
     if (this.htableDescriptor == null) return;
-    LOG.info("Setting up tabledescriptor config now ...");
     long flushSize = this.htableDescriptor.getMemStoreFlushSize();
 
     if (flushSize == HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE) {
