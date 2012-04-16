@@ -24,12 +24,16 @@ import static org.junit.Assert.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
+import java.util.TreeMap;
 
+import org.apache.hadoop.hbase.HServerLoad092.RegionLoad;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -54,6 +58,17 @@ import org.junit.experimental.categories.Category;
  */
 @Category(SmallTests.class)
 public class TestSerialization {
+  @Test
+  public void testHServerLoadVersioning() throws IOException {
+    Set<String> cps = new HashSet<String>(0);
+    Map<byte [], RegionLoad> regions = new TreeMap<byte [], RegionLoad>(Bytes.BYTES_COMPARATOR);
+    regions.put(HConstants.META_TABLE_NAME,
+      new HServerLoad092.RegionLoad(HConstants.META_TABLE_NAME, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, cps));
+    HServerLoad092 hsl092 = new HServerLoad092(0, 0, 0, 0, regions, cps);
+    byte [] hsl092bytes = Writables.getBytes(hsl092);
+    HServerLoad hsl = (HServerLoad)Writables.getWritable(hsl092bytes, new HServerLoad());
+    // TO BE CONTINUED
+  }
 
   @Test public void testCompareFilter() throws Exception {
     Filter f = new RowFilter(CompareOp.EQUAL,

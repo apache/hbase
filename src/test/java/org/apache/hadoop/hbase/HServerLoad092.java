@@ -1,6 +1,4 @@
 /**
- * Copyright 2007 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,24 +27,20 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.VersionedWritable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.WritableUtils;
 
 /**
- * This class is used exporting current state of load on a RegionServer.
+ * This class is used to export current state of load on a RegionServer.
+ * This is the version of HServerLoad that we had in 0.92.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public class HServerLoad extends VersionedWritable
-implements WritableComparable<HServerLoad> {
+public class HServerLoad092 extends VersionedWritable
+implements WritableComparable<HServerLoad092> {
   private static final byte VERSION = 2;
   // Empty load instance.
-  public static final HServerLoad EMPTY_HSERVERLOAD = new HServerLoad();
+  public static final HServerLoad092 EMPTY_HSERVERLOAD = new HServerLoad092();
 
   /** Number of requests per second since last report.
    */
@@ -103,7 +97,7 @@ implements WritableComparable<HServerLoad> {
    * Encapsulates per-region loading metrics.
    */
   public static class RegionLoad extends VersionedWritable {
-    private static final byte VERSION = 2;
+    private static final byte VERSION = 1;
 
     /** @return the object version number */
     public byte getVersion() {
@@ -129,9 +123,9 @@ implements WritableComparable<HServerLoad> {
      */
     private int storefileIndexSizeMB;
     /** the current total read requests made to region */
-    private long readRequestsCount;
+    private int readRequestsCount;
     /** the current total write requests made to region */
-    private long writeRequestsCount;
+    private int writeRequestsCount;
     /** the total compacting key values in currently running compaction */
     private long totalCompactingKVs;
     /** the completed count of key values in currently running compaction */
@@ -180,7 +174,7 @@ implements WritableComparable<HServerLoad> {
         final int memstoreSizeMB, final int storefileIndexSizeMB,
         final int rootIndexSizeKB, final int totalStaticIndexSizeKB,
         final int totalStaticBloomSizeKB,
-        final long readRequestsCount, final long writeRequestsCount,
+        final int readRequestsCount, final int writeRequestsCount,
         final long totalCompactingKVs, final long currentCompactedKVs,
         final Set<String> coprocessors) {
       this.name = name;
@@ -274,29 +268,7 @@ implements WritableComparable<HServerLoad> {
     public long getWriteRequestsCount() {
       return writeRequestsCount;
     }
-    
-    /**
-     * @return The current total size of root-level indexes for the region, in KB.
-     */
-    public int getRootIndexSizeKB() {
-      return rootIndexSizeKB;
-    }
-    
-    /**
-     * @return The total size of all index blocks, not just the root level, in KB.
-     */
-    public int getTotalStaticIndexSizeKB() {
-      return totalStaticIndexSizeKB;
-    }
 
-    /**
-     * @return The total size of all Bloom filter blocks, not just loaded into the
-     * block cache, in KB.
-     */
-    public int getTotalStaticBloomSizeKB() {
-      return totalStaticBloomSizeKB;
-    }
-    
     /**
      * @return the total number of kvs in current compaction
      */
@@ -378,15 +350,11 @@ implements WritableComparable<HServerLoad> {
       this.currentCompactedKVs = currentCompactedKVs;
     }
 
-    /**
-     * HBASE-5256 and HBASE-5283 introduced incompatible serialization changes
-     * This method reads the fields in 0.92 serialization format, ex-version field
-     * @param in
-     * @throws IOException
-     */
-    private void readFields92(DataInput in) throws IOException {
-      // in 0.92, the version was actually written twice, consume the second copy
+    // Writable
+    public void readFields(DataInput in) throws IOException {
+      super.readFields(in);
       int version = in.readByte();
+      if (version > VERSION) throw new IOException("Version mismatch; " + version);
       int namelen = in.readInt();
       this.name = new byte[namelen];
       in.readFully(this.name);
@@ -409,56 +377,26 @@ implements WritableComparable<HServerLoad> {
         coprocessors.add(in.readUTF());
       }
     }
-    
-    // Writable
-    public void readFields(DataInput in) throws IOException {
-      int version = in.readByte();
-      if (version > VERSION) throw new IOException("Version mismatch; " + version);
-      if (version == 1) { 
-        readFields92(in);
-        return;
-      }
-      int namelen = WritableUtils.readVInt(in);
-      this.name = new byte[namelen];
-      in.readFully(this.name);
-      this.stores = WritableUtils.readVInt(in);
-      this.storefiles = WritableUtils.readVInt(in);
-      this.storeUncompressedSizeMB = WritableUtils.readVInt(in);
-      this.storefileSizeMB = WritableUtils.readVInt(in);
-      this.memstoreSizeMB = WritableUtils.readVInt(in);
-      this.storefileIndexSizeMB = WritableUtils.readVInt(in);
-      this.readRequestsCount = WritableUtils.readVLong(in);
-      this.writeRequestsCount = WritableUtils.readVLong(in);
-      this.rootIndexSizeKB = WritableUtils.readVInt(in);
-      this.totalStaticIndexSizeKB = WritableUtils.readVInt(in);
-      this.totalStaticBloomSizeKB = WritableUtils.readVInt(in);
-      this.totalCompactingKVs = WritableUtils.readVLong(in);
-      this.currentCompactedKVs = WritableUtils.readVLong(in);
-      int coprocessorsSize = WritableUtils.readVInt(in);
-      coprocessors = new TreeSet<String>();
-      for (int i = 0; i < coprocessorsSize; i++) {
-        coprocessors.add(in.readUTF());
-      }
-    }
 
     public void write(DataOutput out) throws IOException {
       super.write(out);
-      WritableUtils.writeVInt(out, name.length);
+      out.writeByte(VERSION);
+      out.writeInt(name.length);
       out.write(name);
-      WritableUtils.writeVInt(out, stores);
-      WritableUtils.writeVInt(out, storefiles);
-      WritableUtils.writeVInt(out, storeUncompressedSizeMB);
-      WritableUtils.writeVInt(out, storefileSizeMB);
-      WritableUtils.writeVInt(out, memstoreSizeMB);
-      WritableUtils.writeVInt(out, storefileIndexSizeMB);
-      WritableUtils.writeVLong(out, readRequestsCount);
-      WritableUtils.writeVLong(out, writeRequestsCount);
-      WritableUtils.writeVInt(out, rootIndexSizeKB);
-      WritableUtils.writeVInt(out, totalStaticIndexSizeKB);
-      WritableUtils.writeVInt(out, totalStaticBloomSizeKB);
-      WritableUtils.writeVLong(out, totalCompactingKVs);
-      WritableUtils.writeVLong(out, currentCompactedKVs);
-      WritableUtils.writeVInt(out, coprocessors.size());
+      out.writeInt(stores);
+      out.writeInt(storefiles);
+      out.writeInt(storeUncompressedSizeMB);
+      out.writeInt(storefileSizeMB);
+      out.writeInt(memstoreSizeMB);
+      out.writeInt(storefileIndexSizeMB);
+      out.writeInt(readRequestsCount);
+      out.writeInt(writeRequestsCount);
+      out.writeInt(rootIndexSizeKB);
+      out.writeInt(totalStaticIndexSizeKB);
+      out.writeInt(totalStaticBloomSizeKB);
+      out.writeLong(totalCompactingKVs);
+      out.writeLong(currentCompactedKVs);
+      out.writeInt(coprocessors.size());
       for (String coprocessor: coprocessors) {
         out.writeUTF(coprocessor);
       }
@@ -530,7 +468,7 @@ implements WritableComparable<HServerLoad> {
    */
 
   /** default constructor (used by Writable) */
-  public HServerLoad() {
+  public HServerLoad092() {
     super();
   }
 
@@ -541,7 +479,7 @@ implements WritableComparable<HServerLoad> {
    * @param maxHeapMB
    * @param coprocessors : coprocessors loaded at the regionserver-level
    */
-  public HServerLoad(final int totalNumberOfRequests,
+  public HServerLoad092(final int totalNumberOfRequests,
       final int numberOfRequests, final int usedHeapMB, final int maxHeapMB,
       final Map<byte[], RegionLoad> regionLoad,
       final Set<String> coprocessors) {
@@ -557,7 +495,7 @@ implements WritableComparable<HServerLoad> {
    * Constructor
    * @param hsl the template HServerLoad
    */
-  public HServerLoad(final HServerLoad hsl) {
+  public HServerLoad092(final HServerLoad092 hsl) {
     this(hsl.totalNumberOfRequests, hsl.numberOfRequests, hsl.usedHeapMB,
         hsl.maxHeapMB, hsl.getRegionsLoad(), hsl.coprocessors);
     for (Map.Entry<byte[], RegionLoad> e : hsl.regionLoad.entrySet()) {
@@ -622,7 +560,7 @@ implements WritableComparable<HServerLoad> {
     if (getClass() != o.getClass()) {
       return false;
     }
-    return compareTo((HServerLoad)o) == 0;
+    return compareTo((HServerLoad092)o) == 0;
   }
 
   // Getters
@@ -749,7 +687,7 @@ implements WritableComparable<HServerLoad> {
 
   // Comparable
 
-  public int compareTo(HServerLoad o) {
+  public int compareTo(HServerLoad092 o) {
     return this.getLoad() - o.getLoad();
   }
 }
