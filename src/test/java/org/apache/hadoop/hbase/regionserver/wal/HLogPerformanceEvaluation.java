@@ -124,6 +124,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     int numFamilies = 1;
     boolean noSync = false;
     boolean verify = false;
+    boolean verbose = false;
+    long roll = Long.MAX_VALUE;
     // Process command line args
     for (int i = 0; i < args.length; i++) {
       String cmd = args[i];
@@ -147,6 +149,10 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           noSync = true;
         } else if (cmd.equals("-verify")) {
           verify = true;
+        } else if (cmd.equals("-verbose")) {
+          verbose = true;
+        } else if (cmd.equals("-roll")) {
+          roll = Long.parseLong(args[++i]);
         } else {
           printUsageAndExit();
         }
@@ -165,8 +171,22 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       cleanRegionRootDir(fs, rootRegionDir);
       // Initialize Table Descriptor
       HTableDescriptor htd = createHTableDescriptor(numFamilies);
+      final long whenToRoll = roll;
       HLog hlog = new HLog(fs, new Path(rootRegionDir, "wals"),
-        new Path(rootRegionDir, "old.wals"), getConf());
+          new Path(rootRegionDir, "old.wals"), getConf()) {
+        int appends = 0;
+        protected void doWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit,
+            HTableDescriptor htd)
+        throws IOException {
+          this.appends++;
+          if (this.appends % whenToRoll == 0) {
+            LOG.info("Rolling after " + appends + " edits");
+            rollWriter();
+          }
+          super.doWrite(info, logKey, logEdit, htd);
+        };
+      };
+      hlog.rollWriter();
       HRegion region = null;
       try {
         region = openRegion(fs, rootRegionDir, htd, hlog);
@@ -179,8 +199,13 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
         }
         if (verify) {
           Path dir = hlog.getDir();
+          long editCount = 0;
           for (FileStatus fss: fs.listStatus(dir)) {
-            verify(fss.getPath(), numIterations * numThreads);
+            editCount += verify(fss.getPath(), verbose);
+          }
+          long expected = numIterations * numThreads;
+          if (editCount != expected) {
+            throw new IllegalStateException("Counted=" + editCount + ", expected=" + expected);
           }
         }
       } finally {
@@ -209,10 +234,10 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
    * Verify that sequenceids are ascending and that the file has expected number
    * of edits.
    * @param wal
-   * @param editsCount
+   * @return Count of edits.
    * @throws IOException
    */
-  private void verify(final Path wal, final long editsCount) throws IOException {
+  private long verify(final Path wal, final boolean verbose) throws IOException {
     HLog.Reader reader = HLog.getReader(wal.getFileSystem(getConf()), wal, getConf());
     long previousSeqid = -1;
     long count = 0;
@@ -222,16 +247,17 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
         if (e == null) break;
         count++;
         long seqid = e.getKey().getLogSeqNum();
+        if (verbose) LOG.info("seqid=" + seqid);
         if (previousSeqid >= seqid) {
           throw new IllegalStateException("wal=" + wal.getName() +
             ", previousSeqid=" + previousSeqid + ", seqid=" + seqid);
         }
         previousSeqid = seqid;
       }
-      if (count != editsCount) throw new IllegalStateException("Expected=" + editsCount + ", found=" + count);
     } finally {
       reader.close();
     }
+    return count;
   }
 
   private static void logBenchmarkResult(String testName, long numTests, long totalTime) {
@@ -252,6 +278,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     System.err.println("  -valueSize <N>   Row/Col value size in byte.");
     System.err.println("  -nosync          Append without syncing");
     System.err.println("  -verify          Verify edits written in sequence");
+    System.err.println("  -verbose         Output extra info; e.g. all edit seq ids when verifying");
+    System.err.println("  -roll <N>        Roll the way every N appends");
     System.exit(1);
   }
 
