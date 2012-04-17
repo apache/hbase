@@ -109,6 +109,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -335,86 +336,6 @@ public class HRegion implements HeapSize { // , Writable{
   public final static String REGIONINFO_FILE = ".regioninfo";
   private HTableDescriptor htableDescriptor = null;
   private RegionSplitPolicy splitPolicy;
-
-  // for simple numeric metrics (# of blocks read from block cache)
-  public static final ConcurrentMap<String, AtomicLong> numericMetrics = new ConcurrentHashMap<String, AtomicLong>();
-
-  public static final String METRIC_GETSIZE = "getsize";
-  public static final String METRIC_NEXTSIZE = "nextsize";
-
-  // for simple numeric metrics (current block cache size)
-  // These ones are not reset to zero when queried, unlike the previous.
-  public static final ConcurrentMap<String, AtomicLong> numericPersistentMetrics = new ConcurrentHashMap<String, AtomicLong>();
-
-  /**
-   * Used for metrics where we want track a metrics (such as latency) over a
-   * number of operations.
-   */
-  public static final ConcurrentMap<String, Pair<AtomicLong, AtomicInteger>>
-      timeVaryingMetrics = new ConcurrentHashMap<String,
-          Pair<AtomicLong, AtomicInteger>>();
-
-  public static void incrNumericMetric(String key, long amount) {
-    AtomicLong oldVal = numericMetrics.get(key);
-    if (oldVal == null) {
-      oldVal = numericMetrics.putIfAbsent(key, new AtomicLong(amount));
-      if (oldVal == null)
-        return;
-    }
-    oldVal.addAndGet(amount);
-  }
-
-  public static void setNumericMetric(String key, long amount) {
-    numericMetrics.put(key, new AtomicLong(amount));
-  }
-
-  public static void incrTimeVaryingMetric(String key, long amount) {
-    Pair<AtomicLong, AtomicInteger> oldVal = timeVaryingMetrics.get(key);
-    if (oldVal == null) {
-      oldVal = timeVaryingMetrics.putIfAbsent(key,
-          new Pair<AtomicLong, AtomicInteger>(new AtomicLong(amount),
-              new AtomicInteger(1)));
-      if (oldVal == null)
-        return;
-    }
-    oldVal.getFirst().addAndGet(amount); // total time
-    oldVal.getSecond().incrementAndGet(); // increment ops by 1
-  }
-
-  public static void incrNumericPersistentMetric(String key, long amount) {
-    AtomicLong oldVal = numericPersistentMetrics.get(key);
-    if (oldVal == null) {
-      oldVal = numericPersistentMetrics
-          .putIfAbsent(key, new AtomicLong(amount));
-      if (oldVal == null)
-        return;
-    }
-    oldVal.addAndGet(amount);
-  }
-
-  public static long getNumericMetric(String key) {
-    AtomicLong m = numericMetrics.get(key);
-    if (m == null)
-      return 0;
-    return m.get();
-  }
-
-  public static Pair<Long, Integer> getTimeVaryingMetric(String key) {
-    Pair<AtomicLong, AtomicInteger> pair = timeVaryingMetrics.get(key);
-    if (pair == null) {
-      return new Pair<Long, Integer>(0L, 0);
-    }
-
-    return new Pair<Long, Integer>(pair.getFirst().get(),
-        pair.getSecond().get());
-  }
-
-  static long getNumericPersistentMetric(String key) {
-    AtomicLong m = numericPersistentMetrics.get(key);
-    if (m == null)
-      return 0;
-    return m.get();
-  }
 
   /**
    * Should only be used for testing purposes
@@ -1890,7 +1811,7 @@ public class HRegion implements HeapSize { // , Writable{
     final String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
         getTableDesc().getNameAsString(), familyMap.keySet());
     if (!metricPrefix.isEmpty()) {
-      HRegion.incrTimeVaryingMetric(metricPrefix + "delete_", after - now);
+      RegionMetricsStorage.incrTimeVaryingMetric(metricPrefix + "delete_", after - now);
     }
 
     if (flush) {
@@ -2281,7 +2202,7 @@ public class HRegion implements HeapSize { // , Writable{
       if (metricPrefix == null) {
         metricPrefix = SchemaMetrics.CF_BAD_FAMILY_PREFIX;
       }
-      HRegion.incrTimeVaryingMetric(metricPrefix + "multiput_",
+      RegionMetricsStorage.incrTimeVaryingMetric(metricPrefix + "multiput_",
           endTimeMs - startTimeMs);
 
       if (!success) {
@@ -2540,7 +2461,7 @@ public class HRegion implements HeapSize { // , Writable{
     final String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
         this.getTableDesc().getNameAsString(), familyMap.keySet());
     if (!metricPrefix.isEmpty()) {
-      HRegion.incrTimeVaryingMetric(metricPrefix + "put_", after - now);
+      RegionMetricsStorage.incrTimeVaryingMetric(metricPrefix + "put_", after - now);
     }
 
     if (flush) {
@@ -4155,7 +4076,7 @@ public class HRegion implements HeapSize { // , Writable{
     RegionScanner scanner = null;
     try {
       scanner = getScanner(scan);
-      scanner.next(results, HRegion.METRIC_GETSIZE);
+      scanner.next(results, SchemaMetrics.METRIC_GETSIZE);
     } finally {
       if (scanner != null)
         scanner.close();
@@ -4171,7 +4092,7 @@ public class HRegion implements HeapSize { // , Writable{
     final String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
         this.getTableDesc().getNameAsString(), get.familySet());
     if (!metricPrefix.isEmpty()) {
-      HRegion.incrTimeVaryingMetric(metricPrefix + "get_", after - now);
+      RegionMetricsStorage.incrTimeVaryingMetric(metricPrefix + "get_", after - now);
     }
 
     return results;
@@ -4245,14 +4166,14 @@ public class HRegion implements HeapSize { // , Writable{
         processor.postProcess(this, walEdit);
       } catch (IOException e) {
         long endNanoTime = System.nanoTime();
-        HRegion.incrTimeVaryingMetric(metricsName + ".error.nano",
+        RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".error.nano",
                                       endNanoTime - startNanoTime);
         throw e;
       } finally {
         closeRegionOperation();
       }
       final long endNanoTime = System.nanoTime();
-      HRegion.incrTimeVaryingMetric(metricsName + ".nano",
+      RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".nano",
                                     endNanoTime - startNanoTime);
       return;
     }
@@ -4362,7 +4283,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     } catch (IOException e) {
       long endNanoTime = System.nanoTime();
-      HRegion.incrTimeVaryingMetric(metricsName + ".error.nano",
+      RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".error.nano",
                                     endNanoTime - startNanoTime);
       throw e;
     } finally {
@@ -4374,19 +4295,19 @@ public class HRegion implements HeapSize { // , Writable{
     }
     // Populate all metrics
     long endNanoTime = System.nanoTime();
-    HRegion.incrTimeVaryingMetric(metricsName + ".nano",
+    RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".nano",
                                   endNanoTime - startNanoTime);
 
-    HRegion.incrTimeVaryingMetric(metricsName + ".acquirelock.nano",
+    RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".acquirelock.nano",
                                   lockedNanoTime - startNanoTime);
 
-    HRegion.incrTimeVaryingMetric(metricsName + ".process.nano",
+    RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".process.nano",
                                   processDoneNanoTime - lockedNanoTime);
 
-    HRegion.incrTimeVaryingMetric(metricsName + ".occupylock.nano",
+    RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".occupylock.nano",
                                   unlockedNanoTime - lockedNanoTime);
 
-    HRegion.incrTimeVaryingMetric(metricsName + ".sync.nano",
+    RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".sync.nano",
                                   endNanoTime - unlockedNanoTime);
   }
 
@@ -4783,7 +4704,7 @@ public class HRegion implements HeapSize { // , Writable{
     long after = EnvironmentEdgeManager.currentTimeMillis();
     String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
         getTableDesc().getName(), family);
-    HRegion.incrTimeVaryingMetric(metricPrefix + "increment_", after - before);
+    RegionMetricsStorage.incrTimeVaryingMetric(metricPrefix + "increment_", after - before);
 
     if (flush) {
       // Request a cache flush.  Do it outside update lock.

@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
     StoreMetricType;
@@ -90,7 +91,7 @@ public class TestRegionServerMetrics {
     Long startValue = startingMetrics.get(storeMetricName);
     assertEquals("Invalid value for store metric " + storeMetricName
         + " (type " + storeMetricType + ")", expected,
-        HRegion.getNumericMetric(storeMetricName)
+        RegionMetricsStorage.getNumericMetric(storeMetricName)
             - (startValue != null ? startValue : 0));
   }
 
@@ -130,7 +131,7 @@ public class TestRegionServerMetrics {
     final String storeMetricName = ALL_METRICS
         .getStoreMetricNameMax(StoreMetricType.STORE_FILE_COUNT);
     assertEquals("Invalid value for store metric " + storeMetricName,
-        NUM_FLUSHES, HRegion.getNumericMetric(storeMetricName));
+        NUM_FLUSHES, RegionMetricsStorage.getNumericMetric(storeMetricName));
   }
 
 
@@ -144,14 +145,14 @@ public class TestRegionServerMetrics {
 
     for (int i =0; i < cfs.length; ++i) {
       String prefix = SchemaMetrics.generateSchemaMetricsPrefix(table, cfs[i]);
-      String getMetric = prefix + HRegion.METRIC_GETSIZE;
-      String nextMetric = prefix + HRegion.METRIC_NEXTSIZE;
+      String getMetric = prefix + SchemaMetrics.METRIC_GETSIZE;
+      String nextMetric = prefix + SchemaMetrics.METRIC_NEXTSIZE;
 
       // verify getsize and nextsize matches
-      int getSize = HRegion.numericMetrics.containsKey(getMetric) ?
-          HRegion.numericMetrics.get(getMetric).intValue() : 0;
-      int nextSize = HRegion.numericMetrics.containsKey(nextMetric) ?
-          HRegion.numericMetrics.get(nextMetric).intValue() : 0;
+      int getSize = RegionMetricsStorage.getNumericMetrics().containsKey(getMetric) ?
+          RegionMetricsStorage.getNumericMetrics().get(getMetric).intValue() : 0;
+      int nextSize = RegionMetricsStorage.getNumericMetrics().containsKey(nextMetric) ?
+          RegionMetricsStorage.getNumericMetrics().get(nextMetric).intValue() : 0;
 
       assertEquals(metrics[i], getSize);
       assertEquals(metrics[cfs.length + i], nextSize);

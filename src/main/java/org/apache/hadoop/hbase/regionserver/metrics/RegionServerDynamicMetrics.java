@@ -133,17 +133,17 @@ public class RegionServerDynamicMetrics implements Updater {
    */
   public void doUpdates(MetricsContext context) {
     /* get dynamically created numeric metrics, and push the metrics */
-    for (Entry<String, AtomicLong> entry : HRegion.numericMetrics.entrySet()) {
+    for (Entry<String, AtomicLong> entry : RegionMetricsStorage.getNumericMetrics().entrySet()) {
       this.setNumericMetric(entry.getKey(), entry.getValue().getAndSet(0));
     }
     /* get dynamically created numeric metrics, and push the metrics.
      * These ones aren't to be reset; they are cumulative. */
-    for (Entry<String, AtomicLong> entry : HRegion.numericPersistentMetrics.entrySet()) {
+    for (Entry<String, AtomicLong> entry : RegionMetricsStorage.getNumericPersistentMetrics().entrySet()) {
       this.setNumericMetric(entry.getKey(), entry.getValue().get());
     }
     /* get dynamically created time varying metrics, and push the metrics */
     for (Entry<String, Pair<AtomicLong, AtomicInteger>> entry :
-          HRegion.timeVaryingMetrics.entrySet()) {
+      RegionMetricsStorage.getTimeVaryingMetrics().entrySet()) {
       Pair<AtomicLong, AtomicInteger> value = entry.getValue();
       this.incrTimeVaryingMetric(entry.getKey(),
           value.getFirst().getAndSet(0),

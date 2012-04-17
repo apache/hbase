@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -373,7 +374,7 @@ class StoreScanner extends NonLazyKeyValueScanner
           results.add(kv);
 
           if (metric != null) {
-            HRegion.incrNumericMetric(this.metricNamePrefix + metric,
+            RegionMetricsStorage.incrNumericMetric(this.metricNamePrefix + metric,
                 kv.getLength());
           }
 

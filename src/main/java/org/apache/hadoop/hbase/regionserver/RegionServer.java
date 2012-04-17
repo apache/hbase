@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.regionserver.HRegionServer.QosPriority;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -681,7 +682,7 @@ public abstract class RegionServer implements
               for (int i = 0; i < rows
                   && currentScanResultSize < maxScannerResultSize; i++) {
                 // Collect values to be returned here
-                boolean moreRows = scanner.next(values, HRegion.METRIC_NEXTSIZE);
+                boolean moreRows = scanner.next(values, SchemaMetrics.METRIC_NEXTSIZE);
                 if (!values.isEmpty()) {
                   for (KeyValue kv : values) {
                     currentScanResultSize += kv.heapSize();

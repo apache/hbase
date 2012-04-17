@@ -125,6 +125,7 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
+import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerDynamicMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
@@ -1256,7 +1257,7 @@ public class HRegionServer extends RegionServer
     }
 
     for (Entry<String, MutableDouble> e : tempVals.entrySet()) {
-      HRegion.setNumericMetric(e.getKey(), e.getValue().longValue());
+      RegionMetricsStorage.setNumericMetric(e.getKey(), e.getValue().longValue());
     }
 
     this.metrics.stores.set(stores);
@@ -2245,7 +2246,7 @@ public class HRegionServer extends RegionServer
           && currentScanResultSize < maxScannerResultSize; i++) {
         requestCount.incrementAndGet();
         // Collect values to be returned here
-        boolean moreRows = s.next(values, HRegion.METRIC_NEXTSIZE);
+        boolean moreRows = s.next(values, SchemaMetrics.METRIC_NEXTSIZE);
         if (!values.isEmpty()) {
           for (KeyValue kv : values) {
             currentScanResultSize += kv.heapSize();

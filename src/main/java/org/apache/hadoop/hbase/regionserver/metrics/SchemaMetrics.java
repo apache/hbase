@@ -29,6 +29,9 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -39,12 +42,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
- * A collection of metric names in a given column family or a (table, column
+ * A names in a given column family or a (table, column
  * family) combination. The following "dimensions" are supported:
  * <ul>
  * <li>Table name (optional; enabled based on configuration)</li>
@@ -303,6 +305,11 @@ public class SchemaMetrics {
     }
   }
 
+  
+
+    public static final String METRIC_GETSIZE = "getsize";
+    public static final String METRIC_NEXTSIZE = "nextsize";
+
   /**
    * Returns a {@link SchemaMetrics} object for the given table and column
    * family, instantiating it if necessary.
@@ -366,7 +373,7 @@ public class SchemaMetrics {
     if (blockCategory == null) {
       blockCategory = BlockCategory.UNKNOWN;  // So that we see this in stats.
     }
-    HRegion.incrNumericMetric(getBlockMetricName(blockCategory,
+    RegionMetricsStorage.incrNumericMetric(getBlockMetricName(blockCategory,
         isCompaction, metricType), 1);
 
     if (blockCategory != BlockCategory.ALL_CATEGORIES) {
@@ -377,7 +384,7 @@ public class SchemaMetrics {
 
   private void addToReadTime(BlockCategory blockCategory,
       boolean isCompaction, long timeMs) {
-    HRegion.incrTimeVaryingMetric(getBlockMetricName(blockCategory,
+    RegionMetricsStorage.incrTimeVaryingMetric(getBlockMetricName(blockCategory,
         isCompaction, BlockMetricType.READ_TIME), timeMs);
 
     // Also update the read time aggregated across all block categories
@@ -433,7 +440,7 @@ public class SchemaMetrics {
    */
   public void updatePersistentStoreMetric(StoreMetricType storeMetricType,
       long value) {
-    HRegion.incrNumericPersistentMetric(
+    RegionMetricsStorage.incrNumericPersistentMetric(
         storeMetricNames[storeMetricType.ordinal()], value);
   }
 
@@ -478,7 +485,7 @@ public class SchemaMetrics {
     if (category == null) {
       category = BlockCategory.ALL_CATEGORIES;
     }
-    HRegion.incrNumericPersistentMetric(getBlockMetricName(category, false,
+    RegionMetricsStorage.incrNumericPersistentMetric(getBlockMetricName(category, false,
         BlockMetricType.CACHE_SIZE), cacheSizeDelta);
 
     if (category != BlockCategory.ALL_CATEGORIES) {
@@ -502,7 +509,7 @@ public class SchemaMetrics {
    * positives/negatives as specified by the argument.
    */
   public void updateBloomMetrics(boolean isInBloom) {
-    HRegion.incrNumericMetric(getBloomMetricName(isInBloom), 1);
+    RegionMetricsStorage.incrNumericMetric(getBloomMetricName(isInBloom), 1);
     if (this != ALL_SCHEMA_METRICS) {
       ALL_SCHEMA_METRICS.updateBloomMetrics(isInBloom);
     }
@@ -731,11 +738,11 @@ public class SchemaMetrics {
         long metricValue;
         if (isTimeVaryingKey(metricName)) {
           Pair<Long, Integer> totalAndCount =
-              HRegion.getTimeVaryingMetric(stripTimeVaryingSuffix(metricName));
+              RegionMetricsStorage.getTimeVaryingMetric(stripTimeVaryingSuffix(metricName));
           metricValue = metricName.endsWith(TOTAL_SUFFIX) ?
               totalAndCount.getFirst() : totalAndCount.getSecond();
         } else {
-          metricValue = HRegion.getNumericMetric(metricName);
+          metricValue = RegionMetricsStorage.getNumericMetric(metricName);
         }
 
         metricsSnapshot.put(metricName, metricValue);
