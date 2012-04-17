@@ -49,6 +49,8 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 /**
  * This class runs performance benchmarks for {@link HLog}.
+ * See usage for this tool by running:
+ * <code>$ hbase org.apache.hadoop.hbase.regionserver.wal.HLogPerformanceEvaluation -h</code>
  */
 @InterfaceAudience.Private
 public final class HLogPerformanceEvaluation extends Configured implements Tool {
@@ -178,7 +180,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
         if (verify) {
           Path dir = hlog.getDir();
           for (FileStatus fss: fs.listStatus(dir)) {
-            verifyInSequence(fss.getPath());
+            verify(fss.getPath(), numIterations * numThreads);
           }
         }
       } finally {
@@ -202,13 +204,23 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     return htd;
   }
 
-  void verifyInSequence(final Path wal) throws IOException {
+  /**
+   * Verify the content of the WAL file.
+   * Verify that sequenceids are ascending and that the file has expected number
+   * of edits.
+   * @param wal
+   * @param editsCount
+   * @throws IOException
+   */
+  private void verify(final Path wal, final long editsCount) throws IOException {
     HLog.Reader reader = HLog.getReader(wal.getFileSystem(getConf()), wal, getConf());
     long previousSeqid = -1;
+    long count = 0;
     try {
       while (true) {
         Entry e = reader.next();
         if (e == null) break;
+        count++;
         long seqid = e.getKey().getLogSeqNum();
         if (previousSeqid >= seqid) {
           throw new IllegalStateException("wal=" + wal.getName() +
@@ -216,6 +228,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
         }
         previousSeqid = seqid;
       }
+      if (count != editsCount) throw new IllegalStateException("Expected=" + editsCount + ", found=" + count);
     } finally {
       reader.close();
     }
