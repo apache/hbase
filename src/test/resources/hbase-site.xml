@@ -142,4 +142,11 @@
     version is X.X.X-SNAPSHOT"
     </description>
   </property>
+   <property>
+     <name>hbase.client.retries.number</name>
+     <value>100</value>
+     <description>
+     Use a lot of retries in unit tests.
+     </description>
+   </property>
 </configuration>
