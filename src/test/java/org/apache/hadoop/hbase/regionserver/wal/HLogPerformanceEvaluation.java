@@ -36,6 +36,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -129,7 +130,6 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     // Process command line args
     for (int i = 0; i < args.length; i++) {
       String cmd = args[i];
-
       try {
         if (cmd.equals("-threads")) {
           numThreads = Integer.parseInt(args[++i]);
@@ -153,7 +153,12 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           verbose = true;
         } else if (cmd.equals("-roll")) {
           roll = Long.parseLong(args[++i]);
+        } else if (cmd.equals("-h")) {
+          printUsageAndExit();
+        } else if (cmd.equals("--help")) {
+          printUsageAndExit();
         } else {
+          System.err.println("UNEXPECTED: " + cmd);
           printUsageAndExit();
         }
       } catch (Exception e) {
@@ -163,6 +168,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
 
     // Run HLog Performance Evaluation
     FileSystem fs = FileSystem.get(getConf());
+    LOG.info("" + fs);
     try {
       if (rootRegionDir == null) {
         rootRegionDir = TEST_UTIL.getDataTestDir("HLogPerformanceEvaluation");
@@ -280,6 +286,12 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     System.err.println("  -verify          Verify edits written in sequence");
     System.err.println("  -verbose         Output extra info; e.g. all edit seq ids when verifying");
     System.err.println("  -roll <N>        Roll the way every N appends");
+    System.err.println("");
+    System.err.println("Examples:");
+    System.err.println("");
+    System.err.println(" To run 100 threads on hdfs with log rolling every 10k edits and verification afterward do:");
+    System.err.println(" $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLogPerformanceEvaluation \\");
+    System.err.println("    -conf ./core-site.xml -path hdfs://example.org:7000/tmp -threads 100 -roll 10000 -verify");
     System.exit(1);
   }
 
@@ -337,7 +349,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
   }
 
   public static void main(String[] args) throws Exception {
-    int exitCode = ToolRunner.run(new HLogPerformanceEvaluation(), args);
+    int exitCode = ToolRunner.run(HBaseConfiguration.create(), new HLogPerformanceEvaluation(), args);
     System.exit(exitCode);
   }
 }
