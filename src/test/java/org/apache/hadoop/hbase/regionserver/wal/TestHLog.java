@@ -51,7 +51,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.log4j.Level;
@@ -134,6 +133,19 @@ public class TestHLog  {
   private static String getName() {
     // TODO Auto-generated method stub
     return "TestHLog";
+  }
+
+  /**
+   * Test that with three concurrent threads we still write edits in sequence
+   * edit id order.
+   * @throws Exception
+   */
+  @Test
+  public void testMaintainOrderWithConcurrentWrites() throws Exception {
+    // Run the HPE tool with three threads writing 3000 edits each concurrently.
+    // When done, verify that all edits were written and that the order in the
+    // WALs is of ascending edit sequence ids.
+    HLogPerformanceEvaluation.main(new String [] {"-threads", "3", "-verify", "-iterations", "3000"});
   }
 
   /**
