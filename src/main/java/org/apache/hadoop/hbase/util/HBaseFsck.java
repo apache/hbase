@@ -2894,6 +2894,7 @@ public class HBaseFsck {
   protected static void printUsageAndExit() {
     System.err.println("Usage: fsck [opts] {only tables}");
     System.err.println(" where [opts] are:");
+    System.err.println("   -help Display help options (this)");
     System.err.println("   -details Display full report of all regions.");
     System.err.println("   -timelag {timeInSeconds}  Process only regions that " +
                        " have not experienced any metadata updates in the last " +
@@ -2938,7 +2939,9 @@ public class HBaseFsck {
     // Process command-line args.
     for (int i = 0; i < args.length; i++) {
       String cmd = args[i];
-      if (cmd.equals("-details")) {
+      if (cmd.equals("-help") || cmd.equals("-h")) {
+        printUsageAndExit();
+      } else if (cmd.equals("-details")) {
         fsck.setDisplayFullReport();
       } else if (cmd.equals("-timelag")) {
         if (i == args.length - 1) {
@@ -3031,6 +3034,9 @@ public class HBaseFsck {
         fsck.setSummary();
       } else if (cmd.equals("-metaonly")) {
         fsck.setCheckMetaOnly();
+      } else if (cmd.startsWith("-")) {
+        System.err.println("Unrecognized option:" + cmd);
+        printUsageAndExit();
       } else {
         byte[] table = Bytes.toBytes(cmd);
         fsck.includeTable(table);
