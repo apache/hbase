@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
 /**
  * Test cases that ensure that file system level errors are bubbled up
  * appropriately to clients, rather than swallowed.
@@ -163,13 +162,16 @@ public class TestFSErrorsExposed {
    * removes the data from HDFS underneath it, and ensures that
    * errors are bubbled to the client.
    */
-  @Test
+  @Test(timeout=5 * 60 * 1000)
   public void testFullSystemBubblesFSErrors() throws Exception {
     try {
       // We set it not to run or it will trigger server shutdown while sync'ing
       // because all the datanodes are bad
       util.getConfiguration().setInt(
           "hbase.regionserver.optionallogflushinterval", Integer.MAX_VALUE);
+
+      util.getConfiguration().setInt("hbase.client.retries.number", 3);
+
       util.startMiniCluster(1);
       byte[] tableName = Bytes.toBytes("table");
       byte[] fam = Bytes.toBytes("fam");
@@ -204,7 +206,11 @@ public class TestFSErrorsExposed {
         assertTrue(e.getMessage().contains("Could not seek"));
       }
 
+      // Restart data nodes so that HBase can shut down cleanly.
+      util.getDFSCluster().restartDataNodes();
+
     } finally {
+      util.getMiniHBaseCluster().killAll();
       util.shutdownMiniCluster();
     }
   }
@@ -232,7 +238,7 @@ public class TestFSErrorsExposed {
       for (SoftReference<FaultyInputStream> is: inStreams) {
         is.get().startFaults();
       }
-    } 
+    }
   }
 
   static class FaultyInputStream extends FSDataInputStream {
@@ -265,4 +271,3 @@ public class TestFSErrorsExposed {
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
-

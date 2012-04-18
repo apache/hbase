@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.MapWritable;
@@ -528,5 +530,18 @@ public class MiniHBaseCluster {
       count += rst.getRegionServer().getNumberOfOnlineRegions();
     }
     return count;
+  }
+
+  /**
+   * Do a simulated kill all masters and regionservers. Useful when it is
+   * impossible to bring the mini-cluster back for clean shutdown.
+   */
+  public void killAll() {
+    for (RegionServerThread rst : getRegionServerThreads()) {
+      rst.getRegionServer().abort("killAll");
+    }
+    for (MasterThread masterThread : getMasterThreads()) {
+      masterThread.getMaster().abort("killAll", new Throwable());
+    }
   }
 }
