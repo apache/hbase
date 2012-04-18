@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl"?>
+<rdf:RDF xml:lang="en"
+         xmlns="http://usefulinc.com/ns/doap#" 
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" 
+         xmlns:asfext="http://projects.apache.org/ns/asfext#"
+         xmlns:foaf="http://xmlns.com/foaf/0.1/">
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+   
+         http://www.apache.org/licenses/LICENSE-2.0
+   
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+  <Project rdf:about="http://hbase.apache.org">
+    <created>2012-04-14</created>
+    <license rdf:resource="http://usefulinc.com/doap/licenses/asl20" />
+    <name>Apache HBase</name>
+    <homepage rdf:resource="http://hbase.apache.org" />
+    <asfext:pmc rdf:resource="http://hbase.apache.org" />
+    <shortdesc>Apache HBase software is the Hadoop database. Think of it as a distributed, scalable, big data store.</shortdesc>
+    <description>Use Apache HBase software when you need random, realtime read/write access to your Big Data. This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware. HBase is an open-source, distributed, versioned, column-oriented store modeled after Google's Bigtable: A Distributed Storage System for Structured Data by Chang et al. Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of Hadoop and HDFS. </description>
+    <bug-database rdf:resource="http://issues.apache.org/jira/browse/HBASE" />
+    <mailing-list rdf:resource="http://hbase.apache.org/mail-lists.html" />
+    <download-page rdf:resource="http://www.apache.org/dyn/closer.cgi/hbase/" />
+    <programming-language>Java</programming-language>
+    <category rdf:resource="http://projects.apache.org/category/database" />
+    <release>
+      <Version>
+        <name>Apache hbase 0.92.1</name>
+        <created>2012-03-19</created>
+        <revision>0.92.1</revision>
+      </Version>
+    </release>
+    <repository>
+      <SVNRepository>
+        <location rdf:resource="http://svn.apache.org/repos/asf/hbase"/>
+        <browse rdf:resource="http://svn.apache.org/viewvc/hbase"/>
+      </SVNRepository>
+    </repository>
+    <maintainer>
+      <foaf:Person>
+        <foaf:name>Apache HBase PMC</foaf:name>
+          <foaf:mbox rdf:resource="mailto:dev@hbase.apache.org"/>
+      </foaf:Person>
+    </maintainer>
+  </Project>
+</rdf:RDF>
