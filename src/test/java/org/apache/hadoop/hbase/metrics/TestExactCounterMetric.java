@@ -23,8 +23,11 @@ import java.util.List;
 import junit.framework.Assert;
 
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestExactCounterMetric {
 
   @Test
@@ -44,4 +47,8 @@ public class TestExactCounterMetric {
       i--;
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

@@ -23,9 +23,12 @@ import java.util.Random;
 
 import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
 import org.apache.hadoop.hbase.metrics.histogram.Snapshot;
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestMetricsHistogram {
 
   @Test
@@ -95,4 +98,8 @@ public class TestMetricsHistogram {
         && s.get95thPercentile() <= maxAcceptableninetyFifth);
 
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

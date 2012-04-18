@@ -49,11 +49,14 @@ import org.apache.hadoop.hbase.master.TestMasterFailover;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(LargeTests.class)
 public class TestRSKilledWhenMasterInitializing {
   private static final Log LOG = LogFactory.getLog(TestMasterFailover.class);
 
@@ -257,5 +260,4 @@ public class TestRSKilledWhenMasterInitializing {
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
-
 }

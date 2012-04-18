@@ -22,8 +22,11 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.hbase.metrics.histogram.ExponentiallyDecayingSample;
 import org.apache.hadoop.hbase.metrics.histogram.Snapshot;
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestExponentiallyDecayingSample {
   
   @Test
@@ -60,4 +63,8 @@ public class TestExponentiallyDecayingSample {
         Assert.assertTrue(i >= 0.0 && i < 1000.0);
       }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

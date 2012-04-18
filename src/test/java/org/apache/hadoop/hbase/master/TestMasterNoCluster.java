@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.zookeeper.KeeperException;
@@ -52,6 +53,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.junit.experimental.categories.Category;
 
 /**
  * Standup the master and fake it to test various aspects of master function.
@@ -61,6 +63,7 @@ import org.mockito.Mockito;
  * TODO: Speed up the zk connection by Master.  It pauses 5 seconds establishing
  * session.
  */
+@Category(MediumTests.class)
 public class TestMasterNoCluster {
   private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
 
@@ -326,4 +329,8 @@ public class TestMasterNoCluster {
       master.join();
     }
   }
+
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

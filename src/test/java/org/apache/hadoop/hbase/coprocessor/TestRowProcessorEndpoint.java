@@ -34,7 +34,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.junit.AfterClass;
@@ -64,7 +65,7 @@ import com.sun.org.apache.commons.logging.LogFactory;
  * Verifies ProcessRowEndpoint works.
  * The tested RowProcessor performs two scans and a read-modify-write.
  */
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestRowProcessorEndpoint {
 
   static final Log LOG = LogFactory.getLog(TestRowProcessorEndpoint.class);

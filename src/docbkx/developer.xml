@@ -338,7 +338,10 @@ report: "[INFO] Tests are skipped". It's harmless.
 </para>
 <para>Running <programlisting>mvn test -P runLargeTests</programlisting> execute medium tests in a single JVM.
 </para>
+</section>
 
+<section xml:id="hbase.unittests.cmds.test.hbasetests">
+<title><command>hbasetests.sh</command></title>
 <para>It's also possible to use the script <command>hbasetests.sh</command>. This script runs the medium and
 large tests in parallel with two maven instances, and provide a single report.
 It must be executed from the directory which contains the <filename>pom.xml</filename>.</para>

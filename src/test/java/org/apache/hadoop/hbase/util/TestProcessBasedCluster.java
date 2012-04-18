@@ -29,11 +29,14 @@ import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.MediumTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * A basic unit test that spins up a local HBase cluster.
  */
+@Category(MediumTests.class)
 public class TestProcessBasedCluster {
 
   private static final Log LOG = LogFactory.getLog(TestProcessBasedCluster.class);
@@ -86,4 +89,7 @@ public class TestProcessBasedCluster {
     assertTrue(pom.getPath() + " does not exist", pom.exists());
   }
 
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

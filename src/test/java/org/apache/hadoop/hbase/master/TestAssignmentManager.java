@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
@@ -79,7 +80,7 @@ import com.google.protobuf.ServiceException;
 /**
  * Test {@link AssignmentManager}
  */
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestAssignmentManager {
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final ServerName SERVERNAME_A =
