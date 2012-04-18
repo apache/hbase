@@ -88,11 +88,11 @@ public class ExecRPCInvoker implements InvocationHandler {
               return new ExecResult(regionName, value);
             }
           };
-      ExecResult result = callable.withRetries();
-      this.regionName = result.getRegionName();
-      LOG.debug("Result is region="+ Bytes.toStringBinary(regionName) +
-          ", value="+result.getValue());
-      return result.getValue();
+        ExecResult result = callable.withRetries();
+        this.regionName = result.getRegionName();
+        LOG.debug("Result is region="+ Bytes.toStringBinary(regionName) +
+            ", value="+result.getValue());
+        return result.getValue();
     }
 
     return null;

@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.protobuf.ClientProtocol;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.ipc.RemoteException;
 
+import com.google.protobuf.ServiceException;
+
 /**
  * Abstract class that implements {@link Callable}.  Implementation stipulates
  * return type and method we actually invoke on remote Server.  Usually
@@ -231,7 +233,13 @@ public abstract class ServerCallable<T> implements Callable<T> {
     if (t instanceof RemoteException) {
       t = ((RemoteException)t).unwrapRemoteException();
     }
-    if (t instanceof DoNotRetryIOException) {
+    if (t instanceof ServiceException) {
+      ServiceException se = (ServiceException)t;
+      Throwable cause = se.getCause();
+      if (cause != null && cause instanceof DoNotRetryIOException) {
+        throw (DoNotRetryIOException)cause;
+      }
+    } else if (t instanceof DoNotRetryIOException) {
       throw (DoNotRetryIOException)t;
     }
     return t;

@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.lang.reflect.Method;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import javax.net.SocketFactory;
@@ -42,17 +41,10 @@ interface RpcEngine {
   /** Stop this proxy. */
   void stopProxy(VersionedProtocol proxy);
 
-  /** Expert: Make multiple, parallel calls to a set of servers. */
-  Object[] call(Method method, Object[][] params, InetSocketAddress[] addrs,
-                Class<? extends VersionedProtocol> protocol,
-                User ticket, Configuration conf)
-    throws IOException, InterruptedException;
-
   /** Construct a server for a protocol implementation instance. */
   RpcServer getServer(Class<? extends VersionedProtocol> protocol, Object instance,
                        Class<?>[] ifaces, String bindAddress,
                        int port, int numHandlers, int metaHandlerCount,
                        boolean verbose, Configuration conf, int highPriorityLevel)
       throws IOException;
-
 }

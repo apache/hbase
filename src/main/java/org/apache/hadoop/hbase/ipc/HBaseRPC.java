@@ -31,9 +31,9 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.ReflectionUtils;
+
 import javax.net.SocketFactory;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -138,7 +138,6 @@ public class HBaseRPC {
   /**
    * A version mismatch for the RPC protocol.
    */
-  @SuppressWarnings("serial")
   public static class VersionMismatch extends IOException {
     private static final long serialVersionUID = 0;
     private String interfaceName;
@@ -343,31 +342,6 @@ public class HBaseRPC {
     if (proxy!=null) {
       getProxyEngine(proxy).stopProxy(proxy);
     }
-  }
-
-  /**
-   * Expert: Make multiple, parallel calls to a set of servers.
-   *
-   * @param method method to invoke
-   * @param params array of parameters
-   * @param addrs array of addresses
-   * @param conf configuration
-   * @return values
-   * @throws IOException e
-   * @deprecated Instead of calling statically, use
-   *     {@link HBaseRPC#getProtocolEngine(Class, org.apache.hadoop.conf.Configuration)}
-   *     to obtain an {@link RpcEngine} instance and then use
-   *     {@link RpcEngine#call(java.lang.reflect.Method, Object[][], java.net.InetSocketAddress[], Class, org.apache.hadoop.hbase.security.User, org.apache.hadoop.conf.Configuration)}
-   */
-  @Deprecated
-  public static Object[] call(Method method, Object[][] params,
-      InetSocketAddress[] addrs,
-      Class<? extends VersionedProtocol> protocol,
-      User ticket,
-      Configuration conf)
-    throws IOException, InterruptedException {
-    return getProtocolEngine(protocol, conf)
-      .call(method, params, addrs, protocol, ticket, conf);
   }
 
   /**

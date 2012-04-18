@@ -22,9 +22,9 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Method;
-import java.lang.reflect.Array;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.UndeclaredThrowableException;
 
 import java.net.InetSocketAddress;
 import java.io.*;
@@ -45,9 +45,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Objects;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.*;
 
@@ -59,7 +59,7 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 class WritableRpcEngine implements RpcEngine {
   // LOG is NOT in hbase subpackage intentionally so that the default HBase
-  // DEBUG log level does NOT emit RPC-level logging. 
+  // DEBUG log level does NOT emit RPC-level logging.
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.ipc.RPCEngine");
 
   /* Cache a client using its socket factory as the hash key */
@@ -93,17 +93,6 @@ class WritableRpcEngine implements RpcEngine {
         client.incCount();
       }
       return client;
-    }
-
-    /**
-     * Construct & cache an IPC client with the default SocketFactory
-     * if no cached client exists.
-     *
-     * @param conf Configuration
-     * @return an IPC client
-     */
-    protected synchronized HBaseClient getClient(Configuration conf) {
-      return getClient(conf, SocketFactory.getDefault());
     }
 
     /**
@@ -152,15 +141,27 @@ class WritableRpcEngine implements RpcEngine {
         startTime = System.currentTimeMillis();
       }
 
-      HbaseObjectWritable value = (HbaseObjectWritable)
-        client.call(new Invocation(method, args), address,
-                    protocol, ticket, rpcTimeout);
-      if (logDebug) {
-        // FIGURE HOW TO TURN THIS OFF!
-        long callTime = System.currentTimeMillis() - startTime;
-        LOG.debug("Call: " + method.getName() + " " + callTime);
+      try {
+        HbaseObjectWritable value = (HbaseObjectWritable)
+          client.call(new Invocation(method, args), address,
+                      protocol, ticket, rpcTimeout);
+        if (logDebug) {
+          // FIGURE HOW TO TURN THIS OFF!
+          long callTime = System.currentTimeMillis() - startTime;
+          LOG.debug("Call: " + method.getName() + " " + callTime);
+        }
+        return value.get();
+      } catch (Throwable t) {
+        // For protobuf protocols, ServiceException is expected
+        if (Invocation.PROTOBUF_PROTOCOLS.contains(protocol)) {
+          if (t instanceof RemoteException) {
+            Throwable cause = ((RemoteException)t).unwrapRemoteException();
+            throw new ServiceException(cause);
+          }
+          throw new ServiceException(t);
+        }
+        throw t;
       }
-      return value.get();
     }
 
     /* close the IPC client that's responsible for this invoker's RPCs */
@@ -185,11 +186,25 @@ class WritableRpcEngine implements RpcEngine {
               protocol.getClassLoader(), new Class[] { protocol },
               new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
     if (proxy instanceof VersionedProtocol) {
-      long serverVersion = ((VersionedProtocol)proxy)
-        .getProtocolVersion(protocol.getName(), clientVersion);
-      if (serverVersion != clientVersion) {
-        throw new HBaseRPC.VersionMismatch(protocol.getName(), clientVersion,
-                                      serverVersion);
+      try {
+        long serverVersion = ((VersionedProtocol)proxy)
+          .getProtocolVersion(protocol.getName(), clientVersion);
+        if (serverVersion != clientVersion) {
+          throw new HBaseRPC.VersionMismatch(protocol.getName(), clientVersion,
+                                        serverVersion);
+        }
+      } catch (Throwable t) {
+        if (t instanceof UndeclaredThrowableException) {
+          t = t.getCause();
+        }
+        if (t instanceof ServiceException) {
+          throw ProtobufUtil.getRemoteException((ServiceException)t);
+        }
+        if (!(t instanceof IOException)) {
+          LOG.error("Unexpected throwable object ", t);
+          throw new IOException(t);
+        }
+        throw (IOException)t;
       }
     }
     return proxy;
@@ -202,38 +217,6 @@ class WritableRpcEngine implements RpcEngine {
   public void stopProxy(VersionedProtocol proxy) {
     if (proxy!=null) {
       ((Invoker)Proxy.getInvocationHandler(proxy)).close();
-    }
-  }
-
-
-  /** Expert: Make multiple, parallel calls to a set of servers. */
-  public Object[] call(Method method, Object[][] params,
-                       InetSocketAddress[] addrs,
-                       Class<? extends VersionedProtocol> protocol,
-                       User ticket, Configuration conf)
-    throws IOException, InterruptedException {
-
-    Invocation[] invocations = new Invocation[params.length];
-    for (int i = 0; i < params.length; i++)
-      invocations[i] = new Invocation(method, params[i]);
-    HBaseClient client = CLIENTS.getClient(conf);
-    try {
-    Writable[] wrappedValues =
-      client.call(invocations, addrs, protocol, ticket);
-
-    if (method.getReturnType() == Void.TYPE) {
-      return null;
-    }
-
-    Object[] values =
-      (Object[])Array.newInstance(method.getReturnType(), wrappedValues.length);
-    for (int i = 0; i < values.length; i++)
-      if (wrappedValues[i] != null)
-        values[i] = ((HbaseObjectWritable)wrappedValues[i]).get();
-
-    return values;
-    } finally {
-      CLIENTS.stopClient(client);
     }
   }
 

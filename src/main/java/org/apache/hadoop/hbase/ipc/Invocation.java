@@ -25,12 +25,15 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.protobuf.AdminProtocol;
 import org.apache.hadoop.hbase.protobuf.ClientProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.io.VersionMismatchException;
@@ -56,6 +59,15 @@ public class Invocation extends VersionedWritable implements Configurable {
   static {
     PROTOCOL_VERSION.put(ClientService.BlockingInterface.class,
       Long.valueOf(ClientProtocol.VERSION));
+  }
+
+  // For protobuf protocols, which use ServiceException, instead of IOException
+  protected static final Set<Class<?>>
+    PROTOBUF_PROTOCOLS = new HashSet<Class<?>>();
+
+  static {
+    PROTOBUF_PROTOCOLS.add(ClientProtocol.class);
+    PROTOBUF_PROTOCOLS.add(AdminProtocol.class);
   }
 
   private static byte RPC_VERSION = 1;

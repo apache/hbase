@@ -20,30 +20,25 @@ package org.apache.hadoop.hbase.ipc;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
 import org.apache.hadoop.hbase.util.Objects;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
-import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 
+import com.google.protobuf.ServiceException;
+
 import javax.net.SocketFactory;
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.*;
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -161,14 +156,26 @@ public class SecureRpcEngine implements RpcEngine {
       if (logDebug) {
         startTime = System.currentTimeMillis();
       }
-      HbaseObjectWritable value = (HbaseObjectWritable)
-        client.call(new Invocation(method, args), address,
-                    protocol, ticket, rpcTimeout);
-      if (logDebug) {
-        long callTime = System.currentTimeMillis() - startTime;
-        LOG.debug("Call: " + method.getName() + " " + callTime);
+      try {
+        HbaseObjectWritable value = (HbaseObjectWritable)
+          client.call(new Invocation(method, args), address,
+                      protocol, ticket, rpcTimeout);
+        if (logDebug) {
+          long callTime = System.currentTimeMillis() - startTime;
+          LOG.debug("Call: " + method.getName() + " " + callTime);
+        }
+        return value.get();
+      } catch (Throwable t) {
+        // For protobuf protocols, ServiceException is expected
+        if (Invocation.PROTOBUF_PROTOCOLS.contains(protocol)) {
+          if (t instanceof RemoteException) {
+            Throwable cause = ((RemoteException)t).unwrapRemoteException();
+            throw new ServiceException(cause);
+          }
+          throw new ServiceException(t);
+        }
+        throw t;
       }
-      return value.get();
     }
 
     /* close the IPC client that's responsible for this invoker's RPCs */
@@ -389,6 +396,9 @@ public class SecureRpcEngine implements RpcEngine {
         Throwable target = e.getTargetException();
         if (target instanceof IOException) {
           throw (IOException)target;
+        }
+        if (target instanceof ServiceException) {
+          throw ProtobufUtil.getRemoteException((ServiceException)target);
         }
         IOException ioe = new IOException(target.toString());
         ioe.setStackTrace(target.getStackTrace());

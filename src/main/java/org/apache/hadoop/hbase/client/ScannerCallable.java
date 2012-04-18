@@ -141,11 +141,10 @@ public class ScannerCallable extends ServerCallable<Result[]> {
           }
           updateResultsMetrics(rrs);
         } catch (IOException e) {
-          IOException ioe = null;
+          IOException ioe = e;
           if (e instanceof RemoteException) {
             ioe = RemoteExceptionHandler.decodeRemoteException((RemoteException)e);
           }
-          if (ioe == null) throw new IOException(e);
           if (ioe instanceof NotServingRegionException) {
             // Throw a DNRE so that we break out of cycle of calling NSRE
             // when what we need is to open scanner against new location.
