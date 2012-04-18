@@ -133,6 +133,19 @@ public class TestHLog  {
   }
 
   /**
+   * Test that with three concurrent threads we still write edits in sequence
+   * edit id order.
+   * @throws Exception
+   */
+  @Test
+  public void testMaintainOrderWithConcurrentWrites() throws Exception {
+    // Run the HPE tool with three threads writing 3000 edits each concurrently.
+    // When done, verify that all edits were written and that the order in the
+    // WALs is of ascending edit sequence ids.
+    HLogPerformanceEvaluation.main(new String [] {"-threads", "3", "-verify", "-iterations", "3000"});
+  }
+
+  /**
    * Just write multiple logs then split.  Before fix for HADOOP-2283, this
    * would fail.
    * @throws IOException
