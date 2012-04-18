@@ -348,8 +348,18 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     return(endTime - startTime);
   }
 
+  /**
+   * The guts of the {@link #main} method.
+   * Call this method to avoid the {@link #main(String[])} System.exit.
+   * @param args
+   * @return errCode
+   * @throws Exception 
+   */
+  static int innerMain(final String [] args) throws Exception {
+    return ToolRunner.run(HBaseConfiguration.create(), new HLogPerformanceEvaluation(), args);
+  }
+
   public static void main(String[] args) throws Exception {
-    int exitCode = ToolRunner.run(HBaseConfiguration.create(), new HLogPerformanceEvaluation(), args);
-    System.exit(exitCode);
+     System.exit(innerMain(args));
   }
 }
