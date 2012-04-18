@@ -260,9 +260,9 @@ public class HLogSplitter {
    * directory.
    */
   private List<Path> splitLog(final FileStatus[] logfiles) throws IOException {
-    List<Path> processedLogs = new ArrayList<Path>();
-    List<Path> corruptedLogs = new ArrayList<Path>();
-    List<Path> splits = null;
+    List<Path> processedLogs = new ArrayList<Path>(logfiles.length);
+    List<Path> corruptedLogs = new ArrayList<Path>(logfiles.length);
+    List<Path> splits;
 
     boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", true);
 
@@ -279,24 +279,25 @@ public class HLogSplitter {
         splitSize += logLength;
         logAndReport("Splitting hlog " + (i++ + 1) + " of " + logfiles.length
             + ": " + logPath + ", length=" + logLength);
-        Reader in;
+        Reader in = null;
         try {
           in = getReader(fs, log, conf, skipErrors);
           if (in != null) {
             parseHLog(in, logPath, entryBuffers, fs, conf, skipErrors);
-            try {
-              in.close();
-            } catch (IOException e) {
-              LOG.warn("Close log reader threw exception -- continuing",
-                  e);
-            }
           }
           processedLogs.add(logPath);
         } catch (CorruptedLogFileException e) {
           LOG.info("Got while parsing hlog " + logPath +
               ". Marking as corrupted", e);
           corruptedLogs.add(logPath);
-          continue;
+        } finally {
+          if (in != null) {
+            try {
+              in.close();
+            } catch (IOException e) {
+              LOG.warn("Close log reader threw exception -- continuing", e);
+            }
+          }
         }
       }
       status.setStatus("Log splits complete. Checking for orphaned logs.");
@@ -619,7 +620,7 @@ public class HLogSplitter {
         if (!fs.rename(corrupted, p)) {
           LOG.warn("Unable to move corrupted log " + corrupted + " to " + p);
         } else {
-          LOG.warn("Moving corrupted log " + corrupted + " to " + p);
+          LOG.warn("Moved corrupted log " + corrupted + " to " + p);
         }
       }
     }
