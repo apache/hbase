@@ -185,6 +185,35 @@ public class TestFSUtils {
       fs.delete(p, true);
     }
   }
+  
+  @Test
+  public void testDeleteAndExists() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
+    FileSystem fs = FileSystem.get(conf);
+    FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
+    // then that the correct file is created
+    String file = UUID.randomUUID().toString();
+    Path p = new Path("temptarget" + File.separator + file);
+    Path p1 = new Path("temppath" + File.separator + file);
+    try {
+      FSDataOutputStream out = FSUtils.create(fs, p, perms);
+      out.close();
+      assertTrue("The created file should be present", FSUtils.isExists(fs, p));
+      // delete the file with recursion as false. Only the file will be deleted.
+      FSUtils.delete(fs, p, false);
+      // Create another file
+      FSDataOutputStream out1 = FSUtils.create(fs, p1, perms);
+      out1.close();
+      // delete the file with recursion as false. Still the file only will be deleted
+      FSUtils.delete(fs, p1, true);
+      assertFalse("The created file should be present", FSUtils.isExists(fs, p1));
+      // and then cleanup
+    } finally {
+      FSUtils.delete(fs, p, true);
+      FSUtils.delete(fs, p1, true);
+    }
+  }
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
