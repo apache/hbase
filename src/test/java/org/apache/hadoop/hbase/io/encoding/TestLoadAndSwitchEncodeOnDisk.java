@@ -16,12 +16,21 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
+import java.util.NavigableMap;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -64,8 +73,10 @@ public class TestLoadAndSwitchEncodeOnDisk extends
     super.loadTest();
 
     HColumnDescriptor hcd = getColumnDesc(admin);
-    System.err.println("\nDisabling encode-on-disk. Old column descriptor: " +
-        hcd + "\n");
+    System.err.println("\nDisabling encode-on-disk. Old column descriptor: " + hcd + "\n");
+    HTable t = new HTable(this.conf, TABLE);
+    assertAllOnLine(t);
+
     admin.disableTable(TABLE);
     hcd.setEncodeOnDisk(false);
     admin.modifyColumn(TABLE, hcd);
@@ -75,6 +86,10 @@ public class TestLoadAndSwitchEncodeOnDisk extends
 
     System.err.println("\nNew column descriptor: " +
         getColumnDesc(admin) + "\n");
+
+    // The table may not have all regions on line yet.  Assert online before
+    // moving to major compact.
+    assertAllOnLine(t);
 
     System.err.println("\nCompacting the table\n");
     admin.majorCompact(TABLE);
@@ -88,4 +103,15 @@ public class TestLoadAndSwitchEncodeOnDisk extends
     System.err.println("\nDone with the test, shutting down the cluster\n");
   }
 
+  private void assertAllOnLine(final HTable t) throws IOException {
+    NavigableMap<HRegionInfo, ServerName> regions = t.getRegionLocations();
+    for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {
+      byte [] startkey = e.getKey().getStartKey();
+      Scan s = new Scan(startkey);
+      ResultScanner scanner = t.getScanner(s);
+      Result r = scanner.next();
+      org.junit.Assert.assertTrue(r != null && r.size() > 0);
+      scanner.close();
+    }
+  }
 }

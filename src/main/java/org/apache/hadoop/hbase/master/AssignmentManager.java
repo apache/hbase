@@ -1346,8 +1346,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param region
    * @param setOfflineInZK
    * @param forceNewPlan
-   * @param hijack
-   *          - true new assignment is needed, false otherwise
+   * @param hijack True if new assignment is needed, false otherwise
    */
   public void assign(HRegionInfo region, boolean setOfflineInZK,
       boolean forceNewPlan, boolean hijack) {
@@ -1598,20 +1597,17 @@ public class AssignmentManager extends ZooKeeperListener {
       if (setOfflineInZK) {
         // get the version of the znode after setting it to OFFLINE.
         // versionOfOfflineNode will be -1 if the znode was not set to OFFLINE
-        versionOfOfflineNode = setOfflineInZooKeeper(state,
-            hijack);
-        if(versionOfOfflineNode != -1){
+        versionOfOfflineNode = setOfflineInZooKeeper(state, hijack);
+        if (versionOfOfflineNode != -1) {
           if (isDisabledorDisablingRegionInRIT(region)) {
             return;
           }
           setEnabledTable(region);
         }
       }
-      
       if (setOfflineInZK && versionOfOfflineNode == -1) {
         return;
       }
-      
       if (this.master.isStopped()) {
         LOG.debug("Server stopped; skipping assign of " + state);
         return;
@@ -2218,12 +2214,16 @@ public class AssignmentManager extends ZooKeeperListener {
     LOG.info("Bulk assigning done");
   }
 
+  // TODO: This method seems way wrong.  Why would we mark a table enabled based
+  // off a single region?  We seem to call this on bulk assign on startup which
+  // isn't too bad but then its also called in assign.  It makes the enabled
+  // flag up in zk meaningless.  St.Ack
   private void setEnabledTable(HRegionInfo hri) {
     String tableName = hri.getTableNameAsString();
     boolean isTableEnabled = this.zkTable.isEnabledTable(tableName);
     if (!isTableEnabled) {
       setEnabledTable(tableName);
-    }    
+    }
   }
 
   /**
