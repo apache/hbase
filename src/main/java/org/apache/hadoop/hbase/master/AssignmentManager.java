@@ -402,6 +402,13 @@ public class AssignmentManager extends ZooKeeperListener {
   throws KeeperException, IOException, InterruptedException {
     List<String> nodes = ZKUtil.listChildrenAndWatchForNewChildren(watcher,
       watcher.assignmentZNode);
+    
+    if (nodes == null) {
+      String errorMessage = "Failed to get the children from ZK";
+      master.abort(errorMessage, new IOException(errorMessage));
+      return;
+    }
+    
     // Run through all regions.  If they are not assigned and not in RIT, then
     // its a clean cluster startup, else its a failover.
     for (Map.Entry<HRegionInfo, ServerName> e: this.regions.entrySet()) {
