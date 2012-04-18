@@ -729,6 +729,15 @@ public class HRegion implements HeapSize { // , Writable{
 
     // and then create the file
     Path tmpPath = new Path(getTmpDir(), REGIONINFO_FILE);
+    
+    // if datanode crashes or if the RS goes down just before the close is called while trying to
+    // close the created regioninfo file in the .tmp directory then on next
+    // creation we will be getting AlreadyCreatedException.
+    // Hence delete and create the file if exists.
+    if (FSUtils.isExists(fs, tmpPath)) {
+      FSUtils.delete(fs, tmpPath, true);
+    }
+    
     FSDataOutputStream out = FSUtils.create(fs, tmpPath, perms);
 
     try {

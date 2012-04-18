@@ -1016,4 +1016,30 @@ public abstract class FSUtils {
     if (status == null || status.length < 1) return null;
     return status;
   }
+  
+  /**
+   * Calls fs.delete() and returns the value returned by the fs.delete()
+   * 
+   * @param fs
+   * @param path
+   * @param recursive
+   * @return
+   * @throws IOException
+   */
+  public static boolean delete(final FileSystem fs, final Path path, final boolean recursive)
+      throws IOException {
+    return fs.delete(path, recursive);
+  }
+
+  /**
+   * Calls fs.exists(). Checks if the specified path exists
+   * 
+   * @param fs
+   * @param path
+   * @return
+   * @throws IOException
+   */
+  public static boolean isExists(final FileSystem fs, final Path path) throws IOException {
+    return fs.exists(path);
+  }
 }
