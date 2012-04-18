@@ -40,6 +40,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
+import com.google.common.base.Preconditions;
+
 /**
  * An HColumnDescriptor contains information about a column family such as the
  * number of versions, compression settings, etc.
@@ -379,12 +381,13 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @throws IllegalArgumentException If not null and not a legitimate family
    * name: i.e. 'printable' and ends in a ':' (Null passes are allowed because
    * <code>b</code> can be null when deserializing).  Cannot start with a '.'
-   * either.
+   * either. Also Family can not be an empty value.
    */
   public static byte [] isLegalFamilyName(final byte [] b) {
     if (b == null) {
       return b;
     }
+    Preconditions.checkArgument(b.length != 0, "Family name can not be empty");
     if (b[0] == '.') {
       throw new IllegalArgumentException("Family names cannot start with a " +
         "period: " + Bytes.toString(b));
