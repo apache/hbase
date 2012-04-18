@@ -142,7 +142,9 @@ public class TestHLog  {
     // Run the HPE tool with three threads writing 3000 edits each concurrently.
     // When done, verify that all edits were written and that the order in the
     // WALs is of ascending edit sequence ids.
-    HLogPerformanceEvaluation.main(new String [] {"-threads", "3", "-verify", "-iterations", "3000"});
+    int errCode =
+      HLogPerformanceEvaluation.innerMain(new String [] {"-threads", "3", "-verify", "-iterations", "3000"});
+    assertEquals(0, errCode);
   }
 
   /**
