@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.0 - 4/13/2012
+Release 0.94.0 - 4/18/2012
 Sub-task
 
     [HBASE-4343] - Get the TestAcidGuarantee unit test to fail consistently
@@ -35,6 +35,7 @@ Sub-task
     [HBASE-5541] - Avoid holding the rowlock during HLog sync in HRegion.mutateRowWithLocks
     [HBASE-5638] - Backport to 0.90 and 0.92 - NPE reading ZK config in HBase
     [HBASE-5641] - decayingSampleTick1 prevents HBase from shutting down.
+    [HBASE-5793] - TestHBaseFsck#TestNoHdfsTable test hangs after client retries increased
 
 Bug
 
@@ -166,6 +167,7 @@ Bug
     [HBASE-5531] - Maven hadoop profile (version 23) needs to be updated with latest 23 snapshot
     [HBASE-5535] - Make the functions in task monitor synchronized
     [HBASE-5537] - MXBean shouldn't have a dependence on InterfaceStability until 0.96
+    [HBASE-5545] - region can't be opened for a long time. Because the creating File failed.
     [HBASE-5552] - Clean up our jmx view; its a bit of a mess
     [HBASE-5562] - test-patch.sh reports a javadoc warning when there are no new javadoc warnings
     [HBASE-5563] - HRegionInfo#compareTo should compare regionId as well
@@ -202,6 +204,10 @@ Bug
     [HBASE-5736] - ThriftServerRunner.HbaseHandler.mutateRow() does not use ByteBuffer correctly
     [HBASE-5743] - Support GIT patches
     [HBASE-5773] - HtablePool constructor not reading config files in certain cases
+    [HBASE-5780] - Fix race in HBase regionserver startup vs ZK SASL authentication
+    [HBASE-5781] - Zookeeper session got closed while trying to assign the region to RS using hbck -fix
+    [HBASE-5782] - Edits can be appended out of seqid order since HBASE-4487
+    [HBASE-5795] - HServerLoad$RegionLoad breaks 0.92<->0.94 compatibility
 
 Improvement
 
@@ -344,6 +350,7 @@ Improvement
     [HBASE-5748] - Enable lib directory in jar file for coprocessor
     [HBASE-5770] - Add a clock skew warning threshold
     [HBASE-5775] - ZKUtil doesn't handle deleteRecurisively cleanly
+    [HBASE-5823] - Hbck should be able to print help
 
 New Feature
 
@@ -380,6 +387,7 @@ Task
     [HBASE-5084] - Allow different HTable instances to share one ExecutorService
     [HBASE-5111] - Upgrade zookeeper to 3.4.2 release
     [HBASE-5173] - Commit hbase-4480 findHangingTest.sh script under dev-support
+    [HBASE-5256] - Use WritableUtils.readVInt() in RegionLoad.readFields()
     [HBASE-5264] - Add 0.92.0 upgrade guide
     [HBASE-5294] - Make sure javadoc is included in tarball bundle when we release
     [HBASE-5400] - Some tests does not have annotations for (Small|Medium|Large)Tests
@@ -401,6 +409,7 @@ Test
     [HBASE-5150] - Failure in a thread may not fail a test, clean up log splitting test
     [HBASE-5223] - TestMetaReaderEditor is missing call to CatalogTracker.stop()
     [HBASE-5455] - Add test to avoid unintentional reordering of items in HbaseObjectWritable
+    [HBASE-5792] - HLog Performance Evaluation Tool
 
 
 Release 0.92.1 - Unreleased
