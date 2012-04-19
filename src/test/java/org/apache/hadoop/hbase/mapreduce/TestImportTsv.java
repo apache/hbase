@@ -204,11 +204,13 @@ public class TestImportTsv {
       final byte[] TAB = Bytes.toBytes(tableName);
       final byte[] QA = Bytes.toBytes("A");
       final byte[] QB = Bytes.toBytes("B");
-
-      HTableDescriptor desc = new HTableDescriptor(TAB);
-      desc.addFamily(new HColumnDescriptor(FAM));
-      new HBaseAdmin(conf).createTable(desc);
-
+      if (conf.get(ImportTsv.BULK_OUTPUT_CONF_KEY) == null) {
+        HTableDescriptor desc = new HTableDescriptor(TAB);
+        desc.addFamily(new HColumnDescriptor(FAM));
+        new HBaseAdmin(conf).createTable(desc);
+      } else { // set the hbaseAdmin as we are not going through main()
+        ImportTsv.createHbaseAdmin(conf);
+      }
       Job job = ImportTsv.createSubmittableJob(conf, args);
       job.waitForCompletion(false);
       assertTrue(job.isSuccessful());
@@ -255,6 +257,21 @@ public class TestImportTsv {
     }
   }
   
+  @Test
+  public void testBulkOutputWithoutAnExistingTable() throws Exception {
+    String TABLE_NAME = "TestTable";
+    String FAMILY = "FAM";
+    String INPUT_FILE = "InputFile2.esv";
+
+    // Prepare the arguments required for the test.
+    String[] args = new String[] {
+        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B",
+        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
+        "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=output", TABLE_NAME,
+        INPUT_FILE };
+    doMROnTableTest(INPUT_FILE, FAMILY, TABLE_NAME, args, 3);
+  }
+
   public static String toU8Str(byte[] bytes) throws UnsupportedEncodingException {
     return new String(bytes, HConstants.UTF8_ENCODING);
   }
