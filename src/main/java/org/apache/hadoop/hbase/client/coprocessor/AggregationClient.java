@@ -94,7 +94,7 @@ public class AggregationClient {
 
       @Override
       public synchronized void update(byte[] region, byte[] row, R result) {
-        max = ci.compare(max, result) < 0 ? result : max;
+        max = (max == null || (result != null && ci.compare(max, result) < 0)) ? result : max;
       }
     }
     MaxCallBack aMaxCallBack = new MaxCallBack();
@@ -144,7 +144,7 @@ public class AggregationClient {
 
       @Override
       public synchronized void update(byte[] region, byte[] row, R result) {
-        min = (min == null || ci.compare(result, min) < 0) ? result : min;
+        min = (min == null || (result != null && ci.compare(result, min) < 0)) ? result : min;
       }
     }
     HTable table = new HTable(conf, tableName);
