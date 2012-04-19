@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 
 /**
  * Handles everything on master-side related to master election.
@@ -118,7 +119,8 @@ class ActiveMasterManager extends ZooKeeperListener {
    * master was running or if some other problem (zookeeper, stop flag has been
    * set on this Master)
    */
-  boolean blockUntilBecomingActiveMaster() {
+  boolean blockUntilBecomingActiveMaster(
+      ClusterStatusTracker clusterStatusTracker) {
     boolean cleanSetOfActiveMaster = true;
     // Try to become the active master, watch if there is another master
     try {
@@ -158,11 +160,14 @@ class ActiveMasterManager extends ZooKeeperListener {
           LOG.debug("Interrupted waiting for master to die", e);
         }
       }
+      if (!clusterStatusTracker.isClusterUp()) {
+        this.master.stop("Cluster went down before this master became active");
+      }
       if (this.master.isStopped()) {
         return cleanSetOfActiveMaster;
       }
       // Try to become active master again now that there is no active master
-      blockUntilBecomingActiveMaster();
+      blockUntilBecomingActiveMaster(clusterStatusTracker);
     }
     return cleanSetOfActiveMaster;
   }

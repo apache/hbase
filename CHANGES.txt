@@ -20,6 +20,7 @@ Release 0.90.7 - Unreleased
                (Ioan Eugen Stan)
    HBASE-5781  Zookeeper session got closed while trying to assign the region to RS using hbck -fix
    HBASE-5793  TestHBaseFsck#TestNoHdfsTable test hangs after client retries increased
+   HBASE-5213  "hbase master stop" does not bring down backup masters (Gregory Chanan)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
