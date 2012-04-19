@@ -193,8 +193,8 @@ public class AssignmentManager extends ZooKeeperListener {
    * @throws IOException 
    */
   public AssignmentManager(Server master, ServerManager serverManager,
-      CatalogTracker catalogTracker, final ExecutorService service)
-  throws KeeperException, IOException {
+      CatalogTracker catalogTracker, final LoadBalancer balancer,
+      final ExecutorService service) throws KeeperException, IOException {
     super(master.getZooKeeper());
     this.master = master;
     this.serverManager = serverManager;
@@ -212,7 +212,7 @@ public class AssignmentManager extends ZooKeeperListener {
     this.zkTable = new ZKTable(this.master.getZooKeeper());
     this.maximumAssignmentAttempts =
       this.master.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10);
-    this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
+    this.balancer = balancer;
     this.threadPoolExecutorService = Executors.newCachedThreadPool();
   }
 
@@ -1807,8 +1807,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
     if (servers.isEmpty()) return null;
 
-    RegionPlan randomPlan = new RegionPlan(state.getRegion(), null,
-      balancer.randomAssignment(servers));
+    RegionPlan randomPlan = null;
     boolean newPlan = false;
     RegionPlan existingPlan = null;
 
@@ -1826,6 +1825,8 @@ public class AssignmentManager extends ZooKeeperListener {
           || existingPlan.getDestination() == null
           || drainingServers.contains(existingPlan.getDestination())) {
         newPlan = true;
+        randomPlan = new RegionPlan(state.getRegion(), null, balancer
+            .randomAssignment(servers));
         this.regionPlans.put(encodedName, randomPlan);
       }
     }

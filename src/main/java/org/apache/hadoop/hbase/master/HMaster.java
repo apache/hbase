@@ -412,9 +412,9 @@ Server {
         this, conf.getInt("hbase.master.catalog.timeout", Integer.MAX_VALUE));
     this.catalogTracker.start();
 
-    this.assignmentManager = new AssignmentManager(this, serverManager,
-        this.catalogTracker, this.executorService);
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
+    this.assignmentManager = new AssignmentManager(this, serverManager,
+        this.catalogTracker, this.balancer, this.executorService);
     zooKeeper.registerListenerFirst(assignmentManager);
 
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
