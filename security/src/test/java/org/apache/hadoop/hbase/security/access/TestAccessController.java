@@ -202,7 +202,7 @@ public class TestAccessController {
 
   @Test
   public void testTableModify() throws Exception {
-    PrivilegedExceptionAction disableTable = new PrivilegedExceptionAction() {
+    PrivilegedExceptionAction modifyTable = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
         HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
@@ -213,18 +213,18 @@ public class TestAccessController {
     };
 
     // all others should be denied
-    verifyDenied(USER_OWNER, disableTable);
-    verifyDenied(USER_RW, disableTable);
-    verifyDenied(USER_RO, disableTable);
-    verifyDenied(USER_NONE, disableTable);
+    verifyDenied(USER_OWNER, modifyTable);
+    verifyDenied(USER_RW, modifyTable);
+    verifyDenied(USER_RO, modifyTable);
+    verifyDenied(USER_NONE, modifyTable);
 
     // verify that superuser can create tables
-    verifyAllowed(SUPERUSER, disableTable);
+    verifyAllowed(SUPERUSER, modifyTable);
   }
 
   @Test
   public void testTableDelete() throws Exception {
-    PrivilegedExceptionAction disableTable = new PrivilegedExceptionAction() {
+    PrivilegedExceptionAction deleteTable = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preDeleteTable(ObserverContext.createAndPrepare(CP_ENV, null), TEST_TABLE);
         return null;
@@ -232,13 +232,13 @@ public class TestAccessController {
     };
 
     // all others should be denied
-    verifyDenied(USER_OWNER, disableTable);
-    verifyDenied(USER_RW, disableTable);
-    verifyDenied(USER_RO, disableTable);
-    verifyDenied(USER_NONE, disableTable);
+    verifyDenied(USER_OWNER, deleteTable);
+    verifyDenied(USER_RW, deleteTable);
+    verifyDenied(USER_RO, deleteTable);
+    verifyDenied(USER_NONE, deleteTable);
 
     // verify that superuser can create tables
-    verifyAllowed(SUPERUSER, disableTable);
+    verifyAllowed(SUPERUSER, deleteTable);
   }
 
   @Test

@@ -42,6 +42,7 @@ Release 0.92.2 - Unreleased
    HBASE-5793  TestHBaseFsck#TestNoHdfsTable test hangs after client retries increased
    HBASE-5780  Fix race in HBase regionserver startup vs ZK SASL authentication (Shaneal Manek)
    HBASE-5823  HBASE-5823 Hbck should be able to print help (Enis Soztutar)
+   HBASE-5787  Table owner can't disable/delete its own table (Matteo)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
