@@ -44,6 +44,7 @@ Release 0.92.2 - Unreleased
    HBASE-5823  HBASE-5823 Hbck should be able to print help (Enis Soztutar)
    HBASE-5787  Table owner can't disable/delete its own table (Matteo)
    HBASE-5821  Incorrect handling of null value in Coprocessor aggregation function min() (Maryann Xue)
+   HBASE-5833  0.92 build has been failing pretty consistently on TestMasterFailover....
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)

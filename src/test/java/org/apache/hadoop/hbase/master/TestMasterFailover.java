@@ -79,8 +79,6 @@ public class TestMasterFailover {
 
     // Create config to use for this cluster
     Configuration conf = HBaseConfiguration.create();
-    conf.setInt("hbase.master.wait.on.regionservers.mintostart", 3);
-    conf.setInt("hbase.master.wait.on.regionservers.maxtostart", 3);
 
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
@@ -752,6 +750,8 @@ public class TestMasterFailover {
       master.assignRegion(hri);
     }
 
+    assertTrue(" Table must be enabled.", master.getAssignmentManager()
+        .getZKTable().isEnabledTable("enabledTable"));
     // we also need regions assigned out on the dead server
     List<HRegionInfo> enabledAndOnDeadRegions = new ArrayList<HRegionInfo>();
     enabledAndOnDeadRegions.add(enabledRegions.remove(0));
@@ -796,6 +796,9 @@ public class TestMasterFailover {
     // Disable the disabledTable in ZK
     ZKTable zktable = new ZKTable(zkw);
     zktable.setDisabledTable(Bytes.toString(disabledTable));
+
+    assertTrue(" The enabled table should be identified on master fail over.",
+        zktable.isEnabledTable("enabledTable"));
 
     /*
      * ZK = CLOSING
@@ -923,7 +926,7 @@ public class TestMasterFailover {
       Thread.sleep(100);
     }
     LOG.debug("\n\nRegion of disabled table was open at steady-state on dead RS"
-        + "\n" + region + "\n\n");
+      + "\n" + region + "\n\n");
 
     /*
      * DONE MOCKING
