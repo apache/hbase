@@ -240,9 +240,10 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.1
     <title>Tests</title>
 
 <para>HBase tests are divided into two groups: <xref linkend="hbase.unittests"/> and
-<xref linkend="integration.tests" />.
-Unit tests are run by the Apache Continuous Integration server and by developers
-when they are verifying a fix does not cause breakage elsewhere in the code base.
+<xref linkend="integration.tests" /> (As of this writing, Integration tests are little
+developed).
+Unit tests are run by the Apache Continuous Integration server, Jenkins at
+builds.apache.org, and by developers when they are verifying a fix does not cause breakage elsewhere in the code base.
 Integration tests are generally long-running tests that are invoked out-of-bound of
 the CI server when you want to do more intensive testing beyond the unit test set.
 Integration tests, for example, are run proving a release candidate or a production
@@ -265,24 +266,42 @@ public class TestHRegionInfo {
   public void testCreateHRegionInfoName() throws Exception {
     // ...
   }
+...
+  @org.junit.Rule
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
+    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }</programlisting>
-The above example shows how to mark a test as belonging to the small category.
+The above example shows how to mark a test as belonging to the small category.  The <code>@org.junit.Rule</code>
+lines on the end are also necessary. Add them to each new unit test file.  They are needed by the categorization process.
+HBase uses a patched maven surefire plugin and maven profiles to implement its unit test characterizations.
 </para>
+
+<section xml:id="hbase.unittests.small">
+<title><indexterm><primary>SmallTests</primary></indexterm></title>
 <para>
 <emphasis>Small</emphasis> tests are executed in a shared JVM. We put in this category all the tests that can
-be executed quickly in a shared JVM.  The maximum execution time for a test is 15 seconds,
-and they do not use a cluster.  <emphasis>Medium</emphasis> tests represent tests that must be executed
+be executed quickly in a shared JVM.  The maximum execution time for a small test is 15 seconds,
+and small tests should not use a (mini)cluster.</para>
+</section>
+
+<section xml:id="hbase.unittests.medium">
+<title><indexterm><primary>MediumTests</primary></indexterm></title>
+<para><emphasis>Medium</emphasis> tests represent tests that must be executed
 before proposing a patch. They are designed to run in less than 30 minutes altogether,
 and are quite stable in their results. They are designed to last less than 50 seconds
 individually. They can use a cluster, and each of them is executed in a separate JVM.
-<emphasis>Large</emphasis> tests are everything else. They are typically integration-like
+</para>
+</section>
+
+<section xml:id="hbase.unittests.large">
+<title><indexterm><primary>LargeTests</primary></indexterm></title>
+<para><emphasis>Large</emphasis> tests are everything else. They are typically integration-like
 tests (yes, some large tests should be moved out to be HBase <xref linkend="integration.tests" />),
 regression tests for specific bugs, timeout tests, performance tests.
 They are executed before a commit on the pre-integration machines. They can be run on
 the developer machine as well.
 </para>
-<para>HBase uses a patched maven surefire plugin and maven profiles to implement its
-unit test characterizations.</para>
+</section>
 
 <section xml:id="hbase.unittests.cmds">
 <title>Running tests</title>
@@ -291,8 +310,9 @@ unit test characterizations.</para>
 <section xml:id="hbase.unittests.cmds.test">
 <title>Default: small and medium category tests
 </title>
-<para>Running <programlisting>mvn test</programlisting> will execute all small tests in a single JVM and medium tests in a separate JVM for
-each test instance. Medium tests are NOT executed if there is an error in a small test.
+<para>Running <programlisting>mvn test</programlisting> will execute all small tests in a single JVM
+(no fork) and then medium tests in a separate JVM for each test instance.
+Medium tests are NOT executed if there is an error in a small test.
 Large tests are NOT executed.  There is one report for small tests, and one report for
 medium tests if they are executed. To run small and medium tests with the security
 profile enabled, do <programlisting>mvn test -P security</programlisting>
@@ -323,9 +343,10 @@ To run a single test with the security profile enabled:
 
 <para>
 The <code>-P localTests</code>  will remove the JUnit category effect (without this specific profile,
-the profiles are taken into account).  It will actually use the official release of surefire
+the categories are taken into account).  It will actually use the official release of surefire
 and the old connector (The HBase build uses a patched version of the maven surefire plugin).
-junit tests are executed in separated JVM.  You will see a new message at the end of the
+Each junit tests is executed in a separate JVM (A fork per test class).  There is no
+parallelization when <code>localTests</code> profile is set.  You will see a new message at the end of the
 report: "[INFO] Tests are skipped". It's harmless.
 </para>
 </section>
@@ -343,7 +364,9 @@ report: "[INFO] Tests are skipped". It's harmless.
 <section xml:id="hbase.unittests.cmds.test.hbasetests">
 <title><command>hbasetests.sh</command></title>
 <para>It's also possible to use the script <command>hbasetests.sh</command>. This script runs the medium and
-large tests in parallel with two maven instances, and provide a single report.
+large tests in parallel with two maven instances, and provides a single report.  This script does not use
+the hbase version of surefire so no parallelization is being done other than the two maven instances the
+script sets up.
 It must be executed from the directory which contains the <filename>pom.xml</filename>.</para>
 <para>For example running
 <programlisting>./dev-support/hbasetests.sh</programlisting> will execute small and medium tests.
