@@ -870,4 +870,13 @@
     </description>
   </property>
 
+  <property>
+    <name>hbase.metrics.exposeOperationTimes</name>
+    <value>true</value>
+    <description>Whether to report metrics about time taken performing an
+      operation on the region server.  Get, Put, Delete, Increment, and Append can all
+      have their times exposed through Hadoop metrics per CF and per region.
+	</description>
+  </property>
+
 </configuration>

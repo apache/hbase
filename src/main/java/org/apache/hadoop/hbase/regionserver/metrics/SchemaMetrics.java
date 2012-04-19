@@ -169,9 +169,10 @@ public class SchemaMetrics {
    */
   public static final String UNKNOWN = "__unknown";
 
-  private static final String TABLE_PREFIX = "tbl.";
+  public static final String TABLE_PREFIX = "tbl.";
   public static final String CF_PREFIX = "cf.";
   public static final String BLOCK_TYPE_PREFIX = "bt.";
+  public static final String REGION_PREFIX = "region.";
 
   public static final String CF_UNKNOWN_PREFIX = CF_PREFIX + UNKNOWN + ".";
   public static final String CF_BAD_FAMILY_PREFIX = CF_PREFIX + "__badfamily.";
@@ -621,6 +622,23 @@ public class SchemaMetrics {
     }
 
     return SchemaMetrics.generateSchemaMetricsPrefix(tableName, sb.toString());
+  }
+  
+  
+  /**
+   * Get the prefix for metrics generated about a single region.
+   * @param tableName the table name or {@link #TOTAL_KEY} for all tables
+   * @param regionName regionName
+   * @return the prefix for this table/region combination.
+   */
+  static String generateRegionMetricsPrefix(String tableName, String regionName) {
+    tableName = getEffectiveTableName(tableName);
+    String schemaMetricPrefix =
+        tableName.equals(TOTAL_KEY) ? "" : TABLE_PREFIX + tableName + ".";
+    schemaMetricPrefix +=
+        regionName.equals(TOTAL_KEY) ? "" : REGION_PREFIX + regionName + ".";
+    
+    return schemaMetricPrefix;
   }
 
   /**
