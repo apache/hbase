@@ -505,7 +505,11 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> c,
       byte[] tableName) throws IOException {
-    requirePermission(Permission.Action.CREATE);
+    if (isActiveUserTableOwner(c.getEnvironment(), tableName)) {
+      requirePermission(Permission.Action.CREATE);
+    } else {
+      requirePermission(Permission.Action.ADMIN);
+    }
   }
   @Override
   public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> c,
@@ -555,8 +559,11 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preEnableTable(ObserverContext<MasterCoprocessorEnvironment> c,
       byte[] tableName) throws IOException {
-    /* TODO: Allow for users with global CREATE permission and the table owner */
-    requirePermission(Permission.Action.ADMIN);
+    if (isActiveUserTableOwner(c.getEnvironment(), tableName)) {
+      requirePermission(Permission.Action.CREATE);
+    } else {
+      requirePermission(Permission.Action.ADMIN);
+    }
   }
   @Override
   public void postEnableTable(ObserverContext<MasterCoprocessorEnvironment> c,
@@ -565,8 +572,11 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> c,
       byte[] tableName) throws IOException {
-    /* TODO: Allow for users with global CREATE permission and the table owner */
-    requirePermission(Permission.Action.ADMIN);
+    if (isActiveUserTableOwner(c.getEnvironment(), tableName)) {
+      requirePermission(Permission.Action.CREATE);
+    } else {
+      requirePermission(Permission.Action.ADMIN);
+    }
   }
   @Override
   public void postDisableTable(ObserverContext<MasterCoprocessorEnvironment> c,
@@ -1026,5 +1036,17 @@ public class AccessController extends BaseRegionObserver
       }
     }
     return tableName;
+  }
+
+  private String getTableOwner(MasterCoprocessorEnvironment e, 
+      byte[] tableName) throws IOException {
+    HTableDescriptor htd = e.getTable(tableName).getTableDescriptor();
+    return htd.getOwnerString();
+  }
+
+  private boolean isActiveUserTableOwner(MasterCoprocessorEnvironment e,
+      byte[] tableName) throws IOException {
+    String activeUser = getActiveUser().getShortName();
+    return activeUser.equals(getTableOwner(e, tableName));
   }
 }
