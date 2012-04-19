@@ -316,9 +316,11 @@ public class TestAssignmentManager {
 
     // We need a mocked catalog tracker.
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server
+        .getConfiguration());
     // Create an AM.
-    AssignmentManager am =
-      new AssignmentManager(this.server, this.serverManager, ct, executor, null);
+    AssignmentManager am = new AssignmentManager(this.server,
+        this.serverManager, ct, balancer, executor, null);
     try {
       // Make sure our new AM gets callbacks; once registered, can't unregister.
       // Thats ok because we make a new zk watcher for each test.
@@ -382,9 +384,11 @@ public class TestAssignmentManager {
 
     // We need a mocked catalog tracker.
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server
+        .getConfiguration());
     // Create an AM.
-    AssignmentManager am =
-      new AssignmentManager(this.server, this.serverManager, ct, executor, null);
+    AssignmentManager am = new AssignmentManager(this.server,
+        this.serverManager, ct, balancer, executor, null);
     try {
       // Make sure our new AM gets callbacks; once registered, can't unregister.
       // Thats ok because we make a new zk watcher for each test.
@@ -457,9 +461,11 @@ public class TestAssignmentManager {
     Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_A, hri, -1)).thenReturn(true);
     // Need a mocked catalog tracker.
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server
+        .getConfiguration());
     // Create an AM.
-    AssignmentManager am =
-      new AssignmentManager(this.server, this.serverManager, ct, null, null);
+    AssignmentManager am = new AssignmentManager(this.server,
+        this.serverManager, ct, balancer, null, null);
     try {
       // First make sure my mock up basically works.  Unassign a region.
       unassign(am, SERVERNAME_A, hri);
@@ -607,8 +613,10 @@ public class TestAssignmentManager {
     Mockito.when(ct.getConnection()).thenReturn(connection);
     // Create and startup an executor. Used by AM handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("mockedAMExecutor");
-    AssignmentManagerWithExtrasForTesting am =
-      new AssignmentManagerWithExtrasForTesting(server, manager, ct, executor);
+    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server
+        .getConfiguration());
+    AssignmentManagerWithExtrasForTesting am = new AssignmentManagerWithExtrasForTesting(
+        server, manager, ct, balancer, executor);
     return am;
   }
 
@@ -624,10 +632,10 @@ public class TestAssignmentManager {
     AtomicBoolean gate = new AtomicBoolean(true);
 
     public AssignmentManagerWithExtrasForTesting(final Server master,
-        final ServerManager serverManager,
-        final CatalogTracker catalogTracker, final ExecutorService service)
+        final ServerManager serverManager, final CatalogTracker catalogTracker,
+        final LoadBalancer balancer, final ExecutorService service)
     throws KeeperException, IOException {
-      super(master, serverManager, catalogTracker, service, null);
+      super(master, serverManager, catalogTracker, balancer, service, null);
       this.es = service;
       this.ct = catalogTracker;
     }

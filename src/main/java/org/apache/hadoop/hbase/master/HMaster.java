@@ -426,9 +426,9 @@ Server {
         this, conf.getInt("hbase.master.catalog.timeout", Integer.MAX_VALUE));
     this.catalogTracker.start();
 
-    this.assignmentManager = new AssignmentManager(this, serverManager,
-        this.catalogTracker, this.executorService, this.metrics);
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
+    this.assignmentManager = new AssignmentManager(this, serverManager,
+        this.catalogTracker, this.balancer, this.executorService, this.metrics);
     zooKeeper.registerListenerFirst(assignmentManager);
 
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
@@ -585,12 +585,12 @@ Server {
     org.apache.hadoop.hbase.catalog.MetaMigrationRemovingHTD.
       updateMetaWithNewHRI(this);
 
+    this.balancer.setMasterServices(this);
     // Fixup assignment manager status
     status.setStatus("Starting assignment manager");
     this.assignmentManager.joinCluster(onlineServers);
 
     this.balancer.setClusterStatus(getClusterStatus());
-    this.balancer.setMasterServices(this);
 
     // Fixing up missing daughters if any
     status.setStatus("Fixing up missing daughters");
