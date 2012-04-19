@@ -72,7 +72,7 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
         hasMoreRows = scanner.next(results);
         for (KeyValue kv : results) {
           temp = ci.getValue(colFamily, qualifier, kv);
-          max = (max == null || ci.compare(temp, max) > 0) ? temp : max;
+          max = (max == null || (temp != null && ci.compare(temp, max) > 0)) ? temp : max;
         }
         results.clear();
       } while (hasMoreRows);
@@ -101,7 +101,7 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
         hasMoreRows = scanner.next(results);
         for (KeyValue kv : results) {
           temp = ci.getValue(colFamily, qualifier, kv);
-          min = (min == null || ci.compare(temp, min) < 0) ? temp : min;
+          min = (min == null || (temp != null && ci.compare(temp, min) < 0)) ? temp : min;
         }
         results.clear();
       } while (hasMoreRows);
