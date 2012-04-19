@@ -44,7 +44,6 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -4634,7 +4633,9 @@ public class HRegion implements HeapSize { // , Writable{
    * @param writeToWAL
    * @return The new value.
    * @throws IOException
+   * @deprecated use {@link #increment(Increment, Integer, boolean)}
    */
+  @Deprecated
   public long incrementColumnValue(byte [] row, byte [] family,
       byte [] qualifier, long amount, boolean writeToWAL)
   throws IOException {
