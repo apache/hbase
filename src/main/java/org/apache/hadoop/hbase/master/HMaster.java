@@ -1174,6 +1174,11 @@ Server {
       this.assignmentManager.unassign(hri);
     } else {
       dest = new ServerName(Bytes.toString(destServerName));
+      if (dest.equals(p.getSecond())) {
+        LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
+            + " because region already assigned to the same server " + dest +".");
+        return;
+      }
       try {
         if (this.cpHost != null) {
           if (this.cpHost.preMove(p.getFirst(), p.getSecond(), dest)) {
