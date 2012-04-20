@@ -852,7 +852,8 @@ public class HTable implements HTableInterface {
         writeBuffer.add(put);
         currentWriteBufferSize += put.heapSize();
 
-        // we need to periodically see if the writebuffer is full instead of waiting until the end of the List
+        // we need to periodically see if the writebuffer is full
+        // instead of waiting until the end of the List
         n++;
         if (n % DOPUT_WB_CHECK == 0 && currentWriteBufferSize > writeBufferSize) {
           flushCommits();
