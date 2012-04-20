@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -111,12 +112,12 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
       Put put = new Put(ROW);
       put.add(TEST_FAMILY, ROW, ROW);
       table.put(put);
-    } catch (Throwable t) {
+    } catch (RetriesExhaustedWithDetailsException e) {
       // below, could call instead :
       // startsWith("Failed 1 action: DoNotRetryIOException.")
       // But that might be too brittle if client-side
       // DoNotRetryIOException-handler changes its message.
-      assertTrue(t instanceof DoNotRetryIOException);
+      assertTrue(e.getMessage().contains("DoNotRetryIOException"));
       threwDNRE = true;
     } finally {
       assertTrue(threwDNRE);

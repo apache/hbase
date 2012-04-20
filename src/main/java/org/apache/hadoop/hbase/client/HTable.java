@@ -829,39 +829,20 @@ public class HTable implements HTableInterface {
   }
 
   private void doPut(final List<Put> puts) throws IOException {
-    if (autoFlush && puts.size() == 1) {
-      final Put put = puts.get(0);
+    int n = 0;
+    for (Put put : puts) {
       validatePut(put);
-      new ServerCallable<Void>(connection, tableName, put.getRow(),
-          operationTimeout) {
-        public Void call() throws IOException {
-          try {
-            MutateRequest request = RequestConverter.buildMutateRequest(
-              location.getRegionInfo().getRegionName(), put);
-            server.mutate(null, request);
-          } catch (ServiceException se) {
-            throw ProtobufUtil.getRemoteException(se);
-          }
-          return null;
-        }
-      }.withRetries();
-    } else {
-      int n = 0;
-      for (Put put : puts) {
-        validatePut(put);
-        writeBuffer.add(put);
-        currentWriteBufferSize += put.heapSize();
-
-        // we need to periodically see if the writebuffer is full
-        // instead of waiting until the end of the List
-        n++;
-        if (n % DOPUT_WB_CHECK == 0 && currentWriteBufferSize > writeBufferSize) {
-          flushCommits();
-        }
-      }
-      if (autoFlush || currentWriteBufferSize > writeBufferSize) {
+      writeBuffer.add(put);
+      currentWriteBufferSize += put.heapSize();
+     
+      // we need to periodically see if the writebuffer is full instead of waiting until the end of the List
+      n++;
+      if (n % DOPUT_WB_CHECK == 0 && currentWriteBufferSize > writeBufferSize) {
         flushCommits();
       }
+    }
+    if (autoFlush || currentWriteBufferSize > writeBufferSize) {
+      flushCommits();
     }
   }
 

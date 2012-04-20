@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.constraint;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,6 +32,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -114,8 +118,13 @@ public class TestConstraint {
     try {
       table.put(put);
       fail("This put should not have suceeded - AllFailConstraint was not run!");
-    } catch (Throwable t) {
-      assertTrue(t instanceof ConstraintException);
+    } catch (RetriesExhaustedWithDetailsException e) {
+      List<Throwable> causes = e.getCauses();
+      assertEquals(
+          "More than one failure cause - should only be the failure constraint exception",
+          1, causes.size());
+      Throwable t = causes.get(0);
+      assertEquals(ConstraintException.class, t.getClass());
     }
     table.close();
   }
