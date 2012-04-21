@@ -212,8 +212,8 @@ public class AssignmentVerificationReport {
       }
     }
 
-    int dispersionScoreSummary = 0;
-    int dispersionNumSummary = 0;
+    float dispersionScoreSummary = 0;
+    float dispersionNumSummary = 0;
     // Calculate the secondary score for each primary region server
     for (Map.Entry<HServerAddress, Integer> entry :
       primaryRSToRegionCounterMap.entrySet()) {
