@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
@@ -52,10 +53,10 @@ public class ThriftUtilities {
     StoreFile.BloomType bt =
       BloomType.valueOf(in.bloomFilterType);
 
-    if (in.name == null || in.name.length <= 0) {
+    if (in.name == null || in.name.remaining() <= 0) {
       throw new IllegalArgument("column name is empty");
     }
-    byte [] parsedName = KeyValue.parseColumn(in.name)[0];
+    byte [] parsedName = KeyValue.parseColumn(Bytes.getBytes(in.name))[0];
     HColumnDescriptor col = new HColumnDescriptor(parsedName)
         .setMaxVersions(in.maxVersions)
         .setCompressionType(comp)
@@ -76,7 +77,7 @@ public class ThriftUtilities {
    */
   static public ColumnDescriptor colDescFromHbase(HColumnDescriptor in) {
     ColumnDescriptor col = new ColumnDescriptor();
-    col.name = Bytes.add(in.getName(), KeyValue.COLUMN_FAMILY_DELIM_ARRAY);
+    col.name = ByteBuffer.wrap(Bytes.add(in.getName(), KeyValue.COLUMN_FAMILY_DELIM_ARRAY));
     col.maxVersions = in.getMaxVersions();
     col.compression = in.getCompression().toString();
     col.inMemory = in.isInMemory();
@@ -96,7 +97,7 @@ public class ThriftUtilities {
   static public List<TCell> cellFromHBase(KeyValue in) {
     List<TCell> list = new ArrayList<TCell>(1);
     if (in != null) {
-      list.add(new TCell(in.getValue(), in.getTimestamp()));
+      list.add(new TCell(ByteBuffer.wrap(in.getValue()), in.getTimestamp()));
     }
     return list;
   }
@@ -112,7 +113,7 @@ public class ThriftUtilities {
     if (in != null) {
       list = new ArrayList<TCell>(in.length);
       for (int i = 0; i < in.length; i++) {
-        list.add(new TCell(in[i].getValue(), in[i].getTimestamp()));
+        list.add(new TCell(ByteBuffer.wrap(in[i].getValue()), in[i].getTimestamp()));
       }
     } else {
       list = new ArrayList<TCell>(0);
@@ -136,11 +137,12 @@ public class ThriftUtilities {
             continue;
         }
         TRowResult result = new TRowResult();
-        result.row = result_.getRow();
-        result.columns = new TreeMap<byte[], TCell>(Bytes.BYTES_COMPARATOR);
+        result.row = ByteBuffer.wrap(result_.getRow());
+        result.columns = new TreeMap<ByteBuffer, TCell>(Bytes.BYTE_BUFFER_COMPARATOR);
         for(KeyValue kv : result_.sorted()) {
-          result.columns.put(KeyValue.makeColumn(kv.getFamily(),
-              kv.getQualifier()), new TCell(kv.getValue(), kv.getTimestamp()));
+          result.columns.put(ByteBuffer.wrap(KeyValue.makeColumn(kv.getFamily(),
+              kv.getQualifier())), new TCell(ByteBuffer.wrap(kv.getValue()),
+                  kv.getTimestamp()));
         }
         results.add(result);
     }

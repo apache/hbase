@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -302,15 +304,21 @@ public final class HConstants {
    */
   public static final byte [] EMPTY_BYTE_ARRAY = new byte [0];
 
+  public static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.wrap(EMPTY_BYTE_ARRAY);
+
   /**
    * Used by scanners, etc when they want to start at the beginning of a region
    */
   public static final byte [] EMPTY_START_ROW = EMPTY_BYTE_ARRAY;
 
+  public static final ByteBuffer EMPTY_START_ROW_BUF = ByteBuffer.wrap(EMPTY_START_ROW);
+
   /**
    * Last row in a table.
    */
   public static final byte [] EMPTY_END_ROW = EMPTY_START_ROW;
+
+  public static final ByteBuffer EMPTY_END_ROW_BUF = ByteBuffer.wrap(EMPTY_END_ROW);
 
   /**
     * Used by scanners and others when they're trying to detect the end of a
@@ -490,6 +498,35 @@ public final class HConstants {
   public static final int VARIABLE_WAIT_TIME_MS = 40;
 
   public static final String LOAD_BALANCER_SLOP_KEY = "hbase.regions.slop";
+
+  // Thrift server configuration options
+
+  /** Configuration key prefix for the stand-alone thrift proxy */
+  public static final String THRIFT_PROXY_PREFIX = "hbase.thrift.";
+
+  /** Configuration key prefix for thrift server embedded into the region server */
+  public static final String RS_THRIFT_PREFIX = "hbase.regionserver.thrift.";
+
+  /** Default port for the stand-alone thrift proxy */
+  public static final int DEFAULT_THRIFT_PROXY_PORT = 9090;
+
+  /** Default port for the thrift server embedded into regionserver */
+  public static final int DEFAULT_RS_THRIFT_SERVER_PORT = 9091;
+
+  /** Configuration key suffix for thrift server type (e.g. thread pool, nonblocking, etc.) */
+  public static final String THRIFT_SERVER_TYPE_SUFFIX = "server.type";
+
+  /** Configuration key suffix for the IP address for thrift server to bind to */
+  public static final String THRIFT_BIND_SUFFIX = "ipaddress";
+
+  /** Configuration key suffix for whether to use compact Thrift transport */
+  public static final String THRIFT_COMPACT_SUFFIX = "compact";
+
+  /** Configuration key suffix for whether to use framed Thrift transport */
+  public static final String THRIFT_FRAMED_SUFFIX = "framed";
+
+  /** Configuration key suffix for Thrift server port */
+  public static final String THRIFT_PORT_SUFFIX = "port";
 
   private HConstants() {
     // Can't be instantiated with this ctor.

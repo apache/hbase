@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.thrift;
 
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -33,26 +32,29 @@ import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.thrift.TException;
 import org.apache.thrift.TProcessor;
-import org.apache.thrift.TProcessorFactory;
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.server.TServer;
 import org.apache.thrift.server.TThreadPoolServer;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
-import org.apache.thrift.transport.TTransportFactory;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * A thread pool server customized for HBase.
+ * A bounded thread pool server customized for HBase.
  */
 public class TBoundedThreadPoolServer extends TServer {
 
   private static final String QUEUE_FULL_MSG =
       "Queue is full, closing connection";
+
+  /**
+   * The "core size" of the thread pool. New threads are created on every
+   * connection until this many threads are created.
+   */
+  public static final String MIN_WORKER_THREADS_SUFFIX = "minWorkerThreads";
 
   /**
    * This default core pool size should be enough for many test scenarios. We
@@ -61,39 +63,66 @@ public class TBoundedThreadPoolServer extends TServer {
    */
   public static final int DEFAULT_MIN_WORKER_THREADS = 16;
 
+  /**
+   * The maximum size of the thread pool. When the pending request queue
+   * overflows, new threads are created until their number reaches this number.
+   * After that, the server starts dropping connections.
+   */
+  public static final String MAX_WORKER_THREADS_SUFFIX = "maxWorkerThreads";
+
   public static final int DEFAULT_MAX_WORKER_THREADS = 1000;
+
+  /**
+   * The maximum number of pending connections waiting in the queue. If there
+   * are no idle threads in the pool, the server queues requests. Only when
+   * the queue overflows, new threads are added, up to
+   * hbase.thrift.maxQueuedRequests threads.
+   */
+  public static final String MAX_QUEUED_REQUESTS_SUFFIX = "maxQueuedRequests";
 
   public static final int DEFAULT_MAX_QUEUED_REQUESTS = 1000;
 
-  public static final String MIN_WORKER_THREADS_CONF_KEY =
-      "hbase.thrift.minWorkerThreads";
+  /**
+   * Default amount of time in seconds to keep a thread alive. Worker threads
+   * are stopped after being idle for this long.
+   */
+  public static final String THREAD_KEEP_ALIVE_TIME_SEC_SUFFIX =
+      "hbase.thrift.threadKeepAliveTimeSec";
 
-  public static final String MAX_WORKER_THREADS_CONF_KEY =
-      "hbase.thrift.maxWorkerThreads";
-
-  public static final String MAX_QUEUED_REQUESTS_CONF_KEY =
-      "hbase.thrift.maxQueuedRequests";
-
-  private static final Log LOG = LogFactory.getLog(
-      TBoundedThreadPoolServer.class.getName());
+  private static final int DEFAULT_THREAD_KEEP_ALIVE_TIME_SEC = 60;
 
   /**
    * Time to wait after interrupting all worker threads. This is after a clean
    * shutdown has been attempted.
    */
-  public static final int SHUTDOWN_NOW_TIME_MS = 5000;
+  public static final int TIME_TO_WAIT_AFTER_SHUTDOWN_MS = 5000;
 
-  public static class Options extends TThreadPoolServer.Options {
-    public int maxQueuedRequests;
+  private static final Log LOG = LogFactory.getLog(
+      TBoundedThreadPoolServer.class.getName());
 
-    public Options(Configuration conf) {
-      super();
-      minWorkerThreads = conf.getInt(MIN_WORKER_THREADS_CONF_KEY,
+  private final CallQueue callQueue;
+
+  public static class Args extends TThreadPoolServer.Args {
+    int maxQueuedRequests;
+    int threadKeepAliveTimeSec;
+
+    public Args(TServerTransport transport, Configuration conf, String confKeyPrefix) {
+      super(transport);
+      minWorkerThreads = conf.getInt(confKeyPrefix + MIN_WORKER_THREADS_SUFFIX,
           DEFAULT_MIN_WORKER_THREADS);
-      maxWorkerThreads = conf.getInt(MAX_WORKER_THREADS_CONF_KEY,
+      maxWorkerThreads = conf.getInt(confKeyPrefix + MAX_WORKER_THREADS_SUFFIX,
           DEFAULT_MAX_WORKER_THREADS);
-      maxQueuedRequests = conf.getInt(MAX_QUEUED_REQUESTS_CONF_KEY,
+      maxQueuedRequests = conf.getInt(confKeyPrefix + MAX_QUEUED_REQUESTS_SUFFIX,
           DEFAULT_MAX_QUEUED_REQUESTS);
+      threadKeepAliveTimeSec = conf.getInt(confKeyPrefix + THREAD_KEEP_ALIVE_TIME_SEC_SUFFIX,
+          DEFAULT_THREAD_KEEP_ALIVE_TIME_SEC);
+    }
+
+    @Override
+    public String toString() {
+      return "min worker threads=" + minWorkerThreads
+          + ", max worker threads=" + maxWorkerThreads
+          + ", max queued requests=" + maxQueuedRequests;
     }
   }
 
@@ -103,30 +132,16 @@ public class TBoundedThreadPoolServer extends TServer {
   /** Flag for stopping the server */
   private volatile boolean stopped;
 
-  private Options serverOptions;
+  private Args serverOptions;
 
-  private final int KEEP_ALIVE_TIME_SEC = 60;
+  public TBoundedThreadPoolServer(Args options, ThriftMetrics metrics) {
+    super(options);
 
-  private final ThriftMetrics metrics;
-
-  public TBoundedThreadPoolServer(TProcessor processor,
-      TServerTransport serverTransport,
-      TTransportFactory transportFactory,
-      TProtocolFactory protocolFactory,
-      Options options,
-      ThriftMetrics metrics) {
-    super(new TProcessorFactory(processor), serverTransport, transportFactory,
-        transportFactory, protocolFactory, protocolFactory);
-
-    this.metrics = metrics;
-
-    BlockingQueue<Runnable> executorQueue;
     if (options.maxQueuedRequests > 0) {
-      executorQueue = new CallQueue(
+      this.callQueue = new CallQueue(
           new LinkedBlockingQueue<Call>(options.maxQueuedRequests), metrics);
     } else {
-      executorQueue = new CallQueue(
-          new SynchronousQueue<Call>(), metrics);
+      this.callQueue = new CallQueue(new SynchronousQueue<Call>(), metrics);
     }
 
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
@@ -134,8 +149,8 @@ public class TBoundedThreadPoolServer extends TServer {
     tfb.setNameFormat("thrift-worker-%d");
     executorService =
         new ThreadPoolExecutor(options.minWorkerThreads,
-            options.maxWorkerThreads, KEEP_ALIVE_TIME_SEC, TimeUnit.SECONDS,
-            executorQueue, tfb.build());
+            options.maxWorkerThreads, options.threadKeepAliveTimeSec,
+            TimeUnit.SECONDS, this.callQueue, tfb.build());
     serverOptions = options;
   }
 
@@ -147,19 +162,19 @@ public class TBoundedThreadPoolServer extends TServer {
       return;
     }
 
-    Runtime.getRuntime().addShutdownHook(new Thread(getClass().getSimpleName() + "-shutdown-hook") {
-      @Override
-      public void run() {
-        TBoundedThreadPoolServer.this.stop();
-      }
-    });
+    Runtime.getRuntime().addShutdownHook(
+        new Thread(getClass().getSimpleName() + "-shutdown-hook") {
+          @Override
+          public void run() {
+            TBoundedThreadPoolServer.this.stop();
+          }
+        });
 
     stopped = false;
     while (!stopped && !Thread.interrupted()) {
       TTransport client = null;
       try {
         client = serverTransport_.accept();
-        metrics.incNumConnections(1);
       } catch (TTransportException ttx) {
         if (!stopped) {
           LOG.warn("Transport error when accepting message", ttx);
@@ -181,7 +196,6 @@ public class TBoundedThreadPoolServer extends TServer {
         } else {
           LOG.warn(QUEUE_FULL_MSG, rex);
         }
-        metrics.incNumConnections(-1);
         client.close();
       }
     }
@@ -218,11 +232,11 @@ public class TBoundedThreadPoolServer extends TServer {
     }
 
     LOG.info("Interrupting all worker threads and waiting for "
-        + SHUTDOWN_NOW_TIME_MS + " ms longer");
+        + TIME_TO_WAIT_AFTER_SHUTDOWN_MS + " ms longer");
 
     // This will interrupt all the threads, even those running a task.
     executorService.shutdownNow();
-    Threads.sleepWithoutInterrupt(SHUTDOWN_NOW_TIME_MS);
+    Threads.sleepWithoutInterrupt(TIME_TO_WAIT_AFTER_SHUTDOWN_MS);
 
     // Preserve the interrupted status.
     if (interrupted) {
@@ -283,7 +297,6 @@ public class TBoundedThreadPoolServer extends TServer {
       if (outputTransport != null) {
         outputTransport.close();
       }
-      metrics.incNumConnections(-1);
     }
   }
 }

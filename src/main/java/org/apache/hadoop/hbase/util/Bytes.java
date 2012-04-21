@@ -124,6 +124,17 @@ public class Bytes {
   public static RawComparator<byte []> BYTES_RAWCOMPARATOR =
     new ByteArrayComparator();
 
+  public static final Comparator<ByteBuffer> BYTE_BUFFER_COMPARATOR =
+      new Comparator<ByteBuffer>() {
+        @Override
+        public int compare(ByteBuffer left, ByteBuffer right) {
+          int lpos = left.position();
+          int rpos = right.position();
+          return compareTo(left.array(), left.arrayOffset() + lpos, left.limit() - lpos,
+              right.array(), right.arrayOffset() + rpos, right.limit() - rpos);
+        }
+      };
+
   /**
    * Read byte-array written with a WritableableUtils.vint prefix.
    * @param in Input to read from.
@@ -314,6 +325,22 @@ public class Bytes {
     if (buf == null)
       return "null";
     return toStringBinary(buf.array(), buf.arrayOffset(), buf.limit());
+  }
+
+  /**
+   * Similar to {@link #toStringBinary(byte[])}, but converts the portion of the buffer from the
+   * current position to the limit to string.
+   *
+   * @param buf a byte buffer
+   * @return a string representation of the buffer's remaining contents
+   */
+  public static String toStringBinaryRemaining(ByteBuffer buf) {
+    if (buf == null) {
+      return "null";
+    }
+    int offset = buf.arrayOffset();
+    int pos = buf.position();
+    return toStringBinary(buf.array(), offset + pos, buf.limit() - pos);
   }
 
   /**
@@ -743,6 +770,26 @@ public class Bytes {
     n <<= 8;
     n ^= bytes[offset+1] & 0xFF;
     return n;
+  }
+
+  public static byte[] getBytes(ByteBuffer buf) {
+    if (buf == null) {
+      return HConstants.EMPTY_BYTE_ARRAY;
+    }
+
+    if (buf.arrayOffset() == 0 && buf.position() == 0) {
+      byte[] arr = buf.array();
+      if (buf.limit() == arr.length) {
+        // We already have the exact array we need, just return it.
+        return arr;
+      }
+    }
+
+    int savedPos = buf.position();
+    byte [] newBytes = new byte[buf.remaining()];
+    buf.get(newBytes);
+    buf.position(savedPos);
+    return newBytes;
   }
 
   /**

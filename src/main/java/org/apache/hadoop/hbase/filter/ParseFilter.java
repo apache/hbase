@@ -19,26 +19,23 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
-import java.util.TreeSet;
 import java.util.ArrayList;
-import java.util.Stack;
-import java.util.HashMap;
-import java.util.Set;
-
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.filter.ParseConstants;
-
-import org.apache.hadoop.hbase.filter.FilterList;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import java.lang.ArrayIndexOutOfBoundsException;
-import java.lang.ClassCastException;
-import java.lang.reflect.*;
+import java.util.Collections;
 import java.util.EmptyStackException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This class allows a user to specify a filter via a string
@@ -51,6 +48,7 @@ import java.util.EmptyStackException;
  *
  */
 public class ParseFilter {
+  private static final Log LOG = LogFactory.getLog(ParseFilter.class);
 
   private static HashMap<ByteBuffer, Integer> operatorPrecedenceHashMap;
   private static HashMap<String, String> filterHashMap;
@@ -841,4 +839,27 @@ public class ParseFilter {
   public Set<String> getSupportedFilters () {
     return filterHashMap.keySet();
   }
+
+  /**
+   * Returns all known filters
+   * @return an unmodifiable map of filters
+   */
+  public static Map<String, String> getAllFilters() {
+    return Collections.unmodifiableMap(filterHashMap);
+  }
+
+  /**
+   * Register a new filter with the parser.  If the filter is already registered,
+   * an IllegalArgumentException will be thrown.
+   *
+   * @param name a name for the filter
+   * @param filterClass fully qualified class name
+   */
+  public static void registerFilter(String name, String filterClass) {
+    if(LOG.isInfoEnabled())
+      LOG.info("Registering new filter " + name);
+
+    filterHashMap.put(name, filterClass);
+  }
+
 }

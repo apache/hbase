@@ -1,4 +1,6 @@
 /**
+ * Copyright 2011 The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,13 +17,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,62 +30,58 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
+import org.apache.hadoop.hbase.thrift.ThriftServerRunner;
+import org.apache.hadoop.hbase.thrift.ThriftUtilities;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
-import org.apache.hadoop.hbase.thrift.TBoundedThreadPoolServer;
-import org.apache.hadoop.hbase.thrift.ThriftMetrics;
-import org.apache.hadoop.hbase.thrift.ThriftServer;
-import org.apache.hadoop.hbase.thrift.ThriftUtilities;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.TException;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TCompactProtocol;
-import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.server.TNonblockingServer;
-import org.apache.thrift.server.TServer;
-import org.apache.thrift.transport.TFramedTransport;
-import org.apache.thrift.transport.TNonblockingServerSocket;
-import org.apache.thrift.transport.TNonblockingServerTransport;
-import org.apache.thrift.transport.TServerSocket;
-import org.apache.thrift.transport.TServerTransport;
-import org.apache.thrift.transport.TTransportFactory;
 
 /**
- * ThriftServer - this class starts up a Thrift server in the same
+ * HRegionThriftServer - this class starts up a Thrift server in the same
  * JVM where the RegionServer is running. It inherits most of the
  * functionality from the standard ThriftServer. This is good because
  * we can maintain compatibility with applications that use the
- * standard Thrift interface. For performance reasons, we override
- * methods to directly invoke calls into the HRegionServer.
+ * standard Thrift interface. For performance reasons, we can override
+ * methods to directly invoke calls into the HRegionServer and avoid the hop.
+ * <p>
+ * This can be enabled with <i>hbase.regionserver.export.thrift</i> set to true.
  */
 public class HRegionThriftServer extends Thread {
 
   public static final Log LOG = LogFactory.getLog(HRegionThriftServer.class);
-  public static final int DEFAULT_LISTEN_PORT = 9091;
 
-  private HRegionServer rs;
-  private Configuration conf;
-
-  private int port;
-  private boolean nonblocking;
-  private String bindIpAddress;
-  private String transport;
-  private String protocol;
-  volatile private TServer tserver;
-  private boolean redirect; // redirect to appropriate Regionserver
+  private final HRegionServer rs;
+  private final ThriftServerRunner serverRunner;
 
   /**
    * Create an instance of the glue object that connects the
    * RegionServer with the standard ThriftServer implementation
    */
-  HRegionThriftServer(HRegionServer regionServer, Configuration conf) {
+  HRegionThriftServer(HRegionServer regionServer, Configuration conf)
+      throws IOException {
+    super("Region Thrift Server");
     this.rs = regionServer;
-    this.conf = conf;
+    this.serverRunner = new ThriftServerRunner(conf, HConstants.RS_THRIFT_PREFIX,
+        new HBaseHandlerRegion(conf));
+  }
+
+  /**
+   * Stop ThriftServer
+   */
+  void shutdown() {
+    serverRunner.shutdown();
+  }
+
+  @Override
+  public void run() {
+    serverRunner.run();
   }
 
   /**
@@ -93,11 +89,26 @@ public class HRegionThriftServer extends Thread {
    * to use the default implementation for most calls. We override certain calls
    * for performance reasons
    */
-  private class HBaseHandlerRegion extends ThriftServer.HBaseHandler {
+  private class HBaseHandlerRegion extends ThriftServerRunner.HBaseHandler
+      implements Hbase.Iface {
+
+    /**
+     * Whether requests should be redirected to other RegionServers if the
+     * specified region is not hosted by this RegionServer.
+     */
+    private boolean redirect;
 
     HBaseHandlerRegion(final Configuration conf) throws IOException {
       super(conf);
       initialize(conf);
+    }
+
+    /**
+     * Read and initialize config parameters
+     */
+    private void initialize(Configuration conf) {
+      this.redirect = conf.getBoolean("hbase.regionserver.thrift.redirect",
+          false);
     }
 
     /**
@@ -130,23 +141,24 @@ public class HRegionThriftServer extends Thread {
      * Get a record. Shortcircuit to get better performance.
      */
     @Override
-    public List<TRowResult> getRowWithColumnsTs(byte[] tableName, byte[] row,
-                                                List<byte[]> columns,
+    public List<TRowResult> getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row,
+                                                List<ByteBuffer> columns,
                                                 long timestamp)
       throws IOError {
       try {
         HTable table = getTable(tableName);
-        HRegionLocation location = table.getRegionLocation(row);
+        byte[] rowBytes = Bytes.getBytes(row);
+        HRegionLocation location = table.getRegionLocation(rowBytes);
         byte[] regionName = location.getRegionInfo().getRegionName();
 
         if (columns == null) {
-          Get get = new Get(row);
+          Get get = new Get(rowBytes);
           get.setTimeRange(Long.MIN_VALUE, timestamp);
           Result result = rs.get(regionName, get);
           return ThriftUtilities.rowResultFromHBase(result);
         }
         byte[][] columnArr = columns.toArray(new byte[columns.size()][]);
-        Get get = new Get(row);
+        Get get = new Get(rowBytes);
         for (byte[] column : columnArr) {
           byte[][] famAndQf = KeyValue.parseColumn(column);
           if (famAndQf.length == 1) {
@@ -168,26 +180,28 @@ public class HRegionThriftServer extends Thread {
         throw new IOError(e.getMessage());
       }
     }
+
     @Override
-    public List<TRowResult> getRowWithColumnPrefix(byte[] tableName,
-        byte[] row, byte[] prefix) throws IOError {
+    public List<TRowResult> getRowWithColumnPrefix(ByteBuffer tableName,
+        ByteBuffer row, ByteBuffer prefix) throws IOError {
       return (getRowWithColumnPrefixTs(tableName, row, prefix,
           HConstants.LATEST_TIMESTAMP));
     }
 
     @Override
-    public List<TRowResult> getRowWithColumnPrefixTs(byte[] tableName,
-        byte[] row, byte[] prefix, long timestamp) throws IOError {
+    public List<TRowResult> getRowWithColumnPrefixTs(ByteBuffer tableName,
+        ByteBuffer row, ByteBuffer prefix, long timestamp) throws IOError {
       try {
         HTable table = getTable(tableName);
+        byte[] rowBytes = Bytes.getBytes(row);
         if (prefix == null) {
-          Get get = new Get(row);
+          Get get = new Get(rowBytes);
           get.setTimeRange(Long.MIN_VALUE, timestamp);
           Result result = table.get(get);
           return ThriftUtilities.rowResultFromHBase(result);
         }
-        Get get = new Get(row);
-        byte[][] famAndPrefix = KeyValue.parseColumn(prefix);
+        Get get = new Get(rowBytes);
+        byte[][] famAndPrefix = KeyValue.parseColumn(Bytes.getBytes(prefix));
         if (famAndPrefix.length == 2) {
           get.addFamily(famAndPrefix[0]);
           get.setFilter(new ColumnPrefixFilter(famAndPrefix[1]));
@@ -200,93 +214,6 @@ public class HRegionThriftServer extends Thread {
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
-    }
-
-  }
-
-  /**
-   * Read and initialize config parameters
-   */
-  private void initialize(Configuration conf) {
-    this.port = conf.getInt("hbase.regionserver.thrift.port",
-                            DEFAULT_LISTEN_PORT);
-    this.bindIpAddress = conf.get("hbase.regionserver.thrift.ipaddress");
-    this.protocol = conf.get("hbase.regionserver.thrift.protocol");
-    this.transport = conf.get("hbase.regionserver.thrift.transport");
-    this.nonblocking = conf.getBoolean("hbase.regionserver.thrift.nonblocking",
-                                       false);
-    this.redirect = conf.getBoolean("hbase.regionserver.thrift.redirect",
-                                       false);
-  }
-
-  /**
-   * Stop ThriftServer
-   */
-  void shutdown() {
-    if (tserver != null) {
-      tserver.stop();
-      tserver = null;
-    }
-  }
-
-  public void run() {
-    try {
-      HBaseHandlerRegion handler = new HBaseHandlerRegion(this.conf);
-      Hbase.Processor processor = new Hbase.Processor(handler);
-
-      TProtocolFactory protocolFactory;
-      if (this.protocol != null && this.protocol.equals("compact")) {
-        protocolFactory = new TCompactProtocol.Factory();
-      } else {
-        protocolFactory = new TBinaryProtocol.Factory();
-      }
-
-      if (this.nonblocking) {
-        LOG.info("starting HRegionServer Nonblocking Thrift server on " +
-                 this.port);
-        LOG.info("HRegionServer Nonblocking Thrift server does not " +
-                 "support address binding.");
-        TNonblockingServerTransport serverTransport =
-          new TNonblockingServerSocket(this.port);
-        TFramedTransport.Factory transportFactory =
-          new TFramedTransport.Factory();
-
-        tserver = new TNonblockingServer(processor, serverTransport,
-                                        transportFactory, protocolFactory);
-      } else {
-        InetAddress listenAddress = null;
-        if (this.bindIpAddress != null) {
-          listenAddress = InetAddress.getByName(this.bindIpAddress);
-        } else {
-          listenAddress = InetAddress.getLocalHost();
-        }
-        TServerTransport serverTransport = new TServerSocket(
-           new InetSocketAddress(listenAddress, port));
-
-        TTransportFactory transportFactory;
-        if (this.transport != null && this.transport.equals("framed")) {
-          transportFactory = new TFramedTransport.Factory();
-        } else {
-          transportFactory = new TTransportFactory();
-        }
-
-        TBoundedThreadPoolServer.Options serverOptions =
-            new TBoundedThreadPoolServer.Options(conf);
-
-        LOG.info("starting " + ThriftServer.THREAD_POOL_SERVER_CLASS.getSimpleName() + " on "
-            + listenAddress + ":" + Integer.toString(port)
-            + "; minimum number of worker threads="
-            + serverOptions.minWorkerThreads
-            + ", maximum number of worker threads="
-            + serverOptions.maxWorkerThreads + ", queued requests="
-            + serverOptions.maxQueuedRequests);
-        ThriftMetrics metrics = new ThriftMetrics(port, conf);
-        tserver = new TBoundedThreadPoolServer(processor, serverTransport,
-                                       transportFactory, protocolFactory, serverOptions, metrics);
-      }
-      tserver.serve();
-    } catch (Exception e) {
-      LOG.warn("Unable to start HRegionServerThrift interface.", e);
     }
   }
 }

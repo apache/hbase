@@ -28,7 +28,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.thrift.CallQueue.Call;
+import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -102,8 +104,8 @@ public class TestCallQueue {
   private static ThriftMetrics createMetrics() throws Exception {
     setupMetricsContext();
     Configuration conf = UTIL.getConfiguration();
-    return new ThriftMetrics(
-        Integer.parseInt(ThriftServer.DEFAULT_LISTEN_PORT), conf);
+    // The port is not important here. It is just for setting a tag within metrics.
+    return new ThriftMetrics(HConstants.DEFAULT_THRIFT_PROXY_PORT, conf, Hbase.Iface.class);
   }
 
   private static void setupMetricsContext() throws Exception {

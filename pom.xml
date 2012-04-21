@@ -491,7 +491,7 @@
     <protobuf.version>2.3.0</protobuf.version>
     <slf4j.version>1.5.8</slf4j.version>
     <stax-api>1.0.1</stax-api>
-    <thrift.version>0.2.0</thrift.version>
+    <thrift.version>0.8.0</thrift.version>
     <guava.version>r09</guava.version>
   </properties>
 
@@ -627,7 +627,7 @@
     -->
     <dependency>
       <groupId>org.apache.thrift</groupId>
-      <artifactId>thrift</artifactId>
+      <artifactId>libthrift</artifactId>
       <version>${thrift.version}</version>
       <exclusions>
         <exclusion>
