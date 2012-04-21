@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
+import org.apache.hadoop.hbase.ipc.HBaseServer;
+
 import java.io.IOException;
 import java.util.Map;
 
@@ -46,6 +48,7 @@ public interface MonitoredTask extends Cloneable {
 
   public abstract void setStatus(String status);
   public abstract void setDescription(String description);
+  public abstract void setProcessingServer(HBaseServer server);
 
   /**
    * Explicitly mark this status as able to be cleaned up,

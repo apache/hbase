@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.monitoring;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
+import java.lang.reflect.Method;
+
 /**
  * A MonitoredTask implementation optimized for use with RPC Handlers
  * handling frequent, short duration tasks. String concatenations and object
@@ -38,7 +40,7 @@ public interface MonitoredRPCHandler extends MonitoredTask {
   public abstract boolean isOperationRunning();
 
   public abstract void setRPC(String methodName, Object [] params,
-      long queueTime);
+      long queueTime, Method realMethod);
   public abstract void setRPCPacket(Writable param);
   public abstract void setConnection(String clientAddress, int remotePort);
 }

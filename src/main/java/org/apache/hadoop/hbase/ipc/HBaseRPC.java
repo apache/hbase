@@ -33,11 +33,11 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.util.ParamFormatHelper;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.StringUtils;
 
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -45,10 +45,12 @@ import javax.net.SocketFactory;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+
 import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -428,7 +430,7 @@ public class HBaseRPC {
   throws IOException {
     VersionedProtocol proxy =
         (VersionedProtocol) Proxy.newProxyInstance(
-            protocol.getClassLoader(), new Class[] { protocol },
+            protocol.getClassLoader(), new Class[]{protocol},
             new Invoker(addr, ticket, conf, factory, rpcTimeout));
     long serverVersion = proxy.getProtocolVersion(protocol.getName(),
                                                   clientVersion);
@@ -553,6 +555,7 @@ public class HBaseRPC {
     private Object instance;
     private Class<?> implementation;
     private boolean verbose;
+    ParamFormatHelper paramFormatHelper;
 
     private static final String WARN_RESPONSE_TIME =
       "hbase.ipc.warn.response.time";
@@ -598,7 +601,8 @@ public class HBaseRPC {
      */
     public Server(Object instance, Configuration conf, String bindAddress,  int port,
                   int numHandlers, boolean verbose) throws IOException {
-      super(bindAddress, port, Invocation.class, numHandlers, conf, classNameBase(instance.getClass().getName()));
+      super(bindAddress, port, Invocation.class, numHandlers, conf,
+          classNameBase(instance.getClass().getName()));
       this.instance = instance;
       this.implementation = instance.getClass();
       this.verbose = verbose;
@@ -606,6 +610,27 @@ public class HBaseRPC {
           DEFAULT_WARN_RESPONSE_TIME);
       this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE,
           DEFAULT_WARN_RESPONSE_SIZE);
+
+      // Create a param formatter for TaskMonitor to use to pretty print
+      //  the arguments passed over RPC. See ScanParamsFormatter for an example
+      paramFormatHelper = new ParamFormatHelper(instance);
+    }
+
+    /**
+     * Gets info about a specific RPC call given an specific method and
+     * arguments it takes. Relies on the method in the RPC handler having an
+     * ParamFormat annotation on it. If there is no pretty printer, this returns
+     * null
+     * @param method the method of this.instance to get the info on
+     * @param params the params that would be passed to this function
+     * @return A map from String to object of information on this RPC call
+     */
+    @Override
+    public Map<String, Object> getParamFormatMap(Method method, Object[] params) {
+      if (paramFormatHelper != null) {
+        return paramFormatHelper.getMap(method, params);
+      }
+      return null;
     }
 
     @Override
@@ -618,17 +643,16 @@ public class HBaseRPC {
               "cause is a version mismatch between client and server.");
         }
         if (verbose) log("Call: " + call);
-        status.setRPC(call.getMethodName(), call.getParameters(), receivedTime);
+        Method method = implementation.getMethod(call.getMethodName(),
+                call.getParameterClasses());
+        status.setRPC(call.getMethodName(), call.getParameters(), receivedTime, method);
         status.setRPCPacket(param);
         status.resume("Servicing call");
-        Method method =
-          implementation.getMethod(call.getMethodName(),
-                                   call.getParameterClasses());
 
         long startTime = System.currentTimeMillis();
         Object value = method.invoke(instance, call.getParameters());
         int processingTime = (int) (System.currentTimeMillis() - startTime);
-        int qTime = (int) (startTime-receivedTime);
+        int qTime = (int) (startTime - receivedTime);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Served: " + call.getMethodName() +
             " queueTime= " + qTime +
@@ -637,7 +661,7 @@ public class HBaseRPC {
         rpcMetrics.rpcQueueTime.inc(qTime);
         rpcMetrics.rpcProcessingTime.inc(processingTime);
         rpcMetrics.inc(call.getMethodName(), processingTime);
-        if (verbose) log("Return: "+value);
+        if (verbose) log("Return: " + value);
 
         HbaseObjectWritable retVal =
           new HbaseObjectWritable(method.getReturnType(), value);

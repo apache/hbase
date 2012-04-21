@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
+import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.codehaus.jackson.map.ObjectMapper;
 
 
@@ -35,6 +36,8 @@ class MonitoredTaskImpl implements MonitoredTask {
   private volatile String description;
 
   protected volatile State state = State.RUNNING;
+
+  HBaseServer processingServer;
 
   public MonitoredTaskImpl() {
     startTime = System.currentTimeMillis();
@@ -127,6 +130,11 @@ class MonitoredTaskImpl implements MonitoredTask {
   @Override
   public void setDescription(String description) {
     this.description = description;
+  }
+
+  @Override
+  public void setProcessingServer(HBaseServer server) {
+    this.processingServer = server;
   }
 
   @Override

@@ -27,6 +27,7 @@ import org.apache.hadoop.io.Writable;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,6 +46,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   private String methodName = "";
   private Object [] params = {};
   private Writable packet;
+  private Method realMethod;
 
   public MonitoredRPCHandlerImpl() {
     super();
@@ -190,7 +192,8 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
    * @param params The parameters that will be passed to the indicated method.
    */
   public synchronized void setRPC(String methodName, Object [] params,
-      long queueTime) {
+      long queueTime, Method realMethod) {
+    this.realMethod = realMethod;
     this.methodName = methodName;
     this.params = params;
     this.rpcStartTime = System.currentTimeMillis();
@@ -243,6 +246,17 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
         paramList.add(param.toString());
       }
     }
+
+    // If we have a custom ParamFormatter for this method, add the info
+    //  it generates to the map
+    if (processingServer != null) {
+      Map<String, Object> moreInfo =
+        processingServer.getParamFormatMap(realMethod, params);
+      if (moreInfo != null) {
+        map.putAll(moreInfo);
+      }
+    }
+
     return map;
   }
 

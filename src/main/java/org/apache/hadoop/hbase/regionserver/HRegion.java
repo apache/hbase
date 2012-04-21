@@ -2902,9 +2902,12 @@ public class HRegion implements HeapSize {
     private int isScan;
     private boolean filterClosed = false;
     private long readPt;
+    private Scan originalScan;
 
     RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
       //DebugPrint.println("HRegionScanner.<init>");
+
+      this.originalScan = scan;
 
       this.filter = scan.getFilter();
       this.batch = scan.getBatch();
@@ -3101,6 +3104,14 @@ public class HRegion implements HeapSize {
 
     KeyValueHeap getStoreHeapForTesting() {
       return storeHeap;
+    }
+
+    /**
+     * Get the original scan object that was used to create this internal one
+     * @return original scan object... used for debug output
+     */
+    public Scan getOriginalScan() {
+      return originalScan;
     }
   }
 

@@ -26,6 +26,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -50,6 +51,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -139,6 +141,18 @@ public abstract class HBaseServer {
   public static String getRemoteAddress() {
     InetAddress addr = getRemoteIp();
     return (addr == null) ? null : addr.getHostAddress();
+  }
+
+  /**
+   * Stub method for getting information about a RPC call. In the future, we
+   *  could use this for real pretty printing of non-rpc calls.
+   * @see HBaseRPC#Server#getParamFormatMap(java.lang.reflect.Method, Object[])
+   * @param method Ignored for now
+   * @param params Ignored for now
+   * @return null
+   */
+  public Map<String, Object> getParamFormatMap(Method method, Object[] params) {
+    return null;
   }
 
   protected String bindAddress;
@@ -973,6 +987,7 @@ public abstract class HBaseServer {
     public void run() {
       LOG.info(getName() + ": starting");
       status.setStatus("starting");
+      status.setProcessingServer(HBaseServer.this);
       SERVER.set(HBaseServer.this);
       while (running) {
         try {

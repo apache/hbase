@@ -115,13 +115,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.InfoServer;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
-import org.apache.hadoop.hbase.util.Sleeper;
-import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.*;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
@@ -2160,6 +2154,7 @@ public class HRegionServer implements HRegionInterface,
     return scannerId;
   }
 
+  @ParamFormat(clazz = ScanParamsFormatter.class)
   @Override
   public Result next(final long scannerId) throws IOException {
     Result [] res = next(scannerId, 1);
@@ -2169,6 +2164,34 @@ public class HRegionServer implements HRegionInterface,
     return res[0];
   }
 
+  /**
+   * Pretty param printer for next() RPC calls. (works for 1 and 2 parameter
+   * methods)
+   * @see ParamFormatter
+   */
+  public static class ScanParamsFormatter implements ParamFormatter<HRegionServer> {
+    // TODO make this configurable - same as Operation class's
+    private static final int DEFAULT_MAX_COLS = 5;
+
+    @Override
+    public Map<String, Object> getMap(Object[] params, HRegionServer regionServer) {
+      Map<String, Object> res = new HashMap<String, Object>();
+      if (params == null || params.length == 0) return null; // bad request
+      long scannerId = (Long) params[0];
+      String scannerName = String.valueOf(scannerId);
+      InternalScanner s = regionServer.scanners.get(scannerName);
+      if (s != null && s instanceof HRegion.RegionScanner) {
+        res.put("scan", ((HRegion.RegionScanner)s).getOriginalScan().toMap(DEFAULT_MAX_COLS));
+      }
+
+      if (params.length > 1) {
+        res.put("maxrows", params[1]);
+      }
+      return res;
+    }
+  }
+
+  @ParamFormat(clazz = ScanParamsFormatter.class)
   @Override
   public Result [] next(final long scannerId, int nbRows) throws IOException {
     try {
