@@ -250,8 +250,13 @@ class ProcessServerShutdown extends RegionServerOperation {
 
     public Boolean call() throws IOException {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Process server shutdown scanning root region on " +
-            master.getRegionManager().getRootRegionLocation().getBindAddress());
+        HServerAddress addr = master.getRegionManager().getRootRegionLocation();
+        if (addr != null) {
+          LOG.debug("Process server shutdown scanning root region on " +
+              addr.getBindAddress());
+        } else {
+          LOG.debug("ProcessServerShutdown scanning root, but root is null");
+        }
       }
       Scan scan = new Scan();
       scan.addFamily(HConstants.CATALOG_FAMILY);
