@@ -104,6 +104,7 @@ public class AssignmentPlan implements Writable{
       this.updateAssignmentPlan(regionInfo, serverList);
     }
   }
+
   /**
    * Add an assignment to the plan
    * @param region

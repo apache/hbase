@@ -628,25 +628,34 @@ public class RegionPlacement implements RegionPlacementPolicy{
       currentAssignment.entrySet()) {
       try {
         // Keep track of the favored updates for the current region server
-        AssignmentPlan singleServerPlan = new AssignmentPlan();
-
+        AssignmentPlan singleServerPlan = null;
         // Find out all the updates for the current region server
         for (HRegionInfo region : entry.getValue()) {
           List<HServerAddress> favoredServerList = plan.getAssignment(region);
-          singleServerPlan.updateAssignmentPlan(region, favoredServerList);
-        }
+          if (favoredServerList != null &&
+              favoredServerList.size() == HConstants.FAVORED_NODES_NUM) {
+            // Create the single server plan if necessary
+            if (singleServerPlan == null) {
+              singleServerPlan = new AssignmentPlan();
+            }
+            // Update the single server update
+            singleServerPlan.updateAssignmentPlan(region, favoredServerList);
+          }
 
-        // Update the current region server with its updated favored nodes
-        HRegionInterface currentRegionServer =
-          connection.getHRegionConnection(entry.getKey());
-        int updatedRegionNum =
-          currentRegionServer.updateFavoredNodes(singleServerPlan);
-        LOG.info("Region server " +
-            currentRegionServer.getHServerInfo().getHostnamePort() +
-            " has updated " + updatedRegionNum + " / " +
-            singleServerPlan.getAssignmentMap().size() +
-            " regions with the assignment plan");
-        succeededNum ++;
+        }
+        if (singleServerPlan != null) {
+          // Update the current region server with its updated favored nodes
+          HRegionInterface currentRegionServer =
+            connection.getHRegionConnection(entry.getKey());
+          int updatedRegionNum =
+            currentRegionServer.updateFavoredNodes(singleServerPlan);
+          LOG.info("Region server " +
+              currentRegionServer.getHServerInfo().getHostnamePort() +
+              " has updated " + updatedRegionNum + " / " +
+              singleServerPlan.getAssignmentMap().size() +
+              " regions with the assignment plan");
+          succeededNum ++;
+        }
       } catch (Exception e) {
         failedUpdateMap.put(entry.getKey(), e);
       }
@@ -821,6 +830,12 @@ public class RegionPlacement implements RegionPlacementPolicy{
     opt.addOption("d", "verification-details", false,
         "print the details of verification report");
 
+    opt.addOption("update", false,
+      "Update the favored nodes for a single region," +
+      "for example: -update -r regionName -f server1:port,server2:port,server3:port");
+    opt.addOption("r", true, "The region name that needs to be updated");
+    opt.addOption("f", true, "The new favored nodes");
+
     opt.addOption("tables", true,
         "The list of table names splitted by ',' ;" +
         "For example: -tables: t1,t2,...,tn");
@@ -888,7 +903,33 @@ public class RegionPlacement implements RegionPlacementPolicy{
       } else if (cmd.hasOption("p") || cmd.hasOption("print")) {
         AssignmentPlan plan = rp.getExistingAssignmentPlan();
         RegionPlacement.printAssignmentPlan(plan);
-      } else {
+      } else if (cmd.hasOption("update")) {
+
+        if (!cmd.hasOption("f") || !cmd.hasOption("r")) {
+          throw new IllegalArgumentException("Please specify: " +
+			" -update -r regionName -f server1:port,server2:port,server3:port");
+        }
+
+        String regionName = cmd.getOptionValue("r");
+        String favoredNodesStr = cmd.getOptionValue("f");
+        LOG.info("Going to update the region " + regionName + " with the new favored nodes " +
+            favoredNodesStr);
+        List<HServerAddress> favoredNodes = null;
+        HRegionInfo regionInfo =
+          rp.getRegionAssignmentSnapshot().getRegionNameToRegionInfoMap().get(regionName);
+        if (regionInfo == null) {
+          LOG.error("Cannot find the region " + regionName + " from the META");
+        } else {
+          try {
+            favoredNodes = RegionPlacement.getFavoredNodeList(favoredNodesStr);
+          } catch (IllegalArgumentException e) {
+            LOG.error("Cannot parse the invalid favored nodes because " + e);
+          }
+          AssignmentPlan newPlan = new AssignmentPlan();
+          newPlan.updateAssignmentPlan(regionInfo, favoredNodes);
+          rp.updateAssignmentPlan(newPlan);
+        }
+      }else {
         printHelp(opt);
       }
     } catch (ParseException e) {
@@ -898,8 +939,8 @@ public class RegionPlacement implements RegionPlacementPolicy{
 
   private static void printHelp(Options opt) {
     new HelpFormatter().printHelp(
-        "RegionPlacement < -w | -n | -v | -t | -h >" +
-        "[-l false] [-m false] [-d] [-tables t1,t2,...tn]", opt);
+        "RegionPlacement < -w | -n | -v | -t | -h | -update -r regionName -f favoredNodes >" +
+        " [-l false] [-m false] [-d] [-tables t1,t2,...tn]", opt);
   }
 
   /**

@@ -84,7 +84,6 @@ import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.StopStatus;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -3040,7 +3039,7 @@ public class HRegionServer implements HRegionInterface,
 
       if (region == null) {
         LOG.warn("Region " + entry.getKey().getRegionNameAsString() +
-            " is not running on this" + this.serverInfo.getHostnamePort()
+            " is not running on this " + this.serverInfo.getHostnamePort()
             + " region server any more !");
         continue;
       }
