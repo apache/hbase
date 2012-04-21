@@ -1383,8 +1383,6 @@ public class HConnectionManager {
        */
       int process(final List<? extends Row> list, final byte[] tableName, T ret)
       throws IOException {
-        byte [] region = getRegionName(tableName, list.get(0).getRow(), false);
-        byte [] currentRegion = region;
         boolean isLastRow;
         boolean retryOnlyOne = false;
         List<Row> currentList = new ArrayList<Row>();
@@ -1392,6 +1390,9 @@ public class HConnectionManager {
         if (list.size() > 1) {
           Collections.sort(list);
         }
+        byte [] region = getRegionName(tableName, list.get(0).getRow(), false);
+        byte [] currentRegion = region;
+
         for (i = 0, tries = 0; i < list.size() && tries < numRetries; i++) {
           Row row = list.get(i);
           currentList.add(row);
