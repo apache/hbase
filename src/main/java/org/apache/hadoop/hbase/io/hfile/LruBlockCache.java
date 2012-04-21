@@ -49,6 +49,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 /**
  * A block cache implementation that is memory-aware using {@link HeapSize},
  * memory-bound using an LRU eviction algorithm, and concurrent: backed by a
@@ -123,7 +125,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
   private final ScheduledExecutorService scheduleThreadPool =
-    Executors.newScheduledThreadPool(1);
+    Executors.newScheduledThreadPool(1,
+      new ThreadFactoryBuilder()
+        .setNameFormat("LRU Statistics #%d")
+        .setDaemon(true)
+        .build());
 
   /** Current size of cache */
   private final AtomicLong size;
@@ -619,17 +625,16 @@ public class LruBlockCache implements BlockCache, HeapSize {
     }
   }
 
-  /*
+  /**
    * Statistics thread.  Periodically prints the cache statistics to the log.
    */
-  private static class StatisticsThread extends Thread {
+  private static class StatisticsThread implements Runnable {
     LruBlockCache lru;
 
     public StatisticsThread(LruBlockCache lru) {
-      super("LruBlockCache.StatisticsThread");
-      setDaemon(true);
       this.lru = lru;
     }
+
     @Override
     public void run() {
       lru.logStats();
