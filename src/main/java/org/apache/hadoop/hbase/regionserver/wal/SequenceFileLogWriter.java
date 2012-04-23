@@ -21,10 +21,8 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
@@ -73,9 +71,6 @@ public class SequenceFileLogWriter implements HLog.Writer {
    * from sequencefile native compression.
    */
   private CompressionContext compressionContext;
-
-  private Method syncFs = null;
-  private Method hflush = null;
 
   /**
    * Default constructor.
@@ -196,56 +191,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
     }
     
     this.writer_out = getSequenceFilePrivateFSDataOutputStreamAccessible();
-    this.syncFs = getSyncFs();
-    this.hflush = getHFlush();
-    String msg = "Path=" + path +
-      ", syncFs=" + (this.syncFs != null) +
-      ", hflush=" + (this.hflush != null) +
-      ", compression=" + compress;
-    if (this.syncFs != null || this.hflush != null) {
-      LOG.debug(msg);
-    } else {
-      LOG.warn("No sync support! " + msg);
-    }
-  }
-
-  /**
-   * Now do dirty work to see if syncFs is available on the backing this.writer.
-   * It will be available in branch-0.20-append and in CDH3.
-   * @return The syncFs method or null if not available.
-   * @throws IOException
-   */
-  private Method getSyncFs()
-  throws IOException {
-    Method m = null;
-    try {
-      // function pointer to writer.syncFs() method; present when sync is hdfs-200.
-      m = this.writer.getClass().getMethod("syncFs", new Class<?> []{});
-    } catch (SecurityException e) {
-      throw new IOException("Failed test for syncfs", e);
-    } catch (NoSuchMethodException e) {
-      // Not available
-    }
-    return m;
-  }
-
-  /**
-   * See if hflush (0.21 and 0.22 hadoop) is available.
-   * @return The hflush method or null if not available.
-   * @throws IOException
-   */
-  private Method getHFlush()
-  throws IOException {
-    Method m = null;
-    try {
-      Class<? extends OutputStream> c = getWriterFSDataOutputStream().getClass();
-      m = c.getMethod("hflush", new Class<?> []{});
-    } catch (SecurityException e) {
-      throw new IOException("Failed test for hflush", e);
-    } catch (NoSuchMethodException e) {
-      // Ignore
-    }
-    return m;
+    LOG.debug("Path=" + path + ", compression=" + compress);
   }
 
   // Get at the private FSDataOutputStream inside in SequenceFile so we can
@@ -265,8 +211,8 @@ public class SequenceFileLogWriter implements HLog.Writer {
         } catch (IllegalAccessException ex) {
           throw new IOException("Accessing " + fieldName, ex);
         } catch (SecurityException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
+          LOG.warn("Does not have access to out field from FSDataOutputStream",
+              e);
         }
       }
     }
@@ -299,19 +245,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
 
   @Override
   public void sync() throws IOException {
-    if (this.syncFs != null) {
-      try {
-       this.syncFs.invoke(this.writer, HLog.NO_ARGS);
-      } catch (Exception e) {
-        throw new IOException("Reflection", e);
-      }
-    } else if (this.hflush != null) {
-      try {
-        this.hflush.invoke(getWriterFSDataOutputStream(), HLog.NO_ARGS);
-      } catch (Exception e) {
-        throw new IOException("Reflection", e);
-      }
-    }
+    this.writer.syncFs();
   }
 
   @Override
