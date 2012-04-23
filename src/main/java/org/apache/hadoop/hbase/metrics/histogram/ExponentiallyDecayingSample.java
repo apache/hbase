@@ -43,8 +43,8 @@ public class ExponentiallyDecayingSample implements Sample {
   private static final long RESCALE_THRESHOLD = TimeUnit.HOURS.toNanos(1);
 
   private static final ScheduledExecutorService TICK_SERVICE = 
-      Executors.newScheduledThreadPool(1, 
-          getNamedDaemonThreadFactory("decayingSampleTick"));
+    Executors.newScheduledThreadPool(1, 
+      getNamedDaemonThreadFactory(Thread.currentThread().getName() + ".decayingSampleTick."));
 
   private static volatile long CURRENT_TICK = 
       TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis());
