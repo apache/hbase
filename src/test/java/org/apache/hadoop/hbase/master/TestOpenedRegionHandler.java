@@ -112,6 +112,7 @@ public class TestOpenedRegionHandler {
   @Test
   public void testShouldNotCompeleteOpenedRegionSuccessfullyIfVersionMismatches()
       throws Exception {
+    HRegion region = null;
     try {
       int testIndex = 0;
       TEST_UTIL.startMiniZKCluster();
@@ -120,8 +121,7 @@ public class TestOpenedRegionHandler {
           "testShouldNotCompeleteOpenedRegionSuccessfullyIfVersionMismatches");
       HRegionInfo hri = new HRegionInfo(htd.getName(),
           Bytes.toBytes(testIndex), Bytes.toBytes(testIndex + 1));
-      HRegion region = HRegion.createHRegion(hri, TEST_UTIL
-          .getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+      region = HRegion.createHRegion(hri, TEST_UTIL.getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
       assertNotNull(region);
       AssignmentManager am = Mockito.mock(AssignmentManager.class);
       when(am.isRegionInTransition(hri)).thenReturn(
@@ -160,6 +160,8 @@ public class TestOpenedRegionHandler {
       assertEquals("The region should not be opened successfully.", regionName,
           region.getRegionInfo().getEncodedName());
     } finally {
+      region.close();
+      region.getLog().closeAndDelete();
       TEST_UTIL.shutdownMiniZKCluster();
     }
   }

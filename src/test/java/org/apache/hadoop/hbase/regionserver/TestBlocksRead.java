@@ -85,7 +85,16 @@ public class TestBlocksRead extends HBaseTestCase {
     EnvironmentEdgeManagerTestHelper.reset();
   }
 
-  private void initHRegion(byte[] tableName, String callingMethod,
+  /**
+   * Callers must afterward call {@link HRegion#closeHRegion(HRegion)}
+   * @param tableName
+   * @param callingMethod
+   * @param conf
+   * @param families
+   * @throws IOException
+   * @return created and initialized region.
+   */
+  private HRegion initHRegion(byte[] tableName, String callingMethod,
       HBaseConfiguration conf, String family) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor familyDesc;
@@ -99,8 +108,9 @@ public class TestBlocksRead extends HBaseTestCase {
 
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
-    region = HRegion.createHRegion(info, path, conf, htd);
+    HRegion r = HRegion.createHRegion(info, path, conf, htd);
     blockCache = new CacheConfig(conf).getBlockCache();
+    return r;
   }
 
   private void putData(String family, String row, String col, long version)
@@ -212,45 +222,50 @@ public class TestBlocksRead extends HBaseTestCase {
     String FAMILY = "cf1";
     KeyValue kvs[];
     HBaseConfiguration conf = getConf();
-    initHRegion(TABLE, getName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, getName(), conf, FAMILY);
 
-    putData(FAMILY, "row", "col1", 1);
-    putData(FAMILY, "row", "col2", 2);
-    putData(FAMILY, "row", "col3", 3);
-    putData(FAMILY, "row", "col4", 4);
-    putData(FAMILY, "row", "col5", 5);
-    putData(FAMILY, "row", "col6", 6);
-    putData(FAMILY, "row", "col7", 7);
-    region.flushcache();
+    try {
+      putData(FAMILY, "row", "col1", 1);
+      putData(FAMILY, "row", "col2", 2);
+      putData(FAMILY, "row", "col3", 3);
+      putData(FAMILY, "row", "col4", 4);
+      putData(FAMILY, "row", "col5", 5);
+      putData(FAMILY, "row", "col6", 6);
+      putData(FAMILY, "row", "col7", 7);
+      region.flushcache();
 
-    // Expected block reads: 1
-    // The top block has the KV we are
-    // interested. So only 1 seek is needed.
-    kvs = getData(FAMILY, "row", "col1", 1);
-    assertEquals(1, kvs.length);
-    verifyData(kvs[0], "row", "col1", 1);
+      // Expected block reads: 1
+      // The top block has the KV we are
+      // interested. So only 1 seek is needed.
+      kvs = getData(FAMILY, "row", "col1", 1);
+      assertEquals(1, kvs.length);
+      verifyData(kvs[0], "row", "col1", 1);
 
-    // Expected block reads: 2
-    // The top block and next block has the KVs we are
-    // interested. So only 2 seek is needed.
-    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2"), 2);
-    assertEquals(2, kvs.length);
-    verifyData(kvs[0], "row", "col1", 1);
-    verifyData(kvs[1], "row", "col2", 2);
+      // Expected block reads: 2
+      // The top block and next block has the KVs we are
+      // interested. So only 2 seek is needed.
+      kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2"), 2);
+      assertEquals(2, kvs.length);
+      verifyData(kvs[0], "row", "col1", 1);
+      verifyData(kvs[1], "row", "col2", 2);
 
-    // Expected block reads: 3
-    // The first 2 seeks is to find out col2. [HBASE-4443]
-    // One additional seek for col3
-    // So 3 seeks are needed.
-    kvs = getData(FAMILY, "row", Arrays.asList("col2", "col3"), 3);
-    assertEquals(2, kvs.length);
-    verifyData(kvs[0], "row", "col2", 2);
-    verifyData(kvs[1], "row", "col3", 3);
+      // Expected block reads: 3
+      // The first 2 seeks is to find out col2. [HBASE-4443]
+      // One additional seek for col3
+      // So 3 seeks are needed.
+      kvs = getData(FAMILY, "row", Arrays.asList("col2", "col3"), 3);
+      assertEquals(2, kvs.length);
+      verifyData(kvs[0], "row", "col2", 2);
+      verifyData(kvs[1], "row", "col3", 3);
 
-    // Expected block reads: 2. [HBASE-4443]
-    kvs = getData(FAMILY, "row", Arrays.asList("col5"), 2);
-    assertEquals(1, kvs.length);
-    verifyData(kvs[0], "row", "col5", 5);
+      // Expected block reads: 2. [HBASE-4443]
+      kvs = getData(FAMILY, "row", Arrays.asList("col5"), 2);
+      assertEquals(1, kvs.length);
+      verifyData(kvs[0], "row", "col5", 5);
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
   }
 
   /**
@@ -264,97 +279,102 @@ public class TestBlocksRead extends HBaseTestCase {
     String FAMILY = "cf1";
     KeyValue kvs[];
     HBaseConfiguration conf = getConf();
-    initHRegion(TABLE, getName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, getName(), conf, FAMILY);
 
-    // File 1
-    putData(FAMILY, "row", "col1", 1);
-    putData(FAMILY, "row", "col2", 2);
-    region.flushcache();
+    try {
+      // File 1
+      putData(FAMILY, "row", "col1", 1);
+      putData(FAMILY, "row", "col2", 2);
+      region.flushcache();
 
-    // File 2
-    putData(FAMILY, "row", "col1", 3);
-    putData(FAMILY, "row", "col2", 4);
-    region.flushcache();
+      // File 2
+      putData(FAMILY, "row", "col1", 3);
+      putData(FAMILY, "row", "col2", 4);
+      region.flushcache();
 
-    // Expected blocks read: 1.
-    // File 2's top block is also the KV we are
-    // interested. So only 1 seek is needed.
-    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 1);
-    assertEquals(1, kvs.length);
-    verifyData(kvs[0], "row", "col1", 3);
+      // Expected blocks read: 1.
+      // File 2's top block is also the KV we are
+      // interested. So only 1 seek is needed.
+      kvs = getData(FAMILY, "row", Arrays.asList("col1"), 1);
+      assertEquals(1, kvs.length);
+      verifyData(kvs[0], "row", "col1", 3);
 
-    // Expected blocks read: 2
-    // File 2's top block has the "col1" KV we are
-    // interested. We also need "col2" which is in a block
-    // of its own. So, we need that block as well.
-    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2"), 2);
-    assertEquals(2, kvs.length);
-    verifyData(kvs[0], "row", "col1", 3);
-    verifyData(kvs[1], "row", "col2", 4);
+      // Expected blocks read: 2
+      // File 2's top block has the "col1" KV we are
+      // interested. We also need "col2" which is in a block
+      // of its own. So, we need that block as well.
+      kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2"), 2);
+      assertEquals(2, kvs.length);
+      verifyData(kvs[0], "row", "col1", 3);
+      verifyData(kvs[1], "row", "col2", 4);
 
-    // File 3: Add another column
-    putData(FAMILY, "row", "col3", 5);
-    region.flushcache();
+      // File 3: Add another column
+      putData(FAMILY, "row", "col3", 5);
+      region.flushcache();
 
-    // Expected blocks read: 1
-    // File 3's top block has the "col3" KV we are
-    // interested. So only 1 seek is needed.
-    kvs = getData(FAMILY, "row", "col3", 1);
-    assertEquals(1, kvs.length);
-    verifyData(kvs[0], "row", "col3", 5);
+      // Expected blocks read: 1
+      // File 3's top block has the "col3" KV we are
+      // interested. So only 1 seek is needed.
+      kvs = getData(FAMILY, "row", "col3", 1);
+      assertEquals(1, kvs.length);
+      verifyData(kvs[0], "row", "col3", 5);
 
-    // Get a column from older file.
-    // For ROWCOL Bloom filter: Expected blocks read: 1.
-    // For ROW Bloom filter: Expected blocks read: 2.
-    // For NONE Bloom filter: Expected blocks read: 2.
-    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 1, 2, 2);
-    assertEquals(1, kvs.length);
-    verifyData(kvs[0], "row", "col1", 3);
+      // Get a column from older file.
+      // For ROWCOL Bloom filter: Expected blocks read: 1.
+      // For ROW Bloom filter: Expected blocks read: 2.
+      // For NONE Bloom filter: Expected blocks read: 2.
+      kvs = getData(FAMILY, "row", Arrays.asList("col1"), 1, 2, 2);
+      assertEquals(1, kvs.length);
+      verifyData(kvs[0], "row", "col1", 3);
 
-    // File 4: Delete the entire row.
-    deleteFamily(FAMILY, "row", 6);
-    region.flushcache();
+      // File 4: Delete the entire row.
+      deleteFamily(FAMILY, "row", 6);
+      region.flushcache();
 
-    // For ROWCOL Bloom filter: Expected blocks read: 2.
-    // For ROW Bloom filter: Expected blocks read: 3.
-    // For NONE Bloom filter: Expected blocks read: 3.
-    kvs = getData(FAMILY, "row", "col1", 2, 3, 3);
-    assertEquals(0, kvs.length);
-    kvs = getData(FAMILY, "row", "col2", 3, 4, 4);
-    assertEquals(0, kvs.length);
-    kvs = getData(FAMILY, "row", "col3", 2);
-    assertEquals(0, kvs.length);
-    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 4);
-    assertEquals(0, kvs.length);
+      // For ROWCOL Bloom filter: Expected blocks read: 2.
+      // For ROW Bloom filter: Expected blocks read: 3.
+      // For NONE Bloom filter: Expected blocks read: 3.
+      kvs = getData(FAMILY, "row", "col1", 2, 3, 3);
+      assertEquals(0, kvs.length);
+      kvs = getData(FAMILY, "row", "col2", 3, 4, 4);
+      assertEquals(0, kvs.length);
+      kvs = getData(FAMILY, "row", "col3", 2);
+      assertEquals(0, kvs.length);
+      kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 4);
+      assertEquals(0, kvs.length);
 
-    // File 5: Delete
-    deleteFamily(FAMILY, "row", 10);
-    region.flushcache();
+      // File 5: Delete
+      deleteFamily(FAMILY, "row", 10);
+      region.flushcache();
 
-    // File 6: some more puts, but with timestamps older than the
-    // previous delete.
-    putData(FAMILY, "row", "col1", 7);
-    putData(FAMILY, "row", "col2", 8);
-    putData(FAMILY, "row", "col3", 9);
-    region.flushcache();
+      // File 6: some more puts, but with timestamps older than the
+      // previous delete.
+      putData(FAMILY, "row", "col1", 7);
+      putData(FAMILY, "row", "col2", 8);
+      putData(FAMILY, "row", "col3", 9);
+      region.flushcache();
 
-    // Baseline expected blocks read: 8. [HBASE-4532]
-    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 5);
-    assertEquals(0, kvs.length);
+      // Baseline expected blocks read: 8. [HBASE-4532]
+      kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 5);
+      assertEquals(0, kvs.length);
+ 
+      // File 7: Put back new data
+      putData(FAMILY, "row", "col1", 11);
+      putData(FAMILY, "row", "col2", 12);
+      putData(FAMILY, "row", "col3", 13);
+      region.flushcache();
 
-    // File 7: Put back new data
-    putData(FAMILY, "row", "col1", 11);
-    putData(FAMILY, "row", "col2", 12);
-    putData(FAMILY, "row", "col3", 13);
-    region.flushcache();
 
-
-    // Expected blocks read: 5. [HBASE-4585]
-    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 5);
-    assertEquals(3, kvs.length);
-    verifyData(kvs[0], "row", "col1", 11);
-    verifyData(kvs[1], "row", "col2", 12);
-    verifyData(kvs[2], "row", "col3", 13);
+      // Expected blocks read: 5. [HBASE-4585]
+      kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 5);
+      assertEquals(3, kvs.length);
+      verifyData(kvs[0], "row", "col1", 11);
+      verifyData(kvs[1], "row", "col2", 12);
+      verifyData(kvs[2], "row", "col3", 13);
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
   }
 
   /**
@@ -367,62 +387,71 @@ public class TestBlocksRead extends HBaseTestCase {
     String FAMILY = "cf1";
 
     HBaseConfiguration conf = getConf();
-    initHRegion(TABLE, getName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, getName(), conf, FAMILY);
 
-    putData(FAMILY, "row", "col1", 1);
-    putData(FAMILY, "row", "col2", 2);
-    region.flushcache();
+    try {
+      putData(FAMILY, "row", "col1", 1);
+      putData(FAMILY, "row", "col2", 2);
+      region.flushcache();
 
-    // Execute a scan with caching turned off
-    // Expected blocks stored: 0
-    long blocksStart = getBlkCount();
-    Scan scan = new Scan();
-    scan.setCacheBlocks(false);
-    RegionScanner rs = region.getScanner(scan);
-    List<KeyValue> result = new ArrayList<KeyValue>(2);
-    rs.next(result);
-    assertEquals(2 * BLOOM_TYPE.length, result.size());
-    rs.close();
-    long blocksEnd = getBlkCount();
+      // Execute a scan with caching turned off
+      // Expected blocks stored: 0
+      long blocksStart = getBlkCount();
+      Scan scan = new Scan();
+      scan.setCacheBlocks(false);
+      RegionScanner rs = region.getScanner(scan);
+      List<KeyValue> result = new ArrayList<KeyValue>(2);
+      rs.next(result);
+      assertEquals(2 * BLOOM_TYPE.length, result.size());
+      rs.close();
+      long blocksEnd = getBlkCount();
 
-    assertEquals(blocksStart, blocksEnd);
+      assertEquals(blocksStart, blocksEnd);
 
-    // Execute with caching turned on
-    // Expected blocks stored: 2
-    blocksStart = blocksEnd;
-    scan.setCacheBlocks(true);
-    rs = region.getScanner(scan);
-    result = new ArrayList<KeyValue>(2);
-    rs.next(result);
-    assertEquals(2 * BLOOM_TYPE.length, result.size());
-    rs.close();
-    blocksEnd = getBlkCount();
+      // Execute with caching turned on
+      // Expected blocks stored: 2
+      blocksStart = blocksEnd;
+      scan.setCacheBlocks(true);
+      rs = region.getScanner(scan);
+      result = new ArrayList<KeyValue>(2);
+      rs.next(result);
+      assertEquals(2 * BLOOM_TYPE.length, result.size());
+      rs.close();
+      blocksEnd = getBlkCount();
     
-    assertEquals(2 * BLOOM_TYPE.length, blocksEnd - blocksStart);
-	}
+      assertEquals(2 * BLOOM_TYPE.length, blocksEnd - blocksStart);
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
 
-	@Test
+  @Test
   public void testLazySeekBlocksReadWithDelete() throws Exception {
     byte[] TABLE = Bytes.toBytes("testLazySeekBlocksReadWithDelete");
     String FAMILY = "cf1";
     KeyValue kvs[];
     HBaseConfiguration conf = getConf();
-    initHRegion(TABLE, getName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, getName(), conf, FAMILY);
+    try {
+      deleteFamily(FAMILY, "row", 200);
+      for (int i = 0; i < 100; i++) {
+        putData(FAMILY, "row", "col" + i, i);
+      }
+      putData(FAMILY, "row", "col99", 201);
+      region.flushcache();
 
-    deleteFamily(FAMILY, "row", 200);
-    for (int i = 0; i < 100; i++) {
-      putData(FAMILY, "row", "col" + i, i);
+      kvs = getData(FAMILY, "row", Arrays.asList("col0"), 2);
+      assertEquals(0, kvs.length);
+
+      kvs = getData(FAMILY, "row", Arrays.asList("col99"), 2);
+      assertEquals(1, kvs.length);
+      verifyData(kvs[0], "row", "col99", 201);
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
     }
-    putData(FAMILY, "row", "col99", 201);
-    region.flushcache();
-
-    kvs = getData(FAMILY, "row", Arrays.asList("col0"), 2);
-    assertEquals(0, kvs.length);
-
-    kvs = getData(FAMILY, "row", Arrays.asList("col99"), 2);
-    assertEquals(1, kvs.length);
-    verifyData(kvs[0], "row", "col99", 201);
-	}
+  }
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
