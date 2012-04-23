@@ -2485,9 +2485,9 @@ public class HRegionServer extends RegionServer
     }
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
+    HTableDescriptor htd = this.tableDescriptors.get(region.getTableName());
     this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(),
         true);
-    HTableDescriptor htd = this.tableDescriptors.get(region.getTableName());
     // Need to pass the expected version in the constructor.
     if (region.isRootRegion()) {
       this.service.submit(new OpenRootHandler(this, this, region, htd,
