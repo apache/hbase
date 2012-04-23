@@ -1438,8 +1438,12 @@ public class StoreFile extends SchemaConfigured {
      */
     public boolean passesGeneralBloomFilter(byte[] row, int rowOffset,
         int rowLen, byte[] col, int colOffset, int colLen) {
-      if (generalBloomFilter == null)
+      // Cache Bloom filter as a local variable in case it is set to null by
+      // another thread on an IO error.
+      BloomFilter bloomFilter = this.generalBloomFilter;
+      if (bloomFilter == null) {
         return true;
+      }
 
       byte[] key;
       switch (bloomFilterType) {
@@ -1456,20 +1460,12 @@ public class StoreFile extends SchemaConfigured {
           break;
 
         case ROWCOL:
-          key = generalBloomFilter.createBloomKey(row, rowOffset, rowLen, col,
+          key = bloomFilter.createBloomKey(row, rowOffset, rowLen, col,
               colOffset, colLen);
           break;
 
         default:
           return true;
-      }
-
-      // Cache Bloom filter as a local variable in case it is set to null by
-      // another thread on an IO error.
-      BloomFilter bloomFilter = this.generalBloomFilter;
-
-      if (bloomFilter == null) {
-        return true;
       }
 
       // Empty file

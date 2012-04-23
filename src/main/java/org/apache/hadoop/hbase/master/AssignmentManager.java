@@ -609,6 +609,9 @@ public class AssignmentManager extends ZooKeeperListener {
         }
         failoverProcessedRegions.put(encodedRegionName, regionInfo);
         break;
+        
+      default:
+        throw new IllegalStateException("Received event is not valid.");
       }
     }
   }
@@ -898,6 +901,9 @@ public class AssignmentManager extends ZooKeeperListener {
             new OpenedRegionHandler(master, this, regionState.getRegion(),
               data.getOrigin(), expectedVersion));
           break;
+          
+        default:
+          throw new IllegalStateException("Received event is not valid.");
       }
     }
   }
@@ -1990,7 +1996,6 @@ public class AssignmentManager extends ZooKeeperListener {
               return;
             } catch (KeeperException ke) {
               LOG.error("Unexpected zk state", ke);
-              ke = e;
             }
           }
           // If we get here, don't understand whats going on -- abort.
@@ -2940,6 +2945,9 @@ public class AssignmentManager extends ZooKeeperListener {
           "expire, send RPC again");
         invokeUnassign(regionInfo);
         break;
+        
+      default:
+        throw new IllegalStateException("Received event is not valid.");
       }
     }
   }

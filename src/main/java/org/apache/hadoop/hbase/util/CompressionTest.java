@@ -84,7 +84,6 @@ public class CompressionTest {
       }
     }
 
-    Configuration conf = HBaseConfiguration.create();
     try {
       Compressor c = algo.getCompressor();
       algo.returnCompressor(c);

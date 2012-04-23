@@ -48,4 +48,51 @@
        <Bug pattern="NP_NULL_PARAM_DEREF" />
      </Match>
 
+	 <Match>
+       <Class name="org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogReader"/>
+	   <Or>
+         <Method name="addFileInfoToException" />
+       </Or>
+       <Bug pattern="REC_CATCH_EXCEPTION" />
+     </Match>
+     
+
+	 <Match>
+       <Class name="org.apache.hadoop.hbase.KeyValue"/>
+	   <Or>
+         <Method name="createEmptyByteArray" />
+		 <Method name="createByteArray" />
+       </Or>
+       <Bug pattern="INT_VACUOUS_COMPARISON" />
+     </Match>
+
+	 <Match>
+       <Class name="org.apache.hadoop.hbase.regionserver.LruHashMap"/>
+	   <Or>
+         <Method name="equals" />
+       </Or>
+       <Bug pattern="EQ_UNUSUAL" />
+     </Match>
+
+	 <Match>
+       <Class name="org.apache.hadoop.hbase.util.ByteBufferUtils"/>
+	   <Or>
+         <Method name="putInt" />
+       </Or>
+       <Bug pattern="ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT" />
+     </Match>
+     
+	  <Match>
+       <Class name="org.apache.hadoop.hbase.mapreduce.MultithreadedTableMapper"/>
+	   <Or>
+         <Method name="MapRunner" />
+       </Or>
+       <Bug pattern="REC_CATCH_EXCEPTION" />
+     </Match>
+
+	  <Match>
+       <Class name="org.apache.hadoop.hbase.util.PoolMap$RoundRobinPool"/>
+	   <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS" />
+     </Match>
+
 </FindBugsFilter>

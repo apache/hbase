@@ -50,6 +50,6 @@ public class CompactionProgress {
    * @return float
    */
   public float getProgressPct() {
-    return currentCompactedKVs / totalCompactingKVs;
+    return (float)currentCompactedKVs / totalCompactingKVs;
   }
 }

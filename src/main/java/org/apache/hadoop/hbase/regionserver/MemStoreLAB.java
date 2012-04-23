@@ -111,8 +111,7 @@ public class MemStoreLAB {
    * != c
    */
   private void tryRetireChunk(Chunk c) {
-    @SuppressWarnings("unused")
-    boolean weRetiredIt = curChunk.compareAndSet(c, null);
+    curChunk.compareAndSet(c, null);
     // If the CAS succeeds, that means that we won the race
     // to retire the chunk. We could use this opportunity to
     // update metrics on external fragmentation.

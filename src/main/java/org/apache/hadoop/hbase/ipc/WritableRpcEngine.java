@@ -185,7 +185,6 @@ class WritableRpcEngine implements RpcEngine {
           (VersionedProtocol) Proxy.newProxyInstance(
               protocol.getClassLoader(), new Class[] { protocol },
               new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
-    if (proxy instanceof VersionedProtocol) {
       try {
         long serverVersion = ((VersionedProtocol)proxy)
           .getProtocolVersion(protocol.getName(), clientVersion);
@@ -206,7 +205,6 @@ class WritableRpcEngine implements RpcEngine {
         }
         throw (IOException)t;
       }
-    }
     return proxy;
   }
 

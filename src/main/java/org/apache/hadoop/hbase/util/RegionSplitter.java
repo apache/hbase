@@ -632,7 +632,6 @@ public class RegionSplitter {
     // get table info
     Path hbDir = new Path(table.getConfiguration().get(HConstants.HBASE_DIR));
     Path tableDir = HTableDescriptor.getTableDir(hbDir, table.getTableName());
-    Path splitFile = new Path(tableDir, "_balancedSplit");
     FileSystem fs = FileSystem.get(table.getConfiguration());
 
     // clear the cache to forcibly refresh region information

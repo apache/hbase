@@ -386,7 +386,7 @@ implements WritableComparable<HServerLoad> {
      */
     private void readFields92(DataInput in) throws IOException {
       // in 0.92, the version was actually written twice, consume the second copy
-      int version = in.readByte();
+      in.readByte(); // version
       int namelen = in.readInt();
       this.name = new byte[namelen];
       in.readFully(this.name);
@@ -503,7 +503,7 @@ implements WritableComparable<HServerLoad> {
       float compactionProgressPct = Float.NaN;
       if( this.totalCompactingKVs > 0 ) {
         compactionProgressPct = Float.valueOf(
-            this.currentCompactedKVs / this.totalCompactingKVs);
+            (float)this.currentCompactedKVs / this.totalCompactingKVs);
       }
       sb = Strings.appendKeyValue(sb, "compactionProgressPct",
           compactionProgressPct);

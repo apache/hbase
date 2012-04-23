@@ -222,9 +222,18 @@ public class FilterList implements Filter {
         case INCLUDE:
           rc = ReturnCode.INCLUDE;
           // must continue here to evaluate all filters
+          break;
         case NEXT_ROW:
+          break;
         case SKIP:
           // continue;
+          break;
+        case NEXT_COL:
+          break;
+        case SEEK_NEXT_USING_HINT:
+          break;
+        default:
+          throw new IllegalStateException("Received code is not valid.");
         }
       }
     }

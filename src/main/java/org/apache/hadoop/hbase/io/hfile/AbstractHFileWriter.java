@@ -198,10 +198,6 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
     if (key == null || length <= 0) {
       throw new IOException("Key cannot be null or empty");
     }
-    if (length > HFile.MAXIMUM_KEY_LENGTH) {
-      throw new IOException("Key length " + length + " > "
-          + HFile.MAXIMUM_KEY_LENGTH);
-    }
     if (lastKeyBuffer != null) {
       int keyComp = comparator.compare(lastKeyBuffer, lastKeyOffset,
           lastKeyLength, key, offset, length);

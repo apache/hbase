@@ -88,7 +88,7 @@ extends ConstantSizeRegionSplitPolicy {
   long getSizeToCheck(final int tableRegionsCount) {
     return tableRegionsCount == 0? getDesiredMaxFileSize():
       Math.min(getDesiredMaxFileSize(),
-        this.flushSize * (tableRegionsCount * tableRegionsCount));
+        this.flushSize * (tableRegionsCount * (long)tableRegionsCount));
   }
 
   /**

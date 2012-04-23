@@ -671,7 +671,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     return CACHE_FIXED_OVERHEAD + ClassSize.CONCURRENT_HASHMAP +
         ((long)Math.ceil(maxSize*1.2/blockSize)
             * ClassSize.CONCURRENT_HASHMAP_ENTRY) +
-        (concurrency * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
+        ((long)concurrency * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
   }
 
   @Override

@@ -92,7 +92,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
       int hashType, int maxFold, boolean cacheOnWrite,
       RawComparator<byte[]> comparator) {
     chunkByteSize = ByteBloomFilter.computeFoldableByteSize(
-        chunkByteSizeHint * 8, maxFold);
+        chunkByteSizeHint * 8L, maxFold);
 
     this.errorRate = errorRate;
     this.hashType = hashType;

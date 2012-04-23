@@ -316,7 +316,7 @@ public class PoolMap<K, V> implements Map<K, V> {
 
     @Override
     public R put(R resource) {
-      if (size() < maxSize) {
+      if (super.size() < maxSize) {
         add(resource);
       }
       return null;
@@ -355,7 +355,7 @@ public class PoolMap<K, V> implements Map<K, V> {
 
     @Override
     public R put(R resource) {
-      if (size() < maxSize) {
+      if (super.size() < maxSize) {
         add(resource);
       }
       return null;
@@ -363,10 +363,10 @@ public class PoolMap<K, V> implements Map<K, V> {
 
     @Override
     public R get() {
-      if (size() < maxSize) {
+      if (super.size() < maxSize) {
         return null;
       }
-      nextResource %= size();
+      nextResource %= super.size();
       R resource = get(nextResource++);
       return resource;
     }

@@ -883,7 +883,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       offset = Bytes.putLong(dest, offset, prevOffset);
       offset = Bytes.putByte(dest, offset, checksumType.getCode());
       offset = Bytes.putInt(dest, offset, bytesPerChecksum);
-      offset = Bytes.putInt(dest, offset, onDiskDataSize);
+      Bytes.putInt(dest, offset, onDiskDataSize);
     }
 
     /**

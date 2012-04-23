@@ -74,13 +74,9 @@ public class FSHDFSUtils extends FSUtils{
     while (!recovered) {
       try {
         try {
-          if (fs instanceof DistributedFileSystem) {
-            DistributedFileSystem dfs = (DistributedFileSystem)fs;
-            DistributedFileSystem.class.getMethod("recoverLease",
-              new Class[] {Path.class}).invoke(dfs, p);
-          } else {
-            throw new Exception("Not a DistributedFileSystem");
-          }
+          DistributedFileSystem dfs = (DistributedFileSystem) fs;
+          DistributedFileSystem.class.getMethod("recoverLease", new Class[] { Path.class }).invoke(
+              dfs, p);
         } catch (InvocationTargetException ite) {
           // function was properly called, but threw it's own exception
           throw (IOException) ite.getCause();

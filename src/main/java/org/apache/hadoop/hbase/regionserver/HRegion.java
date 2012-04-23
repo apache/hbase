@@ -2268,7 +2268,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       // Lock row
       Integer lid = getLock(lockId, get.getRow(), true);
-      List<KeyValue> result = new ArrayList<KeyValue>();
+      List<KeyValue> result = null;
       try {
         result = get(get, false);
 

@@ -246,7 +246,12 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
   }
 
   private static int optimalFunctionCount(int maxKeys, long bitSize) {
-    return (int) Math.ceil(Math.log(2) * (bitSize / maxKeys));
+    long i = bitSize / maxKeys;
+    double result = Math.ceil(Math.log(2) * i);
+    if (result > Integer.MAX_VALUE){
+      throw new IllegalArgumentException("result too large for integer value.");
+    }
+    return (int)result;
   }
 
   /** Private constructor used by other constructors. */
@@ -298,7 +303,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
       double errorRate, int hashType, int foldFactor) {
     ByteBloomFilter bbf = new ByteBloomFilter(hashType);
 
-    bbf.byteSize = computeFoldableByteSize(byteSizeHint * 8, foldFactor);
+    bbf.byteSize = computeFoldableByteSize(byteSizeHint * 8L, foldFactor);
     long bitSize = bbf.byteSize * 8;
     bbf.maxKeys = (int) idealMaxKeys(bitSize, errorRate);
     bbf.hashCount = optimalFunctionCount(bbf.maxKeys, bitSize);
