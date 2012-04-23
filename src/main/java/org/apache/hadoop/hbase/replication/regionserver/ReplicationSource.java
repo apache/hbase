@@ -48,9 +48,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -605,9 +606,10 @@ public class ReplicationSource extends Thread
         continue;
       }
       try {
-        HRegionInterface rrs = getRS();
+        AdminProtocol rrs = getRS();
         LOG.debug("Replicating " + currentNbEntries);
-        rrs.replicateLogEntries(Arrays.copyOf(this.entriesArray, currentNbEntries));
+        ProtobufUtil.replicateWALEntry(rrs,
+          Arrays.copyOf(this.entriesArray, currentNbEntries));
         if (this.lastLoggedPosition != this.position) {
           this.manager.logPositionAndCleanOldLogs(this.currentPath,
               this.peerClusterZnode, this.position, queueRecovered);
@@ -727,13 +729,13 @@ public class ReplicationSource extends Thread
    * @return
    * @throws IOException
    */
-  private HRegionInterface getRS() throws IOException {
+  private AdminProtocol getRS() throws IOException {
     if (this.currentPeers.size() == 0) {
       throw new IOException(this.peerClusterZnode + " has 0 region servers");
     }
     ServerName address =
         currentPeers.get(random.nextInt(this.currentPeers.size()));
-    return this.conn.getHRegionConnection(address.getHostname(), address.getPort());
+    return this.conn.getAdmin(address.getHostname(), address.getPort());
   }
 
   /**
@@ -746,9 +748,9 @@ public class ReplicationSource extends Thread
     Thread pingThread = new Thread() {
       public void run() {
         try {
-          HRegionInterface rrs = getRS();
+          AdminProtocol rrs = getRS();
           // Dummy call which should fail
-          rrs.getHServerInfo();
+          ProtobufUtil.getServerInfo(rrs);
           latch.countDown();
         } catch (IOException ex) {
           if (ex instanceof RemoteException) {

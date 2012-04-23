@@ -212,11 +212,25 @@ public class SecureRpcEngine implements RpcEngine {
         (VersionedProtocol) Proxy.newProxyInstance(
             protocol.getClassLoader(), new Class[] { protocol },
             new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
-    long serverVersion = proxy.getProtocolVersion(protocol.getName(),
-                                                  clientVersion);
-    if (serverVersion != clientVersion) {
-      throw new HBaseRPC.VersionMismatch(protocol.getName(), clientVersion,
-                                serverVersion);
+    try {
+      long serverVersion = proxy.getProtocolVersion(protocol.getName(),
+                                                    clientVersion);
+      if (serverVersion != clientVersion) {
+        throw new HBaseRPC.VersionMismatch(protocol.getName(), clientVersion,
+                                  serverVersion);
+      }
+    } catch (Throwable t) {
+      if (t instanceof UndeclaredThrowableException) {
+        t = t.getCause();
+      }
+      if (t instanceof ServiceException) {
+        throw ProtobufUtil.getRemoteException((ServiceException)t);
+      }
+      if (!(t instanceof IOException)) {
+        LOG.error("Unexpected throwable object ", t);
+        throw new IOException(t);
+      }
+      throw (IOException)t;
     }
     return proxy;
   }

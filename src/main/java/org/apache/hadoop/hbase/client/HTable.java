@@ -662,15 +662,8 @@ public class HTable implements HTableInterface {
    throws IOException {
      return new ServerCallable<Result>(connection, tableName, row, operationTimeout) {
        public Result call() throws IOException {
-         try {
-           GetRequest request = RequestConverter.buildGetRequest(
-               location.getRegionInfo().getRegionName(), row, family, true);
-           GetResponse response = server.get(null, request);
-           if (!response.hasResult()) return null;
-           return ProtobufUtil.toResult(response.getResult());
-         } catch (ServiceException se) {
-           throw ProtobufUtil.getRemoteException(se);
-         }
+         return ProtobufUtil.getRowOrBefore(server,
+           location.getRegionInfo().getRegionName(), row, family);
        }
      }.withRetries();
    }
@@ -715,14 +708,8 @@ public class HTable implements HTableInterface {
   public Result get(final Get get) throws IOException {
     return new ServerCallable<Result>(connection, tableName, get.getRow(), operationTimeout) {
           public Result call() throws IOException {
-            try {
-              GetRequest request = RequestConverter.buildGetRequest(
-                  location.getRegionInfo().getRegionName(), get);
-              GetResponse response = server.get(null, request);
-              return ProtobufUtil.toResult(response.getResult());
-            } catch (ServiceException se) {
-              throw ProtobufUtil.getRemoteException(se);
-            }
+            return ProtobufUtil.get(server,
+              location.getRegionInfo().getRegionName(), get);
           }
         }.withRetries();
   }

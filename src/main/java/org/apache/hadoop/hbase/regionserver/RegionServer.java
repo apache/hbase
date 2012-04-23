@@ -21,10 +21,14 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -33,12 +37,19 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -48,13 +59,38 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
+import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
-import org.apache.hadoop.hbase.protobuf.ClientProtocol;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
@@ -78,15 +114,24 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.regionserver.HRegionServer.QosPriority;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
+import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
+import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
+import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
+import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
+import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 
+import com.google.protobuf.ByteString;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
@@ -101,16 +146,44 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Private
 public abstract class RegionServer implements
-    ClientProtocol, Runnable, RegionServerServices {
+    ClientProtocol, AdminProtocol, Runnable, RegionServerServices {
 
   private static final Log LOG = LogFactory.getLog(RegionServer.class);
 
   private final Random rand = new Random();
 
+  /*
+   * Strings to be used in forming the exception message for
+   * RegionsAlreadyInTransitionException.
+   */
+  protected static final String OPEN = "OPEN";
+  protected static final String CLOSE = "CLOSE";
+
+  //RegionName vs current action in progress
+  //true - if open region action in progress
+  //false - if close region action in progress
+  protected final ConcurrentSkipListMap<byte[], Boolean> regionsInTransitionInRS =
+    new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
+
   protected long maxScannerResultSize;
 
   // Cache flushing
   protected MemStoreFlusher cacheFlusher;
+
+  // catalog tracker
+  protected CatalogTracker catalogTracker;
+
+  /**
+   * Go here to get table descriptors.
+   */
+  protected TableDescriptors tableDescriptors;
+
+  // Replication services. If no replication, this handler will be null.
+  protected ReplicationSourceService replicationSourceHandler;
+  protected ReplicationSinkService replicationSinkHandler;
+
+  // Compactions
+  public CompactSplitThread compactSplitThread;
 
   final Map<String, RegionScanner> scanners =
       new ConcurrentHashMap<String, RegionScanner>();
@@ -124,6 +197,9 @@ public abstract class RegionServer implements
 
   // Leases
   protected Leases leases;
+
+  // Instance of the hbase executor service.
+  protected ExecutorService service;
 
   // Request counter.
   // Do we need this?  Can't we just sum region counters?  St.Ack 20110412
@@ -244,6 +320,67 @@ public abstract class RegionServer implements
     }
   }
 
+  protected void checkIfRegionInTransition(HRegionInfo region,
+      String currentAction) throws RegionAlreadyInTransitionException {
+    byte[] encodedName = region.getEncodedNameAsBytes();
+    if (this.regionsInTransitionInRS.containsKey(encodedName)) {
+      boolean openAction = this.regionsInTransitionInRS.get(encodedName);
+      // The below exception message will be used in master.
+      throw new RegionAlreadyInTransitionException("Received:" + currentAction +
+        " for the region:" + region.getRegionNameAsString() +
+        " ,which we are already trying to " +
+        (openAction ? OPEN : CLOSE)+ ".");
+    }
+  }
+
+  /**
+   * @param region Region to close
+   * @param abort True if we are aborting
+   * @param zk True if we are to update zk about the region close; if the close
+   * was orchestrated by master, then update zk.  If the close is being run by
+   * the regionserver because its going down, don't update zk.
+   * @return True if closed a region.
+   */
+  protected boolean closeRegion(HRegionInfo region, final boolean abort,
+      final boolean zk) {
+    return closeRegion(region, abort, zk, -1);
+  }
+
+
+    /**
+   * @param region Region to close
+   * @param abort True if we are aborting
+   * @param zk True if we are to update zk about the region close; if the close
+   * was orchestrated by master, then update zk.  If the close is being run by
+   * the regionserver because its going down, don't update zk.
+   * @param versionOfClosingNode
+   *   the version of znode to compare when RS transitions the znode from
+   *   CLOSING state.
+   * @return True if closed a region.
+   */
+  protected boolean closeRegion(HRegionInfo region, final boolean abort,
+      final boolean zk, final int versionOfClosingNode) {
+    if (this.regionsInTransitionInRS.containsKey(region.getEncodedNameAsBytes())) {
+      LOG.warn("Received close for region we are already opening or closing; " +
+        region.getEncodedName());
+      return false;
+    }
+    this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(), false);
+    CloseRegionHandler crh = null;
+    if (region.isRootRegion()) {
+      crh = new CloseRootHandler(this, this, region, abort, zk,
+        versionOfClosingNode);
+    } else if (region.isMetaRegion()) {
+      crh = new CloseMetaHandler(this, this, region, abort, zk,
+        versionOfClosingNode);
+    } else {
+      crh = new CloseRegionHandler(this, this, region, abort, zk,
+        versionOfClosingNode);
+    }
+    this.service.submit(crh);
+    return true;
+  }
+
    /**
    * @param regionName
    * @return HRegion for the passed binary <code>regionName</code> or null if
@@ -251,6 +388,11 @@ public abstract class RegionServer implements
    */
   public HRegion getOnlineRegion(final byte[] regionName) {
     String encodedRegionName = HRegionInfo.encodeRegionName(regionName);
+    return this.onlineRegions.get(encodedRegionName);
+  }
+
+  @Override
+  public HRegion getFromOnlineRegions(final String encodedRegionName) {
     return this.onlineRegions.get(encodedRegionName);
   }
 
@@ -1002,6 +1144,352 @@ public abstract class RegionServer implements
   }
 
 // End Client methods
+// Start Admin methods
+
+  @Override
+  @QosPriority(priority=HIGH_QOS)
+  public GetRegionInfoResponse getRegionInfo(final RpcController controller,
+      final GetRegionInfoRequest request) throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.incrementAndGet();
+      HRegion region = getRegion(request.getRegion());
+      HRegionInfo info = region.getRegionInfo();
+      GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
+      builder.setRegionInfo(ProtobufUtil.toRegionInfo(info));
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  @Override
+  public GetStoreFileResponse getStoreFile(final RpcController controller,
+      final GetStoreFileRequest request) throws ServiceException {
+    try {
+      HRegion region = getRegion(request.getRegion());
+      requestCount.incrementAndGet();
+      Set<byte[]> columnFamilies = null;
+      if (request.getFamilyCount() == 0) {
+        columnFamilies = region.getStores().keySet();
+      } else {
+        columnFamilies = new HashSet<byte[]>();
+        for (ByteString cf: request.getFamilyList()) {
+          columnFamilies.add(cf.toByteArray());
+        }
+      }
+      int nCF = columnFamilies.size();
+      List<String>  fileList = region.getStoreFileList(
+        columnFamilies.toArray(new byte[nCF][]));
+      GetStoreFileResponse.Builder builder = GetStoreFileResponse.newBuilder();
+      builder.addAllStoreFile(fileList);
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  @Override
+  @QosPriority(priority=HIGH_QOS)
+  public GetOnlineRegionResponse getOnlineRegion(final RpcController controller,
+      final GetOnlineRegionRequest request) throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.incrementAndGet();
+      List<HRegionInfo> list = new ArrayList<HRegionInfo>(onlineRegions.size());
+      for (Map.Entry<String,HRegion> e: this.onlineRegions.entrySet()) {
+        list.add(e.getValue().getRegionInfo());
+      }
+      Collections.sort(list);
+      GetOnlineRegionResponse.Builder builder = GetOnlineRegionResponse.newBuilder();
+      for (HRegionInfo region: list) {
+        builder.addRegionInfo(ProtobufUtil.toRegionInfo(region));
+      }
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+
+  // Region open/close direct RPCs
+
+  /**
+   * Open a region on the region server.
+   *
+   * @param controller the RPC controller
+   * @param request the request
+   * @throws ServiceException
+   */
+  @Override
+  @QosPriority(priority=HIGH_QOS)
+  public OpenRegionResponse openRegion(final RpcController controller,
+      final OpenRegionRequest request) throws ServiceException {
+    int versionOfOfflineNode = -1;
+    if (request.hasVersionOfOfflineNode()) {
+      versionOfOfflineNode = request.getVersionOfOfflineNode();
+    }
+    try {
+      checkOpen();
+      requestCount.incrementAndGet();
+      OpenRegionResponse.Builder
+        builder = OpenRegionResponse.newBuilder();
+      for (RegionInfo regionInfo: request.getRegionList()) {
+        HRegionInfo region = ProtobufUtil.toRegionInfo(regionInfo);
+        checkIfRegionInTransition(region, OPEN);
+
+        HRegion onlineRegion = getFromOnlineRegions(region.getEncodedName());
+        if (null != onlineRegion) {
+          // See HBASE-5094. Cross check with META if still this RS is owning the
+          // region.
+          Pair<HRegionInfo, ServerName> p = MetaReader.getRegion(
+            this.catalogTracker, region.getRegionName());
+          if (this.getServerName().equals(p.getSecond())) {
+            LOG.warn("Attempted open of " + region.getEncodedName()
+              + " but already online on this server");
+            builder.addOpeningState(RegionOpeningState.ALREADY_OPENED);
+            continue;
+          } else {
+            LOG.warn("The region " + region.getEncodedName()
+              + " is online on this server but META does not have this server.");
+            removeFromOnlineRegions(region.getEncodedName());
+          }
+        }
+        LOG.info("Received request to open region: " + region.getEncodedName());
+        this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(), true);
+        HTableDescriptor htd = this.tableDescriptors.get(region.getTableName());
+        // Need to pass the expected version in the constructor.
+        if (region.isRootRegion()) {
+          this.service.submit(new OpenRootHandler(this, this, region, htd,
+            versionOfOfflineNode));
+        } else if (region.isMetaRegion()) {
+          this.service.submit(new OpenMetaHandler(this, this, region, htd,
+            versionOfOfflineNode));
+        } else {
+          this.service.submit(new OpenRegionHandler(this, this, region, htd,
+            versionOfOfflineNode));
+        }
+        builder.addOpeningState(RegionOpeningState.OPENED);
+      }
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  /**
+   * Close a region on the region server.
+   *
+   * @param controller the RPC controller
+   * @param request the request
+   * @throws ServiceException
+   */
+  @Override
+  @QosPriority(priority=HIGH_QOS)
+  public CloseRegionResponse closeRegion(final RpcController controller,
+      final CloseRegionRequest request) throws ServiceException {
+    int versionOfClosingNode = -1;
+    if (request.hasVersionOfClosingNode()) {
+      versionOfClosingNode = request.getVersionOfClosingNode();
+    }
+    boolean zk = request.getTransitionInZK();
+    try {
+      checkOpen();
+      requestCount.incrementAndGet();
+      HRegion region = getRegion(request.getRegion());
+      CloseRegionResponse.Builder
+        builder = CloseRegionResponse.newBuilder();
+      LOG.info("Received close region: " + region.getRegionNameAsString() +
+        ". Version of ZK closing node:" + versionOfClosingNode);
+      HRegionInfo regionInfo = region.getRegionInfo();
+      checkIfRegionInTransition(regionInfo, CLOSE);
+      boolean closed = closeRegion(
+        regionInfo, false, zk, versionOfClosingNode);
+      builder.setClosed(closed);
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  /**
+   * Flush a region on the region server.
+   *
+   * @param controller the RPC controller
+   * @param request the request
+   * @throws ServiceException
+   */
+  @Override
+  @QosPriority(priority=HIGH_QOS)
+  public FlushRegionResponse flushRegion(final RpcController controller,
+      final FlushRegionRequest request) throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.incrementAndGet();
+      HRegion region = getRegion(request.getRegion());
+      LOG.info("Flushing " + region.getRegionNameAsString());
+      boolean shouldFlush = true;
+      if (request.hasIfOlderThanTs()) {
+        shouldFlush = region.getLastFlushTime() < request.getIfOlderThanTs();
+      }
+      FlushRegionResponse.Builder builder = FlushRegionResponse.newBuilder();
+      if (shouldFlush) {
+        builder.setFlushed(region.flushcache());
+      }
+      builder.setLastFlushTime(region.getLastFlushTime());
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  /**
+   * Split a region on the region server.
+   *
+   * @param controller the RPC controller
+   * @param request the request
+   * @throws ServiceException
+   */
+  @Override
+  @QosPriority(priority=HIGH_QOS)
+  public SplitRegionResponse splitRegion(final RpcController controller,
+      final SplitRegionRequest request) throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.incrementAndGet();
+      HRegion region = getRegion(request.getRegion());
+      LOG.info("Splitting " + region.getRegionNameAsString());
+      region.flushcache();
+      byte[] splitPoint = null;
+      if (request.hasSplitPoint()) {
+        splitPoint = request.getSplitPoint().toByteArray();
+      }
+      region.forceSplit(splitPoint);
+      compactSplitThread.requestSplit(region, region.checkSplit());
+      return SplitRegionResponse.newBuilder().build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  /**
+   * Compact a region on the region server.
+   *
+   * @param controller the RPC controller
+   * @param request the request
+   * @throws ServiceException
+   */
+  @Override
+  @QosPriority(priority=HIGH_QOS)
+  public CompactRegionResponse compactRegion(final RpcController controller,
+      final CompactRegionRequest request) throws ServiceException {
+    try {
+      checkOpen();
+      requestCount.incrementAndGet();
+      HRegion region = getRegion(request.getRegion());
+      LOG.info("Compacting " + region.getRegionNameAsString());
+      boolean major = false;
+      if (request.hasMajor()) {
+        major = request.getMajor();
+      }
+      if (major) {
+        region.triggerMajorCompaction();
+      }
+      compactSplitThread.requestCompaction(region,
+        "User-triggered " + (major ? "major " : "") + "compaction",
+          CompactSplitThread.PRIORITY_USER);
+      return CompactRegionResponse.newBuilder().build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  /**
+   * Replicate WAL entries on the region server.
+   *
+   * @param controller the RPC controller
+   * @param request the request
+   * @throws ServiceException
+   */
+  @Override
+  @QosPriority(priority=HIGH_QOS)
+  public ReplicateWALEntryResponse replicateWALEntry(final RpcController controller,
+      final ReplicateWALEntryRequest request) throws ServiceException {
+    try {
+      if (replicationSinkHandler != null) {
+        checkOpen();
+        requestCount.incrementAndGet();
+        HLog.Entry[] entries = ProtobufUtil.toHLogEntries(request.getEntryList());
+        if (entries != null && entries.length > 0) {
+          replicationSinkHandler.replicateLogEntries(entries);
+        }
+      }
+      return ReplicateWALEntryResponse.newBuilder().build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  /**
+   * Roll the WAL writer of the region server.
+   *
+   * @param controller the RPC controller
+   * @param request the request
+   * @throws ServiceException
+   */
+  @Override
+  public RollWALWriterResponse rollWALWriter(final RpcController controller,
+      final RollWALWriterRequest request) throws ServiceException {
+    try {
+      requestCount.incrementAndGet();
+      HLog wal = this.getWAL();
+      byte[][] regionsToFlush = wal.rollWriter(true);
+      RollWALWriterResponse.Builder builder = RollWALWriterResponse.newBuilder();
+      if (regionsToFlush != null) {
+        for (byte[] region: regionsToFlush) {
+          builder.addRegionToFlush(ByteString.copyFrom(region));
+        }
+      }
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  /**
+   * Stop the region server.
+   *
+   * @param controller the RPC controller
+   * @param request the request
+   * @throws ServiceException
+   */
+  @Override
+  public StopServerResponse stopServer(final RpcController controller,
+      final StopServerRequest request) throws ServiceException {
+    requestCount.incrementAndGet();
+    String reason = request.getReason();
+    stop(reason);
+    return StopServerResponse.newBuilder().build();
+  }
+
+  /**
+   * Get some information of the region server.
+   *
+   * @param controller the RPC controller
+   * @param request the request
+   * @throws ServiceException
+   */
+  @Override
+  public GetServerInfoResponse getServerInfo(final RpcController controller,
+      final GetServerInfoRequest request) throws ServiceException {
+    ServerName serverName = getServerName();
+    requestCount.incrementAndGet();
+    GetServerInfoResponse.Builder builder = GetServerInfoResponse.newBuilder();
+    builder.setServerName(ProtobufUtil.toServerName(serverName));
+    return builder.build();
+  }
+
+// End Admin methods
 
   /**
    * Find the HRegion based on a region specifier

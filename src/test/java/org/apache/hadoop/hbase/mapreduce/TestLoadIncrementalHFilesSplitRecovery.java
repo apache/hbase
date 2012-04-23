@@ -42,13 +42,13 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ServerCallable;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -60,6 +60,8 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Multimap;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 /**
  * Test cases for the atomic load error handling of the bulk load functionality.
@@ -259,7 +261,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   }
 
   private HConnection getMockedConnection(final Configuration conf)
-  throws IOException {
+  throws IOException, ServiceException {
     HConnection c = Mockito.mock(HConnection.class);
     Mockito.when(c.getConfiguration()).thenReturn(conf);
     Mockito.doNothing().when(c).close();
@@ -271,10 +273,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       thenReturn(loc);
     Mockito.when(c.locateRegion((byte[]) Mockito.any(), (byte[]) Mockito.any())).
       thenReturn(loc);
-    HRegionInterface hri = Mockito.mock(HRegionInterface.class);
-    Mockito.when(hri.bulkLoadHFiles(Mockito.anyList(), (byte [])Mockito.any())).
-      thenThrow(new IOException("injecting bulk load error"));
-    Mockito.when(c.getHRegionConnection(Mockito.anyString(), Mockito.anyInt())).
+    ClientProtocol hri = Mockito.mock(ClientProtocol.class);
+    Mockito.when(hri.bulkLoadHFile((RpcController)Mockito.any(), (BulkLoadHFileRequest)Mockito.any())).
+      thenThrow(new ServiceException(new IOException("injecting bulk load error")));
+    Mockito.when(c.getClient(Mockito.anyString(), Mockito.anyInt())).
       thenReturn(hri);
     return c;
   }

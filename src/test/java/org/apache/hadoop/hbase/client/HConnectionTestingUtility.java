@@ -24,10 +24,11 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.AdminProtocol;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionKey;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.protobuf.ClientProtocol;
 import org.mockito.Mockito;
 
 /**
@@ -72,14 +73,14 @@ public class HConnectionTestingUtility {
    * connection when done by calling
    * {@link HConnectionManager#deleteConnection(Configuration, boolean)} else it
    * will stick around; this is probably not what you want.
-   * @param implementation An {@link HRegionInterface} instance; you'll likely
-   * want to pass a mocked HRS; can be null.
-   * 
+   *
    * @param conf Configuration to use
-   * @param implementation An HRegionInterface; can be null but is usually
+   * @param admin An AdminProtocol; can be null but is usually
+   * itself a mock.
+   * @param client A ClientProtocol; can be null but is usually
    * itself a mock.
    * @param sn ServerName to include in the region location returned by this
-   * <code>implementation</code>
+   * <code>connection</code>
    * @param hri HRegionInfo to include in the location returned when
    * getRegionLocation is called on the mocked connection
    * @return Mock up a connection that returns a {@link Configuration} when
@@ -93,7 +94,7 @@ public class HConnectionTestingUtility {
    * @throws IOException
    */
   public static HConnection getMockedConnectionAndDecorate(final Configuration conf,
-      final HRegionInterface implementation, final ClientProtocol client,
+      final AdminProtocol admin, final ClientProtocol client,
       final ServerName sn, final HRegionInfo hri)
   throws IOException {
     HConnection c = HConnectionTestingUtility.getMockedConnection(conf);
@@ -105,10 +106,10 @@ public class HConnectionTestingUtility {
       thenReturn(loc);
     Mockito.when(c.locateRegion((byte[]) Mockito.any(), (byte[]) Mockito.any())).
       thenReturn(loc);
-    if (implementation != null) {
-      // If a call to getHRegionConnection, return this implementation.
-      Mockito.when(c.getHRegionConnection(Mockito.anyString(), Mockito.anyInt())).
-        thenReturn(implementation);
+    if (admin != null) {
+      // If a call to getAdmin, return this implementation.
+      Mockito.when(c.getAdmin(Mockito.anyString(), Mockito.anyInt())).
+        thenReturn(admin);
     }
     if (client != null) {
       // If a call to getClient, return this client.

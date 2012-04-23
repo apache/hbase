@@ -74,7 +74,6 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
@@ -82,7 +81,9 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Action;
+import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -117,11 +118,7 @@ import org.apache.hadoop.hbase.ipc.Invocation;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.protobuf.ClientProtocol;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
-import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
-import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
-import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
@@ -185,12 +182,6 @@ public class HRegionServer extends RegionServer
   private boolean useHBaseChecksum; // verify hbase checksums?
   private Path rootDir;
 
-  //RegionName vs current action in progress
-  //true - if open region action in progress
-  //false - if close region action in progress
-  private final ConcurrentSkipListMap<byte[], Boolean> regionsInTransitionInRS =
-      new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
-
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   final int numRetries;
@@ -228,9 +219,6 @@ public class HRegionServer extends RegionServer
   @SuppressWarnings("unused")
   private RegionServerDynamicMetrics dynamicMetrics;
 
-  // Compactions
-  public CompactSplitThread compactSplitThread;
-
   /*
    * Check for compactions requests.
    */
@@ -250,9 +238,6 @@ public class HRegionServer extends RegionServer
   // master address manager and watcher
   private MasterAddressTracker masterAddressManager;
 
-  // catalog tracker
-  private CatalogTracker catalogTracker;
-
   // Cluster Status Tracker
   private ClusterStatusTracker clusterStatusTracker;
 
@@ -263,14 +248,6 @@ public class HRegionServer extends RegionServer
   private final Sleeper sleeper;
 
   private final int rpcTimeout;
-
-  // Instance of the hbase executor service.
-  private ExecutorService service;
-  @SuppressWarnings("unused")
-
-  // Replication services. If no replication, this handler will be null.
-  private ReplicationSourceService replicationSourceHandler;
-  private ReplicationSinkService replicationSinkHandler;
 
   private final RegionServerAccounting regionServerAccounting;
 
@@ -295,18 +272,6 @@ public class HRegionServer extends RegionServer
    * This servers startcode.
    */
   private final long startcode;
-
-  /**
-   * Go here to get table descriptors.
-   */
-  private TableDescriptors tableDescriptors;
-
-  /*
-   * Strings to be used in forming the exception message for
-   * RegionsAlreadyInTransitionException.
-   */
-  private static final String OPEN = "OPEN";
-  private static final String CLOSE = "CLOSE";
 
   /**
    * MX Bean for RegionServerInfo
@@ -370,7 +335,7 @@ public class HRegionServer extends RegionServer
 
     this.rpcServer = HBaseRPC.getServer(this,
       new Class<?>[]{HRegionInterface.class, ClientProtocol.class,
-        HBaseRPCErrorHandler.class,
+        AdminProtocol.class, HBaseRPCErrorHandler.class,
         OnlineRegions.class},
         initialIsa.getHostName(), // BindAddress is IP we got for this server.
         initialIsa.getPort(),
@@ -2490,19 +2455,6 @@ public class HRegionServer extends RegionServer
     return RegionOpeningState.OPENED;
   }
 
-  private void checkIfRegionInTransition(HRegionInfo region,
-      String currentAction) throws RegionAlreadyInTransitionException {
-    byte[] encodedName = region.getEncodedNameAsBytes();
-    if (this.regionsInTransitionInRS.containsKey(encodedName)) {
-      boolean openAction = this.regionsInTransitionInRS.get(encodedName);
-      // The below exception message will be used in master.
-      throw new RegionAlreadyInTransitionException("Received:" + currentAction +
-        " for the region:" + region.getRegionNameAsString() +
-        " ,which we are already trying to " +
-        (openAction ? OPEN : CLOSE)+ ".");
-    }
-  }
-
   @Override
   @QosPriority(priority=HIGH_QOS)
   public void openRegions(List<HRegionInfo> regions)
@@ -2557,54 +2509,6 @@ public class HRegionServer extends RegionServer
   public boolean closeRegion(byte[] encodedRegionName, boolean zk)
     throws IOException {
     return closeRegion(encodedRegionName, false, zk);
-  }
-
-  /**
-   * @param region Region to close
-   * @param abort True if we are aborting
-   * @param zk True if we are to update zk about the region close; if the close
-   * was orchestrated by master, then update zk.  If the close is being run by
-   * the regionserver because its going down, don't update zk.
-   * @return True if closed a region.
-   */
-  protected boolean closeRegion(HRegionInfo region, final boolean abort,
-      final boolean zk) {
-    return closeRegion(region, abort, zk, -1);
-  }
-
-
-    /**
-   * @param region Region to close
-   * @param abort True if we are aborting
-   * @param zk True if we are to update zk about the region close; if the close
-   * was orchestrated by master, then update zk.  If the close is being run by
-   * the regionserver because its going down, don't update zk.
-   * @param versionOfClosingNode
-   *   the version of znode to compare when RS transitions the znode from
-   *   CLOSING state.
-   * @return True if closed a region.
-   */
-  protected boolean closeRegion(HRegionInfo region, final boolean abort,
-      final boolean zk, final int versionOfClosingNode) {
-    if (this.regionsInTransitionInRS.containsKey(region.getEncodedNameAsBytes())) {
-      LOG.warn("Received close for region we are already opening or closing; " +
-          region.getEncodedName());
-      return false;
-    }
-    this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(), false);
-    CloseRegionHandler crh = null;
-    if (region.isRootRegion()) {
-      crh = new CloseRootHandler(this, this, region, abort, zk,
-        versionOfClosingNode);
-    } else if (region.isMetaRegion()) {
-      crh = new CloseMetaHandler(this, this, region, abort, zk,
-        versionOfClosingNode);
-    } else {
-      crh = new CloseRegionHandler(this, this, region, abort, zk,
-        versionOfClosingNode);
-    }
-    this.service.submit(crh);
-    return true;
   }
 
   /**
@@ -2804,13 +2708,6 @@ public class HRegionServer extends RegionServer
     return sortedRegions;
   }
 
-  @Override
-  public HRegion getFromOnlineRegions(final String encodedRegionName) {
-    HRegion r = null;
-    r = this.onlineRegions.get(encodedRegionName);
-    return r;
-  }
-
   /** @return the request count */
   public AtomicInteger getRequestCount() {
     return this.requestCount;
@@ -2858,6 +2755,8 @@ public class HRegionServer extends RegionServer
       return new ProtocolSignature(HRegionInterface.VERSION, null);
     } else if (protocol.equals(ClientProtocol.class.getName())) {
       return new ProtocolSignature(ClientProtocol.VERSION, null);
+    } else if (protocol.equals(AdminProtocol.class.getName())) {
+      return new ProtocolSignature(AdminProtocol.VERSION, null);
     }
     throw new IOException("Unknown protocol: " + protocol);
   }
@@ -2870,6 +2769,8 @@ public class HRegionServer extends RegionServer
       return HRegionInterface.VERSION;
     } else if (protocol.equals(ClientProtocol.class.getName())) {
       return ClientProtocol.VERSION;
+    } else if (protocol.equals(AdminProtocol.class.getName())) {
+      return AdminProtocol.VERSION;
     }
     throw new IOException("Unknown protocol: " + protocol);
   }

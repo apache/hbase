@@ -49,7 +49,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class SortedCopyOnWriteSet<E> implements SortedSet<E> {
-  private SortedSet<E> internalSet;
+  private volatile SortedSet<E> internalSet;
 
   public SortedCopyOnWriteSet() {
     this.internalSet = new TreeSet<E>();

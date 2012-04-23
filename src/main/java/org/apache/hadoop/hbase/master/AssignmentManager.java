@@ -2051,40 +2051,36 @@ public class AssignmentManager extends ZooKeeperListener {
       // This never happens. Currently regionserver close always return true.
       LOG.warn("Server " + server + " region CLOSE RPC returned false for " +
         region.getRegionNameAsString());
-    } catch (NotServingRegionException nsre) {
-      LOG.info("Server " + server + " returned " + nsre + " for " +
-        region.getRegionNameAsString());
-      // Presume that master has stale data.  Presume remote side just split.
-      // Presume that the split message when it comes in will fix up the master's
-      // in memory cluster state.
     } catch (Throwable t) {
       if (t instanceof RemoteException) {
         t = ((RemoteException)t).unwrapRemoteException();
-        if (t instanceof NotServingRegionException) {
-          if (checkIfRegionBelongsToDisabling(region)) {
-            // Remove from the regionsinTransition map
-            LOG.info("While trying to recover the table "
-                + region.getTableNameAsString()
-                + " to DISABLED state the region " + region
-                + " was offlined but the table was in DISABLING state");
-            synchronized (this.regionsInTransition) {
-              this.regionsInTransition.remove(region.getEncodedName());
-            }
-            // Remove from the regionsMap
-            synchronized (this.regions) {
-              this.regions.remove(region);
-            }
-            deleteClosingOrClosedNode(region);
+      }
+      if (t instanceof NotServingRegionException) {
+        // Presume that master has stale data.  Presume remote side just split.
+        // Presume that the split message when it comes in will fix up the master's
+        // in memory cluster state.
+        if (checkIfRegionBelongsToDisabling(region)) {
+          // Remove from the regionsinTransition map
+          LOG.info("While trying to recover the table "
+              + region.getTableNameAsString()
+              + " to DISABLED state the region " + region
+              + " was offlined but the table was in DISABLING state");
+          synchronized (this.regionsInTransition) {
+            this.regionsInTransition.remove(region.getEncodedName());
           }
+          // Remove from the regionsMap
+          synchronized (this.regions) {
+            this.regions.remove(region);
+          }
+          deleteClosingOrClosedNode(region);
         }
+      } else if (t instanceof RegionAlreadyInTransitionException) {
         // RS is already processing this region, only need to update the timestamp
-        if (t instanceof RegionAlreadyInTransitionException) {
-          LOG.debug("update " + state + " the timestamp.");
-          state.update(state.getState());
-        }
+        LOG.debug("update " + state + " the timestamp.");
+        state.update(state.getState());
       }
       LOG.info("Server " + server + " returned " + t + " for " +
-        region.getEncodedName());
+        region.getRegionNameAsString());
       // Presume retry or server will expire.
     }
   }

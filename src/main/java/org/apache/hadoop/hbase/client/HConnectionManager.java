@@ -66,20 +66,16 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.AdminProtocol;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.ClientProtocol;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -160,6 +156,12 @@ public class HConnectionManager {
 
   /** Default client protocol class name. */
   public static final String DEFAULT_CLIENT_PROTOCOL_CLASS = ClientProtocol.class.getName();
+
+  /** Parameter name for what admin protocol to use. */
+  public static final String REGION_PROTOCOL_CLASS = "hbase.adminprotocol.class";
+
+  /** Default admin protocol class name. */
+  public static final String DEFAULT_ADMIN_PROTOCOL_CLASS = AdminProtocol.class.getName();
 
   private static final Log LOG = LogFactory.getLog(HConnectionManager.class);
 
@@ -507,7 +509,7 @@ public class HConnectionManager {
   /* Encapsulates connection to zookeeper and regionservers.*/
   static class HConnectionImplementation implements HConnection, Closeable {
     static final Log LOG = LogFactory.getLog(HConnectionImplementation.class);
-    private final Class<? extends HRegionInterface> serverInterfaceClass;
+    private final Class<? extends AdminProtocol> adminClass;
     private final Class<? extends ClientProtocol> clientClass;
     private final long pause;
     private final int numRetries;
@@ -535,8 +537,8 @@ public class HConnectionManager {
 
 
     private final Configuration conf;
-    // Known region HServerAddress.toString() -> HRegionInterface
 
+    // Known region ServerName.toString() -> RegionClient/Admin
     private final ConcurrentHashMap<String, Map<String, VersionedProtocol>> servers =
       new ConcurrentHashMap<String, Map<String, VersionedProtocol>>();
     private final ConcurrentHashMap<String, String> connectionLock =
@@ -576,15 +578,15 @@ public class HConnectionManager {
     throws ZooKeeperConnectionException {
       this.conf = conf;
       this.managed = managed;
-      String serverClassName = conf.get(HConstants.REGION_SERVER_CLASS,
-        HConstants.DEFAULT_REGION_SERVER_CLASS);
+      String adminClassName = conf.get(REGION_PROTOCOL_CLASS,
+        DEFAULT_ADMIN_PROTOCOL_CLASS);
       this.closed = false;
       try {
-        this.serverInterfaceClass =
-          (Class<? extends HRegionInterface>) Class.forName(serverClassName);
+        this.adminClass =
+          (Class<? extends AdminProtocol>) Class.forName(adminClassName);
       } catch (ClassNotFoundException e) {
         throw new UnsupportedOperationException(
-            "Unable to find region server interface " + serverClassName, e);
+            "Unable to find region server interface " + adminClassName, e);
       }
       String clientClassName = conf.get(CLIENT_PROTOCOL_CLASS,
         DEFAULT_CLIENT_PROTOCOL_CLASS);
@@ -730,9 +732,6 @@ public class HConnectionManager {
           return getKeepAliveMaster();
         } catch (MasterNotRunningException e) {
           throw e;
-        } catch (IOException e) {
-          throw new ZooKeeperConnectionException(
-            "Can't create a connection to master", e);
         }
       }
     }
@@ -1057,8 +1056,8 @@ public class HConnectionManager {
           metaLocation = locateRegion(parentTable, metaKey);
           // If null still, go around again.
           if (metaLocation == null) continue;
-          HRegionInterface server =
-            getHRegionConnection(metaLocation.getHostname(), metaLocation.getPort());
+          ClientProtocol server =
+            getClient(metaLocation.getHostname(), metaLocation.getPort());
 
           Result regionInfoRow = null;
           // This block guards against two threads trying to load the meta
@@ -1086,9 +1085,9 @@ public class HConnectionManager {
             }
 
             // Query the root or meta region for the location of the meta region
-            regionInfoRow = server.getClosestRowBefore(
-            metaLocation.getRegionInfo().getRegionName(), metaKey,
-            HConstants.CATALOG_FAMILY);
+            regionInfoRow = ProtobufUtil.getRowOrBefore(server,
+              metaLocation.getRegionInfo().getRegionName(), metaKey,
+              HConstants.CATALOG_FAMILY);
           }
           if (regionInfoRow == null) {
             throw new TableNotFoundException(Bytes.toString(tableName));
@@ -1340,17 +1339,9 @@ public class HConnectionManager {
     }
 
     @Override
-    @Deprecated
-    public HRegionInterface getHRegionConnection(HServerAddress hsa)
-    throws IOException {
-      return getHRegionConnection(hsa, false);
-    }
-
-    @Override
-    public HRegionInterface getHRegionConnection(final String hostname,
-        final int port)
-    throws IOException {
-      return getHRegionConnection(hostname, port, false);
+    public AdminProtocol getAdmin(final String hostname,
+        final int port) throws IOException {
+      return getAdmin(hostname, port, false);
     }
 
     @Override
@@ -1361,21 +1352,10 @@ public class HConnectionManager {
     }
 
     @Override
-    @Deprecated
-    public HRegionInterface getHRegionConnection(HServerAddress hsa,
-        boolean master)
-    throws IOException {
-      String hostname = hsa.getInetSocketAddress().getHostName();
-      int port = hsa.getInetSocketAddress().getPort();
-      return getHRegionConnection(hostname, port, master);
-    }
-
-    @Override
-    public HRegionInterface getHRegionConnection(final String hostname,
-        final int port, final boolean master)
-    throws IOException {
-      return (HRegionInterface)getProtocol(hostname, port,
-        serverInterfaceClass, HRegionInterface.VERSION);
+    public AdminProtocol getAdmin(final String hostname,
+        final int port, final boolean master) throws IOException {
+      return (AdminProtocol)getProtocol(hostname, port,
+        adminClass, AdminProtocol.VERSION);
     }
 
     /**
@@ -1591,11 +1571,19 @@ public class HConnectionManager {
           }catch  (InvocationTargetException e){
             // We will have this for all the exception, checked on not, sent
             //  by any layer, including the functional exception
-            if (e.getCause () == null){
+            Throwable cause = e.getCause();
+            if (cause == null){
               throw new RuntimeException(
                 "Proxy invocation failed and getCause is null", e);
             }
-            throw e.getCause();
+            if (cause instanceof UndeclaredThrowableException) {
+              cause = cause.getCause();
+            }
+            if (cause instanceof ServiceException) {
+              ServiceException se = (ServiceException)cause;
+              cause = ProtobufUtil.getRemoteException(se);
+            }
+            throw cause;
           }
         }
       }
@@ -1715,39 +1703,8 @@ public class HConnectionManager {
          ServerCallable<MultiResponse> callable =
            new ServerCallable<MultiResponse>(connection, tableName, null) {
              public MultiResponse call() throws IOException {
-               try {
-                 MultiResponse response = new MultiResponse();
-                 for (Map.Entry<byte[], List<Action<R>>> e: multi.actions.entrySet()) {
-                   byte[] regionName = e.getKey();
-                   int rowMutations = 0;
-                   List<Action<R>> actions = e.getValue();
-                   for (Action<R> action: actions) {
-                     Row row = action.getAction();
-                     if (row instanceof RowMutations) {
-                       MultiRequest request =
-                         RequestConverter.buildMultiRequest(regionName, (RowMutations)row);
-                       server.multi(null, request);
-                       response.add(regionName, action.getOriginalIndex(), new Result());
-                       rowMutations++;
-                     }
-                   }
-                   if (actions.size() > rowMutations) {
-                     MultiRequest request =
-                       RequestConverter.buildMultiRequest(regionName, actions);
-                     ClientProtos.MultiResponse
-                       proto = server.multi(null, request);
-                     List<Object> results = ResponseConverter.getResults(proto);
-                     for (int i = 0, n = results.size(); i < n; i++) {
-                       int originalIndex = actions.get(i).getOriginalIndex();
-                       response.add(regionName, originalIndex, results.get(i));
-                     }
-                   }
-                 }
-                 return response;
-               } catch (ServiceException se) {
-                 throw ProtobufUtil.getRemoteException(se);
-               }
-             }
+               return ProtobufUtil.multi(server, multi);
+            }
              @Override
              public void connect(boolean reload) throws IOException {
                server = connection.getClient(

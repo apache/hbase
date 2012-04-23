@@ -38,12 +38,12 @@ message GetRegionInfoResponse {
  * Get a list of store files for a set of column families in a particular region.
  * If no column family is specified, get the store files for all column families.
  */
-message GetStoreFileListRequest {
+message GetStoreFileRequest {
   required RegionSpecifier region = 1;
-  repeated bytes columnFamily = 2;
+  repeated bytes family = 2;
 }
 
-message GetStoreFileListResponse {
+message GetStoreFileResponse {
   repeated string storeFile = 1;
 }
 
@@ -55,7 +55,7 @@ message GetOnlineRegionResponse {
 }
 
 message OpenRegionRequest {
-  repeated RegionSpecifier region = 1;
+  repeated RegionInfo region = 1;
   optional uint32 versionOfOfflineNode = 2;
 }
 
@@ -133,7 +133,7 @@ message UUID {
 
 // Protocol buffer version of HLog
 message WALEntry {
-  required WALKey walKey = 1;
+  required WALKey key = 1;
   required WALEdit edit = 2;
 
   // Protocol buffer version of HLogKey
@@ -146,7 +146,7 @@ message WALEntry {
   }
 
   message WALEdit {
-    repeated bytes keyValue = 1;
+    repeated bytes keyValueBytes = 1;
     repeated FamilyScope familyScope = 2;
 
     enum ScopeType {
@@ -168,7 +168,7 @@ message WALEntry {
  * hbase.replication has to be set to true for this to work.
  */
 message ReplicateWALEntryRequest {
-  repeated WALEntry walEntry = 1;
+  repeated WALEntry entry = 1;
 }
 
 message ReplicateWALEntryResponse {
@@ -201,8 +201,8 @@ service AdminService {
   rpc getRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
 
-  rpc getStoreFileList(GetStoreFileListRequest)
-    returns(GetStoreFileListResponse);
+  rpc getStoreFile(GetStoreFileRequest)
+    returns(GetStoreFileResponse);
 
   rpc getOnlineRegion(GetOnlineRegionRequest)
     returns(GetOnlineRegionResponse);

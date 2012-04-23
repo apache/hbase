@@ -44,13 +44,14 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 
 /**
@@ -81,8 +82,8 @@ public class ServerManager {
   /**
    * Map from full server-instance name to the RPC connection for this server.
    */
-  private final Map<ServerName, HRegionInterface> serverConnections =
-    new HashMap<ServerName, HRegionInterface>();
+  private final Map<ServerName, AdminProtocol> serverConnections =
+    new HashMap<ServerName, AdminProtocol>();
 
   /**
    * List of region servers <ServerName> that should not get any more new
@@ -476,14 +477,13 @@ public class ServerManager {
   public RegionOpeningState sendRegionOpen(final ServerName server,
       HRegionInfo region, int versionOfOfflineNode)
   throws IOException {
-    HRegionInterface hri = getServerConnection(server);
-    if (hri == null) {
+    AdminProtocol admin = getServerConnection(server);
+    if (admin == null) {
       LOG.warn("Attempting to send OPEN RPC to server " + server.toString() +
         " failed because no RPC connection found to this server");
       return RegionOpeningState.FAILED_OPENING;
     }
-    return (versionOfOfflineNode == -1) ? hri.openRegion(region) : hri
-        .openRegion(region, versionOfOfflineNode);
+    return ProtobufUtil.openRegion(admin, region, versionOfOfflineNode);
   }
 
   /**
@@ -496,13 +496,13 @@ public class ServerManager {
    */
   public void sendRegionOpen(ServerName server, List<HRegionInfo> regions)
   throws IOException {
-    HRegionInterface hri = getServerConnection(server);
-    if (hri == null) {
+    AdminProtocol admin = getServerConnection(server);
+    if (admin == null) {
       LOG.warn("Attempting to send OPEN RPC to server " + server.toString() +
         " failed because no RPC connection found to this server");
       return;
     }
-    hri.openRegions(regions);
+    ProtobufUtil.openRegion(admin, regions);
   }
 
   /**
@@ -521,14 +521,15 @@ public class ServerManager {
   public boolean sendRegionClose(ServerName server, HRegionInfo region,
     int versionOfClosingNode) throws IOException {
     if (server == null) throw new NullPointerException("Passed server is null");
-    HRegionInterface hri = getServerConnection(server);
-    if (hri == null) {
+    AdminProtocol admin = getServerConnection(server);
+    if (admin == null) {
       throw new IOException("Attempting to send CLOSE RPC to server " +
         server.toString() + " for region " +
         region.getRegionNameAsString() +
         " failed because no RPC connection found to this server");
     }
-    return hri.closeRegion(region, versionOfClosingNode);
+    return ProtobufUtil.closeRegion(admin, region.getRegionName(),
+      versionOfClosingNode);
   }
 
   /**
@@ -538,15 +539,15 @@ public class ServerManager {
    * @throws RetriesExhaustedException wrapping a ConnectException if failed
    * putting up proxy.
    */
-  private HRegionInterface getServerConnection(final ServerName sn)
+  private AdminProtocol getServerConnection(final ServerName sn)
   throws IOException {
-    HRegionInterface hri = this.serverConnections.get(sn);
-    if (hri == null) {
+    AdminProtocol admin = this.serverConnections.get(sn.toString());
+    if (admin == null) {
       LOG.debug("New connection to " + sn.toString());
-      hri = this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
-      this.serverConnections.put(sn, hri);
+      admin = this.connection.getAdmin(sn.getHostname(), sn.getPort());
+      this.serverConnections.put(sn, admin);
     }
-    return hri;
+    return admin;
   }
 
   /**

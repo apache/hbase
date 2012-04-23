@@ -31,9 +31,6 @@ import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -80,12 +77,7 @@ public class ExecRPCInvoker implements InvocationHandler {
           new ServerCallable<ExecResult>(connection, table, row) {
             public ExecResult call() throws Exception {
               byte[] regionName = location.getRegionInfo().getRegionName();
-              ExecCoprocessorRequest request =
-                RequestConverter.buildExecCoprocessorRequest(regionName, exec);
-              ExecCoprocessorResponse response =
-                server.execCoprocessor(null, request);
-              Object value = ProtobufUtil.toObject(response.getValue());
-              return new ExecResult(regionName, value);
+              return ProtobufUtil.execCoprocessor(server, exec, regionName);
             }
           };
         ExecResult result = callable.withRetries();

@@ -47,15 +47,15 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.client.AdminProtocol;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.ClientProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -93,12 +93,12 @@ public class TestCatalogJanitor {
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
       }
-      // Mock an HConnection and a HRegionInterface implementation.  Have the
+      // Mock an HConnection and a AdminProtocol implementation.  Have the
       // HConnection return the HRI.  Have the HRI return a few mocked up responses
       // to make our test work.
       this.connection =
         HConnectionTestingUtility.getMockedConnectionAndDecorate(this.c,
-          Mockito.mock(HRegionInterface.class), ri,
+          Mockito.mock(AdminProtocol.class), ri,
           new ServerName("example.org,12345,6789"),
           HRegionInfo.FIRST_META_REGIONINFO);
       // Set hbase.rootdir into test dir.
@@ -106,7 +106,7 @@ public class TestCatalogJanitor {
       Path rootdir = fs.makeQualified(new Path(this.c.get(HConstants.HBASE_DIR)));
       this.c.set(HConstants.HBASE_DIR, rootdir.toString());
       this.ct = Mockito.mock(CatalogTracker.class);
-      HRegionInterface hri = Mockito.mock(HRegionInterface.class);
+      AdminProtocol hri = Mockito.mock(AdminProtocol.class);
       Mockito.when(this.ct.getConnection()).thenReturn(this.connection);
       Mockito.when(ct.waitForMetaServerConnectionDefault()).thenReturn(hri);
     }

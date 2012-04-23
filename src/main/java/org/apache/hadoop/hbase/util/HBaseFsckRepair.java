@@ -34,12 +34,13 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.zookeeper.KeeperException;
@@ -149,17 +150,16 @@ public class HBaseFsckRepair {
   public static void closeRegionSilentlyAndWait(HBaseAdmin admin,
       ServerName server, HRegionInfo region) throws IOException, InterruptedException {
     HConnection connection = admin.getConnection();
-    HRegionInterface rs = connection.getHRegionConnection(server.getHostname(),
-        server.getPort());
-    rs.closeRegion(region, false);
+    AdminProtocol rs = connection.getAdmin(server.getHostname(), server.getPort());
+    ProtobufUtil.closeRegion(rs, region.getRegionName(), false);
     long timeout = admin.getConfiguration()
       .getLong("hbase.hbck.close.timeout", 120000);
     long expiration = timeout + System.currentTimeMillis();
     while (System.currentTimeMillis() < expiration) {
       try {
-        HRegionInfo rsRegion = rs.getRegionInfo(region.getRegionName());
-        if (rsRegion == null)
-          return;
+        HRegionInfo rsRegion =
+          ProtobufUtil.getRegionInfo(rs, region.getRegionName());
+        if (rsRegion == null) return;
       } catch (IOException ioe) {
         return;
       }

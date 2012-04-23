@@ -53,13 +53,21 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.AdminProtocol;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.ClientProtocol;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
@@ -71,6 +79,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -1092,20 +1101,26 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean closeRegionWithEncodedRegionName(final String encodedRegionName,
       final String serverName) throws IOException {
-    byte[] encodedRegionNameInBytes = Bytes.toBytes(encodedRegionName);
     if (null == serverName || ("").equals(serverName.trim())) {
       throw new IllegalArgumentException(
           "The servername cannot be null or empty.");
     }
     ServerName sn = new ServerName(serverName);
-    HRegionInterface rs = this.connection.getHRegionConnection(
+    AdminProtocol admin = this.connection.getAdmin(
         sn.getHostname(), sn.getPort());
     // Close the region without updating zk state.
-    boolean isRegionClosed = rs.closeRegion(encodedRegionNameInBytes, false);
-    if (false == isRegionClosed) {
-      LOG.error("Not able to close the region " + encodedRegionName + ".");
+    CloseRegionRequest request =
+      RequestConverter.buildCloseRegionRequest(encodedRegionName, false);
+    try {
+      CloseRegionResponse response = admin.closeRegion(null, request);
+      boolean isRegionClosed = response.getClosed();
+      if (false == isRegionClosed) {
+        LOG.error("Not able to close the region " + encodedRegionName + ".");
+      }
+      return isRegionClosed;
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
     }
-    return isRegionClosed;
   }
 
   /**
@@ -1117,10 +1132,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void closeRegion(final ServerName sn, final HRegionInfo hri)
   throws IOException {
-    HRegionInterface rs =
-      this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
+    AdminProtocol admin =
+      this.connection.getAdmin(sn.getHostname(), sn.getPort());
     // Close the region without updating zk state.
-    rs.closeRegion(hri, false);
+    ProtobufUtil.closeRegion(admin, hri.getRegionName(), false);
   }
 
   /**
@@ -1183,9 +1198,15 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   private void flush(final ServerName sn, final HRegionInfo hri)
   throws IOException {
-    HRegionInterface rs =
-      this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
-    rs.flushRegion(hri);
+    AdminProtocol admin =
+      this.connection.getAdmin(sn.getHostname(), sn.getPort());
+    FlushRegionRequest request =
+      RequestConverter.buildFlushRegionRequest(hri.getRegionName());
+    try {
+      admin.flushRegion(null, request);
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
   }
 
   /**
@@ -1289,9 +1310,15 @@ public class HBaseAdmin implements Abortable, Closeable {
   private void compact(final ServerName sn, final HRegionInfo hri,
       final boolean major)
   throws IOException {
-    HRegionInterface rs =
-      this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
-    rs.compactRegion(hri, major);
+    AdminProtocol admin =
+      this.connection.getAdmin(sn.getHostname(), sn.getPort());
+    CompactRegionRequest request =
+      RequestConverter.buildCompactRegionRequest(hri.getRegionName(), major);
+    try {
+      admin.compactRegion(null, request);
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
   }
 
   /**
@@ -1471,9 +1498,15 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   private void split(final ServerName sn, final HRegionInfo hri,
       byte[] splitPoint) throws IOException {
-    HRegionInterface rs =
-      this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
-    rs.splitRegion(hri, splitPoint);
+    AdminProtocol admin =
+      this.connection.getAdmin(sn.getHostname(), sn.getPort());
+    SplitRegionRequest request =
+      RequestConverter.buildSplitRegionRequest(hri.getRegionName(), splitPoint);
+    try {
+      admin.splitRegion(null, request);
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
   }
 
   /**
@@ -1572,9 +1605,15 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException {
     String hostname = Addressing.parseHostname(hostnamePort);
     int port = Addressing.parsePort(hostnamePort);
-    HRegionInterface rs =
-      this.connection.getHRegionConnection(hostname, port);
-    rs.stop("Called by admin client " + this.connection.toString());
+    AdminProtocol admin =
+      this.connection.getAdmin(hostname, port);
+    StopServerRequest request = RequestConverter.buildStopServerRequest(
+      "Called by admin client " + this.connection.toString());
+    try {
+      admin.stopServer(null, request);
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
   }
 
   /**
@@ -1715,9 +1754,21 @@ public class HBaseAdmin implements Abortable, Closeable {
  public synchronized  byte[][] rollHLogWriter(String serverName)
       throws IOException, FailedLogCloseException {
     ServerName sn = new ServerName(serverName);
-    HRegionInterface rs = this.connection.getHRegionConnection(
+    AdminProtocol admin = this.connection.getAdmin(
         sn.getHostname(), sn.getPort());
-    return rs.rollHLogWriter();
+    RollWALWriterRequest request = RequestConverter.buildRollWALWriterRequest();;
+    try {
+      RollWALWriterResponse response = admin.rollWALWriter(null, request);
+      int regionCount = response.getRegionToFlushCount();
+      byte[][] regionsToFlush = new byte[regionCount][];
+      for (int i = 0; i < regionCount; i++) {
+        ByteString region = response.getRegionToFlush(i);
+        regionsToFlush[i] = region.toByteArray();
+      }
+      return regionsToFlush;
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
   }
 
   public String[] getMasterCoprocessors() {

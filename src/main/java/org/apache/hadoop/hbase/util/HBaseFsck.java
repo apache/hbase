@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -70,8 +71,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
@@ -2620,11 +2621,11 @@ public class HBaseFsck {
     public synchronized void run() {
       errors.progress();
       try {
-        HRegionInterface server =
-            connection.getHRegionConnection(rsinfo.getHostname(), rsinfo.getPort());
+        AdminProtocol server =
+          connection.getAdmin(rsinfo.getHostname(), rsinfo.getPort());
 
         // list all online regions from this region server
-        List<HRegionInfo> regions = server.getOnlineRegions();
+        List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(server);
         if (hbck.checkMetaOnly) {
           regions = filterOnlyMetaRegions(regions);
         }

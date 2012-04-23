@@ -24,16 +24,15 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.util.StringUtils;
 
@@ -144,18 +143,6 @@ public final class ResponseConverter {
       regionInfos.add(ProtobufUtil.toRegionInfo(regionInfo));
     }
     return regionInfos;
-  }
-
-  /**
-   * Get the region info from a GetRegionInfoResponse
-   *
-   * @param proto the GetRegionInfoResponse
-   * @return the region info
-   */
-  public static HRegionInfo getRegionInfo
-      (final GetRegionInfoResponse proto) {
-    if (proto == null || proto.getRegionInfo() == null) return null;
-    return ProtobufUtil.toRegionInfo(proto.getRegionInfo());
   }
 
   /**

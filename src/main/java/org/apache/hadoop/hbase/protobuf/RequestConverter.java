@@ -24,10 +24,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
+import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
@@ -42,6 +44,23 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALEdit.ScopeType;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALKey;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALEdit.FamilyScope;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath;
@@ -65,6 +84,9 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -90,16 +112,15 @@ public final class RequestConverter {
    * @param regionName the name of the region to get
    * @param row the row to get
    * @param family the column family to get
-   * @param closestRowBefore if the requested row doesn't exist,
    * should return the immediate row before
    * @return a protocol buffer GetReuqest
    */
-  public static GetRequest buildGetRequest(final byte[] regionName,
-      final byte[] row, final byte[] family, boolean closestRowBefore) {
+  public static GetRequest buildGetRowOrBeforeRequest(
+      final byte[] regionName, final byte[] row, final byte[] family) {
     GetRequest.Builder builder = GetRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
-    builder.setClosestRowBefore(closestRowBefore);
+    builder.setClosestRowBefore(true);
     builder.setRegion(region);
 
     Column.Builder columnBuilder = Column.newBuilder();
@@ -542,6 +563,294 @@ public final class RequestConverter {
   }
 
 // End utilities for Client
+//Start utilities for Admin
+
+ /**
+  * Create a protocol buffer GetRegionInfoRequest for a given region name
+  *
+  * @param regionName the name of the region to get info
+  * @return a protocol buffer GetRegionInfoRequest
+  */
+ public static GetRegionInfoRequest
+     buildGetRegionInfoRequest(final byte[] regionName) {
+   GetRegionInfoRequest.Builder builder = GetRegionInfoRequest.newBuilder();
+   RegionSpecifier region = buildRegionSpecifier(
+     RegionSpecifierType.REGION_NAME, regionName);
+   builder.setRegion(region);
+   return builder.build();
+ }
+
+ /**
+  * Create a protocol buffer GetStoreFileRequest for a given region name
+  *
+  * @param regionName the name of the region to get info
+  * @param family the family to get store file list
+  * @return a protocol buffer GetStoreFileRequest
+  */
+ public static GetStoreFileRequest
+     buildGetStoreFileRequest(final byte[] regionName, final byte[] family) {
+   GetStoreFileRequest.Builder builder = GetStoreFileRequest.newBuilder();
+   RegionSpecifier region = buildRegionSpecifier(
+     RegionSpecifierType.REGION_NAME, regionName);
+   builder.setRegion(region);
+   builder.addFamily(ByteString.copyFrom(family));
+   return builder.build();
+ }
+
+ /**
+  * Create a protocol buffer GetOnlineRegionRequest
+  *
+  * @return a protocol buffer GetOnlineRegionRequest
+  */
+ public static GetOnlineRegionRequest buildGetOnlineRegionRequest() {
+   return GetOnlineRegionRequest.newBuilder().build();
+ }
+
+ /**
+  * Create a protocol buffer FlushRegionRequest for a given region name
+  *
+  * @param regionName the name of the region to get info
+  * @return a protocol buffer FlushRegionRequest
+  */
+ public static FlushRegionRequest
+     buildFlushRegionRequest(final byte[] regionName) {
+   FlushRegionRequest.Builder builder = FlushRegionRequest.newBuilder();
+   RegionSpecifier region = buildRegionSpecifier(
+     RegionSpecifierType.REGION_NAME, regionName);
+   builder.setRegion(region);
+   return builder.build();
+ }
+
+ /**
+  * Create a protocol buffer OpenRegionRequest to open a list of regions
+  *
+  * @param regions the list of regions to open
+  * @return a protocol buffer OpenRegionRequest
+  */
+ public static OpenRegionRequest
+     buildOpenRegionRequest(final List<HRegionInfo> regions) {
+   OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
+   for (HRegionInfo region: regions) {
+     builder.addRegion(ProtobufUtil.toRegionInfo(region));
+   }
+   return builder.build();
+ }
+
+ /**
+  * Create a protocol buffer OpenRegionRequest for a given region
+  *
+  * @param region the region to open
+  * @return a protocol buffer OpenRegionRequest
+  */
+ public static OpenRegionRequest
+     buildOpenRegionRequest(final HRegionInfo region) {
+   return buildOpenRegionRequest(region, -1);
+ }
+
+ /**
+  * Create a protocol buffer OpenRegionRequest for a given region
+  *
+  * @param region the region to open
+  * @param versionOfOfflineNode that needs to be present in the offline node
+  * @return a protocol buffer OpenRegionRequest
+  */
+ public static OpenRegionRequest buildOpenRegionRequest(
+     final HRegionInfo region, final int versionOfOfflineNode) {
+   OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
+   builder.addRegion(ProtobufUtil.toRegionInfo(region));
+   if (versionOfOfflineNode >= 0) {
+     builder.setVersionOfOfflineNode(versionOfOfflineNode);
+   }
+   return builder.build();
+ }
+
+ /**
+  * Create a CloseRegionRequest for a given region name
+  *
+  * @param regionName the name of the region to close
+  * @param transitionInZK indicator if to transition in ZK
+  * @return a CloseRegionRequest
+  */
+ public static CloseRegionRequest buildCloseRegionRequest(
+     final byte[] regionName, final boolean transitionInZK) {
+   CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
+   RegionSpecifier region = buildRegionSpecifier(
+     RegionSpecifierType.REGION_NAME, regionName);
+   builder.setRegion(region);
+   builder.setTransitionInZK(transitionInZK);
+   return builder.build();
+ }
+
+ /**
+  * Create a CloseRegionRequest for a given region name
+  *
+  * @param regionName the name of the region to close
+  * @param versionOfClosingNode
+  *   the version of znode to compare when RS transitions the znode from
+  *   CLOSING state.
+  * @return a CloseRegionRequest
+  */
+ public static CloseRegionRequest buildCloseRegionRequest(
+     final byte[] regionName, final int versionOfClosingNode) {
+   CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
+   RegionSpecifier region = buildRegionSpecifier(
+     RegionSpecifierType.REGION_NAME, regionName);
+   builder.setRegion(region);
+   builder.setVersionOfClosingNode(versionOfClosingNode);
+   return builder.build();
+ }
+
+ /**
+  * Create a CloseRegionRequest for a given encoded region name
+  *
+  * @param encodedRegionName the name of the region to close
+  * @param transitionInZK indicator if to transition in ZK
+  * @return a CloseRegionRequest
+  */
+ public static CloseRegionRequest
+     buildCloseRegionRequest(final String encodedRegionName,
+       final boolean transitionInZK) {
+   CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
+   RegionSpecifier region = buildRegionSpecifier(
+     RegionSpecifierType.ENCODED_REGION_NAME,
+     Bytes.toBytes(encodedRegionName));
+   builder.setRegion(region);
+   builder.setTransitionInZK(transitionInZK);
+   return builder.build();
+ }
+
+ /**
+  * Create a SplitRegionRequest for a given region name
+  *
+  * @param regionName the name of the region to split
+  * @param splitPoint the split point
+  * @return a SplitRegionRequest
+  */
+ public static SplitRegionRequest buildSplitRegionRequest(
+     final byte[] regionName, final byte[] splitPoint) {
+   SplitRegionRequest.Builder builder = SplitRegionRequest.newBuilder();
+   RegionSpecifier region = buildRegionSpecifier(
+     RegionSpecifierType.REGION_NAME, regionName);
+   builder.setRegion(region);
+   if (splitPoint != null) {
+     builder.setSplitPoint(ByteString.copyFrom(splitPoint));
+   }
+   return builder.build();
+ }
+
+ /**
+  * Create a  CompactRegionRequest for a given region name
+  *
+  * @param regionName the name of the region to get info
+  * @param major indicator if it is a major compaction
+  * @return a CompactRegionRequest
+  */
+ public static CompactRegionRequest buildCompactRegionRequest(
+     final byte[] regionName, final boolean major) {
+   CompactRegionRequest.Builder builder = CompactRegionRequest.newBuilder();
+   RegionSpecifier region = buildRegionSpecifier(
+     RegionSpecifierType.REGION_NAME, regionName);
+   builder.setRegion(region);
+   builder.setMajor(major);
+   return builder.build();
+ }
+
+ /**
+  * Create a new ReplicateWALEntryRequest from a list of HLog entries
+  *
+  * @param entries the HLog entries to be replicated
+  * @return a ReplicateWALEntryRequest
+  */
+ public static ReplicateWALEntryRequest
+     buildReplicateWALEntryRequest(final HLog.Entry[] entries) {
+   FamilyScope.Builder scopeBuilder = FamilyScope.newBuilder();
+   WALEntry.Builder entryBuilder = WALEntry.newBuilder();
+   ReplicateWALEntryRequest.Builder builder =
+     ReplicateWALEntryRequest.newBuilder();
+   for (HLog.Entry entry: entries) {
+     entryBuilder.clear();
+     WALKey.Builder keyBuilder = entryBuilder.getKeyBuilder();
+     HLogKey key = entry.getKey();
+     keyBuilder.setEncodedRegionName(
+       ByteString.copyFrom(key.getEncodedRegionName()));
+     keyBuilder.setTableName(ByteString.copyFrom(key.getTablename()));
+     keyBuilder.setLogSequenceNumber(key.getLogSeqNum());
+     keyBuilder.setWriteTime(key.getWriteTime());
+     UUID clusterId = key.getClusterId();
+     if (clusterId != null) {
+       AdminProtos.UUID.Builder uuidBuilder = keyBuilder.getClusterIdBuilder();
+       uuidBuilder.setLeastSigBits(clusterId.getLeastSignificantBits());
+       uuidBuilder.setMostSigBits(clusterId.getMostSignificantBits());
+     }
+     WALEdit edit = entry.getEdit();
+     WALEntry.WALEdit.Builder editBuilder = entryBuilder.getEditBuilder();
+     NavigableMap<byte[], Integer> scopes = edit.getScopes();
+     if (scopes != null && !scopes.isEmpty()) {
+       for (Map.Entry<byte[], Integer> scope: scopes.entrySet()) {
+         scopeBuilder.setFamily(ByteString.copyFrom(scope.getKey()));
+         ScopeType scopeType = ScopeType.valueOf(scope.getValue().intValue());
+         scopeBuilder.setScopeType(scopeType);
+         editBuilder.addFamilyScope(scopeBuilder.build());
+       }
+     }
+     List<KeyValue> keyValues = edit.getKeyValues();
+     for (KeyValue value: keyValues) {
+       editBuilder.addKeyValueBytes(ByteString.copyFrom(
+         value.getBuffer(), value.getOffset(), value.getLength()));
+     }
+     builder.addEntry(entryBuilder.build());
+   }
+   return builder.build();
+ }
+
+ /**
+  * Create a new RollWALWriterRequest
+  *
+  * @return a ReplicateWALEntryRequest
+  */
+ public static RollWALWriterRequest buildRollWALWriterRequest() {
+   RollWALWriterRequest.Builder builder = RollWALWriterRequest.newBuilder();
+   return builder.build();
+ }
+
+ /**
+  * Create a new GetServerInfoRequest
+  *
+  * @return a GetServerInfoRequest
+  */
+ public static GetServerInfoRequest buildGetServerInfoRequest() {
+   GetServerInfoRequest.Builder builder =  GetServerInfoRequest.newBuilder();
+   return builder.build();
+ }
+
+ /**
+  * Create a new StopServerRequest
+  *
+  * @param reason the reason to stop the server
+  * @return a StopServerRequest
+  */
+ public static StopServerRequest buildStopServerRequest(final String reason) {
+   StopServerRequest.Builder builder = StopServerRequest.newBuilder();
+   builder.setReason(reason);
+   return builder.build();
+ }
+
+//End utilities for Admin
+
+  /**
+   * Convert a byte array to a protocol buffer RegionSpecifier
+   *
+   * @param type the region specifier type
+   * @param value the region specifier byte array value
+   * @return a protocol buffer RegionSpecifier
+   */
+  public static RegionSpecifier buildRegionSpecifier(
+      final RegionSpecifierType type, final byte[] value) {
+    RegionSpecifier.Builder regionBuilder = RegionSpecifier.newBuilder();
+    regionBuilder.setValue(ByteString.copyFrom(value));
+    regionBuilder.setType(type);
+    return regionBuilder.build();
+  }
 
   /**
    * Create a protocol buffer Condition
@@ -742,21 +1051,6 @@ public final class RequestConverter {
       mutateBuilder.addColumnValue(columnBuilder.build());
     }
     return mutateBuilder.build();
-  }
-
-  /**
-   * Convert a byte array to a protocol buffer RegionSpecifier
-   *
-   * @param type the region specifier type
-   * @param value the region specifier byte array value
-   * @return a protocol buffer RegionSpecifier
-   */
-  private static RegionSpecifier buildRegionSpecifier(
-      final RegionSpecifierType type, final byte[] value) {
-    RegionSpecifier.Builder regionBuilder = RegionSpecifier.newBuilder();
-    regionBuilder.setValue(ByteString.copyFrom(value));
-    regionBuilder.setType(type);
-    return regionBuilder.build();
   }
 
   /**

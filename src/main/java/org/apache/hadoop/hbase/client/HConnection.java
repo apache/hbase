@@ -36,11 +36,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.client.AdminProtocol;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.protobuf.ClientProtocol;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
@@ -201,24 +201,13 @@ public interface HConnection extends Abortable, Closeable {
 
   /**
    * Establishes a connection to the region server at the specified address.
-   * @param regionServer - the server to connect to
-   * @return proxy for HRegionServer
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Use {@link #getHRegionConnection(String, int)}
-   */
-  @Deprecated
-  public HRegionInterface getHRegionConnection(HServerAddress regionServer)
-  throws IOException;
-
-  /**
-   * Establishes a connection to the region server at the specified address.
    * @param hostname RegionServer hostname
    * @param port RegionServer port
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
    *
    */
-  public HRegionInterface getHRegionConnection(final String hostname, final int port)
+  public AdminProtocol getAdmin(final String hostname, final int port)
   throws IOException;
 
   /**
@@ -236,26 +225,13 @@ public interface HConnection extends Abortable, Closeable {
 
   /**
    * Establishes a connection to the region server at the specified address.
-   * @param regionServer - the server to connect to
-   * @param getMaster - do we check if master is alive
-   * @return proxy for HRegionServer
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Use {@link #getHRegionConnection(String, int)}
-   */
-  @Deprecated
-  public HRegionInterface getHRegionConnection(HServerAddress regionServer,
-     boolean getMaster)
-  throws IOException;
-
-  /**
-   * Establishes a connection to the region server at the specified address.
    * @param hostname RegionServer hostname
    * @param port RegionServer port
    * @param getMaster - do we check if master is alive
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
    */
-  public HRegionInterface getHRegionConnection(final String hostname,
+  public AdminProtocol getAdmin(final String hostname,
      final int port, boolean getMaster)
   throws IOException;
 

@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -32,7 +32,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.client.AdminProtocol;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
@@ -42,17 +43,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Lists;
-
 @Category(LargeTests.class)
 public class TestFromClientSide3 {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL
     = new HBaseTestingUtility();
-  private static byte[] ROW = Bytes.toBytes("testRow");
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
-  private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
-  private static byte[] VALUE = Bytes.toBytes("testValue");
   private static Random random = new Random();
   private static int SLAVES = 3;
 
@@ -108,19 +104,21 @@ public class TestFromClientSide3 {
     HConnection conn = HConnectionManager.getConnection(TEST_UTIL
         .getConfiguration());
     HRegionLocation loc = table.getRegionLocation(row, true);
-    HRegionInterface server = conn.getHRegionConnection(loc.getHostname(), loc
+    AdminProtocol server = conn.getAdmin(loc.getHostname(), loc
         .getPort());
     byte[] regName = loc.getRegionInfo().getRegionName();
 
     for (int i = 0; i < nFlushes; i++) {
       randomCFPuts(table, row, family, nPuts);
-      int sfCount = server.getStoreFileList(regName, FAMILY).size();
+      List<String> sf = ProtobufUtil.getStoreFiles(server, regName, FAMILY);
+      int sfCount = sf.size();
 
       // TODO: replace this api with a synchronous flush after HBASE-2949
       admin.flush(table.getTableName());
 
       // synchronously poll wait for a new storefile to appear (flush happened)
-      while (server.getStoreFileList(regName, FAMILY).size() == sfCount) {
+      while (ProtobufUtil.getStoreFiles(
+          server, regName, FAMILY).size() == sfCount) {
         Thread.sleep(40);
       }
     }
@@ -154,9 +152,10 @@ public class TestFromClientSide3 {
     // Verify we have multiple store files.
     HRegionLocation loc = hTable.getRegionLocation(row, true);
     byte[] regionName = loc.getRegionInfo().getRegionName();
-    HRegionInterface server = connection.getHRegionConnection(
-        loc.getHostname(), loc.getPort());
-    assertTrue(server.getStoreFileList(regionName, FAMILY).size() > 1);
+    AdminProtocol server = connection.getAdmin(
+      loc.getHostname(), loc.getPort());
+    assertTrue(ProtobufUtil.getStoreFiles(
+      server, regionName, FAMILY).size() > 1);
 
     // Issue a compaction request
     admin.compact(TABLE);
@@ -167,16 +166,17 @@ public class TestFromClientSide3 {
       loc = hTable.getRegionLocation(row, true);
       if (!loc.getRegionInfo().isOffline()) {
         regionName = loc.getRegionInfo().getRegionName();
-        server = connection.getHRegionConnection(loc.getHostname(), loc
-            .getPort());
-        if (server.getStoreFileList(regionName, FAMILY).size() <= 1) {
+        server = connection.getAdmin(loc.getHostname(), loc.getPort());
+        if (ProtobufUtil.getStoreFiles(
+            server, regionName, FAMILY).size() <= 1) {
           break;
         }
       }
       Thread.sleep(40);
     }
     // verify the compactions took place and that we didn't just time out
-    assertTrue(server.getStoreFileList(regionName, FAMILY).size() <= 1);
+    assertTrue(ProtobufUtil.getStoreFiles(
+      server, regionName, FAMILY).size() <= 1);
 
     // change the compaction.min config option for this table to 5
     LOG.info("hbase.hstore.compaction.min should now be 5");
@@ -198,11 +198,11 @@ public class TestFromClientSide3 {
 
     // This time, the compaction request should not happen
     Thread.sleep(10 * 1000);
-    int sfCount = 0;
     loc = hTable.getRegionLocation(row, true);
     regionName = loc.getRegionInfo().getRegionName();
-    server = connection.getHRegionConnection(loc.getHostname(), loc.getPort());
-    sfCount = server.getStoreFileList(regionName, FAMILY).size();
+    server = connection.getAdmin(loc.getHostname(), loc.getPort());
+    int sfCount = ProtobufUtil.getStoreFiles(
+      server, regionName, FAMILY).size();
     assertTrue(sfCount > 1);
 
     // change an individual CF's config option to 2 & online schema update
@@ -225,9 +225,10 @@ public class TestFromClientSide3 {
       loc = hTable.getRegionLocation(row, true);
       regionName = loc.getRegionInfo().getRegionName();
       try {
-        server = connection.getHRegionConnection(loc.getHostname(), loc
+        server = connection.getAdmin(loc.getHostname(), loc
             .getPort());
-        if (server.getStoreFileList(regionName, FAMILY).size() < sfCount) {
+        if (ProtobufUtil.getStoreFiles(
+            server, regionName, FAMILY).size() < sfCount) {
           break;
         }
       } catch (Exception e) {
@@ -236,7 +237,8 @@ public class TestFromClientSide3 {
       Thread.sleep(40);
     }
     // verify the compaction took place and that we didn't just time out
-    assertTrue(server.getStoreFileList(regionName, FAMILY).size() < sfCount);
+    assertTrue(ProtobufUtil.getStoreFiles(
+      server, regionName, FAMILY).size() < sfCount);
 
     // Finally, ensure that we can remove a custom config value after we made it
     LOG.info("Removing CF config value");

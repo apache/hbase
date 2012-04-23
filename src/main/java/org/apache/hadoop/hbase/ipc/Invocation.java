@@ -32,9 +32,10 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.AdminProtocol;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.hbase.protobuf.AdminProtocol;
-import org.apache.hadoop.hbase.protobuf.ClientProtocol;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.io.VersionMismatchException;
 import org.apache.hadoop.io.VersionedWritable;
@@ -50,7 +51,6 @@ public class Invocation extends VersionedWritable implements Configurable {
   private long clientVersion;
   private int clientMethodsHash;
 
-
   // For generated protocol classes which don't have VERSION field,
   // such as protobuf interfaces.
   private static final Map<Class<?>, Long>
@@ -59,6 +59,8 @@ public class Invocation extends VersionedWritable implements Configurable {
   static {
     PROTOCOL_VERSION.put(ClientService.BlockingInterface.class,
       Long.valueOf(ClientProtocol.VERSION));
+    PROTOCOL_VERSION.put(AdminService.BlockingInterface.class,
+      Long.valueOf(AdminProtocol.VERSION));
   }
 
   // For protobuf protocols, which use ServiceException, instead of IOException

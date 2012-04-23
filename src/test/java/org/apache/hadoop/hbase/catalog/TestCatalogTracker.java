@@ -32,8 +32,18 @@ import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AdminProtocol;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
@@ -41,7 +51,9 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.protobuf.ClientProtocol;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -186,16 +198,19 @@ public class TestCatalogTracker {
   @Test
   public void testServerNotRunningIOException()
   throws IOException, InterruptedException, KeeperException, ServiceException {
-    // Mock an HRegionInterface.
-    final HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
+    // Mock an Admin and a Client.
+    final AdminProtocol admin = Mockito.mock(AdminProtocol.class);
     final ClientProtocol client = Mockito.mock(ClientProtocol.class);
-    HConnection connection = mockConnection(implementation, client);
+    HConnection connection = mockConnection(admin, client);
     try {
-      // If a 'getRegionInfo' is called on mocked HRegionInterface, throw IOE
+      // If a 'getRegionInfo' is called on mocked AdminProtocol, throw IOE
       // the first time.  'Succeed' the second time we are called.
-      Mockito.when(implementation.getRegionInfo((byte[]) Mockito.any())).
-        thenThrow(new IOException("Server not running, aborting")).
-        thenReturn(new HRegionInfo());
+      GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
+      builder.setRegionInfo(ProtobufUtil.toRegionInfo(new HRegionInfo(Bytes.toBytes("test"))));
+      Mockito.when(admin.getRegionInfo((RpcController)Mockito.any(),
+        (GetRegionInfoRequest)Mockito.any())).thenThrow(
+          new ServiceException(new IOException("Server not running, aborting"))).
+        thenReturn(builder.build());
 
       // After we encounter the above 'Server not running', we should catch the
       // IOE and go into retrying for the meta mode.  We'll do gets on -ROOT- to
@@ -292,18 +307,19 @@ public class TestCatalogTracker {
    * @throws IOException
    * @throws InterruptedException
    * @throws KeeperException
+   * @throws ServiceException
    */
   @Test
   public void testVerifyRootRegionLocationFails()
-  throws IOException, InterruptedException, KeeperException {
+  throws IOException, InterruptedException, KeeperException, ServiceException {
     HConnection connection = Mockito.mock(HConnection.class);
-    ConnectException connectException =
-      new ConnectException("Connection refused");
-    final HRegionInterface implementation =
-      Mockito.mock(HRegionInterface.class);
-    Mockito.when(implementation.getRegionInfo((byte [])Mockito.any())).
-      thenThrow(connectException);
-    Mockito.when(connection.getHRegionConnection(Mockito.anyString(),
+    ServiceException connectException =
+      new ServiceException(new ConnectException("Connection refused"));
+    final AdminProtocol implementation =
+      Mockito.mock(AdminProtocol.class);
+    Mockito.when(implementation.getRegionInfo((RpcController)Mockito.any(),
+      (GetRegionInfoRequest)Mockito.any())).thenThrow(connectException);
+    Mockito.when(connection.getAdmin(Mockito.anyString(),
       Mockito.anyInt(), Mockito.anyBoolean())).
       thenReturn(implementation);
     final CatalogTracker ct = constructAndStartCatalogTracker(connection);
@@ -379,11 +395,11 @@ public class TestCatalogTracker {
   // that ... and so one.
   @Test public void testNoTimeoutWaitForMeta()
   throws Exception {
-    // Mock an HConnection and a HRegionInterface implementation.  Have the
+    // Mock an HConnection and a AdminProtocol implementation.  Have the
     // HConnection return the HRI.  Have the HRI return a few mocked up responses
     // to make our test work.
-    // Mock an HRegionInterface.
-    final HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
+    // Mock an AdminProtocol.
+    final AdminProtocol implementation = Mockito.mock(AdminProtocol.class);
     HConnection connection = mockConnection(implementation, null);
     try {
       // Now the ct is up... set into the mocks some answers that make it look
@@ -396,8 +412,10 @@ public class TestCatalogTracker {
       // It works for now but has been deprecated.
       Mockito.when(connection.getRegionServerWithRetries((ServerCallable<Result>)Mockito.any())).
         thenReturn(result);
-      Mockito.when(implementation.getRegionInfo((byte[]) Mockito.any())).
-        thenReturn(HRegionInfo.FIRST_META_REGIONINFO);
+      GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
+      builder.setRegionInfo(ProtobufUtil.toRegionInfo(HRegionInfo.FIRST_META_REGIONINFO));
+      Mockito.when(implementation.getRegionInfo((RpcController)Mockito.any(),
+        (GetRegionInfoRequest)Mockito.any())).thenReturn(builder.build());
       final CatalogTracker ct = constructAndStartCatalogTracker(connection);
       ServerName hsa = ct.getMetaLocation();
       Assert.assertNull(hsa);
@@ -430,7 +448,7 @@ public class TestCatalogTracker {
   }
 
   /**
-   * @param implementation An {@link HRegionInterface} instance; you'll likely
+   * @param admin An {@link AdminProtocol} instance; you'll likely
    * want to pass a mocked HRS; can be null.
    * @param client A mocked ClientProtocol instance, can be null
    * @return Mock up a connection that returns a {@link Configuration} when
@@ -443,9 +461,8 @@ public class TestCatalogTracker {
    * when done with this mocked Connection.
    * @throws IOException
    */
-  private HConnection mockConnection(
-      final HRegionInterface implementation, final ClientProtocol client)
-  throws IOException {
+  private HConnection mockConnection(final AdminProtocol admin,
+      final ClientProtocol client) throws IOException {
     HConnection connection =
       HConnectionTestingUtility.getMockedConnection(UTIL.getConfiguration());
     Mockito.doNothing().when(connection).close();
@@ -459,10 +476,10 @@ public class TestCatalogTracker {
     Mockito.when(connection.locateRegion((byte[]) Mockito.any(),
         (byte[]) Mockito.any())).
       thenReturn(anyLocation);
-    if (implementation != null) {
+    if (admin != null) {
       // If a call to getHRegionConnection, return this implementation.
-      Mockito.when(connection.getHRegionConnection(Mockito.anyString(), Mockito.anyInt())).
-        thenReturn(implementation);
+      Mockito.when(connection.getAdmin(Mockito.anyString(), Mockito.anyInt())).
+        thenReturn(admin);
     }
     if (client != null) {
       // If a call to getClient, return this implementation.

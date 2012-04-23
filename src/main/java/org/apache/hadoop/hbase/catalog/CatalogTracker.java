@@ -34,11 +34,13 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MetaNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
@@ -340,7 +342,7 @@ public class CatalogTracker {
    * @throws IOException
    * @deprecated Use #getRootServerConnection(long)
    */
-  public HRegionInterface waitForRootServerConnection(long timeout)
+  public AdminProtocol waitForRootServerConnection(long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException, IOException {
     return getRootServerConnection(timeout);
   }
@@ -356,7 +358,7 @@ public class CatalogTracker {
    * @throws NotAllMetaRegionsOnlineException if timed out waiting
    * @throws IOException
    */
-  HRegionInterface getRootServerConnection(long timeout)
+  AdminProtocol getRootServerConnection(long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException, IOException {
     return getCachedConnection(waitForRoot(timeout));
   }
@@ -370,7 +372,7 @@ public class CatalogTracker {
    * @throws IOException
    * @deprecated Use #getRootServerConnection(long)
    */
-  public HRegionInterface waitForRootServerConnectionDefault()
+  public AdminProtocol waitForRootServerConnectionDefault()
   throws NotAllMetaRegionsOnlineException, IOException {
     try {
       return getRootServerConnection(this.defaultTimeout);
@@ -395,11 +397,11 @@ public class CatalogTracker {
    * @throws IOException
    * @throws InterruptedException
    */
-  private HRegionInterface getMetaServerConnection()
+  private AdminProtocol getMetaServerConnection()
   throws IOException, InterruptedException {
     synchronized (metaAvailable) {
       if (metaAvailable.get()) {
-        HRegionInterface current = getCachedConnection(this.metaLocation);
+        AdminProtocol current = getCachedConnection(this.metaLocation);
         // If we are to refresh, verify we have a good connection by making
         // an invocation on it.
         if (verifyRegionLocation(current, this.metaLocation, META_REGION_NAME)) {
@@ -416,7 +418,7 @@ public class CatalogTracker {
       ServerName newLocation = MetaReader.getMetaRegionLocation(this);
       if (newLocation == null) return null;
 
-      HRegionInterface newConnection = getCachedConnection(newLocation);
+      AdminProtocol newConnection = getCachedConnection(newLocation);
       if (verifyRegionLocation(newConnection, newLocation, META_REGION_NAME)) {
         setMetaLocation(newLocation);
         return newConnection;
@@ -495,7 +497,7 @@ public class CatalogTracker {
    * @throws IOException
    * @deprecated Does not retry; use an HTable instance instead.
    */
-  public HRegionInterface waitForMetaServerConnection(long timeout)
+  public AdminProtocol waitForMetaServerConnection(long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException, IOException {
     return getCachedConnection(waitForMeta(timeout));
   }
@@ -510,7 +512,7 @@ public class CatalogTracker {
    * @throws IOException
    * @deprecated Does not retry; use an HTable instance instead.
    */
-  public HRegionInterface waitForMetaServerConnectionDefault()
+  public AdminProtocol waitForMetaServerConnectionDefault()
   throws NotAllMetaRegionsOnlineException, IOException {
     try {
       return getCachedConnection(waitForMeta(defaultTimeout));
@@ -546,19 +548,19 @@ public class CatalogTracker {
 
   /**
    * @param sn ServerName to get a connection against.
-   * @return The HRegionInterface we got when we connected to <code>sn</code>
+   * @return The AdminProtocol we got when we connected to <code>sn</code>
    * May have come from cache, may not be good, may have been setup by this
    * invocation, or may be null.
    * @throws IOException
    */
-  private HRegionInterface getCachedConnection(ServerName sn)
+  private AdminProtocol getCachedConnection(ServerName sn)
   throws IOException {
     if (sn == null) {
       return null;
     }
-    HRegionInterface protocol = null;
+    AdminProtocol protocol = null;
     try {
-      protocol = connection.getHRegionConnection(sn.getHostname(), sn.getPort());
+      protocol = connection.getAdmin(sn.getHostname(), sn.getPort());
     } catch (RetriesExhaustedException e) {
       if (e.getCause() != null && e.getCause() instanceof ConnectException) {
         // Catch this; presume it means the cached connection has gone bad.
@@ -599,11 +601,11 @@ public class CatalogTracker {
    * the Interface.
    * @throws IOException
    */
-  // TODO: We should be able to get the ServerName from the HRegionInterface
+  // TODO: We should be able to get the ServerName from the AdminProtocol
   // rather than have to pass it in.  Its made awkward by the fact that the
   // HRI is likely a proxy against remote server so the getServerName needs
   // to be fixed to go to a local method or to a cache before we can do this.
-  private boolean verifyRegionLocation(HRegionInterface hostingServer,
+  private boolean verifyRegionLocation(AdminProtocol hostingServer,
       final ServerName address, final byte [] regionName)
   throws IOException {
     if (hostingServer == null) {
@@ -613,7 +615,7 @@ public class CatalogTracker {
     Throwable t = null;
     try {
       // Try and get regioninfo from the hosting server.
-      return hostingServer.getRegionInfo(regionName) != null;
+      return ProtobufUtil.getRegionInfo(hostingServer, regionName) != null;
     } catch (ConnectException e) {
       t = e;
     } catch (RetriesExhaustedException e) {
@@ -647,7 +649,7 @@ public class CatalogTracker {
    */
   public boolean verifyRootRegionLocation(final long timeout)
   throws InterruptedException, IOException {
-    HRegionInterface connection = null;
+    AdminProtocol connection = null;
     try {
       connection = waitForRootServerConnection(timeout);
     } catch (NotAllMetaRegionsOnlineException e) {
@@ -672,7 +674,7 @@ public class CatalogTracker {
    */
   public boolean verifyMetaRegionLocation(final long timeout)
   throws InterruptedException, IOException {
-    HRegionInterface connection = null;
+    AdminProtocol connection = null;
     try {
       connection = waitForMetaServerConnection(timeout);
     } catch (NotAllMetaRegionsOnlineException e) {

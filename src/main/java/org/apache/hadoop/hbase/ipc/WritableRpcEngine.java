@@ -28,14 +28,18 @@ import java.lang.reflect.UndeclaredThrowableException;
 
 import java.net.InetSocketAddress;
 import java.io.*;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 
 import javax.net.SocketFactory;
 
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.AdminProtocol;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
@@ -61,6 +65,15 @@ class WritableRpcEngine implements RpcEngine {
   // LOG is NOT in hbase subpackage intentionally so that the default HBase
   // DEBUG log level does NOT emit RPC-level logging.
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.ipc.RPCEngine");
+
+  // For protobuf protocols, which use ServiceException, instead of IOException
+  protected static final Set<Class<?>>
+    PROTOBUF_PROTOCOLS = new HashSet<Class<?>>();
+
+  static {
+    PROTOBUF_PROTOCOLS.add(ClientProtocol.class);
+    PROTOBUF_PROTOCOLS.add(AdminProtocol.class);
+  }
 
   /* Cache a client using its socket factory as the hash key */
   static private class ClientCache {

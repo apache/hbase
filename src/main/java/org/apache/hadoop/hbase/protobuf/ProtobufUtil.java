@@ -39,24 +39,52 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Action;
+import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.MultiAction;
+import org.apache.hadoop.hbase.client.MultiResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowLock;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
+import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UUID;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALEdit.FamilyScope;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALKey;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Column;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue;
@@ -66,10 +94,12 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
+import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
@@ -218,6 +248,27 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Convert a protocol buffer ServerName to a ServerName
+   *
+   * @param proto the protocol buffer ServerName to convert
+   * @return the converted ServerName
+   */
+  public static ServerName toServerName(
+      final HBaseProtos.ServerName proto) {
+    if (proto == null) return null;
+    String hostName = proto.getHostName();
+    long startCode = -1;
+    int port = -1;
+    if (proto.hasPort()) {
+      port = proto.getPort();
+    }
+    if (proto.hasStartCode()) {
+      startCode = proto.getStartCode();
+    }
+    return new ServerName(hostName, port, startCode);
+  }
+
+  /**
    * Convert a RegionInfo to a HRegionInfo
    *
    * @param proto the RegionInfo to convert
@@ -227,6 +278,11 @@ public final class ProtobufUtil {
       toRegionInfo(final RegionInfo proto) {
     if (proto == null) return null;
     byte[] tableName = proto.getTableName().toByteArray();
+    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+      return HRegionInfo.ROOT_REGIONINFO;
+    } else if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
+      return HRegionInfo.FIRST_META_REGIONINFO;
+    }
     long regionId = proto.getRegionId();
     byte[] startKey = null;
     byte[] endKey = null;
@@ -236,9 +292,16 @@ public final class ProtobufUtil {
     if (proto.hasEndKey()) {
       endKey = proto.getEndKey().toByteArray();
     }
-
-    return new HRegionInfo(tableName,
-      startKey, endKey, false, regionId);
+    boolean split = false;
+    if (proto.hasSplit()) {
+      split = proto.getSplit();
+    }
+    HRegionInfo hri = new HRegionInfo(tableName,
+      startKey, endKey, split, regionId);
+    if (proto.hasOffline()) {
+      hri.setOffline(proto.getOffline());
+    }
+    return hri;
   }
 
   /**
@@ -259,6 +322,8 @@ public final class ProtobufUtil {
     if (info.getEndKey() != null) {
       builder.setEndKey(ByteString.copyFrom(info.getEndKey()));
     }
+    builder.setOffline(info.isOffline());
+    builder.setSplit(info.isSplit());
     return builder.build();
   }
 
@@ -596,7 +661,7 @@ public final class ProtobufUtil {
       toHLogEntries(final List<WALEntry> protoList) {
     List<HLog.Entry> entries = new ArrayList<HLog.Entry>();
     for (WALEntry entry: protoList) {
-      WALKey walKey = entry.getWalKey();
+      WALKey walKey = entry.getKey();
       java.util.UUID clusterId = HConstants.DEFAULT_CLUSTER_ID;
       if (walKey.hasClusterId()) {
         UUID protoUuid = walKey.getClusterId();
@@ -608,7 +673,7 @@ public final class ProtobufUtil {
         walKey.getWriteTime(), clusterId);
       WALEntry.WALEdit walEdit = entry.getEdit();
       WALEdit edit = new WALEdit();
-      for (ByteString keyValue: walEdit.getKeyValueList()) {
+      for (ByteString keyValue: walEdit.getKeyValueBytesList()) {
         edit.add(new KeyValue(keyValue.toByteArray()));
       }
       if (walEdit.getFamilyScopeCount() > 0) {
@@ -721,4 +786,333 @@ public final class ProtobufUtil {
     }
     return builder.build();
   }
+
+// Start helpers for Client
+
+  /**
+   * A helper to invoke a Get using client protocol.
+   *
+   * @param client
+   * @param regionName
+   * @param get
+   * @return the result of the Get
+   * @throws IOException
+   */
+  public static Result get(final ClientProtocol client,
+      final byte[] regionName, final Get get) throws IOException {
+    GetRequest request =
+      RequestConverter.buildGetRequest(regionName, get);
+    try {
+      GetResponse response = client.get(null, request);
+      return toResult(response.getResult());
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to get a row of the closet one before using client protocol.
+   *
+   * @param client
+   * @param regionName
+   * @param row
+   * @param family
+   * @return the row or the closestRowBefore if it doesn't exist
+   * @throws IOException
+   */
+  public static Result getRowOrBefore(final ClientProtocol client,
+      final byte[] regionName, final byte[] row,
+      final byte[] family) throws IOException {
+    GetRequest request =
+      RequestConverter.buildGetRowOrBeforeRequest(
+        regionName, row, family);
+    try {
+      GetResponse response = client.get(null, request);
+      if (!response.hasResult()) return null;
+      return toResult(response.getResult());
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to invoke a multi action using client protocol.
+   *
+   * @param client
+   * @param multi
+   * @return a multi response
+   * @throws IOException
+   */
+  public static <R> MultiResponse multi(final ClientProtocol client,
+      final MultiAction<R> multi) throws IOException {
+    try {
+      MultiResponse response = new MultiResponse();
+      for (Map.Entry<byte[], List<Action<R>>> e: multi.actions.entrySet()) {
+        byte[] regionName = e.getKey();
+        int rowMutations = 0;
+        List<Action<R>> actions = e.getValue();
+        for (Action<R> action: actions) {
+          Row row = action.getAction();
+          if (row instanceof RowMutations) {
+            MultiRequest request =
+              RequestConverter.buildMultiRequest(regionName, (RowMutations)row);
+            client.multi(null, request);
+            response.add(regionName, action.getOriginalIndex(), new Result());
+            rowMutations++;
+          }
+        }
+        if (actions.size() > rowMutations) {
+          MultiRequest request =
+            RequestConverter.buildMultiRequest(regionName, actions);
+          ClientProtos.MultiResponse
+            proto = client.multi(null, request);
+          List<Object> results = ResponseConverter.getResults(proto);
+          for (int i = 0, n = results.size(); i < n; i++) {
+            int originalIndex = actions.get(i).getOriginalIndex();
+            response.add(regionName, originalIndex, results.get(i));
+          }
+        }
+      }
+      return response;
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to bulk load a list of HFiles using client protocol.
+   *
+   * @param client
+   * @param familyPaths
+   * @param regionName
+   * @return true if all are loaded
+   * @throws IOException
+   */
+  public static boolean bulkLoadHFile(final ClientProtocol client,
+      final List<Pair<byte[], String>> familyPaths,
+      final byte[] regionName) throws IOException {
+    BulkLoadHFileRequest request =
+      RequestConverter.buildBulkLoadHFileRequest(familyPaths, regionName);
+    try {
+      BulkLoadHFileResponse response =
+        client.bulkLoadHFile(null, request);
+      return response.getLoaded();
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to exec a coprocessor Exec using client protocol.
+   *
+   * @param client
+   * @param exec
+   * @param regionName
+   * @return the exec result
+   * @throws IOException
+   */
+  public static ExecResult execCoprocessor(final ClientProtocol client,
+      final Exec exec, final byte[] regionName) throws IOException {
+    ExecCoprocessorRequest request =
+      RequestConverter.buildExecCoprocessorRequest(regionName, exec);
+    try {
+      ExecCoprocessorResponse response =
+        client.execCoprocessor(null, request);
+      Object value = ProtobufUtil.toObject(response.getValue());
+      return new ExecResult(regionName, value);
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+// End helpers for Client
+// Start helpers for Admin
+
+  /**
+   * A helper to retrieve region info given a region name
+   * using admin protocol.
+   *
+   * @param admin
+   * @param regionName
+   * @return the retrieved region info
+   * @throws IOException
+   */
+  public static HRegionInfo getRegionInfo(final AdminProtocol admin,
+      final byte[] regionName) throws IOException {
+    try {
+      GetRegionInfoRequest request =
+        RequestConverter.buildGetRegionInfoRequest(regionName);
+      GetRegionInfoResponse response =
+        admin.getRegionInfo(null, request);
+      return toRegionInfo(response.getRegionInfo());
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to close a region given a region name
+   * using admin protocol.
+   *
+   * @param admin
+   * @param regionName
+   * @param transitionInZK
+   * @throws IOException
+   */
+  public static void closeRegion(final AdminProtocol admin,
+      final byte[] regionName, final boolean transitionInZK) throws IOException {
+    CloseRegionRequest closeRegionRequest =
+      RequestConverter.buildCloseRegionRequest(regionName, transitionInZK);
+    try {
+      admin.closeRegion(null, closeRegionRequest);
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to close a region given a region name
+   * using admin protocol.
+   *
+   * @param admin
+   * @param regionName
+   * @param versionOfClosingNode
+   * @return true if the region is closed
+   * @throws IOException
+   */
+  public static boolean closeRegion(final AdminProtocol admin,
+      final byte[] regionName, final int versionOfClosingNode) throws IOException {
+    CloseRegionRequest closeRegionRequest =
+      RequestConverter.buildCloseRegionRequest(regionName, versionOfClosingNode);
+    try {
+      CloseRegionResponse response = admin.closeRegion(null, closeRegionRequest);
+      return ResponseConverter.isClosed(response);
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to open a region using admin protocol.
+   *
+   * @param admin
+   * @param region
+   * @param versionOfOfflineNode
+   * @return the region opening state
+   * @throws IOException
+   */
+  public static RegionOpeningState openRegion(final AdminProtocol admin,
+      final HRegionInfo region, final int versionOfOfflineNode) throws IOException {
+    OpenRegionRequest request =
+      RequestConverter.buildOpenRegionRequest(region, versionOfOfflineNode);
+    try {
+      OpenRegionResponse response = admin.openRegion(null, request);
+      return ResponseConverter.getRegionOpeningState(response);
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to open a list of regions using admin protocol.
+   *
+   * @param admin
+   * @param regions
+   * @throws IOException
+   */
+  public static void openRegion(final AdminProtocol admin,
+      final List<HRegionInfo> regions) throws IOException {
+    OpenRegionRequest request =
+      RequestConverter.buildOpenRegionRequest(regions);
+    try {
+      admin.openRegion(null, request);
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to get the all the online regions on a region
+   * server using admin protocol.
+   *
+   * @param admin
+   * @return a list of online region info
+   * @throws IOException
+   */
+  public static List<HRegionInfo> getOnlineRegions(
+      final AdminProtocol admin) throws IOException {
+    GetOnlineRegionRequest request = RequestConverter.buildGetOnlineRegionRequest();
+    List<HRegionInfo> regions = null;
+    try {
+      GetOnlineRegionResponse response =
+        admin.getOnlineRegion(null, request);
+      regions = new ArrayList<HRegionInfo>();
+      for (RegionInfo regionInfo: response.getRegionInfoList()) {
+        regions.add(toRegionInfo(regionInfo));
+      }
+      return regions;
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to get the info of a region server using admin protocol.
+   *
+   * @param admin
+   * @return the server name
+   * @throws IOException
+   */
+  public static ServerName getServerInfo(
+      final AdminProtocol admin) throws IOException {
+    GetServerInfoRequest request = RequestConverter.buildGetServerInfoRequest();
+    try {
+      GetServerInfoResponse response = admin.getServerInfo(null, request);
+      return toServerName(response.getServerName());
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to replicate a list of HLog entries using admin protocol.
+   *
+   * @param admin
+   * @param entries
+   * @throws IOException
+   */
+  public static void replicateWALEntry(final AdminProtocol admin,
+      final HLog.Entry[] entries) throws IOException {
+    ReplicateWALEntryRequest request =
+      RequestConverter.buildReplicateWALEntryRequest(entries);
+    try {
+      admin.replicateWALEntry(null, request);
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
+  }
+
+  /**
+   * A helper to get the list of files of a column family
+   * on a given region using admin protocol.
+   *
+   * @param admin
+   * @param regionName
+   * @param family
+   * @return the list of store files
+   * @throws IOException
+   */
+  public static List<String> getStoreFiles(final AdminProtocol admin,
+      final byte[] regionName, final byte[] family) throws IOException {
+    GetStoreFileRequest request =
+      RequestConverter.buildGetStoreFileRequest(regionName, family);
+    try {
+      GetStoreFileResponse response = admin.getStoreFile(null, request);
+      return response.getStoreFileList();
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
+  }
+
+// End helpers for Admin
 }

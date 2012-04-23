@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -59,7 +60,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
@@ -400,19 +401,19 @@ public class TestHBaseFsck {
   /**
    * Get region info from local cluster.
    */
-  Map<ServerName, List<String>> getDeployedHRIs(HBaseAdmin admin)
-    throws IOException {
+  Map<ServerName, List<String>> getDeployedHRIs(
+      final HBaseAdmin admin) throws IOException {
     ClusterStatus status = admin.getMaster().getClusterStatus();
     Collection<ServerName> regionServers = status.getServers();
     Map<ServerName, List<String>> mm =
         new HashMap<ServerName, List<String>>();
     HConnection connection = admin.getConnection();
     for (ServerName hsi : regionServers) {
-      HRegionInterface server =
-        connection.getHRegionConnection(hsi.getHostname(), hsi.getPort());
+      AdminProtocol server =
+        connection.getAdmin(hsi.getHostname(), hsi.getPort());
 
       // list all online regions from this region server
-      List<HRegionInfo> regions = server.getOnlineRegions();
+      List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(server);
       List<String> regionNames = new ArrayList<String>();
       for (HRegionInfo hri : regions) {
         regionNames.add(hri.getRegionNameAsString());

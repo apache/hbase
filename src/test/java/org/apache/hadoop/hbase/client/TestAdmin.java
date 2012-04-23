@@ -1220,8 +1220,12 @@ public class TestAdmin {
       if (!regionInfo.isMetaTable()) {
         if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion1")) {
           info = regionInfo;
-          admin.closeRegionWithEncodedRegionName("sample", rs.getServerName()
+          try {
+            admin.closeRegionWithEncodedRegionName("sample", rs.getServerName()
               .getServerName());
+          } catch (NotServingRegionException nsre) {
+            // expected, ignore it
+          }
         }
       }
     }
@@ -1320,8 +1324,12 @@ public class TestAdmin {
       if (!regionInfo.isMetaTable()) {
         if (regionInfo.getRegionNameAsString().contains("TestHBACloseRegion4")) {
           info = regionInfo;
-          admin.closeRegionWithEncodedRegionName(regionInfo
+          try {
+            admin.closeRegionWithEncodedRegionName(regionInfo
               .getRegionNameAsString(), rs.getServerName().getServerName());
+          } catch (NotServingRegionException nsre) {
+            // expected, ignore it.
+          }
         }
       }
     }
