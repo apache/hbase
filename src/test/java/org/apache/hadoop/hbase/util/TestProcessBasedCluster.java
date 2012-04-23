@@ -1,4 +1,5 @@
 /*
+
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with this
  * work for additional information regarding copyright ownership. The ASF
@@ -48,7 +49,7 @@ public class TestProcessBasedCluster {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @Test(timeout=300 * 1000)
+  // DISABLED BECAUSE FLAKEY @Test(timeout=300 * 1000)
   public void testProcessBasedCluster() throws Exception {
     ProcessBasedLocalHBaseCluster cluster = new ProcessBasedLocalHBaseCluster(
         TEST_UTIL.getConfiguration(), 2, 3);
