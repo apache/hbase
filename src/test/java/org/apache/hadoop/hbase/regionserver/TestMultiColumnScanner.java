@@ -131,140 +131,143 @@ public class TestMultiColumnScanner {
   @Test
   public void testMultiColumnScanner() throws IOException {
     HRegion region = createRegion(TABLE_NAME, comprAlgo, bloomType);
-    List<String> rows = sequentialStrings("row", NUM_ROWS);
-    List<String> qualifiers = sequentialStrings("qual", NUM_COLUMNS);
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
-    Set<String> keySet = new HashSet<String>();
+    try {
+      List<String> rows = sequentialStrings("row", NUM_ROWS);
+      List<String> qualifiers = sequentialStrings("qual", NUM_COLUMNS);
+      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      Set<String> keySet = new HashSet<String>();
 
-    // A map from <row>_<qualifier> to the most recent delete timestamp for
-    // that column.
-    Map<String, Long> lastDelTimeMap = new HashMap<String, Long>();
+      // A map from <row>_<qualifier> to the most recent delete timestamp for
+      // that column.
+      Map<String, Long> lastDelTimeMap = new HashMap<String, Long>();
 
-    Random rand = new Random(29372937L);
-    Set<String> rowQualSkip = new HashSet<String>();
+      Random rand = new Random(29372937L);
+      Set<String> rowQualSkip = new HashSet<String>();
 
-    // Skip some columns in some rows. We need to test scanning over a set
-    // of columns when some of the columns are not there.
-    for (String row : rows)
+      // Skip some columns in some rows. We need to test scanning over a set
+      // of columns when some of the columns are not there.
+      for (String row : rows)
+        for (String qual : qualifiers)
+          if (rand.nextDouble() < COLUMN_SKIP_IN_ROW_PROB) {
+            LOG.info("Skipping " + qual + " in row " + row);
+            rowQualSkip.add(rowQualKey(row, qual));
+          }
+
+      // Also skip some columns in all rows.
       for (String qual : qualifiers)
-        if (rand.nextDouble() < COLUMN_SKIP_IN_ROW_PROB) {
-          LOG.info("Skipping " + qual + " in row " + row);
-          rowQualSkip.add(rowQualKey(row, qual));
+        if (rand.nextDouble() < COLUMN_SKIP_EVERYWHERE_PROB) {
+          LOG.info("Skipping " + qual + " in all rows");
+          for (String row : rows)
+            rowQualSkip.add(rowQualKey(row, qual));
         }
 
-    // Also skip some columns in all rows.
-    for (String qual : qualifiers)
-      if (rand.nextDouble() < COLUMN_SKIP_EVERYWHERE_PROB) {
-        LOG.info("Skipping " + qual + " in all rows");
-        for (String row : rows)
-          rowQualSkip.add(rowQualKey(row, qual));
+      for (int iFlush = 0; iFlush < NUM_FLUSHES; ++iFlush) {
+        for (String qual : qualifiers) {
+          // This is where we decide to include or not include this column into
+          // this store file, regardless of row and timestamp.
+          if (rand.nextDouble() < COLUMN_SKIP_IN_STORE_FILE_PROB)
+            continue;
+
+          byte[] qualBytes = Bytes.toBytes(qual);
+          for (String row : rows) {
+            Put p = new Put(Bytes.toBytes(row));
+            for (long ts : TIMESTAMPS) {
+              String value = createValue(row, qual, ts);
+              KeyValue kv = KeyValueTestUtil.create(row, FAMILY, qual, ts,
+                  value);
+              assertEquals(kv.getTimestamp(), ts);
+              p.add(kv);
+              String keyAsString = kv.toString();
+              if (!keySet.contains(keyAsString)) {
+                keySet.add(keyAsString);
+                kvs.add(kv);
+              }
+            }
+            region.put(p);
+
+            Delete d = new Delete(Bytes.toBytes(row));
+            boolean deletedSomething = false;
+            for (long ts : TIMESTAMPS)
+              if (rand.nextDouble() < DELETE_PROBABILITY) {
+                d.deleteColumns(FAMILY_BYTES, qualBytes, ts);
+                String rowAndQual = row + "_" + qual;
+                Long whenDeleted = lastDelTimeMap.get(rowAndQual);
+                lastDelTimeMap.put(rowAndQual, whenDeleted == null ? ts
+                    : Math.max(ts, whenDeleted));
+                deletedSomething = true;
+              }
+            if (deletedSomething)
+              region.delete(d, null, true);
+          }
+        }
+        region.flushcache();
       }
 
-    for (int iFlush = 0; iFlush < NUM_FLUSHES; ++iFlush) {
-      for (String qual : qualifiers) {
-        // This is where we decide to include or not include this column into
-        // this store file, regardless of row and timestamp.
-        if (rand.nextDouble() < COLUMN_SKIP_IN_STORE_FILE_PROB)
-          continue;
-
-        byte[] qualBytes = Bytes.toBytes(qual);
-        for (String row : rows) {
-          Put p = new Put(Bytes.toBytes(row));
-          for (long ts : TIMESTAMPS) {
-            String value = createValue(row, qual, ts);
-            KeyValue kv = KeyValueTestUtil.create(row, FAMILY, qual, ts,
-                value);
-            assertEquals(kv.getTimestamp(), ts);
-            p.add(kv);
-            String keyAsString = kv.toString();
-            if (!keySet.contains(keyAsString)) {
-              keySet.add(keyAsString);
-              kvs.add(kv);
+      Collections.sort(kvs, KeyValue.COMPARATOR);
+      for (int maxVersions = 1; maxVersions <= TIMESTAMPS.length; ++maxVersions) {
+        for (int columnBitMask = 1; columnBitMask <= MAX_COLUMN_BIT_MASK; ++columnBitMask) {
+          Scan scan = new Scan();
+          scan.setMaxVersions(maxVersions);
+          Set<String> qualSet = new TreeSet<String>();
+          {
+            int columnMaskTmp = columnBitMask;
+            for (String qual : qualifiers) {
+              if ((columnMaskTmp & 1) != 0) {
+                scan.addColumn(FAMILY_BYTES, Bytes.toBytes(qual));
+                qualSet.add(qual);
+              }
+              columnMaskTmp >>= 1;
             }
+            assertEquals(0, columnMaskTmp);
           }
-          region.put(p);
 
-          Delete d = new Delete(Bytes.toBytes(row));
-          boolean deletedSomething = false;
-          for (long ts : TIMESTAMPS)
-            if (rand.nextDouble() < DELETE_PROBABILITY) {
-              d.deleteColumns(FAMILY_BYTES, qualBytes, ts);
-              String rowAndQual = row + "_" + qual;
-              Long whenDeleted = lastDelTimeMap.get(rowAndQual);
-              lastDelTimeMap.put(rowAndQual, whenDeleted == null ? ts
-                  : Math.max(ts, whenDeleted));
-              deletedSomething = true;
-            }
-          if (deletedSomething)
-            region.delete(d, null, true);
-        }
-      }
-      region.flushcache();
-    }
+          InternalScanner scanner = region.getScanner(scan);
+          List<KeyValue> results = new ArrayList<KeyValue>();
 
-    Collections.sort(kvs, KeyValue.COMPARATOR);
-    for (int maxVersions = 1; maxVersions <= TIMESTAMPS.length; ++maxVersions) {
-      for (int columnBitMask = 1; columnBitMask <= MAX_COLUMN_BIT_MASK; ++columnBitMask) {
-        Scan scan = new Scan();
-        scan.setMaxVersions(maxVersions);
-        Set<String> qualSet = new TreeSet<String>();
-        {
-          int columnMaskTmp = columnBitMask;
-          for (String qual : qualifiers) {
-            if ((columnMaskTmp & 1) != 0) {
-              scan.addColumn(FAMILY_BYTES, Bytes.toBytes(qual));
-              qualSet.add(qual);
-            }
-            columnMaskTmp >>= 1;
-          }
-          assertEquals(0, columnMaskTmp);
-        }
+          int kvPos = 0;
+          int numResults = 0;
+          String queryInfo = "columns queried: " + qualSet + " (columnBitMask="
+              + columnBitMask + "), maxVersions=" + maxVersions;
 
-        InternalScanner scanner = region.getScanner(scan);
-        List<KeyValue> results = new ArrayList<KeyValue>();
-
-        int kvPos = 0;
-        int numResults = 0;
-        String queryInfo = "columns queried: " + qualSet + " (columnBitMask="
-            + columnBitMask + "), maxVersions=" + maxVersions;
-
-        while (scanner.next(results) || results.size() > 0) {
-          for (KeyValue kv : results) {
-            while (kvPos < kvs.size()
-                && !matchesQuery(kvs.get(kvPos), qualSet, maxVersions,
-                    lastDelTimeMap)) {
+          while (scanner.next(results) || results.size() > 0) {
+            for (KeyValue kv : results) {
+              while (kvPos < kvs.size()
+                  && !matchesQuery(kvs.get(kvPos), qualSet, maxVersions,
+                      lastDelTimeMap)) {
+                ++kvPos;
+              }
+              String rowQual = getRowQualStr(kv);
+              String deleteInfo = "";
+              Long lastDelTS = lastDelTimeMap.get(rowQual);
+              if (lastDelTS != null) {
+                deleteInfo = "; last timestamp when row/column " + rowQual
+                    + " was deleted: " + lastDelTS;
+              }
+              assertTrue("Scanner returned additional key/value: " + kv + ", "
+                  + queryInfo + deleteInfo + ";", kvPos < kvs.size());
+              assertEquals("Scanner returned wrong key/value; " + queryInfo
+                  + deleteInfo + ";", kvs.get(kvPos), kv);
               ++kvPos;
+              ++numResults;
             }
-            String rowQual = getRowQualStr(kv);
-            String deleteInfo = "";
-            Long lastDelTS = lastDelTimeMap.get(rowQual);
-            if (lastDelTS != null) {
-              deleteInfo = "; last timestamp when row/column " + rowQual
-                  + " was deleted: " + lastDelTS;
-            }
-            assertTrue("Scanner returned additional key/value: " + kv + ", "
-                + queryInfo + deleteInfo + ";", kvPos < kvs.size());
-            assertEquals("Scanner returned wrong key/value; " + queryInfo
-                + deleteInfo + ";", kvs.get(kvPos), kv);
-            ++kvPos;
-            ++numResults;
+            results.clear();
           }
-          results.clear();
-        }
-        for (; kvPos < kvs.size(); ++kvPos) {
-          KeyValue remainingKV = kvs.get(kvPos);
-          assertFalse("Matching column not returned by scanner: "
-              + remainingKV + ", " + queryInfo + ", results returned: "
-              + numResults, matchesQuery(remainingKV, qualSet, maxVersions,
-              lastDelTimeMap));
+          for (; kvPos < kvs.size(); ++kvPos) {
+            KeyValue remainingKV = kvs.get(kvPos);
+            assertFalse("Matching column not returned by scanner: "
+                + remainingKV + ", " + queryInfo + ", results returned: "
+                + numResults, matchesQuery(remainingKV, qualSet, maxVersions,
+                    lastDelTimeMap));
+          }
         }
       }
+      assertTrue("This test is supposed to delete at least some row/column " +
+          "pairs", lastDelTimeMap.size() > 0);
+      LOG.info("Number of row/col pairs deleted at least once: " +
+          lastDelTimeMap.size());
+    } finally {
+      HRegion.closeHRegion(region);
     }
-    assertTrue("This test is supposed to delete at least some row/column " +
-        "pairs", lastDelTimeMap.size() > 0);
-    LOG.info("Number of row/col pairs deleted at least once: " +
-       lastDelTimeMap.size());
-    region.close();
   }
 
   static HRegion createRegion(String tableName,

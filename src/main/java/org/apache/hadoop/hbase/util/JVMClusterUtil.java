@@ -192,13 +192,13 @@ public class JVMClusterUtil {
     }
     // Wait for an active master
     while (true) {
-      for (JVMClusterUtil.MasterThread t : masters) {
+      for (JVMClusterUtil.MasterThread t: masters) {
         if (t.master.isActiveMaster()) {
           return t.master.getServerName().toString();
         }
       }
       try {
-        Thread.sleep(1000);
+        Thread.sleep(100);
       } catch(InterruptedException e) {
         // Keep waiting
       }
@@ -213,13 +213,17 @@ public class JVMClusterUtil {
       final List<RegionServerThread> regionservers) {
     LOG.debug("Shutting down HBase Cluster");
     if (masters != null) {
+      // Do backups first.
+      JVMClusterUtil.MasterThread activeMaster = null;
       for (JVMClusterUtil.MasterThread t : masters) {
-        if (t.master.isActiveMaster()) {
-          t.master.shutdown();
-        } else {
+        if (!t.master.isActiveMaster()) {
           t.master.stopMaster();
+        } else {
+          activeMaster = t;
         }
       }
+      // Do active after.
+      if (activeMaster != null) activeMaster.master.shutdown();
     }
     // regionServerThreads can never be null because they are initialized when
     // the class is constructed.

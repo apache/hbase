@@ -53,37 +53,41 @@ public class TestMinVersions extends HBaseTestCase {
     HRegion region = createNewHRegion(htd, null, null);
 
     long ts = System.currentTimeMillis() - 2000; // 2s in the past
+    try {
+      Put p = new Put(T1, ts);
+      p.add(c0, c0, T1);
+      region.put(p);
 
-    Put p = new Put(T1, ts);
-    p.add(c0, c0, T1);
-    region.put(p);
+      p = new Put(T1, ts+1);
+      p.add(c0, c0, T4);
+      region.put(p);
 
-    p = new Put(T1, ts+1);
-    p.add(c0, c0, T4);
-    region.put(p);
+      p = new Put(T3, ts);
+      p.add(c0, c0, T3);
+      region.put(p);
 
-    p = new Put(T3, ts);
-    p.add(c0, c0, T3);
-    region.put(p);
+      // now make sure that getClosestBefore(...) get can
+      // rows that would be expired without minVersion.
+      // also make sure it gets the latest version
+      Result r = region.getClosestRowBefore(T1, c0);
+      checkResult(r, c0, T4);
 
-    // now make sure that getClosestBefore(...) get can
-    // rows that would be expired without minVersion.
-    // also make sure it gets the latest version
-    Result r = region.getClosestRowBefore(T1, c0);
-    checkResult(r, c0, T4);
+      r = region.getClosestRowBefore(T2, c0);
+      checkResult(r, c0, T4);
 
-    r = region.getClosestRowBefore(T2, c0);
-    checkResult(r, c0, T4);
+      // now flush/compact
+      region.flushcache();
+      region.compactStores(true);
 
-    // now flush/compact
-    region.flushcache();
-    region.compactStores(true);
+      r = region.getClosestRowBefore(T1, c0);
+      checkResult(r, c0, T4);
 
-    r = region.getClosestRowBefore(T1, c0);
-    checkResult(r, c0, T4);
-
-    r = region.getClosestRowBefore(T2, c0);
-    checkResult(r, c0, T4);
+      r = region.getClosestRowBefore(T2, c0);
+      checkResult(r, c0, T4);
+    } finally {
+      region.close();
+      region.getLog().closeAndDelete();
+    }
   }
 
   /**
@@ -97,44 +101,49 @@ public class TestMinVersions extends HBaseTestCase {
 
     long ts = System.currentTimeMillis() - 2000; // 2s in the past
 
-    Put p = new Put(T1, ts-1);
-    p.add(c0, c0, T2);
-    region.put(p);
+    try {
+      Put p = new Put(T1, ts-1);
+      p.add(c0, c0, T2);
+      region.put(p);
 
-    p = new Put(T1, ts-3);
-    p.add(c0, c0, T0);
-    region.put(p);
+      p = new Put(T1, ts-3);
+      p.add(c0, c0, T0);
+      region.put(p);
 
-    // now flush/compact
-    region.flushcache();
-    region.compactStores(true);
+      // now flush/compact
+      region.flushcache();
+      region.compactStores(true);
 
-    p = new Put(T1, ts);
-    p.add(c0, c0, T3);
-    region.put(p);
+      p = new Put(T1, ts);
+      p.add(c0, c0, T3);
+      region.put(p);
 
-    p = new Put(T1, ts-2);
-    p.add(c0, c0, T1);
-    region.put(p);
+      p = new Put(T1, ts-2);
+      p.add(c0, c0, T1);
+      region.put(p);
 
-    p = new Put(T1, ts-3);
-    p.add(c0, c0, T0);
-    region.put(p);
+      p = new Put(T1, ts-3);
+      p.add(c0, c0, T0);
+      region.put(p);
 
-    // newest version in the memstore
-    // the 2nd oldest in the store file
-    // and the 3rd, 4th oldest also in the memstore
+      // newest version in the memstore
+      // the 2nd oldest in the store file
+      // and the 3rd, 4th oldest also in the memstore
 
-    Get g = new Get(T1);
-    g.setMaxVersions();
-    Result r = region.get(g, null); // this'll use ScanWildcardColumnTracker
-    checkResult(r, c0, T3,T2,T1);
+      Get g = new Get(T1);
+      g.setMaxVersions();
+      Result r = region.get(g, null); // this'll use ScanWildcardColumnTracker
+      checkResult(r, c0, T3,T2,T1);
 
-    g = new Get(T1);
-    g.setMaxVersions();
-    g.addColumn(c0, c0);
-    r = region.get(g, null);  // this'll use ExplicitColumnTracker
-    checkResult(r, c0, T3,T2,T1);
+      g = new Get(T1);
+      g.setMaxVersions();
+      g.addColumn(c0, c0);
+      r = region.get(g, null);  // this'll use ExplicitColumnTracker
+      checkResult(r, c0, T3,T2,T1);
+    } finally {
+      region.close();
+      region.getLog().closeAndDelete();
+    }
   }
 
   /**
@@ -146,47 +155,52 @@ public class TestMinVersions extends HBaseTestCase {
 
     long ts = System.currentTimeMillis() - 2000; // 2s in the past
 
-    Put p = new Put(T1, ts-2);
-    p.add(c0, c0, T1);
-    region.put(p);
+    try {
+      Put p = new Put(T1, ts-2);
+      p.add(c0, c0, T1);
+      region.put(p);
 
-    p = new Put(T1, ts-1);
-    p.add(c0, c0, T2);
-    region.put(p);
+      p = new Put(T1, ts-1);
+      p.add(c0, c0, T2);
+      region.put(p);
 
-    p = new Put(T1, ts);
-    p.add(c0, c0, T3);
-    region.put(p);
+      p = new Put(T1, ts);
+      p.add(c0, c0, T3);
+      region.put(p);
 
-    Delete d = new Delete(T1, ts-1, null);
-    region.delete(d, null, true);
+      Delete d = new Delete(T1, ts-1, null);
+      region.delete(d, null, true);
 
-    Get g = new Get(T1);
-    g.setMaxVersions();
-    Result r = region.get(g, null);  // this'll use ScanWildcardColumnTracker
-    checkResult(r, c0, T3);
+      Get g = new Get(T1);
+      g.setMaxVersions();
+      Result r = region.get(g, null);  // this'll use ScanWildcardColumnTracker
+      checkResult(r, c0, T3);
 
-    g = new Get(T1);
-    g.setMaxVersions();
-    g.addColumn(c0, c0);
-    r = region.get(g, null);  // this'll use ExplicitColumnTracker
-    checkResult(r, c0, T3);
+      g = new Get(T1);
+      g.setMaxVersions();
+      g.addColumn(c0, c0);
+      r = region.get(g, null);  // this'll use ExplicitColumnTracker
+      checkResult(r, c0, T3);
 
-    // now flush/compact
-    region.flushcache();
-    region.compactStores(true);
+      // now flush/compact
+      region.flushcache();
+      region.compactStores(true);
 
-    // try again
-    g = new Get(T1);
-    g.setMaxVersions();
-    r = region.get(g, null);  // this'll use ScanWildcardColumnTracker
-    checkResult(r, c0, T3);
+      // try again
+      g = new Get(T1);
+      g.setMaxVersions();
+      r = region.get(g, null);  // this'll use ScanWildcardColumnTracker
+      checkResult(r, c0, T3);
 
-    g = new Get(T1);
-    g.setMaxVersions();
-    g.addColumn(c0, c0);
-    r = region.get(g, null);  // this'll use ExplicitColumnTracker
-    checkResult(r, c0, T3);
+      g = new Get(T1);
+      g.setMaxVersions();
+      g.addColumn(c0, c0);
+      r = region.get(g, null);  // this'll use ExplicitColumnTracker
+      checkResult(r, c0, T3);
+    } finally {
+      region.close();
+      region.getLog().closeAndDelete();
+    }
   }
 
   /**
@@ -198,63 +212,68 @@ public class TestMinVersions extends HBaseTestCase {
 
     long ts = System.currentTimeMillis() - 2000; // 2s in the past
 
-    // 2nd version
-    Put p = new Put(T1, ts-2);
-    p.add(c0, c0, T2);
-    region.put(p);
+    try {
+      // 2nd version
+      Put p = new Put(T1, ts-2);
+      p.add(c0, c0, T2);
+      region.put(p);
 
-    // 3rd version
-    p = new Put(T1, ts-1);
-    p.add(c0, c0, T3);
-    region.put(p);
+      // 3rd version
+      p = new Put(T1, ts-1);
+      p.add(c0, c0, T3);
+      region.put(p);
 
-    // 4th version
-    p = new Put(T1, ts);
-    p.add(c0, c0, T4);
-    region.put(p);
+      // 4th version
+      p = new Put(T1, ts);
+      p.add(c0, c0, T4);
+      region.put(p);
 
-    // now flush/compact
-    region.flushcache();
-    region.compactStores(true);
+      // now flush/compact
+      region.flushcache();
+      region.compactStores(true);
 
-    // now put the first version (backdated)
-    p = new Put(T1, ts-3);
-    p.add(c0, c0, T1);
-    region.put(p);
+      // now put the first version (backdated)
+      p = new Put(T1, ts-3);
+      p.add(c0, c0, T1);
+      region.put(p);
 
-    // now the latest change is in the memstore,
-    // but it is not the latest version
+      // now the latest change is in the memstore,
+      // but it is not the latest version
 
-    Result r = region.get(new Get(T1), null);
-    checkResult(r, c0, T4);
+      Result r = region.get(new Get(T1), null);
+      checkResult(r, c0, T4);
 
-    Get g = new Get(T1);
-    g.setMaxVersions();
-    r = region.get(g, null); // this'll use ScanWildcardColumnTracker
-    checkResult(r, c0, T4,T3);
+      Get g = new Get(T1);
+      g.setMaxVersions();
+      r = region.get(g, null); // this'll use ScanWildcardColumnTracker
+      checkResult(r, c0, T4,T3);
 
-    g = new Get(T1);
-    g.setMaxVersions();
-    g.addColumn(c0, c0);
-    r = region.get(g, null);  // this'll use ExplicitColumnTracker
-    checkResult(r, c0, T4,T3);
+      g = new Get(T1);
+      g.setMaxVersions();
+      g.addColumn(c0, c0);
+      r = region.get(g, null);  // this'll use ExplicitColumnTracker
+      checkResult(r, c0, T4,T3);
 
-    p = new Put(T1, ts+1);
-    p.add(c0, c0, T5);
-    region.put(p);
+      p = new Put(T1, ts+1);
+      p.add(c0, c0, T5);
+      region.put(p);
 
-    // now the latest version is in the memstore
+      // now the latest version is in the memstore
 
-    g = new Get(T1);
-    g.setMaxVersions();
-    r = region.get(g, null);  // this'll use ScanWildcardColumnTracker
-    checkResult(r, c0, T5,T4);
+      g = new Get(T1);
+      g.setMaxVersions();
+      r = region.get(g, null);  // this'll use ScanWildcardColumnTracker
+      checkResult(r, c0, T5,T4);
 
-    g = new Get(T1);
-    g.setMaxVersions();
-    g.addColumn(c0, c0);
-    r = region.get(g, null);  // this'll use ExplicitColumnTracker
-    checkResult(r, c0, T5,T4);
+      g = new Get(T1);
+      g.setMaxVersions();
+      g.addColumn(c0, c0);
+      r = region.get(g, null);  // this'll use ExplicitColumnTracker
+      checkResult(r, c0, T5,T4);
+    } finally {
+      region.close();
+      region.getLog().closeAndDelete();
+    }
   }
 
   /**
@@ -265,81 +284,86 @@ public class TestMinVersions extends HBaseTestCase {
     HTableDescriptor htd = createTableDescriptor(getName(), 2, 1000, 1);
     HRegion region = createNewHRegion(htd, null, null);
 
-    long ts = System.currentTimeMillis() - 2000; // 2s in the past
+    try {
+      long ts = System.currentTimeMillis() - 2000; // 2s in the past
 
-     // 1st version
-    Put p = new Put(T1, ts-3);
-    p.add(c0, c0, T1);
-    region.put(p);
+      // 1st version
+      Put p = new Put(T1, ts-3);
+      p.add(c0, c0, T1);
+      region.put(p);
 
-    // 2nd version
-    p = new Put(T1, ts-2);
-    p.add(c0, c0, T2);
-    region.put(p);
+      // 2nd version
+      p = new Put(T1, ts-2);
+      p.add(c0, c0, T2);
+      region.put(p);
 
-    // 3rd version
-    p = new Put(T1, ts-1);
-    p.add(c0, c0, T3);
-    region.put(p);
+      // 3rd version
+      p = new Put(T1, ts-1);
+      p.add(c0, c0, T3);
+      region.put(p);
 
-    // 4th version
-    p = new Put(T1, ts);
-    p.add(c0, c0, T4);
-    region.put(p);
+      // 4th version
+      p = new Put(T1, ts);
+      p.add(c0, c0, T4);
+      region.put(p);
 
-    Result r = region.get(new Get(T1), null);
-    checkResult(r, c0, T4);
+      Result r = region.get(new Get(T1), null);
+      checkResult(r, c0, T4);
 
-    Get g = new Get(T1);
-    g.setTimeRange(0L, ts+1);
-    r = region.get(g, null);
-    checkResult(r, c0, T4);
+      Get g = new Get(T1);
+      g.setTimeRange(0L, ts+1);
+      r = region.get(g, null);
+      checkResult(r, c0, T4);
 
-    // oldest version still exists
-    g.setTimeRange(0L, ts-2);
-    r = region.get(g, null);
-    checkResult(r, c0, T1);
+      // oldest version still exists
+      g.setTimeRange(0L, ts-2);
+      r = region.get(g, null);
+      checkResult(r, c0, T1);
 
-    // gets see only available versions
-    // even before compactions
-    g = new Get(T1);
-    g.setMaxVersions();
-    r = region.get(g, null); // this'll use ScanWildcardColumnTracker
-    checkResult(r, c0, T4,T3);
+      // gets see only available versions
+      // even before compactions
+      g = new Get(T1);
+      g.setMaxVersions();
+      r = region.get(g, null); // this'll use ScanWildcardColumnTracker
+      checkResult(r, c0, T4,T3);
 
-    g = new Get(T1);
-    g.setMaxVersions();
-    g.addColumn(c0, c0);
-    r = region.get(g, null);  // this'll use ExplicitColumnTracker
-    checkResult(r, c0, T4,T3);
+      g = new Get(T1);
+      g.setMaxVersions();
+      g.addColumn(c0, c0);
+      r = region.get(g, null);  // this'll use ExplicitColumnTracker
+      checkResult(r, c0, T4,T3);
 
-    // now flush
-    region.flushcache();
+      // now flush
+      region.flushcache();
 
-    // with HBASE-4241 a flush will eliminate the expired rows
-    g = new Get(T1);
-    g.setTimeRange(0L, ts-2);
-    r = region.get(g, null);
-    assertTrue(r.isEmpty());
+      // with HBASE-4241 a flush will eliminate the expired rows
+      g = new Get(T1);
+      g.setTimeRange(0L, ts-2);
+      r = region.get(g, null);
+      assertTrue(r.isEmpty());
 
-    // major compaction
-    region.compactStores(true);
+      // major compaction
+      region.compactStores(true);
 
-    // after compaction the 4th version is still available
-    g = new Get(T1);
-    g.setTimeRange(0L, ts+1);
-    r = region.get(g, null);
-    checkResult(r, c0, T4);
+      // after compaction the 4th version is still available
+      g = new Get(T1);
+      g.setTimeRange(0L, ts+1);
+      r = region.get(g, null);
+      checkResult(r, c0, T4);
 
-    // so is the 3rd
-    g.setTimeRange(0L, ts);
-    r = region.get(g, null);
-    checkResult(r, c0, T3);
+      // so is the 3rd
+      g.setTimeRange(0L, ts);
+      r = region.get(g, null);
+      checkResult(r, c0, T3);
 
-    // but the 2nd and earlier versions are gone
-    g.setTimeRange(0L, ts-1);
-    r = region.get(g, null);
-    assertTrue(r.isEmpty());
+      // but the 2nd and earlier versions are gone
+      g.setTimeRange(0L, ts-1);
+      r = region.get(g, null);
+      assertTrue(r.isEmpty());
+    } finally {
+      region.close();
+      region.getLog().closeAndDelete();
+    }
   }
 
   /**
@@ -353,61 +377,66 @@ public class TestMinVersions extends HBaseTestCase {
 
     long ts = System.currentTimeMillis() - 2000; // 2s in the past
 
-    Put p = new Put(T1, ts-3);
-    p.add(c0, c0, T0);
-    p.add(c1, c1, T0);
-    region.put(p);
+    try {
+      Put p = new Put(T1, ts-3);
+      p.add(c0, c0, T0);
+      p.add(c1, c1, T0);
+      region.put(p);
 
-    p = new Put(T1, ts-2);
-    p.add(c0, c0, T1);
-    p.add(c1, c1, T1);
-    region.put(p);
+      p = new Put(T1, ts-2);
+      p.add(c0, c0, T1);
+      p.add(c1, c1, T1);
+      region.put(p);
 
-    p = new Put(T1, ts-1);
-    p.add(c0, c0, T2);
-    p.add(c1, c1, T2);
-    region.put(p);
+      p = new Put(T1, ts-1);
+      p.add(c0, c0, T2);
+      p.add(c1, c1, T2);
+      region.put(p);
 
-    p = new Put(T1, ts);
-    p.add(c0, c0, T3);
-    p.add(c1, c1, T3);
-    region.put(p);
+      p = new Put(T1, ts);
+      p.add(c0, c0, T3);
+      p.add(c1, c1, T3);
+      region.put(p);
 
-    List<Long> tss = new ArrayList<Long>();
-    tss.add(ts-1);
-    tss.add(ts-2);
+      List<Long> tss = new ArrayList<Long>();
+      tss.add(ts-1);
+      tss.add(ts-2);
 
-    Get g = new Get(T1);
-    g.addColumn(c1,c1);
-    g.setFilter(new TimestampsFilter(tss));
-    g.setMaxVersions();
-    Result r = region.get(g, null);
-    checkResult(r, c1, T2,T1);
+      Get g = new Get(T1);
+      g.addColumn(c1,c1);
+      g.setFilter(new TimestampsFilter(tss));
+      g.setMaxVersions();
+      Result r = region.get(g, null);
+      checkResult(r, c1, T2,T1);
 
-    g = new Get(T1);
-    g.addColumn(c0,c0);
-    g.setFilter(new TimestampsFilter(tss));
-    g.setMaxVersions();
-    r = region.get(g, null);
-    checkResult(r, c0, T2,T1);
+      g = new Get(T1);
+      g.addColumn(c0,c0);
+      g.setFilter(new TimestampsFilter(tss));
+      g.setMaxVersions();
+      r = region.get(g, null);
+      checkResult(r, c0, T2,T1);
 
-    // now flush/compact
-    region.flushcache();
-    region.compactStores(true);
+      // now flush/compact
+      region.flushcache();
+      region.compactStores(true);
 
-    g = new Get(T1);
-    g.addColumn(c1,c1);
-    g.setFilter(new TimestampsFilter(tss));
-    g.setMaxVersions();
-    r = region.get(g, null);
-    checkResult(r, c1, T2);
+      g = new Get(T1);
+      g.addColumn(c1,c1);
+      g.setFilter(new TimestampsFilter(tss));
+      g.setMaxVersions();
+      r = region.get(g, null);
+      checkResult(r, c1, T2);
 
-    g = new Get(T1);
-    g.addColumn(c0,c0);
-    g.setFilter(new TimestampsFilter(tss));
-    g.setMaxVersions();
-    r = region.get(g, null);
-    checkResult(r, c0, T2);
+      g = new Get(T1);
+      g.addColumn(c0,c0);
+      g.setFilter(new TimestampsFilter(tss));
+      g.setMaxVersions();
+      r = region.get(g, null);
+      checkResult(r, c0, T2);
+    } finally {
+      region.close();
+      region.getLog().closeAndDelete();
+    }
 }
 
   private void checkResult(Result r, byte[] col, byte[] ... vals) {

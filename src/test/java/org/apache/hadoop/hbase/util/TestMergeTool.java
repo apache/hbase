@@ -167,6 +167,13 @@ public class TestMergeTool extends HBaseTestCase {
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
+    for (int i = 0; i < sourceRegions.length; i++) {
+      HRegion r = regions[i];
+      if (r != null) {
+        r.close();
+        r.getLog().closeAndDelete();
+      }
+    }
     TEST_UTIL.shutdownMiniCluster();
   }
 

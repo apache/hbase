@@ -99,30 +99,34 @@ public class TestOpenRegionHandler {
          HRegion.createHRegion(hri, HTU.getDataTestDir(), HTU
             .getConfiguration(), htd);
     assertNotNull(region);
-    OpenRegionHandler handler = new OpenRegionHandler(server, rss, hri, htd) {
-      HRegion openRegion() {
-        // Open region first, then remove znode as though it'd been hijacked.
-        HRegion region = super.openRegion();
-        
-        // Don't actually open region BUT remove the znode as though it'd
-        // been hijacked on us.
-        ZooKeeperWatcher zkw = this.server.getZooKeeper();
-        String node = ZKAssign.getNodeName(zkw, hri.getEncodedName());
-        try {
-          ZKUtil.deleteNodeFailSilent(zkw, node);
-        } catch (KeeperException e) {
-          throw new RuntimeException("Ugh failed delete of " + node, e);
+    try {
+      OpenRegionHandler handler = new OpenRegionHandler(server, rss, hri, htd) {
+        HRegion openRegion() {
+          // Open region first, then remove znode as though it'd been hijacked.
+          HRegion region = super.openRegion();
+
+          // Don't actually open region BUT remove the znode as though it'd
+          // been hijacked on us.
+          ZooKeeperWatcher zkw = this.server.getZooKeeper();
+          String node = ZKAssign.getNodeName(zkw, hri.getEncodedName());
+          try {
+            ZKUtil.deleteNodeFailSilent(zkw, node);
+          } catch (KeeperException e) {
+            throw new RuntimeException("Ugh failed delete of " + node, e);
+          }
+          return region;
         }
-        return region;
-      }
-    };
-    // Call process without first creating OFFLINE region in zk, see if
-    // exception or just quiet return (expected).
-    handler.process();
-    ZKAssign.createNodeOffline(server.getZooKeeper(), hri, server.getServerName());
-    // Call process again but this time yank the zk znode out from under it
-    // post OPENING; again will expect it to come back w/o NPE or exception.
-    handler.process();
+      };
+      // Call process without first creating OFFLINE region in zk, see if
+      // exception or just quiet return (expected).
+      handler.process();
+      ZKAssign.createNodeOffline(server.getZooKeeper(), hri, server.getServerName());
+      // Call process again but this time yank the zk znode out from under it
+      // post OPENING; again will expect it to come back w/o NPE or exception.
+      handler.process();
+    } finally {
+      HRegion.closeHRegion(region);
+    }
   }
   
   @Test

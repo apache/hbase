@@ -70,95 +70,98 @@ public class TestColumnSeeking {
     HRegion region =
         HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(), TEST_UTIL
             .getConfiguration(), htd);
+    try {
+      List<String> rows = generateRandomWords(10, "row");
+      List<String> allColumns = generateRandomWords(10, "column");
+      List<String> values = generateRandomWords(100, "value");
 
-    List<String> rows = generateRandomWords(10, "row");
-    List<String> allColumns = generateRandomWords(10, "column");
-    List<String> values = generateRandomWords(100, "value");
+      long maxTimestamp = 2;
+      double selectPercent = 0.5;
+      int numberOfTests = 5;
+      double flushPercentage = 0.2;
+      double minorPercentage = 0.2;
+      double majorPercentage = 0.2;
+      double putPercentage = 0.2;
 
-    long maxTimestamp = 2;
-    double selectPercent = 0.5;
-    int numberOfTests = 5;
-    double flushPercentage = 0.2;
-    double minorPercentage = 0.2;
-    double majorPercentage = 0.2;
-    double putPercentage = 0.2;
+      HashMap<String, KeyValue> allKVMap = new HashMap<String, KeyValue>();
 
-    HashMap<String, KeyValue> allKVMap = new HashMap<String, KeyValue>();
+      HashMap<String, KeyValue>[] kvMaps = new HashMap[numberOfTests];
+      ArrayList<String>[] columnLists = new ArrayList[numberOfTests];
 
-    HashMap<String, KeyValue>[] kvMaps = new HashMap[numberOfTests];
-    ArrayList<String>[] columnLists = new ArrayList[numberOfTests];
-
-    for (int i = 0; i < numberOfTests; i++) {
-      kvMaps[i] = new HashMap<String, KeyValue>();
-      columnLists[i] = new ArrayList<String>();
-      for (String column : allColumns) {
-        if (Math.random() < selectPercent) {
-          columnLists[i].add(column);
+      for (int i = 0; i < numberOfTests; i++) {
+        kvMaps[i] = new HashMap<String, KeyValue>();
+        columnLists[i] = new ArrayList<String>();
+        for (String column : allColumns) {
+          if (Math.random() < selectPercent) {
+            columnLists[i].add(column);
+          }
         }
       }
-    }
 
-    for (String value : values) {
-      for (String row : rows) {
-        Put p = new Put(Bytes.toBytes(row));
-        p.setWriteToWAL(false);
-        for (String column : allColumns) {
-          for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
-            KeyValue kv =
-                KeyValueTestUtil.create(row, family, column, timestamp, value);
-            if (Math.random() < putPercentage) {
-              p.add(kv);
-              allKVMap.put(kv.getKeyString(), kv);
-              for (int i = 0; i < numberOfTests; i++) {
-                if (columnLists[i].contains(column)) {
-                  kvMaps[i].put(kv.getKeyString(), kv);
+      for (String value : values) {
+        for (String row : rows) {
+          Put p = new Put(Bytes.toBytes(row));
+          p.setWriteToWAL(false);
+          for (String column : allColumns) {
+            for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
+              KeyValue kv =
+                  KeyValueTestUtil.create(row, family, column, timestamp, value);
+              if (Math.random() < putPercentage) {
+                p.add(kv);
+                allKVMap.put(kv.getKeyString(), kv);
+                for (int i = 0; i < numberOfTests; i++) {
+                  if (columnLists[i].contains(column)) {
+                    kvMaps[i].put(kv.getKeyString(), kv);
+                  }
                 }
               }
             }
           }
-        }
-        region.put(p);
-        if (Math.random() < flushPercentage) {
-          LOG.info("Flushing... ");
-          region.flushcache();
-        }
+          region.put(p);
+          if (Math.random() < flushPercentage) {
+            LOG.info("Flushing... ");
+            region.flushcache();
+          }
 
-        if (Math.random() < minorPercentage) {
-          LOG.info("Minor compacting... ");
-          region.compactStores(false);
-        }
+          if (Math.random() < minorPercentage) {
+            LOG.info("Minor compacting... ");
+            region.compactStores(false);
+          }
 
-        if (Math.random() < majorPercentage) {
-          LOG.info("Major compacting... ");
-          region.compactStores(true);
+          if (Math.random() < majorPercentage) {
+            LOG.info("Major compacting... ");
+            region.compactStores(true);
+          }
         }
       }
-    }
 
-    for (int i = 0; i < numberOfTests + 1; i++) {
-      Collection<KeyValue> kvSet;
-      Scan scan = new Scan();
-      scan.setMaxVersions();
-      if (i < numberOfTests) {
-        kvSet = kvMaps[i].values();
-        for (String column : columnLists[i]) {
-          scan.addColumn(familyBytes, Bytes.toBytes(column));
+      for (int i = 0; i < numberOfTests + 1; i++) {
+        Collection<KeyValue> kvSet;
+        Scan scan = new Scan();
+        scan.setMaxVersions();
+        if (i < numberOfTests) {
+          kvSet = kvMaps[i].values();
+          for (String column : columnLists[i]) {
+            scan.addColumn(familyBytes, Bytes.toBytes(column));
+          }
+          LOG.info("ExplicitColumns scanner");
+          LOG.info("Columns: " + columnLists[i].size() + "  Keys: "
+              + kvSet.size());
+        } else {
+          kvSet = allKVMap.values();
+          LOG.info("Wildcard scanner");
+          LOG.info("Columns: " + allColumns.size() + "  Keys: " + kvSet.size());
+
         }
-        LOG.info("ExplicitColumns scanner");
-        LOG.info("Columns: " + columnLists[i].size() + "  Keys: "
-            + kvSet.size());
-      } else {
-        kvSet = allKVMap.values();
-        LOG.info("Wildcard scanner");
-        LOG.info("Columns: " + allColumns.size() + "  Keys: " + kvSet.size());
-
+        InternalScanner scanner = region.getScanner(scan);
+        List<KeyValue> results = new ArrayList<KeyValue>();
+        while (scanner.next(results))
+          ;
+        assertEquals(kvSet.size(), results.size());
+        assertTrue(results.containsAll(kvSet));
       }
-      InternalScanner scanner = region.getScanner(scan);
-      List<KeyValue> results = new ArrayList<KeyValue>();
-      while (scanner.next(results))
-        ;
-      assertEquals(kvSet.size(), results.size());
-      assertTrue(results.containsAll(kvSet));
+    } finally {
+      HRegion.closeHRegion(region);
     }
   }
 

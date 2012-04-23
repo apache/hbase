@@ -96,13 +96,16 @@ public class TestScanWithBloomError {
 
   @Test
   public void testThreeStoreFiles() throws IOException {
-    region = createRegion(TABLE_NAME, Compression.Algorithm.GZ, bloomType);
-    createStoreFile(new int[] {1, 2, 6});
-    createStoreFile(new int[] {1, 2, 3, 7});
-    createStoreFile(new int[] {1, 9});
-    scanColSet(new int[]{1, 4, 6, 7}, new int[]{1, 6, 7});
-
-    region.close();
+    this.region = createRegion(TABLE_NAME, Compression.Algorithm.GZ, bloomType);
+    try {
+      createStoreFile(new int[] {1, 2, 6});
+      createStoreFile(new int[] {1, 2, 3, 7});
+      createStoreFile(new int[] {1, 9});
+      scanColSet(new int[]{1, 4, 6, 7}, new int[]{1, 6, 7});
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
   }
 
   private void scanColSet(int[] colSet, int[] expectedResultCols)

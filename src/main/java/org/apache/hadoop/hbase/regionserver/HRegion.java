@@ -61,13 +61,13 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -78,11 +78,10 @@ import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
-import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -3080,7 +3079,11 @@ public class HRegion implements HeapSize { // , Writable{
    * bootstrap code in the HMaster constructor.
    * Note, this method creates an {@link HLog} for the created region. It
    * needs to be closed explicitly.  Use {@link HRegion#getLog()} to get
-   * access.
+   * access.  <b>When done with a region created using this method, you will
+   * need to explicitly close the {@link HLog} it created too; it will not be
+   * done for you.  Not closing the log will leave at least a daemon thread
+   * running.</b>  Call {@link #closeHRegion(HRegion)} and it will do
+   * necessary cleanup for you.
    * @param info Info for region to create.
    * @param rootDir Root directory for HBase instance
    * @param conf
@@ -3093,6 +3096,23 @@ public class HRegion implements HeapSize { // , Writable{
       final Configuration conf, final HTableDescriptor hTableDescriptor)
   throws IOException {
     return createHRegion(info, rootDir, conf, hTableDescriptor, null);
+  }
+
+  /**
+   * This will do the necessary cleanup a call to {@link #createHRegion(HRegionInfo, Path, Configuration, HTableDescriptor)}
+   * requires.  This method will close the region and then close its
+   * associated {@link HLog} file.  You use it if you call the other createHRegion,
+   * the one that takes an {@link HLog} instance but don't be surprised by the
+   * call to the {@link HLog#closeAndDelete()} on the {@link HLog} the
+   * HRegion was carrying.
+   * @param r
+   * @throws IOException
+   */
+  public static void closeHRegion(final HRegion r) throws IOException {
+    if (r == null) return;
+    r.close();
+    if (r.getLog() == null) return;
+    r.getLog().closeAndDelete();
   }
 
   /**

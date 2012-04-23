@@ -44,7 +44,8 @@ public class ExponentiallyDecayingSample implements Sample {
 
   private static final ScheduledExecutorService TICK_SERVICE = 
       Executors.newScheduledThreadPool(1, 
-          Threads.getNamedThreadFactory("decayingSampleTick", true));
+          Threads.getNamedThreadFactory(Thread.currentThread().getName() +
+            ".decayingSampleTick.", true));
 
   private static volatile long CURRENT_TICK = 
       TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis());

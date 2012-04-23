@@ -54,54 +54,58 @@ public class TestMultipleColumnPrefixFilter {
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
     HRegion region = HRegion.createHRegion(info, TEST_UTIL.
       getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+    try {
+      List<String> rows = generateRandomWords(100, "row");
+      List<String> columns = generateRandomWords(10000, "column");
+      long maxTimestamp = 2;
 
-    List<String> rows = generateRandomWords(100, "row");
-    List<String> columns = generateRandomWords(10000, "column");
-    long maxTimestamp = 2;
+      List<KeyValue> kvList = new ArrayList<KeyValue>();
 
-    List<KeyValue> kvList = new ArrayList<KeyValue>();
+      Map<String, List<KeyValue>> prefixMap = new HashMap<String,
+          List<KeyValue>>();
 
-    Map<String, List<KeyValue>> prefixMap = new HashMap<String,
-        List<KeyValue>>();
+      prefixMap.put("p", new ArrayList<KeyValue>());
+      prefixMap.put("q", new ArrayList<KeyValue>());
+      prefixMap.put("s", new ArrayList<KeyValue>());
 
-    prefixMap.put("p", new ArrayList<KeyValue>());
-    prefixMap.put("q", new ArrayList<KeyValue>());
-    prefixMap.put("s", new ArrayList<KeyValue>());
+      String valueString = "ValueString";
 
-    String valueString = "ValueString";
-
-    for (String row: rows) {
-      Put p = new Put(Bytes.toBytes(row));
-      p.setWriteToWAL(false);
-      for (String column: columns) {
-        for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
-          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
-              valueString);
-          p.add(kv);
-          kvList.add(kv);
-          for (String s: prefixMap.keySet()) {
-            if (column.startsWith(s)) {
-              prefixMap.get(s).add(kv);
+      for (String row: rows) {
+        Put p = new Put(Bytes.toBytes(row));
+        p.setWriteToWAL(false);
+        for (String column: columns) {
+          for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
+            KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
+                valueString);
+            p.add(kv);
+            kvList.add(kv);
+            for (String s: prefixMap.keySet()) {
+              if (column.startsWith(s)) {
+                prefixMap.get(s).add(kv);
+              }
             }
           }
         }
+        region.put(p);
       }
-      region.put(p);
-    }
 
-    MultipleColumnPrefixFilter filter;
-    Scan scan = new Scan();
-    scan.setMaxVersions();
-    byte [][] filter_prefix = new byte [2][];
-    filter_prefix[0] = new byte [] {'p'};
-    filter_prefix[1] = new byte [] {'q'};
-    
-    filter = new MultipleColumnPrefixFilter(filter_prefix);
-    scan.setFilter(filter);
-    List<KeyValue> results = new ArrayList<KeyValue>();  
-    InternalScanner scanner = region.getScanner(scan);
-    while(scanner.next(results));
-    assertEquals(prefixMap.get("p").size() + prefixMap.get("q").size(), results.size());
+      MultipleColumnPrefixFilter filter;
+      Scan scan = new Scan();
+      scan.setMaxVersions();
+      byte [][] filter_prefix = new byte [2][];
+      filter_prefix[0] = new byte [] {'p'};
+      filter_prefix[1] = new byte [] {'q'};
+
+      filter = new MultipleColumnPrefixFilter(filter_prefix);
+      scan.setFilter(filter);
+      List<KeyValue> results = new ArrayList<KeyValue>();  
+      InternalScanner scanner = region.getScanner(scan);
+      while(scanner.next(results));
+      assertEquals(prefixMap.get("p").size() + prefixMap.get("q").size(), results.size());
+    } finally {
+      region.close();
+      region.getLog().closeAndDelete();
+    }
   }
 
   @Test
@@ -114,60 +118,64 @@ public class TestMultipleColumnPrefixFilter {
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
     HRegion region = HRegion.createHRegion(info, TEST_UTIL.
       getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+    try {
+      List<String> rows = generateRandomWords(100, "row");
+      List<String> columns = generateRandomWords(10000, "column");
+      long maxTimestamp = 3;
 
-    List<String> rows = generateRandomWords(100, "row");
-    List<String> columns = generateRandomWords(10000, "column");
-    long maxTimestamp = 3;
+      List<KeyValue> kvList = new ArrayList<KeyValue>();
 
-    List<KeyValue> kvList = new ArrayList<KeyValue>();
+      Map<String, List<KeyValue>> prefixMap = new HashMap<String,
+          List<KeyValue>>();
 
-    Map<String, List<KeyValue>> prefixMap = new HashMap<String,
-        List<KeyValue>>();
+      prefixMap.put("p", new ArrayList<KeyValue>());
+      prefixMap.put("q", new ArrayList<KeyValue>());
+      prefixMap.put("s", new ArrayList<KeyValue>());
 
-    prefixMap.put("p", new ArrayList<KeyValue>());
-    prefixMap.put("q", new ArrayList<KeyValue>());
-    prefixMap.put("s", new ArrayList<KeyValue>());
+      String valueString = "ValueString";
 
-    String valueString = "ValueString";
-
-    for (String row: rows) {
-      Put p = new Put(Bytes.toBytes(row));
-      p.setWriteToWAL(false);
-      for (String column: columns) {
-        for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
-          double rand = Math.random();
-          KeyValue kv;
-          if (rand < 0.5) 
-            kv = KeyValueTestUtil.create(row, family1, column, timestamp,
-                valueString);
-          else 
-            kv = KeyValueTestUtil.create(row, family2, column, timestamp,
-                valueString);
-          p.add(kv);
-          kvList.add(kv);
-          for (String s: prefixMap.keySet()) {
-            if (column.startsWith(s)) {
-              prefixMap.get(s).add(kv);
+      for (String row: rows) {
+        Put p = new Put(Bytes.toBytes(row));
+        p.setWriteToWAL(false);
+        for (String column: columns) {
+          for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
+            double rand = Math.random();
+            KeyValue kv;
+            if (rand < 0.5) 
+              kv = KeyValueTestUtil.create(row, family1, column, timestamp,
+                  valueString);
+            else 
+              kv = KeyValueTestUtil.create(row, family2, column, timestamp,
+                  valueString);
+            p.add(kv);
+            kvList.add(kv);
+            for (String s: prefixMap.keySet()) {
+              if (column.startsWith(s)) {
+                prefixMap.get(s).add(kv);
+              }
             }
           }
         }
+        region.put(p);
       }
-      region.put(p);
-    }
 
-    MultipleColumnPrefixFilter filter;
-    Scan scan = new Scan();
-    scan.setMaxVersions();
-    byte [][] filter_prefix = new byte [2][];
-    filter_prefix[0] = new byte [] {'p'};
-    filter_prefix[1] = new byte [] {'q'};
-    
-    filter = new MultipleColumnPrefixFilter(filter_prefix);
-    scan.setFilter(filter);
-    List<KeyValue> results = new ArrayList<KeyValue>();  
-    InternalScanner scanner = region.getScanner(scan);
-    while(scanner.next(results));
-    assertEquals(prefixMap.get("p").size() + prefixMap.get("q").size(), results.size());
+      MultipleColumnPrefixFilter filter;
+      Scan scan = new Scan();
+      scan.setMaxVersions();
+      byte [][] filter_prefix = new byte [2][];
+      filter_prefix[0] = new byte [] {'p'};
+      filter_prefix[1] = new byte [] {'q'};
+
+      filter = new MultipleColumnPrefixFilter(filter_prefix);
+      scan.setFilter(filter);
+      List<KeyValue> results = new ArrayList<KeyValue>();  
+      InternalScanner scanner = region.getScanner(scan);
+      while(scanner.next(results));
+      assertEquals(prefixMap.get("p").size() + prefixMap.get("q").size(), results.size());
+    } finally {
+      region.close();
+      region.getLog().closeAndDelete();
+    }
   }
   
   @Test
@@ -178,49 +186,53 @@ public class TestMultipleColumnPrefixFilter {
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
     HRegion region = HRegion.createHRegion(info, TEST_UTIL.
       getDataTestDir(), TEST_UTIL.getConfiguration(),htd);
+    try {
+      List<String> rows = generateRandomWords(100, "row");
+      List<String> columns = generateRandomWords(10000, "column");
+      long maxTimestamp = 2;
 
-    List<String> rows = generateRandomWords(100, "row");
-    List<String> columns = generateRandomWords(10000, "column");
-    long maxTimestamp = 2;
+      String valueString = "ValueString";
 
-    String valueString = "ValueString";
-
-    for (String row: rows) {
-      Put p = new Put(Bytes.toBytes(row));
-      p.setWriteToWAL(false);
-      for (String column: columns) {
-        for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
-          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
-              valueString);
-          p.add(kv);
+      for (String row: rows) {
+        Put p = new Put(Bytes.toBytes(row));
+        p.setWriteToWAL(false);
+        for (String column: columns) {
+          for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
+            KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
+                valueString);
+            p.add(kv);
+          }
         }
+        region.put(p);
       }
-      region.put(p);
-    }
 
-    MultipleColumnPrefixFilter multiplePrefixFilter;
-    Scan scan1 = new Scan();
-    scan1.setMaxVersions();
-    byte [][] filter_prefix = new byte [1][];
-    filter_prefix[0] = new byte [] {'p'};
- 
-    multiplePrefixFilter = new MultipleColumnPrefixFilter(filter_prefix);
-    scan1.setFilter(multiplePrefixFilter);
-    List<KeyValue> results1 = new ArrayList<KeyValue>();  
-    InternalScanner scanner1 = region.getScanner(scan1);
-    while(scanner1.next(results1));
-    
-    ColumnPrefixFilter singlePrefixFilter;
-    Scan scan2 = new Scan();
-    scan2.setMaxVersions();
-    singlePrefixFilter = new ColumnPrefixFilter(Bytes.toBytes("p"));
- 
-    scan2.setFilter(singlePrefixFilter);
-    List<KeyValue> results2 = new ArrayList<KeyValue>();  
-    InternalScanner scanner2 = region.getScanner(scan1);
-    while(scanner2.next(results2));
-    
-    assertEquals(results1.size(), results2.size());
+      MultipleColumnPrefixFilter multiplePrefixFilter;
+      Scan scan1 = new Scan();
+      scan1.setMaxVersions();
+      byte [][] filter_prefix = new byte [1][];
+      filter_prefix[0] = new byte [] {'p'};
+
+      multiplePrefixFilter = new MultipleColumnPrefixFilter(filter_prefix);
+      scan1.setFilter(multiplePrefixFilter);
+      List<KeyValue> results1 = new ArrayList<KeyValue>();  
+      InternalScanner scanner1 = region.getScanner(scan1);
+      while(scanner1.next(results1));
+
+      ColumnPrefixFilter singlePrefixFilter;
+      Scan scan2 = new Scan();
+      scan2.setMaxVersions();
+      singlePrefixFilter = new ColumnPrefixFilter(Bytes.toBytes("p"));
+
+      scan2.setFilter(singlePrefixFilter);
+      List<KeyValue> results2 = new ArrayList<KeyValue>();  
+      InternalScanner scanner2 = region.getScanner(scan1);
+      while(scanner2.next(results2));
+
+      assertEquals(results1.size(), results2.size());
+    } finally {
+      region.close();
+      region.getLog().closeAndDelete();
+    }
   }
   
   List<String> generateRandomWords(int numberOfWords, String suffix) {

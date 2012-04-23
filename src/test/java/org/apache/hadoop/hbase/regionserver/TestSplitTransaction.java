@@ -321,7 +321,9 @@ public class TestSplitTransaction {
     HColumnDescriptor hcd = new HColumnDescriptor(CF);
     htd.addFamily(hcd);
     HRegionInfo hri = new HRegionInfo(htd.getName(), STARTROW, ENDROW);
-    HRegion.createHRegion(hri, testdir, TEST_UTIL.getConfiguration(), htd);
+    HRegion r = HRegion.createHRegion(hri, testdir, TEST_UTIL.getConfiguration(), htd);
+    r.close();
+    r.getLog().closeAndDelete();
     return HRegion.openHRegion(testdir, hri, htd, wal,
       TEST_UTIL.getConfiguration());
   }

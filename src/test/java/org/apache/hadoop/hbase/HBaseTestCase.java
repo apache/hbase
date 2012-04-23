@@ -170,10 +170,19 @@ public abstract class HBaseTestCase extends TestCase {
       );
     }
 
+  /**
+   * You must call close on the returned region and then close on the log file
+   * it created. Do {@link HRegion#close()} followed by {@link HRegion#getLog()}
+   * and on it call close.
+   * @param desc
+   * @param startKey
+   * @param endKey
+   * @return An {@link HRegion}
+   * @throws IOException
+   */
   protected HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
       byte [] endKey)
   throws IOException {
-    FileSystem filesystem = FileSystem.get(conf);
     HRegionInfo hri = new HRegionInfo(desc.getName(), startKey, endKey);
     return HRegion.createHRegion(hri, testDir, conf, desc);
   }
@@ -679,6 +688,11 @@ public abstract class HBaseTestCase extends TestCase {
     }
   }
 
+  /**
+   * You must call {@link #closeRootAndMeta()} when done after calling this
+   * method. It does cleanup.
+   * @throws IOException
+   */
   protected void createRootAndMetaRegions() throws IOException {
     root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO, testDir,
         conf, HTableDescriptor.ROOT_TABLEDESC);

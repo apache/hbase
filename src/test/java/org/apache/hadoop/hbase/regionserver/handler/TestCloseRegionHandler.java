@@ -97,28 +97,32 @@ public class TestCloseRegionHandler {
     HRegion region =
       HRegion.createHRegion(hri, HTU.getDataTestDir(),
         HTU.getConfiguration(), htd);
-    assertNotNull(region);
-    // Spy on the region so can throw exception when close is called.
-    HRegion spy = Mockito.spy(region);
-    final boolean abort = false;
-    Mockito.when(spy.close(abort)).
-      thenThrow(new RuntimeException("Mocked failed close!"));
-    // The CloseRegionHandler will try to get an HRegion that corresponds
-    // to the passed hri -- so insert the region into the online region Set.
-    rss.addToOnlineRegions(spy);
-    // Assert the Server is NOT stopped before we call close region.
-    assertFalse(server.isStopped());
-    CloseRegionHandler handler =
-      new CloseRegionHandler(server, rss, hri, false, false, -1);
-    boolean throwable = false;
     try {
-      handler.process();
-    } catch (Throwable t) {
-      throwable = true;
+      assertNotNull(region);
+      // Spy on the region so can throw exception when close is called.
+      HRegion spy = Mockito.spy(region);
+      final boolean abort = false;
+      Mockito.when(spy.close(abort)).
+      thenThrow(new RuntimeException("Mocked failed close!"));
+      // The CloseRegionHandler will try to get an HRegion that corresponds
+      // to the passed hri -- so insert the region into the online region Set.
+      rss.addToOnlineRegions(spy);
+      // Assert the Server is NOT stopped before we call close region.
+      assertFalse(server.isStopped());
+      CloseRegionHandler handler =
+          new CloseRegionHandler(server, rss, hri, false, false, -1);
+      boolean throwable = false;
+      try {
+        handler.process();
+      } catch (Throwable t) {
+        throwable = true;
+      } finally {
+        assertTrue(throwable);
+        // Abort calls stop so stopped flag should be set.
+        assertTrue(server.isStopped());
+      }
     } finally {
-      assertTrue(throwable);
-      // Abort calls stop so stopped flag should be set.
-      assertTrue(server.isStopped());
+      HRegion.closeHRegion(region);
     }
   }
 

@@ -85,6 +85,7 @@ public class TestDependentColumnFilter extends TestCase {
   protected void tearDown() throws Exception {
     super.tearDown();
     this.region.close();
+    this.region.getLog().closeAndDelete();
   }
 
   private void addData() throws IOException {

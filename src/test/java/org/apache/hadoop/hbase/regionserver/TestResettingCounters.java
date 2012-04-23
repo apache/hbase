@@ -70,31 +70,34 @@ public class TestResettingCounters {
       }
     }
     HRegion region = HRegion.createHRegion(hri, path, conf, htd);
+    try {
+      Increment odd = new Increment(rows[0]);
+      Increment even = new Increment(rows[0]);
+      Increment all = new Increment(rows[0]);
+      for (int i=0;i<numQualifiers;i++) {
+        if (i % 2 == 0) even.addColumn(families[0], qualifiers[i], 1);
+        else odd.addColumn(families[0], qualifiers[i], 1);
+        all.addColumn(families[0], qualifiers[i], 1);
+      }
 
-    Increment odd = new Increment(rows[0]);
-    Increment even = new Increment(rows[0]);
-    Increment all = new Increment(rows[0]);
-    for (int i=0;i<numQualifiers;i++) {
-      if (i % 2 == 0) even.addColumn(families[0], qualifiers[i], 1);
-      else odd.addColumn(families[0], qualifiers[i], 1);
-      all.addColumn(families[0], qualifiers[i], 1);
-    }
+      // increment odd qualifiers 5 times and flush
+      for (int i=0;i<5;i++) region.increment(odd, null, false);
+      region.flushcache();
 
-    // increment odd qualifiers 5 times and flush
-    for (int i=0;i<5;i++) region.increment(odd, null, false);
-    region.flushcache();
+      // increment even qualifiers 5 times
+      for (int i=0;i<5;i++) region.increment(even, null, false);
 
-    // increment even qualifiers 5 times
-    for (int i=0;i<5;i++) region.increment(even, null, false);
-
-    // increment all qualifiers, should have value=6 for all
-    Result result = region.increment(all, null, false);
-    assertEquals(numQualifiers, result.size());
-    KeyValue [] kvs = result.raw();
-    for (int i=0;i<kvs.length;i++) {
-      System.out.println(kvs[i].toString());
-      assertTrue(Bytes.equals(kvs[i].getQualifier(), qualifiers[i]));
-      assertEquals(6, Bytes.toLong(kvs[i].getValue()));
+      // increment all qualifiers, should have value=6 for all
+      Result result = region.increment(all, null, false);
+      assertEquals(numQualifiers, result.size());
+      KeyValue [] kvs = result.raw();
+      for (int i=0;i<kvs.length;i++) {
+        System.out.println(kvs[i].toString());
+        assertTrue(Bytes.equals(kvs[i].getQualifier(), qualifiers[i]));
+        assertEquals(6, Bytes.toLong(kvs[i].getValue()));
+      }
+    } finally {
+      HRegion.closeHRegion(region);
     }
   }
 }

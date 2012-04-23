@@ -1447,7 +1447,7 @@ public class HTable implements HTableInterface, Closeable {
             SecurityManager s = System.getSecurityManager();
             group = (s != null)? s.getThreadGroup() :
                                  Thread.currentThread().getThreadGroup();
-            namePrefix = "pool-" +
+            namePrefix = "htable-pool-" +
                           poolNumber.getAndIncrement() +
                          "-thread-";
         }
