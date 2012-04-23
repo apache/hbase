@@ -133,7 +133,8 @@ public class TestWALReplay {
     HTableDescriptor htd = createBasic3FamilyHTD(tableNameStr);
     HRegion region2 = HRegion.createHRegion(hri,
         hbaseRootDir, this.conf, htd);
-
+    region2.close();
+    region2.getLog().closeAndDelete();
     final byte [] tableName = Bytes.toBytes(tableNameStr);
     final byte [] rowName = tableName;
 
@@ -193,6 +194,8 @@ public class TestWALReplay {
     final HTableDescriptor htd = createBasic3FamilyHTD(tableNameStr);
     HRegion region2 = HRegion.createHRegion(hri,
         hbaseRootDir, this.conf, htd);
+    region2.close();
+    region2.getLog().closeAndDelete();
     HLog wal = createWAL(this.conf);
     HRegion region = HRegion.openHRegion(hri, htd, wal, this.conf);
     Path f =  new Path(basedir, "hfile");
@@ -252,7 +255,8 @@ public class TestWALReplay {
     final HTableDescriptor htd = createBasic3FamilyHTD(tableNameStr);
     HRegion region3 = HRegion.createHRegion(hri,
             hbaseRootDir, this.conf, htd);
-
+    region3.close();
+    region3.getLog().closeAndDelete();
     // Write countPerFamily edits into the three families.  Do a flush on one
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
@@ -369,7 +373,8 @@ public class TestWALReplay {
     final HTableDescriptor htd = createBasic3FamilyHTD(tableNameStr);
     HRegion region3 = HRegion.createHRegion(hri,
             hbaseRootDir, this.conf, htd);
-
+    region3.close();
+    region3.getLog().closeAndDelete();
     // Write countPerFamily edits into the three families.  Do a flush on one
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
@@ -435,7 +440,8 @@ public class TestWALReplay {
     final HTableDescriptor htd = createBasic3FamilyHTD(tableNameStr);
     HRegion region2 = HRegion.createHRegion(hri,
             hbaseRootDir, this.conf, htd);
-
+    region2.close();
+    region2.getLog().closeAndDelete();
     final HLog wal = createWAL(this.conf);
     final byte[] tableName = Bytes.toBytes(tableNameStr);
     final byte[] rowName = tableName;

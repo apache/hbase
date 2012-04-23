@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -579,16 +580,17 @@ public class LruBlockCache implements BlockCache, HeapSize {
    */
   private static class EvictionThread extends HasThread {
     private WeakReference<LruBlockCache> cache;
+    private boolean go = true;
 
     public EvictionThread(LruBlockCache cache) {
-      super("LruBlockCache.EvictionThread");
+      super(Thread.currentThread().getName() + ".LruBlockCache.EvictionThread");
       setDaemon(true);
       this.cache = new WeakReference<LruBlockCache>(cache);
     }
 
     @Override
     public void run() {
-      while(true) {
+      while (this.go) {
         synchronized(this) {
           try {
             this.wait();
@@ -599,10 +601,16 @@ public class LruBlockCache implements BlockCache, HeapSize {
         cache.evict();
       }
     }
+
     public void evict() {
       synchronized(this) {
         this.notify(); // FindBugs NN_NAKED_NOTIFY
       }
+    }
+
+    void shutdown() {
+      this.go = false;
+      interrupt();
     }
   }
 
@@ -727,6 +735,14 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
   public void shutdown() {
     this.scheduleThreadPool.shutdown();
+    for (int i = 0; i < 10; i++) {
+      if (!this.scheduleThreadPool.isShutdown()) Threads.sleep(10);
+    }
+    if (!this.scheduleThreadPool.isShutdown()) {
+      List<Runnable> runnables = this.scheduleThreadPool.shutdownNow();
+      LOG.debug("Still running " + runnables);
+    }
+    this.evictionThread.shutdown();
   }
 
   /** Clears the cache. Used in tests. */
