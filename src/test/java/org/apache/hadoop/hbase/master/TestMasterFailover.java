@@ -61,6 +61,51 @@ import org.junit.Test;
 public class TestMasterFailover {
   private static final Log LOG = LogFactory.getLog(TestMasterFailover.class);
 
+  @Test (timeout=180000)
+  public void testShouldCheckMasterFailOverWhenMETAIsInOpenedState()
+      throws Exception {
+    final int NUM_MASTERS = 1;
+    final int NUM_RS = 2;
+
+    Configuration conf = HBaseConfiguration.create();
+    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
+    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 8000);
+    // Start the cluster
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+
+    // Find regionserver carrying meta.
+    List<RegionServerThread> regionServerThreads = cluster.getRegionServerThreads();
+    int count = -1;
+    HRegion metaRegion = null;
+    for (RegionServerThread regionServerThread : regionServerThreads) {
+      HRegionServer regionServer = regionServerThread.getRegionServer();
+      metaRegion = regionServer.getOnlineRegion(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+      count++;
+      regionServer.abort("");
+      if (null != metaRegion) break;
+    }
+    HRegionServer regionServer = cluster.getRegionServer(count);
+
+    TEST_UTIL.shutdownMiniHBaseCluster();
+
+    // Create a ZKW to use in the test
+    ZooKeeperWatcher zkw = 
+      HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL,
+        metaRegion, regionServer.getServerName());
+
+    LOG.info("Staring cluster for second time");
+    TEST_UTIL.startMiniHBaseCluster(1, 1);
+
+    // Failover should be completed, now wait for no RIT
+    log("Waiting for no more RIT");
+    ZKAssign.blockUntilNoRIT(zkw);
+
+    // Stop the cluster
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
   /**
    * Simple test of master failover.
    * <p>
@@ -142,60 +187,6 @@ public class TestMasterFailover {
     TEST_UTIL.shutdownMiniCluster();
   }
   
-  @Test
-  public void testShouldCheckMasterFailOverWhenMETAIsInOpenedState()
-      throws Exception {
-    final int NUM_MASTERS = 1;
-    final int NUM_RS = 2;
-
-    Configuration conf = HBaseConfiguration.create();
-    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
-    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 8000);
-    // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-
-    // get all the master threads
-    List<MasterThread> masterThreads = cluster.getMasterThreads();
-
-    // wait for each to come online
-    for (MasterThread mt : masterThreads) {
-      assertTrue(mt.isAlive());
-    }
-    assertEquals(NUM_MASTERS, masterThreads.size());
-    assertEquals(1, masterThreads.size());
-
-    List<RegionServerThread> regionServerThreads = cluster
-        .getRegionServerThreads();
-    int count = -1;
-    HRegion metaRegion = null;
-    for (RegionServerThread regionServerThread : regionServerThreads) {
-      HRegionServer regionServer = regionServerThread.getRegionServer();
-      metaRegion = regionServer
-          .getOnlineRegion(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
-      count++;
-      regionServer.abort("");
-      if (null != metaRegion) {
-        break;
-      }
-    }
-    HRegionServer regionServer = cluster.getRegionServer(count);
-
-    cluster.shutdown();
-    ZooKeeperWatcher zkw = 
-      HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL,
-        metaRegion, regionServer.getServerName());
-
-    TEST_UTIL.startMiniHBaseCluster(1, 1);
-
-    // Failover should be completed, now wait for no RIT
-    log("Waiting for no more RIT");
-    ZKAssign.blockUntilNoRIT(zkw);
-
-    // Stop the cluster
-    TEST_UTIL.shutdownMiniCluster();
-  }
 
 
 

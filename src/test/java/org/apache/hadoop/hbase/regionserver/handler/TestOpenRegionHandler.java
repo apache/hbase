@@ -117,6 +117,7 @@ public class TestOpenRegionHandler {
     // post OPENING; again will expect it to come back w/o NPE or exception.
     handler.process();
   }
+
   @Test
   public void testFailedOpenRegion() throws Exception {
     Server server = new MockServer();

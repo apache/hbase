@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
@@ -504,16 +505,17 @@ public class LruBlockCache implements BlockCache, HeapSize {
    */
   private static class EvictionThread extends Thread {
     private WeakReference<LruBlockCache> cache;
+    private boolean go = true;
 
     public EvictionThread(LruBlockCache cache) {
-      super("LruBlockCache.EvictionThread");
+      super(Thread.currentThread().getName() + ".LruBlockCache.EvictionThread");
       setDaemon(true);
       this.cache = new WeakReference<LruBlockCache>(cache);
     }
 
     @Override
     public void run() {
-      while(true) {
+      while (this.go) {
         synchronized(this) {
           try {
             this.wait();
@@ -524,10 +526,16 @@ public class LruBlockCache implements BlockCache, HeapSize {
         cache.evict();
       }
     }
+
     public void evict() {
       synchronized(this) {
         this.notify(); // FindBugs NN_NAKED_NOTIFY
       }
+    }
+
+    void shutdown() {
+      this.go = false;
+      interrupt();
     }
   }
 
@@ -711,5 +719,20 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
   public void shutdown() {
     this.scheduleThreadPool.shutdown();
+    for (int i = 0; i < 10; i++) {
+      if (!this.scheduleThreadPool.isShutdown()) {
+        try {
+          Thread.sleep(10);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+    }
+    if (!this.scheduleThreadPool.isShutdown()) {
+      List<Runnable> runnables = this.scheduleThreadPool.shutdownNow();
+      LOG.debug("Still running " + runnables);
+    }
+    this.evictionThread.shutdown();
   }
 }

@@ -2584,7 +2584,11 @@ public class HRegion implements HeapSize { // , Writable{
    * bootstrap code in the HMaster constructor.
    * Note, this method creates an {@link HLog} for the created region. It
    * needs to be closed explicitly.  Use {@link HRegion#getLog()} to get
-   * access.
+   * access.  <b>When done with a region created using this method, you will
+   * need to explicitly close the {@link HLog} it created too; it will not be
+   * done for you.  Not closing the log will leave at least a daemon thread
+   * running.</b>  Call {@link #closeHRegion(HRegion)} and it will do
+   * necessary cleanup for you.
    * @param info Info for region to create.
    * @param rootDir Root directory for HBase instance
    * @param conf
@@ -2606,6 +2610,23 @@ public class HRegion implements HeapSize { // , Writable{
       fs, conf, info, null);
     region.initialize();
     return region;
+  }
+
+   /**
+   * This will do the necessary cleanup a call to {@link #createHRegion(HRegionInfo, Path, Configuration, HTableDescriptor)}
+   * requires.  This method will close the region and then close its
+   * associated {@link HLog} file.  You use it if you call the other createHRegion,
+   * the one that takes an {@link HLog} instance but don't be surprised by the
+   * call to the {@link HLog#closeAndDelete()} on the {@link HLog} the
+   * HRegion was carrying.
+   * @param r
+   * @throws IOException
+   */
+  public static void closeHRegion(final HRegion r) throws IOException {
+    if (r == null) return;
+    r.close();
+    if (r.getLog() == null) return;
+    r.getLog().closeAndDelete();
   }
 
   /**

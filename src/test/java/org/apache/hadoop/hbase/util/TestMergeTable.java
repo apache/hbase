@@ -165,8 +165,8 @@ public class TestMergeTable {
       HRegion.addRegionToMETA(meta, r);
     }
     meta.close();
-    meta.getLog().closeAndDelete();
+    if (meta.getLog() != null) meta.getLog().closeAndDelete();
     root.close();
-    root.getLog().closeAndDelete();
+    if (root.getLog() != null) root.getLog().closeAndDelete();
   }
 }

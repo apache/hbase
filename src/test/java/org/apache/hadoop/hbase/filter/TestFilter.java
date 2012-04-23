@@ -163,6 +163,7 @@ public class TestFilter extends HBaseTestCase {
 
   protected void tearDown() throws Exception {
     this.region.close();
+    this.region.getLog().closeAndDelete();
     super.tearDown();
   }
 
