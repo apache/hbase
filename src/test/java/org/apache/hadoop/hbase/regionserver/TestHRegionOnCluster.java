@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.MediumTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests that need to spin up a cluster testing an {@link HRegion}.  Use
