@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -719,6 +722,9 @@ public class HRegionServer extends RegionServer
     } catch (KeeperException e) {
       LOG.warn("Failed deleting my ephemeral node", e);
     }
+    // We may have failed to delete the znode at the previous step, but
+    //  we delete the file anyway: a second attempt to delete the znode is likely to fail again.
+    deleteMyEphemeralNodeOnDisk();
     this.zooKeeper.close();
     LOG.info("stopping server " + this.serverNameFromMasterPOV +
       "; zookeeper connection closed.");
@@ -895,6 +901,9 @@ public class HRegionServer extends RegionServer
       // Set our ephemeral znode up in zookeeper now we have a name.
       createMyEphemeralNode();
 
+      // Save it in a file, this will allow to see if we crash
+      writeMyEphemeralNodeOnDisk();
+
       // Master sent us hbase.rootdir to use. Should be fully qualified
       // path with file system specification included. Set 'fs.defaultFS'
       // to match the filesystem on hbase.rootdir else underlying hadoop hdfs
@@ -929,9 +938,47 @@ public class HRegionServer extends RegionServer
     return ZKUtil.joinZNode(this.zooKeeper.rsZNode, getServerName().toString());
   }
 
+  private String getMyEphemeralNodeFileName(){
+    return System.getenv().get("HBASE_ZNODE_FILE");
+  }
+
+
   private void createMyEphemeralNode() throws KeeperException {
     ZKUtil.createEphemeralNodeAndWatch(this.zooKeeper, getMyEphemeralNodePath(),
       HConstants.EMPTY_BYTE_ARRAY);
+  }
+
+  private void writeMyEphemeralNodeOnDisk() throws IOException {
+    String fileName = getMyEphemeralNodeFileName();
+
+    if (fileName==null){
+      LOG.warn("No filename given to save the znode used, it won't be saved "+
+      "(Environment variable HBASE_ZNODE_FILE is not set).");
+      return;
+    }
+
+    FileWriter fstream = new FileWriter(fileName);
+    BufferedWriter out = new BufferedWriter(fstream);
+    try {
+      out.write(getMyEphemeralNodePath()+"\n");
+    } finally {
+      try {
+        out.close();
+      } finally {
+        fstream.close();
+      }
+    }
+  }
+
+  private void deleteMyEphemeralNodeOnDisk(){
+    String fileName = getMyEphemeralNodeFileName();
+
+    if (fileName==null){
+      return;
+    }
+
+    File f = new File(fileName);
+    f.delete();
   }
 
   private void deleteMyEphemeralNode() throws KeeperException {

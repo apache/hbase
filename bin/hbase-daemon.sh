@@ -32,6 +32,15 @@
 #
 # Modelled after $HADOOP_HOME/bin/hadoop-daemon.sh
 
+cleanZNode() {
+  if [ -f $HBASE_ZNODE_FILE ]; then
+    #call ZK to delete the node
+    ZNODE=`cat $HBASE_ZNODE_FILE`
+    echo "Region Server $HBASE_ZNODE_FILE didn't stop properly. Cleaning ZNode ($ZNODE) to trigger an immediate recovery."
+    $bin/hbase zkcli delete $ZNODE > /dev/null 2>&1
+  fi
+}
+
 usage="Usage: hbase-daemon.sh [--config <conf-dir>]\
  (start|stop|restart) <hbase-command> \
  <args...>"
@@ -96,7 +105,7 @@ fi
 mkdir -p "$HBASE_LOG_DIR"
 
 if [ "$HBASE_PID_DIR" = "" ]; then
-  HBASE_PID_DIR=/tmp
+  export HBASE_PID_DIR=/tmp
 fi
 
 if [ "$HBASE_IDENT_STRING" = "" ]; then
@@ -121,6 +130,7 @@ logout=$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.out
 loggc=$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.gc
 loglog="${HBASE_LOG_DIR}/${HBASE_LOGFILE}"
 pid=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.pid
+export HBASE_ZNODE_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.znode
 
 if [ "$HBASE_USE_GC_LOGFILE" = "true" ]; then
   export HBASE_GC_OPTS=" -Xloggc:${loggc}"
@@ -148,9 +158,9 @@ case $startStop in
     # Add to the command log file vital stats on our environment.
     echo "`date` Starting $command on `hostname`" >> $loglog
     echo "`ulimit -a`" >> $loglog 2>&1
-    nohup nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
+    (nohup nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
         --config "${HBASE_CONF_DIR}" \
-        $command "$@" $startStop > "$logout" 2>&1 < /dev/null &
+        $command "$@" $startStop > "$logout" 2>&1 < /dev/null ; cleanZNode) &
     echo $! > $pid
     sleep 1; head "$logout"
     ;;
