@@ -461,25 +461,31 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
 
 
   private List<String> getTaskList() {
-    for (int i = 0; i < zkretries; i++) {
+    List<String> childrenPaths = null;
+    long sleepTime = 1000;
+    // It will be in loop till it gets the list of children or
+    // it will come out if worker thread exited.
+    while (!exitWorker) {
       try {
-        return (ZKUtil.listChildrenAndWatchForNewChildren(this.watcher,
-            this.watcher.splitLogZNode));
-      } catch (KeeperException e) {
-        LOG.warn("Could not get children of znode " +
-            this.watcher.splitLogZNode, e);
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e1) {
-          LOG.warn("Interrupted while trying to get task list ...", e1);
-          Thread.currentThread().interrupt();
-          return null;
+        childrenPaths = ZKUtil.listChildrenAndWatchForNewChildren(this.watcher,
+            this.watcher.splitLogZNode);
+        if (childrenPaths != null) {
+          return childrenPaths;
         }
+      } catch (KeeperException e) {
+        LOG.warn("Could not get children of znode "
+            + this.watcher.splitLogZNode, e);
+      }
+      try {
+        LOG.debug("Retry listChildren of znode " + this.watcher.splitLogZNode
+            + " after sleep for " + sleepTime + "ms!");
+        Thread.sleep(sleepTime);
+      } catch (InterruptedException e1) {
+        LOG.warn("Interrupted while trying to get task list ...", e1);
+        Thread.currentThread().interrupt();
       }
     }
-    LOG.warn("Tried " + zkretries + " times, still couldn't fetch " +
-        "children of " + watcher.splitLogZNode + " giving up");
-    return null;
+    return childrenPaths;
   }
 
 
