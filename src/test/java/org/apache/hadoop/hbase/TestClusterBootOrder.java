@@ -25,12 +25,10 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 /**
  * Tests the boot order indifference between regionserver and master
  */
-@Category(MediumTests.class)
 public class TestClusterBootOrder {
 
   private static final long SLEEP_INTERVAL = 1000;
@@ -111,8 +109,4 @@ public class TestClusterBootOrder {
     startRegionServer();
     waitForClusterOnline();
   }
-
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
