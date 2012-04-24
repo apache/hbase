@@ -19,16 +19,16 @@
 # * See the License for the specific language governing permissions and
 # * limitations under the License.
 # */
- 
+
 # Move regions off a server then stop it.  Optionally restart and reload.
 # Turn off the balancer before running this script.
 function usage {
-  echo "Usage: graceful_stop.sh [--config <conf-dir>] [--restart] [--reload] [--thrift] [--rest] <hostname>" 
+  echo "Usage: graceful_stop.sh [--config <conf-dir>] [--restart [--reload]] [--thrift] [--rest] <hostname>"
   echo " thrift      If we should stop/start thrift before/after the hbase stop/start"
   echo " rest        If we should stop/start rest before/after the hbase stop/start"
   echo " restart     If we should restart after graceful stop"
-  echo " reload      Move offloaded regions back on to the stopped server"
-  echo " debug       Move offloaded regions back on to the stopped server"
+  echo "   reload      Move offloaded regions back on to the restarted server"
+  echo " debug       Print helpful debug information"
   echo " hostname    Hostname of server we are to stop"
   exit 1
 }
