@@ -39,9 +39,13 @@ options:
    -n N        Run each test N times. Default = 1.
    -s N        Print N slowest tests
    -H          Print which tests are hanging (if any)
+   -e          Echo the maven call before running. Default: not enabled
+   -r          Runs remotely, on the build server. Default: not enabled
 EOF
 }
 
+echoUsage=0
+server=0
 testFile=
 doClean=""
 testType=verify
@@ -59,7 +63,7 @@ else
 fi
 testDir=$scriptDir/../../../target/surefire-reports
 
-while getopts "hcHun:s:f:" OPTION
+while getopts "hcerHun:s:f:" OPTION
 do
      case $OPTION in
          h)
@@ -84,6 +88,12 @@ do
          f)
              testFile=$OPTARG
              ;;
+        e)
+             echoUsage=1
+             ;;
+        r)
+            server=1
+            ;;
 	 ?) 
 	     usage
 	     exit 1
@@ -124,15 +134,44 @@ do
         #Now loop through each test
 	for (( j = 0; j < $numTests; j++ ))
 	do
-	    nice -10 mvn $doClean $testType -Dtest=${test[$j]}
-	    if [ $? -ne 0 ]; then
+        # Create the general command
+        cmd="nice -10 mvn $doClean $testType -Dtest=${test[$j]}"
+
+        # Add that is should run locally, if not on the server
+        if [ ${server} -eq 0 ]; then
+            cmd="${cmd} -P localTests"
+        fi
+
+        # Print the command, if we should
+        if [ ${echoUsage} -eq 1 ]; then
+            echo "${cmd}"
+        fi
+
+        # Run the command
+        $cmd
+
+        if [ $? -ne 0 ]; then
 		echo "${test[$j]} failed, iteration: $i"
 		exit 1
 	    fi
 	done
     else
 	echo "EXECUTING ALL TESTS"
-	nice -10 mvn $doClean $testType
+    # Create the general command
+    cmd="nice -10 mvn $doClean $testType"
+
+    # Add that is should run locally, if not on the server
+    if [ ${server} -eq 0 ]; then
+       cmd="${cmd} -P localTests"
+    fi
+
+    # Print the command, if we should
+    if [ ${echoUsage} -eq 1 ]; then
+        echo "${cmd}"
+    fi
+
+    #now run the command
+    $cmd
     fi
 done
 
