@@ -1093,6 +1093,7 @@ Server {
     }
 
     HRegionInfo [] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
+    checkInitialized();
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
