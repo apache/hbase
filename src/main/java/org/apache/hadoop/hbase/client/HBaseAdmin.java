@@ -367,11 +367,13 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Creates a new table with an initial set of empty regions defined by the
    * specified split keys.  The total number of regions created will be the
    * number of split keys plus one. Synchronous operation.
+   * Note : Avoid passing empty split key.
    *
    * @param desc table descriptor for table
    * @param splitKeys array of split keys for the initial regions of the table
    *
-   * @throws IllegalArgumentException if the table name is reserved
+   * @throws IllegalArgumentException if the table name is reserved, if the split keys
+   * are repeated and if the split key has empty byte array.
    * @throws MasterNotRunningException if master is not running
    * @throws TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence
@@ -446,10 +448,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Asynchronous operation.  To check if the table exists, use
    * {@link: #isTableAvailable} -- it is not safe to create an HTable
    * instance to this table before it is available.
-   *
+   * Note : Avoid passing empty split key.
    * @param desc table descriptor for table
    *
-   * @throws IllegalArgumentException Bad table name.
+   * @throws IllegalArgumentException Bad table name, if the split keys
+   * are repeated and if the split key has empty byte array.
    * @throws MasterNotRunningException if master is not running
    * @throws TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence
@@ -460,11 +463,15 @@ public class HBaseAdmin implements Abortable, Closeable {
     final HTableDescriptor desc, final byte [][] splitKeys)
   throws IOException {
     HTableDescriptor.isLegalTableName(desc.getName());
-    if(splitKeys != null && splitKeys.length > 1) {
+    if(splitKeys != null && splitKeys.length > 0) {
       Arrays.sort(splitKeys, Bytes.BYTES_COMPARATOR);
       // Verify there are no duplicate split keys
       byte [] lastKey = null;
       for(byte [] splitKey : splitKeys) {
+        if (Bytes.compareTo(splitKey, HConstants.EMPTY_BYTE_ARRAY) == 0) {
+          throw new IllegalArgumentException(
+              "Empty split key must not be passed in the split keys.");
+        }
         if(lastKey != null && Bytes.equals(splitKey, lastKey)) {
           throw new IllegalArgumentException("All split keys must be unique, " +
             "found duplicate: " + Bytes.toStringBinary(splitKey) +

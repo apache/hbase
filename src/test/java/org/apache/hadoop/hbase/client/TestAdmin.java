@@ -715,6 +715,36 @@ public class TestAdmin {
     }
     ladmin.close();
   }
+  
+  @Test
+  public void testCreateTableWithOnlyEmptyStartRow() throws IOException {
+    byte[] tableName = Bytes.toBytes("testCreateTableWithOnlyEmptyStartRow");
+    byte[][] splitKeys = new byte[1][];
+    splitKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor("col"));
+    try {
+      admin.createTable(desc, splitKeys);
+      fail("Test case should fail as empty split key is passed.");
+    } catch (IllegalArgumentException e) {
+    }
+  }
+  
+  @Test
+  public void testCreateTableWithEmptyRowInTheSplitKeys() throws IOException{
+    byte[] tableName = Bytes.toBytes("testCreateTableWithEmptyRowInTheSplitKeys");
+    byte[][] splitKeys = new byte[3][];
+    splitKeys[0] = "region1".getBytes();
+    splitKeys[1] = HConstants.EMPTY_BYTE_ARRAY;
+    splitKeys[2] = "region2".getBytes();
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor("col"));
+    try {
+      admin.createTable(desc, splitKeys);
+      fail("Test case should fail as empty split key is passed.");
+    } catch (IllegalArgumentException e) {
+    }
+  }
 
   @Test
   public void testTableExist() throws IOException {
