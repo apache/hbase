@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -802,6 +803,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   public void createTable(HTableDescriptor desc, byte [][] splitKeys)
   throws IOException {
+    checkInitialized();
     createTable(desc, splitKeys, false);
   }
 
@@ -888,30 +890,36 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   public void deleteTable(final byte [] tableName) throws IOException {
+    checkInitialized();
     this.executorService.submit(new DeleteTableHandler(tableName, this, this));
   }
 
   public void addColumn(byte [] tableName, HColumnDescriptor column)
   throws IOException {
+    checkInitialized();
     new TableAddFamilyHandler(tableName, column, this, this).process();
   }
 
   public void modifyColumn(byte [] tableName, HColumnDescriptor descriptor)
   throws IOException {
+    checkInitialized();
     new TableModifyFamilyHandler(tableName, descriptor, this, this).process();
   }
 
   public void deleteColumn(final byte [] tableName, final byte [] c)
   throws IOException {
+    checkInitialized();
     new TableDeleteFamilyHandler(tableName, c, this, this).process();
   }
 
   public void enableTable(final byte [] tableName) throws IOException {
+    checkInitialized();
     this.executorService.submit(new EnableTableHandler(this, tableName,
       catalogTracker, assignmentManager));
   }
 
   public void disableTable(final byte [] tableName) throws IOException {
+    checkInitialized();
     this.executorService.submit(new DisableTableHandler(this, tableName,
       catalogTracker, assignmentManager));
   }
@@ -956,6 +964,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   @Override
   public void modifyTable(final byte[] tableName, HTableDescriptor htd)
   throws IOException {
+    checkInitialized();
     this.executorService.submit(new ModifyTableHandler(tableName, htd, this, this));
   }
 
@@ -1049,6 +1058,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   public boolean isStopped() {
     return this.stopped;
   }
+  
+  void checkInitialized() throws PleaseHoldException {
+    if (!this.initialized) {
+      throw new PleaseHoldException("Master is initializing");
+    }
+  }
 
   /**
    * Report whether this master is currently the active master or not.
@@ -1078,6 +1093,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   @Override
   public void assign(final byte [] regionName, final boolean force)
   throws IOException {
+    checkInitialized();
     Pair<HRegionInfo, HServerAddress> pair =
       MetaReader.getRegion(this.catalogTracker, regionName);
     if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
@@ -1091,6 +1107,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   @Override
   public void unassign(final byte [] regionName, final boolean force)
   throws IOException {
+    checkInitialized();
     Pair<HRegionInfo, HServerAddress> pair =
       MetaReader.getRegion(this.catalogTracker, regionName);
     if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
