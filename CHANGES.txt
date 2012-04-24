@@ -48,6 +48,7 @@ Release 0.92.2 - Unreleased
    HBASE-5857  RIT map in RS not getting cleared while region opening (Chinna Rao)
    HBASE-5849  On first cluster startup, RS aborts if root znode is not available
                (Enis Soztutar)
+   HBASE-5850  Refuse operations from Admin before master is initialized - fix for all branches (xufeng)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)

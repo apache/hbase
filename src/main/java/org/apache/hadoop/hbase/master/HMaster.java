@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.PleaseHoldException;	
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -1058,6 +1059,7 @@ Server {
     }
 
     HRegionInfo [] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
+    checkInitialized();
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
@@ -1099,6 +1101,7 @@ Server {
 
   @Override
   public void deleteTable(final byte [] tableName) throws IOException {
+    checkInitialized();
     if (cpHost != null) {
       cpHost.preDeleteTable(tableName);
     }
@@ -1120,6 +1123,7 @@ Server {
 
   public void addColumn(byte [] tableName, HColumnDescriptor column)
   throws IOException {
+    checkInitialized();
     if (cpHost != null) {
       if (cpHost.preAddColumn(tableName, column)) {
         return;
@@ -1133,6 +1137,7 @@ Server {
 
   public void modifyColumn(byte [] tableName, HColumnDescriptor descriptor)
   throws IOException {
+    checkInitialized();
     if (cpHost != null) {
       if (cpHost.preModifyColumn(tableName, descriptor)) {
         return;
@@ -1146,6 +1151,7 @@ Server {
 
   public void deleteColumn(final byte [] tableName, final byte [] c)
   throws IOException {
+    checkInitialized();
     if (cpHost != null) {
       if (cpHost.preDeleteColumn(tableName, c)) {
         return;
@@ -1158,6 +1164,7 @@ Server {
   }
 
   public void enableTable(final byte [] tableName) throws IOException {
+    checkInitialized();
     if (cpHost != null) {
       cpHost.preEnableTable(tableName);
     }
@@ -1170,6 +1177,7 @@ Server {
   }
 
   public void disableTable(final byte [] tableName) throws IOException {
+    checkInitialized();
     if (cpHost != null) {
       cpHost.preDisableTable(tableName);
     }
@@ -1219,6 +1227,7 @@ Server {
   @Override
   public void modifyTable(final byte[] tableName, HTableDescriptor htd)
   throws IOException {
+    checkInitialized();
     if (cpHost != null) {
       cpHost.preModifyTable(tableName, htd);
     }
@@ -1521,6 +1530,11 @@ Server {
     return this.abort;
   }
   
+  void checkInitialized() throws PleaseHoldException {
+    if (!this.initialized) {
+      throw new PleaseHoldException("Master is initializing");
+    }
+  }
   
   /**
    * Report whether this master is currently the active master or not.
@@ -1565,6 +1579,7 @@ Server {
 
   @Override
   public void assign(final byte [] regionName)throws IOException {
+    checkInitialized();
     Pair<HRegionInfo, ServerName> pair =
       MetaReader.getRegion(this.catalogTracker, regionName);
     if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
@@ -1588,6 +1603,7 @@ Server {
   @Override
   public void unassign(final byte [] regionName, final boolean force)
   throws IOException {
+    checkInitialized();
     Pair<HRegionInfo, ServerName> pair =
       MetaReader.getRegion(this.catalogTracker, regionName);
     if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
