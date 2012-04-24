@@ -46,8 +46,6 @@ Release 0.92.2 - Unreleased
    HBASE-5821  Incorrect handling of null value in Coprocessor aggregation function min() (Maryann Xue)
    HBASE-5833  0.92 build has been failing pretty consistently on TestMasterFailover
    HBASE-5857  RIT map in RS not getting cleared while region opening (Chinna Rao)
-   HBASE-5849  On first cluster startup, RS aborts if root znode is not available
-               (Enis Soztutar)
    HBASE-5850  Refuse operations from Admin before master is initialized - fix for all branches (xufeng)
 
   IMPROVEMENTS
