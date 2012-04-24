@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -49,9 +50,13 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Test open and close of regions using zk.
@@ -306,6 +311,30 @@ public class TestZKBasedOpenCloseRegion {
       Threads.sleep(100);
     }
     LOG.info("Done with testCloseRegion");
+  }
+  
+  /**
+   * If region open fails with IOException in openRegion() while doing tableDescriptors.get()
+   * the region should not add into regionsInTransitionInRS map
+   * @throws Exception
+   */
+  @Test
+  public void testRegionOpenFailsDueToIOException() throws Exception {
+    HRegionInfo REGIONINFO = new HRegionInfo(Bytes.toBytes("t"),
+        HConstants.EMPTY_START_ROW, HConstants.EMPTY_START_ROW);
+    HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
+    TableDescriptors htd = Mockito.mock(TableDescriptors.class);
+    Object orizinalState = Whitebox.getInternalState(regionServer, "tableDescriptors");
+    Whitebox.setInternalState(regionServer, "tableDescriptors", htd);
+    Mockito.doThrow(new IOException()).when(htd).get((byte[]) Mockito.any());
+    try {
+      regionServer.openRegion(REGIONINFO);
+      fail("It should throw IOException ");
+    } catch (IOException e) {
+    }
+    Whitebox.setInternalState(regionServer, "tableDescriptors", orizinalState);
+    assertFalse("Region should not be in RIT",
+        regionServer.getRegionsInTransitionInRS().containsKey(REGIONINFO.getEncodedNameAsBytes()));
   }
 
   private static void waitUntilAllRegionsAssigned()
