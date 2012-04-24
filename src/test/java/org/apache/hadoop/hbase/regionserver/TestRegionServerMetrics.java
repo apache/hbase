@@ -23,15 +23,25 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
     StoreMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -77,6 +87,29 @@ public class TestRegionServerMetrics {
     SchemaMetrics.validateMetricChanges(startingMetrics);
   }
 
+  private void assertTimeVaryingMetricCount(int expectedCount, String table, String cf,
+      String regionName, String metricPrefix) {
+
+    Integer expectedCountInteger = new Integer(expectedCount);
+
+    if (cf != null) {
+      String cfKey =
+          SchemaMetrics.TABLE_PREFIX + table + "." + SchemaMetrics.CF_PREFIX + cf + "."
+              + metricPrefix;
+      Pair<Long, Integer> cfPair = RegionMetricsStorage.getTimeVaryingMetric(cfKey);
+      assertEquals(expectedCountInteger, cfPair.getSecond());
+    }
+
+    if (regionName != null) {
+      String rKey =
+          SchemaMetrics.TABLE_PREFIX + table + "." + SchemaMetrics.REGION_PREFIX + regionName + "."
+              + metricPrefix;
+
+      Pair<Long, Integer> regionPair = RegionMetricsStorage.getTimeVaryingMetric(rKey);
+      assertEquals(expectedCountInteger, regionPair.getSecond());
+    }
+  }
+  
   private void assertStoreMetricEquals(long expected,
       SchemaMetrics schemaMetrics, StoreMetricType storeMetricType) {
     final String storeMetricName =
@@ -84,10 +117,88 @@ public class TestRegionServerMetrics {
     Long startValue = startingMetrics.get(storeMetricName);
     assertEquals("Invalid value for store metric " + storeMetricName
         + " (type " + storeMetricType + ")", expected,
-        HRegion.getNumericMetric(storeMetricName)
+        RegionMetricsStorage.getNumericMetric(storeMetricName)
             - (startValue != null ? startValue : 0));
   }
-
+  
+    @Test
+    public void testOperationMetrics() throws IOException {
+      String cf = "OPCF";
+      String otherCf = "otherCF";
+      String rk = "testRK";
+      String icvCol = "icvCol";
+      String appendCol = "appendCol";
+      String regionName = null;
+      HTable hTable =
+          TEST_UTIL.createTable(TABLE_NAME.getBytes(),
+              new byte[][] { cf.getBytes(), otherCf.getBytes() });
+      Set<HRegionInfo> regionInfos = hTable.getRegionLocations().keySet();
+  
+      regionName = regionInfos.toArray(new HRegionInfo[regionInfos.size()])[0].getEncodedName();
+  
+      //Do a multi put that has one cf.  Since they are in different rk's
+      //The lock will still be obtained and everything will be applied in one multiput.
+      Put pOne = new Put(rk.getBytes());
+      pOne.add(cf.getBytes(), icvCol.getBytes(), Bytes.toBytes(0L));
+      Put pTwo = new Put("ignored1RK".getBytes());
+      pTwo.add(cf.getBytes(), "ignored".getBytes(), Bytes.toBytes(0L));
+      
+      hTable.put(Arrays.asList(new Put[] {pOne, pTwo}));
+  
+      // Do a multiput where the cf doesn't stay consistent.
+      Put pThree = new Put("ignored2RK".getBytes());
+      pThree.add(cf.getBytes(), "ignored".getBytes(), Bytes.toBytes("TEST1"));
+      Put pFour = new Put("ignored3RK".getBytes());
+      pFour.add(otherCf.getBytes(), "ignored".getBytes(), Bytes.toBytes(0L));
+  
+      hTable.put(Arrays.asList(new Put[] { pThree, pFour }));
+  
+      hTable.incrementColumnValue(rk.getBytes(), cf.getBytes(), icvCol.getBytes(), 1L);
+      
+      Increment i = new Increment(rk.getBytes());
+      i.addColumn(cf.getBytes(), icvCol.getBytes(), 1L);
+      hTable.increment(i);
+  
+      Get g = new Get(rk.getBytes());
+      g.addColumn(cf.getBytes(), appendCol.getBytes());
+      hTable.get(g);
+  
+      Append a = new Append(rk.getBytes());
+      a.add(cf.getBytes(), appendCol.getBytes(), Bytes.toBytes("-APPEND"));
+      hTable.append(a);
+  
+      Delete dOne = new Delete(rk.getBytes());
+      dOne.deleteFamily(cf.getBytes());
+      hTable.delete(dOne);
+  
+      Delete dTwo = new Delete(rk.getBytes());
+      hTable.delete(dTwo);
+  
+      // There should be one multi put where the cf is consistent
+      assertTimeVaryingMetricCount(1, TABLE_NAME, cf, null, "multiput_");
+  
+      // There were two multiputs to the cf.
+      assertTimeVaryingMetricCount(2, TABLE_NAME, null, regionName, "multiput_");
+  
+      // There was one multiput where the cf was not consistent.
+      assertTimeVaryingMetricCount(1, TABLE_NAME, "__unknown", null, "multiput_");
+  
+      // One increment and one append
+      assertTimeVaryingMetricCount(1, TABLE_NAME, cf, regionName, "incrementColumnValue_");
+      assertTimeVaryingMetricCount(1, TABLE_NAME, cf, regionName, "increment_");
+      assertTimeVaryingMetricCount(1, TABLE_NAME, cf, regionName, "append_");
+  
+      // One delete where the cf is known
+      assertTimeVaryingMetricCount(1, TABLE_NAME, cf, null, "delete_");
+  
+      // two deletes in the region.
+      assertTimeVaryingMetricCount(2, TABLE_NAME, null, regionName, "delete_");
+  
+      // Three gets. one for gets. One for append. One for increment.
+      assertTimeVaryingMetricCount(4, TABLE_NAME, cf, regionName, "get_");
+  
+    }
+  
   @Test
   public void testMultipleRegions() throws IOException, InterruptedException {
 
@@ -124,7 +235,7 @@ public class TestRegionServerMetrics {
     final String storeMetricName = ALL_METRICS
         .getStoreMetricNameMax(StoreMetricType.STORE_FILE_COUNT);
     assertEquals("Invalid value for store metric " + storeMetricName,
-        NUM_FLUSHES, HRegion.getNumericMetric(storeMetricName));
+        NUM_FLUSHES, RegionMetricsStorage.getNumericMetric(storeMetricName));
   }
 
 

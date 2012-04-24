@@ -128,6 +128,7 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
+import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerDynamicMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
@@ -1399,7 +1400,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
 
     for (Entry<String, MutableDouble> e : tempVals.entrySet()) {
-      HRegion.setNumericMetric(e.getKey(), e.getValue().longValue());
+      RegionMetricsStorage.setNumericMetric(e.getKey(), e.getValue().longValue());
     }
 
     this.metrics.stores.set(stores);

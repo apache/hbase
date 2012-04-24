@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -104,6 +105,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.metrics.OperationMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -322,83 +324,8 @@ public class HRegion implements HeapSize { // , Writable{
   public final static String REGIONINFO_FILE = ".regioninfo";
   private HTableDescriptor htableDescriptor = null;
   private RegionSplitPolicy splitPolicy;
+  private final OperationMetrics opMetrics;
 
-  // for simple numeric metrics (# of blocks read from block cache)
-  public static final ConcurrentMap<String, AtomicLong> numericMetrics = new ConcurrentHashMap<String, AtomicLong>();
-
-  // for simple numeric metrics (current block cache size)
-  // These ones are not reset to zero when queried, unlike the previous.
-  public static final ConcurrentMap<String, AtomicLong> numericPersistentMetrics = new ConcurrentHashMap<String, AtomicLong>();
-
-  /**
-   * Used for metrics where we want track a metrics (such as latency) over a
-   * number of operations.
-   */
-  public static final ConcurrentMap<String, Pair<AtomicLong, AtomicInteger>>
-      timeVaryingMetrics = new ConcurrentHashMap<String, 
-          Pair<AtomicLong, AtomicInteger>>();
-
-  public static void incrNumericMetric(String key, long amount) {
-    AtomicLong oldVal = numericMetrics.get(key);
-    if (oldVal == null) {
-      oldVal = numericMetrics.putIfAbsent(key, new AtomicLong(amount));
-      if (oldVal == null)
-        return;
-    }
-    oldVal.addAndGet(amount);
-  }
-
-  public static void setNumericMetric(String key, long amount) {
-    numericMetrics.put(key, new AtomicLong(amount));
-  }
-
-  public static void incrTimeVaryingMetric(String key, long amount) {
-    Pair<AtomicLong, AtomicInteger> oldVal = timeVaryingMetrics.get(key);
-    if (oldVal == null) {
-      oldVal = timeVaryingMetrics.putIfAbsent(key,
-          new Pair<AtomicLong, AtomicInteger>(new AtomicLong(amount),
-              new AtomicInteger(1)));
-      if (oldVal == null)
-        return;
-    }
-    oldVal.getFirst().addAndGet(amount); // total time
-    oldVal.getSecond().incrementAndGet(); // increment ops by 1
-  }
-
-  public static void incrNumericPersistentMetric(String key, long amount) {
-    AtomicLong oldVal = numericPersistentMetrics.get(key);
-    if (oldVal == null) {
-      oldVal = numericPersistentMetrics
-          .putIfAbsent(key, new AtomicLong(amount));
-      if (oldVal == null)
-        return;
-    }
-    oldVal.addAndGet(amount);
-  }
-
-  public static long getNumericMetric(String key) {
-    AtomicLong m = numericMetrics.get(key);
-    if (m == null)
-      return 0;
-    return m.get();
-  }
-
-  public static Pair<Long, Integer> getTimeVaryingMetric(String key) {
-    Pair<AtomicLong, AtomicInteger> pair = timeVaryingMetrics.get(key);
-    if (pair == null) {
-      return new Pair<Long, Integer>(0L, 0);
-    }
-
-    return new Pair<Long, Integer>(pair.getFirst().get(),
-        pair.getSecond().get());
-  }
-
-  static long getNumericPersistentMetric(String key) {
-    AtomicLong m = numericPersistentMetrics.get(key);
-    if (m == null)
-      return 0;
-    return m.get();
-  }
 
   /**
    * Should only be used for testing purposes
@@ -419,6 +346,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.threadWakeFrequency = 0L;
     this.coprocessorHost = null;
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
+    this.opMetrics = new OperationMetrics();
   }
 
   /**
@@ -463,6 +391,7 @@ public class HRegion implements HeapSize { // , Writable{
     setHTableSpecificConf();
     this.regiondir = getRegionDir(this.tableDir, encodedNameStr);
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
+    this.opMetrics = new OperationMetrics(conf, this.regionInfo);
 
     /*
      * timestamp.slop provides a server-side constraint on the timestamp. This
@@ -1851,11 +1780,7 @@ public class HRegion implements HeapSize { // , Writable{
       coprocessorHost.postDelete(delete, walEdit, writeToWAL);
     }
     final long after = EnvironmentEdgeManager.currentTimeMillis();
-    final String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
-        getTableDesc().getNameAsString(), familyMap.keySet());
-    if (!metricPrefix.isEmpty()) {
-      HRegion.incrTimeVaryingMetric(metricPrefix + "delete_", after - now);
-    }
+    this.opMetrics.updateDeleteMetrics(familyMap.keySet(), after-now);
 
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
@@ -2001,9 +1926,10 @@ public class HRegion implements HeapSize { // , Writable{
   @SuppressWarnings("unchecked")
   private long doMiniBatchPut(
       BatchOperationInProgress<Pair<Put, Integer>> batchOp) throws IOException {
-    String metricPrefix = null;
     final String tableName = getTableDesc().getNameAsString();
 
+    // The set of columnFamilies first seen.
+    Set<byte[]> cfSet = null;
     // variable to note if all Put items are for the same CF -- metrics related
     boolean cfSetConsistent = true;
     long startTimeMs = EnvironmentEdgeManager.currentTimeMillis();
@@ -2085,19 +2011,13 @@ public class HRegion implements HeapSize { // , Writable{
         lastIndexExclusive++;
         numReadyToWrite++;
 
-        // If first time around, designate a prefix for metrics based on the CF
-        // set. After that, watch for inconsistencies.
-        final String curMetricPrefix =
-            SchemaMetrics.generateSchemaMetricsPrefix(tableName,
-                put.getFamilyMap().keySet());
-
-        if (metricPrefix == null) {
-          metricPrefix = curMetricPrefix;
-        } else if (cfSetConsistent && !metricPrefix.equals(curMetricPrefix)) {
-          // The column family set for this batch put is undefined.
-          cfSetConsistent = false;
-          metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(tableName,
-              SchemaMetrics.UNKNOWN);
+        // If Column Families stay consistent through out all of the
+        // individual puts then metrics can be reported as a mutliput across
+        // column families in the first put.
+        if (cfSet == null) {
+          cfSet = put.getFamilyMap().keySet();
+        } else {
+          cfSetConsistent = cfSetConsistent && put.getFamilyMap().keySet().equals(cfSet);
         }
       }
 
@@ -2242,11 +2162,12 @@ public class HRegion implements HeapSize { // , Writable{
 
       // do after lock
       final long endTimeMs = EnvironmentEdgeManager.currentTimeMillis();
-      if (metricPrefix == null) {
-        metricPrefix = SchemaMetrics.CF_BAD_FAMILY_PREFIX;
-      }
-      HRegion.incrTimeVaryingMetric(metricPrefix + "multiput_",
-          endTimeMs - startTimeMs);
+            
+      // See if the column families were consistent through the whole thing.
+      // if they were then keep them. If they were not then pass a null.
+      // null will be treated as unknown.
+      final Set<byte[]> keptCfs = cfSetConsistent ? cfSet : null;
+      this.opMetrics.updateMultiPutMetrics(keptCfs, endTimeMs - startTimeMs);
 
       if (!success) {
         for (int i = firstIndex; i < lastIndexExclusive; i++) {
@@ -2501,12 +2422,8 @@ public class HRegion implements HeapSize { // , Writable{
 
     // do after lock
     final long after = EnvironmentEdgeManager.currentTimeMillis();
-    final String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
-        this.getTableDesc().getNameAsString(), familyMap.keySet());
-    if (!metricPrefix.isEmpty()) {
-      HRegion.incrTimeVaryingMetric(metricPrefix + "put_", after - now);
-    }
-
+    this.opMetrics.updatePutMetrics(familyMap.keySet(), after - now);
+    
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
       requestFlush();
@@ -4128,12 +4045,8 @@ public class HRegion implements HeapSize { // , Writable{
 
     // do after lock
     final long after = EnvironmentEdgeManager.currentTimeMillis();
-    final String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
-        this.getTableDesc().getNameAsString(), get.familySet());
-    if (!metricPrefix.isEmpty()) {
-      HRegion.incrTimeVaryingMetric(metricPrefix + "get_", after - now);
-    }
-
+    this.opMetrics.updateGetMetrics(get.familySet(), after - now);
+    
     return results;
   }
 
@@ -4454,6 +4367,10 @@ public class HRegion implements HeapSize { // , Writable{
       closeRegionOperation();
     }
 
+    
+    long after = EnvironmentEdgeManager.currentTimeMillis();
+    this.opMetrics.updateAppendMetrics(append.getFamilyMap().keySet(), after - now);
+    
     if (flush) {
       // Request a cache flush. Do it outside update lock.
       requestFlush();
@@ -4564,6 +4481,9 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       closeRegionOperation();
     }
+    
+    long after = EnvironmentEdgeManager.currentTimeMillis();
+    this.opMetrics.updateIncrementMetrics(increment.getFamilyMap().keySet(), after - now);
 
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
@@ -4661,9 +4581,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     // do after lock
     long after = EnvironmentEdgeManager.currentTimeMillis();
-    String metricPrefix = SchemaMetrics.generateSchemaMetricsPrefix(
-        getTableDesc().getName(), family);
-    HRegion.incrTimeVaryingMetric(metricPrefix + "increment_", after - before);
+    this.opMetrics.updateIncrementColumnValueMetrics(family, after - before);
 
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
@@ -4693,7 +4611,7 @@ public class HRegion implements HeapSize { // , Writable{
       ClassSize.OBJECT +
       ClassSize.ARRAY +
       30 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
-      (5 * Bytes.SIZEOF_LONG) +
+      (6 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD +

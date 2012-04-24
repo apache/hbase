@@ -165,9 +165,10 @@ public class SchemaMetrics {
    */
   public static final String UNKNOWN = "__unknown";
 
-  private static final String TABLE_PREFIX = "tbl.";
+  public static final String TABLE_PREFIX = "tbl.";
   public static final String CF_PREFIX = "cf.";
   public static final String BLOCK_TYPE_PREFIX = "bt.";
+  public static final String REGION_PREFIX = "region.";
 
   public static final String CF_UNKNOWN_PREFIX = CF_PREFIX + UNKNOWN + ".";
   public static final String CF_BAD_FAMILY_PREFIX = CF_PREFIX + "__badfamily.";
@@ -364,7 +365,7 @@ public class SchemaMetrics {
     if (blockCategory == null) {
       blockCategory = BlockCategory.UNKNOWN;  // So that we see this in stats.
     }
-    HRegion.incrNumericMetric(getBlockMetricName(blockCategory,
+    RegionMetricsStorage.incrNumericMetric(getBlockMetricName(blockCategory,
         isCompaction, metricType), 1);
 
     if (blockCategory != BlockCategory.ALL_CATEGORIES) {
@@ -375,7 +376,7 @@ public class SchemaMetrics {
 
   private void addToReadTime(BlockCategory blockCategory,
       boolean isCompaction, long timeMs) {
-    HRegion.incrTimeVaryingMetric(getBlockMetricName(blockCategory,
+    RegionMetricsStorage.incrTimeVaryingMetric(getBlockMetricName(blockCategory,
         isCompaction, BlockMetricType.READ_TIME), timeMs);
 
     // Also update the read time aggregated across all block categories
@@ -431,7 +432,7 @@ public class SchemaMetrics {
    */
   public void updatePersistentStoreMetric(StoreMetricType storeMetricType,
       long value) {
-    HRegion.incrNumericPersistentMetric(
+    RegionMetricsStorage.incrNumericPersistentMetric(
         storeMetricNames[storeMetricType.ordinal()], value);
   }
 
@@ -476,7 +477,7 @@ public class SchemaMetrics {
     if (category == null) {
       category = BlockCategory.ALL_CATEGORIES;
     }
-    HRegion.incrNumericPersistentMetric(getBlockMetricName(category, false,
+    RegionMetricsStorage.incrNumericPersistentMetric(getBlockMetricName(category, false,
         BlockMetricType.CACHE_SIZE), cacheSizeDelta);
 
     if (category != BlockCategory.ALL_CATEGORIES) {
@@ -500,7 +501,7 @@ public class SchemaMetrics {
    * positives/negatives as specified by the argument.
    */
   public void updateBloomMetrics(boolean isInBloom) {
-    HRegion.incrNumericMetric(getBloomMetricName(isInBloom), 1);
+    RegionMetricsStorage.incrNumericMetric(getBloomMetricName(isInBloom), 1);
     if (this != ALL_SCHEMA_METRICS) {
       ALL_SCHEMA_METRICS.updateBloomMetrics(isInBloom);
     }
@@ -614,6 +615,23 @@ public class SchemaMetrics {
     return SchemaMetrics.generateSchemaMetricsPrefix(tableName, sb.toString());
   }
 
+  /**
+   * Get the prefix for metrics generated about a single region.
+   * 
+   * @param tableName
+   *          the table name or {@link #TOTAL_KEY} for all tables
+   * @param regionName
+   *          regionName
+   * @return the prefix for this table/region combination.
+   */
+  static String generateRegionMetricsPrefix(String tableName, String regionName) {
+    tableName = getEffectiveTableName(tableName);
+    String schemaMetricPrefix = tableName.equals(TOTAL_KEY) ? "" : TABLE_PREFIX + tableName + ".";
+    schemaMetricPrefix += regionName.equals(TOTAL_KEY) ? "" : REGION_PREFIX + regionName + ".";
+
+    return schemaMetricPrefix;
+  }
+  
   /**
    * Sets the flag of whether to use table name in metric names. This flag
    * is specified in configuration and is not expected to change at runtime,
@@ -729,11 +747,11 @@ public class SchemaMetrics {
         long metricValue;
         if (isTimeVaryingKey(metricName)) {
           Pair<Long, Integer> totalAndCount =
-              HRegion.getTimeVaryingMetric(stripTimeVaryingSuffix(metricName));
+              RegionMetricsStorage.getTimeVaryingMetric(stripTimeVaryingSuffix(metricName));
           metricValue = metricName.endsWith(TOTAL_SUFFIX) ?
               totalAndCount.getFirst() : totalAndCount.getSecond();
         } else {
-          metricValue = HRegion.getNumericMetric(metricName);
+          metricValue = RegionMetricsStorage.getNumericMetric(metricName);
         }
 
         metricsSnapshot.put(metricName, metricValue);
