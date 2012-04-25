@@ -66,7 +66,6 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
-import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -88,7 +87,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.zookeeper.KeeperException;
@@ -1332,11 +1330,8 @@ public class HBaseTestingUtility {
     // Allow the user to override FS URI for this map-reduce cluster to use.
     mrCluster = new MiniMRCluster(servers,
       FS_URI != null ? FS_URI : FileSystem.get(conf).getUri().toString(), 1);
-    JobConf jobConf = MapreduceTestingShim.getJobConf(mrCluster);
-    if (jobConf != null) {
-      jobConf.set("mapred.local.dir",
-          conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
-    }
+    mrCluster.getJobTrackerRunner().getJobTracker().getConf().set("mapred.local.dir",
+      conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
     LOG.info("Mini mapreduce cluster started");
     conf.set("mapred.job.tracker",
         mrCluster.createJobConf().get("mapred.job.tracker"));
