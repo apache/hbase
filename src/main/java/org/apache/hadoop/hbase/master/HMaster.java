@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
@@ -394,6 +393,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // Wait for region servers to report in.  Returns count of regions.
     int regionCount = this.serverManager.waitForRegionServers();
 
+    this.assignmentManager.startTimeOutMonitor();
     // TODO: Should do this in background rather than block master startup
     this.fileSystemManager.
       splitLogAfterStartup(this.serverManager.getOnlineServers());

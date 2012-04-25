@@ -23,6 +23,7 @@ Release 0.90.7 - Unreleased
    HBASE-5213  "hbase master stop" does not bring down backup masters (Gregory Chanan)
    HBASE-5833  0.92 build has been failing pretty consistently on TestMasterFailover.
    HBASE-5850  Refuse operations from Admin before master is initialized - fix for all branches (xufeng)
+   HBASE-5873  TimeOut Monitor thread should be started after atleast one region server registers. (rajeshbabu)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
