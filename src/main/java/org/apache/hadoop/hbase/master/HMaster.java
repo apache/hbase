@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.PleaseHoldException;	
+import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -513,6 +513,7 @@ Server {
       }
     }
 
+    this.assignmentManager.startTimeOutMonitor();
     Set<ServerName> onlineServers = new HashSet<ServerName>(serverManager
         .getOnlineServers().keySet());
     // TODO: Should do this in background rather than block master startup

@@ -25,8 +25,8 @@ import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -58,21 +58,18 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
-import org.apache.hadoop.hbase.executor.EventHandler;
-import org.apache.hadoop.hbase.executor.EventHandler.EventType;
-import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
-import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
-import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
+import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
+import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -206,13 +203,16 @@ public class AssignmentManager extends ZooKeeperListener {
       conf.getInt("hbase.master.assignment.timeoutmonitor.period", 10000),
       master, serverManager,
       conf.getInt("hbase.master.assignment.timeoutmonitor.timeout", 1800000));
-    Threads.setDaemonThreadRunning(timeoutMonitor.getThread(),
-      master.getServerName() + ".timeoutMonitor");
     this.zkTable = new ZKTable(this.master.getZooKeeper());
     this.maximumAssignmentAttempts =
       this.master.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10);
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.threadPoolExecutorService = Executors.newCachedThreadPool();
+  }
+
+  void startTimeOutMonitor() {
+    Threads.setDaemonThreadRunning(timeoutMonitor.getThread(),
+        master.getServerName() + ".timeoutMonitor");
   }
 
   /**
