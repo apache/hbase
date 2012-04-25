@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -78,7 +79,8 @@ public class TestRegionRebalancing {
   public void testRebalanceOnRegionServerNumberChange()
   throws IOException, InterruptedException {
     HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
-    admin.createTable(this.desc, HBaseTestingUtility.KEYS);
+    admin.createTable(this.desc, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
+        1, HBaseTestingUtility.KEYS.length));
     this.table = new HTable(UTIL.getConfiguration(), this.desc.getName());
     CatalogTracker ct = new CatalogTracker(UTIL.getConfiguration());
     ct.start();
@@ -88,7 +90,7 @@ public class TestRegionRebalancing {
       ct.stop();
     }
     assertEquals("Test table should have right number of regions",
-      HBaseTestingUtility.KEYS.length + 1/*One extra to account for start/end keys*/,
+      HBaseTestingUtility.KEYS.length,
       this.table.getStartKeys().length);
 
     // verify that the region assignments are balanced to start out
