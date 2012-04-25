@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
@@ -40,9 +40,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.JobID;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -144,13 +142,13 @@ public class TestHLogRecordReader {
     jobConf.setLong(HLogInputFormat.END_TIME_KEY, ts);
 
     // only 1st file is considered, and only its 1st entry is used
-    List<InputSplit> splits = input.getSplits(new JobContext(jobConf, new JobID()));
+    List<InputSplit> splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
     assertEquals(1, splits.size());
     testSplit(splits.get(0), Bytes.toBytes("1"));
 
     jobConf.setLong(HLogInputFormat.START_TIME_KEY, ts+1);
     jobConf.setLong(HLogInputFormat.END_TIME_KEY, ts1+1);
-    splits = input.getSplits(new JobContext(jobConf, new JobID()));
+    splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
     // both files need to be considered
     assertEquals(2, splits.size());
     // only the 2nd entry from the 1st file is used
@@ -191,7 +189,7 @@ public class TestHLogRecordReader {
     jobConf.set("mapred.input.dir", logDir.toString());
 
     // make sure both logs are found
-    List<InputSplit> splits = input.getSplits(new JobContext(jobConf, new JobID()));
+    List<InputSplit> splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
     assertEquals(2, splits.size());
 
     // should return exactly one KV
@@ -203,14 +201,14 @@ public class TestHLogRecordReader {
 
     // set an endtime, the 2nd log file can be ignored completely.
     jobConf.setLong(HLogInputFormat.END_TIME_KEY, secondTs-1);
-    splits = input.getSplits(new JobContext(jobConf, new JobID()));
+    splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
     assertEquals(1, splits.size());
     testSplit(splits.get(0), Bytes.toBytes("1"));
 
     // now set a start time
     jobConf.setLong(HLogInputFormat.END_TIME_KEY, Long.MAX_VALUE);
     jobConf.setLong(HLogInputFormat.START_TIME_KEY, thirdTs);
-    splits = input.getSplits(new JobContext(jobConf, new JobID()));
+    splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
     // both logs need to be considered
     assertEquals(2, splits.size());
     // but both readers skip all edits
@@ -223,7 +221,7 @@ public class TestHLogRecordReader {
    */
   private void testSplit(InputSplit split, byte[]... columns) throws Exception {
     HLogRecordReader reader = new HLogRecordReader();
-    reader.initialize(split, new TaskAttemptContext(conf, new TaskAttemptID()));
+    reader.initialize(split, MapReduceTestUtil.createDummyMapTaskAttemptContext(conf));
 
     for (byte[] column : columns) {
       assertTrue(reader.nextKeyValue());
