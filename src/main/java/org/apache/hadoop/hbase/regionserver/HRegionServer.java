@@ -535,12 +535,6 @@ public class HRegionServer extends RegionServer
    */
   private void blockAndCheckIfStopped(ZooKeeperNodeTracker tracker)
       throws IOException, InterruptedException {
-    if (false == tracker.checkIfBaseNodeAvailable()) {
-      String errorMsg = "Check the value configured in 'zookeeper.znode.parent'. "
-          + "There could be a mismatch with the one configured in the master.";
-      LOG.error(errorMsg);
-      abort(errorMsg);
-    }
     while (tracker.blockUntilAvailable(this.msgInterval, false) == null) {
       if (this.stopped) {
         throw new IOException("Received the shutdown message while waiting.");
