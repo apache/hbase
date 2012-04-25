@@ -514,6 +514,7 @@ Server {
       }
     }
 
+    this.assignmentManager.startTimeOutMonitor();
     Set<ServerName> onlineServers = new HashSet<ServerName>(serverManager
         .getOnlineServers().keySet());
     // TODO: Should do this in background rather than block master startup
