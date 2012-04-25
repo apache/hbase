@@ -1775,7 +1775,11 @@ public class AssignmentManager extends ZooKeeperListener {
       ZKAssign.asyncCreateNodeOffline(master.getZooKeeper(), state.getRegion(),
         this.master.getServerName(), cb, ctx);
     } catch (KeeperException e) {
-      master.abort("Unexpected ZK exception creating/setting node OFFLINE", e);
+      if (e instanceof NodeExistsException) {
+        LOG.warn("Node for " + state.getRegion() + " already exists");
+      } else { 
+        master.abort("Unexpected ZK exception creating/setting node OFFLINE", e);
+      }
       return false;
     }
     return true;
