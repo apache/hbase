@@ -37,8 +37,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.RawComparator;
@@ -72,14 +71,30 @@ public class TestHFileWriterV2 {
   @Test
   public void testHFileFormatV2() throws IOException {
     Path hfilePath = new Path(TEST_UTIL.getDataTestDir(),
-        "testHFileFormatV2");
+    "testHFileFormatV2");
+    final Compression.Algorithm compressAlgo = Compression.Algorithm.GZ;
+    final int entryCount = 10000;
+    writeDataAndReadFromHFile(hfilePath, compressAlgo, entryCount, false);
+  }
+  
+  
+  @Test
+  public void testMidKeyInHFile() throws IOException{
+    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(),
+    "testMidKeyInHFile");
+    Compression.Algorithm compressAlgo = Compression.Algorithm.NONE;
+    int entryCount = 50000;
+    writeDataAndReadFromHFile(hfilePath, compressAlgo, entryCount, true);
+  }
 
-    final Compression.Algorithm COMPRESS_ALGO = Compression.Algorithm.GZ;
+  private void writeDataAndReadFromHFile(Path hfilePath,
+      Algorithm compressAlgo, int entryCount, boolean findMidKey) throws IOException {
+
     HFileWriterV2 writer = (HFileWriterV2)
         new HFileWriterV2.WriterFactoryV2(conf, new CacheConfig(conf))
             .withPath(fs, hfilePath)
             .withBlockSize(4096)
-            .withCompression(COMPRESS_ALGO)
+            .withCompression(compressAlgo)
             .withComparator(KeyValue.KEY_COMPARATOR)
             .create();
 
@@ -88,11 +103,10 @@ public class TestHFileWriterV2 {
 
     Random rand = new Random(9713312); // Just a fixed seed.
 
-    final int ENTRY_COUNT = 10000;
     List<byte[]> keys = new ArrayList<byte[]>();
     List<byte[]> values = new ArrayList<byte[]>();
 
-    for (int i = 0; i < ENTRY_COUNT; ++i) {
+    for (int i = 0; i < entryCount; ++i) {
       byte[] keyBytes = randomOrderedKey(rand, i);
 
       // A random-length random value.
@@ -113,6 +127,7 @@ public class TestHFileWriterV2 {
     writer.appendMetaBlock("CAPITAL_OF_FRANCE", new Text("Paris"));
 
     writer.close();
+    
 
     FSDataInputStream fsdis = fs.open(hfilePath);
 
@@ -124,10 +139,10 @@ public class TestHFileWriterV2 {
         FixedFileTrailer.readFromStream(fsdis, fileSize);
 
     assertEquals(2, trailer.getMajorVersion());
-    assertEquals(ENTRY_COUNT, trailer.getEntryCount());
+    assertEquals(entryCount, trailer.getEntryCount());
 
     HFileBlock.FSReader blockReader =
-        new HFileBlock.FSReaderV2(fsdis, COMPRESS_ALGO, fileSize);
+        new HFileBlock.FSReaderV2(fsdis, compressAlgo, fileSize);
     // Comparator class name is stored in the trailer in version 2.
     RawComparator<byte []> comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =
@@ -143,16 +158,21 @@ public class TestHFileWriterV2 {
     // Data index. We also read statistics about the block index written after
     // the root level.
     dataBlockIndexReader.readMultiLevelIndexRoot(
-        blockIter.nextBlockAsStream(BlockType.ROOT_INDEX),
+        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
         trailer.getDataIndexCount());
-
+    
+    if (findMidKey) {
+      byte[] midkey = dataBlockIndexReader.midkey();
+      assertNotNull("Midkey should not be null", midkey);
+    }
+    
     // Meta index.
     metaBlockIndexReader.readRootIndex(
-        blockIter.nextBlockAsStream(BlockType.ROOT_INDEX),
+        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX).getByteStream(),
         trailer.getMetaIndexCount());
     // File info
     FileInfo fileInfo = new FileInfo();
-    fileInfo.readFields(blockIter.nextBlockAsStream(BlockType.FILE_INFO));
+    fileInfo.readFields(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
     byte [] keyValueFormatVersion = fileInfo.get(
         HFileWriterV2.KEY_VALUE_VERSION);
     boolean includeMemstoreTS = keyValueFormatVersion != null &&
@@ -200,7 +220,7 @@ public class TestHFileWriterV2 {
     }
     LOG.info("Finished reading: entries=" + entriesRead + ", blocksRead="
         + blocksRead);
-    assertEquals(ENTRY_COUNT, entriesRead);
+    assertEquals(entryCount, entriesRead);
 
     // Meta blocks. We can scan until the load-on-open data offset (which is
     // the root block index offset in version 2) because we are not testing
@@ -225,6 +245,7 @@ public class TestHFileWriterV2 {
 
     fsdis.close();
   }
+
 
   // Static stuff used by various HFile v2 unit tests
 
