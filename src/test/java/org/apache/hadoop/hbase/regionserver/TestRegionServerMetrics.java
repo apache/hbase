@@ -49,6 +49,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+
 /**
  * Test metrics incremented on region server operations.
  */
@@ -196,6 +197,32 @@ public class TestRegionServerMetrics {
 
   }
 
+  @Test
+  public void testRemoveRegionMetrics() throws IOException, InterruptedException {
+    String cf = "REMOVECF";
+    HTable hTable = TEST_UTIL.createTable(TABLE_NAME.getBytes(), cf.getBytes());
+    HRegionInfo[] regionInfos =
+        hTable.getRegionLocations().keySet()
+            .toArray(new HRegionInfo[hTable.getRegionLocations().keySet().size()]);
+
+    String regionName = regionInfos[0].getEncodedName();
+
+    // Do some operations so there are metrics.
+    Put pOne = new Put("TEST".getBytes());
+    pOne.add(cf.getBytes(), "test".getBytes(), "test".getBytes());
+    hTable.put(pOne);
+
+    Get g = new Get("TEST".getBytes());
+    g.addFamily(cf.getBytes());
+    hTable.get(g);
+    assertTimeVaryingMetricCount(1, TABLE_NAME, cf, regionName, "get_");
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    admin.disableTable(TABLE_NAME.getBytes());
+    admin.deleteTable(TABLE_NAME.getBytes());
+
+    assertTimeVaryingMetricCount(0, TABLE_NAME, cf, regionName, "get_");
+  }
+  
   @Test
   public void testMultipleRegions() throws IOException, InterruptedException {
 

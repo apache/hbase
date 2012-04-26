@@ -20,7 +20,9 @@
 
 package org.apache.hadoop.hbase.regionserver.metrics;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,12 +54,18 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
  */
 @InterfaceAudience.Private
 public class RegionServerDynamicMetrics implements Updater {
+  private static final String UNABLE_TO_CLEAR = "Unable to clear RegionServerDynamicMetrics";
+  
   private MetricsRecord metricsRecord;
   private MetricsContext context;
   private final RegionServerDynamicStatistics rsDynamicStatistics;
   private Method updateMbeanInfoIfMetricsListChanged = null;
   private static final Log LOG =
     LogFactory.getLog(RegionServerDynamicStatistics.class);
+  
+  private boolean reflectionInitialized = false;
+  private Field recordMetricMapField;
+  private Field registryMetricMapField;
 
   /**
    * The metrics variables are public:
@@ -124,6 +132,60 @@ public class RegionServerDynamicMetrics implements Updater {
     }
     if (numOps > 0) {
       m.inc(numOps, amt);
+    }
+  }
+  
+  /**
+   * Clear all metrics this exposes. 
+   * Uses reflection to clear them from hadoop metrics side as well.
+   */
+  @SuppressWarnings("rawtypes")
+  public void clear() {
+    
+    // If this is the first clear use reflection to get the two maps that hold copies of our 
+    // metrics on the hadoop metrics side. We have to use reflection because there is not 
+    // remove metrics on the hadoop side. If we can't get them then clearing old metrics 
+    // is not possible and bailing out early is our best option.
+    if (!this.reflectionInitialized) {
+      this.reflectionInitialized = true;
+      try {
+        this.recordMetricMapField = this.metricsRecord.getClass().getDeclaredField("metricTable");
+        this.recordMetricMapField.setAccessible(true);
+      } catch (SecurityException e) {
+        LOG.debug(UNABLE_TO_CLEAR);
+        return;
+      } catch (NoSuchFieldException e) {
+        LOG.debug(UNABLE_TO_CLEAR);
+        return;
+      }
+
+      try {
+        this.registryMetricMapField = this.registry.getClass().getDeclaredField("metricsList");
+        this.registryMetricMapField.setAccessible(true);
+      } catch (SecurityException e) {
+        LOG.debug(UNABLE_TO_CLEAR);
+        return;
+      } catch (NoSuchFieldException e) {
+        LOG.debug(UNABLE_TO_CLEAR);
+        return;
+      } 
+    }
+
+    
+    //If we found both fields then try and clear the maps.
+    if (this.recordMetricMapField != null && this.registryMetricMapField != null) {
+      try {
+        Map recordMap = (Map) this.recordMetricMapField.get(this.metricsRecord);
+        recordMap.clear();
+        Map registryMap = (Map) this.registryMetricMapField.get(this.registry);
+        registryMap.clear();
+      } catch (IllegalArgumentException e) {
+        LOG.debug(UNABLE_TO_CLEAR);
+      } catch (IllegalAccessException e) {
+        LOG.debug(UNABLE_TO_CLEAR);
+      }
+    } else {
+      LOG.debug(UNABLE_TO_CLEAR);
     }
   }
 

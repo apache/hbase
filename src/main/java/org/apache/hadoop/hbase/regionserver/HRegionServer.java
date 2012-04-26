@@ -2680,6 +2680,14 @@ public class HRegionServer extends RegionServer
   public boolean removeFromOnlineRegions(final String encodedName) {
     HRegion toReturn = null;
     toReturn = this.onlineRegions.remove(encodedName);
+    
+    //Clear all of the dynamic metrics as they are now probably useless.
+    //This is a clear because dynamic metrics could include metrics per cf and
+    //per hfile.  Figuring out which cfs, hfiles, and regions are still relevant to
+    //this region server would be an onerous task.  Instead just clear everything
+    //and on the next tick of the metrics everything that is still relevant will be
+    //re-added.
+    this.dynamicMetrics.clear();
     return toReturn != null;
   }
 

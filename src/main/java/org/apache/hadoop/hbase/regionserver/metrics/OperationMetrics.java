@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -64,12 +63,12 @@ public class OperationMetrics {
    * @param conf The Configuration of the HRegion reporting operations coming in.
    * @param regionInfo The region info
    */
-  public OperationMetrics(Configuration conf, HRegionInfo regionInfo) {
+  public OperationMetrics(Configuration conf, HRegionInfo regionInfo) { 
     // Configure SchemaMetrics before trying to create a RegionOperationMetrics instance as
     // RegionOperationMetrics relies on SchemaMetrics to do naming.
     if (conf != null) {
       SchemaMetrics.configureGlobally(conf);
-
+      
       this.conf = conf;
       if (regionInfo != null) {
         this.tableName = regionInfo.getTableNameAsString();
@@ -172,6 +171,13 @@ public class OperationMetrics {
   public void updateDeleteMetrics(Set<byte[]> columnFamilies, long value) {
     doUpdateTimeVarying(columnFamilies, DELETE_KEY, value);
   }
+  
+  /**
+   * This deletes all old metrics this instance has ever created or updated.
+   */
+  public void closeMetrics() {
+    RegionMetricsStorage.clear();
+  }
 
   /**
    * Method to send updates for cf and region metrics. This is the normal method
@@ -199,7 +205,8 @@ public class OperationMetrics {
   private void doSafeIncTimeVarying(String prefix, String key, long value) {
     if (conf.getBoolean(CONF_KEY, true)) {
       if (prefix != null && !prefix.isEmpty() && key != null && !key.isEmpty()) {
-        RegionMetricsStorage.incrTimeVaryingMetric(prefix + key, value);
+        String m = prefix + key;
+        RegionMetricsStorage.incrTimeVaryingMetric(m, value);
       }
     }
   }

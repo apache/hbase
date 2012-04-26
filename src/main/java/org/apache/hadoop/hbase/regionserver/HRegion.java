@@ -966,6 +966,7 @@ public class HRegion implements HeapSize { // , Writable{
         status.setStatus("Running coprocessor post-close hooks");
         this.coprocessorHost.postClose(abort);
       }
+      this.opMetrics.closeMetrics();
       status.markComplete("Closed");
       LOG.info("Closed " + this);
       return result;
