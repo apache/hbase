@@ -248,13 +248,15 @@ setup () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean compile -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
+  echo "$MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
   export MAVEN_OPTS="${MAVEN_OPTS}"
-  $MVN clean compile -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
+  # build core and tests
+  $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     echo "Trunk compilation is broken?"
     cleanupAndExit 1
   fi
+
 }
 
 ###############################################################################
@@ -345,6 +347,30 @@ applyPatch () {
   fi
   return 0
 }
+
+###############################################################################
+### Attempt to compile against the hadoop 0.23.x
+checkHadoop23Compile () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Checking against hadoop 23 build"
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+
+  export MAVEN_OPTS="${MAVEN_OPTS}"
+  # build core and tests
+  $MVN clean test -DskipTests -Dhadoop.profile=23 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunk23JavacWarnings.txt 2>&1
+  if [[ $? != 0 ]] ; then
+    echo "Failed to compile against hadoop 23".
+    cleanupAndExit 1
+  fi
+ 
+}
+
 
 ###############################################################################
 ### Check there are no javadoc warnings
@@ -719,6 +745,9 @@ if [[ $? != 0 ]] ; then
   submitJiraComment 1
   cleanupAndExit 1
 fi
+
+checkHadoop23Compile
+(( RESULT = RESULT + $? ))
 checkJavadocWarnings
 (( RESULT = RESULT + $? ))
 checkJavacWarnings
