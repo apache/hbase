@@ -95,4 +95,13 @@
 	   <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS" />
      </Match>
 
+    <Match>
+       <Class name="org.apache.hadoop.hbase.regionserver.HRegion" />
+       <Or>
+         <Method name="startRegionOperation" />
+         <Method name="startBulkRegionOperation" />
+       </Or>
+       <Bug pattern="UL_UNRELEASED_LOCK" />
+    </Match>
+
 </FindBugsFilter>

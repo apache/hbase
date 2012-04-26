@@ -109,8 +109,11 @@ class LogRoller extends HasThread implements WALActionsListener {
         LOG.error("Log rolling failed", ex);
         server.abort("Log rolling failed", ex);
       } finally {
-        rollLog.set(false);
-        rollLock.unlock();
+        try {
+          rollLog.set(false);
+        } finally {
+          rollLock.unlock();
+        }
       }
     }
     LOG.info("LogRoller exiting.");

@@ -1091,10 +1091,14 @@ public class HRegion implements HeapSize { // , Writable{
 
   /** @return info about the last flushes <time, size> */
   public List<Pair<Long,Long>> getRecentFlushInfo() {
+    List<Pair<Long,Long>> ret = null;
     this.lock.readLock().lock();
-    List<Pair<Long,Long>> ret = this.recentFlushes;
-    this.recentFlushes = new ArrayList<Pair<Long,Long>>();
-    this.lock.readLock().unlock();
+    try {
+      ret = this.recentFlushes;
+      this.recentFlushes = new ArrayList<Pair<Long,Long>>();
+    } finally {
+      this.lock.readLock().unlock();
+    }
     return ret;
   }
 
@@ -1204,10 +1208,11 @@ public class HRegion implements HeapSize { // , Writable{
       return false;
     }
     Preconditions.checkArgument(cr.getHRegion().equals(this));
+    MonitoredTask status = null;
     lock.readLock().lock();
-    MonitoredTask status = TaskMonitor.get().createStatus(
-        "Compacting " + cr.getStore() + " in " + this);
     try {
+      status = TaskMonitor.get().createStatus(
+        "Compacting " + cr.getStore() + " in " + this);
       if (this.closed.get()) {
         LOG.debug("Skipping compaction on " + this + " because closed");
         return false;
@@ -1250,8 +1255,11 @@ public class HRegion implements HeapSize { // , Writable{
       status.markComplete("Compaction complete");
       return true;
     } finally {
-      status.cleanup();
-      lock.readLock().unlock();
+      try {
+        if (status != null) status.cleanup();
+      } finally {
+        lock.readLock().unlock();
+      }
     }
   }
 

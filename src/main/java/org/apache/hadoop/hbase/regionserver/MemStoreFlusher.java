@@ -425,8 +425,11 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
         return false;
       }
     } finally {
-      flushOccurred.signalAll();
-      lock.unlock();
+      try {
+        flushOccurred.signalAll();
+      } finally {
+        lock.unlock();
+      }
     }
     return true;
   }

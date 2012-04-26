@@ -578,8 +578,8 @@ public class HLog implements Syncable {
     }
     byte [][] regionsToFlush = null;
     this.cacheFlushLock.lock();
-    this.logRollRunning = true;
     try {
+      this.logRollRunning = true;
       if (closed) {
         LOG.debug("HLog closed.  Skipping rolling of writer");
         return regionsToFlush;
@@ -645,8 +645,11 @@ public class HLog implements Syncable {
         }
       }
     } finally {
-      this.logRollRunning = false;
-      this.cacheFlushLock.unlock();
+      try {
+        this.logRollRunning = false;
+      } finally {
+        this.cacheFlushLock.unlock();
+      }
     }
     return regionsToFlush;
   }
