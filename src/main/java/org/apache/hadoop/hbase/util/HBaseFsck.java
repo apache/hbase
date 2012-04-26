@@ -165,6 +165,7 @@ public class HBaseFsck {
   private int maxMerge = DEFAULT_MAX_MERGE; // maximum number of overlapping regions to merge
   private int maxOverlapsToSideline = DEFAULT_OVERLAPS_TO_SIDELINE; // maximum number of overlapping regions to sideline
   private boolean sidelineBigOverlaps = false; // sideline overlaps with >maxMerge regions
+  private boolean fixTableDesc = false; // fix table descriptor inconsistency?
 
   private boolean rerun = false; // if we tried to fix something, rerun hbck
   private static boolean summary = false; // if we want to print less output
@@ -174,6 +175,7 @@ public class HBaseFsck {
    * State
    *********/
   private ErrorReporter errors = new PrintingErrorReporter();
+  private boolean multiTableDescFound = false; // to record if multi table descriptors found
   int fixes = 0;
 
   /**
@@ -263,6 +265,7 @@ public class HBaseFsck {
     errors.clear();
     tablesInfo.clear();
     orphanHdfsDirs.clear();
+    multiTableDescFound = false;
   }
 
   /**
@@ -1075,6 +1078,12 @@ public class HBaseFsck {
     for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
       checkRegionConsistency(e.getKey(), e.getValue());
     }
+    if (shouldFixTableDesc() && isMultiTableDescFound()) {
+      setShouldRerun();  // should re-run to verify it is fixed
+      for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
+        fixTableDescConsistency(e.getKey(), e.getValue());
+      }
+    }
   }
 
   /**
@@ -1204,6 +1213,32 @@ public class HBaseFsck {
       setShouldRerun();
       HBaseFsckRepair.fixUnassigned(admin, hbi.getHdfsHRI());
       HBaseFsckRepair.waitUntilAssigned(admin, hbi.getHdfsHRI());
+    }
+  }
+
+  /**
+   * Check a single region for table desc consistency.
+   */
+  private void fixTableDescConsistency(final String key, final HbckInfo hbi)
+        throws IOException, KeeperException, InterruptedException {
+    String tableName = Bytes.toString(hbi.getTableName());
+    TableInfo tableInfo = tablesInfo.get(tableName);
+    Preconditions.checkNotNull("Table " + tableName + "' not present!", tableInfo);
+    if (tableInfo.htds.size() != 1) {
+      HTableDescriptor htd = tableInfo.getHTD();
+      Path sidelineTableDir = new Path(getSidelineDir(), tableName);
+      if (!htd.equals(hbi.getHdfsHRI().getTableDesc())) {
+        if (hbi.deployedOn.size() > 1) {
+          LOG.warn("Region " + hbi.toString() + " is deployed on multiple region servers."
+            + " Please fix the multiple assignments before fixing multiple table desc.");
+        } else {
+          HServerAddress hsa = null;
+          if (hbi.deployedOn.size() == 1) {
+            hsa = hbi.deployedOn.get(0);
+          }
+          HBaseFsckRepair.fixTableDesc(admin, hsa, hbi, htd, sidelineTableDir);
+        }
+      }
     }
   }
 
@@ -1492,6 +1527,7 @@ public class HBaseFsck {
   public class TableInfo {
     String tableName;
     TreeSet <HServerAddress> deployedOn;
+    HTableDescriptor htdFromAdmin;
 
     // backwards regions
     final List<HbckInfo> backwards = new ArrayList<HbckInfo>();
@@ -1529,6 +1565,7 @@ public class HBaseFsck {
         if (htds.size() > 1) {
           LOG.warn("Multiple table descriptors found for table '"
               + Bytes.toString(hir.getTableName()) + "' regions: " + htds);
+          setMultiTableDescFound(true);
         } else {
           LOG.info("Added a table descriptor found in table '"
               + Bytes.toString(hir.getTableName()) + "' regions: " + htd);
@@ -1539,14 +1576,17 @@ public class HBaseFsck {
     /**
      * @return descriptor common to all regions.  null if are none or multiple!
      */
-    private HTableDescriptor getHTD() {
-      if (htds.size() == 1) {
-        return (HTableDescriptor)htds.toArray()[0];
-      } else {
-        LOG.error("None/Multiple table descriptors found for table '"
-          + tableName + "' regions: " + htds);
+    private HTableDescriptor getHTD() throws IOException {
+      if (htds.size() != 1) {
+        if (htdFromAdmin == null) {
+          LOG.warn("None/Multiple table descriptors found for table '"
+            + tableName + "' regions: " + htds);
+          htdFromAdmin = admin.getTableDescriptor(Bytes.toBytes(tableName));
+          LOG.warn("Use this one from meta instead" + htdFromAdmin);
+        }
+        return htdFromAdmin;
       }
-      return null;
+      return (HTableDescriptor)htds.toArray()[0];
     }
 
     public void addRegionInfo(HbckInfo hir) {
@@ -2425,6 +2465,12 @@ public class HBaseFsck {
    */
   private void printTableSummary(TreeMap<String, TableInfo> tablesInfo) {
     System.out.println("Summary:");
+    if (isMultiTableDescFound()) {
+      System.out.println("  Multiple table descriptors were found.\n"
+        + "    You can ignore it if your cluster is working fine.\n"
+        + "    To fix it, please re-run hbck with option -fixTableDesc\n");
+    }
+
     for (TableInfo tInfo : tablesInfo.values()) {
       if (errors.tableHasErrors(tInfo)) {
         System.out.println("Table " + tInfo.getName() + " is inconsistent.");
@@ -2820,6 +2866,22 @@ public class HBaseFsck {
     return sidelineBigOverlaps;
   }
 
+  public void setFixTableDesc(boolean ftd) {
+    this.fixTableDesc = ftd;
+  }
+
+  public boolean shouldFixTableDesc() {
+    return fixTableDesc;
+  }
+
+  public void setMultiTableDescFound(boolean multiTableDesc) {
+    multiTableDescFound = multiTableDesc;
+  }
+
+  public boolean isMultiTableDescFound() {
+    return multiTableDescFound;
+  }
+
   /**
    * @param mm maximum number of regions to merge into a single region.
    */
@@ -2893,6 +2955,7 @@ public class HBaseFsck {
     System.err.println("");
     System.err.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles -fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps");
     System.err.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles -fixHdfsOrphans");
+    System.err.println("   -fixTableDesc     Try to fix table descriptor inconsistency");
 
     Runtime.getRuntime().exit(-2);
   }
@@ -2958,6 +3021,8 @@ public class HBaseFsck {
         fsck.setFixVersionFile(true);
       } else if (cmd.equals("-sidelineBigOverlaps")) {
         fsck.setSidelineBigOverlaps(true);
+      } else if (cmd.equals("-fixTableDesc")) {
+        fsck.setFixTableDesc(true);
       } else if (cmd.equals("-repair")) {
         // this attempts to merge overlapping hdfs regions, needs testing
         // under load

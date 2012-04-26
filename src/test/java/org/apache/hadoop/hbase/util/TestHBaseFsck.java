@@ -22,10 +22,7 @@ package org.apache.hadoop.hbase.util;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertNoErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,6 +35,8 @@ import java.util.Map.Entry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
@@ -878,6 +877,91 @@ public class TestHBaseFsck {
 
       // check result
       assertNoErrors(doFsck(conf, false));
+    } finally {
+      deleteTable(table);
+    }
+  }
+
+  /**
+   * This creates regions with inconsistent region info.
+   * Test it can be fixed properly.
+   */
+  @Test(timeout=300000)
+  public void testMultipleTableDesc() throws Exception {
+    String table = "MultipleTableDesc";
+    try {
+      setupTable(table);
+
+      HTableDescriptor htd = tbl.getTableDescriptor();
+      Map<HRegionInfo, HServerAddress> hris = tbl.getRegionsInfo();
+      assertTrue(hris.size() > 1);
+
+      // verify everything is fine before messing it up
+      Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
+      Path tableDir = new Path(rootDir + "/" + htd.getNameAsString());
+      FileSystem fs = rootDir.getFileSystem(conf);
+      int currentBlockSize = htd.getFamily(FAM).getBlocksize();
+      int i = 0;
+      for (HRegionInfo hri: hris.keySet()) {
+        assertEquals(htd, hri.getTableDesc());
+        Path regionDir = new Path(tableDir, hri.getEncodedName());
+        Path hriPath = new Path(regionDir, HRegion.REGIONINFO_FILE);
+        HRegionInfo hriOnFs = new HRegionInfo();
+        FSDataInputStream in = fs.open(hriPath);
+        try {
+          hriOnFs.readFields(in);
+        } finally {
+          in.close();
+        }
+        assertEquals(htd, hriOnFs.getTableDesc());
+
+        // now mess up one .regioninfo file
+        if (++i == 1) {
+          HTableDescriptor newHtd = new HTableDescriptor(htd);
+          int blockSize = currentBlockSize - 512;
+          newHtd.getFamily(FAM).setBlocksize(blockSize);
+          FSDataOutputStream out = fs.create(hriPath, true);
+          try {
+            hri.setTableDesc(newHtd);
+            hri.write(out);
+            out.write('\n');
+            out.write('\n');
+            out.write(Bytes.toBytes(hri.toString()));
+          } finally {
+            out.close();
+          }
+        }
+      }
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertTrue(hbck.isMultiTableDescFound());
+      // there should be no other issues
+      assertNoErrors(hbck);
+
+      // now fix it.
+      hbck = new HBaseFsck(conf);
+      hbck.setFixTableDesc(true);
+      hbck.connect();
+      hbck.onlineHbck();
+
+      // verify it is fixed
+      hbck = doFsck(conf, false);
+      assertFalse(hbck.isMultiTableDescFound());
+      assertNoErrors(hbck);
+
+      // verify all .regioninfo files on FS
+      for (HRegionInfo hri: hris.keySet()) {
+        Path regionDir = new Path(tableDir, hri.getEncodedName());
+        Path hriPath = new Path(regionDir, HRegion.REGIONINFO_FILE);
+        FSDataInputStream in = fs.open(hriPath);
+        HRegionInfo hriOnFs = new HRegionInfo();
+        try {
+          hriOnFs.readFields(in);
+        } finally {
+          in.close();
+        }
+        assertEquals(htd, hriOnFs.getTableDesc());
+      }
     } finally {
       deleteTable(table);
     }

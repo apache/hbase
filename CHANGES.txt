@@ -29,6 +29,7 @@ Release 0.90.7 - Unreleased
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
    HBASE-5589  Add of the offline call to the Master Interface
    HBASE-5734  Change hbck sideline root (Jimmy Xiang)
+   HBASE-5801  [hbck] Hbck should handle case where some regions have different HTD settings in .regioninfo files (0.90 specific) (Jimmy Xiang)
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems

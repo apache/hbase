@@ -26,10 +26,13 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -187,6 +190,57 @@ public class HBaseFsckRepair {
     HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
     meta.put(p);
     meta.close();
+  }
+
+  /**
+   * Replace the .regioninfo with a new one with the expected table desc,
+   * then re-assign the region.
+   */
+  public static void fixTableDesc(final HBaseAdmin admin, final HServerAddress hsa,
+      final HBaseFsck.HbckInfo hbi, final HTableDescriptor htd, final Path sidelineTableDir)
+          throws IOException, KeeperException, InterruptedException {
+    // at first, sideline the current .regioninfo
+    Path regionDir = hbi.getHdfsRegionDir();
+    Path regioninfoPath = new Path(regionDir, HRegion.REGIONINFO_FILE);
+    Path sidelineRegionDir = new Path(sidelineTableDir, regionDir.getName());
+    Path regioninfoSidelinePath = new Path(sidelineRegionDir, HRegion.REGIONINFO_FILE);
+    FileSystem fs = FileSystem.get(admin.getConfiguration());
+    fs.mkdirs(sidelineRegionDir);
+    boolean success = fs.rename(regioninfoPath, regioninfoSidelinePath);
+    if (!success) {
+      String msg = "Unable to rename file " + regioninfoPath +  " to " + regioninfoSidelinePath;
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
+
+    // then fix the table desc: create a new .regioninfo,
+    //   offline the region and wait till it's assigned again.
+    HRegionInfo hri = hbi.getHdfsHRI();
+    hri.setTableDesc(htd);
+    Path tmpDir = new Path(sidelineRegionDir, ".tmp");
+    Path tmpPath = new Path(tmpDir, HRegion.REGIONINFO_FILE);
+
+    FSDataOutputStream out = fs.create(tmpPath, true);
+    try {
+      hri.write(out);
+      out.write('\n');
+      out.write('\n');
+      out.write(Bytes.toBytes(hri.toString()));
+    } finally {
+      out.close();
+    }
+    if (!fs.rename(tmpPath, regioninfoPath)) {
+      throw new IOException("Unable to rename " + tmpPath + " to " +
+        regioninfoPath);
+    }
+
+    if (hsa != null) {
+      closeRegionSilentlyAndWait(admin, hsa, hri);
+    }
+
+    // Force ZK node to OFFLINE so master assigns
+    forceOfflineInZK(admin, hri);
+    waitUntilAssigned(admin, hri);
   }
 
   /**
