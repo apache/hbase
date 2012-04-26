@@ -127,4 +127,12 @@ public class RegionMetricsStorage {
     return m.get();
   }
 
+  /**
+   * Clear all copies of the metrics this stores.
+   */
+  public static void clear() {
+    timeVaryingMetrics.clear();
+    numericMetrics.clear();
+    numericPersistentMetrics.clear();
+  }
 }
