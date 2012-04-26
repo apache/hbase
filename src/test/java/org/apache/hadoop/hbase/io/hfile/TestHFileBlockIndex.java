@@ -176,7 +176,7 @@ public class TestHFileBlockIndex {
             Bytes.BYTES_RAWCOMPARATOR, numLevels, brw);
 
     indexReader.readRootIndex(blockReader.blockRange(rootIndexOffset,
-        fileSize).nextBlockAsStream(BlockType.ROOT_INDEX), numRootEntries);
+        fileSize).nextBlockWithBlockType(BlockType.ROOT_INDEX), numRootEntries);
 
     long prevOffset = -1;
     int i = 0;
