@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.0 - 4/18/2012
+Release 0.94.0 - 4/26/2012
 Sub-task
 
     [HBASE-4343] - Get the TestAcidGuarantee unit test to fail consistently
@@ -109,7 +109,6 @@ Bug
     [HBASE-5121] - MajorCompaction may affect scan's correctness
     [HBASE-5141] - Memory leak in MonitoredRPCHandlerImpl
     [HBASE-5152] - Region is on service before completing initialization when doing rollback of split, it will affect read correctness
-    [HBASE-5161] - Compaction algorithm should prioritize reference files
     [HBASE-5163] - TestLogRolling#testLogRollOnDatanodeDeath fails sometimes on Jenkins or hadoop QA ("The directory is already locked.")
     [HBASE-5172] - HTableInterface should extend java.io.Closeable
     [HBASE-5176] - AssignmentManager#getRegion: logging nit adds a redundant '+'
@@ -186,6 +185,7 @@ Bug
     [HBASE-5623] - Race condition when rolling the HLog and hlogFlush
     [HBASE-5624] - Aborting regionserver when splitting region, may cause daughter region not assigned by ServerShutdownHandler.
     [HBASE-5633] - NPE reading ZK config in HBase
+    [HBASE-5635] - If getTaskList() returns null, splitlogWorker would go down and it won't serve any requests
     [HBASE-5636] - TestTableMapReduce doesn't work properly.
     [HBASE-5639] - The logic used in waiting for region servers during startup is broken
     [HBASE-5656] - LoadIncrementalHFiles createTable should detect and set compression algorithm
@@ -207,7 +207,19 @@ Bug
     [HBASE-5780] - Fix race in HBase regionserver startup vs ZK SASL authentication
     [HBASE-5781] - Zookeeper session got closed while trying to assign the region to RS using hbck -fix
     [HBASE-5782] - Edits can be appended out of seqid order since HBASE-4487
+    [HBASE-5787] - Table owner can't disable/delete his/her own table
     [HBASE-5795] - HServerLoad$RegionLoad breaks 0.92<->0.94 compatibility
+    [HBASE-5825] - TestHLog not running any tests; fix
+    [HBASE-5833] - 0.92 build has been failing pretty consistently on TestMasterFailover....
+    [HBASE-5848] - Create table with EMPTY_START_ROW passed as splitKey causes the HMaster to abort
+    [HBASE-5849] - On first cluster startup, RS aborts if root znode is not available
+    [HBASE-5850] - Refuse operations from Admin before master is initialized - fix for all branches.
+    [HBASE-5857] - RIT map in RS not getting cleared while region opening
+    [HBASE-5861] - Hadoop 23 compilation broken due to tests introduced in HBASE-5604
+    [HBASE-5864] - Error while reading from hfile in 0.94
+    [HBASE-5866] - Canary in tool package but says its in tools.
+    [HBASE-5871] - Usability regression, we don't parse compression algos anymore
+    [HBASE-5873] - TimeOut Monitor thread should be started after atleast one region server registers.
 
 Improvement
 
@@ -347,10 +359,12 @@ Improvement
     [HBASE-5706] - "Dropping fs latency stats since buffer is full" spam
     [HBASE-5734] - Change hbck sideline root
     [HBASE-5735] - Clearer warning message when connecting a non-secure HBase client to a secure HBase server
+    [HBASE-5737] - Minor Improvements related to balancer.
     [HBASE-5748] - Enable lib directory in jar file for coprocessor
     [HBASE-5770] - Add a clock skew warning threshold
     [HBASE-5775] - ZKUtil doesn't handle deleteRecurisively cleanly
     [HBASE-5823] - Hbck should be able to print help
+    [HBASE-5862] - After Region Close remove the Operation Metrics.
 
 New Feature
 
@@ -360,6 +374,7 @@ New Feature
     [HBASE-3856] - Build a tree structure data block index inside of the HFile
     [HBASE-4102] - atomicAppend: A put that appends to the latest version of a cell; i.e. reads current value then adds the bytes offered by the client to the tail and writes out a new entry
     [HBASE-4219] - Add Per-Column Family Metrics
+    [HBASE-4393] - Implement a canary monitoring program
     [HBASE-4460] - Support running an embedded ThriftServer within a RegionServer
     [HBASE-4536] - Allow CF to retain deleted rows
     [HBASE-4608] - HLog Compression
