@@ -533,24 +533,43 @@ public class HFileBlockIndex {
         }
       }
     }
+    
+    /**
+     * Read in the root-level index from the given input stream. Must match
+     * what was written into the root level by
+     * {@link BlockIndexWriter#writeIndexBlocks(FSDataOutputStream)} at the
+     * offset that function returned.
+     *
+     * @param blk the HFile block
+     * @param numEntries the number of root-level index entries
+     * @return the buffered input stream or wrapped byte input stream
+     * @throws IOException
+     */
+    public DataInputStream readRootIndex(HFileBlock blk, final int numEntries) throws IOException {
+      DataInputStream in = blk.getByteStream();
+      readRootIndex(in, numEntries);
+      return in;
+    }
 
     /**
      * Read the root-level metadata of a multi-level block index. Based on
      * {@link #readRootIndex(DataInput, int)}, but also reads metadata
      * necessary to compute the mid-key in a multi-level index.
      *
-     * @param in the buffered or byte input stream to read from
+     * @param blk the HFile block
      * @param numEntries the number of root-level index entries
      * @throws IOException
      */
-    public void readMultiLevelIndexRoot(DataInputStream in,
+    public void readMultiLevelIndexRoot(HFileBlock blk,
         final int numEntries) throws IOException {
-      readRootIndex(in, numEntries);
-      if (in.available() < MID_KEY_METADATA_SIZE) {
+      DataInputStream in = readRootIndex(blk, numEntries);
+      // after reading the root index the checksum bytes have to
+      // be subtracted to know if the mid key exists.
+      int checkSumBytes = blk.totalChecksumBytes();
+      if ((in.available() - checkSumBytes) < MID_KEY_METADATA_SIZE) {
         // No mid-key metadata available.
         return;
       }
-
       midLeafBlockOffset = in.readLong();
       midLeafBlockOnDiskSize = in.readInt();
       midKeyEntry = in.readInt();
@@ -763,7 +782,7 @@ public class HFileBlockIndex {
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("Wrote a " + numLevels + "-level index with root level at pos "
-          + out.getPos() + ", " + rootChunk.getNumEntries()
+          + rootLevelIndexPos + ", " + rootChunk.getNumEntries()
           + " root-level entries, " + totalNumEntries + " total entries, "
           + StringUtils.humanReadableInt(this.totalBlockOnDiskSize) +
           " on-disk size, "

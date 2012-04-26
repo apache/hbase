@@ -1099,10 +1099,9 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
 
     /**
      * Similar to {@link #nextBlock()} but checks block type, throws an
-     * exception if incorrect, and returns the data portion of the block as
-     * an input stream.
+     * exception if incorrect, and returns the HFile block
      */
-    DataInputStream nextBlockAsStream(BlockType blockType) throws IOException;
+    HFileBlock nextBlockWithBlockType(BlockType blockType) throws IOException;
   }
 
   /** A full-fledged reader with iteration ability. */
@@ -1200,14 +1199,14 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         }
 
         @Override
-        public DataInputStream nextBlockAsStream(BlockType blockType)
+        public HFileBlock nextBlockWithBlockType(BlockType blockType)
             throws IOException {
           HFileBlock blk = nextBlock();
           if (blk.getBlockType() != blockType) {
             throw new IOException("Expected block of type " + blockType
                 + " but found " + blk.getBlockType());
           }
-          return blk.getByteStream();
+          return blk;
         }
       };
     }

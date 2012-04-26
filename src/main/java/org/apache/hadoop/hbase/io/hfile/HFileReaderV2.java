@@ -126,17 +126,17 @@ public class HFileReaderV2 extends AbstractHFileReader {
     // Data index. We also read statistics about the block index written after
     // the root level.
     dataBlockIndexReader.readMultiLevelIndexRoot(
-        blockIter.nextBlockAsStream(BlockType.ROOT_INDEX),
+        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
         trailer.getDataIndexCount());
 
     // Meta index.
     metaBlockIndexReader.readRootIndex(
-        blockIter.nextBlockAsStream(BlockType.ROOT_INDEX),
+        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
         trailer.getMetaIndexCount());
 
     // File info
     fileInfo = new FileInfo();
-    fileInfo.readFields(blockIter.nextBlockAsStream(BlockType.FILE_INFO));
+    fileInfo.readFields(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
     lastKey = fileInfo.get(FileInfo.LASTKEY);
     avgKeyLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_KEY_LEN));
     avgValueLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_VALUE_LEN));
