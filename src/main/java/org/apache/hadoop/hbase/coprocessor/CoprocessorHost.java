@@ -117,15 +117,15 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   protected void loadSystemCoprocessors(Configuration conf, String confKey) {
     Class<?> implClass = null;
 
-    // load default coprocessors from configure file
-    String defaultCPClasses = conf.get(confKey);
-    if (defaultCPClasses == null || defaultCPClasses.length() == 0)
+    // load default coprocessors from configure file    
+    String[] defaultCPClasses = conf.getStrings(confKey);
+    if (defaultCPClasses == null || defaultCPClasses.length == 0)
       return;
-    StringTokenizer st = new StringTokenizer(defaultCPClasses, ",");
+
     int priority = Coprocessor.PRIORITY_SYSTEM;
     List<E> configured = new ArrayList<E>();
-    while (st.hasMoreTokens()) {
-      String className = st.nextToken();
+    for (String className : defaultCPClasses) {
+      className = className.trim();
       if (findCoprocessor(className) != null) {
         continue;
       }
