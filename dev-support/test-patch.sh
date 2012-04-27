@@ -365,10 +365,15 @@ checkHadoop23Compile () {
   # build core and tests
   $MVN clean test -DskipTests -Dhadoop.profile=23 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunk23JavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
-    echo "Failed to compile against hadoop 23".
+    JIRA_COMMENT="$JIRA_COMMENT
+
+    -1 hadoop23.  The patch failed to compile against the hadoop 0.23.x profile."
     cleanupAndExit 1
   fi
- 
+  JIRA_COMMENT="$JIRA_COMMENT
+
+    +1 hadoop23.  The patch compiles against the hadoop 0.23.x profile."
+  return 0
 }
 
 
