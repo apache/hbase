@@ -299,7 +299,6 @@ public class HRegion implements HeapSize { // , Writable{
   final long timestampSlop;
   private volatile long lastFlushTime;
   final RegionServerServices rsServices;
-  private RegionServerAccounting rsAccounting;
   private List<Pair<Long, Long>> recentFlushes = new ArrayList<Pair<Long,Long>>();
   private long blockingMemStoreSize;
   final long threadWakeFrequency;
@@ -405,7 +404,6 @@ public class HRegion implements HeapSize { // , Writable{
         HConstants.LATEST_TIMESTAMP);
 
     if (rsServices != null) {
-      this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
       // TODO: revisit if coprocessors should load in other cases
       this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
@@ -664,9 +662,14 @@ public class HRegion implements HeapSize { // , Writable{
    * @return the size of memstore in this region
    */
   public long addAndGetGlobalMemstoreSize(long memStoreSize) {
-    if (this.rsAccounting != null) {
-      rsAccounting.addAndGetGlobalMemstoreSize(memStoreSize);
-    }  
+    if (this.rsServices != null) {
+      RegionServerAccounting rsAccounting =
+        this.rsServices.getRegionServerAccounting();
+
+      if (rsAccounting != null) {
+        rsAccounting.addAndGetGlobalMemstoreSize(memStoreSize);
+      }
+    }
     return this.memstoreSize.getAndAdd(memStoreSize);
   }
 
@@ -2652,8 +2655,12 @@ public class HRegion implements HeapSize { // , Writable{
       }
       // The edits size added into rsAccounting during this replaying will not
       // be required any more. So just clear it.
-      if (this.rsAccounting != null) {
-        this.rsAccounting.clearRegionReplayEditsSize(this.regionInfo.getRegionName());
+      if (this.rsServices != null) {
+        RegionServerAccounting rsAccounting =
+          this.rsServices.getRegionServerAccounting();
+        if (rsAccounting != null) {
+          rsAccounting.clearRegionReplayEditsSize(this.regionInfo.getRegionName());
+        }
       }
     }
     if (seqid > minSeqId) {
@@ -2837,8 +2844,12 @@ public class HRegion implements HeapSize { // , Writable{
    */
   protected boolean restoreEdit(final Store s, final KeyValue kv) {
     long kvSize = s.add(kv);
-    if (this.rsAccounting != null) {
-      rsAccounting.addAndGetRegionReplayEditsSize(this.regionInfo.getRegionName(), kvSize);
+    if (this.rsServices != null) {
+      RegionServerAccounting rsAccounting =
+        this.rsServices.getRegionServerAccounting();
+      if (rsAccounting != null) {
+        rsAccounting.addAndGetRegionReplayEditsSize(this.regionInfo.getRegionName(), kvSize);
+      }
     }
     return isFlushSize(this.addAndGetGlobalMemstoreSize(kvSize));
   }
@@ -4617,7 +4628,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      31 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
+      30 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
       (6 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
