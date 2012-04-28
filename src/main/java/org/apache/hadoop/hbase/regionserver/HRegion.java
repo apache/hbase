@@ -312,6 +312,7 @@ public class HRegion implements HeapSize { // , Writable{
   final long rowProcessorTimeout;
   private volatile long lastFlushTime;
   final RegionServerServices rsServices;
+  private RegionServerAccounting rsAccounting;
   private List<Pair<Long, Long>> recentFlushes = new ArrayList<Pair<Long,Long>>();
   private long blockingMemStoreSize;
   final long threadWakeFrequency;
@@ -443,9 +444,10 @@ public class HRegion implements HeapSize { // , Writable{
     this.rowProcessorTimeout = conf.getLong(
         "hbase.hregion.row.processor.timeout", DEFAULT_ROW_PROCESSOR_TIMEOUT);
 
-    // don't initialize coprocessors if not running within a regionserver
-    // TODO: revisit if coprocessors should load in other cases
     if (rsServices != null) {
+      this.rsAccounting = this.rsServices.getRegionServerAccounting();
+      // don't initialize coprocessors if not running within a regionserver
+      // TODO: revisit if coprocessors should load in other cases
       this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
     }
     if (LOG.isDebugEnabled()) {
@@ -702,13 +704,8 @@ public class HRegion implements HeapSize { // , Writable{
    * @return the size of memstore in this region
    */
   public long addAndGetGlobalMemstoreSize(long memStoreSize) {
-    if (this.rsServices != null) {
-      RegionServerAccounting rsAccounting =
-        this.rsServices.getRegionServerAccounting();
-
-      if (rsAccounting != null) {
-        rsAccounting.addAndGetGlobalMemstoreSize(memStoreSize);
-      }
+    if (this.rsAccounting != null) {
+      rsAccounting.addAndGetGlobalMemstoreSize(memStoreSize);
     }
     return this.memstoreSize.getAndAdd(memStoreSize);
   }
@@ -2708,6 +2705,11 @@ public class HRegion implements HeapSize { // , Writable{
           throw e;
         }
       }
+      // The edits size added into rsAccounting during this replaying will not
+      // be required any more. So just clear it.
+      if (this.rsAccounting != null) {
+        this.rsAccounting.clearRegionReplayEditsSize(this.regionInfo.getRegionName());
+      }
     }
     if (seqid > minSeqId) {
       // Then we added some edits to memory. Flush and cleanup split edit files.
@@ -2889,7 +2891,11 @@ public class HRegion implements HeapSize { // , Writable{
    * @return True if we should flush.
    */
   protected boolean restoreEdit(final Store s, final KeyValue kv) {
-    return isFlushSize(this.addAndGetGlobalMemstoreSize(s.add(kv)));
+    long kvSize = s.add(kv);
+    if (this.rsAccounting != null) {
+      rsAccounting.addAndGetRegionReplayEditsSize(this.regionInfo.getRegionName(), kvSize);
+    }
+    return isFlushSize(this.addAndGetGlobalMemstoreSize(kvSize));
   }
 
   /*
@@ -4775,7 +4781,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      33 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
+      34 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
       (6 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 

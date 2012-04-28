@@ -19,9 +19,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * RegionServerAccounting keeps record of some basic real time information about
@@ -32,6 +35,11 @@ public class RegionServerAccounting {
 
   private final AtomicLong atomicGlobalMemstoreSize = new AtomicLong(0);
   
+  // Store the edits size during replaying HLog. Use this to roll back the  
+  // global memstore size once a region opening failed.
+  private final ConcurrentMap<byte[], AtomicLong> replayEditsPerRegion = 
+    new ConcurrentSkipListMap<byte[], AtomicLong>(Bytes.BYTES_COMPARATOR);
+
   /**
    * @return the global Memstore size in the RegionServer
    */
@@ -47,5 +55,47 @@ public class RegionServerAccounting {
   public long addAndGetGlobalMemstoreSize(long memStoreSize) {
     return atomicGlobalMemstoreSize.addAndGet(memStoreSize);
   }
- 
+  
+  /***
+   * Add memStoreSize to replayEditsPerRegion.
+   * 
+   * @param regionName region name.
+   * @param memStoreSize the Memstore size will be added to replayEditsPerRegion.
+   * @return the replay edits size for the region.
+   */
+  public long addAndGetRegionReplayEditsSize(byte[] regionName, long memStoreSize) {
+    AtomicLong replayEdistsSize = replayEditsPerRegion.get(regionName);
+    if (replayEdistsSize == null) {
+      replayEdistsSize = new AtomicLong(0);
+      replayEditsPerRegion.put(regionName, replayEdistsSize);
+    }
+    return replayEdistsSize.addAndGet(memStoreSize);
+  }
+
+  /**
+   * Roll back the global MemStore size for a specified region when this region
+   * can't be opened.
+   * 
+   * @param regionName the region which could not open.
+   * @return the global Memstore size in the RegionServer
+   */
+  public long rollbackRegionReplayEditsSize(byte[] regionName) {
+    AtomicLong replayEditsSize = replayEditsPerRegion.get(regionName);
+    long editsSizeLong = 0L;
+    if (replayEditsSize != null) {
+      editsSizeLong = -replayEditsSize.get();
+      clearRegionReplayEditsSize(regionName);
+    }
+    return addAndGetGlobalMemstoreSize(editsSizeLong);
+  }
+
+  /**
+   * Clear a region from replayEditsPerRegion.
+   * 
+   * @param regionName region name.
+   */
+  public void clearRegionReplayEditsSize(byte[] regionName) {
+    replayEditsPerRegion.remove(regionName);
+  }
+  
 }
