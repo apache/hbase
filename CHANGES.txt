@@ -54,6 +54,8 @@ Release 0.92.2 - Unreleased
    HBASE-5871  Usability regression, we don't parse compression algos anymore (Lars H)
    HBASE-5873  TimeOut Monitor thread should be started after atleast one region server registers. (rajeshbabu)
    HBASE-5893  Allow spaces in coprocessor conf (aka trim() className) (Matteo Bertozzi)
+   HBASE-5611  Replayed edits from regions that failed to open during recovery aren't removed from
+               the global MemStore size (Jieshan)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
