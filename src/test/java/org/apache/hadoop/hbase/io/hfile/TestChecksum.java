@@ -110,7 +110,6 @@ public class TestChecksum {
 
         // Use hbase checksums. 
         assertEquals(true, hfs.useHBaseChecksum());
-        assertEquals(true, hfs.getNoChecksumFs() != hfs.getBackingFs());
 
         // Do a read that purposely introduces checksum verification failures.
         FSDataInputStream is = fs.open(path);
@@ -217,7 +216,6 @@ public class TestChecksum {
 
         // Verify hbase checksums. 
         assertEquals(true, hfs.useHBaseChecksum());
-        assertEquals(true, hfs.getNoChecksumFs() != hfs.getBackingFs());
 
         // Read data back from file.
         FSDataInputStream is = fs.open(path);
