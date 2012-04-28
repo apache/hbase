@@ -403,9 +403,9 @@ public class HRegion implements HeapSize { // , Writable{
         "hbase.hregion.keyvalue.timestamp.slop.millisecs",
         HConstants.LATEST_TIMESTAMP);
 
+    // don't initialize coprocessors if not running within a regionserver
+    // TODO: revisit if coprocessors should load in other cases
     if (rsServices != null) {
-      // don't initialize coprocessors if not running within a regionserver
-      // TODO: revisit if coprocessors should load in other cases
       this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
     }
     if (LOG.isDebugEnabled()) {
@@ -2653,15 +2653,6 @@ public class HRegion implements HeapSize { // , Writable{
           throw e;
         }
       }
-      // The edits size added into rsAccounting during this replaying will not
-      // be required any more. So just clear it.
-      if (this.rsServices != null) {
-        RegionServerAccounting rsAccounting =
-          this.rsServices.getRegionServerAccounting();
-        if (rsAccounting != null) {
-          rsAccounting.clearRegionReplayEditsSize(this.regionInfo.getRegionName());
-        }
-      }
     }
     if (seqid > minSeqId) {
       // Then we added some edits to memory. Flush and cleanup split edit files.
@@ -2843,15 +2834,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return True if we should flush.
    */
   protected boolean restoreEdit(final Store s, final KeyValue kv) {
-    long kvSize = s.add(kv);
-    if (this.rsServices != null) {
-      RegionServerAccounting rsAccounting =
-        this.rsServices.getRegionServerAccounting();
-      if (rsAccounting != null) {
-        rsAccounting.addAndGetRegionReplayEditsSize(this.regionInfo.getRegionName(), kvSize);
-      }
-    }
-    return isFlushSize(this.addAndGetGlobalMemstoreSize(kvSize));
+    return isFlushSize(this.addAndGetGlobalMemstoreSize(s.add(kv)));
   }
 
   /*
