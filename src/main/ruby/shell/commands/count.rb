@@ -35,10 +35,22 @@ parameter. Examples:
  hbase> count 't1', INTERVAL => 100000
  hbase> count 't1', CACHE => 1000
  hbase> count 't1', INTERVAL => 10, CACHE => 1000
+
+The same commands also can be run on a table reference. Suppose you had a reference
+t to table 't1', the corresponding commands would be:
+
+ hbase> t.count
+ hbase> t.count INTERVAL => 100000
+ hbase> t.count CACHE => 1000
+ hbase> t.count INTERVAL => 10, CACHE => 1000
 EOF
       end
 
       def command(table, params = {})
+        count(table(table), params)
+      end
+
+      def count(table, params = {})
         # If the second parameter is an integer, then it is the old command syntax
         params = { 'INTERVAL' => params } if params.kind_of?(Fixnum)
 
@@ -51,7 +63,7 @@ EOF
         # Call the counter method
         now = Time.now
         formatter.header
-        count = table(table).count(params['INTERVAL'].to_i, params['CACHE'].to_i) do |cnt, row|
+        count = table._count_internal(params['INTERVAL'].to_i, params['CACHE'].to_i) do |cnt, row|
           formatter.row([ "Current count: #{cnt}, row: #{row}" ])
         end
         formatter.footer(now, count)
@@ -59,3 +71,6 @@ EOF
     end
   end
 end
+
+#Add the method table.count that calls count.count
+::Hbase::Table.add_shell_command("count")

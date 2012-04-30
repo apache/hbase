@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
@@ -87,6 +88,7 @@ import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
 
@@ -3458,6 +3460,45 @@ public class TestHRegion extends HBaseTestCase {
           htu.shutdownMiniCluster();
         }
       }
+  }
+  
+  /**
+   * Testcase to check state of region initialization task set to ABORTED or not if any exceptions
+   * during initialization
+   * 
+   * @throws Exception
+   */
+  @Test
+  public void testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization() throws Exception {
+    HRegionInfo info = null;
+    try {
+      FileSystem fs = Mockito.mock(FileSystem.class);
+      Mockito.when(fs.exists((Path) Mockito.anyObject())).thenThrow(new IOException());
+      HTableDescriptor htd = new HTableDescriptor(tableName);
+      htd.addFamily(new HColumnDescriptor("cf"));
+      info = new HRegionInfo(htd.getName(), HConstants.EMPTY_BYTE_ARRAY,
+          HConstants.EMPTY_BYTE_ARRAY, false);
+      Path path = new Path(DIR + "testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization");
+      // no where we are instantiating HStore in this test case so useTableNameGlobally is null. To
+      // avoid NullPointerException we are setting useTableNameGlobally to false.
+      SchemaMetrics.setUseTableNameInTest(false);
+      region = HRegion.newHRegion(path, null, fs, conf, info, htd, null);
+      // region initialization throws IOException and set task state to ABORTED.
+      region.initialize();
+      fail("Region initialization should fail due to IOException");
+    } catch (IOException io) {
+      List<MonitoredTask> tasks = TaskMonitor.get().getTasks();
+      for (MonitoredTask monitoredTask : tasks) {
+        if (!(monitoredTask instanceof MonitoredRPCHandler)
+            && monitoredTask.getDescription().contains(region.toString())) {
+          assertTrue("Region state should be ABORTED.",
+              monitoredTask.getState().equals(MonitoredTask.State.ABORTED));
+          break;
+        }
+      }
+    } finally {
+      HRegion.closeHRegion(region);
+    }
   }
 
   private void putData(int startRow, int numRows, byte [] qf,

@@ -29,14 +29,28 @@ a column and timestamp. Examples:
   hbase> deleteall 't1', 'r1'
   hbase> deleteall 't1', 'r1', 'c1'
   hbase> deleteall 't1', 'r1', 'c1', ts1
+
+The same commands also can be run on a table reference. Suppose you had a reference
+t to table 't1', the corresponding command would be:
+
+  hbase> t.deleteall 'r1'
+  hbase> t.deleteall 'r1', 'c1'
+  hbase> t.deleteall 'r1', 'c1', ts1
 EOF
       end
 
-      def command(table, row, column = nil, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+      def command(table, row, column, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+        deleteall(table(table), row, column, timestamp)
+      end
+
+      def deleteall(table, row, column = nil, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
         format_simple_command do
-          table(table).deleteall(row, column, timestamp)
+          table.deleteall_internal(row, column, timestamp)
         end
       end
     end
   end
 end
+
+#Add the method table.deleteall that calls deleteall.deleteall
+::Hbase::Table.add_shell_command("deleteall")

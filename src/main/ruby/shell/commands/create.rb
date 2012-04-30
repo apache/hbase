@@ -38,13 +38,22 @@ Examples:
   hbase> # Optionally pre-split the table into NUMREGIONS, using
   hbase> # SPLITALGO ("HexStringSplit", "UniformSplit" or classname)
   hbase> create 't1', 'f1', {NUMREGIONS => 15, SPLITALGO => 'HexStringSplit'}
+
+  You can also keep around a reference to the created table:
+
+  hbase> t1 = create 't1', 'f1'
+
+  Which gives you a reference to the table named 't1', on which you can then
+  call methods.
 EOF
       end
 
       def command(table, *args)
         format_simple_command do
-          admin.create(table, *args)
+          ret = admin.create(table, *args)
         end
+        #and then return the table you just created
+        table(table)
       end
     end
   end

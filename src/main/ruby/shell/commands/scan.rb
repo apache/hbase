@@ -58,14 +58,28 @@ cells). This option cannot be combined with requesting specific COLUMNS.
 Disabled by default.  Example:
 
   hbase> scan 't1', {RAW => true, VERSIONS => 10}
+
+Scan can also be used directly from a table, by first getting a reference to a table, like such:
+
+  hbase> t = get_table 't'
+  hbase> t.scan
+
+Note in the above situation, you can still provide all the filtering, columns, options, etc as
+described above.
 EOF
       end
 
       def command(table, args = {})
+        scan(table(table), args)
+      end
+
+      #internal command that actually does the scanning
+      def scan(table, args = {})
         now = Time.now
         formatter.header(["ROW", "COLUMN+CELL"])
 
-        count = table(table).scan(args) do |row, cells|
+        #actually do the scanning
+        count = table._scan_internal(args) do |row, cells|
           formatter.row([ row, cells ])
         end
 
@@ -74,3 +88,6 @@ EOF
     end
   end
 end
+
+#Add the method table.scan that calls Scan.scan
+::Hbase::Table.add_shell_command("scan")
