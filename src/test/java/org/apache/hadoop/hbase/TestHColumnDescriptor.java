@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import org.junit.experimental.categories.Category;
 
 import org.junit.Test;
 
 /** Tests the HColumnDescriptor with appropriate arguments */
+@Category(SmallTests.class)
 public class TestHColumnDescriptor {
 
   @Test
