@@ -817,10 +817,10 @@ public class TestHBaseFsck {
    * the region is not deployed when the table is disabled.
    */
   @Test
-  public void testRegionShouldNotDeployed() throws Exception {
-    String table = "tableRegionShouldNotDeployed";
+  public void testRegionShouldNotBeDeployed() throws Exception {
+    String table = "tableRegionShouldNotBeDeployed";
     try {
-      LOG.info("Starting testRegionShouldNotDeployed.");
+      LOG.info("Starting testRegionShouldNotBeDeployed.");
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       assertTrue(cluster.waitForActiveAndReadyMaster());
 
