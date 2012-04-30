@@ -143,7 +143,7 @@ partitioner.
 and write your content directly to the filesystem properly formatted as
 HBase data files (HFiles).  Your import will run faster, perhaps an order of
 magnitude faster if not more.  For more on how this mechanism works, see
-<a href="http://hbase.apache.org/docs/current/bulk-loads.html">Bulk Loads</code>
+<a href="http://hbase.apache.org/bulk-loads.html">Bulk Loads</code>
 documentation.
 </p>
 
