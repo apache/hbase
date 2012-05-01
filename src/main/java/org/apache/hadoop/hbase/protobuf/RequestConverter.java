@@ -18,16 +18,12 @@
 package org.apache.hadoop.hbase.protobuf;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NavigableMap;
-import java.util.NavigableSet;
 import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -43,7 +39,6 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
-import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -58,9 +53,9 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterReque
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALEdit.FamilyScope;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALEdit.ScopeType;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALKey;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALEdit.FamilyScope;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath;
@@ -74,14 +69,10 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowRequest;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -160,7 +151,7 @@ public final class RequestConverter {
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setExistenceOnly(existenceOnly);
     builder.setRegion(region);
-    builder.setGet(buildGet(get));
+    builder.setGet(ProtobufUtil.toGet(get));
     return builder.build();
   }
 
@@ -222,7 +213,7 @@ public final class RequestConverter {
     builder.setRegion(region);
     Condition condition = buildCondition(
       row, family, qualifier, comparator, compareType);
-    builder.setMutate(buildMutate(MutateType.PUT, put));
+    builder.setMutate(ProtobufUtil.toMutate(MutateType.PUT, put));
     builder.setCondition(condition);
     return builder.build();
   }
@@ -250,7 +241,7 @@ public final class RequestConverter {
     builder.setRegion(region);
     Condition condition = buildCondition(
       row, family, qualifier, comparator, compareType);
-    builder.setMutate(buildMutate(MutateType.DELETE, delete));
+    builder.setMutate(ProtobufUtil.toMutate(MutateType.DELETE, delete));
     builder.setCondition(condition);
     return builder.build();
   }
@@ -269,7 +260,7 @@ public final class RequestConverter {
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setMutate(buildMutate(MutateType.PUT, put));
+    builder.setMutate(ProtobufUtil.toMutate(MutateType.PUT, put));
     return builder.build();
   }
 
@@ -287,7 +278,7 @@ public final class RequestConverter {
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setMutate(buildMutate(MutateType.APPEND, append));
+    builder.setMutate(ProtobufUtil.toMutate(MutateType.APPEND, append));
     return builder.build();
   }
 
@@ -304,7 +295,7 @@ public final class RequestConverter {
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setMutate(buildMutate(increment));
+    builder.setMutate(ProtobufUtil.toMutate(increment));
     return builder.build();
   }
 
@@ -322,7 +313,7 @@ public final class RequestConverter {
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setMutate(buildMutate(MutateType.DELETE, delete));
+    builder.setMutate(ProtobufUtil.toMutate(MutateType.DELETE, delete));
     return builder.build();
   }
 
@@ -352,7 +343,7 @@ public final class RequestConverter {
           "RowMutations supports only put and delete, not "
             + mutation.getClass().getName());
       }
-      Mutate mutate = buildMutate(mutateType, mutation);
+      Mutate mutate = ProtobufUtil.toMutate(mutateType, mutation);
       builder.addAction(ProtobufUtil.toParameter(mutate));
     }
     return builder.build();
@@ -377,56 +368,7 @@ public final class RequestConverter {
     builder.setNumberOfRows(numberOfRows);
     builder.setCloseScanner(closeScanner);
     builder.setRegion(region);
-
-    ClientProtos.Scan.Builder scanBuilder =
-      ClientProtos.Scan.newBuilder();
-    scanBuilder.setCacheBlocks(scan.getCacheBlocks());
-    scanBuilder.setBatchSize(scan.getBatch());
-    scanBuilder.setMaxVersions(scan.getMaxVersions());
-    TimeRange timeRange = scan.getTimeRange();
-    if (!timeRange.isAllTime()) {
-      HBaseProtos.TimeRange.Builder timeRangeBuilder =
-        HBaseProtos.TimeRange.newBuilder();
-      timeRangeBuilder.setFrom(timeRange.getMin());
-      timeRangeBuilder.setTo(timeRange.getMax());
-      scanBuilder.setTimeRange(timeRangeBuilder.build());
-    }
-    Map<String, byte[]> attributes = scan.getAttributesMap();
-    if (!attributes.isEmpty()) {
-      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
-      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
-        attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(ByteString.copyFrom(attribute.getValue()));
-        scanBuilder.addAttribute(attributeBuilder.build());
-      }
-    }
-    byte[] startRow = scan.getStartRow();
-    if (startRow != null && startRow.length > 0) {
-      scanBuilder.setStartRow(ByteString.copyFrom(startRow));
-    }
-    byte[] stopRow = scan.getStopRow();
-    if (stopRow != null && stopRow.length > 0) {
-      scanBuilder.setStopRow(ByteString.copyFrom(stopRow));
-    }
-    if (scan.hasFilter()) {
-      scanBuilder.setFilter(ProtobufUtil.toParameter(scan.getFilter()));
-    }
-    Column.Builder columnBuilder = Column.newBuilder();
-    for (Map.Entry<byte[],NavigableSet<byte []>>
-        family: scan.getFamilyMap().entrySet()) {
-      columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
-      NavigableSet<byte []> columns = family.getValue();
-      columnBuilder.clearQualifier();
-      if (columns != null && columns.size() > 0) {
-        for (byte [] qualifier: family.getValue()) {
-          if (qualifier != null) {
-            columnBuilder.addQualifier(ByteString.copyFrom(qualifier));
-          }
-        }
-      }
-      scanBuilder.addColumn(columnBuilder.build());
-    }
-    builder.setScan(scanBuilder.build());
+    builder.setScan(ProtobufUtil.toScan(scan));
     return builder.build();
   }
 
@@ -517,7 +459,7 @@ public final class RequestConverter {
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setCall(buildExec(exec));
+    builder.setCall(ProtobufUtil.toExec(exec));
     return builder.build();
   }
 
@@ -540,17 +482,17 @@ public final class RequestConverter {
       Message protoAction = null;
       Row row = action.getAction();
       if (row instanceof Get) {
-        protoAction = buildGet((Get)row);
+        protoAction = ProtobufUtil.toGet((Get)row);
       } else if (row instanceof Put) {
-        protoAction = buildMutate(MutateType.PUT, (Put)row);
+        protoAction = ProtobufUtil.toMutate(MutateType.PUT, (Put)row);
       } else if (row instanceof Delete) {
-        protoAction = buildMutate(MutateType.DELETE, (Delete)row);
+        protoAction = ProtobufUtil.toMutate(MutateType.DELETE, (Delete)row);
       } else if (row instanceof Exec) {
-        protoAction = buildExec((Exec)row);
+        protoAction = ProtobufUtil.toExec((Exec)row);
       } else if (row instanceof Append) {
-        protoAction = buildMutate(MutateType.APPEND, (Append)row);
+        protoAction = ProtobufUtil.toMutate(MutateType.APPEND, (Append)row);
       } else if (row instanceof Increment) {
-        protoAction = buildMutate((Increment)row);
+        protoAction = ProtobufUtil.toMutate((Increment)row);
       } else if (row instanceof RowMutations) {
         continue; // ignore RowMutations
       } else {
@@ -874,203 +816,5 @@ public final class RequestConverter {
     builder.setComparator(ProtobufUtil.toParameter(comparator));
     builder.setCompareType(compareType);
     return builder.build();
-  }
-
-  /**
-   * Create a new protocol buffer Exec based on a client Exec
-   *
-   * @param exec
-   * @return
-   * @throws IOException
-   */
-  private static ClientProtos.Exec buildExec(
-      final Exec exec) throws IOException {
-    ClientProtos.Exec.Builder
-      builder = ClientProtos.Exec.newBuilder();
-    Configuration conf = exec.getConf();
-    if (conf != null) {
-      NameStringPair.Builder propertyBuilder = NameStringPair.newBuilder();
-      Iterator<Entry<String, String>> iterator = conf.iterator();
-      while (iterator.hasNext()) {
-        Entry<String, String> entry = iterator.next();
-        propertyBuilder.setName(entry.getKey());
-        propertyBuilder.setValue(entry.getValue());
-        builder.addProperty(propertyBuilder.build());
-      }
-    }
-    builder.setProtocolName(exec.getProtocolName());
-    builder.setMethodName(exec.getMethodName());
-    builder.setRow(ByteString.copyFrom(exec.getRow()));
-    Object[] parameters = exec.getParameters();
-    if (parameters != null && parameters.length > 0) {
-      Class<?>[] declaredClasses = exec.getParameterClasses();
-      for (int i = 0, n = parameters.length; i < n; i++) {
-        builder.addParameter(
-          ProtobufUtil.toParameter(declaredClasses[i], parameters[i]));
-      }
-    }
-    return builder.build();
-  }
-
-  /**
-   * Create a protocol buffer Get based on a client Get.
-   *
-   * @param get the client Get
-   * @return a protocol buffer Get
-   * @throws IOException
-   */
-  private static ClientProtos.Get buildGet(
-      final Get get) throws IOException {
-    ClientProtos.Get.Builder builder =
-      ClientProtos.Get.newBuilder();
-    builder.setRow(ByteString.copyFrom(get.getRow()));
-    builder.setCacheBlocks(get.getCacheBlocks());
-    builder.setMaxVersions(get.getMaxVersions());
-    if (get.getLockId() >= 0) {
-      builder.setLockId(get.getLockId());
-    }
-    if (get.getFilter() != null) {
-      builder.setFilter(ProtobufUtil.toParameter(get.getFilter()));
-    }
-    TimeRange timeRange = get.getTimeRange();
-    if (!timeRange.isAllTime()) {
-      HBaseProtos.TimeRange.Builder timeRangeBuilder =
-        HBaseProtos.TimeRange.newBuilder();
-      timeRangeBuilder.setFrom(timeRange.getMin());
-      timeRangeBuilder.setTo(timeRange.getMax());
-      builder.setTimeRange(timeRangeBuilder.build());
-    }
-    Map<String, byte[]> attributes = get.getAttributesMap();
-    if (!attributes.isEmpty()) {
-      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
-      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
-        attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(ByteString.copyFrom(attribute.getValue()));
-        builder.addAttribute(attributeBuilder.build());
-      }
-    }
-    if (get.hasFamilies()) {
-      Column.Builder columnBuilder = Column.newBuilder();
-      Map<byte[], NavigableSet<byte[]>> families = get.getFamilyMap();
-      for (Map.Entry<byte[], NavigableSet<byte[]>> family: families.entrySet()) {
-        NavigableSet<byte[]> qualifiers = family.getValue();
-        columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
-        columnBuilder.clearQualifier();
-        if (qualifiers != null && qualifiers.size() > 0) {
-          for (byte[] qualifier: qualifiers) {
-            if (qualifier != null) {
-              columnBuilder.addQualifier(ByteString.copyFrom(qualifier));
-            }
-          }
-        }
-        builder.addColumn(columnBuilder.build());
-      }
-    }
-    return builder.build();
-  }
-
-  private static Mutate buildMutate(final Increment increment) {
-    Mutate.Builder builder = Mutate.newBuilder();
-    builder.setRow(ByteString.copyFrom(increment.getRow()));
-    builder.setMutateType(MutateType.INCREMENT);
-    builder.setWriteToWAL(increment.getWriteToWAL());
-    if (increment.getLockId() >= 0) {
-      builder.setLockId(increment.getLockId());
-    }
-    TimeRange timeRange = increment.getTimeRange();
-    if (!timeRange.isAllTime()) {
-      HBaseProtos.TimeRange.Builder timeRangeBuilder =
-        HBaseProtos.TimeRange.newBuilder();
-      timeRangeBuilder.setFrom(timeRange.getMin());
-      timeRangeBuilder.setTo(timeRange.getMax());
-      builder.setTimeRange(timeRangeBuilder.build());
-    }
-    ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
-    QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-    for (Map.Entry<byte[],NavigableMap<byte[], Long>>
-        family: increment.getFamilyMap().entrySet()) {
-      columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
-      columnBuilder.clearQualifierValue();
-      NavigableMap<byte[], Long> values = family.getValue();
-      if (values != null && values.size() > 0) {
-        for (Map.Entry<byte[], Long> value: values.entrySet()) {
-          valueBuilder.setQualifier(ByteString.copyFrom(value.getKey()));
-          valueBuilder.setValue(ByteString.copyFrom(
-            Bytes.toBytes(value.getValue().longValue())));
-          columnBuilder.addQualifierValue(valueBuilder.build());
-        }
-      }
-      builder.addColumnValue(columnBuilder.build());
-    }
-    return builder.build();
-  }
-
-  /**
-   * Create a protocol buffer Mutate based on a client Mutation
-   *
-   * @param mutateType
-   * @param mutation
-   * @return a mutate
-   * @throws IOException
-   */
-  private static Mutate buildMutate(final MutateType mutateType,
-      final Mutation mutation) throws IOException {
-    Mutate.Builder mutateBuilder = Mutate.newBuilder();
-    mutateBuilder.setRow(ByteString.copyFrom(mutation.getRow()));
-    mutateBuilder.setMutateType(mutateType);
-    mutateBuilder.setWriteToWAL(mutation.getWriteToWAL());
-    if (mutation.getLockId() >= 0) {
-      mutateBuilder.setLockId(mutation.getLockId());
-    }
-    mutateBuilder.setTimestamp(mutation.getTimeStamp());
-    Map<String, byte[]> attributes = mutation.getAttributesMap();
-    if (!attributes.isEmpty()) {
-      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
-      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
-        attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(ByteString.copyFrom(attribute.getValue()));
-        mutateBuilder.addAttribute(attributeBuilder.build());
-      }
-    }
-    ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
-    QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-    for (Map.Entry<byte[],List<KeyValue>>
-        family: mutation.getFamilyMap().entrySet()) {
-      columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
-      columnBuilder.clearQualifierValue();
-      for (KeyValue value: family.getValue()) {
-        valueBuilder.setQualifier(ByteString.copyFrom(value.getQualifier()));
-        valueBuilder.setValue(ByteString.copyFrom(value.getValue()));
-        valueBuilder.setTimestamp(value.getTimestamp());
-        if (mutateType == MutateType.DELETE) {
-          KeyValue.Type keyValueType = KeyValue.Type.codeToType(value.getType());
-          valueBuilder.setDeleteType(toDeleteType(keyValueType));
-        }
-        columnBuilder.addQualifierValue(valueBuilder.build());
-      }
-      mutateBuilder.addColumnValue(columnBuilder.build());
-    }
-    return mutateBuilder.build();
-  }
-
-  /**
-   * Convert a delete KeyValue type to protocol buffer DeleteType.
-   *
-   * @param type
-   * @return
-   * @throws IOException
-   */
-  private static DeleteType toDeleteType(
-      KeyValue.Type type) throws IOException {
-    switch (type) {
-    case Delete:
-      return DeleteType.DELETE_ONE_VERSION;
-    case DeleteColumn:
-      return DeleteType.DELETE_MULTIPLE_VERSIONS;
-    case DeleteFamily:
-      return DeleteType.DELETE_FAMILY;
-      default:
-        throw new IOException("Unknown delete type: " + type);
-    }
   }
 }

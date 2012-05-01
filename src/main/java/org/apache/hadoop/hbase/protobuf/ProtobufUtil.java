@@ -28,8 +28,12 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -48,6 +52,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.MultiResponse;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
@@ -58,6 +63,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
@@ -555,6 +561,68 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Convert a client Scan to a protocol buffer Scan
+   *
+   * @param scan the client Scan to convert
+   * @return the converted protocol buffer Scan
+   * @throws IOException
+   */
+  public static ClientProtos.Scan toScan(
+      final Scan scan) throws IOException {
+    ClientProtos.Scan.Builder scanBuilder =
+      ClientProtos.Scan.newBuilder();
+    scanBuilder.setCacheBlocks(scan.getCacheBlocks());
+    if (scan.getBatch() > 0) {
+      scanBuilder.setBatchSize(scan.getBatch());
+    }
+    scanBuilder.setMaxVersions(scan.getMaxVersions());
+    TimeRange timeRange = scan.getTimeRange();
+    if (!timeRange.isAllTime()) {
+      HBaseProtos.TimeRange.Builder timeRangeBuilder =
+        HBaseProtos.TimeRange.newBuilder();
+      timeRangeBuilder.setFrom(timeRange.getMin());
+      timeRangeBuilder.setTo(timeRange.getMax());
+      scanBuilder.setTimeRange(timeRangeBuilder.build());
+    }
+    Map<String, byte[]> attributes = scan.getAttributesMap();
+    if (!attributes.isEmpty()) {
+      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
+      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
+        attributeBuilder.setName(attribute.getKey());
+        attributeBuilder.setValue(ByteString.copyFrom(attribute.getValue()));
+        scanBuilder.addAttribute(attributeBuilder.build());
+      }
+    }
+    byte[] startRow = scan.getStartRow();
+    if (startRow != null && startRow.length > 0) {
+      scanBuilder.setStartRow(ByteString.copyFrom(startRow));
+    }
+    byte[] stopRow = scan.getStopRow();
+    if (stopRow != null && stopRow.length > 0) {
+      scanBuilder.setStopRow(ByteString.copyFrom(stopRow));
+    }
+    if (scan.hasFilter()) {
+      scanBuilder.setFilter(ProtobufUtil.toParameter(scan.getFilter()));
+    }
+    Column.Builder columnBuilder = Column.newBuilder();
+    for (Map.Entry<byte[],NavigableSet<byte []>>
+        family: scan.getFamilyMap().entrySet()) {
+      columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
+      NavigableSet<byte []> columns = family.getValue();
+      columnBuilder.clearQualifier();
+      if (columns != null && columns.size() > 0) {
+        for (byte [] qualifier: family.getValue()) {
+          if (qualifier != null) {
+            columnBuilder.addQualifier(ByteString.copyFrom(qualifier));
+          }
+        }
+      }
+      scanBuilder.addColumn(columnBuilder.build());
+    }
+    return scanBuilder.build();
+  }
+
+  /**
    * Convert a protocol buffer Scan to a client Scan
    *
    * @param proto the protocol buffer Scan to convert
@@ -613,6 +681,190 @@ public final class ProtobufUtil {
       }
     }
     return scan;
+  }
+
+
+  /**
+   * Create a new protocol buffer Exec based on a client Exec
+   *
+   * @param exec
+   * @return
+   * @throws IOException
+   */
+  public static ClientProtos.Exec toExec(
+      final Exec exec) throws IOException {
+    ClientProtos.Exec.Builder
+      builder = ClientProtos.Exec.newBuilder();
+    Configuration conf = exec.getConf();
+    if (conf != null) {
+      NameStringPair.Builder propertyBuilder = NameStringPair.newBuilder();
+      Iterator<Entry<String, String>> iterator = conf.iterator();
+      while (iterator.hasNext()) {
+        Entry<String, String> entry = iterator.next();
+        propertyBuilder.setName(entry.getKey());
+        propertyBuilder.setValue(entry.getValue());
+        builder.addProperty(propertyBuilder.build());
+      }
+    }
+    builder.setProtocolName(exec.getProtocolName());
+    builder.setMethodName(exec.getMethodName());
+    builder.setRow(ByteString.copyFrom(exec.getRow()));
+    Object[] parameters = exec.getParameters();
+    if (parameters != null && parameters.length > 0) {
+      Class<?>[] declaredClasses = exec.getParameterClasses();
+      for (int i = 0, n = parameters.length; i < n; i++) {
+        builder.addParameter(
+          ProtobufUtil.toParameter(declaredClasses[i], parameters[i]));
+      }
+    }
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer Get based on a client Get.
+   *
+   * @param get the client Get
+   * @return a protocol buffer Get
+   * @throws IOException
+   */
+  public static ClientProtos.Get toGet(
+      final Get get) throws IOException {
+    ClientProtos.Get.Builder builder =
+      ClientProtos.Get.newBuilder();
+    builder.setRow(ByteString.copyFrom(get.getRow()));
+    builder.setCacheBlocks(get.getCacheBlocks());
+    builder.setMaxVersions(get.getMaxVersions());
+    if (get.getLockId() >= 0) {
+      builder.setLockId(get.getLockId());
+    }
+    if (get.getFilter() != null) {
+      builder.setFilter(ProtobufUtil.toParameter(get.getFilter()));
+    }
+    TimeRange timeRange = get.getTimeRange();
+    if (!timeRange.isAllTime()) {
+      HBaseProtos.TimeRange.Builder timeRangeBuilder =
+        HBaseProtos.TimeRange.newBuilder();
+      timeRangeBuilder.setFrom(timeRange.getMin());
+      timeRangeBuilder.setTo(timeRange.getMax());
+      builder.setTimeRange(timeRangeBuilder.build());
+    }
+    Map<String, byte[]> attributes = get.getAttributesMap();
+    if (!attributes.isEmpty()) {
+      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
+      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
+        attributeBuilder.setName(attribute.getKey());
+        attributeBuilder.setValue(ByteString.copyFrom(attribute.getValue()));
+        builder.addAttribute(attributeBuilder.build());
+      }
+    }
+    if (get.hasFamilies()) {
+      Column.Builder columnBuilder = Column.newBuilder();
+      Map<byte[], NavigableSet<byte[]>> families = get.getFamilyMap();
+      for (Map.Entry<byte[], NavigableSet<byte[]>> family: families.entrySet()) {
+        NavigableSet<byte[]> qualifiers = family.getValue();
+        columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
+        columnBuilder.clearQualifier();
+        if (qualifiers != null && qualifiers.size() > 0) {
+          for (byte[] qualifier: qualifiers) {
+            if (qualifier != null) {
+              columnBuilder.addQualifier(ByteString.copyFrom(qualifier));
+            }
+          }
+        }
+        builder.addColumn(columnBuilder.build());
+      }
+    }
+    return builder.build();
+  }
+
+  /**
+   * Convert a client Increment to a protobuf Mutate.
+   *
+   * @param increment
+   * @return the converted mutate
+   */
+  public static Mutate toMutate(final Increment increment) {
+    Mutate.Builder builder = Mutate.newBuilder();
+    builder.setRow(ByteString.copyFrom(increment.getRow()));
+    builder.setMutateType(MutateType.INCREMENT);
+    builder.setWriteToWAL(increment.getWriteToWAL());
+    if (increment.getLockId() >= 0) {
+      builder.setLockId(increment.getLockId());
+    }
+    TimeRange timeRange = increment.getTimeRange();
+    if (!timeRange.isAllTime()) {
+      HBaseProtos.TimeRange.Builder timeRangeBuilder =
+        HBaseProtos.TimeRange.newBuilder();
+      timeRangeBuilder.setFrom(timeRange.getMin());
+      timeRangeBuilder.setTo(timeRange.getMax());
+      builder.setTimeRange(timeRangeBuilder.build());
+    }
+    ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
+    QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
+    for (Map.Entry<byte[],NavigableMap<byte[], Long>>
+        family: increment.getFamilyMap().entrySet()) {
+      columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
+      columnBuilder.clearQualifierValue();
+      NavigableMap<byte[], Long> values = family.getValue();
+      if (values != null && values.size() > 0) {
+        for (Map.Entry<byte[], Long> value: values.entrySet()) {
+          valueBuilder.setQualifier(ByteString.copyFrom(value.getKey()));
+          valueBuilder.setValue(ByteString.copyFrom(
+            Bytes.toBytes(value.getValue().longValue())));
+          columnBuilder.addQualifierValue(valueBuilder.build());
+        }
+      }
+      builder.addColumnValue(columnBuilder.build());
+    }
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer Mutate based on a client Mutation
+   *
+   * @param mutateType
+   * @param mutation
+   * @return a mutate
+   * @throws IOException
+   */
+  public static Mutate toMutate(final MutateType mutateType,
+      final Mutation mutation) throws IOException {
+    Mutate.Builder mutateBuilder = Mutate.newBuilder();
+    mutateBuilder.setRow(ByteString.copyFrom(mutation.getRow()));
+    mutateBuilder.setMutateType(mutateType);
+    mutateBuilder.setWriteToWAL(mutation.getWriteToWAL());
+    if (mutation.getLockId() >= 0) {
+      mutateBuilder.setLockId(mutation.getLockId());
+    }
+    mutateBuilder.setTimestamp(mutation.getTimeStamp());
+    Map<String, byte[]> attributes = mutation.getAttributesMap();
+    if (!attributes.isEmpty()) {
+      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
+      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
+        attributeBuilder.setName(attribute.getKey());
+        attributeBuilder.setValue(ByteString.copyFrom(attribute.getValue()));
+        mutateBuilder.addAttribute(attributeBuilder.build());
+      }
+    }
+    ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
+    QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
+    for (Map.Entry<byte[],List<KeyValue>>
+        family: mutation.getFamilyMap().entrySet()) {
+      columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
+      columnBuilder.clearQualifierValue();
+      for (KeyValue value: family.getValue()) {
+        valueBuilder.setQualifier(ByteString.copyFrom(value.getQualifier()));
+        valueBuilder.setValue(ByteString.copyFrom(value.getValue()));
+        valueBuilder.setTimestamp(value.getTimestamp());
+        if (mutateType == MutateType.DELETE) {
+          KeyValue.Type keyValueType = KeyValue.Type.codeToType(value.getType());
+          valueBuilder.setDeleteType(toDeleteType(keyValueType));
+        }
+        columnBuilder.addQualifierValue(valueBuilder.build());
+      }
+      mutateBuilder.addColumnValue(columnBuilder.build());
+    }
+    return mutateBuilder.build();
   }
 
   /**
@@ -687,6 +939,27 @@ public final class ProtobufUtil {
       entries.add(new HLog.Entry(key, edit));
     }
     return entries.toArray(new HLog.Entry[entries.size()]);
+  }
+
+  /**
+   * Convert a delete KeyValue type to protocol buffer DeleteType.
+   *
+   * @param type
+   * @return
+   * @throws IOException
+   */
+  public static DeleteType toDeleteType(
+      KeyValue.Type type) throws IOException {
+    switch (type) {
+    case Delete:
+      return DeleteType.DELETE_ONE_VERSION;
+    case DeleteColumn:
+      return DeleteType.DELETE_MULTIPLE_VERSIONS;
+    case DeleteFamily:
+      return DeleteType.DELETE_FAMILY;
+      default:
+        throw new IOException("Unknown delete type: " + type);
+    }
   }
 
   /**
