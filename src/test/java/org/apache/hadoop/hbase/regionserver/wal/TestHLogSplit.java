@@ -116,8 +116,6 @@ public class TestHLogSplit {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().
-            setBoolean("dfs.support.append", true);
-    TEST_UTIL.getConfiguration().
             setStrings("hbase.rootdir", hbaseDir.toString());
     TEST_UTIL.getConfiguration().
             setClass("hbase.regionserver.hlog.writer.impl",
@@ -1223,7 +1221,9 @@ public class TestHLogSplit {
 
     switch (corruption) {
       case APPEND_GARBAGE:
-        out = fs.append(path);
+        fs.delete(path, false);
+        out = fs.create(path);
+        out.write(corrupted_bytes);
         out.write("-----".getBytes());
         closeOrFlush(close, out);
         break;

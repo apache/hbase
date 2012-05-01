@@ -1099,6 +1099,7 @@ Release 0.90.7 - Unreleased
 
   BUG FIXES
    HBASE-5271  Result.getValue and Result.getColumnLatest return the wrong column (Ghais Issa)
+   HBASE-5908  TestHLogSplit.testTralingGarbageCorruptionFileSkipErrorsPasses should not use append to corrupt the HLog (Gregory Chanan)
 
 Release 0.90.6 - Unreleased
 
