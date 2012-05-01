@@ -136,79 +136,63 @@ class ProcessServerShutdown extends RegionServerOperation {
 
   /** Finds regions that the dead region server was serving
    */
-  protected void scanMetaRegion(HRegionInterface server, long scannerId,
+  protected void scanMetaRegion(HRegionInterface server, Scan scan,
     byte [] regionName)
   throws IOException {
+    long scannerId = server.openScanner(regionName, scan);
+
+    int rows = scan.getCaching();
+    // The default caching if not set for scans is -1. Handle it
+    if (rows < 1) rows = 1;
+
     List<ToDoEntry> toDoList = new ArrayList<ToDoEntry>();
     Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
     List<byte []> emptyRows = new ArrayList<byte []>();
     try {
       while (true) {
-        Result values = null;
+        Result[] values = null;
         try {
-          values = server.next(scannerId);
+          values = server.next(scannerId, rows);
         } catch (IOException e) {
           LOG.error("Shutdown scanning of meta region",
             RemoteExceptionHandler.checkIOException(e));
           break;
         }
-        if (values == null || values.size() == 0) {
+        if (values == null || values.length == 0) {
           break;
         }
-        byte [] row = values.getRow();
-        // Check server name.  If null, skip (We used to consider it was on
-        // shutdown server but that would mean that we'd reassign regions that
-        // were already out being assigned, ones that were product of a split
-        // that happened while the shutdown was being processed).
-        String serverAddress = BaseScanner.getServerAddress(values);
-        long startCode = BaseScanner.getStartCode(values);
+        for(Result value: values) {
+          if (value.size() == 0) continue;
+          byte [] row = value.getRow();
+          // Check server name.  If null, skip (We used to consider it was on
+          // shutdown server but that would mean that we'd reassign regions that
+          // were already out being assigned, ones that were product of a split
+          // that happened while the shutdown was being processed).
+          String serverAddress = BaseScanner.getServerAddress(value);
+          long startCode = BaseScanner.getStartCode(value);
 
-        String serverName = null;
-        if (serverAddress != null && serverAddress.length() > 0) {
-          serverName = HServerInfo.getServerName(serverAddress, startCode);
-        }
-        if (serverName == null || !deadServer.equals(serverName)) {
-          // This isn't the server you're looking for - move along
-          continue;
-        }
+          String serverName = null;
+          if (serverAddress != null && serverAddress.length() > 0) {
+            serverName = HServerInfo.getServerName(serverAddress, startCode);
+          }
+          if (serverName == null || !deadServer.equals(serverName)) {
+            // This isn't the server you're looking for - move along
+            continue;
+          }
 
-        if (LOG.isDebugEnabled() && row != null) {
-          LOG.debug("Shutdown scanner for " + serverName + " processing " +
-            Bytes.toString(row));
-        }
+          if (LOG.isDebugEnabled() && row != null) {
+            LOG.debug("Shutdown scanner for " + serverName + " processing " +
+              Bytes.toString(row));
+          }
 
-        HRegionInfo info = master.getHRegionInfo(row, values);
-        if (info == null) {
-          emptyRows.add(row);
-          continue;
-        }
-
-        synchronized (master.getRegionManager()) {
-          if (info.isMetaTable()) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("removing meta region " +
-                  Bytes.toString(info.getRegionName()) +
-              " from online meta regions");
-            }
-            master.getRegionManager().offlineMetaRegionWithStartKey(info.getStartKey());
+          HRegionInfo info = master.getHRegionInfo(row, value);
+          if (info == null) {
+            emptyRows.add(row);
+            continue;
           }
 
           ToDoEntry todo = new ToDoEntry(info);
           toDoList.add(todo);
-
-          if (master.getRegionManager().isOfflined(info.getRegionNameAsString()) ||
-              info.isOffline()) {
-            master.getRegionManager().removeRegion(info);
-            // Mark region offline
-            if (!info.isOffline()) {
-              todo.regionOffline = true;
-            }
-          } else {
-            if (!info.isOffline() && !info.isSplit()) {
-              // Get region reassigned
-              regions.add(info);
-            }
-          }
         }
       }
     } finally {
@@ -230,7 +214,36 @@ class ProcessServerShutdown extends RegionServerOperation {
         Bytes.toString(regionName));
       master.deleteEmptyMetaRows(server, regionName, emptyRows);
     }
+
+    synchronized (master.getRegionManager()) {
     // Update server in root/meta entries
+      for (ToDoEntry e: toDoList) {
+        if (e.info.isMetaTable()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("removing meta region " +
+                Bytes.toString(e.info.getRegionName()) +
+            " from online meta regions");
+          }
+          master.getRegionManager().offlineMetaRegionWithStartKey(e.info.getStartKey());
+        }
+
+        if (master.getRegionManager().isOfflined(e.info.getRegionNameAsString()) ||
+            e.info.isOffline()) {
+          master.getRegionManager().removeRegion(e.info);
+          // Mark region offline
+          if (!e.info.isOffline()) {
+            e.regionOffline = true;
+          }
+        } else {
+          if (!e.info.isOffline() && !e.info.isSplit()) {
+            // Get region reassigned
+            regions.add(e.info);
+          }
+        }
+      }
+    }
+
+    // Let us not do this while we hold the lock on the regionManager.
     for (ToDoEntry e: toDoList) {
       if (e.regionOffline) {
         HRegion.offlineRegionInMETA(server, regionName, e.info);
@@ -260,9 +273,9 @@ class ProcessServerShutdown extends RegionServerOperation {
       }
       Scan scan = new Scan();
       scan.addFamily(HConstants.CATALOG_FAMILY);
-      long scannerId = server.openScanner(
-          HRegionInfo.ROOT_REGIONINFO.getRegionName(), scan);
-      scanMetaRegion(server, scannerId,
+      scan.setCaching(1000);
+      scan.setCacheBlocks(true);
+      scanMetaRegion(server, scan,
           HRegionInfo.ROOT_REGIONINFO.getRegionName());
       return true;
     }
@@ -280,9 +293,9 @@ class ProcessServerShutdown extends RegionServerOperation {
       }
       Scan scan = new Scan();
       scan.addFamily(HConstants.CATALOG_FAMILY);
-      long scannerId = server.openScanner(
-          m.getRegionName(), scan);
-      scanMetaRegion(server, scannerId, m.getRegionName());
+      scan.setCaching(1000);
+      scan.setCacheBlocks(true);
+      scanMetaRegion(server, scan, m.getRegionName());
       return true;
     }
   }

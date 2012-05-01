@@ -121,15 +121,23 @@ public class RegionServerOperationQueue {
     // Only process the delayed queue if root region is online.  If offline,
     // the operation to put it online is probably in the toDoQueue.  Process
     // it first.
-    if (toDoQueue.isEmpty()) {
-      op = delayedToDoQueue.poll();
-    }
-    if (op == null) {
+    //
+    // The original logic used to starve the items in the delayed queue.
+    //
+    // Let us add all the ready items in the Delayed queue, behind the items in the
+    // todo queue.
+    while ((op = delayedToDoQueue.poll()) != null) {
       try {
-        op = toDoQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
+        toDoQueue.put(op);
       } catch (InterruptedException e) {
         LOG.debug("Interrupted", e);
       }
+    }
+
+    try {
+      op = toDoQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException e) {
+      LOG.debug("Interrupted", e);
     }
 
     // At this point, if there's still no todo operation, or we're supposed to

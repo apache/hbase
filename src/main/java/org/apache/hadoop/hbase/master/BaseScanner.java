@@ -178,6 +178,7 @@ abstract class BaseScanner extends Chore {
       Scan s = new Scan().addFamily(HConstants.CATALOG_FAMILY);
       // Make this scan do a row at a time otherwise, data can be stale.
       s.setCaching(1);
+      s.setCacheBlocks(true);
       scannerId = regionServer.openScanner(metaRegion.getRegionName(), s);
       while (true) {
         Result values = regionServer.next(scannerId);
