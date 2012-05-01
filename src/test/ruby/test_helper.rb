@@ -37,17 +37,23 @@ end
 
 module Hbase
   module TestHelpers
+    require 'hbase'
+    require 'hbase/hbase'
+    require 'shell'
+    require 'shell/formatter'
+
     def setup_hbase
-      @formatter = Shell::Formatter::Console.new()
-      @hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
+      formatter = ::Shell::Formatter::Console.new
+      hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
+      @shell = ::Shell::Shell.new(hbase, formatter)
     end
 
     def table(table)
-      @hbase.table(table, @formatter)
+      @shell.hbase_table(table)
     end
 
     def admin
-      @hbase.admin(@formatter)
+      @shell.hbase_admin
     end
 
     def create_test_table(name)

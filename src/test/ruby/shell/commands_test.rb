@@ -18,8 +18,9 @@
 # limitations under the License.
 #
 
+require 'hbase'
+require 'hbase/table'
 require 'shell'
-require 'shell/formatter'
 
 class ShellCommandsTest < Test::Unit::TestCase
   Shell.commands.each do |name, klass|

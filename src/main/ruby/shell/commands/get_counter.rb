@@ -39,7 +39,8 @@ EOF
       def command(table, row, column, value)
         get_counter(table(table), row, column, value)
       end
-      def command(table, row, column, value = nil)
+
+      def get_counter(table, row, column, value = nil)
         if cnt = table._get_counter_internal(row, column)
           puts "COUNTER VALUE = #{cnt}"
         else
