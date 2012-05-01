@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Compare
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue;
@@ -344,7 +345,7 @@ public final class RequestConverter {
             + mutation.getClass().getName());
       }
       Mutate mutate = ProtobufUtil.toMutate(mutateType, mutation);
-      builder.addAction(ProtobufUtil.toParameter(mutate));
+      builder.addAction(MultiAction.newBuilder().setMutate(mutate).build());
     }
     return builder.build();
   }
@@ -479,27 +480,28 @@ public final class RequestConverter {
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
     for (Action<R> action: actions) {
-      Message protoAction = null;
+      MultiAction.Builder protoAction = MultiAction.newBuilder();
+
       Row row = action.getAction();
       if (row instanceof Get) {
-        protoAction = ProtobufUtil.toGet((Get)row);
+        protoAction.setGet(ProtobufUtil.toGet((Get)row));
       } else if (row instanceof Put) {
-        protoAction = ProtobufUtil.toMutate(MutateType.PUT, (Put)row);
+        protoAction.setMutate(ProtobufUtil.toMutate(MutateType.PUT, (Put)row));
       } else if (row instanceof Delete) {
-        protoAction = ProtobufUtil.toMutate(MutateType.DELETE, (Delete)row);
+        protoAction.setMutate(ProtobufUtil.toMutate(MutateType.DELETE, (Delete)row));
       } else if (row instanceof Exec) {
-        protoAction = ProtobufUtil.toExec((Exec)row);
+        protoAction.setExec(ProtobufUtil.toExec((Exec)row));
       } else if (row instanceof Append) {
-        protoAction = ProtobufUtil.toMutate(MutateType.APPEND, (Append)row);
+        protoAction.setMutate(ProtobufUtil.toMutate(MutateType.APPEND, (Append)row));
       } else if (row instanceof Increment) {
-        protoAction = ProtobufUtil.toMutate((Increment)row);
+        protoAction.setMutate(ProtobufUtil.toMutate((Increment)row));
       } else if (row instanceof RowMutations) {
         continue; // ignore RowMutations
       } else {
         throw new DoNotRetryIOException(
           "multi doesn't support " + row.getClass().getName());
       }
-      builder.addAction(ProtobufUtil.toParameter(protoAction));
+      builder.addAction(protoAction.build());
     }
     return builder.build();
   }

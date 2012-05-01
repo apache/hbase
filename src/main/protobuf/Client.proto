@@ -300,6 +300,16 @@ message ExecCoprocessorResponse {
 }
 
 /**
+ * An action that is part of MultiRequest.
+ * This is a union type - exactly one of the fields will be set.
+ */
+message MultiAction {
+  optional Mutate mutate = 1;
+  optional Get get = 2;
+  optional Exec exec = 3;
+}
+
+/**
  * An individual action result. The result will in the
  * same order as the action in the request. If an action
  * returns a value, it is set in value field. If it doesn't
@@ -321,13 +331,14 @@ message ActionResult {
  */
 message MultiRequest {
   required RegionSpecifier region = 1;
-  repeated NameBytesPair action = 2;
+  repeated MultiAction action = 2;
   optional bool atomic = 3;
 }
 
 message MultiResponse {
   repeated ActionResult result = 1;
 }
+
 
 service ClientService {
   rpc get(GetRequest)

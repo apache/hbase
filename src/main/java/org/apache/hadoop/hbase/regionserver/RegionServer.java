@@ -103,6 +103,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.LockRowResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiAction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate;
@@ -1049,34 +1050,31 @@ public abstract class RegionServer implements
       MultiResponse.Builder builder = MultiResponse.newBuilder();
       if (request.hasAtomic() && request.getAtomic()) {
         List<Mutate> mutates = new ArrayList<Mutate>();
-        for (NameBytesPair parameter: request.getActionList()) {
-          Object action = ProtobufUtil.toObject(parameter);
-          if (action instanceof Mutate) {
-            mutates.add((Mutate)action);
+        for (MultiAction actionUnion : request.getActionList()) {
+          if (actionUnion.hasMutate()) {
+            mutates.add(actionUnion.getMutate());
           } else {
             throw new DoNotRetryIOException(
-              "Unsupported atomic atction type: "
-                + action.getClass().getName());
+              "Unsupported atomic action type: " + actionUnion);
           }
         }
         mutateRows(region, mutates);
       } else {
         ActionResult.Builder resultBuilder = null;
         List<Mutate> puts = new ArrayList<Mutate>();
-        for (NameBytesPair parameter: request.getActionList()) {
+        for (MultiAction actionUnion : request.getActionList()) {
           requestCount.incrementAndGet();
           try {
             Object result = null;
-            Object action = ProtobufUtil.toObject(parameter);
-            if (action instanceof ClientProtos.Get) {
-              Get get = ProtobufUtil.toGet((ClientProtos.Get)action);
+            if (actionUnion.hasGet()) {
+              Get get = ProtobufUtil.toGet(actionUnion.getGet());
               Integer lock = getLockFromId(get.getLockId());
               Result r = region.get(get, lock);
               if (r != null) {
                 result = ProtobufUtil.toResult(r);
               }
-            } else if (action instanceof Mutate) {
-              Mutate mutate = (Mutate)action;
+            } else if (actionUnion.hasMutate()) {
+              Mutate mutate = actionUnion.getMutate();
               MutateType type = mutate.getMutateType();
               if (type != MutateType.PUT) {
                 if (!puts.isEmpty()) {
@@ -1110,12 +1108,12 @@ public abstract class RegionServer implements
               if (r != null) {
                 result = ProtobufUtil.toResult(r);
               }
-            } else if (action instanceof ClientProtos.Exec) {
-              Exec call = ProtobufUtil.toExec((ClientProtos.Exec)action);
+            } else if (actionUnion.hasExec()) {
+              Exec call = ProtobufUtil.toExec(actionUnion.getExec());
               result = region.exec(call).getValue();
             } else {
-              LOG.debug("Error: invalid action, "
-                + "it must be a Get, Mutate, or Exec.");
+              LOG.warn("Error: invalid action: " + actionUnion + ". " +
+                "it must be a Get, Mutate, or Exec.");
               throw new DoNotRetryIOException("Invalid action, "
                 + "it must be a Get, Mutate, or Exec.");
             }
