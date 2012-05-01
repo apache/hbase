@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.0 - 4/26/2012
+Release 0.94.0 - 5/1/2012
 Sub-task
 
     [HBASE-4343] - Get the TestAcidGuarantee unit test to fail consistently
@@ -181,6 +181,7 @@ Bug
     [HBASE-5597] - Findbugs check in test-patch.sh always fails
     [HBASE-5603] - rolling-restart.sh script hangs when attempting to detect expiration of /hbase/master znode.
     [HBASE-5606] - SplitLogManger async delete node hangs log splitting when ZK connection is lost
+    [HBASE-5611] - Replayed edits from regions that failed to open during recovery aren't removed from the global MemStore size
     [HBASE-5613] - ThriftServer getTableRegions does not return serverName and port
     [HBASE-5623] - Race condition when rolling the HLog and hlogFlush
     [HBASE-5624] - Aborting regionserver when splitting region, may cause daughter region not assigned by ServerShutdownHandler.
@@ -217,9 +218,15 @@ Bug
     [HBASE-5857] - RIT map in RS not getting cleared while region opening
     [HBASE-5861] - Hadoop 23 compilation broken due to tests introduced in HBASE-5604
     [HBASE-5864] - Error while reading from hfile in 0.94
+    [HBASE-5865] - test-util.sh broken with unittest updates
     [HBASE-5866] - Canary in tool package but says its in tools.
     [HBASE-5871] - Usability regression, we don't parse compression algos anymore
     [HBASE-5873] - TimeOut Monitor thread should be started after atleast one region server registers.
+    [HBASE-5884] - MapReduce package info has broken link to bulk-loads
+    [HBASE-5885] - Invalid HFile block magic on Local file System
+    [HBASE-5893] - Allow spaces in coprocessor conf (aka trim() className)
+    [HBASE-5897] - prePut coprocessor hook causing substantial CPU usage
+    [HBASE-5908] - TestHLogSplit.testTralingGarbageCorruptionFileSkipErrorsPasses should not use append to corrupt the HLog
 
 Improvement
 
@@ -357,6 +364,7 @@ Improvement
     [HBASE-5671] - hbase.metrics.showTableName should be true by default
     [HBASE-5682] - Allow HConnectionImplementation to recover from ZK connection loss (for 0.94 only)
     [HBASE-5706] - "Dropping fs latency stats since buffer is full" spam
+    [HBASE-5712] - Parallelize load of .regioninfo files in diagnostic/repair portion of hbck.
     [HBASE-5734] - Change hbck sideline root
     [HBASE-5735] - Clearer warning message when connecting a non-secure HBase client to a secure HBase server
     [HBASE-5737] - Minor Improvements related to balancer.
@@ -365,6 +373,7 @@ Improvement
     [HBASE-5775] - ZKUtil doesn't handle deleteRecurisively cleanly
     [HBASE-5823] - Hbck should be able to print help
     [HBASE-5862] - After Region Close remove the Operation Metrics.
+    [HBASE-5863] - Improve the graceful_stop.sh CLI help (especially about reloads)
 
 New Feature
 
@@ -411,6 +420,7 @@ Task
     [HBASE-5715] - Revert 'Instant schema alter' for now, HBASE-4213
     [HBASE-5721] - Update bundled hadoop to be 1.0.2 (it was just released)
     [HBASE-5758] - Forward port "HBASE-4109 Hostname returned via reverse dns lookup contains trailing period if configured interface is not 'default'"
+    [HBASE-5836] - Backport per region metrics from HBASE-3614 to 0.94.1
 
 Test
 
