@@ -924,7 +924,11 @@ public class SplitLogManager implements Watcher {
         LOG.info("resubmitted " + resubmitted + " out of " + tot + " tasks");
       }
       // If there are pending tasks and all of them have been unassigned for
-      // some time then put up a RESCAN node to ping the workers.
+      // some time then put up a RESCAN node to ping the workers. (Skip this
+      // processing if znode create is pending. Creation of any znode has
+      // the same effect as creation of a RESCAN node. They both ping the
+      // workers to look for new tasks)
+      //
       // ZKSplitlog.DEFAULT_UNASSIGNED_TIMEOUT is of the order of minutes
       // because a. it is very unlikely that every worker had a
       // transient error when trying to grab the task b. if there are no
@@ -934,7 +938,7 @@ public class SplitLogManager implements Watcher {
       // that there is always one worker in the system
       if (tot > 0 && !found_assigned_task &&
           ((EnvironmentEdgeManager.currentTimeMillis() - lastNodeCreateTime) >
-          unassignedTimeout)) {
+          unassignedTimeout) && !isAnyCreateZNodePending()) {
         for (Map.Entry<String, Task> e : tasks.entrySet()) {
           String path = e.getKey();
           Task task = e.getValue();
@@ -992,6 +996,9 @@ public class SplitLogManager implements Watcher {
     }
   }
 
+  static boolean isAnyCreateZNodePending() {
+    return tot_mgr_node_create_queued.get() > tot_mgr_node_create_result.get();
+  }
   /**
    * Asynchronous handler for zk get-data-set-watch on node results.
    * Retries on failures.
