@@ -24,6 +24,7 @@ Release 0.90.7 - Unreleased
    HBASE-5833  0.92 build has been failing pretty consistently on TestMasterFailover.
    HBASE-5850  Refuse operations from Admin before master is initialized - fix for all branches (xufeng)
    HBASE-5873  TimeOut Monitor thread should be started after atleast one region server registers. (rajeshbabu)
+   HBASE-5908  TestHLogSplit.testTralingGarbageCorruptionFileSkipErrorsPasses should not use append to corrupt the HLog (Gregory Chanan)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
