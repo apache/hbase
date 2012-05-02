@@ -557,7 +557,7 @@ public class SplitLogManager implements Watcher {
       task.unforcedResubmits++;
     }
     task.setUnassigned();
-    createRescanNode(Long.MAX_VALUE);
+    createRescanNode();
     tot_mgr_resubmit.incrementAndGet();
     return true;
   }
@@ -610,7 +610,7 @@ public class SplitLogManager implements Watcher {
    * signal the workers that a task was resubmitted by creating the
    * RESCAN node.
    */
-  private void createRescanNode(long retries) {
+  private void createRescanNode() {
     // The RESCAN node will be deleted almost immediately by the
     // SplitLogManager as soon as it is created because it is being
     // created in the DONE state. This behavior prevents a buildup
@@ -620,7 +620,8 @@ public class SplitLogManager implements Watcher {
     // therefore this behavior is safe.
     watcher.asyncCreate(ZKSplitLog.getRescanNode(watcher),
         TaskState.TASK_DONE.get(serverName), CreateMode.EPHEMERAL_SEQUENTIAL,
-        new CreateRescanAsyncCallback(), new Long(retries));
+        new CreateRescanAsyncCallback(), new Long(0));
+    tot_mgr_node_create_rescan_queued.incrementAndGet();
   }
 
   private void createRescanSuccess(String path) {
@@ -951,7 +952,7 @@ public class SplitLogManager implements Watcher {
             tryGetDataSetWatch(path);
           }
         }
-        createRescanNode(Long.MAX_VALUE);
+        createRescanNode();
         tot_mgr_resubmit_unassigned.incrementAndGet();
         LOG.debug("resubmitting unassigned task(s) after timeout");
       }
@@ -996,9 +997,18 @@ public class SplitLogManager implements Watcher {
     }
   }
 
+  /**
+   * @return true if there is a pending create of a task node or a RESCAN node
+   * in zookeeper. It doesn't bother about being strict - there are small
+   * windows when it can return wrong results.
+   */
   static boolean isAnyCreateZNodePending() {
-    return tot_mgr_node_create_queued.get() > tot_mgr_node_create_result.get();
+    return ((tot_mgr_node_create_queued.get() >
+             tot_mgr_node_create_result.get()) ||
+            (tot_mgr_node_create_rescan_queued.get() >
+             tot_mgr_node_create_rescan_result.get()));
   }
+
   /**
    * Asynchronous handler for zk get-data-set-watch on node results.
    * Retries on failures.
@@ -1103,6 +1113,7 @@ public class SplitLogManager implements Watcher {
 
     @Override
     public void processResult(int rc, String path, Object ctx, String name) {
+      tot_mgr_node_create_rescan_result.incrementAndGet();
       if (rc != 0) {
         if (rc == KeeperException.Code.SESSIONEXPIRED.intValue()) {
           LOG.error("ZK session expired. Master is expected to shut down. Abandoning retries.");
@@ -1111,11 +1122,8 @@ public class SplitLogManager implements Watcher {
         Long retry_count = (Long)ctx;
         LOG.warn("rc=" + KeeperException.Code.get(rc) + " for "+ path +
             " retry=" + retry_count);
-        if (retry_count == 0) {
-          createRescanFailure();
-        } else {
-          createRescanNode(retry_count - 1);
-        }
+        assert retry_count == 0;
+        createRescanFailure();
         return;
       }
       // path is the original arg, name is the actual name that was created

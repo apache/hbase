@@ -209,6 +209,10 @@ public class ZKSplitLog {
     public static AtomicLong tot_mgr_log_split_err = new AtomicLong(0);
     public static AtomicLong tot_mgr_node_create_queued = new AtomicLong(0);
     public static AtomicLong tot_mgr_node_create_result = new AtomicLong(0);
+    public static AtomicLong tot_mgr_node_create_rescan_queued =
+        new AtomicLong(0);
+    public static AtomicLong tot_mgr_node_create_rescan_result =
+        new AtomicLong(0);
     public static AtomicLong tot_mgr_node_already_exists = new AtomicLong(0);
     public static AtomicLong tot_mgr_node_create_err = new AtomicLong(0);
     public static AtomicLong tot_mgr_node_create_retry = new AtomicLong(0);
