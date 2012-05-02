@@ -491,22 +491,6 @@ public class HRegion implements HeapSize { // , Writable{
     MonitoredTask status = TaskMonitor.get().createStatus(
         "Initializing region " + this);
 
-    long nextSeqId = -1;
-    try {
-      nextSeqId = initializeRegionInternals(reporter, status);
-      return nextSeqId;
-    } finally {
-      // nextSeqid will be -1 if the initialization fails.
-      // At least it will be 0 otherwise.
-      if (nextSeqId == -1) {
-        status
-            .abort("Exception during region " + this.getRegionNameAsString() + " initialization.");
-      }
-    }
-  }
-
-  private long initializeRegionInternals(final CancelableProgressable reporter, MonitoredTask status)
-      throws IOException, UnsupportedEncodingException {
     if (coprocessorHost != null) {
       status.setStatus("Running coprocessor pre-open hook");
       coprocessorHost.preOpen();
