@@ -33,6 +33,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -4289,6 +4290,34 @@ public class TestFromClientSide {
     assertNotNull(addrAfter);
     assertTrue(addrAfter.getPort() != addrCache.getPort());
     assertEquals(addrAfter.getPort(), addrNoCache.getPort());
+  }
+
+  @Test
+  public void testAtomicRowMutation() throws Exception {
+    LOG.info("Starting testAtomicRowMutation");
+    final byte [] TABLENAME = Bytes.toBytes("testAtomicRowMutation");
+    HTable t = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    byte [][] QUALIFIERS = new byte [][] {
+        Bytes.toBytes("a"), Bytes.toBytes("b")
+    };
+    RowMutations arm = new RowMutations(ROW);
+//    arm.add(new Delete(ROW));
+    Put p = new Put(ROW);
+    p.add(FAMILY, QUALIFIERS[0], VALUE);
+    arm.add(p);
+    t.mutateRow(arm);
+
+    Get g = new Get(ROW);
+    Result r = t.get(g);
+    // delete was first, row should exist
+    assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[0])));
+
+    arm = new RowMutations(ROW);
+    arm.add(p);
+    arm.add(new Delete(ROW));
+    t.mutateRow(Arrays.asList((RowMutations)arm));
+    r = t.get(g);
+    assertTrue(r.isEmpty());
   }
 }
 

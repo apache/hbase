@@ -265,6 +265,18 @@ public interface HTableInterface {
       long amount, boolean writeToWAL) throws IOException;
 
   /**
+   * Performs multiple mutations atomically on a single row. Currently
+   * {@link Put} and {@link Delete} are supported.
+   *
+   * @param arm object that specifies the set of mutations to perform
+   * atomically
+   * @throws IOException
+   */
+  public void mutateRow(final RowMutations arm) throws IOException;
+
+  public void mutateRow(List<RowMutations> armList) throws IOException;
+  
+  /**
    * Tells whether or not 'auto-flush' is turned on.
    *
    * @return {@code true} if 'auto-flush' is enabled (default), meaning
@@ -310,4 +322,5 @@ public interface HTableInterface {
    * @see #unlockRow
    */
   void unlockRow(RowLock rl) throws IOException;
+
 }

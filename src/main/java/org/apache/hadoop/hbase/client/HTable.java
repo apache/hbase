@@ -668,6 +668,28 @@ public class HTable implements HTableInterface {
   }
 
   /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void mutateRow(final RowMutations arm) throws IOException {
+    connection.getRegionServerWithRetries(
+	    new ServerCallable<Void>(connection, tableName, arm.getRow()) {
+	      public Void call() throws IOException {
+	        server.mutateRow(location.getRegionInfo().getRegionName(), arm);
+	        return null;
+	      }
+	    });
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void mutateRow(final List<RowMutations> armList) throws IOException {
+	  connection.processBatchOfRowMutations(armList, this.tableName);
+  }
+
+  /**
    * Test for the existence of columns in the table, as specified in the Get.<p>
    *
    * This will return true if the Get matches one or more keys, false if not.<p>

@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTableInterface;
@@ -71,7 +72,7 @@ public class RemoteHTable implements HTableInterface {
   final long sleepTime;
 
   @SuppressWarnings("unchecked")
-  protected String buildRowSpec(final byte[] row, final Map familyMap, 
+  protected String buildRowSpec(final byte[] row, final Map familyMap,
       final long startTime, final long endTime, final int maxVersions) {
     StringBuffer sb = new StringBuffer();
     sb.append('/');
@@ -144,7 +145,7 @@ public class RemoteHTable implements HTableInterface {
         byte[][] split = KeyValue.parseColumn(cell.getColumn());
         byte[] column = split[0];
         byte[] qualifier = split.length > 1 ? split[1] : null;
-        kvs.add(new KeyValue(row.getKey(), column, qualifier, 
+        kvs.add(new KeyValue(row.getKey(), column, qualifier,
           cell.getTimestamp(), cell.getValue()));
       }
       results.add(new Result(kvs));
@@ -238,7 +239,7 @@ public class RemoteHTable implements HTableInterface {
         TableSchemaModel schema = new TableSchemaModel();
         schema.getObjectFromMessage(response.getBody());
         return schema.getTableDescriptor();
-      case 509: 
+      case 509:
         try {
           Thread.sleep(sleepTime);
         } catch (InterruptedException e) { }
@@ -306,7 +307,7 @@ public class RemoteHTable implements HTableInterface {
     sb.append('/');
     if (accessToken != null) {
       sb.append(accessToken);
-      sb.append('/');      
+      sb.append('/');
     }
     sb.append(Bytes.toStringBinary(name));
     sb.append('/');
@@ -364,7 +365,7 @@ public class RemoteHTable implements HTableInterface {
     sb.append('/');
     if (accessToken != null) {
       sb.append(accessToken);
-      sb.append('/');      
+      sb.append('/');
     }
     sb.append(Bytes.toStringBinary(name));
     sb.append("/$multiput"); // can be any nonexistent row
@@ -495,7 +496,7 @@ public class RemoteHTable implements HTableInterface {
       }
       return results[0];
     }
-    
+
     class Iter implements Iterator<Result> {
 
       Result cache;
@@ -529,7 +530,7 @@ public class RemoteHTable implements HTableInterface {
       public void remove() {
         throw new RuntimeException("remove() not supported");
       }
-      
+
     }
 
     @Override
@@ -602,4 +603,15 @@ public class RemoteHTable implements HTableInterface {
     throw new IOException("incrementColumnValue not supported");
   }
 
+
+  @Override
+  public void mutateRow(RowMutations arm) throws IOException {
+    throw new IOException("atomicMutation not supported");
+  }
+
+  @Override
+  public void mutateRow(List<RowMutations> armList)
+		throws IOException {
+    throw new IOException("atomicMutation not supported");
+  }
 }

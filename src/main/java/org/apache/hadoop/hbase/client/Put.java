@@ -45,20 +45,12 @@ import java.util.TreeMap;
  * for each column to be inserted, execute {@link #add(byte[], byte[], byte[]) add} or
  * {@link #add(byte[], byte[], long, byte[]) add} if setting the timestamp.
  */
-public class Put extends Operation
+public class Put extends Mutation
   implements HeapSize, Writable, Row, Comparable<Row> {
-  private static final byte PUT_VERSION = (byte)1;
-
-  private byte [] row = null;
-  private long timestamp = HConstants.LATEST_TIMESTAMP;
-  private long lockId = -1L;
-  private boolean writeToWAL = true;
-
-  private Map<byte [], List<KeyValue>> familyMap =
-    new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
+  private static final byte PUT_VERSION = (byte)2;
 
   private static final long OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + ClassSize.REFERENCE +
+      ClassSize.OBJECT + 2 * ClassSize.REFERENCE +
       2 * Bytes.SIZEOF_LONG + Bytes.SIZEOF_BOOLEAN +
       ClassSize.REFERENCE + ClassSize.TREEMAP);
 
@@ -103,7 +95,7 @@ public class Put extends Operation
       throw new IllegalArgumentException("Row key is invalid");
     }
     this.row = Arrays.copyOf(row, row.length);
-    this.timestamp = ts;
+    this.ts = ts;
     if(rowLock != null) {
       this.lockId = rowLock.getLockId();
     }
@@ -114,7 +106,7 @@ public class Put extends Operation
    * @param putToCopy put to copy
    */
   public Put(Put putToCopy) {
-    this(putToCopy.getRow(), putToCopy.timestamp, putToCopy.getRowLock());
+    this(putToCopy.getRow(), putToCopy.ts, putToCopy.getRowLock());
     this.familyMap =
       new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
     for(Map.Entry<byte [], List<KeyValue>> entry :
@@ -132,7 +124,7 @@ public class Put extends Operation
    * @return this
    */
   public Put add(byte [] family, byte [] qualifier, byte [] value) {
-    return add(family, qualifier, this.timestamp, value);
+    return add(family, qualifier, this.ts, value);
   }
 
   /**
@@ -199,7 +191,7 @@ public class Put extends Operation
    * existing KeyValue object in the family map.
    */
   public boolean has(byte [] family, byte [] qualifier) {
-  return has(family, qualifier, this.timestamp, new byte[0], true, true);
+  return has(family, qualifier, this.ts, new byte[0], true, true);
   }
 
   /**
@@ -229,7 +221,7 @@ public class Put extends Operation
    * existing KeyValue object in the family map.
    */
   public boolean has(byte [] family, byte [] qualifier, byte [] value) {
-    return has(family, qualifier, this.timestamp, value, true, false);
+    return has(family, qualifier, this.ts, value, true, false);
   }
 
   /**
@@ -328,154 +320,6 @@ public class Put extends Operation
     return list;
   }
 
-  /**
-   * Method for retrieving the put's familyMap
-   * @return familyMap
-   */
-  public Map<byte [], List<KeyValue>> getFamilyMap() {
-    return this.familyMap;
-  }
-
-  /**
-   * Method for retrieving the put's row
-   * @return row
-   */
-  public byte [] getRow() {
-    return this.row;
-  }
-
-  /**
-   * Method for retrieving the put's RowLock
-   * @return RowLock
-   */
-  public RowLock getRowLock() {
-    return new RowLock(this.row, this.lockId);
-  }
-
-  /**
-   * Method for retrieving the put's lockId
-   * @return lockId
-   */
-  public long getLockId() {
-  	return this.lockId;
-  }
-
-  /**
-   * Method to check if the familyMap is empty
-   * @return true if empty, false otherwise
-   */
-  public boolean isEmpty() {
-    return familyMap.isEmpty();
-  }
-
-  /**
-   * @return Timestamp
-   */
-  public long getTimeStamp() {
-    return this.timestamp;
-  }
-
-  /**
-   * @return the number of different families included in this put
-   */
-  public int numFamilies() {
-    return familyMap.size();
-  }
-
-  /**
-   * @return the total number of KeyValues that will be added with this put
-   */
-  public int size() {
-    int size = 0;
-    for(List<KeyValue> kvList : this.familyMap.values()) {
-      size += kvList.size();
-    }
-    return size;
-  }
-
-  /**
-   * @return true if edits should be applied to WAL, false if not
-   */
-  public boolean getWriteToWAL() {
-    return this.writeToWAL;
-  }
-
-  /**
-   * Set whether this Put should be written to the WAL or not.
-   * Not writing the WAL means you may lose edits on server crash.
-   * @param write true if edits should be written to WAL, false if not
-   */
-  public void setWriteToWAL(boolean write) {
-    this.writeToWAL = write;
-  }
-
-  /**
-   * Compile the column family (i.e. schema) information
-   * into a Map. Useful for parsing and aggregation by debugging,
-   * logging, and administration tools.
-   * @return Map
-   */
-  @Override
-  public Map<String, Object> getFingerprint() {
-    Map<String, Object> map = new HashMap<String, Object>();
-    List<String> families = new ArrayList<String>();
-    // ideally, we would also include table information, but that information
-    // is not stored in each Operation instance.
-    map.put("families", families);
-    for (Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
-      families.add(Bytes.toStringBinary(entry.getKey()));
-    }
-    return map;
-  }
-
-  /**
-   * Compile the details beyond the scope of getFingerprint (row, columns,
-   * timestamps, etc.) into a Map along with the fingerprinted information.
-   * Useful for debugging, logging, and administration tools.
-   * @param maxCols a limit on the number of columns output prior to truncation
-   * @return Map
-   */
-  @Override
-  public Map<String, Object> toMap(int maxCols) {
-    // we start with the fingerprint map and build on top of it.
-    Map<String, Object> map = getFingerprint();
-    // replace the fingerprint's simple list of families with a
-    // map from column families to lists of qualifiers and kv details
-    Map<String, List<Map<String, Object>>> columns =
-      new HashMap<String, List<Map<String, Object>>>();
-    map.put("families", columns);
-    map.put("row", Bytes.toStringBinary(this.row));
-    int colCount = 0;
-    // iterate through all column families affected by this Put
-    for (Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
-      // map from this family to details for each kv affected within the family
-      List<Map<String, Object>> qualifierDetails =
-        new ArrayList<Map<String, Object>>();
-      columns.put(Bytes.toStringBinary(entry.getKey()), qualifierDetails);
-      colCount += entry.getValue().size();
-      if (maxCols <= 0) {
-        continue;
-      }
-      // add details for each kv
-      for (KeyValue kv : entry.getValue()) {
-        if (--maxCols <= 0 ) {
-          continue;
-        }
-        Map<String, Object> kvMap = kv.toStringMap();
-        // row and family information are already available in the bigger map
-        kvMap.remove("row");
-        kvMap.remove("family");
-        qualifierDetails.add(kvMap);
-      }
-    }
-    map.put("totalColumns", colCount);
-    return map;
-  }
-
-  public int compareTo(Row p) {
-    return Bytes.compareTo(this.getRow(), p.getRow());
-  }
-
   //HeapSize
   public long heapSize() {
     long heapsize = OVERHEAD;
@@ -502,6 +346,8 @@ public class Put extends Operation
         heapsize += kv.heapSize();
       }
     }
+    heapsize += getAttributeSize();
+
     return ClassSize.align((int)heapsize);
   }
 
@@ -513,7 +359,7 @@ public class Put extends Operation
       throw new IOException("version not supported");
     }
     this.row = Bytes.readByteArray(in);
-    this.timestamp = in.readLong();
+    this.ts = in.readLong();
     this.lockId = in.readLong();
     this.writeToWAL = in.readBoolean();
     int numFamilies = in.readInt();
@@ -533,13 +379,16 @@ public class Put extends Operation
       }
       this.familyMap.put(family, keys);
     }
+    if (version > 1) {
+      readAttributes(in);
+    }
   }
 
   public void write(final DataOutput out)
   throws IOException {
     out.writeByte(PUT_VERSION);
     Bytes.writeByteArray(out, this.row);
-    out.writeLong(this.timestamp);
+    out.writeLong(this.ts);
     out.writeLong(this.lockId);
     out.writeBoolean(this.writeToWAL);
     out.writeInt(familyMap.size());
@@ -557,10 +406,24 @@ public class Put extends Operation
         out.write(kv.getBuffer(), kv.getOffset(), kv.getLength());
       }
     }
+    writeAttributes(out);
   }
 
   /**
-   * Add the specified column and value, with the specified timestamp as
+   * Compile the column family (i.e. schema) information
+   * into a Map. Useful for parsing and aggregation by debugging,
+   * logging, and administration tools.
+   * @return Map
+   */
+  @Override
+  public Map<String, Object> getFingerprint() {
+    Map<String, Object> map = super.getFingerprint();
+    map.put("operation", "Put");
+    return map;
+  }
+
+  /**
+    * Add the specified column and value, with the specified timestamp as
    * its version to this Put operation.
    * @param column Old style column name with family and qualifier put together
    * with a colon.
@@ -572,5 +435,6 @@ public class Put extends Operation
   public Put add(byte [] column, long ts, byte [] value) {
     byte [][] parts = KeyValue.parseColumn(column);
     return add(parts[0], parts[1], ts, value);
+
   }
 }

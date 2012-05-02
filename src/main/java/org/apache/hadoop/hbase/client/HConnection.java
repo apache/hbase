@@ -195,7 +195,7 @@ public interface HConnection extends Closeable {
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
    */
-  public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable) 
+  public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
   throws IOException, RuntimeException;
 
   /**
@@ -235,6 +235,10 @@ public interface HConnection extends Closeable {
 
   public void processBatchOfPuts(List<Put> list, final byte[] tableName)
   throws IOException;
+
+    public int processBatchOfRowMutations(final List<RowMutations> list,
+      final byte[] tableName)
+    throws IOException;
 
   /**
    * Enable or disable region cache prefetch for the table. It will be

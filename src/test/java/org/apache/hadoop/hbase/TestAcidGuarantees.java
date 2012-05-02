@@ -29,11 +29,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Ignore;
@@ -76,6 +78,137 @@ public class TestAcidGuarantees {
     Configuration conf = HBaseConfiguration.create();
     conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(128*1024));
     util = new HBaseTestingUtility(conf);
+  }
+  /**
+   * Thread that does random full-row writes into a table.
+   */
+  public static class RowMutationsWriter extends RepeatingTestThread {
+    Random rand = new Random();
+    byte data[] = new byte[10];
+    byte targetRows[][];
+    byte targetFamilies[][];
+    HTable table;
+    AtomicLong numWritten = new AtomicLong();
+
+    public RowMutationsWriter(TestContext ctx, byte targetRows[][],
+                           byte targetFamilies[][]) throws IOException {
+      super(ctx);
+      this.targetRows = targetRows;
+      this.targetFamilies = targetFamilies;
+      table = new HTable(ctx.getConf(), TABLE_NAME);
+    }
+    
+    public void doAnAction() throws Exception {
+      // Pick a random row to write into
+      byte[] targetRow = targetRows[rand.nextInt(targetRows.length)];
+      RowMutations mutation = new RowMutations(targetRow);
+
+      long writeNumber = numWritten.incrementAndGet();
+      /*
+       * Do a mutation in which we write a random value in to col-0 and
+       * 100-that value in col 1; and delete the rest of the columns
+       * Should maintain the invariant that the sum of the two columns is
+       * always 100.
+       */
+      for (byte[] family : targetFamilies) {
+	    long value = rand.nextInt();
+        for (int i = 0; i < NUM_COLS_TO_CHECK; i++) {
+          byte qualifier[] = Bytes.toBytes("col" + i);
+          if ((i + writeNumber) % NUM_COLS_TO_CHECK == 0) {
+		      Put p = new Put(targetRow);
+	          p.add(family, qualifier, writeNumber, Bytes.toBytes(value));
+	          mutation.add(p);
+          }
+          else if ((i + writeNumber) % NUM_COLS_TO_CHECK == 1) {
+		      Put p = new Put(targetRow);
+	          p.add(family, qualifier, writeNumber, Bytes.toBytes(100 - value));
+	          mutation.add(p);
+          }
+          else {
+		      Delete d = new Delete(targetRow);
+	          d.deleteColumns(family, qualifier, writeNumber);
+	          mutation.add(d);
+          }
+        }
+      }
+      table.mutateRow(mutation);
+    }
+  }
+
+  /**
+   * Thread that does single-row reads in a table, looking for partially
+   * completed rows.
+   */
+  public static class RowMutationsGetReader extends RepeatingTestThread {
+    byte targetRow[];
+    byte targetFamilies[][];
+    HTable table;
+    int numVerified = 0;
+    AtomicLong numRead = new AtomicLong();
+    // initialized to true if we ever get a non-null result
+    boolean gotResults = false;
+
+    public RowMutationsGetReader(TestContext ctx, byte targetRow[],
+                           byte targetFamilies[][]) throws IOException {
+      super(ctx);
+      this.targetRow = targetRow;
+      this.targetFamilies = targetFamilies;
+      table = new HTable(ctx.getConf(), TABLE_NAME);
+    }
+
+    public void doAnAction() throws Exception {
+      Get g = new Get(targetRow);
+      Result res = table.get(g);
+      if (res.getRow() == null) {
+        // Trying to verify but we didn't find the row - the writing
+        // thread probably just hasn't started writing yet, so we can
+        // ignore this action -- only if we have never received values
+    	// before this.
+    	  
+    	if (gotResults)
+    		gotFailure(res);
+    	
+        return;
+      }
+      
+      gotResults = true;
+
+      for (byte[] family : targetFamilies) {
+    	long sum = 0;
+        int countNonNull = 0;
+        for (int i = 0; i < NUM_COLS_TO_CHECK; i++) {
+          byte qualifier[] = Bytes.toBytes("col" + i);
+          byte thisValue[] = res.getValue(family, qualifier);
+          if (thisValue != null) {
+        	  countNonNull++;
+        	  sum += Bytes.toLong(thisValue);
+          }
+          numVerified++;
+        }
+        if (sum != 100 || countNonNull != 2)
+            gotFailure(res);
+      }
+      numRead.getAndIncrement();
+    }
+
+    private void gotFailure(Result res) {
+      StringBuilder msg = new StringBuilder();
+      msg.append("Failed after ").append(numVerified).append("!");
+      msg.append("Expecting 2 KV each for " + targetFamilies.length 
+    		  + " families. Summing up to 100.");
+      msg.append("Got:\n");
+      if (res.list() == null)
+    	  msg.append("None");
+      else {
+        for (KeyValue kv : res.list()) {
+          msg.append(kv.toString());
+          msg.append(" val= (long)");
+          msg.append(Bytes.toLong(kv.getValue()));
+          msg.append("\n");
+        }
+        throw new RuntimeException(msg.toString());
+      }
+    }
   }
 
   /**
@@ -291,6 +424,63 @@ public class TestAcidGuarantees {
     }
   }
 
+  
+  @Test
+  public void testMutations() throws Exception {
+    util.startMiniCluster(1);
+    try {
+	  long millisToRun = 5000;
+      int numWriters = 5;
+      int numGetters = 5;
+      int numUniqueRows = 1;
+      
+      createTableIfMissing();
+      TestContext ctx = new TestContext(util.getConfiguration());
+
+      byte rows[][] = new byte[numUniqueRows][];
+      for (int i = 0; i < numUniqueRows; i++) {
+        rows[i] = Bytes.toBytes("test_row_" + i);
+      }
+
+      List<RowMutationsWriter> writers = Lists.newArrayList();
+      for (int i = 0; i < numWriters; i++) {
+        RowMutationsWriter writer = new RowMutationsWriter(
+            ctx, rows, FAMILIES);
+        writers.add(writer);
+        ctx.addThread(writer);
+      }
+    
+      // Add a flusher
+      ctx.addThread(new RepeatingTestThread(ctx) {
+        public void doAnAction() throws Exception {
+          util.flush();
+        }
+      });
+
+      List<RowMutationsGetReader> getters = Lists.newArrayList();
+      for (int i = 0; i < numGetters; i++) {
+        RowMutationsGetReader getter = new RowMutationsGetReader(
+            ctx, rows[i % numUniqueRows], FAMILIES);
+        getters.add(getter);
+        ctx.addThread(getter);
+      }
+
+      ctx.startThreads();
+      ctx.waitFor(millisToRun);
+      ctx.stop();
+
+      LOG.info("Finished test. Writers:");
+      for (RowMutationsWriter writer : writers) {
+        LOG.info("  wrote " + writer.numWritten.get());
+      }
+      LOG.info("Readers:");
+      for (RowMutationsGetReader reader : getters) {
+        LOG.info("  read " + reader.numRead.get());
+      }
+    } finally {
+      util.shutdownMiniCluster();
+    }
+  }
   @Test
   public void testGetAtomicity() throws Exception {
     util.startMiniCluster(1);

@@ -72,11 +72,15 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowLock;
+import org.apache.hadoop.hbase.client.RowMutation;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
@@ -1712,6 +1716,60 @@ public class HRegion implements HeapSize {
     }
   }
 
+  /**
+   * Setup a Delete object with correct timestamps.
+   * Caller should the row and region locks.
+   * @param delete
+   * @param now
+   * @throws IOException
+   */
+  private void prepareDeleteTimestamps(Map<byte[], List<KeyValue>> familyMap, byte[] byteNow)
+      throws IOException {
+    for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
+
+      byte[] family = e.getKey();
+      List<KeyValue> kvs = e.getValue();
+      Map<byte[], Integer> kvCount = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+
+      for (KeyValue kv: kvs) {
+        //  Check if time is LATEST, change to time of most recent addition if so
+        //  This is expensive.
+        if (kv.isLatestTimestamp() && kv.isDeleteType()) {
+          byte[] qual = kv.getQualifier();
+          if (qual == null) qual = HConstants.EMPTY_BYTE_ARRAY;
+
+          Integer count = kvCount.get(qual);
+          if (count == null) {
+            kvCount.put(qual, 1);
+          } else {
+            kvCount.put(qual, count + 1);
+          }
+          count = kvCount.get(qual);
+
+          Get get = new Get(kv.getRow());
+          get.setMaxVersions(count);
+          get.addColumn(family, qual);
+
+          List<KeyValue> result = get(get);
+
+          if (result.size() < count) {
+            // Nothing to delete
+            kv.updateLatestStamp(byteNow);
+            continue;
+          }
+          if (result.size() > count) {
+            throw new RuntimeException("Unexpected size: " + result.size());
+          }
+          KeyValue getkv = result.get(count - 1);
+          Bytes.putBytes(kv.getBuffer(), kv.getTimestampOffset(),
+              getkv.getBuffer(), getkv.getTimestampOffset(), Bytes.SIZEOF_LONG);
+        } else {
+          kv.updateLatestStamp(byteNow);
+        }
+      }
+    }
+  }
+
 
   /**
    * @param familyMap map of family to edits for the given family.
@@ -1729,50 +1787,7 @@ public class HRegion implements HeapSize {
     updatesLock.readLock().lock();
 
     try {
-
-      for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
-
-        byte[] family = e.getKey();
-        List<KeyValue> kvs = e.getValue();
-        Map<byte[], Integer> kvCount = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
-
-        for (KeyValue kv: kvs) {
-          //  Check if time is LATEST, change to time of most recent addition if so
-          //  This is expensive.
-          if (kv.isLatestTimestamp() && kv.isDeleteType()) {
-            byte[] qual = kv.getQualifier();
-            if (qual == null) qual = HConstants.EMPTY_BYTE_ARRAY;
-
-            Integer count = kvCount.get(qual);
-            if (count == null) {
-              kvCount.put(qual, 1);
-            } else {
-              kvCount.put(qual, count + 1);
-            }
-            count = kvCount.get(qual);
-
-            Get get = new Get(kv.getRow());
-            get.setMaxVersions(count);
-            get.addColumn(family, qual);
-
-            List<KeyValue> result = get(get);
-
-            if (result.size() < count) {
-              // Nothing to delete
-              kv.updateLatestStamp(byteNow);
-              continue;
-            }
-            if (result.size() > count) {
-              throw new RuntimeException("Unexpected size: " + result.size());
-            }
-            KeyValue getkv = result.get(count - 1);
-            Bytes.putBytes(kv.getBuffer(), kv.getTimestampOffset(),
-                getkv.getBuffer(), getkv.getTimestampOffset(), Bytes.SIZEOF_LONG);
-          } else {
-            kv.updateLatestStamp(byteNow);
-          }
-        }
-      }
+      prepareDeleteTimestamps(familyMap, byteNow);
 
       if (writeToWAL) {
         // write/sync to WAL should happen before we touch memstore.
@@ -2311,11 +2326,16 @@ public class HRegion implements HeapSize {
    * new entries.
    */
   private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap) {
+	  return applyFamilyMapToMemstore(familyMap, null);
+  }
+  
+  private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap,
+		  MultiVersionConsistencyControl.WriteEntry writeEntryToUse) {
     long start = EnvironmentEdgeManager.currentTimeMillis();
     MultiVersionConsistencyControl.WriteEntry w = null;
     long size = 0;
     try {
-      w = mvcc.beginMemstoreInsert();
+	  w = (writeEntryToUse == null)? mvcc.beginMemstoreInsert(): writeEntryToUse;
 
       for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
         byte[] family = e.getKey();
@@ -2328,12 +2348,15 @@ public class HRegion implements HeapSize {
         }
       }
     } finally {
-      long now = EnvironmentEdgeManager.currentTimeMillis();
-      HRegion.memstoreInsertTime.addAndGet(now - start);
-      start = now;
-      mvcc.completeMemstoreInsert(w);
-      now = EnvironmentEdgeManager.currentTimeMillis();
-      HRegion.mvccWaitTime.addAndGet(now - start);
+      if (writeEntryToUse == null) {
+	      long now = EnvironmentEdgeManager.currentTimeMillis();
+	      HRegion.memstoreInsertTime.addAndGet(now - start);
+	      start = now;
+	      mvcc.completeMemstoreInsert(w);
+	      now = EnvironmentEdgeManager.currentTimeMillis();
+	      HRegion.mvccWaitTime.addAndGet(now - start);
+      }
+      // else the calling function will take care of the mvcc completion and metrics.
     }
 
     return size;
@@ -3655,6 +3678,92 @@ public class HRegion implements HeapSize {
     return results;
   }
 
+
+  public void mutateRow(RowMutations rm) throws IOException {
+    boolean flush = false;
+
+    Integer lid = null;
+    
+    splitsAndClosesLock.readLock().lock();
+    try {
+      // 1. run all pre-hooks before the atomic operation
+      // NOT required for 0.89
+
+      // one WALEdit is used for all edits.
+      WALEdit walEdit = new WALEdit();
+
+      // 2. acquire the row lock
+      lid = getLock(null, rm.getRow(), true);
+
+      // 3. acquire the region lock
+      this.updatesLock.readLock().lock();
+
+      // 4. Get a mvcc write number
+      MultiVersionConsistencyControl.WriteEntry w = mvcc.beginMemstoreInsert();
+
+      long now = EnvironmentEdgeManager.currentTimeMillis();
+      byte[] byteNow = Bytes.toBytes(now);
+      try {
+        // 5. Check mutations and apply edits to a single WALEdit
+        for (Mutation m : rm.getMutations()) {
+          if (m instanceof Put) {
+            Map<byte[], List<KeyValue>> familyMap = m.getFamilyMap();
+            checkFamilies(familyMap.keySet());
+            checkTimestamps(familyMap, now);
+            updateKVTimestamps(familyMap.values(), byteNow);
+          } else if (m instanceof Delete) {
+            Delete d = (Delete) m;
+            prepareDelete(d);
+            Map<byte[], List<KeyValue>> familyMap = m.getFamilyMap();
+            prepareDeleteTimestamps(familyMap, byteNow);
+          } else {
+            throw new DoNotRetryIOException(
+                "Action must be Put or Delete. But was: "
+                    + m.getClass().getName());
+          }
+          if (m.getWriteToWAL()) {
+            addFamilyMapToWALEdit(m.getFamilyMap(), walEdit);
+          }
+        }
+
+        // 6. append/sync all edits at once
+        // TODO: Do batching as in doMiniBatchPut
+        this.log.append(regionInfo, this.getTableDesc().getName(), walEdit, now);
+
+        // 7. apply to memstore
+        long addedSize = 0;
+        for (Mutation m : rm.getMutations()) {
+          addedSize += applyFamilyMapToMemstore(m.getFamilyMap(), w);
+        }
+        flush = isFlushSize(this.incMemoryUsage(addedSize));
+      } finally {
+        // 8. roll mvcc forward
+	      long start = now;
+	      now = EnvironmentEdgeManager.currentTimeMillis();
+	      HRegion.memstoreInsertTime.addAndGet(now - start);
+	
+	      mvcc.completeMemstoreInsert(w);
+	      now = EnvironmentEdgeManager.currentTimeMillis();
+	      HRegion.mvccWaitTime.addAndGet(now - start);
+
+        // 9. release region lock
+        this.updatesLock.readLock().unlock();
+      }
+      // 10. run all coprocessor post hooks, after region lock is released
+      // NOT required in 0.89. coprocessors are not supported.
+      
+    } finally {
+      if (lid != null) {
+        // 11. release the row lock
+        releaseRowLock(lid);
+      }
+      if (flush) {
+        // 12. Flush cache if needed. Do it outside update lock.
+        requestFlush();
+      }
+      splitsAndClosesLock.readLock().unlock();
+    }
+  }
   /**
    *
    * @param row
@@ -3979,4 +4088,5 @@ public class HRegion implements HeapSize {
        if (bc != null) bc.shutdown();
      }
   }
+
 }

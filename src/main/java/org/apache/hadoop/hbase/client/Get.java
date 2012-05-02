@@ -66,7 +66,8 @@ import java.util.TreeSet;
  * <p>
  * To add a filter, execute {@link #setFilter(Filter) setFilter}.
  */
-public class Get extends Operation implements Writable, Row, Comparable<Row> {
+public class Get extends OperationWithAttributes
+  implements Writable, Row, Comparable<Row> {
   private static final byte GET_VERSION = (byte)3;
 
   private byte [] row = null;

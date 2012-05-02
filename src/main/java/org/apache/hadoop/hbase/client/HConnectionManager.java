@@ -1525,6 +1525,31 @@ public class HConnectionManager {
       return results;
     }
 
+    public int processBatchOfRowMutations(final List<RowMutations> list,
+      final byte[] tableName)
+    throws IOException {
+      if (list.isEmpty()) return 0;
+      Batch<Object> b = new Batch<Object>(this) {
+        @SuppressWarnings("unchecked")
+        @Override
+        int doCall(final List<? extends Row> currentList, final byte [] row,
+            final byte[] tableName, Object whatevs)
+        throws IOException, RuntimeException {
+          final List<RowMutations> mutations = (List<RowMutations>)currentList;
+          getRegionServerWithRetries(new ServerCallable<Void>(this.c,
+                tableName, row) {
+              public Void call() throws IOException {
+                server.mutateRow(location.getRegionInfo().getRegionName(),
+                  mutations);
+                return null;
+              }
+            });
+            return -1;
+          }
+        };
+      return b.process(list, tableName, new Object());
+      }
+
     public int processBatchOfDeletes(final List<Delete> list,
       final byte[] tableName)
     throws IOException {

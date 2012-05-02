@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -363,6 +364,25 @@ public class TestOperation {
     kvMap = (Map) familyInfo.get(0);
     assertEquals("Qualifier incorrect in Delete.toJSON()",
         Bytes.toStringBinary(QUALIFIER), kvMap.get("qualifier"));
+    
+    // produce a RowMutations operation
+    RowMutations rmut = new RowMutations(ROW);
+    rmut.add(delete);
+    rmut.add(put);
+    // get its JSON representation, and parse it
+    json = rmut.toJSON();
+    parsedJSON = mapper.readValue(json, HashMap.class);
+    // check for the row
+    assertEquals("row absent in RowMutations.toJSON()",
+        Bytes.toStringBinary(ROW), parsedJSON.get("row"));
+    // check for the family and the qualifier.
+    List<Map<String, Object>> mutationDetails = ((ArrayList)parsedJSON.get("mutations"));
+    assertEquals("Expecting to find one delete and one put",
+        2, mutationDetails.size());
+    assertEquals("Should find one Put",
+        1, parsedJSON.get("num-put"));
+    assertEquals("Should find one Delete",
+        1, parsedJSON.get("num-delete"));
   }
 
   /**

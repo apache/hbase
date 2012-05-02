@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MultiPut;
@@ -159,6 +160,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(Result.class, code++);
     addToMap(Result[].class, code++);
     addToMap(Scan.class, code++);
+
+    addToMap(RowMutations.class, code++);
 
     addToMap(WhileMatchFilter.class, code++);
     addToMap(PrefixFilter.class, code++);

@@ -66,16 +66,9 @@ import java.util.TreeMap;
  * deleteFamily -- then you need to use the method overrides that take a
  * timestamp.  The constructor timestamp is not referenced.
  */
-public class Delete extends Operation
+public class Delete extends Mutation
   implements Writable, Row, Comparable<Row> {
-  private static final byte DELETE_VERSION = (byte)1;
-
-  private byte [] row = null;
-  // This ts is only used when doing a deleteRow.  Anything less,
-  private long ts;
-  private long lockId = -1L;
-  private final Map<byte [], List<KeyValue>> familyMap =
-    new TreeMap<byte [], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
+  private static final byte DELETE_VERSION = (byte)3;
 
   /** Constructor for Writable.  DO NOT USE */
   public Delete() {
@@ -124,19 +117,10 @@ public class Delete extends Operation
     this.ts = d.getTimeStamp();
     this.lockId = d.getLockId();
     this.familyMap.putAll(d.getFamilyMap());
+    this.writeToWAL = d.writeToWAL;
   }
 
-  public int compareTo(final Row d) {
-    return Bytes.compareTo(this.getRow(), d.getRow());
-  }
 
-  /**
-   * Method to check if the familyMap is empty
-   * @return true if empty, false otherwise
-   */
-  public boolean isEmpty() {
-    return familyMap.isEmpty();
-  }
 
   /**
    * Delete all versions of all columns of the specified family.
@@ -243,102 +227,6 @@ public class Delete extends Operation
     return this.familyMap;
   }
 
-  /**
-   *  Method for retrieving the delete's row
-   * @return row
-   */
-  public byte [] getRow() {
-    return this.row;
-  }
-
-  /**
-   * Method for retrieving the delete's RowLock
-   * @return RowLock
-   */
-  public RowLock getRowLock() {
-    return new RowLock(this.row, this.lockId);
-  }
-
-  /**
-   * Method for retrieving the delete's lock ID.
-   *
-   * @return The lock ID.
-   */
-  public long getLockId() {
-	return this.lockId;
-  }
-
-  /**
-   * Method for retrieving the delete's timestamp
-   * @return timestamp
-   */
-  public long getTimeStamp() {
-    return this.ts;
-  }
-
-  /**
-   * Compile the column family (i.e. schema) information
-   * into a Map. Useful for parsing and aggregation by debugging,
-   * logging, and administration tools.
-   * @return Map
-   */
-  @Override
-  public Map<String, Object> getFingerprint() {
-    Map<String, Object> map = new HashMap<String, Object>();
-    List<String> families = new ArrayList<String>();
-    // ideally, we would also include table information, but that information
-    // is not stored in each Operation instance.
-    map.put("families", families);
-    for (Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
-      families.add(Bytes.toStringBinary(entry.getKey()));
-    }
-    return map;
-  }
-
-  /**
-   * Compile the details beyond the scope of getFingerprint (row, columns,
-   * timestamps, etc.) into a Map along with the fingerprinted information.
-   * Useful for debugging, logging, and administration tools.
-   * @param maxCols a limit on the number of columns output prior to truncation
-   * @return Map
-   */
-  @Override
-  public Map<String, Object> toMap(int maxCols) {
-    // we start with the fingerprint map and build on top of it.
-    Map<String, Object> map = getFingerprint();
-    // replace the fingerprint's simple list of families with a
-    // map from column families to lists of qualifiers and kv details
-    Map<String, List<Map<String, Object>>> columns =
-      new HashMap<String, List<Map<String, Object>>>();
-    map.put("families", columns);
-    map.put("row", Bytes.toStringBinary(this.row));
-    int colCount = 0;
-    // iterate through all column families affected by this Delete
-    for (Map.Entry<byte [], List<KeyValue>> entry : this.familyMap.entrySet()) {
-      // map from this family to details for each kv affected within the family
-      List<Map<String, Object>> qualifierDetails =
-        new ArrayList<Map<String, Object>>();
-      columns.put(Bytes.toStringBinary(entry.getKey()), qualifierDetails);
-      colCount += entry.getValue().size();
-      if (maxCols <= 0) {
-        continue;
-      }
-      // add details for each kv
-      for (KeyValue kv : entry.getValue()) {
-        if (--maxCols <= 0 ) {
-          continue;
-        }
-        Map<String, Object> kvMap = kv.toStringMap();
-        // row and family information are already available in the bigger map
-        kvMap.remove("row");
-        kvMap.remove("family");
-        qualifierDetails.add(kvMap);
-      }
-    }
-    map.put("totalColumns", colCount);
-    return map;
-  }
-
   //Writable
   public void readFields(final DataInput in) throws IOException {
     int version = in.readByte();
@@ -348,6 +236,9 @@ public class Delete extends Operation
     this.row = Bytes.readByteArray(in);
     this.ts = in.readLong();
     this.lockId = in.readLong();
+    if (version > 2) {
+      this.writeToWAL = in.readBoolean();
+    }
     this.familyMap.clear();
     int numFamilies = in.readInt();
     for(int i=0;i<numFamilies;i++) {
@@ -361,6 +252,9 @@ public class Delete extends Operation
       }
       this.familyMap.put(family, list);
     }
+    if (version > 1) {
+      readAttributes(in);
+    }
   }
 
   public void write(final DataOutput out) throws IOException {
@@ -368,6 +262,7 @@ public class Delete extends Operation
     Bytes.writeByteArray(out, this.row);
     out.writeLong(this.ts);
     out.writeLong(this.lockId);
+    out.writeBoolean(this.writeToWAL);
     out.writeInt(familyMap.size());
     for(Map.Entry<byte [], List<KeyValue>> entry : familyMap.entrySet()) {
       Bytes.writeByteArray(out, entry.getKey());
@@ -377,6 +272,7 @@ public class Delete extends Operation
         kv.write(out);
       }
     }
+    writeAttributes(out);
   }
 
   /**
@@ -407,5 +303,18 @@ public class Delete extends Operation
     return this;
   }
 
+
+  /**
+   * Compile the column family (i.e. schema) information
+   * into a Map. Useful for parsing and aggregation by debugging,
+   * logging, and administration tools.
+   * @return Map
+   */
+  @Override
+  public Map<String, Object> getFingerprint() {
+    Map<String, Object> map = super.getFingerprint();
+    map.put("operation", "Delete");
+    return map;
+  }
 
 }

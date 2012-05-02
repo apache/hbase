@@ -88,6 +88,10 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.HMsg.Type;
+import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MultiPut;
@@ -2036,6 +2040,35 @@ public class HRegionServer implements HRegionInterface,
     } catch(Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
+  }
+
+  @Override
+  public void mutateRow(byte[] regionName, List<RowMutations> armList)
+      throws IOException {
+    checkOpen();
+    if (regionName == null) {
+      throw new IOException("Invalid arguments to atomicMutation " +
+      "regionName is null");
+    }
+    requestCount.incrementAndGet();
+    try {
+      HRegion region = getRegion(regionName);
+      if (!region.getRegionInfo().isMetaTable()) {
+        this.cacheFlusher.reclaimMemStoreMemory();
+      }
+      for (RowMutations arm: armList) {
+        this.requestCount.incrementAndGet();
+        region.mutateRow(arm);
+      }
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
+    }
+  }
+
+  @Override
+  public void mutateRow(byte[] regionName, RowMutations arm)
+      throws IOException {
+	  mutateRow(regionName, Collections.singletonList(arm));
   }
 
   @Override

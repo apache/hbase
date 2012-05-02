@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Restartable;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MultiPut;
@@ -263,6 +264,12 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
    */
   public long openScanner(final byte [] regionName, final Scan scan)
   throws IOException;
+
+  public void mutateRow(byte[] regionName, RowMutations arm)
+      throws IOException;
+
+  public void mutateRow(byte[] regionName, List<RowMutations> armList)
+      throws IOException;
 
   /**
    * Get the next set of values
