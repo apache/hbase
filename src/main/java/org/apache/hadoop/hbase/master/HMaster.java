@@ -1307,27 +1307,23 @@ public class HMaster extends Thread implements HMasterInterface,
         startKey = endKey;
       }
     }
-    for (int tries = 0; tries < this.numRetries; tries++) {
-      try {
-        // We can not create a table unless meta regions have already been
-        // assigned and scanned.
-        if (!this.regionManager.areAllMetaRegionsOnline()) {
-          throw new NotAllMetaRegionsOnlineException();
-        }
-        if (!this.serverManager.hasEnoughRegionServers()) {
-          throw new IOException("not enough servers to create table yet");
-        }
-        createTable(newRegions);
-        LOG.info("created table " + desc.getNameAsString());
-        break;
-      } catch (TableExistsException e) {
-        throw e;
-      } catch (IOException e) {
-        if (tries == this.numRetries - 1) {
-          throw RemoteExceptionHandler.checkIOException(e);
-        }
-        this.sleeper.sleep();
+    try {
+      // We can not create a table unless meta regions have already been
+      // assigned and scanned.
+      if (!this.regionManager.areAllMetaRegionsOnline()) {
+        throw new NotAllMetaRegionsOnlineException();
       }
+      if (!this.serverManager.hasEnoughRegionServers()) {
+        throw new IOException("not enough servers to create table yet");
+      }
+      createTable(newRegions);
+      LOG.info("Succeeded in creating table " + desc.getNameAsString());
+    } catch (TableExistsException e) {
+      throw e;
+    } catch (IOException e) {
+      LOG.error("Cannot create table " + desc.getNameAsString() + 
+				" because of " + e.toString());
+      throw RemoteExceptionHandler.checkIOException(e);
     }
   }
 
