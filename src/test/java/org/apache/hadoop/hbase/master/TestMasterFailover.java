@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
-import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -56,167 +55,6 @@ import org.junit.experimental.categories.Category;
 @Category(LargeTests.class)
 public class TestMasterFailover {
   private static final Log LOG = LogFactory.getLog(TestMasterFailover.class);
-
-  @Test (timeout=180000)
-  public void testShouldCheckMasterFailOverWhenMETAIsInOpenedState()
-      throws Exception {
-    LOG.info("Starting testShouldCheckMasterFailOverWhenMETAIsInOpenedState");
-    final int NUM_MASTERS = 1;
-    final int NUM_RS = 2;
-
-    Configuration conf = HBaseConfiguration.create();
-    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
-    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 8000);
-    // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
-
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-
-    // Find regionserver carrying meta.
-    List<RegionServerThread> regionServerThreads =
-      cluster.getRegionServerThreads();
-    int count = -1;
-    HRegion metaRegion = null;
-    for (RegionServerThread regionServerThread : regionServerThreads) {
-      HRegionServer regionServer = regionServerThread.getRegionServer();
-      metaRegion = regionServer.getOnlineRegion(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
-      count++;
-      regionServer.abort("");
-      if (null != metaRegion) break;
-    }
-    HRegionServer regionServer = cluster.getRegionServer(count);
-
-    TEST_UTIL.shutdownMiniHBaseCluster();
-
-    // Create a ZKW to use in the test
-    ZooKeeperWatcher zkw = 
-      HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL, 
-          metaRegion, regionServer.getServerName());
-
-    LOG.info("Staring cluster for second time");
-    TEST_UTIL.startMiniHBaseCluster(NUM_MASTERS, NUM_RS);
-
-    // Failover should be completed, now wait for no RIT
-    log("Waiting for no more RIT");
-    ZKAssign.blockUntilNoRIT(zkw);
-
-    zkw.close();
-    // Stop the cluster
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  /**
-   * Simple test of master failover.
-   * <p>
-   * Starts with three masters.  Kills a backup master.  Then kills the active
-   * master.  Ensures the final master becomes active and we can still contact
-   * the cluster.
-   * @throws Exception
-   */
-  @Test (timeout=240000)
-  public void testSimpleMasterFailover() throws Exception {
-
-    final int NUM_MASTERS = 3;
-    final int NUM_RS = 3;
-
-    // Create config to use for this cluster
-    Configuration conf = HBaseConfiguration.create();
-
-    // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-
-    // get all the master threads
-    List<MasterThread> masterThreads = cluster.getMasterThreads();
-
-    // wait for each to come online
-    for (MasterThread mt : masterThreads) {
-      assertTrue(mt.isAlive());
-    }
-
-    // verify only one is the active master and we have right number
-    int numActive = 0;
-    int activeIndex = -1;
-    ServerName activeName = null;
-    HMaster active = null;
-    for (int i = 0; i < masterThreads.size(); i++) {
-      if (masterThreads.get(i).getMaster().isActiveMaster()) {
-        numActive++;
-        activeIndex = i;
-        active = masterThreads.get(activeIndex).getMaster();
-        activeName = active.getServerName();
-      }
-    }
-    assertEquals(1, numActive);
-    assertEquals(NUM_MASTERS, masterThreads.size());
-    LOG.info("Active master " + activeName);
-
-    // Check that ClusterStatus reports the correct active and backup masters
-    assertNotNull(active);
-    ClusterStatus status = active.getClusterStatus();
-    assertTrue(status.getMaster().equals(activeName));
-    assertEquals(2, status.getBackupMastersSize());
-    assertEquals(2, status.getBackupMasters().size());
-
-    // attempt to stop one of the inactive masters
-    int backupIndex = (activeIndex == 0 ? 1 : activeIndex - 1);
-    HMaster master = cluster.getMaster(backupIndex);
-    LOG.debug("\n\nStopping a backup master: " + master.getServerName() + "\n");
-    cluster.stopMaster(backupIndex, false);
-    cluster.waitOnMaster(backupIndex);
-
-    // Verify still one active master and it's the same
-    for (int i = 0; i < masterThreads.size(); i++) {
-      if (masterThreads.get(i).getMaster().isActiveMaster()) {
-        assertTrue(activeName.equals(masterThreads.get(i).getMaster().getServerName()));
-        activeIndex = i;
-        active = masterThreads.get(activeIndex).getMaster();
-      }
-    }
-    assertEquals(1, numActive);
-    assertEquals(2, masterThreads.size());
-    int rsCount = masterThreads.get(activeIndex).getMaster().getClusterStatus().getServersSize();
-    LOG.info("Active master " + active.getServerName() + " managing " + rsCount +  " regions servers");
-    assertEquals(3, rsCount);
-
-    // Check that ClusterStatus reports the correct active and backup masters
-    assertNotNull(active);
-    status = active.getClusterStatus();
-    assertTrue(status.getMaster().equals(activeName));
-    assertEquals(1, status.getBackupMastersSize());
-    assertEquals(1, status.getBackupMasters().size());
-
-    // kill the active master
-    LOG.debug("\n\nStopping the active master " + active.getServerName() + "\n");
-    cluster.stopMaster(activeIndex, false);
-    cluster.waitOnMaster(activeIndex);
-
-    // wait for an active master to show up and be ready
-    assertTrue(cluster.waitForActiveAndReadyMaster());
-
-    LOG.debug("\n\nVerifying backup master is now active\n");
-    // should only have one master now
-    assertEquals(1, masterThreads.size());
-
-    // and he should be active
-    active = masterThreads.get(0).getMaster();
-    assertNotNull(active);
-    status = active.getClusterStatus();
-    ServerName mastername = status.getMaster();
-    assertTrue(mastername.equals(active.getServerName()));
-    assertTrue(active.isActiveMaster());
-    assertEquals(0, status.getBackupMastersSize());
-    assertEquals(0, status.getBackupMasters().size());
-    int rss = status.getServersSize();
-    LOG.info("Active master " + mastername.getServerName() + " managing " +
-      rss +  " region servers");
-    assertEquals(3, rss);
-
-    // Stop the cluster
-    TEST_UTIL.shutdownMiniCluster();
-  }
 
   /**
    * Complex test of master failover that tests as many permutations of the
@@ -475,8 +313,9 @@ public class TestMasterFailover {
     ZKAssign.createNodeOffline(zkw, region, serverName);
     hrs.openRegion(region);
     while (true) {
-      RegionTransitionData rtd = ZKAssign.getData(zkw, region.getEncodedName());
-      if (rtd != null && rtd.getEventType() == EventType.RS_ZK_REGION_OPENED) {
+      byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
+      RegionTransition rt = RegionTransition.parseFrom(bytes);
+      if (rt != null && rt.getEventType().equals(EventType.RS_ZK_REGION_OPENED)) {
         break;
       }
       Thread.sleep(100);
@@ -488,8 +327,9 @@ public class TestMasterFailover {
     ZKAssign.createNodeOffline(zkw, region, serverName);
     hrs.openRegion(region);
     while (true) {
-      RegionTransitionData rtd = ZKAssign.getData(zkw, region.getEncodedName());
-      if (rtd != null && rtd.getEventType() == EventType.RS_ZK_REGION_OPENED) {
+      byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
+      RegionTransition rt = RegionTransition.parseFrom(bytes);
+      if (rt != null && rt.getEventType().equals(EventType.RS_ZK_REGION_OPENED)) {
         break;
       }
       Thread.sleep(100);
@@ -603,16 +443,14 @@ public class TestMasterFailover {
     final int NUM_MASTERS = 1;
     final int NUM_RS = 2;
 
-    // Create config to use for this cluster
-    Configuration conf = HBaseConfiguration.create();
+    // Create and start the cluster
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    Configuration conf = TEST_UTIL.getConfiguration();
     // Need to drop the timeout much lower
     conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
     conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 4000);
     conf.setInt("hbase.master.wait.on.regionservers.mintostart", 1);
     conf.setInt("hbase.master.wait.on.regionservers.maxtostart", 2);
-
-    // Create and start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     log("Cluster started");
@@ -835,8 +673,9 @@ public class TestMasterFailover {
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
     hrsDead.openRegion(region);
     while (true) {
-      RegionTransitionData rtd = ZKAssign.getData(zkw, region.getEncodedName());
-      if (rtd != null && rtd.getEventType() == EventType.RS_ZK_REGION_OPENED) {
+      byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
+      RegionTransition rt = RegionTransition.parseFrom(bytes);
+      if (rt != null && rt.getEventType().equals(EventType.RS_ZK_REGION_OPENED)) {
         break;
       }
       Thread.sleep(100);
@@ -850,8 +689,9 @@ public class TestMasterFailover {
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
     hrsDead.openRegion(region);
     while (true) {
-      RegionTransitionData rtd = ZKAssign.getData(zkw, region.getEncodedName());
-      if (rtd != null && rtd.getEventType() == EventType.RS_ZK_REGION_OPENED) {
+      byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
+      RegionTransition rt = RegionTransition.parseFrom(bytes);
+      if (rt != null && rt.getEventType().equals(EventType.RS_ZK_REGION_OPENED)) {
         break;
       }
       Thread.sleep(100);
@@ -869,9 +709,11 @@ public class TestMasterFailover {
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
     hrsDead.openRegion(region);
     while (true) {
-      RegionTransitionData rtd = ZKAssign.getData(zkw, region.getEncodedName());
-      if (rtd != null && rtd.getEventType() == EventType.RS_ZK_REGION_OPENED) {
+      byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
+      RegionTransition rt = RegionTransition.parseFrom(bytes);
+      if (rt != null && rt.getEventType().equals(EventType.RS_ZK_REGION_OPENED)) {
         ZKAssign.deleteOpenedNode(zkw, region.getEncodedName());
+        LOG.debug("DELETED " + rt);
         break;
       }
       Thread.sleep(100);
@@ -885,8 +727,9 @@ public class TestMasterFailover {
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
     hrsDead.openRegion(region);
     while (true) {
-      RegionTransitionData rtd = ZKAssign.getData(zkw, region.getEncodedName());
-      if (rtd != null && rtd.getEventType() == EventType.RS_ZK_REGION_OPENED) {
+      byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
+      RegionTransition rt = RegionTransition.parseFrom(bytes);
+      if (rt != null && rt.getEventType().equals(EventType.RS_ZK_REGION_OPENED)) {
         ZKAssign.deleteOpenedNode(zkw, region.getEncodedName());
         break;
       }
@@ -984,7 +827,8 @@ public class TestMasterFailover {
 
     // Now, everything that should be online should be online
     for (HRegionInfo hri : regionsThatShouldBeOnline) {
-      assertTrue("region=" + hri.getRegionNameAsString(), onlineRegions.contains(hri));
+      assertTrue("region=" + hri.getRegionNameAsString() + ", " + onlineRegions.toString(),
+        onlineRegions.contains(hri));
     }
 
     // Everything that should be offline should not be online
@@ -1017,6 +861,167 @@ public class TestMasterFailover {
   private void log(String string) {
     LOG.info("\n\n" + string + " \n\n");
   }
+
+  @Test (timeout=180000)
+  public void testShouldCheckMasterFailOverWhenMETAIsInOpenedState()
+      throws Exception {
+    LOG.info("Starting testShouldCheckMasterFailOverWhenMETAIsInOpenedState");
+    final int NUM_MASTERS = 1;
+    final int NUM_RS = 2;
+
+    // Start the cluster
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
+    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 8000);
+    conf.setInt("hbase.master.info.port", -1);
+
+    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+
+    // Find regionserver carrying meta.
+    List<RegionServerThread> regionServerThreads =
+      cluster.getRegionServerThreads();
+    int count = -1;
+    HRegion metaRegion = null;
+    for (RegionServerThread regionServerThread : regionServerThreads) {
+      HRegionServer regionServer = regionServerThread.getRegionServer();
+      metaRegion = regionServer.getOnlineRegion(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+      count++;
+      regionServer.abort("");
+      if (null != metaRegion) break;
+    }
+    HRegionServer regionServer = cluster.getRegionServer(count);
+
+    TEST_UTIL.shutdownMiniHBaseCluster();
+
+    // Create a ZKW to use in the test
+    ZooKeeperWatcher zkw = 
+      HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL, 
+          metaRegion, regionServer.getServerName());
+
+    LOG.info("Staring cluster for second time");
+    TEST_UTIL.startMiniHBaseCluster(NUM_MASTERS, NUM_RS);
+
+    // Failover should be completed, now wait for no RIT
+    log("Waiting for no more RIT");
+    ZKAssign.blockUntilNoRIT(zkw);
+
+    zkw.close();
+    // Stop the cluster
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  /**
+   * Simple test of master failover.
+   * <p>
+   * Starts with three masters.  Kills a backup master.  Then kills the active
+   * master.  Ensures the final master becomes active and we can still contact
+   * the cluster.
+   * @throws Exception
+   */
+  @Test (timeout=240000)
+  public void testSimpleMasterFailover() throws Exception {
+
+    final int NUM_MASTERS = 3;
+    final int NUM_RS = 3;
+
+    // Start the cluster
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+
+    // get all the master threads
+    List<MasterThread> masterThreads = cluster.getMasterThreads();
+
+    // wait for each to come online
+    for (MasterThread mt : masterThreads) {
+      assertTrue(mt.isAlive());
+    }
+
+    // verify only one is the active master and we have right number
+    int numActive = 0;
+    int activeIndex = -1;
+    ServerName activeName = null;
+    HMaster active = null;
+    for (int i = 0; i < masterThreads.size(); i++) {
+      if (masterThreads.get(i).getMaster().isActiveMaster()) {
+        numActive++;
+        activeIndex = i;
+        active = masterThreads.get(activeIndex).getMaster();
+        activeName = active.getServerName();
+      }
+    }
+    assertEquals(1, numActive);
+    assertEquals(NUM_MASTERS, masterThreads.size());
+    LOG.info("Active master " + activeName);
+
+    // Check that ClusterStatus reports the correct active and backup masters
+    assertNotNull(active);
+    ClusterStatus status = active.getClusterStatus();
+    assertTrue(status.getMaster().equals(activeName));
+    assertEquals(2, status.getBackupMastersSize());
+    assertEquals(2, status.getBackupMasters().size());
+
+    // attempt to stop one of the inactive masters
+    int backupIndex = (activeIndex == 0 ? 1 : activeIndex - 1);
+    HMaster master = cluster.getMaster(backupIndex);
+    LOG.debug("\n\nStopping a backup master: " + master.getServerName() + "\n");
+    cluster.stopMaster(backupIndex, false);
+    cluster.waitOnMaster(backupIndex);
+
+    // Verify still one active master and it's the same
+    for (int i = 0; i < masterThreads.size(); i++) {
+      if (masterThreads.get(i).getMaster().isActiveMaster()) {
+        assertTrue(activeName.equals(masterThreads.get(i).getMaster().getServerName()));
+        activeIndex = i;
+        active = masterThreads.get(activeIndex).getMaster();
+      }
+    }
+    assertEquals(1, numActive);
+    assertEquals(2, masterThreads.size());
+    int rsCount = masterThreads.get(activeIndex).getMaster().getClusterStatus().getServersSize();
+    LOG.info("Active master " + active.getServerName() + " managing " + rsCount +  " regions servers");
+    assertEquals(3, rsCount);
+
+    // Check that ClusterStatus reports the correct active and backup masters
+    assertNotNull(active);
+    status = active.getClusterStatus();
+    assertTrue(status.getMaster().equals(activeName));
+    assertEquals(1, status.getBackupMastersSize());
+    assertEquals(1, status.getBackupMasters().size());
+
+    // kill the active master
+    LOG.debug("\n\nStopping the active master " + active.getServerName() + "\n");
+    cluster.stopMaster(activeIndex, false);
+    cluster.waitOnMaster(activeIndex);
+
+    // wait for an active master to show up and be ready
+    assertTrue(cluster.waitForActiveAndReadyMaster());
+
+    LOG.debug("\n\nVerifying backup master is now active\n");
+    // should only have one master now
+    assertEquals(1, masterThreads.size());
+
+    // and he should be active
+    active = masterThreads.get(0).getMaster();
+    assertNotNull(active);
+    status = active.getClusterStatus();
+    ServerName mastername = status.getMaster();
+    assertTrue(mastername.equals(active.getServerName()));
+    assertTrue(active.isActiveMaster());
+    assertEquals(0, status.getBackupMastersSize());
+    assertEquals(0, status.getBackupMasters().size());
+    int rss = status.getServersSize();
+    LOG.info("Active master " + mastername.getServerName() + " managing " +
+      rss +  " region servers");
+    assertEquals(3, rss);
+
+    // Stop the cluster
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =

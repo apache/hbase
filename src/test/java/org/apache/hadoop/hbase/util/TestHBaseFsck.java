@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.Delete;
@@ -59,7 +60,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
-import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -920,9 +920,9 @@ public class TestHBaseFsck {
 
       int iTimes = 0;
       while (true) {
-        RegionTransitionData rtd = ZKAssign.getData(zkw,
-            region.getEncodedName());
-        if (rtd != null && rtd.getEventType() == EventType.RS_ZK_REGION_OPENED) {
+        RegionTransition rt = RegionTransition.parseFrom(ZKAssign.getData(zkw,
+            region.getEncodedName()));
+        if (rt != null && rt.getEventType() == EventType.RS_ZK_REGION_OPENED) {
           break;
         }
         Thread.sleep(100);

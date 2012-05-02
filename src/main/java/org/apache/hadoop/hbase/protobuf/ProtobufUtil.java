@@ -37,6 +37,7 @@ import java.util.NavigableSet;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -142,6 +143,7 @@ public final class ProtobufUtil {
    * for preamble.
    */
   static final byte [] PB_MAGIC = new byte [] {'P', 'B', 'U', 'F'};
+  private static final String PB_MAGIC_STR = Bytes.toString(PB_MAGIC);
 
   /**
    * Prepend the passed bytes with four bytes of magic, {@link #PB_MAGIC}, to flag what
@@ -161,6 +163,16 @@ public final class ProtobufUtil {
   public static boolean isPBMagicPrefix(final byte [] bytes) {
     if (bytes == null || bytes.length <= PB_MAGIC.length) return false;
     return Bytes.compareTo(PB_MAGIC, 0, PB_MAGIC.length, bytes, 0, PB_MAGIC.length) == 0;
+  }
+
+  /**
+   * @param bytes
+   * @throws DeserializationException if we are missing the pb magic prefix
+   */
+  public static void expectPBMagicPrefix(final byte [] bytes) throws DeserializationException {
+    if (!isPBMagicPrefix(bytes)) {
+      throw new DeserializationException("Missing pb magic " + PB_MAGIC_STR + " prefix");
+    }
   }
 
   /**
@@ -237,6 +249,7 @@ public final class ProtobufUtil {
    *
    * @param serverName the ServerName to convert
    * @return the converted protocol buffer ServerName
+   * @see #toServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName)
    */
   public static HBaseProtos.ServerName
       toServerName(final ServerName serverName) {
@@ -259,8 +272,7 @@ public final class ProtobufUtil {
    * @param proto the protocol buffer ServerName to convert
    * @return the converted ServerName
    */
-  public static ServerName toServerName(
-      final HBaseProtos.ServerName proto) {
+  public static ServerName toServerName(final HBaseProtos.ServerName proto) {
     if (proto == null) return null;
     String hostName = proto.getHostName();
     long startCode = -1;
@@ -280,8 +292,7 @@ public final class ProtobufUtil {
    * @param proto the RegionInfo to convert
    * @return the converted HRegionInfo
    */
-  public static HRegionInfo
-      toRegionInfo(final RegionInfo proto) {
+  public static HRegionInfo toRegionInfo(final RegionInfo proto) {
     if (proto == null) return null;
     byte[] tableName = proto.getTableName().toByteArray();
     if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
@@ -316,8 +327,7 @@ public final class ProtobufUtil {
    * @param info the HRegionInfo to convert
    * @return the converted RegionInfo
    */
-  public static RegionInfo
-      toRegionInfo(final HRegionInfo info) {
+  public static RegionInfo toRegionInfo(final HRegionInfo info) {
     if (info == null) return null;
     RegionInfo.Builder builder = RegionInfo.newBuilder();
     builder.setTableName(ByteString.copyFrom(info.getTableName()));

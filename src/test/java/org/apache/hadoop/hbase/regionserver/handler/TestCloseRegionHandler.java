@@ -25,14 +25,15 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
-import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -133,9 +134,10 @@ public class TestCloseRegionHandler {
       * @throws IOException
       * @throws NodeExistsException
       * @throws KeeperException
+     * @throws DeserializationException 
       */
      @Test public void testZKClosingNodeVersionMismatch()
-     throws IOException, NodeExistsException, KeeperException {
+     throws IOException, NodeExistsException, KeeperException, DeserializationException {
        final Server server = new MockServer(HTU);
        final MockRegionServerServices rss = new MockRegionServerServices();
        rss.setFileSystem(HTU.getTestFileSystem());
@@ -160,9 +162,9 @@ public class TestCloseRegionHandler {
        handler.process();
    
        // Handler should remain in M_ZK_REGION_CLOSING
-       RegionTransitionData data =
-         ZKAssign.getData(server.getZooKeeper(), hri.getEncodedName());
-       assertTrue(EventType.M_ZK_REGION_CLOSING == data.getEventType());
+       RegionTransition rt =
+         RegionTransition.parseFrom(ZKAssign.getData(server.getZooKeeper(), hri.getEncodedName()));
+       assertTrue(rt.getEventType().equals(EventType.M_ZK_REGION_CLOSING ));
      }
   
      /**
@@ -170,9 +172,10 @@ public class TestCloseRegionHandler {
       * @throws IOException
       * @throws NodeExistsException
       * @throws KeeperException
+     * @throws DeserializationException 
       */
      @Test public void testCloseRegion()
-     throws IOException, NodeExistsException, KeeperException {
+     throws IOException, NodeExistsException, KeeperException, DeserializationException {
        final Server server = new MockServer(HTU);
        final MockRegionServerServices rss = new MockRegionServerServices();
        rss.setFileSystem(HTU.getTestFileSystem());
@@ -196,26 +199,23 @@ public class TestCloseRegionHandler {
          versionOfClosingNode);
        handler.process();
        // Handler should have transitioned it to RS_ZK_REGION_CLOSED
-       RegionTransitionData data =
-         ZKAssign.getData(server.getZooKeeper(), hri.getEncodedName());
-       assertTrue(EventType.RS_ZK_REGION_CLOSED == data.getEventType());
+       RegionTransition rt = RegionTransition.parseFrom(
+         ZKAssign.getData(server.getZooKeeper(), hri.getEncodedName()));
+       assertTrue(rt.getEventType().equals(EventType.RS_ZK_REGION_CLOSED));
      }
+
      private void OpenRegion(Server server, RegionServerServices rss,
-           HTableDescriptor htd, HRegionInfo hri)
-           throws IOException, NodeExistsException, KeeperException {
-           // Create it OFFLINE node, which is what Master set before sending OPEN RPC
-           ZKAssign.createNodeOffline(server.getZooKeeper(), hri,
-             server.getServerName());
-           OpenRegionHandler openHandler = new OpenRegionHandler(server, rss, hri,
-             htd);
-           openHandler.process();
-           RegionTransitionData data =
-             ZKAssign.getData(server.getZooKeeper(), hri.getEncodedName());
-       
-           // delete the node, which is what Master do after the region is opened
-           ZKAssign.deleteNode(server.getZooKeeper(), hri.getEncodedName(),
-             EventType.RS_ZK_REGION_OPENED);
-         }  
+         HTableDescriptor htd, HRegionInfo hri)
+     throws IOException, NodeExistsException, KeeperException, DeserializationException {
+       // Create it OFFLINE node, which is what Master set before sending OPEN RPC
+       ZKAssign.createNodeOffline(server.getZooKeeper(), hri, server.getServerName());
+       OpenRegionHandler openHandler = new OpenRegionHandler(server, rss, hri, htd);
+       openHandler.process();
+       // This parse is not used?
+       RegionTransition.parseFrom(ZKAssign.getData(server.getZooKeeper(), hri.getEncodedName()));
+       // delete the node, which is what Master do after the region is opened
+       ZKAssign.deleteNode(server.getZooKeeper(), hri.getEncodedName(), EventType.RS_ZK_REGION_OPENED);
+     }  
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =

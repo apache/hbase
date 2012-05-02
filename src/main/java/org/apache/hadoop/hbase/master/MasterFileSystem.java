@@ -104,7 +104,7 @@ public class MasterFileSystem {
       conf.getBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, true);
     if (this.distributedLogSplitting) {
       this.splitLogManager = new SplitLogManager(master.getZooKeeper(),
-          master.getConfiguration(), master, master.getServerName().toString());
+          master.getConfiguration(), master, master.getServerName());
       this.splitLogManager.finishInitialization();
     } else {
       this.splitLogManager = null;
@@ -250,11 +250,10 @@ public class MasterFileSystem {
   public void splitLog(final List<ServerName> serverNames) throws IOException {
     long splitTime = 0, splitLogSize = 0;
     List<Path> logDirs = new ArrayList<Path>();
-    for(ServerName serverName: serverNames){
-      Path logDir = new Path(this.rootdir,
-        HLog.getHLogDirectoryName(serverName.toString()));
+    for (ServerName serverName: serverNames) {
+      Path logDir = new Path(this.rootdir, HLog.getHLogDirectoryName(serverName.toString()));
       Path splitDir = logDir.suffix(HLog.SPLITTING_EXT);
-      // rename the directory so a rogue RS doesn't create more HLogs
+      // Rename the directory so a rogue RS doesn't create more HLogs
       if (fs.exists(logDir)) {
         if (!this.fs.rename(logDir, splitDir)) {
           throw new IOException("Failed fs.rename for log split: " + logDir);
@@ -272,7 +271,7 @@ public class MasterFileSystem {
       LOG.info("No logs to split");
       return;
     }
-      
+
     if (distributedLogSplitting) {
       splitLogManager.handleDeadWorkers(serverNames);
       splitTime = EnvironmentEdgeManager.currentTimeMillis();

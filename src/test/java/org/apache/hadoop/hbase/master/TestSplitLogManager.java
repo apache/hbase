@@ -19,27 +19,43 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.*;
+import static org.apache.hadoop.hbase.SplitLogCounters.resetCounters;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_get_data_nonode;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_heartbeat;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_log_split_batch_success;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_node_create_queued;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_node_create_result;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_orphan_task_acquired;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_rescan;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_rescan_deleted;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_dead_server_task;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_failed;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_threshold_reached;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_unassigned;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_task_deleted;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
-
-import static org.junit.Assert.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SplitLogTask;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.regionserver.TestMasterAddressManager.NodeCreationListener;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
-import org.apache.hadoop.hbase.zookeeper.ZKSplitLog.TaskState;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.log4j.Level;
@@ -57,6 +73,7 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 public class TestSplitLogManager {
   private static final Log LOG = LogFactory.getLog(TestSplitLogManager.class);
+  private final ServerName DUMMY_MASTER = new ServerName("dummy-master,1,1");
   static {
     Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
   }
@@ -125,8 +142,7 @@ public class TestSplitLogManager {
     public long eval();
   }
 
-  private void waitForCounter(final AtomicLong ctr, long oldval, long newval,
-      long timems) {
+  private void waitForCounter(final AtomicLong ctr, long oldval, long newval, long timems) {
     Expr e = new Expr() {
       public long eval() {
         return ctr.get();
@@ -180,16 +196,16 @@ public class TestSplitLogManager {
   @Test
   public void testTaskCreation() throws Exception {
     LOG.info("TestTaskCreation - test the creation of a task in zk");
-
-    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
 
     byte[] data = ZKUtil.getData(zkw, tasknode);
-    LOG.info("Task node created " + new String(data));
-    assertTrue(TaskState.TASK_UNASSIGNED.equals(data, "dummy-master"));
+    SplitLogTask slt = SplitLogTask.parseFrom(data);
+    LOG.info("Task node created " + slt.toString());
+    assertTrue(slt.isUnassigned(DUMMY_MASTER));
   }
 
   @Test
@@ -197,8 +213,8 @@ public class TestSplitLogManager {
     LOG.info("TestOrphanTaskAcquisition");
 
     String tasknode = ZKSplitLog.getEncodedNodeName(zkw, "orphan/test/slash");
-    zkw.getRecoverableZooKeeper().create(tasknode,
-        TaskState.TASK_OWNED.get("dummy-worker"), Ids.OPEN_ACL_UNSAFE,
+    SplitLogTask slt = new SplitLogTask.Owned(DUMMY_MASTER);
+    zkw.getRecoverableZooKeeper().create(tasknode, slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
     int to = 1000;
@@ -207,7 +223,7 @@ public class TestSplitLogManager {
     to = to + 2 * 100;
 
 
-    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
     waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, 100);
     Task task = slm.findOrCreateOrphanTask(tasknode);
@@ -229,12 +245,12 @@ public class TestSplitLogManager {
         " startup");
     String tasknode = ZKSplitLog.getEncodedNodeName(zkw, "orphan/test/slash");
     //create an unassigned orphan task
-    zkw.getRecoverableZooKeeper().create(tasknode,
-        TaskState.TASK_UNASSIGNED.get("dummy-worker"), Ids.OPEN_ACL_UNSAFE,
+    SplitLogTask slt = new SplitLogTask.Unassigned(DUMMY_MASTER);
+    zkw.getRecoverableZooKeeper().create(tasknode, slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
     int version = ZKUtil.checkExists(zkw, tasknode);
 
-    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
     waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, 100);
     Task task = slm.findOrCreateOrphanTask(tasknode);
@@ -263,24 +279,29 @@ public class TestSplitLogManager {
     to = to + 2 * 100;
 
     conf.setInt("hbase.splitlog.max.resubmit", 2);
-    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
     int version = ZKUtil.checkExists(zkw, tasknode);
-
-    ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker1"));
+    final ServerName worker1 = new ServerName("worker1,1,1");
+    final ServerName worker2 = new ServerName("worker2,1,1");
+    final ServerName worker3 = new ServerName("worker3,1,1");
+    SplitLogTask slt = new SplitLogTask.Owned(worker1);
+    ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     waitForCounter(tot_mgr_heartbeat, 0, 1, 1000);
     waitForCounter(tot_mgr_resubmit, 0, 1, to + EXTRA_TOLERANCE_MS);
     int version1 = ZKUtil.checkExists(zkw, tasknode);
     assertTrue(version1 > version);
-    ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker2"));
+    slt = new SplitLogTask.Owned(worker2);
+    ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     waitForCounter(tot_mgr_heartbeat, 1, 2, 1000);
     waitForCounter(tot_mgr_resubmit, 1, 2, to + 100);
     int version2 = ZKUtil.checkExists(zkw, tasknode);
     assertTrue(version2 > version1);
-    ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker3"));
+    slt = new SplitLogTask.Owned(worker3);
+    ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     waitForCounter(tot_mgr_heartbeat, 1, 2, 1000);
     waitForCounter(tot_mgr_resubmit_threshold_reached, 0, 1, to + EXTRA_TOLERANCE_MS);
     Thread.sleep(to + EXTRA_TOLERANCE_MS);
@@ -293,14 +314,15 @@ public class TestSplitLogManager {
 
     conf.setInt("hbase.splitlog.manager.timeout", 1000);
     conf.setInt("hbase.splitlog.manager.timeoutmonitor.period", 100);
-    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
     int version = ZKUtil.checkExists(zkw, tasknode);
-
-    ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker1"));
+    final ServerName worker1 = new ServerName("worker1,1,1");
+    SplitLogTask slt = new SplitLogTask.Owned(worker1);
+    ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     waitForCounter(tot_mgr_heartbeat, 0, 1, 1000);
     waitForCounter(new Expr() {
       @Override
@@ -312,8 +334,8 @@ public class TestSplitLogManager {
       int version1 = ZKUtil.checkExists(zkw, tasknode);
       assertTrue(version1 > version);
       byte[] taskstate = ZKUtil.getData(zkw, tasknode);
-      assertTrue(Arrays.equals(TaskState.TASK_UNASSIGNED.get("dummy-master"),
-          taskstate));
+      slt = SplitLogTask.parseFrom(taskstate);
+      assertTrue(slt.isUnassigned(DUMMY_MASTER));
       
       waitForCounter(tot_mgr_rescan_deleted, 0, 1, 1000);
     } else {
@@ -327,11 +349,13 @@ public class TestSplitLogManager {
   public void testTaskDone() throws Exception {
     LOG.info("TestTaskDone - cleanup task node once in DONE state");
 
-    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
     TaskBatch batch = new TaskBatch();
     String tasknode = submitTaskAndWait(batch, "foo/1");
-    ZKUtil.setData(zkw, tasknode, TaskState.TASK_DONE.get("worker"));
+    final ServerName worker1 = new ServerName("worker1,1,1");
+    SplitLogTask slt = new SplitLogTask.Done(worker1);
+    ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     synchronized (batch) {
       while (batch.installed != batch.done) {
         batch.wait();
@@ -346,12 +370,14 @@ public class TestSplitLogManager {
     LOG.info("TestTaskErr - cleanup task node once in ERR state");
 
     conf.setInt("hbase.splitlog.max.resubmit", 0);
-    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
-    ZKUtil.setData(zkw, tasknode, TaskState.TASK_ERR.get("worker"));
+    final ServerName worker1 = new ServerName("worker1,1,1");
+    SplitLogTask slt = new SplitLogTask.Err(worker1);
+    ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     synchronized (batch) {
       while (batch.installed != batch.error) {
         batch.wait();
@@ -359,27 +385,34 @@ public class TestSplitLogManager {
     }
     waitForCounter(tot_mgr_task_deleted, 0, 1, 1000);
     assertTrue(ZKUtil.checkExists(zkw, tasknode) == -1);
-    conf.setInt("hbase.splitlog.max.resubmit", ZKSplitLog.DEFAULT_MAX_RESUBMIT);
+    conf.setInt("hbase.splitlog.max.resubmit", SplitLogManager.DEFAULT_MAX_RESUBMIT);
   }
 
   @Test
   public void testTaskResigned() throws Exception {
     LOG.info("TestTaskResigned - resubmit task node once in RESIGNED state");
-
-    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    assertEquals(tot_mgr_resubmit.get(), 0);
+    slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
+    assertEquals(tot_mgr_resubmit.get(), 0);
     TaskBatch batch = new TaskBatch();
     String tasknode = submitTaskAndWait(batch, "foo/1");
-    ZKUtil.setData(zkw, tasknode, TaskState.TASK_RESIGNED.get("worker"));
+    assertEquals(tot_mgr_resubmit.get(), 0);
+    final ServerName worker1 = new ServerName("worker1,1,1");
+    assertEquals(tot_mgr_resubmit.get(), 0);
+    SplitLogTask slt = new SplitLogTask.Resigned(worker1);
+    assertEquals(tot_mgr_resubmit.get(), 0);
+    ZKUtil.setData(zkw, tasknode, slt.toByteArray());
     int version = ZKUtil.checkExists(zkw, tasknode);
-
-    waitForCounter(tot_mgr_resubmit, 0, 1, 1000);
+    // Could be small race here.
+    if (tot_mgr_resubmit.get() == 0) waitForCounter(tot_mgr_resubmit, 0, 1, 1000);
+    assertEquals(tot_mgr_resubmit.get(), 1);
     int version1 = ZKUtil.checkExists(zkw, tasknode);
-    assertTrue(version1 > version);
+    assertTrue("version1=" + version1 + ", version=" + version, version1 > version);
 
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);
-    assertTrue(Arrays.equals(taskstate,
-        TaskState.TASK_UNASSIGNED.get("dummy-master")));
+    slt = SplitLogTask.parseFrom(taskstate);
+    assertTrue(slt.isUnassigned(DUMMY_MASTER));
   }
 
   @Test
@@ -389,8 +422,9 @@ public class TestSplitLogManager {
 
     // create an orphan task in OWNED state
     String tasknode1 = ZKSplitLog.getEncodedNodeName(zkw, "orphan/1");
-    zkw.getRecoverableZooKeeper().create(tasknode1,
-        TaskState.TASK_OWNED.get("dummy-worker"), Ids.OPEN_ACL_UNSAFE,
+    final ServerName worker1 = new ServerName("worker1,1,1");
+    SplitLogTask slt = new SplitLogTask.Owned(worker1);
+    zkw.getRecoverableZooKeeper().create(tasknode1, slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
     int to = 1000;
@@ -399,7 +433,7 @@ public class TestSplitLogManager {
     conf.setInt("hbase.splitlog.manager.timeoutmonitor.period", 100);
 
 
-    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
     waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, 100);
 
@@ -411,8 +445,9 @@ public class TestSplitLogManager {
     // keep updating the orphan owned node every to/2 seconds
     for (int i = 0; i < (3 * to)/100; i++) {
       Thread.sleep(100);
-      ZKUtil.setData(zkw, tasknode1,
-          TaskState.TASK_OWNED.get("dummy-worker"));
+      final ServerName worker2 = new ServerName("worker1,1,1");
+      slt = new SplitLogTask.Owned(worker2);
+      ZKUtil.setData(zkw, tasknode1, slt.toByteArray());
     }
 
     // since we have stopped heartbeating the owned node therefore it should
@@ -429,31 +464,34 @@ public class TestSplitLogManager {
     LOG.info("testDeadWorker");
 
     conf.setLong("hbase.splitlog.max.resubmit", 0);
-    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
     int version = ZKUtil.checkExists(zkw, tasknode);
-
-    ZKUtil.setData(zkw, tasknode, TaskState.TASK_OWNED.get("worker1"));
-    waitForCounter(tot_mgr_heartbeat, 0, 1, 1000);
-    slm.handleDeadWorker("worker1");
-    waitForCounter(tot_mgr_resubmit, 0, 1, 1000);
-    waitForCounter(tot_mgr_resubmit_dead_server_task, 0, 1, 1000);
+    final ServerName worker1 = new ServerName("worker1,1,1");
+    SplitLogTask slt = new SplitLogTask.Owned(worker1);
+    ZKUtil.setData(zkw, tasknode, slt.toByteArray());
+    if (tot_mgr_heartbeat.get() == 0) waitForCounter(tot_mgr_heartbeat, 0, 1, 1000);
+    slm.handleDeadWorker(worker1);
+    if (tot_mgr_resubmit.get() == 0) waitForCounter(tot_mgr_resubmit, 0, 1, 3000);
+    if (tot_mgr_resubmit_dead_server_task.get() == 0) {
+      waitForCounter(tot_mgr_resubmit_dead_server_task, 0, 1, 3000);
+    }
 
     int version1 = ZKUtil.checkExists(zkw, tasknode);
     assertTrue(version1 > version);
     byte[] taskstate = ZKUtil.getData(zkw, tasknode);
-    assertTrue(Arrays.equals(TaskState.TASK_UNASSIGNED.get("dummy-master"),
-        taskstate));
+    slt = SplitLogTask.parseFrom(taskstate);
+    assertTrue(slt.isUnassigned(DUMMY_MASTER));
     return;
   }
 
   @Test
   public void testEmptyLogDir() throws Exception {
     LOG.info("testEmptyLogDir");
-    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path emptyLogDirPath = new Path(fs.getWorkingDirectory(),
@@ -467,7 +505,7 @@ public class TestSplitLogManager {
   public void testVanishingTaskZNode() throws Exception {
     LOG.info("testVanishingTaskZNode");
     conf.setInt("hbase.splitlog.manager.unassigned.timeout", 0);
-    slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
+    slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     final Path logDir = new Path(fs.getWorkingDirectory(),

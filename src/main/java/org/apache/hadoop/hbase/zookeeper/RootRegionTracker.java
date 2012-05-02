@@ -19,16 +19,12 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer;
-import org.apache.hadoop.hbase.util.Addressing;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Tracks the root region server location node in zookeeper.
@@ -64,7 +60,12 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
    * @throws InterruptedException
    */
   public ServerName getRootRegionLocation() throws InterruptedException {
-    return ZKUtil.znodeContentToServerName(super.getData(true));
+    try {
+      return ServerName.parseFrom(super.getData(true));
+    } catch (DeserializationException e) {
+      LOG.warn("Failed parse", e);
+      return null;
+    }
   }
 
   /**
@@ -76,7 +77,11 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
    */
   public static ServerName getRootRegionLocation(final ZooKeeperWatcher zkw)
   throws KeeperException {
-    return ZKUtil.znodeContentToServerName(ZKUtil.getData(zkw, zkw.rootServerZNode));
+    try {
+      return ServerName.parseFrom(ZKUtil.getData(zkw, zkw.rootServerZNode));
+    } catch (DeserializationException e) {
+      throw ZKUtil.convert(e);
+    }
   }
 
   /**
@@ -97,7 +102,12 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
       LOG.error(errorMsg);
       throw new IllegalArgumentException(errorMsg);
     }
-    return ZKUtil.znodeContentToServerName(super.blockUntilAvailable(timeout, true));
+    try {
+      return ServerName.parseFrom(super.blockUntilAvailable(timeout, true));
+    } catch (DeserializationException e) {
+      LOG.warn("Failed parse", e);
+      return null;
+    }
   }
 
   /**
@@ -113,7 +123,7 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
     LOG.info("Setting ROOT region location in ZooKeeper as " + location);
     // Make the RootRegionServer pb and then get its bytes and save this as
     // the znode content.
-    byte [] data = getZNodeData(location);
+    byte [] data = toByteArray(location);
     try {
       ZKUtil.createAndWatch(zookeeper, zookeeper.rootServerZNode, data);
     } catch(KeeperException.NodeExistsException nee) {
@@ -127,7 +137,7 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
    * @param sn What to put into the znode.
    * @return The content of the root-region-server znode
    */
-  static byte [] getZNodeData(final ServerName sn) {
+  static byte [] toByteArray(final ServerName sn) {
     // ZNode content is a pb message preceeded by some pb magic.
     HBaseProtos.ServerName pbsn =
       HBaseProtos.ServerName.newBuilder().setHostName(sn.getHostname()).
@@ -164,6 +174,12 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
       final long timeout)
   throws InterruptedException {
     byte [] data = ZKUtil.blockUntilAvailable(zkw, zkw.rootServerZNode, timeout);
-    return ZKUtil.znodeContentToServerName(data);
+    if (data == null) return null;
+    try {
+      return ServerName.parseFrom(data);
+    } catch (DeserializationException e) {
+      LOG.warn("Failed parse", e);
+      return null;
+    }
   }
 }

@@ -29,23 +29,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -61,10 +62,9 @@ import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
+import org.apache.zookeeper.Watcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -115,6 +115,7 @@ public class TestAssignmentManager {
     // If abort is called, be sure to fail the test (don't just swallow it
     // silently as is mockito default).
     this.server = Mockito.mock(Server.class);
+    Mockito.when(server.getServerName()).thenReturn(new ServerName("master,1,1"));
     Mockito.when(server.getConfiguration()).thenReturn(HTU.getConfiguration());
     this.watcher =
       new ZooKeeperWatcher(HTU.getConfiguration(), "mockedServer", this.server, true);
@@ -159,10 +160,11 @@ public class TestAssignmentManager {
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
+   * @throws DeserializationException 
    */
   @Test(timeout = 5000)
   public void testBalanceOnMasterFailoverScenarioWithOpenedNode()
-      throws IOException, KeeperException, InterruptedException, ServiceException {
+  throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -177,7 +179,7 @@ public class TestAssignmentManager {
       int versionid =
         ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
       assertNotSame(versionid, -1);
-      while (!ZKAssign.verifyRegionState(this.watcher, REGIONINFO,
+      while (!Mocking.verifyRegionState(this.watcher, REGIONINFO,
           EventType.M_ZK_REGION_OFFLINE)) {
         Threads.sleep(1);
       }
@@ -205,7 +207,7 @@ public class TestAssignmentManager {
 
   @Test(timeout = 5000)
   public void testBalanceOnMasterFailoverScenarioWithClosedNode()
-      throws IOException, KeeperException, InterruptedException, ServiceException {
+  throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -221,7 +223,7 @@ public class TestAssignmentManager {
         ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
       assertNotSame(versionid, -1);
       am.gate.set(false);
-      while (!ZKAssign.verifyRegionState(this.watcher, REGIONINFO,
+      while (!Mocking.verifyRegionState(this.watcher, REGIONINFO,
           EventType.M_ZK_REGION_OFFLINE)) {
         Threads.sleep(1);
       }
@@ -249,7 +251,7 @@ public class TestAssignmentManager {
 
   @Test(timeout = 5000)
   public void testBalanceOnMasterFailoverScenarioWithOfflineNode()
-      throws IOException, KeeperException, InterruptedException, ServiceException {
+  throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -264,7 +266,7 @@ public class TestAssignmentManager {
       int versionid =
         ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
       assertNotSame(versionid, -1);
-      while (!ZKAssign.verifyRegionState(this.watcher, REGIONINFO,
+      while (!Mocking.verifyRegionState(this.watcher, REGIONINFO,
           EventType.M_ZK_REGION_OFFLINE)) {
         Threads.sleep(1);
       }
@@ -306,10 +308,11 @@ public class TestAssignmentManager {
    * from one server to another mocking regionserver responding over zk.
    * @throws IOException
    * @throws KeeperException
+   * @throws DeserializationException 
    */
   @Test
   public void testBalance()
-  throws IOException, KeeperException {
+  throws IOException, KeeperException, DeserializationException {
     // Create and startup an executor.  This is used by AssignmentManager
     // handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("testBalanceExecutor");
@@ -345,7 +348,7 @@ public class TestAssignmentManager {
       // balancer.  The zk node will be OFFLINE waiting for regionserver to
       // transition it through OPENING, OPENED.  Wait till we see the OFFLINE
       // zk node before we proceed.
-      while (!ZKAssign.verifyRegionState(this.watcher, REGIONINFO, EventType.M_ZK_REGION_OFFLINE)) {
+      while (!Mocking.verifyRegionState(this.watcher, REGIONINFO, EventType.M_ZK_REGION_OFFLINE)) {
         Threads.sleep(1);
       }
       // Get current versionid else will fail on transition from OFFLINE to OPENING below
@@ -541,12 +544,12 @@ public class TestAssignmentManager {
   private static int createNodeSplitting(final ZooKeeperWatcher zkw,
       final HRegionInfo region, final ServerName serverName)
   throws KeeperException, IOException {
-    RegionTransitionData data =
-      new RegionTransitionData(EventType.RS_ZK_REGION_SPLITTING,
+    RegionTransition rt =
+      RegionTransition.createRegionTransition(EventType.RS_ZK_REGION_SPLITTING,
         region.getRegionName(), serverName);
 
     String node = ZKAssign.getNodeName(zkw, region.getEncodedName());
-    if (!ZKUtil.createEphemeralNodeAndWatch(zkw, node, data.getBytes())) {
+    if (!ZKUtil.createEphemeralNodeAndWatch(zkw, node, rt.toByteArray())) {
       throw new IOException("Failed create of ephemeral " + node);
     }
     // Transition node from SPLITTING to SPLITTING and pick up version so we
@@ -650,12 +653,12 @@ public class TestAssignmentManager {
           deadServers);
     }
     @Override
-    void processRegionsInTransition(final RegionTransitionData data,
+    void processRegionsInTransition(final RegionTransition rt,
         final HRegionInfo regionInfo,
         final Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers,
         final int expectedVersion) throws KeeperException {
       while (this.gate.get()) Threads.sleep(1);
-      super.processRegionsInTransition(data, regionInfo, deadServers, expectedVersion);
+      super.processRegionsInTransition(rt, regionInfo, deadServers, expectedVersion);
     }
     
     /** reset the watcher */

@@ -26,7 +26,6 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -148,9 +147,9 @@ public class TestOpenRegionHandler {
     handler.process();
 
     // Handler should have transitioned it to FAILED_OPEN
-    RegionTransitionData data =
-      ZKAssign.getData(server.getZooKeeper(), TEST_HRI.getEncodedName());
-    assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, data.getEventType());
+    RegionTransition rt = RegionTransition.parseFrom(
+      ZKAssign.getData(server.getZooKeeper(), TEST_HRI.getEncodedName()));
+    assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, rt.getEventType());
   }
   
   @Test
@@ -173,9 +172,9 @@ public class TestOpenRegionHandler {
     handler.process();
 
     // Handler should have transitioned it to FAILED_OPEN
-    RegionTransitionData data =
-      ZKAssign.getData(server.getZooKeeper(), TEST_HRI.getEncodedName());
-    assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, data.getEventType());
+    RegionTransition rt = RegionTransition.parseFrom(
+      ZKAssign.getData(server.getZooKeeper(), TEST_HRI.getEncodedName()));
+    assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, rt.getEventType());
   }
   
 

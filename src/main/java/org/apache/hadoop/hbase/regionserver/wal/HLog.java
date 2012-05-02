@@ -1715,7 +1715,8 @@ public class HLog implements Syncable {
    * Construct the HLog directory name
    *
    * @param serverName Server name formatted as described in {@link ServerName}
-   * @return the HLog directory name
+   * @return the relative HLog directory name, e.g. <code>.logs/1.example.org,6030,12345</code>
+   * if <code>serverName</code> passed is <code>1.example.org,60030,12345</code>
    */
   public static String getHLogDirectoryName(final String serverName) {
     StringBuilder dirName = new StringBuilder(HConstants.HREGION_LOGDIR_NAME);

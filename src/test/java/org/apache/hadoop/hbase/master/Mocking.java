@@ -23,9 +23,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
@@ -33,6 +35,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -71,12 +74,13 @@ public class Mocking {
    * @param sn Name of the regionserver doing the 'opening'
    * @param hri Region we're 'opening'.
    * @throws KeeperException
+   * @throws DeserializationException 
    */
   static void fakeRegionServerRegionOpenInZK(final ZooKeeperWatcher w,
       final ServerName sn, final HRegionInfo hri)
-  throws KeeperException {
+  throws KeeperException, DeserializationException {
     // Wait till we see the OFFLINE zk node before we proceed.
-    while (!ZKAssign.verifyRegionState(w, hri, EventType.M_ZK_REGION_OFFLINE)) {
+    while (!verifyRegionState(w, hri, EventType.M_ZK_REGION_OFFLINE)) {
       Threads.sleep(1);
     }
     // Get current versionid else will fail on transition from OFFLINE to OPENING below
@@ -93,5 +97,41 @@ public class Mocking {
     assertNotSame(-1, versionid);
     // We should be done now.  The master open handler will notice the
     // transition and remove this regions znode.
+  }
+
+  /**
+   * Verifies that the specified region is in the specified state in ZooKeeper.
+   * <p>
+   * Returns true if region is in transition and in the specified state in
+   * ZooKeeper.  Returns false if the region does not exist in ZK or is in
+   * a different state.
+   * <p>
+   * Method synchronizes() with ZK so will yield an up-to-date result but is
+   * a slow read.
+   * @param zkw
+   * @param region
+   * @param expectedState
+   * @return true if region exists and is in expected state
+   * @throws DeserializationException 
+   */
+  static boolean verifyRegionState(ZooKeeperWatcher zkw, HRegionInfo region, EventType expectedState)
+  throws KeeperException, DeserializationException {
+    String encoded = region.getEncodedName();
+
+    String node = ZKAssign.getNodeName(zkw, encoded);
+    zkw.sync(node);
+
+    // Read existing data of the node
+    byte [] existingBytes = null;
+    try {
+      existingBytes = ZKUtil.getDataAndWatch(zkw, node);
+    } catch (KeeperException.NoNodeException nne) {
+      return false;
+    } catch (KeeperException e) {
+      throw e;
+    }
+    if (existingBytes == null) return false;
+    RegionTransition rt = RegionTransition.parseFrom(existingBytes);
+    return rt.getEventType().equals(expectedState);
   }
 }

@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
-import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -98,9 +97,10 @@ public class TestSplitTransactionOnCluster {
    * @throws InterruptedException
    * @throws NodeExistsException
    * @throws KeeperException
+   * @throws DeserializationException 
    */
   @Test (timeout = 300000) public void testRSSplitEphemeralsDisappearButDaughtersAreOnlinedAfterShutdownHandling()
-  throws IOException, InterruptedException, NodeExistsException, KeeperException {
+  throws IOException, InterruptedException, NodeExistsException, KeeperException, DeserializationException {
     final byte [] tableName =
       Bytes.toBytes("ephemeral");
 
@@ -137,12 +137,12 @@ public class TestSplitTransactionOnCluster {
       Stat stats =
         TESTING_UTIL.getZooKeeperWatcher().getRecoverableZooKeeper().exists(path, false);
       LOG.info("EPHEMERAL NODE BEFORE SERVER ABORT, path=" + path + ", stats=" + stats);
-      RegionTransitionData rtd =
-        ZKAssign.getData(TESTING_UTIL.getZooKeeperWatcher(),
-          hri.getEncodedName());
+      RegionTransition rt =
+        RegionTransition.parseFrom(ZKAssign.getData(TESTING_UTIL.getZooKeeperWatcher(),
+          hri.getEncodedName()));
       // State could be SPLIT or SPLITTING.
-      assertTrue(rtd.getEventType().equals(EventType.RS_ZK_REGION_SPLIT) ||
-        rtd.getEventType().equals(EventType.RS_ZK_REGION_SPLITTING));
+      assertTrue(rt.getEventType().equals(EventType.RS_ZK_REGION_SPLIT) ||
+        rt.getEventType().equals(EventType.RS_ZK_REGION_SPLITTING));
       // Now crash the server
       cluster.abortRegionServer(tableRegionIndex);
       waitUntilRegionServerDead();

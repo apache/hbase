@@ -26,7 +26,6 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -36,27 +35,20 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.EmptyWatcher;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.executor.RegionTransitionData;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer;
-import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.KeeperException.NoNodeException;
+import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Internal HBase utility class for ZooKeeper.
@@ -359,8 +351,7 @@ public class ZKUtil {
    *         null if parent does not exist
    * @throws KeeperException if unexpected zookeeper exception
    */
-  public static List<String> listChildrenNoWatch(
-      ZooKeeperWatcher zkw, String znode)
+  public static List<String> listChildrenNoWatch(ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
     List<String> children = null;
     try {
@@ -376,7 +367,9 @@ public class ZKUtil {
 
   /**
    * Simple class to hold a node path and node data.
+   * @deprecated Unused
    */
+  @Deprecated
   public static class NodeAndData {
     private String node;
     private byte [] data;
@@ -392,7 +385,7 @@ public class ZKUtil {
     }
     @Override
     public String toString() {
-      return node + " (" + RegionTransitionData.fromBytes(data) + ")";
+      return node;
     }
     public boolean isEmpty() {
       return (data.length == 0);
@@ -600,6 +593,7 @@ public class ZKUtil {
    * @return list of data of children of the specified node, an empty list if the node
    *          exists but has no children, and null if the node does not exist
    * @throws KeeperException if unexpected zookeeper exception
+   * @deprecated Unused
    */
   public static List<NodeAndData> getChildDataAndWatchForNewChildren(
       ZooKeeperWatcher zkw, String baseNode) throws KeeperException {
@@ -630,6 +624,7 @@ public class ZKUtil {
    * @param expectedVersion
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.BadVersionException if version mismatch
+   * @deprecated Unused
    */
   public static void updateExistingNodeData(ZooKeeperWatcher zkw, String znode,
       byte [] data, int expectedVersion)
@@ -1144,9 +1139,21 @@ public class ZKUtil {
       " byte(s) of data from znode " + znode +
       (watcherSet? " and set watcher; ": "; data=") +
       (data == null? "null": data.length == 0? "empty": (
-          znode.startsWith(zkw.assignmentZNode) ?
-              RegionTransitionData.fromBytes(data).toString()
-              : StringUtils.abbreviate(Bytes.toStringBinary(data), 32)))));
+          znode.startsWith(zkw.assignmentZNode)?
+            ZKAssign.toString(data): // We should not be doing this reaching into another class
+          znode.startsWith(zkw.rootServerZNode)?
+            getServerNameOrEmptyString(data):
+          znode.startsWith(zkw.backupMasterAddressesZNode)?
+            getServerNameOrEmptyString(data):
+          StringUtils.abbreviate(Bytes.toStringBinary(data), 32)))));
+  }
+
+  private static String getServerNameOrEmptyString(final byte [] data) {
+    try {
+      return ServerName.parseFrom(data).toString();
+    } catch (DeserializationException e) {
+      return "";
+    }
   }
 
   /**
@@ -1222,44 +1229,14 @@ public class ZKUtil {
 
 
   /**
-   * Get a ServerName from the passed in znode data bytes.
-   * @param data ZNode data with a server name in it; can handle the old style
-   * servername where servername was host and port.  Works too with data that
-   * begins w/ the pb 'PBUF' magic and that its then followed by a protobuf that
-   * has a serialized {@link ServerName} in it.
-   * @return Returns null if <code>data</code> is null else converts passed data
-   * to a ServerName instance.
+   * Convert a {@link DeserializationException} to a more palatable {@link KeeperException}.
+   * Used when can't let a {@link DeserializationException} out w/o changing public API.
+   * @param e Exception to convert
+   * @return Converted exception
    */
-  public static ServerName znodeContentToServerName(final byte [] data) {
-    if (data == null || data.length <= 0) return null;
-    if (ProtobufUtil.isPBMagicPrefix(data)) {
-      int prefixLen = ProtobufUtil.lengthOfPBMagic();
-      try {
-        RootRegionServer rss =
-          RootRegionServer.newBuilder().mergeFrom(data, prefixLen, data.length - prefixLen).build();
-        HBaseProtos.ServerName sn = rss.getServer();
-        return new ServerName(sn.getHostName(), sn.getPort(), sn.getStartCode());
-      } catch (InvalidProtocolBufferException e) {
-        // A failed parse of the znode is pretty catastrophic. Rather than loop
-        // retrying hoping the bad bytes will changes, and rather than change
-        // the signature on this method to add an IOE which will send ripples all
-        // over the code base, throw a RuntimeException.  This should "never" happen.
-        // Fail fast if it does.
-        throw new RuntimeException(e);
-      }
-    }
-    // The str returned could be old style -- pre hbase-1502 -- which was
-    // hostname and port seperated by a colon rather than hostname, port and
-    // startcode delimited by a ','.
-    String str = Bytes.toString(data);
-    int index = str.indexOf(ServerName.SERVERNAME_SEPARATOR);
-    if (index != -1) {
-      // Presume its ServerName serialized with versioned bytes.
-      return ServerName.parseVersionedServerName(data);
-    }
-    // Presume it a hostname:port format.
-    String hostname = Addressing.parseHostname(str);
-    int port = Addressing.parsePort(str);
-    return new ServerName(hostname, port, -1L);
+  public static KeeperException convert(final DeserializationException e) {
+    KeeperException ke = new KeeperException.DataInconsistencyException();
+    ke.initCause(e);
+    return ke;
   }
 }

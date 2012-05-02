@@ -19,7 +19,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.*;
+import static org.apache.hadoop.hbase.SplitLogCounters.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -73,7 +72,7 @@ public class TestDistributedLogSplitting {
     Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
   }
 
-  // Start a cluster with 2 masters and 3 regionservers
+  // Start a cluster with 2 masters and 6 regionservers
   final int NUM_MASTERS = 2;
   final int NUM_RS = 6;
 
@@ -83,7 +82,7 @@ public class TestDistributedLogSplitting {
   HBaseTestingUtility TEST_UTIL;
 
   private void startCluster(int num_rs) throws Exception{
-    ZKSplitLog.Counters.resetCounters();
+    SplitLogCounters.resetCounters();
     LOG.info("Starting cluster");
     conf = HBaseConfiguration.create();
     conf.getLong("hbase.splitlog.max.resubmit", 0);
@@ -106,48 +105,6 @@ public class TestDistributedLogSplitting {
   @After
   public void after() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @Test (timeout=300000)
-  public void testThreeRSAbort() throws Exception {
-    LOG.info("testThreeRSAbort");
-    final int NUM_REGIONS_TO_CREATE = 40;
-    final int NUM_ROWS_PER_REGION = 100;
-
-    startCluster(NUM_RS); // NUM_RS=6.
-
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf,
-        "distributed log splitting test", null);
-
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
-    populateDataInTable(NUM_ROWS_PER_REGION, "family");
-
-
-    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
-    assertEquals(NUM_RS, rsts.size());
-    rsts.get(0).getRegionServer().abort("testing");
-    rsts.get(1).getRegionServer().abort("testing");
-    rsts.get(2).getRegionServer().abort("testing");
-
-    long start = EnvironmentEdgeManager.currentTimeMillis();
-    while (cluster.getLiveRegionServerThreads().size() > (NUM_RS - 3)) {
-      if (EnvironmentEdgeManager.currentTimeMillis() - start > 60000) {
-        assertTrue(false);
-      }
-      Thread.sleep(200);
-    }
-
-    start = EnvironmentEdgeManager.currentTimeMillis();
-    while (getAllOnlineRegions(cluster).size() < (NUM_REGIONS_TO_CREATE + 2)) {
-      if (EnvironmentEdgeManager.currentTimeMillis() - start > 60000) {
-        assertTrue(false);
-      }
-      Thread.sleep(200);
-    }
-
-    assertEquals(NUM_REGIONS_TO_CREATE * NUM_ROWS_PER_REGION,
-        TEST_UTIL.countRows(ht));
-    ht.close();
   }
 
   @Test (timeout=300000)
@@ -196,8 +153,7 @@ public class TestDistributedLogSplitting {
 
       Path tdir = HTableDescriptor.getTableDir(rootdir, table);
       Path editsdir =
-        HLog.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir,
-        hri.getEncodedName()));
+        HLog.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
       LOG.debug("checking edits dir " + editsdir);
       FileStatus[] files = fs.listStatus(editsdir);
       assertEquals(1, files.length);
@@ -271,6 +227,50 @@ public class TestDistributedLogSplitting {
         "tot_wkr_final_transistion_failed, tot_wkr_task_done, " +
         "tot_wkr_preempt_task");
   }
+
+  @Test (timeout=300000)
+  public void testThreeRSAbort() throws Exception {
+    LOG.info("testThreeRSAbort");
+    final int NUM_REGIONS_TO_CREATE = 40;
+    final int NUM_ROWS_PER_REGION = 100;
+
+    startCluster(NUM_RS); // NUM_RS=6.
+
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf,
+        "distributed log splitting test", null);
+
+    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    populateDataInTable(NUM_ROWS_PER_REGION, "family");
+
+
+    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
+    assertEquals(NUM_RS, rsts.size());
+    rsts.get(0).getRegionServer().abort("testing");
+    rsts.get(1).getRegionServer().abort("testing");
+    rsts.get(2).getRegionServer().abort("testing");
+
+    long start = EnvironmentEdgeManager.currentTimeMillis();
+    while (cluster.getLiveRegionServerThreads().size() > (NUM_RS - 3)) {
+      if (EnvironmentEdgeManager.currentTimeMillis() - start > 60000) {
+        assertTrue(false);
+      }
+      Thread.sleep(200);
+    }
+
+    start = EnvironmentEdgeManager.currentTimeMillis();
+    while (getAllOnlineRegions(cluster).size() < (NUM_REGIONS_TO_CREATE + 2)) {
+      if (EnvironmentEdgeManager.currentTimeMillis() - start > 60000) {
+        assertTrue("Timedout", false);
+      }
+      Thread.sleep(200);
+    }
+
+    assertEquals(NUM_REGIONS_TO_CREATE * NUM_ROWS_PER_REGION,
+        TEST_UTIL.countRows(ht));
+    ht.close();
+  }
+
+
 
   @Test(timeout=25000)
   public void testDelayedDeleteOnFailure() throws Exception {

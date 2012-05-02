@@ -24,8 +24,12 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Instance of an HBase ServerName.
@@ -295,5 +299,48 @@ public class ServerName implements Comparable<ServerName> {
   public static ServerName parseServerName(final String str) {
     return SERVERNAME_PATTERN.matcher(str).matches()? new ServerName(str):
       new ServerName(str, NON_STARTCODE);
+  }
+
+  /**
+   * Get a ServerName from the passed in data bytes.
+   * @param data Data with a serialize server name in it; can handle the old style
+   * servername where servername was host and port.  Works too with data that
+   * begins w/ the pb 'PBUF' magic and that is then followed by a protobuf that
+   * has a serialized {@link ServerName} in it.
+   * @return Returns null if <code>data</code> is null else converts passed data
+   * to a ServerName instance.
+   * @throws DeserializationException 
+   */
+  public static ServerName parseFrom(final byte [] data) throws DeserializationException {
+    if (data == null || data.length <= 0) return null;
+    if (ProtobufUtil.isPBMagicPrefix(data)) {
+      int prefixLen = ProtobufUtil.lengthOfPBMagic();
+      try {
+        RootRegionServer rss =
+          RootRegionServer.newBuilder().mergeFrom(data, prefixLen, data.length - prefixLen).build();
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName sn = rss.getServer();
+        return new ServerName(sn.getHostName(), sn.getPort(), sn.getStartCode());
+      } catch (InvalidProtocolBufferException e) {
+        // A failed parse of the znode is pretty catastrophic. Rather than loop
+        // retrying hoping the bad bytes will changes, and rather than change
+        // the signature on this method to add an IOE which will send ripples all
+        // over the code base, throw a RuntimeException.  This should "never" happen.
+        // Fail fast if it does.
+        throw new DeserializationException(e);
+      }
+    }
+    // The str returned could be old style -- pre hbase-1502 -- which was
+    // hostname and port seperated by a colon rather than hostname, port and
+    // startcode delimited by a ','.
+    String str = Bytes.toString(data);
+    int index = str.indexOf(ServerName.SERVERNAME_SEPARATOR);
+    if (index != -1) {
+      // Presume its ServerName serialized with versioned bytes.
+      return ServerName.parseVersionedServerName(data);
+    }
+    // Presume it a hostname:port format.
+    String hostname = Addressing.parseHostname(str);
+    int port = Addressing.parsePort(str);
+    return new ServerName(hostname, port, -1L);
   }
 }

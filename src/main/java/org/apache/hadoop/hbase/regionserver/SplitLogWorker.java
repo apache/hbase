@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.zookeeper.ZKSplitLog.Counters.*;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;
@@ -32,12 +30,14 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.master.SplitLogManager;
+import org.apache.hadoop.hbase.DeserializationException;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SplitLogCounters;
+import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
-import org.apache.hadoop.hbase.zookeeper.ZKSplitLog.TaskState;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -71,9 +71,8 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   private static final Log LOG = LogFactory.getLog(SplitLogWorker.class);
 
   Thread worker;
-  private final String serverName;
+  private final ServerName serverName;
   private final TaskExecutor splitTaskExecutor;
-  private long zkretries;
 
   private Object taskReadyLock = new Object();
   volatile int taskReadySeq = 0;
@@ -85,15 +84,14 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
 
 
   public SplitLogWorker(ZooKeeperWatcher watcher, Configuration conf,
-      String serverName, TaskExecutor splitTaskExecutor) {
+      ServerName serverName, TaskExecutor splitTaskExecutor) {
     super(watcher);
     this.serverName = serverName;
     this.splitTaskExecutor = splitTaskExecutor;
-    this.zkretries = conf.getLong("hbase.splitlog.zk.retries", 3);
   }
 
   public SplitLogWorker(ZooKeeperWatcher watcher, final Configuration conf,
-      final String serverName) {
+      final ServerName serverName) {
     this(watcher, conf, serverName, new TaskExecutor () {
       @Override
       public Status exec(String filename, CancelableProgressable p) {
@@ -111,24 +109,21 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         // encountered a bad non-retry-able persistent error.
         try {
           String tmpname =
-            ZKSplitLog.getSplitLogDirTmpComponent(serverName, filename);
+            ZKSplitLog.getSplitLogDirTmpComponent(serverName.toString(), filename);
           if (HLogSplitter.splitLogFileToTemp(rootdir, tmpname,
               fs.getFileStatus(new Path(filename)), fs, conf, p) == false) {
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {
-          LOG.warn("log splitting of " + filename + " interrupted, resigning",
-              iioe);
+          LOG.warn("log splitting of " + filename + " interrupted, resigning", iioe);
           return Status.RESIGNED;
         } catch (IOException e) {
           Throwable cause = e.getCause();
           if (cause instanceof InterruptedException) {
-            LOG.warn("log splitting of " + filename + " interrupted, resigning",
-                e);
+            LOG.warn("log splitting of " + filename + " interrupted, resigning", e);
             return Status.RESIGNED;
           }
-          LOG.warn("log splitting of " + filename + " failed, returning error",
-              e);
+          LOG.warn("log splitting of " + filename + " failed, returning error", e);
           return Status.ERR;
         }
         return Status.DONE;
@@ -149,13 +144,11 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
           res = ZKUtil.checkExists(watcher, watcher.splitLogZNode);
         } catch (KeeperException e) {
           // ignore
-          LOG.warn("Exception when checking for " + watcher.splitLogZNode +
-              " ... retrying", e);
+          LOG.warn("Exception when checking for " + watcher.splitLogZNode  + " ... retrying", e);
         }
         if (res == -1) {
           try {
-            LOG.info(watcher.splitLogZNode + " znode does not exist," +
-                " waiting for master to create one");
+            LOG.info(watcher.splitLogZNode + " znode does not exist, waiting for master to create");
             Thread.sleep(1000);
           } catch (InterruptedException e) {
             LOG.debug("Interrupted while waiting for " + watcher.splitLogZNode
@@ -241,31 +234,40 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     try {
       try {
         if ((data = ZKUtil.getDataNoWatch(this.watcher, path, stat)) == null) {
-          tot_wkr_failed_to_grab_task_no_data.incrementAndGet();
+          SplitLogCounters.tot_wkr_failed_to_grab_task_no_data.incrementAndGet();
           return;
         }
       } catch (KeeperException e) {
         LOG.warn("Failed to get data for znode " + path, e);
-        tot_wkr_failed_to_grab_task_exception.incrementAndGet();
+        SplitLogCounters.tot_wkr_failed_to_grab_task_exception.incrementAndGet();
         return;
       }
-      if (TaskState.TASK_UNASSIGNED.equals(data) == false) {
-        tot_wkr_failed_to_grab_task_owned.incrementAndGet();
+      SplitLogTask slt;
+      try {
+        slt = SplitLogTask.parseFrom(data);
+      } catch (DeserializationException e) {
+        LOG.warn("Failed parse data for znode " + path, e);
+        SplitLogCounters.tot_wkr_failed_to_grab_task_exception.incrementAndGet();
+        return;
+      }
+      if (slt.isUnassigned() == false) {
+        SplitLogCounters.tot_wkr_failed_to_grab_task_owned.incrementAndGet();
         return;
       }
 
       currentVersion = stat.getVersion();
       if (attemptToOwnTask(true) == false) {
-        tot_wkr_failed_to_grab_task_lost_race.incrementAndGet();
+        SplitLogCounters.tot_wkr_failed_to_grab_task_lost_race.incrementAndGet();
         return;
       }
 
       if (ZKSplitLog.isRescanNode(watcher, currentTask)) {
-        endTask(TaskState.TASK_DONE, tot_wkr_task_acquired_rescan);
+        endTask(new SplitLogTask.Done(this.serverName),
+          SplitLogCounters.tot_wkr_task_acquired_rescan);
         return;
       }
       LOG.info("worker " + serverName + " acquired task " + path);
-      tot_wkr_task_acquired.incrementAndGet();
+      SplitLogCounters.tot_wkr_task_acquired.incrementAndGet();
       getDataSetWatchAsync();
 
       t = System.currentTimeMillis();
@@ -285,15 +287,15 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
       });
       switch (status) {
         case DONE:
-          endTask(TaskState.TASK_DONE, tot_wkr_task_done);
+          endTask(new SplitLogTask.Done(this.serverName), SplitLogCounters.tot_wkr_task_done);
           break;
         case PREEMPTED:
-          tot_wkr_preempt_task.incrementAndGet();
+          SplitLogCounters.tot_wkr_preempt_task.incrementAndGet();
           LOG.warn("task execution prempted " + path);
           break;
         case ERR:
           if (!exitWorker) {
-            endTask(TaskState.TASK_ERR, tot_wkr_task_err);
+            endTask(new SplitLogTask.Err(this.serverName), SplitLogCounters.tot_wkr_task_err);
             break;
           }
           // if the RS is exiting then there is probably a tons of stuff
@@ -301,13 +303,12 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
           //$FALL-THROUGH$
         case RESIGNED:
           if (exitWorker) {
-            LOG.info("task execution interrupted because worker is exiting " +
-                path);
-            endTask(TaskState.TASK_RESIGNED, tot_wkr_task_resigned);
+            LOG.info("task execution interrupted because worker is exiting " + path);
+            endTask(new SplitLogTask.Resigned(this.serverName),
+              SplitLogCounters.tot_wkr_task_resigned);
           } else {
-            tot_wkr_preempt_task.incrementAndGet();
-            LOG.info("task execution interrupted via zk by manager " +
-                path);
+            SplitLogCounters.tot_wkr_preempt_task.incrementAndGet();
+            LOG.info("task execution interrupted via zk by manager " + path);
           }
           break;
       }
@@ -337,15 +338,16 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
    */
   private boolean attemptToOwnTask(boolean isFirstTime) {
     try {
-      Stat stat = this.watcher.getRecoverableZooKeeper().setData(currentTask,
-          TaskState.TASK_OWNED.get(serverName), currentVersion);
+      SplitLogTask slt = new SplitLogTask.Owned(this.serverName);
+      Stat stat =
+        this.watcher.getRecoverableZooKeeper().setData(currentTask, slt.toByteArray(), currentVersion);
       if (stat == null) {
         LOG.warn("zk.setData() returned null for path " + currentTask);
-        tot_wkr_task_heartbeat_failed.incrementAndGet();
+        SplitLogCounters.tot_wkr_task_heartbeat_failed.incrementAndGet();
         return (false);
       }
       currentVersion = stat.getVersion();
-      tot_wkr_task_heartbeat.incrementAndGet();
+      SplitLogCounters.tot_wkr_task_heartbeat.incrementAndGet();
       return (true);
     } catch (KeeperException e) {
       if (!isFirstTime) {
@@ -363,7 +365,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
           currentTask + " " + StringUtils.stringifyException(e1));
       Thread.currentThread().interrupt();
     }
-    tot_wkr_task_heartbeat_failed.incrementAndGet();
+    SplitLogCounters.tot_wkr_task_heartbeat_failed.incrementAndGet();
     return (false);
   }
 
@@ -373,29 +375,28 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
    * @param ts
    * @param ctr
    */
-  private void endTask(ZKSplitLog.TaskState ts, AtomicLong ctr) {
+  private void endTask(SplitLogTask slt, AtomicLong ctr) {
     String path = currentTask;
     currentTask = null;
     try {
-      if (ZKUtil.setData(this.watcher, path, ts.get(serverName),
+      if (ZKUtil.setData(this.watcher, path, slt.toByteArray(),
           currentVersion)) {
-        LOG.info("successfully transitioned task " + path +
-            " to final state " + ts);
+        LOG.info("successfully transitioned task " + path + " to final state " + slt);
         ctr.incrementAndGet();
         return;
       }
-      LOG.warn("failed to transistion task " + path + " to end state " + ts +
+      LOG.warn("failed to transistion task " + path + " to end state " + slt +
           " because of version mismatch ");
     } catch (KeeperException.BadVersionException bve) {
-      LOG.warn("transisition task " + path + " to " + ts +
+      LOG.warn("transisition task " + path + " to " + slt +
           " failed because of version mismatch", bve);
     } catch (KeeperException.NoNodeException e) {
-      LOG.fatal("logic error - end task " + path + " " + ts +
+      LOG.fatal("logic error - end task " + path + " " + slt +
           " failed because task doesn't exist", e);
     } catch (KeeperException e) {
-      LOG.warn("failed to end task, " + path + " " + ts, e);
+      LOG.warn("failed to end task, " + path + " " + slt, e);
     }
-    tot_wkr_final_transistion_failed.incrementAndGet();
+    SplitLogCounters.tot_wkr_final_transistion_failed.incrementAndGet();
     return;
   }
 
@@ -403,10 +404,17 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     this.watcher.getRecoverableZooKeeper().getZooKeeper().
       getData(currentTask, this.watcher,
       new GetDataAsyncCallback(), null);
-    tot_wkr_get_data_queued.incrementAndGet();
+    SplitLogCounters.tot_wkr_get_data_queued.incrementAndGet();
   }
 
   void getDataSetWatchSuccess(String path, byte[] data) {
+    SplitLogTask slt;
+    try {
+      slt = SplitLogTask.parseFrom(data);
+    } catch (DeserializationException e) {
+      LOG.warn("Failed parse", e);
+      return;
+    }
     synchronized (grabTaskLock) {
       if (workerInGrabTask) {
         // currentTask can change but that's ok
@@ -418,13 +426,12 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
           // UNASSIGNED because by the time this worker sets the data watch
           // the node might have made two transitions - from owned by this
           // worker to unassigned to owned by another worker
-          if (! TaskState.TASK_OWNED.equals(data, serverName) &&
-              ! TaskState.TASK_DONE.equals(data, serverName) &&
-              ! TaskState.TASK_ERR.equals(data, serverName) &&
-              ! TaskState.TASK_RESIGNED.equals(data, serverName)) {
+          if (! slt.isOwned(this.serverName) &&
+              ! slt.isDone(this.serverName) &&
+              ! slt.isErr(this.serverName) &&
+              ! slt.isResigned(this.serverName)) {
             LOG.info("task " + taskpath + " preempted from " +
-                serverName + ", current task state and owner=" +
-                new String(data));
+                serverName + ", current task state and owner=" + slt.toString());
             stopTask();
           }
         }
@@ -439,7 +446,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         String taskpath = currentTask;
         if (taskpath != null && taskpath.equals(path)) {
           LOG.info("retrying data watch on " + path);
-          tot_wkr_get_data_retry.incrementAndGet();
+          SplitLogCounters.tot_wkr_get_data_retry.incrementAndGet();
           getDataSetWatchAsync();
         } else {
           // no point setting a watch on the task which this worker is not
@@ -543,9 +550,8 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     private final Log LOG = LogFactory.getLog(GetDataAsyncCallback.class);
 
     @Override
-    public void processResult(int rc, String path, Object ctx, byte[] data,
-        Stat stat) {
-      tot_wkr_get_data_result.incrementAndGet();
+    public void processResult(int rc, String path, Object ctx, byte[] data, Stat stat) {
+      SplitLogCounters.tot_wkr_get_data_result.incrementAndGet();
       if (rc != 0) {
         LOG.warn("getdata rc = " + KeeperException.Code.get(rc) + " " + path);
         getDataSetWatchFailure(path);

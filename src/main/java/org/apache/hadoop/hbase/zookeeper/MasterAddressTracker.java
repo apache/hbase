@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -80,7 +81,12 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    * @return Server name or null if timed out.
    */
   public ServerName getMasterAddress(final boolean refresh) {
-    return ZKUtil.znodeContentToServerName(super.getData(refresh));
+    try {
+      return ServerName.parseFrom(super.getData(refresh));
+    } catch (DeserializationException e) {
+      LOG.warn("Failed parse", e);
+      return null;
+    }
   }
 
   /**
@@ -99,7 +105,13 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
     if (data == null){
       throw new IOException("Can't get master address from ZooKeeper; znode data == null");
     }
-    return ZKUtil.znodeContentToServerName(data);
+    try {
+      return ServerName.parseFrom(data);
+    } catch (DeserializationException e) {
+      KeeperException ke = new KeeperException.DataInconsistencyException();
+      ke.initCause(e);
+      throw ke;
+    }
   }
 
   /**
@@ -116,7 +128,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
   public static boolean setMasterAddress(final ZooKeeperWatcher zkw,
       final String znode, final ServerName master)
   throws KeeperException {
-    return ZKUtil.createEphemeralNodeAndWatch(zkw, znode, getZNodeData(master));
+    return ZKUtil.createEphemeralNodeAndWatch(zkw, znode, toByteArray(master));
   }
 
   /**
@@ -132,7 +144,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    * @return Content of the master znode as a serialized pb with the pb
    * magic as prefix.
    */
-   static byte [] getZNodeData(final ServerName sn) {
+   static byte [] toByteArray(final ServerName sn) {
      ZooKeeperProtos.Master.Builder mbuilder = ZooKeeperProtos.Master.newBuilder();
      HBaseProtos.ServerName.Builder snbuilder = HBaseProtos.ServerName.newBuilder();
      snbuilder.setHostName(sn.getHostname());

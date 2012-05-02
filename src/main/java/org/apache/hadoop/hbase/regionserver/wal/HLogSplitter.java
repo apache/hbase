@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -349,17 +350,16 @@ public class HLogSplitter {
   static public boolean splitLogFileToTemp(Path rootDir, String tmpname,
       FileStatus logfile, FileSystem fs,
       Configuration conf, CancelableProgressable reporter) throws IOException {
-    HLogSplitter s = new HLogSplitter(conf, rootDir, null, null /* oldLogDir */,
-        fs);
+    HLogSplitter s = new HLogSplitter(conf, rootDir, null, null /* oldLogDir */, fs);
     return s.splitLogFileToTemp(logfile, tmpname, reporter);
   }
 
   public boolean splitLogFileToTemp(FileStatus logfile, String tmpname,
-      CancelableProgressable reporter)  throws IOException {	    
+      CancelableProgressable reporter)
+  throws IOException {
     final Map<byte[], Object> logWriters = Collections.
     synchronizedMap(new TreeMap<byte[], Object>(Bytes.BYTES_COMPARATOR));
     boolean isCorrupted = false;
-    
     Preconditions.checkState(status == null);
     status = TaskMonitor.get().createStatus(
         "Splitting log file " + logfile.getPath() +
@@ -375,7 +375,7 @@ public class HLogSplitter {
     // How often to send a progress report (default 1/2 the zookeeper session
     // timeout of if that not set, the split log DEFAULT_TIMEOUT)
     int period = conf.getInt("hbase.splitlog.report.period",
-      conf.getInt("hbase.splitlog.manager.timeout", ZKSplitLog.DEFAULT_TIMEOUT) / 2);
+      conf.getInt("hbase.splitlog.manager.timeout", SplitLogManager.DEFAULT_TIMEOUT) / 2);
     int numOpenedFilesBeforeReporting =
       conf.getInt("hbase.splitlog.report.openedfiles", 3);
     Path logPath = logfile.getPath();
@@ -474,8 +474,8 @@ public class HLogSplitter {
         WriterAndPath wap = (WriterAndPath)o;
         wap.w.close();
         LOG.debug("Closed " + wap.p);
-        Path dst = getCompletedRecoveredEditsFilePath(wap.p, outputSink
-            .getRegionMaximumEditLogSeqNum(logWritersEntry.getKey()));
+        Path dst = getCompletedRecoveredEditsFilePath(wap.p,
+          outputSink.getRegionMaximumEditLogSeqNum(logWritersEntry.getKey()));
         if (!dst.equals(wap.p) && fs.exists(dst)) {
           LOG.warn("Found existing old edits file. It could be the "
               + "result of a previous failed split attempt. Deleting " + dst
@@ -658,10 +658,9 @@ public class HLogSplitter {
   static Path getRegionSplitEditsPath(final FileSystem fs,
       final Entry logEntry, final Path rootDir, boolean isCreate)
   throws IOException {
-    Path tableDir = HTableDescriptor.getTableDir(rootDir, logEntry.getKey()
-        .getTablename());
+    Path tableDir = HTableDescriptor.getTableDir(rootDir, logEntry.getKey().getTablename());
     Path regiondir = HRegion.getRegionDir(tableDir,
-        Bytes.toString(logEntry.getKey().getEncodedRegionName()));
+      Bytes.toString(logEntry.getKey().getEncodedRegionName()));
     Path dir = HLog.getRegionDirRecoveredEditsDir(regiondir);
 
     if (!fs.exists(regiondir)) {
@@ -675,8 +674,7 @@ public class HLogSplitter {
     }
     // Append file name ends with RECOVERED_LOG_TMPFILE_SUFFIX to ensure
     // region's replayRecoveredEdits will not delete it
-    String fileName = formatRecoveredEditsFileName(logEntry.getKey()
-        .getLogSeqNum());
+    String fileName = formatRecoveredEditsFileName(logEntry.getKey().getLogSeqNum());
     fileName = getTmpRecoveredEditsFileName(fileName);
     return new Path(dir, fileName);
   }
@@ -1080,8 +1078,7 @@ public class HLogSplitter {
   private WriterAndPath createWAP(byte[] region, Entry entry,
       Path rootdir, String tmpname, FileSystem fs, Configuration conf)
   throws IOException {
-    Path regionedits = getRegionSplitEditsPath(fs, entry, rootdir,
-        tmpname==null);
+    Path regionedits = getRegionSplitEditsPath(fs, entry, rootdir, tmpname==null);
     if (regionedits == null) {
       return null;
     }

@@ -1347,7 +1347,7 @@ public class HRegionServer extends RegionServer
 
     // Create the log splitting worker and start it
     this.splitLogWorker = new SplitLogWorker(this.zooKeeper,
-        this.getConfiguration(), this.getServerName().toString());
+        this.getConfiguration(), this.getServerName());
     splitLogWorker.start();
   }
 

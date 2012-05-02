@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -138,7 +139,8 @@ class ActiveMasterManager extends ZooKeeperListener {
       // Try to become the active master, watch if there is another master.
       // Write out our ServerName as versioned bytes.
       try {
-        String backupZNode = ZKUtil.joinZNode(this.watcher.backupMasterAddressesZNode, this.sn.toString());
+        String backupZNode =
+            ZKUtil.joinZNode(this.watcher.backupMasterAddressesZNode, this.sn.toString());
         if (MasterAddressTracker.setMasterAddress(this.watcher, this.watcher.getMasterAddressZNode(), this.sn)) {
           // If we were a backup master before, delete our ZNode from the backup
           // master directory since we are the active now
@@ -174,7 +176,14 @@ class ActiveMasterManager extends ZooKeeperListener {
           msg = ("A master was detected, but went down before its address " +
             "could be read.  Attempting to become the next active master");
         } else {
-          ServerName currentMaster = ZKUtil.znodeContentToServerName(bytes);
+          ServerName currentMaster;
+          try {
+            currentMaster = ServerName.parseFrom(bytes);
+          } catch (DeserializationException e) {
+            LOG.warn("Failed parse", e);
+            // Hopefully next time around we won't fail the parse.  Dangerous.
+            continue;
+          }
           if (ServerName.isSameHostnameAndPort(currentMaster, this.sn)) {
             msg = ("Current master has this master's address, " +
               currentMaster + "; master was restarted? Deleting node.");

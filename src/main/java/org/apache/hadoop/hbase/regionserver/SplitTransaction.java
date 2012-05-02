@@ -39,11 +39,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
-import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -858,12 +858,10 @@ public class SplitTransaction {
   throws KeeperException, IOException {
     LOG.debug(zkw.prefix("Creating ephemeral node for " +
       region.getEncodedName() + " in SPLITTING state"));
-    RegionTransitionData data =
-      new RegionTransitionData(EventType.RS_ZK_REGION_SPLITTING,
+    RegionTransition rt = RegionTransition.createRegionTransition(EventType.RS_ZK_REGION_SPLITTING,
         region.getRegionName(), serverName);
-
     String node = ZKAssign.getNodeName(zkw, region.getEncodedName());
-    if (!ZKUtil.createEphemeralNodeAndWatch(zkw, node, data.getBytes())) {
+    if (!ZKUtil.createEphemeralNodeAndWatch(zkw, node, rt.toByteArray())) {
       throw new IOException("Failed create of ephemeral " + node);
     }
     // Transition node from SPLITTING to SPLITTING and pick up version so we

@@ -59,6 +59,14 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestSerialization {
   @Test
+  public void testSplitLogTask() throws DeserializationException {
+    SplitLogTask slt = new SplitLogTask.Unassigned(new ServerName("mgr,1,1"));
+    byte [] bytes = slt.toByteArray();
+    SplitLogTask sltDeserialized = SplitLogTask.parseFrom(bytes);
+    assertTrue(slt.equals(sltDeserialized));
+  }
+
+  @Test
   public void testHServerLoadVersioning() throws IOException {
     Set<String> cps = new HashSet<String>(0);
     Map<byte [], RegionLoad> regions = new TreeMap<byte [], RegionLoad>(Bytes.BYTES_COMPARATOR);
@@ -66,7 +74,7 @@ public class TestSerialization {
       new HServerLoad092.RegionLoad(HConstants.META_TABLE_NAME, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, cps));
     HServerLoad092 hsl092 = new HServerLoad092(0, 0, 0, 0, regions, cps);
     byte [] hsl092bytes = Writables.getBytes(hsl092);
-    HServerLoad hsl = (HServerLoad)Writables.getWritable(hsl092bytes, new HServerLoad());
+    Writables.getWritable(hsl092bytes, new HServerLoad());
     // TO BE CONTINUED
   }
 

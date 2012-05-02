@@ -1,6 +1,4 @@
 /**
- * Copyright 2009 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,16 +18,27 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.WatchedEvent;
 
 /**
- * An empty ZooKeeper watcher
+ * Base checked exception in HBase.
+ * @see https://issues.apache.org/jira/browse/HBASE-5796
  */
+@SuppressWarnings("serial")
 @InterfaceAudience.Private
-public class EmptyWatcher implements Watcher {
-  public static EmptyWatcher instance = new EmptyWatcher();
-  private EmptyWatcher() {}
+public class HBaseException extends Exception {
+  public HBaseException() {
+    super();
+  }
 
-  public void process(WatchedEvent event) {}
+  public HBaseException(final String message) {
+    super(message);
+  }
+
+  public HBaseException(final String message, final Throwable t) {
+    super(message, t);
+  }
+
+  public HBaseException(final Throwable t) {
+    super(t);
+  }
 }

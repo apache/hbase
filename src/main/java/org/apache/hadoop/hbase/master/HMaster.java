@@ -49,6 +49,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -1427,7 +1428,7 @@ Server {
     List<String> backupMasterStrings;
     try {
       backupMasterStrings = ZKUtil.listChildrenNoWatch(this.zooKeeper,
-                              this.zooKeeper.backupMasterAddressesZNode);
+        this.zooKeeper.backupMasterAddressesZNode);
     } catch (KeeperException e) {
       LOG.warn(this.zooKeeper.prefix("Unable to list backup servers"), e);
       backupMasterStrings = new ArrayList<String>(0);
@@ -1436,9 +1437,17 @@ Server {
                                           backupMasterStrings.size());
     for (String s: backupMasterStrings) {
       try {
-        byte[] bytes = ZKUtil.getData(this.zooKeeper, ZKUtil.joinZNode(this.zooKeeper.backupMasterAddressesZNode, s));
+        byte [] bytes =
+            ZKUtil.getData(this.zooKeeper, ZKUtil.joinZNode(this.zooKeeper.backupMasterAddressesZNode, s));
         if (bytes != null) {
-          backupMasters.add(ZKUtil.znodeContentToServerName(bytes));
+          ServerName sn;
+          try {
+            sn = ServerName.parseFrom(bytes);
+          } catch (DeserializationException e) {
+            LOG.warn("Failed parse, skipping registering backup server", e);
+            continue;
+          }
+          backupMasters.add(sn);
         }
       } catch (KeeperException e) {
         LOG.warn(this.zooKeeper.prefix("Unable to get information about " +

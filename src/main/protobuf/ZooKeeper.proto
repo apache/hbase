@@ -60,3 +60,33 @@ message ClusterUp {
   // the data is cluster startDate.
   required string startDate = 1;
 }
+
+/**
+ * What we write under unassigned up in zookeeper as a region moves through
+ * open/close, etc., regions.  Details a region in transition.
+ */
+message RegionTransition {
+  // Code for EventType gotten by doing o.a.h.h.EventHandler.EventType.getCode()
+  required uint32 eventTypeCode = 1;
+  // Full regionname in bytes
+  required bytes regionName = 2;
+  required uint64 createTime = 3;
+  optional ServerName originServerName = 4;
+  optional bytes payload = 5;
+}
+
+/**
+ * WAL SplitLog directory znodes have this for content.  Used doing distributed
+ * WAL splitting.  Holds current state and name of server that originated split.
+ */
+message SplitLogTask {
+  enum State {
+    UNASSIGNED = 0;
+    OWNED = 1;
+    RESIGNED = 2;
+    DONE = 3;
+    ERR = 4;
+  }
+  required State state = 1;
+  required ServerName serverName = 2;
+}

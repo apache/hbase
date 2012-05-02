@@ -27,6 +27,7 @@ import java.net.UnknownHostException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -227,10 +228,11 @@ public class TestMasterNoCluster {
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
+   * @throws DeserializationException 
    */
   @Test
   public void testCatalogDeploys()
-  throws IOException, KeeperException, InterruptedException {
+  throws IOException, KeeperException, InterruptedException, DeserializationException {
     final Configuration conf = TESTUTIL.getConfiguration();
     final long now = System.currentTimeMillis();
     // Name for our single mocked up regionserver.

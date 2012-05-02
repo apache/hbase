@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -79,7 +78,6 @@ public class TestWALObserver {
   private Configuration conf;
   private FileSystem fs;
   private Path dir;
-  private MiniDFSCluster cluster;
   private Path hbaseRootDir;
   private Path oldLogDir;
   private Path logDir;
@@ -136,8 +134,6 @@ public class TestWALObserver {
 
     HRegionInfo hri = createBasic3FamilyHRegionInfo(Bytes.toString(TEST_TABLE));
     final HTableDescriptor htd = createBasic3FamilyHTD(Bytes.toString(TEST_TABLE));
-    HRegion region2 = HRegion.createHRegion(hri,
-            hbaseRootDir, this.conf, htd);
 
     Path basedir = new Path(this.hbaseRootDir, Bytes.toString(TEST_TABLE));
     deleteDir(basedir);
@@ -235,10 +231,6 @@ public class TestWALObserver {
     fs.mkdirs(new Path(basedir, hri.getEncodedName()));
 
     final Configuration newConf = HBaseConfiguration.create(this.conf);
-
-    HRegion region2 = HRegion.createHRegion(hri,
-        hbaseRootDir, newConf,htd);
-
 
     //HLog wal = new HLog(this.fs, this.dir, this.oldLogDir, this.conf);
     HLog wal = createWAL(this.conf);
