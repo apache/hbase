@@ -53,8 +53,11 @@ import java.util.TreeSet;
  * To scan everything for each row, instantiate a Scan object.
  * <p>
  * To modify scanner caching for just this scan, use {@link #setCaching(int) setCaching}.
- * If caching is NOT set, we will use the caching value of the hosting
- * {@link HTable}.  See {@link HTable#setScannerCaching(int)}.
+ * If caching is NOT set, we will use the caching value of the hosting {@link HTable}.  See
+ * {@link HTable#setScannerCaching(int)}. In addition to row caching, it is possible to specify a
+ * maximum result size, using {@link #setMaxResultSize(long)}. When both are used,
+ * single server requests are limited by either number of rows or maximum result size, whichever
+ * limit comes first.
  * <p>
  * To further define the scope of what to get when scanning, perform additional
  * methods as outlined below.
@@ -88,7 +91,7 @@ public class Scan extends OperationWithAttributes implements Writable {
   private static final String RAW_ATTR = "_raw_";
   private static final String ISOLATION_LEVEL = "_isolationlevel_";
 
-  private static final byte SCAN_VERSION = (byte)2;
+  private static final byte SCAN_VERSION = (byte)3;
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
@@ -104,6 +107,7 @@ public class Scan extends OperationWithAttributes implements Writable {
    * -1 means no caching
    */
   private int caching = -1;
+  private long maxResultSize = -1;
   private boolean cacheBlocks = true;
   private Filter filter = null;
   private TimeRange tr = new TimeRange();
@@ -153,6 +157,7 @@ public class Scan extends OperationWithAttributes implements Writable {
     maxVersions = scan.getMaxVersions();
     batch = scan.getBatch();
     caching = scan.getCaching();
+    maxResultSize = scan.getMaxResultSize();
     cacheBlocks = scan.getCacheBlocks();
     filter = scan.getFilter(); // clone?
     TimeRange ctr = scan.getTimeRange();
@@ -324,6 +329,24 @@ public class Scan extends OperationWithAttributes implements Writable {
    */
   public void setCaching(int caching) {
     this.caching = caching;
+  }
+
+  /**
+   * @return the maximum result size in bytes. See {@link #setMaxResultSize(long)}
+   */
+  public long getMaxResultSize() {
+    return maxResultSize;
+  }
+
+  /**
+   * Set the maximum result size. The default is -1; this means that no specific
+   * maximum result size will be set for this scan, and the global configured
+   * value will be used instead. (Defaults to unlimited).
+   *
+   * @param maxResultSize The maximum result size in bytes.
+   */
+  public void setMaxResultSize(long maxResultSize) {
+    this.maxResultSize = maxResultSize;
   }
 
   /**
@@ -504,6 +527,7 @@ public class Scan extends OperationWithAttributes implements Writable {
     map.put("maxVersions", this.maxVersions);
     map.put("batch", this.batch);
     map.put("caching", this.caching);
+    map.put("maxResultSize", this.maxResultSize);
     map.put("cacheBlocks", this.cacheBlocks);
     List<Long> timeRange = new ArrayList<Long>();
     timeRange.add(this.tr.getMin());
@@ -586,6 +610,9 @@ public class Scan extends OperationWithAttributes implements Writable {
     if (version > 1) {
       readAttributes(in);
     }
+    if (version > 2) {
+      this.maxResultSize = in.readLong();
+    }
   }
 
   public void write(final DataOutput out)
@@ -619,6 +646,7 @@ public class Scan extends OperationWithAttributes implements Writable {
       }
     }
     writeAttributes(out);
+    out.writeLong(maxResultSize);
   }
 
   /**

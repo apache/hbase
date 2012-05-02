@@ -819,11 +819,17 @@ public abstract class RegionServer implements
                 done = true;
               }
             }
+            long maxResultSize;
+            if (scanner.getMaxResultSize() > 0) {
+              maxResultSize = scanner.getMaxResultSize();
+            } else {
+              maxResultSize = maxScannerResultSize;
+            }
 
             if (!done) {
               List<KeyValue> values = new ArrayList<KeyValue>();
               for (int i = 0; i < rows
-                  && currentScanResultSize < maxScannerResultSize; i++) {
+                  && currentScanResultSize < maxResultSize; i++) {
                 // Collect values to be returned here
                 boolean moreRows = scanner.next(values, SchemaMetrics.METRIC_NEXTSIZE);
                 if (!values.isEmpty()) {

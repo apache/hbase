@@ -102,15 +102,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -575,15 +573,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -1080,15 +1076,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -1629,15 +1623,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -2016,15 +2008,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -2361,15 +2351,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -2977,15 +2965,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -3674,15 +3660,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -4154,15 +4138,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -4707,15 +4689,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -5116,15 +5096,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -5647,15 +5625,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -6100,15 +6076,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -6585,15 +6559,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -6942,15 +6914,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -7424,15 +7394,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -7777,15 +7745,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -8355,15 +8321,13 @@ public final class AdminProtos {
         return size;
       }
       
-      private static final long serialVersionUID = 0L;
       @java.lang.Override
-      protected java.lang.Object writeReplace()
-          throws java.io.ObjectStreamException {
+      protected Object writeReplace() throws java.io.ObjectStreamException {
         return super.writeReplace();
       }
       
       @java.lang.Override
-      public boolean equals(final java.lang.Object obj) {
+      public boolean equals(final Object obj) {
         if (obj == this) {
          return true;
         }
@@ -9157,15 +9121,13 @@ public final class AdminProtos {
           return size;
         }
         
-        private static final long serialVersionUID = 0L;
         @java.lang.Override
-        protected java.lang.Object writeReplace()
-            throws java.io.ObjectStreamException {
+        protected Object writeReplace() throws java.io.ObjectStreamException {
           return super.writeReplace();
         }
         
         @java.lang.Override
-        public boolean equals(final java.lang.Object obj) {
+        public boolean equals(final Object obj) {
           if (obj == this) {
            return true;
           }
@@ -9600,15 +9562,13 @@ public final class AdminProtos {
         return size;
       }
       
-      private static final long serialVersionUID = 0L;
       @java.lang.Override
-      protected java.lang.Object writeReplace()
-          throws java.io.ObjectStreamException {
+      protected Object writeReplace() throws java.io.ObjectStreamException {
         return super.writeReplace();
       }
       
       @java.lang.Override
-      public boolean equals(final java.lang.Object obj) {
+      public boolean equals(final Object obj) {
         if (obj == this) {
          return true;
         }
@@ -10255,15 +10215,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -10872,15 +10830,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -11420,15 +11376,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -11720,15 +11674,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -12052,15 +12004,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -12412,12 +12362,12 @@ public final class AdminProtos {
     private int bitField0_;
     // required string reason = 1;
     public static final int REASON_FIELD_NUMBER = 1;
-    private java.lang.Object reason_;
+    private Object reason_;
     public boolean hasReason() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     public String getReason() {
-      java.lang.Object ref = reason_;
+      Object ref = reason_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -12431,7 +12381,7 @@ public final class AdminProtos {
       }
     }
     private com.google.protobuf.ByteString getReasonBytes() {
-      java.lang.Object ref = reason_;
+      Object ref = reason_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -12482,15 +12432,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -12744,12 +12692,12 @@ public final class AdminProtos {
       private int bitField0_;
       
       // required string reason = 1;
-      private java.lang.Object reason_ = "";
+      private Object reason_ = "";
       public boolean hasReason() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       public String getReason() {
-        java.lang.Object ref = reason_;
+        Object ref = reason_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           reason_ = s;
@@ -12849,15 +12797,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -13149,15 +13095,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -13484,15 +13428,13 @@ public final class AdminProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }

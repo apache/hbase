@@ -126,15 +126,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -801,15 +799,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -2070,15 +2066,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -2564,15 +2558,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -3273,15 +3265,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -3970,15 +3960,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -4975,15 +4963,13 @@ public final class ClientProtos {
           return size;
         }
         
-        private static final long serialVersionUID = 0L;
         @java.lang.Override
-        protected java.lang.Object writeReplace()
-            throws java.io.ObjectStreamException {
+        protected Object writeReplace() throws java.io.ObjectStreamException {
           return super.writeReplace();
         }
         
         @java.lang.Override
-        public boolean equals(final java.lang.Object obj) {
+        public boolean equals(final Object obj) {
           if (obj == this) {
            return true;
           }
@@ -5491,15 +5477,13 @@ public final class ClientProtos {
         return size;
       }
       
-      private static final long serialVersionUID = 0L;
       @java.lang.Override
-      protected java.lang.Object writeReplace()
-          throws java.io.ObjectStreamException {
+      protected Object writeReplace() throws java.io.ObjectStreamException {
         return super.writeReplace();
       }
       
       @java.lang.Override
-      public boolean equals(final java.lang.Object obj) {
+      public boolean equals(final Object obj) {
         if (obj == this) {
          return true;
         }
@@ -6245,15 +6229,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -7508,15 +7490,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -8261,15 +8241,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -8728,6 +8706,10 @@ public final class ClientProtos {
     // optional uint32 batchSize = 9;
     boolean hasBatchSize();
     int getBatchSize();
+    
+    // optional uint64 maxResultSize = 10;
+    boolean hasMaxResultSize();
+    long getMaxResultSize();
   }
   public static final class Scan extends
       com.google.protobuf.GeneratedMessage
@@ -8876,6 +8858,16 @@ public final class ClientProtos {
       return batchSize_;
     }
     
+    // optional uint64 maxResultSize = 10;
+    public static final int MAXRESULTSIZE_FIELD_NUMBER = 10;
+    private long maxResultSize_;
+    public boolean hasMaxResultSize() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    public long getMaxResultSize() {
+      return maxResultSize_;
+    }
+    
     private void initFields() {
       column_ = java.util.Collections.emptyList();
       attribute_ = java.util.Collections.emptyList();
@@ -8886,6 +8878,7 @@ public final class ClientProtos {
       maxVersions_ = 1;
       cacheBlocks_ = true;
       batchSize_ = 0;
+      maxResultSize_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -8944,6 +8937,9 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeUInt32(9, batchSize_);
       }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeUInt64(10, maxResultSize_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -8989,20 +8985,22 @@ public final class ClientProtos {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(9, batchSize_);
       }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(10, maxResultSize_);
+      }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -9051,6 +9049,11 @@ public final class ClientProtos {
         result = result && (getBatchSize()
             == other.getBatchSize());
       }
+      result = result && (hasMaxResultSize() == other.hasMaxResultSize());
+      if (hasMaxResultSize()) {
+        result = result && (getMaxResultSize()
+            == other.getMaxResultSize());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -9095,6 +9098,10 @@ public final class ClientProtos {
       if (hasBatchSize()) {
         hash = (37 * hash) + BATCHSIZE_FIELD_NUMBER;
         hash = (53 * hash) + getBatchSize();
+      }
+      if (hasMaxResultSize()) {
+        hash = (37 * hash) + MAXRESULTSIZE_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getMaxResultSize());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -9250,6 +9257,8 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000080);
         batchSize_ = 0;
         bitField0_ = (bitField0_ & ~0x00000100);
+        maxResultSize_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000200);
         return this;
       }
       
@@ -9342,6 +9351,10 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000040;
         }
         result.batchSize_ = batchSize_;
+        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.maxResultSize_ = maxResultSize_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -9430,6 +9443,9 @@ public final class ClientProtos {
         }
         if (other.hasBatchSize()) {
           setBatchSize(other.getBatchSize());
+        }
+        if (other.hasMaxResultSize()) {
+          setMaxResultSize(other.getMaxResultSize());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -9533,6 +9549,11 @@ public final class ClientProtos {
             case 72: {
               bitField0_ |= 0x00000100;
               batchSize_ = input.readUInt32();
+              break;
+            }
+            case 80: {
+              bitField0_ |= 0x00000200;
+              maxResultSize_ = input.readUInt64();
               break;
             }
           }
@@ -10204,6 +10225,27 @@ public final class ClientProtos {
         return this;
       }
       
+      // optional uint64 maxResultSize = 10;
+      private long maxResultSize_ ;
+      public boolean hasMaxResultSize() {
+        return ((bitField0_ & 0x00000200) == 0x00000200);
+      }
+      public long getMaxResultSize() {
+        return maxResultSize_;
+      }
+      public Builder setMaxResultSize(long value) {
+        bitField0_ |= 0x00000200;
+        maxResultSize_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearMaxResultSize() {
+        bitField0_ = (bitField0_ & ~0x00000200);
+        maxResultSize_ = 0L;
+        onChanged();
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:Scan)
     }
     
@@ -10405,15 +10447,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -11211,15 +11251,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -11954,15 +11992,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -12520,15 +12556,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -12977,15 +13011,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -13463,15 +13495,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -13802,12 +13832,12 @@ public final class ClientProtos {
       
       // required string path = 2;
       public static final int PATH_FIELD_NUMBER = 2;
-      private java.lang.Object path_;
+      private Object path_;
       public boolean hasPath() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public String getPath() {
-        java.lang.Object ref = path_;
+        Object ref = path_;
         if (ref instanceof String) {
           return (String) ref;
         } else {
@@ -13821,7 +13851,7 @@ public final class ClientProtos {
         }
       }
       private com.google.protobuf.ByteString getPathBytes() {
-        java.lang.Object ref = path_;
+        Object ref = path_;
         if (ref instanceof String) {
           com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -13884,15 +13914,13 @@ public final class ClientProtos {
         return size;
       }
       
-      private static final long serialVersionUID = 0L;
       @java.lang.Override
-      protected java.lang.Object writeReplace()
-          throws java.io.ObjectStreamException {
+      protected Object writeReplace() throws java.io.ObjectStreamException {
         return super.writeReplace();
       }
       
       @java.lang.Override
-      public boolean equals(final java.lang.Object obj) {
+      public boolean equals(final Object obj) {
         if (obj == this) {
          return true;
         }
@@ -14197,12 +14225,12 @@ public final class ClientProtos {
         }
         
         // required string path = 2;
-        private java.lang.Object path_ = "";
+        private Object path_ = "";
         public boolean hasPath() {
           return ((bitField0_ & 0x00000002) == 0x00000002);
         }
         public String getPath() {
-          java.lang.Object ref = path_;
+          Object ref = path_;
           if (!(ref instanceof String)) {
             String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
             path_ = s;
@@ -14336,15 +14364,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -15047,15 +15073,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -15416,12 +15440,12 @@ public final class ClientProtos {
     
     // required string protocolName = 2;
     public static final int PROTOCOLNAME_FIELD_NUMBER = 2;
-    private java.lang.Object protocolName_;
+    private Object protocolName_;
     public boolean hasProtocolName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     public String getProtocolName() {
-      java.lang.Object ref = protocolName_;
+      Object ref = protocolName_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -15435,7 +15459,7 @@ public final class ClientProtos {
       }
     }
     private com.google.protobuf.ByteString getProtocolNameBytes() {
-      java.lang.Object ref = protocolName_;
+      Object ref = protocolName_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -15448,12 +15472,12 @@ public final class ClientProtos {
     
     // required string methodName = 3;
     public static final int METHODNAME_FIELD_NUMBER = 3;
-    private java.lang.Object methodName_;
+    private Object methodName_;
     public boolean hasMethodName() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     public String getMethodName() {
-      java.lang.Object ref = methodName_;
+      Object ref = methodName_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -15467,7 +15491,7 @@ public final class ClientProtos {
       }
     }
     private com.google.protobuf.ByteString getMethodNameBytes() {
-      java.lang.Object ref = methodName_;
+      Object ref = methodName_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -15612,15 +15636,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -16072,12 +16094,12 @@ public final class ClientProtos {
       }
       
       // required string protocolName = 2;
-      private java.lang.Object protocolName_ = "";
+      private Object protocolName_ = "";
       public boolean hasProtocolName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public String getProtocolName() {
-        java.lang.Object ref = protocolName_;
+        Object ref = protocolName_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           protocolName_ = s;
@@ -16108,12 +16130,12 @@ public final class ClientProtos {
       }
       
       // required string methodName = 3;
-      private java.lang.Object methodName_ = "";
+      private Object methodName_ = "";
       public boolean hasMethodName() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       public String getMethodName() {
-        java.lang.Object ref = methodName_;
+        Object ref = methodName_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           methodName_ = s;
@@ -16654,15 +16676,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -17261,15 +17281,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -17796,15 +17814,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -18561,15 +18577,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -19231,15 +19245,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -20004,15 +20016,13 @@ public final class ClientProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -21355,55 +21365,56 @@ public final class ClientProtos {
       "\001 \002(\0132\020.RegionSpecifier\022\027\n\006mutate\030\002 \002(\0132" +
       "\007.Mutate\022\035\n\tcondition\030\003 \001(\0132\n.Condition\"" +
       "<\n\016MutateResponse\022\027\n\006result\030\001 \001(\0132\007.Resu" +
-      "lt\022\021\n\tprocessed\030\002 \001(\010\"\352\001\n\004Scan\022\027\n\006column" +
+      "lt\022\021\n\tprocessed\030\002 \001(\010\"\201\002\n\004Scan\022\027\n\006column" +
       "\030\001 \003(\0132\007.Column\022!\n\tattribute\030\002 \003(\0132\016.Nam" +
       "eBytesPair\022\020\n\010startRow\030\003 \001(\014\022\017\n\007stopRow\030",
       "\004 \001(\014\022\036\n\006filter\030\005 \001(\0132\016.NameBytesPair\022\035\n" +
       "\ttimeRange\030\006 \001(\0132\n.TimeRange\022\026\n\013maxVersi" +
       "ons\030\007 \001(\r:\0011\022\031\n\013cacheBlocks\030\010 \001(\010:\004true\022" +
-      "\021\n\tbatchSize\030\t \001(\r\"\203\001\n\013ScanRequest\022 \n\006re" +
-      "gion\030\001 \001(\0132\020.RegionSpecifier\022\023\n\004scan\030\002 \001" +
-      "(\0132\005.Scan\022\021\n\tscannerId\030\003 \001(\004\022\024\n\014numberOf" +
-      "Rows\030\004 \001(\r\022\024\n\014closeScanner\030\005 \001(\010\"\\\n\014Scan" +
-      "Response\022\027\n\006result\030\001 \003(\0132\007.Result\022\021\n\tsca" +
-      "nnerId\030\002 \001(\004\022\023\n\013moreResults\030\003 \001(\010\022\013\n\003ttl" +
-      "\030\004 \001(\r\"?\n\016LockRowRequest\022 \n\006region\030\001 \002(\013",
-      "2\020.RegionSpecifier\022\013\n\003row\030\002 \003(\014\".\n\017LockR" +
-      "owResponse\022\016\n\006lockId\030\001 \002(\004\022\013\n\003ttl\030\002 \001(\r\"" +
-      "D\n\020UnlockRowRequest\022 \n\006region\030\001 \002(\0132\020.Re" +
-      "gionSpecifier\022\016\n\006lockId\030\002 \002(\004\"\023\n\021UnlockR" +
-      "owResponse\"\232\001\n\024BulkLoadHFileRequest\022 \n\006r" +
-      "egion\030\001 \002(\0132\020.RegionSpecifier\0224\n\nfamilyP" +
-      "ath\030\002 \003(\0132 .BulkLoadHFileRequest.FamilyP" +
-      "ath\032*\n\nFamilyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004pat" +
-      "h\030\002 \002(\t\"\'\n\025BulkLoadHFileResponse\022\016\n\006load" +
-      "ed\030\001 \002(\010\"\203\001\n\004Exec\022\013\n\003row\030\001 \002(\014\022\024\n\014protoc",
-      "olName\030\002 \002(\t\022\022\n\nmethodName\030\003 \002(\t\022!\n\010prop" +
-      "erty\030\004 \003(\0132\017.NameStringPair\022!\n\tparameter" +
-      "\030\005 \003(\0132\016.NameBytesPair\"O\n\026ExecCoprocesso" +
-      "rRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifi" +
-      "er\022\023\n\004call\030\002 \002(\0132\005.Exec\"8\n\027ExecCoprocess" +
-      "orResponse\022\035\n\005value\030\001 \002(\0132\016.NameBytesPai" +
-      "r\"N\n\013MultiAction\022\027\n\006mutate\030\001 \001(\0132\007.Mutat" +
-      "e\022\021\n\003get\030\002 \001(\0132\004.Get\022\023\n\004exec\030\003 \001(\0132\005.Exe" +
-      "c\"P\n\014ActionResult\022\035\n\005value\030\001 \001(\0132\016.NameB" +
-      "ytesPair\022!\n\texception\030\002 \001(\0132\016.NameBytesP",
-      "air\"^\n\014MultiRequest\022 \n\006region\030\001 \002(\0132\020.Re" +
-      "gionSpecifier\022\034\n\006action\030\002 \003(\0132\014.MultiAct" +
-      "ion\022\016\n\006atomic\030\003 \001(\010\".\n\rMultiResponse\022\035\n\006" +
-      "result\030\001 \003(\0132\r.ActionResult2\221\003\n\rClientSe" +
-      "rvice\022 \n\003get\022\013.GetRequest\032\014.GetResponse\022" +
-      ")\n\006mutate\022\016.MutateRequest\032\017.MutateRespon" +
-      "se\022#\n\004scan\022\014.ScanRequest\032\r.ScanResponse\022" +
-      ",\n\007lockRow\022\017.LockRowRequest\032\020.LockRowRes" +
-      "ponse\0222\n\tunlockRow\022\021.UnlockRowRequest\032\022." +
-      "UnlockRowResponse\022>\n\rbulkLoadHFile\022\025.Bul",
-      "kLoadHFileRequest\032\026.BulkLoadHFileRespons" +
-      "e\022D\n\017execCoprocessor\022\027.ExecCoprocessorRe" +
-      "quest\032\030.ExecCoprocessorResponse\022&\n\005multi" +
-      "\022\r.MultiRequest\032\016.MultiResponseBB\n*org.a" +
-      "pache.hadoop.hbase.protobuf.generatedB\014C" +
-      "lientProtosH\001\210\001\001\240\001\001"
+      "\021\n\tbatchSize\030\t \001(\r\022\025\n\rmaxResultSize\030\n \001(" +
+      "\004\"\203\001\n\013ScanRequest\022 \n\006region\030\001 \001(\0132\020.Regi" +
+      "onSpecifier\022\023\n\004scan\030\002 \001(\0132\005.Scan\022\021\n\tscan" +
+      "nerId\030\003 \001(\004\022\024\n\014numberOfRows\030\004 \001(\r\022\024\n\014clo" +
+      "seScanner\030\005 \001(\010\"\\\n\014ScanResponse\022\027\n\006resul" +
+      "t\030\001 \003(\0132\007.Result\022\021\n\tscannerId\030\002 \001(\004\022\023\n\013m" +
+      "oreResults\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\"?\n\016LockRow",
+      "Request\022 \n\006region\030\001 \002(\0132\020.RegionSpecifie" +
+      "r\022\013\n\003row\030\002 \003(\014\".\n\017LockRowResponse\022\016\n\006loc" +
+      "kId\030\001 \002(\004\022\013\n\003ttl\030\002 \001(\r\"D\n\020UnlockRowReque" +
+      "st\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006" +
+      "lockId\030\002 \002(\004\"\023\n\021UnlockRowResponse\"\232\001\n\024Bu" +
+      "lkLoadHFileRequest\022 \n\006region\030\001 \002(\0132\020.Reg" +
+      "ionSpecifier\0224\n\nfamilyPath\030\002 \003(\0132 .BulkL" +
+      "oadHFileRequest.FamilyPath\032*\n\nFamilyPath" +
+      "\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLo" +
+      "adHFileResponse\022\016\n\006loaded\030\001 \002(\010\"\203\001\n\004Exec",
+      "\022\013\n\003row\030\001 \002(\014\022\024\n\014protocolName\030\002 \002(\t\022\022\n\nm" +
+      "ethodName\030\003 \002(\t\022!\n\010property\030\004 \003(\0132\017.Name" +
+      "StringPair\022!\n\tparameter\030\005 \003(\0132\016.NameByte" +
+      "sPair\"O\n\026ExecCoprocessorRequest\022 \n\006regio" +
+      "n\030\001 \002(\0132\020.RegionSpecifier\022\023\n\004call\030\002 \002(\0132" +
+      "\005.Exec\"8\n\027ExecCoprocessorResponse\022\035\n\005val" +
+      "ue\030\001 \002(\0132\016.NameBytesPair\"N\n\013MultiAction\022" +
+      "\027\n\006mutate\030\001 \001(\0132\007.Mutate\022\021\n\003get\030\002 \001(\0132\004." +
+      "Get\022\023\n\004exec\030\003 \001(\0132\005.Exec\"P\n\014ActionResult" +
+      "\022\035\n\005value\030\001 \001(\0132\016.NameBytesPair\022!\n\texcep",
+      "tion\030\002 \001(\0132\016.NameBytesPair\"^\n\014MultiReque" +
+      "st\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\034\n\006" +
+      "action\030\002 \003(\0132\014.MultiAction\022\016\n\006atomic\030\003 \001" +
+      "(\010\".\n\rMultiResponse\022\035\n\006result\030\001 \003(\0132\r.Ac" +
+      "tionResult2\221\003\n\rClientService\022 \n\003get\022\013.Ge" +
+      "tRequest\032\014.GetResponse\022)\n\006mutate\022\016.Mutat" +
+      "eRequest\032\017.MutateResponse\022#\n\004scan\022\014.Scan" +
+      "Request\032\r.ScanResponse\022,\n\007lockRow\022\017.Lock" +
+      "RowRequest\032\020.LockRowResponse\0222\n\tunlockRo" +
+      "w\022\021.UnlockRowRequest\032\022.UnlockRowResponse",
+      "\022>\n\rbulkLoadHFile\022\025.BulkLoadHFileRequest" +
+      "\032\026.BulkLoadHFileResponse\022D\n\017execCoproces" +
+      "sor\022\027.ExecCoprocessorRequest\032\030.ExecCopro" +
+      "cessorResponse\022&\n\005multi\022\r.MultiRequest\032\016" +
+      ".MultiResponseBB\n*org.apache.hadoop.hbas" +
+      "e.protobuf.generatedB\014ClientProtosH\001\210\001\001\240" +
+      "\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21503,7 +21514,7 @@ public final class ClientProtos {
           internal_static_Scan_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Scan_descriptor,
-              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", },
+              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", },
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.class,
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.Builder.class);
           internal_static_ScanRequest_descriptor =

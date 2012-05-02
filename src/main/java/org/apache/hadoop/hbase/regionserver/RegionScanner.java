@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.Scan;
 
 /**
  * RegionScanner describes iterators over rows in an HRegion.
@@ -52,4 +53,8 @@ public interface RegionScanner extends InternalScanner {
    */
   public boolean reseek(byte[] row) throws IOException;
 
+  /**
+   * @return The preferred max buffersize. See {@link Scan#setMaxResultSize(long)}
+   */
+  public long getMaxResultSize();
 }

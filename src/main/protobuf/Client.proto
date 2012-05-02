@@ -194,6 +194,7 @@ message Scan {
   optional uint32 maxVersions = 7 [default = 1];
   optional bool cacheBlocks = 8 [default = true];
   optional uint32 batchSize = 9;
+  optional uint64 maxResultSize = 10;
 }
 
 /**

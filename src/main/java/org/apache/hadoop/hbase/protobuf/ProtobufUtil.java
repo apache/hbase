@@ -585,6 +585,9 @@ public final class ProtobufUtil {
     if (scan.getBatch() > 0) {
       scanBuilder.setBatchSize(scan.getBatch());
     }
+    if (scan.getMaxResultSize() > 0) {
+      scanBuilder.setMaxResultSize(scan.getMaxResultSize());
+    }
     scanBuilder.setMaxVersions(scan.getMaxVersions());
     TimeRange timeRange = scan.getTimeRange();
     if (!timeRange.isAllTime()) {
@@ -674,6 +677,9 @@ public final class ProtobufUtil {
     }
     if (proto.hasBatchSize()) {
       scan.setBatch(proto.getBatchSize());
+    }
+    if (proto.hasMaxResultSize()) {
+      scan.setMaxResultSize(proto.getMaxResultSize());
     }
     for (NameBytesPair attribute: proto.getAttributeList()) {
       scan.setAttribute(attribute.getName(), attribute.getValue().toByteArray());

@@ -50,12 +50,12 @@ public final class RPCProtos {
     private int bitField0_;
     // required string effectiveUser = 1;
     public static final int EFFECTIVEUSER_FIELD_NUMBER = 1;
-    private java.lang.Object effectiveUser_;
+    private Object effectiveUser_;
     public boolean hasEffectiveUser() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     public String getEffectiveUser() {
-      java.lang.Object ref = effectiveUser_;
+      Object ref = effectiveUser_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -69,7 +69,7 @@ public final class RPCProtos {
       }
     }
     private com.google.protobuf.ByteString getEffectiveUserBytes() {
-      java.lang.Object ref = effectiveUser_;
+      Object ref = effectiveUser_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -82,12 +82,12 @@ public final class RPCProtos {
     
     // required string realUser = 2;
     public static final int REALUSER_FIELD_NUMBER = 2;
-    private java.lang.Object realUser_;
+    private Object realUser_;
     public boolean hasRealUser() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     public String getRealUser() {
-      java.lang.Object ref = realUser_;
+      Object ref = realUser_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -101,7 +101,7 @@ public final class RPCProtos {
       }
     }
     private com.google.protobuf.ByteString getRealUserBytes() {
-      java.lang.Object ref = realUser_;
+      Object ref = realUser_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -164,15 +164,13 @@ public final class RPCProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -453,12 +451,12 @@ public final class RPCProtos {
       private int bitField0_;
       
       // required string effectiveUser = 1;
-      private java.lang.Object effectiveUser_ = "";
+      private Object effectiveUser_ = "";
       public boolean hasEffectiveUser() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       public String getEffectiveUser() {
-        java.lang.Object ref = effectiveUser_;
+        Object ref = effectiveUser_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           effectiveUser_ = s;
@@ -489,12 +487,12 @@ public final class RPCProtos {
       }
       
       // required string realUser = 2;
-      private java.lang.Object realUser_ = "";
+      private Object realUser_ = "";
       public boolean hasRealUser() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public String getRealUser() {
-        java.lang.Object ref = realUser_;
+        Object ref = realUser_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           realUser_ = s;
@@ -591,12 +589,12 @@ public final class RPCProtos {
     
     // optional string protocol = 2 [default = "org.apache.hadoop.hbase.ipc.HRegionInterface"];
     public static final int PROTOCOL_FIELD_NUMBER = 2;
-    private java.lang.Object protocol_;
+    private Object protocol_;
     public boolean hasProtocol() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     public String getProtocol() {
-      java.lang.Object ref = protocol_;
+      Object ref = protocol_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -610,7 +608,7 @@ public final class RPCProtos {
       }
     }
     private com.google.protobuf.ByteString getProtocolBytes() {
-      java.lang.Object ref = protocol_;
+      Object ref = protocol_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -671,15 +669,13 @@ public final class RPCProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -1061,12 +1057,12 @@ public final class RPCProtos {
       }
       
       // optional string protocol = 2 [default = "org.apache.hadoop.hbase.ipc.HRegionInterface"];
-      private java.lang.Object protocol_ = "org.apache.hadoop.hbase.ipc.HRegionInterface";
+      private Object protocol_ = "org.apache.hadoop.hbase.ipc.HRegionInterface";
       public boolean hasProtocol() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public String getProtocol() {
-        java.lang.Object ref = protocol_;
+        Object ref = protocol_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           protocol_ = s;
@@ -1215,15 +1211,13 @@ public final class RPCProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -1597,12 +1591,12 @@ public final class RPCProtos {
     private int bitField0_;
     // required string exceptionName = 1;
     public static final int EXCEPTIONNAME_FIELD_NUMBER = 1;
-    private java.lang.Object exceptionName_;
+    private Object exceptionName_;
     public boolean hasExceptionName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     public String getExceptionName() {
-      java.lang.Object ref = exceptionName_;
+      Object ref = exceptionName_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -1616,7 +1610,7 @@ public final class RPCProtos {
       }
     }
     private com.google.protobuf.ByteString getExceptionNameBytes() {
-      java.lang.Object ref = exceptionName_;
+      Object ref = exceptionName_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -1629,12 +1623,12 @@ public final class RPCProtos {
     
     // optional string stackTrace = 2;
     public static final int STACKTRACE_FIELD_NUMBER = 2;
-    private java.lang.Object stackTrace_;
+    private Object stackTrace_;
     public boolean hasStackTrace() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     public String getStackTrace() {
-      java.lang.Object ref = stackTrace_;
+      Object ref = stackTrace_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -1648,7 +1642,7 @@ public final class RPCProtos {
       }
     }
     private com.google.protobuf.ByteString getStackTraceBytes() {
-      java.lang.Object ref = stackTrace_;
+      Object ref = stackTrace_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -1707,15 +1701,13 @@ public final class RPCProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
@@ -1992,12 +1984,12 @@ public final class RPCProtos {
       private int bitField0_;
       
       // required string exceptionName = 1;
-      private java.lang.Object exceptionName_ = "";
+      private Object exceptionName_ = "";
       public boolean hasExceptionName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       public String getExceptionName() {
-        java.lang.Object ref = exceptionName_;
+        Object ref = exceptionName_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           exceptionName_ = s;
@@ -2028,12 +2020,12 @@ public final class RPCProtos {
       }
       
       // optional string stackTrace = 2;
-      private java.lang.Object stackTrace_ = "";
+      private Object stackTrace_ = "";
       public boolean hasStackTrace() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public String getStackTrace() {
-        java.lang.Object ref = stackTrace_;
+        Object ref = stackTrace_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           stackTrace_ = s;
@@ -2240,15 +2232,13 @@ public final class RPCProtos {
       return size;
     }
     
-    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
+    protected Object writeReplace() throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
+    public boolean equals(final Object obj) {
       if (obj == this) {
        return true;
       }
