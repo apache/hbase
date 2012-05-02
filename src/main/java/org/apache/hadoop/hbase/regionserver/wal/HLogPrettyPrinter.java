@@ -21,10 +21,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -32,6 +36,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -64,11 +69,13 @@ public class HLogPrettyPrinter {
   // enable in order to output a single list of transactions from several files
   private boolean persistentOutput;
   private boolean firstTxn;
-  // useful for programatic capture of JSON output
+  // useful for programmatic capture of JSON output
   private PrintStream out;
   // for JSON encoding
   private ObjectMapper mapper;
 
+  // analysis mode for HLog stats
+  private boolean analysisMode = false;
   /**
    * Basic constructor that simply initializes values to reasonable defaults.
    */
@@ -176,6 +183,13 @@ public class HLogPrettyPrinter {
   }
 
   /**
+   * turn analysis mode on.
+   */
+  private void setAnalyzeOn() {
+    this.analysisMode = true;
+  }
+
+  /**
    * sets the region by which output will be filtered
    *
    * @param row
@@ -236,19 +250,52 @@ public class HLogPrettyPrinter {
       out.print("[");
       firstTxn = true;
     }
+
+    // analysis mode counters and structures
+    long numTxns = 0;
+    long numKVs = 0;
+    long totalKVSize = 0;
+    long numCFsUpdated = 0;
+    long beginTime = 0;
+    long endTime = 0;
+
+    HashMap<String, MutableLong> txnsPerPutSignature = new HashMap<String, MutableLong>();
+    HashMap<String, MutableLong> kvCountPerCF = new HashMap<String, MutableLong>();
+    HashMap<String, MutableLong> kvSizePerCF = new HashMap<String, MutableLong>();
+
     Reader log = HLog.getReader(fs, p, conf);
     try {
       HLog.Entry entry;
       while ((entry = log.next()) != null) {
         HLogKey key = entry.getKey();
         WALEdit edit = entry.getEdit();
+
+        numTxns++;
+
         // begin building a transaction structure
         Map<String, Object> txn = key.toStringMap();
+
+        if (analysisMode) {
+          // track the time of the first transaction
+          // and the last transaction as a way to get
+          // the total time for all transactions in
+          // this HLog.
+          if (numTxns == 1) {
+            beginTime = (Long)(txn.get("writeTime"));
+          }
+          endTime = (Long)(txn.get("writeTime"));
+        }
+
         // check output filters
+
         if (sequence >= 0 && ((Long) txn.get("sequence")) != sequence)
           continue;
+
         if (region != null && !((String) txn.get("region")).equals(region))
           continue;
+
+        String table = (String)(txn.get("table"));
+
         // initialize list into which we will store atomic actions
         List<Map> actions = new ArrayList<Map>();
         for (KeyValue kv : edit.getKeyValues()) {
@@ -258,9 +305,34 @@ public class HLogPrettyPrinter {
           if (outputValues)
             op.put("value", Bytes.toStringBinary(kv.getValue()));
           // check row output filter
-          if (row == null || ((String) op.get("row")).equals(row))
+          if (row == null || ((String) op.get("row")).equals(row)) {
             actions.add(op);
+
+            if (analysisMode) {
+              // track total number of KVs and their size
+              numKVs++;
+              totalKVSize += kv.getLength();
+
+              // track number of KVs per CF
+              String table_and_cf = table + ":" + op.get("family");
+              MutableLong count = kvCountPerCF.get(table_and_cf);
+              if (count != null) {
+                count.increment();
+              } else {
+                kvCountPerCF.put(table_and_cf, new MutableLong(1));
+              }
+
+              // track size of KVs writter per CF
+              MutableLong kvSize = kvSizePerCF.get(table_and_cf);
+              if (kvSize != null) {
+                kvSize.add(kv.getLength());
+              } else {
+                kvSizePerCF.put(table_and_cf, new MutableLong(kv.getLength()));
+              }
+            }
+          }
         }
+
         if (actions.size() == 0)
           continue;
         txn.put("actions", actions);
@@ -273,29 +345,107 @@ public class HLogPrettyPrinter {
           // encode and print JSON
           out.print(mapper.writeValueAsString(txn));
         } else {
-          // Pretty output, complete with indentation by atomic action
-          out.println("Sequence " + txn.get("sequence") + " "
-              + "from region " + txn.get("region") + " " + "in table "
-              + txn.get("table"));
-          for (int i = 0; i < actions.size(); i++) {
-            Map op = actions.get(i);
-            out.println("  Action:");
-            out.println("    row: " + op.get("row"));
-            out.println("    column: " + op.get("family") + ":"
-                + op.get("qualifier"));
-            out.println("    at time: "
-                + (new Date((Long) op.get("timestamp"))));
-            if (outputValues)
-              out.println("    value: " + op.get("value"));
+          if (analysisMode) {
+            // track how many CFs each txn touches
+            TreeSet<String> cfs = new TreeSet<String>();
+            for (int i = 0; i < actions.size(); i++) {
+              // track unique CFs in this txn in a set
+              String cf = (String)(actions.get(i).get("family"));
+              cfs.add(cf);
+            }
+            numCFsUpdated += cfs.size();
+            String putSignature = table + ":" + cfs.toString();
+            MutableLong count = txnsPerPutSignature.get(putSignature);
+            if (count != null) {
+              count.increment();
+            } else {
+              txnsPerPutSignature.put(putSignature, new MutableLong(1));
+            }
+
+          } else {
+            // Pretty output, complete with indentation by atomic action
+            out.println("Sequence " + txn.get("sequence") + " "
+                + "from region " + txn.get("region") + " " + "in table "
+                + table);
+            for (int i = 0; i < actions.size(); i++) {
+              Map op = actions.get(i);
+              out.println("  Action:");
+              out.println("    row: " + op.get("row"));
+              out.println("    column: " + op.get("family") + ":"
+                  + op.get("qualifier"));
+              out.println("    at time: "
+                  + (new Date((Long) op.get("timestamp"))));
+              if (outputValues)
+                out.println("    value: " + op.get("value"));
+            }
           }
         }
       }
+
+      if (analysisMode && (numTxns > 0) && (numKVs > 0)) {
+
+        out.println("=== SUMMARY ===");
+        out.println("Number of txns: " + numTxns);
+        out.println("Number of KVs: " + numKVs);
+        out.println("Total Size of KVs: " + totalKVSize);
+        out.println("Avg number of KVs/txn: " + numKVs/numTxns);
+        out.println("Avg size of txn: " + totalKVSize/numTxns);
+        out.println("Avg size of KV: " + totalKVSize/numKVs);
+        out.println("Avg CFs written to per txn: " + numCFsUpdated/numTxns);
+
+        if (endTime > beginTime) {
+          out.println("Txns/sec: " + (numTxns * 1000 / (endTime - beginTime)));
+          out.println(" KVs/sec: " + (numKVs * 1000 / (endTime - beginTime)));
+        }
+
+        out.println("======= CF Level Stats ======");
+        out.format("%12s|%s\n", "# of KVs", "CF Name");
+        for (Map.Entry<String, MutableLong> e : sortDescByValue(kvCountPerCF)) {
+          String key = e.getKey();
+          long   kvCount = e.getValue().toLong();
+          out.format("%12d %s\n", kvCount, key);
+        }
+        out.println("=====");
+        out.format("%12s|%s\n", "Total KVSize", "CF Name");
+        for (Map.Entry<String, MutableLong> e : sortDescByValue(kvSizePerCF)) {
+          String key = e.getKey();
+          long   kvSize = e.getValue().toLong();
+          out.format("%12d %s\n", kvSize, key);
+        }
+        out.println("=====");
+        out.format("%12s|%s\n", "== TxnCount", "Put/Delete's CF Signature ==");
+        for (Map.Entry<String, MutableLong> e : sortDescByValue(txnsPerPutSignature)) {
+          String putSignature = e.getKey();
+          long txnCount = e.getValue().toLong();
+          out.format("%12d %s\n", txnCount, putSignature);
+        }
+        out.println("===========================");
+
+      }
+
     } finally {
       log.close();
     }
     if (outputJSON && !persistentOutput) {
       out.print("]");
     }
+  }
+
+  // helper function to do descending sort by value of entries in the map
+  private List<Map.Entry<String, MutableLong>> sortDescByValue(Map<String, MutableLong> map) {
+    List<Map.Entry<String, MutableLong>> entrySet =
+      new ArrayList<Map.Entry<String, MutableLong>>(map.entrySet());
+
+    Collections.sort(entrySet,
+          new Comparator<Map.Entry<String, MutableLong>>() {
+            public int compare(Map.Entry<String, MutableLong> o1,
+                               Map.Entry<String, MutableLong> o2) {
+              return o2.getValue().compareTo(o1.getValue());
+            }
+          }
+    );
+
+    return entrySet;
   }
 
   /**
@@ -320,6 +470,7 @@ public class HLogPrettyPrinter {
     options.addOption("s", "sequence", true,
         "Sequence to filter by. Pass sequence number.");
     options.addOption("w", "row", true, "Row to filter by. Pass row name.");
+    options.addOption("a", "analyze", false, "analyze the log");
 
     HLogPrettyPrinter printer = new HLogPrettyPrinter();
     CommandLineParser parser = new PosixParser();
@@ -329,7 +480,7 @@ public class HLogPrettyPrinter {
       files = cmd.getArgList();
       if (files.size() == 0 || cmd.hasOption("h")) {
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp("HFile filename(s) ", options, true);
+        formatter.printHelp("HLog filename(s) ", options, true);
         System.exit(-1);
       }
       // configure the pretty printer using command line options
@@ -343,10 +494,12 @@ public class HLogPrettyPrinter {
         printer.setSequenceFilter(Long.parseLong(cmd.getOptionValue("s")));
       if (cmd.hasOption("w"))
         printer.setRowFilter(cmd.getOptionValue("w"));
+      if (cmd.hasOption("a"))
+        printer.setAnalyzeOn();
     } catch (ParseException e) {
       e.printStackTrace();
       HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("HFile filename(s) ", options, true);
+      formatter.printHelp("HLog filename(s) ", options, true);
       System.exit(-1);
     }
     // get configuration, file system, and process the given files
@@ -368,4 +521,5 @@ public class HLogPrettyPrinter {
     }
     printer.endPersistentOutput();
   }
+
 }

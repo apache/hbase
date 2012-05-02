@@ -137,6 +137,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
     stringMap.put("table", Bytes.toStringBinary(tablename));
     stringMap.put("region", Bytes.toStringBinary(regionName));
     stringMap.put("sequence", logSeqNum);
+    stringMap.put("writeTime", writeTime);
     return stringMap;
   }
 
