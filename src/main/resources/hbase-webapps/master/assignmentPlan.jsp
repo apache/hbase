@@ -104,13 +104,15 @@
 			<tr>
 			<th>Region Name</th> <th>Position</th> <th>Primary RS</th> <th>Secondary RS</th> <th>Tertiary RS</th>  <th>Actions</th>
 			</tr>
-<%				for(Map.Entry<HRegionInfo, List<HServerAddress>> entry : assignmentMap.entrySet() ) {
-					List<HServerAddress> favoredNodeList = entry.getValue();
-					favoredNodes =  RegionPlacement.getFavoredNodes(favoredNodeList);
-						regionName = entry.getKey().getRegionNameAsString();
-						HServerAddress currentRS = currentAssignment.get(entry.getKey());
+<%				
+					for (Map.Entry<String, HRegionInfo> entry : regionNameToRegionInfoMap.entrySet()) {
+						HRegionInfo regionInfo = entry.getValue();
+						List<HServerAddress> favoredNodeList = assignmentMap.get(regionInfo);
+						regionName = regionInfo.getRegionNameAsString();
+						HServerAddress currentRS = currentAssignment.get(regionInfo);
 						String position = "Not Assigned";
-						AssignmentPlan.POSITION favoredNodePosition = AssignmentPlan.getFavoredServerPosition(favoredNodeList, currentRS);
+						AssignmentPlan.POSITION favoredNodePosition =
+							AssignmentPlan.getFavoredServerPosition(favoredNodeList, currentRS);
 						if (favoredNodePosition == null) {
 							position = "Not on FavoredNode";
 						} else {

@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -64,7 +63,7 @@ public class AssignmentPlan implements Writable{
   };
 
   public AssignmentPlan() {
-    assignmentMap = new TreeMap<HRegionInfo, List<HServerAddress>>();
+    assignmentMap = new HashMap<HRegionInfo, List<HServerAddress>>();
     assignmentUpdateTS = new HashMap<HRegionInfo, Long>();
   }
 
@@ -179,9 +178,9 @@ public class AssignmentPlan implements Writable{
    * @return the mapping between each region to its favored region server list
    */
   public synchronized Map<HRegionInfo, List<HServerAddress>> getAssignmentMap() {
-    return assignmentMap;
+    return this.assignmentMap;
   }
-
+  
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(VERSION);

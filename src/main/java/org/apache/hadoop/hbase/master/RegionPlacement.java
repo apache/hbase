@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
@@ -721,10 +722,12 @@ public class RegionPlacement implements RegionPlacementPolicy{
    */
   public static String getFavoredNodes(List<HServerAddress> serverAddrList) {
     String favoredNodes = "";
-    for (int i = 0 ; i < serverAddrList.size(); i++) {
-      favoredNodes += serverAddrList.get(i).getHostNameWithPort();
-      if (i != serverAddrList.size() - 1 ) {
-        favoredNodes += ",";
+    if (serverAddrList != null) {
+      for (int i = 0 ; i < serverAddrList.size(); i++) {
+        favoredNodes += serverAddrList.get(i).getHostNameWithPort();
+        if (i != serverAddrList.size() - 1 ) {
+          favoredNodes += ",";
+        }
       }
     }
     return favoredNodes;
@@ -804,9 +807,10 @@ public class RegionPlacement implements RegionPlacementPolicy{
   public static void printAssignmentPlan(AssignmentPlan plan) {
     if (plan == null) return;
     LOG.info("========== Start to print the assignment plan ================");
+    // sort the map based on region info
     Map<HRegionInfo, List<HServerAddress>> assignmentMap =
-      plan.getAssignmentMap();
-
+      new TreeMap<HRegionInfo, List<HServerAddress>>(plan.getAssignmentMap());
+    
     for (Map.Entry<HRegionInfo, List<HServerAddress>> entry :
       assignmentMap.entrySet()) {
       String serverList = RegionPlacement.getFavoredNodes(entry.getValue());
