@@ -49,10 +49,10 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
   private int maxHeapMB;
   /** per-region load metrics */
   private ArrayList<RegionLoad> regionLoad = new ArrayList<RegionLoad>();
-  // lastLoadRefreshTime and missedLastLoadReport are only maintained by the
+  // lastLoadRefreshTime and expireAfter are only maintained by the 
   // master. They are not serialized and reported by the region servers
   public volatile /* transient */ long lastLoadRefreshTime = 0;
-  public volatile /* transient */ boolean missedLastLoadReport = false;
+  public volatile /* transient */ long expireAfter = Long.MAX_VALUE;
 
   /**
    * Encapsulates per-region loading metrics.
