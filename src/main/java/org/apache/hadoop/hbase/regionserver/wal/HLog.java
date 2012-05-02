@@ -19,7 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.apache.hadoop.hbase.util.FSUtils.recoverFileLease;
+import static org.apache.hadoop.hbase.util.FSUtils.*;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -192,6 +192,7 @@ public class HLog implements Syncable {
    * Current log file.
    */
   Writer writer;
+  boolean writerCloseSyncDone = false;
 
   /*
    * Map of all log files but the current one.
@@ -243,6 +244,8 @@ public class HLog implements Syncable {
 
   private final List<LogEntryVisitor> logEntryVisitors =
       new CopyOnWriteArrayList<LogEntryVisitor>();
+
+  private boolean logRollPending = false;
 
   /**
    * Pattern used to validate a HLog file name
@@ -482,7 +485,7 @@ public class HLog implements Syncable {
    * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
    * @throws IOException
    */
-  public byte [][] rollWriter() throws FailedLogCloseException, IOException {
+  public byte [][] rollWriter() throws IOException {
     // Return if nothing to flush.
     if (this.writer != null && this.numEntries.get() <= 0) {
       return null;
@@ -494,6 +497,7 @@ public class HLog implements Syncable {
         if (closed) {
           return regionsToFlush;
         }
+        this.logRollPending = true;
         // Clean up current writer.
         Path oldFile = cleanupCurrentWriter(this.filenum);
         this.filenum = System.currentTimeMillis();
@@ -509,6 +513,11 @@ public class HLog implements Syncable {
           this.hdfs_out =
             ((SequenceFileLogWriter)this.writer).getDFSCOutputStream();
         }
+        // If there was an IOException before this point then either the old log
+        // has not been closed or the new writer has not been created.
+        // LogRoller will keep retyring. Nothing can be appended to the logs
+        // when logRollPending is true
+        this.logRollPending = false;
 
         LOG.info((oldFile != null?
             "Roll " + FSUtils.getPath(oldFile) + ", entries=" +
@@ -529,10 +538,13 @@ public class HLog implements Syncable {
             // If so, then no new writes have come in since all regions were
             // flushed (and removed from the lastSeqWritten map). Means can
             // remove all but currently open log file.
-            for (Map.Entry<Long, Path> e : this.outputfiles.entrySet()) {
-              archiveLogFile(e.getValue(), e.getKey());
+            TreeSet<Long> tempSet = new TreeSet<Long>(outputfiles.keySet());
+            for (Long seqNum : tempSet) {
+              archiveLogFile(outputfiles.get(seqNum), seqNum);
+              outputfiles.remove(seqNum);
             }
-            this.outputfiles.clear();
+            assert outputfiles.size() == 0 :
+              "Someone added new log files? How?";
           } else {
             regionsToFlush = cleanOldLogs();
           }
@@ -543,6 +555,10 @@ public class HLog implements Syncable {
       this.cacheFlushLock.unlock();
     }
     return regionsToFlush;
+  }
+
+  public boolean isLogRollPending() {
+    return this.logRollPending;
   }
 
   /**
@@ -623,7 +639,8 @@ public class HLog implements Syncable {
           " from region " + Bytes.toString(oldestRegion));
       }
       for (Long seq : sequenceNumbers) {
-        archiveLogFile(this.outputfiles.remove(seq), seq);
+        archiveLogFile(this.outputfiles.get(seq), seq);
+        this.outputfiles.remove(seq);
       }
     }
 
@@ -699,19 +716,28 @@ public class HLog implements Syncable {
   throws IOException {
     Path oldFile = null;
     if (this.writer != null) {
-      // Close the current writer, get a new one.
+      try {
+        if (!writerCloseSyncDone) {
+          this.writer.sync();
+        }
+      } catch (IOException ioe) {
+        LOG.fatal("log sync failed when trying to close " + this.writer);
+        Runtime.getRuntime().halt(1);
+      }
+      // Close the current writer
+      writerCloseSyncDone = true;
       try {
         this.writer.close();
-        this.writer = null;
-      } catch (IOException e) {
-        // Failed close of log file.  Means we're losing edits.  For now,
-        // shut ourselves down to minimize loss.  Alternative is to try and
-        // keep going.  See HBASE-930.
-        FailedLogCloseException flce =
-          new FailedLogCloseException("#" + currentfilenum);
-        flce.initCause(e);
-        throw e;
+      } catch (IOException ioe) {
+        Path fname = computeFilename();
+        if (!tryRecoverFileLease(fs, fname, conf)) {
+          IOException ioe2 =
+              new IOException("lease recovery pending for " + fname, ioe);
+          throw ioe2;
+        }
       }
+      writerCloseSyncDone = false;
+      this.writer = null;
       if (currentfilenum >= 0) {
         oldFile = computeFilename();
         this.outputfiles.put(Long.valueOf(this.logSeqNum.get()), oldFile);
@@ -783,9 +809,7 @@ public class HLog implements Syncable {
         if (LOG.isDebugEnabled()) {
           LOG.debug("closing hlog writer in " + this.dir.toString());
         }
-        if (this.writer != null) {
-          this.writer.close();
-        }
+        cleanupCurrentWriter(-1);
       }
     } finally {
       cacheFlushLock.unlock();
@@ -833,6 +857,9 @@ public class HLog implements Syncable {
     synchronized (updateLock) {
       if (this.closed) {
         throw new IOException("Cannot append; log is closed");
+      }
+      if (this.logRollPending) {
+        throw new IOException("Cannot write; log unstable, roll pending");
       }
       long seqNum = obtainSeqNum();
       logKey.setLogSeqNum(seqNum);
@@ -885,6 +912,9 @@ public class HLog implements Syncable {
     synchronized (this.updateLock) {
       if (this.closed) {
         throw new IOException("Cannot append; log is closed");
+      }
+      if (this.logRollPending) {
+        throw new IOException("Cannot append; log unstable, roll pending");
       }
       long seqNum = obtainSeqNum();
       // The 'lastSeqWritten' map holds the sequence number of the oldest
@@ -1046,7 +1076,18 @@ public class HLog implements Syncable {
         try {
           long now = System.currentTimeMillis();
           long doneUpto = this.unflushedEntries.get();
-          this.writer.sync();
+          if (!logRollPending) {
+            // if logRollPending is true then we know that the data in the old
+            // log file has been synced. We know that no more appends were done
+            // after logRollPending became true. So syncing here is not
+            // required.
+            //
+            // If log roll is pending then either the old log file has been 
+            // synced but not closed. Or old log file has been successfully
+            // closed but a new one has not yet been created. In the latter
+            // case this.writer will be NULL
+            this.writer.sync();
+          }
           this.syncTillHere = doneUpto;
           syncTime.inc(System.currentTimeMillis() - now);
           this.forceSync = false;
@@ -1069,9 +1110,8 @@ public class HLog implements Syncable {
                        " still proceeding ahead...");
           }
         } catch (IOException e) {
-          LOG.fatal("Could not append. Requesting close of hlog", e);
-          requestLogRoll();
-          throw e;
+          LOG.fatal("Could not sync hlog. Aborting", e);
+          Runtime.getRuntime().halt(1);
         }
       }
 
@@ -1226,24 +1266,32 @@ public class HLog implements Syncable {
    * @param logSeqId
    * @throws IOException
    */
-  public void completeCacheFlush(final byte [] regionName, final byte [] tableName,
-                                 final long logSeqId, final boolean isMetaRegion)
-    throws IOException {
+  public void completeCacheFlush(final byte [] regionName,
+      final byte [] tableName,
+      final long logSeqId, final boolean isMetaRegion)  {
     try {
       synchronized (updateLock) {
         if (this.closed) {
           return;
         }
-        long now = System.currentTimeMillis();
-        WALEdit edit = completeCacheFlushLogEdit();
-        HLogKey key = makeKey(regionName, tableName, logSeqId,
-                              System.currentTimeMillis());
-        this.writer.append(new Entry(key, edit));
-        this.numEntries.incrementAndGet();
+        try {
+          if (this.logRollPending) {
+            LOG.warn("Skipping write of cache-flush-done entry" +
+                     " to unstable hlog. Log roll is pending");
+            return;
+          }
+          long now = System.currentTimeMillis();
+          WALEdit edit = completeCacheFlushLogEdit();
+          HLogKey key = makeKey(regionName, tableName, logSeqId,
+              System.currentTimeMillis());
+          this.writer.append(new Entry(key, edit));
+          this.numEntries.incrementAndGet();
+        } catch (IOException ioe) {
+          LOG.warn("Failed to write cache-flush-done entry. Ignoring.", ioe);
+        }
       }
       // sync txn to file system
       this.sync(isMetaRegion);
-
     } finally {
       // updateLock not needed for removing snapshot's entry
       // Cleaning up of lastSeqWritten is in the finally clause because we

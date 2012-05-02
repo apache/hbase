@@ -115,6 +115,8 @@ class SplitRequest implements Runnable {
       LOG.error("Split failed " + this, RemoteExceptionHandler
           .checkIOException(ex));
       server.checkFileSystem();
+      // XXX should restructure the code above such that we don't have to abort
+      server.abort("Split failed", ex);
     }
   }
 

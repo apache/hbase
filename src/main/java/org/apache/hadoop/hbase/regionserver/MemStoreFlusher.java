@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -144,7 +143,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
           continue;
         }
         if (!flushRegion(fqe)) {
-          break;
+          LOG.warn("Failed to flush " + fqe.region);
         }
       } catch (InterruptedException ex) {
         continue;
@@ -154,9 +153,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
         LOG.error("Cache flush failed" +
           (fqe != null ? (" for region " + Bytes.toString(fqe.region.getRegionName())) : ""),
           ex);
-        if (!server.checkFileSystem()) {
-          break;
-        }
+        server.checkFileSystem();
       }
     }
     this.regionsInQueue.clear();
@@ -261,21 +258,13 @@ class MemStoreFlusher extends Thread implements FlushRequester {
         server.compactSplitThread.requestCompaction(region, getName());
       }
       server.getMetrics().addFlush(region.getRecentFlushInfo());
-    } catch (DroppedSnapshotException ex) {
-      // Cache flush can fail in a few places. If it fails in a critical
-      // section, we get a DroppedSnapshotException and a replay of hlog
-      // is required. Currently the only way to do this is a restart of
-      // the server. Abort because hdfs is probably bad (HBASE-644 is a case
-      // where hdfs was bad but passed the hdfs check).
-      server.abort("Replay of HLog required. Forcing server shutdown", ex);
-      return false;
     } catch (IOException ex) {
-      LOG.error("Cache flush failed" +
-        (region != null ? (" for region " + Bytes.toString(region.getRegionName())) : ""),
+      LOG.warn("Cache flush failed" +
+        (region != null ? (" for region " +
+        Bytes.toString(region.getRegionName())) : ""),
         RemoteExceptionHandler.checkIOException(ex));
-      if (!server.checkFileSystem()) {
-        return false;
-      }
+      server.checkFileSystem();
+      return false;
     } finally {
       lock.unlock();
     }

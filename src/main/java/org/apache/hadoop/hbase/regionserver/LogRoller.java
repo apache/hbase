@@ -22,9 +22,11 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.LogRollListener;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -56,14 +58,23 @@ class LogRoller extends Thread implements LogRollListener {
 
   @Override
   public void run() {
+    MonitoredTask status = null;
+    int retried = -1;
     while (!server.isStopRequested()) {
       long now = System.currentTimeMillis();
       boolean periodic = false;
+      long modifiedRollPeriod;
       if (!rollLog.get()) {
-        periodic = (now - this.lastrolltime) > this.rollperiod;
+        if (server.getLog().isLogRollPending() == true) {
+          modifiedRollPeriod = server.threadWakeFrequency;
+        } else {
+          modifiedRollPeriod = this.rollperiod;
+        }
+        periodic = (now - this.lastrolltime) > modifiedRollPeriod;
         if (!periodic) {
           synchronized (rollLog) {
             try {
+              // default 10s
               rollLog.wait(server.threadWakeFrequency);
             } catch (InterruptedException e) {
               // Fall through
@@ -73,38 +84,48 @@ class LogRoller extends Thread implements LogRollListener {
         }
         // Time for periodic roll
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Hlog roll period " + this.rollperiod + "ms elapsed");
+          if (modifiedRollPeriod == this.rollperiod) {
+            LOG.debug("Hlog roll period " + this.rollperiod + "ms elapsed");
+          }
         }
       }
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
-        this.lastrolltime = now;
         byte [][] regionsToFlush = server.getLog().rollWriter();
+        if (status != null) {
+          status.markComplete("Log rolling succeeded after " + retried +
+              "retires.");
+          retried = -1;
+          status = null;
+        }
         if (regionsToFlush != null) {
           for (byte [] r: regionsToFlush) scheduleFlush(r);
         }
-      } catch (FailedLogCloseException e) {
-        LOG.fatal("Forcing server shutdown", e);
-        server.checkFileSystem();
-        server.abort("Failed log close in log roller", e);
-      } catch (java.net.ConnectException e) {
-        LOG.fatal("Forcing server shutdown", e);
-        server.checkFileSystem();
-        server.abort("Failed connect in log roller", e);
       } catch (IOException ex) {
-        LOG.fatal("Log rolling failed with ioe: ",
-          RemoteExceptionHandler.checkIOException(ex));
+        retried++;
+        String msg = "log roll failed." +
+            " retried=" + retried + ", " + StringUtils.stringifyException(ex);
+        if (status == null) {
+          LOG.warn("Log rolling failed with ioe. Will retry." +
+              " Will update status with exceptionif retry fails " +
+              RemoteExceptionHandler.checkIOException(ex));
+          status = TaskMonitor.get().createStatus(msg);
+        } else {
+          status.setStatus(msg);
+        }
         server.checkFileSystem();
-        // Abort if we get here.  We probably won't recover an IOE. HBASE-1132
-        server.abort("IOE in log roller", ex);
       } catch (Exception ex) {
-        LOG.error("Log rolling failed", ex);
-        server.checkFileSystem();
-        server.abort("Log rolling failed", ex);
+        LOG.fatal("Log rolling failed, unexpected exception. Force Aborting",
+            ex);
+        server.forceAbort();
       } finally {
+        this.lastrolltime = System.currentTimeMillis();
         rollLog.set(false);
         rollLock.unlock();
       }
+    }
+    if (status != null) {
+      status.abort("LogRoller exiting while log was unstable and roll pending");
     }
     LOG.info("LogRoller exiting.");
   }

@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.avro.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -62,7 +63,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -1265,8 +1265,6 @@ public class HRegion implements HeapSize {
    * @return true if cache was flushed
    *
    * @throws IOException general io exceptions
-   * @throws DroppedSnapshotException Thrown when replay of hlog is required
-   * because a Snapshot was not properly persisted.
    */
   public boolean flushcache() throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus("Flushing " + this);
@@ -1346,8 +1344,6 @@ public class HRegion implements HeapSize {
    * @return true if the region needs compacting
    *
    * @throws IOException general io exceptions
-   * @throws DroppedSnapshotException Thrown when replay of hlog is required
-   * because a Snapshot was not properly persisted.
    */
   protected boolean internalFlushcache(MonitoredTask status)
     throws IOException {
@@ -1425,14 +1421,25 @@ public class HRegion implements HeapSize {
     // Otherwise, the snapshot content while backed up in the hlog, it will not
     // be part of the current running servers state.
     boolean compactionRequested = false;
-    try {
-      // A.  Flush memstore to all the HStores.
-      // Keep running vector of all store files that includes both old and the
-      // just-made new flush store file.
 
+    // A.  Flush memstore to all the HStores.
+    // Keep running vector of all store files that includes both old and the
+    // just-made new flush store file.
+    try {
       for (StoreFlusher flusher : storeFlushers) {
         flusher.flushCache(status);
       }
+    } catch (IOException ioe) {
+      if (wal != null) {
+        wal.abortCacheFlush(this.regionInfo.getRegionName());
+      }
+      status.abort("Flush failed: " + StringUtils.stringifyException(ioe));
+      // The caller can recover from this IOException. No harm done if
+      // memstore flush fails.
+      throw ioe;
+    }
+
+    try {
 
       Callable<Void> atomicWork = internalPreFlushcacheCommit();
 
@@ -1476,14 +1483,12 @@ public class HRegion implements HeapSize {
       // We used to only catch IOEs but its possible that we'd get other
       // exceptions -- e.g. HBASE-659 was about an NPE -- so now we catch
       // all and sundry.
-      if (wal != null) {
-        wal.abortCacheFlush(this.regionInfo.getRegionName());
-      }
-      DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
-          Bytes.toStringBinary(getRegionName()));
-      dse.initCause(t);
-      status.abort("Flush failed: " + StringUtils.stringifyException(t));
-      throw dse;
+
+      // There is no recovery possible from failures in this block. Abort.
+      // But now that we have factored out memstore flushing in a separate
+      // block, there shouldn't really be any exception here.
+      LOG.fatal("failed to commit flushed memstore. Aborting.", t);
+      Runtime.getRuntime().halt(1);
     }
 
     // If we get to here, the HStores have been written. If we get an

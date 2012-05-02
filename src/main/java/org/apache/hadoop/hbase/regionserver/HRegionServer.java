@@ -279,6 +279,18 @@ public class HRegionServer implements HRegionInterface,
 
   // Cache configuration and block cache reference
   private final CacheConfig cacheConfig;
+  
+  // prevents excessive checking of filesystem
+  private int minCheckFSIntervalMillis;
+
+  // abort if checkFS continues to fail for this long
+  private int checkFSAbortTimeOutMillis;
+
+  // time when last checkFS was done
+  private AtomicLong lastCheckFSAt = new AtomicLong(0);
+
+  // time since checkFS has been failing
+  private volatile long checkFSFailingSince;
 
   private String stopReason = "not stopping";
 
@@ -336,6 +348,18 @@ public class HRegionServer implements HRegionInterface,
     reinitialize();
     SchemaMetrics.configureGlobally(conf);
     cacheConfig = new CacheConfig(conf);
+
+    minCheckFSIntervalMillis =
+        conf.getInt("hbase.regionserver.min.check.fs.interval", 30000);
+    checkFSAbortTimeOutMillis =
+        conf.getInt("hbase.regionserver.check.fs.abort.timeout", 
+                    conf.getInt(HConstants.ZOOKEEPER_SESSION_TIMEOUT,
+                                HConstants.DEFAULT_ZOOKEEPER_SESSION_TIMEOUT));
+    if (minCheckFSIntervalMillis > checkFSAbortTimeOutMillis) {
+      minCheckFSIntervalMillis = checkFSAbortTimeOutMillis;
+    }
+    LOG.info("minCheckFSIntervalMillis=" + minCheckFSIntervalMillis);
+    LOG.info("checkFSAbortTimeOutMillis=" + checkFSAbortTimeOutMillis);
   }
 
   /**
@@ -507,8 +531,8 @@ public class HRegionServer implements HRegionInterface,
         if (!haveRootRegion.get()) {
           HServerAddress rootServer = zooKeeperWrapper.readRootRegionLocation();
           if (rootServer != null) {
-            // By setting the root region location, we bypass the wait imposed on
-            // HTable for all regions being assigned.
+            // By setting the root region location, we bypass the wait imposed
+            // on HTable for all regions being assigned.
             this.connection.setRootRegionLocation(
                 new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootServer));
             haveRootRegion.set(true);
@@ -529,6 +553,7 @@ public class HRegionServer implements HRegionInterface,
             for (HRegion r: onlineRegions.values()) {
               hsl.addRegionInfo(createRegionLoad(r));
             }
+            // XXX add a field in serverInfo to report to fsOK to master?
             this.serverInfo.setLoad(hsl);
             this.requestCount.set(0);
             addOutboundMsgs(outboundMessages);
@@ -574,13 +599,11 @@ public class HRegionServer implements HRegionInterface,
                 break;
 
               default:
-                if (fsOk) {
-                  try {
-                    toDo.put(new ToDoEntry(msgs[i]));
-                  } catch (InterruptedException e) {
-                    throw new RuntimeException("Putting into msgQueue was " +
-                        "interrupted.", e);
-                  }
+                try {
+                  toDo.put(new ToDoEntry(msgs[i]));
+                } catch (InterruptedException e) {
+                  throw new RuntimeException("Putting into msgQueue was " +
+                      "interrupted.", e);
                 }
               }
             }
@@ -975,23 +998,44 @@ public class HRegionServer implements HRegionInterface,
     return stop;
   }
 
-
   /**
    * Checks to see if the file system is still accessible.
    * If not, sets abortRequested and stopRequested
    *
    * @return false if file system is not available
    */
-  public boolean checkFileSystem() {
-    if (this.fsOk && this.fs != null) {
+  public void checkFileSystem() {
+    long curtime = EnvironmentEdgeManager.currentTimeMillis();
+    synchronized (lastCheckFSAt){
+      if ((curtime - this.lastCheckFSAt.get()) <= this.minCheckFSIntervalMillis) {
+        return;
+      }
+      this.lastCheckFSAt.set(curtime);
+    }
+    if (this.fs != null) {
       try {
         FSUtils.checkFileSystemAvailable(this.fs, false);
+        this.fsOk = true;
+        return;
       } catch (IOException e) {
-        abort("File System not available", e);
+        if (this.fsOk) {
+          this.checkFSFailingSince = curtime;
+        }
         this.fsOk = false;
+        // call abort immediately if checkFSAbortTimeOutMillis is 0
+        long timeToAbort = checkFSFailingSince + checkFSAbortTimeOutMillis -
+            curtime;
+        if (timeToAbort <= 0) {
+          abort("File System not available", e);
+          return;
+        }
+        LOG.warn("File System not available, will abort after " +
+            timeToAbort + "ms", e);
+        return;
       }
     }
-    return this.fsOk;
+    this.fsOk = true;
+    return;
   }
 
   /*
@@ -1286,10 +1330,10 @@ public class HRegionServer implements HRegionInterface,
    * Verify that server is healthy
    */
   private boolean isHealthy() {
-    if (!fsOk) {
-      // File system problem
-      return false;
-    }
+    // Declare yourself healthy even if filesystem is not OK.
+    // Logic in checkFileSystem() and elsewhere now hopes that filesystem
+    // failures are transient.
+
     // Verify that all threads are alive
     if (!(leases.isAlive() &&
         cacheFlusher.isAlive() && hlogRoller.isAlive() &&
@@ -1678,9 +1722,7 @@ public class HRegionServer implements HRegionInterface,
             } else {
               LOG.error("unable to process message" +
                   (e != null ? (": " + e.msg.toString()) : ""), ex);
-              if (!checkFileSystem()) {
-                break;
-              }
+              checkFileSystem();
             }
           }
         }
@@ -2734,6 +2776,10 @@ public class HRegionServer implements HRegionInterface,
     if (this.stopRequested.get() || this.abortRequested) {
       throw new IOException("Server not running" +
         (this.abortRequested? ", aborting": ""));
+    }
+    // its ok to call checkFileSystem() because it is rate limited
+    if (!fsOk) {
+      checkFileSystem();
     }
     if (!fsOk) {
       throw new IOException("File system not available");

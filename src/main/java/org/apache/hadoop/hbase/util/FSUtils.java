@@ -616,23 +616,24 @@ public class FSUtils {
   }
 
 
-  /*
-   * Recover file lease. Used when a file might be suspect to be had been left open by another process. <code>p</code>
+  /**
+   * 
    * @param fs
    * @param p
-   * @param append True if append supported
+   * @param conf
+   * @return true if lease is recoverd, false if lease recovery is pending
    * @throws IOException
    */
-  public static void recoverFileLease(final FileSystem fs, final Path p, Configuration conf)
-  throws IOException{
-      if (!isAppendSupported(conf)) {
+  public static boolean tryRecoverFileLease(final FileSystem fs, final Path p,
+      Configuration conf) throws IOException {
+    if (!isAppendSupported(conf)) {
       LOG.warn("Running on HDFS without append enabled may result in data loss");
-      return;
+      return true;
     }
     // lease recovery not needed for local file system case.
     // currently, local file system doesn't implement append either.
     if (!(fs instanceof DistributedFileSystem)) {
-      return;
+      return true;
     }
     long startWaiting = System.currentTimeMillis();
 
@@ -641,55 +642,64 @@ public class FSUtils {
     LOG.info("Recovering file " + p + ", discard last block: "
         + discardlastBlock);
 
-    // Trying recovery
-    boolean recovered = false;
-    while (!recovered) {
+    try {
       try {
-        try {
-          if (fs instanceof DistributedFileSystem) {
-            DistributedFileSystem dfs = (DistributedFileSystem)fs;
-            try {
-              DistributedFileSystem.class.getMethod("recoverLease",
-                  new Class[] {Path.class, Boolean.class}).
-                  invoke(dfs, p, new Boolean(discardlastBlock));
-            } catch (NoSuchMethodException nsme) {
-              DistributedFileSystem.class.getMethod("recoverLease",
-                  new Class[] {Path.class}).invoke(dfs, p);
-            }
-          } else {
-            throw new Exception("Not a DistributedFileSystem");
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem dfs = (DistributedFileSystem)fs;
+          try {
+            return (Boolean) DistributedFileSystem.class.getMethod("recoverLease",
+                new Class[] {Path.class, Boolean.class}).
+                invoke(dfs, p, new Boolean(discardlastBlock));
+          } catch (NoSuchMethodException nsme) {
+            return (Boolean) DistributedFileSystem.class.getMethod("recoverLease",
+                new Class[] {Path.class}).invoke(dfs, p);
           }
-        } catch (InvocationTargetException ite) {
-          // function was properly called, but threw it's own exception
-          throw (IOException) ite.getCause();
-        } catch (Exception e) {
-          LOG.debug("Failed fs.recoverLease invocation, " + e.toString() +
-              ", trying fs.append instead");
-          FSDataOutputStream out = fs.append(p);
-          out.close();
-        }
-        recovered = true;
-      } catch (IOException e) {
-        e = RemoteExceptionHandler.checkIOException(e);
-        if (e instanceof AlreadyBeingCreatedException) {
-          // We expect that we'll get this message while the lease is still
-          // within its soft limit, but if we get it past that, it means
-          // that the RS is holding onto the file even though it lost its
-          // znode. We could potentially abort after some time here.
-          long waitedFor = System.currentTimeMillis() - startWaiting;
-          if (waitedFor > FSConstants.LEASE_SOFTLIMIT_PERIOD) {
-            LOG.warn("Waited " + waitedFor + "ms for lease recovery on " + p +
-                ":" + e.getMessage());
-          }
-        } else if (e instanceof LeaseExpiredException &&
-            e.getMessage().contains("File does not exist")) {
-          // This exception comes out instead of FNFE, fix it
-          throw new FileNotFoundException(
-              "The given HLog wasn't found at " + p.toString());
         } else {
-          throw new IOException("Failed to open " + p + " for append", e);
+          throw new Exception("Not a DistributedFileSystem");
         }
+      } catch (InvocationTargetException ite) {
+        // function was properly called, but threw it's own exception
+        throw (IOException) ite.getCause();
+      } catch (Exception e) {
+        LOG.debug("Failed fs.recoverLease invocation, " + e.toString() +
+            ", trying fs.append instead");
+        FSDataOutputStream out = fs.append(p);
+        out.close();
       }
+      return true;
+    } catch (IOException e) {
+      e = RemoteExceptionHandler.checkIOException(e);
+      if (e instanceof AlreadyBeingCreatedException) {
+        // We expect that we'll get this message while the lease is still
+        // within its soft limit, but if we get it past that, it means
+        // that the RS is holding onto the file even though it lost its
+        // znode. We could potentially abort after some time here.
+        long waitedFor = System.currentTimeMillis() - startWaiting;
+        if (waitedFor > FSConstants.LEASE_SOFTLIMIT_PERIOD) {
+          LOG.warn("Waited " + waitedFor + "ms for lease recovery on " + p +
+              ":" + e.getMessage());
+        }
+      } else if (e instanceof LeaseExpiredException &&
+          e.getMessage().contains("File does not exist")) {
+        // This exception comes out instead of FNFE, fix it
+        throw new FileNotFoundException(
+            "The given HLog wasn't found at " + p.toString());
+      } else {
+        throw new IOException("Failed to open " + p + " for append", e);
+      }
+    }
+    return false;
+  }
+
+  /*
+   * Recover file lease. Used when a file might be suspect to be had been left open by another process. <code>p</code>
+   * @param fs
+   * @param p
+   * @throws IOException
+   */
+  public static void recoverFileLease(final FileSystem fs, final Path p,
+      Configuration conf) throws IOException {
+    while (!tryRecoverFileLease(fs, p, conf)) {
       try {
         Thread.sleep(1000);
       } catch (InterruptedException ex) {
@@ -699,6 +709,7 @@ public class FSUtils {
     }
     LOG.info("Finished lease recover attempt for " + p);
   }
+
 
   /**
    * Runs through the HBase rootdir and creates a reverse lookup map for

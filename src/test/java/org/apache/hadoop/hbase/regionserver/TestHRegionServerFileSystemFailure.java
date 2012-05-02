@@ -88,7 +88,8 @@ public class TestHRegionServerFileSystemFailure {
     for(RegionServerThread serverThread : servers) {
       HRegionServer server = serverThread.getRegionServer();
       if (serverThread.isAlive() && !server.isStopRequested()) {
-        assertFalse(server.checkFileSystem());
+        server.checkFileSystem();
+        assertFalse(server.fsOk);
         break;
       }
     }
