@@ -129,6 +129,10 @@ if [ -z "$HBASE_ZOOKEEPER_JMX_OPTS" ]; then
   HBASE_ZOOKEEPER_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=8092"
 fi
 
+if [ -z "$HBASE_THRIFT_JMX_OPTS" ]; then
+  HBASE_THRIFT_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=8093"
+fi
+
 # YourKit Java Profiling
 # Note that you need to have yjpagent.so & yjp.jar on your computer and have
 # LD_LIBRARY_PATH entry to their dir location. for example:
@@ -164,6 +168,10 @@ fi
 
 if [ -z "$HBASE_ZOOKEEPER_OPTS" ]; then
   export HBASE_ZOOKEEPER_OPTS="$HBASE_ZOOKEEPER_DBG_OPTS $HBASE_ZOOKEEPER_JMX_OPTS"
+fi
+
+if [ -z "$HBASE_THRIFT_OPTS" ]; then
+  export HBASE_THRIFT_OPTS="$HBASE_THRIFT_JMX_OPTS"
 fi
 
 export HBASE_SLAVE_TIMEOUT=300
