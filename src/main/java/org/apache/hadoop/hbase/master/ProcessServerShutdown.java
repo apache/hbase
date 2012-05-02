@@ -148,7 +148,9 @@ class ProcessServerShutdown extends RegionServerOperation {
     List<ToDoEntry> toDoList = new ArrayList<ToDoEntry>();
     Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
     List<byte []> emptyRows = new ArrayList<byte []>();
+    long t0, t1, t2, t3;
     try {
+      t0 = System.currentTimeMillis();
       while (true) {
         Result[] values = null;
         try {
@@ -196,6 +198,7 @@ class ProcessServerShutdown extends RegionServerOperation {
         }
       }
     } finally {
+      t1 = System.currentTimeMillis();
       if (scannerId != -1L) {
         try {
           server.close(scannerId);
@@ -205,17 +208,20 @@ class ProcessServerShutdown extends RegionServerOperation {
         }
       }
     }
+    LOG.debug("Took " + (t1 - t0 ) + " ms. to fetch entries during scan meta region for " + this);
 
     // Scan complete. Remove any rows which had empty HRegionInfos
 
     if (emptyRows.size() > 0) {
       LOG.warn("Found " + emptyRows.size() +
         " rows with empty HRegionInfo while scanning meta region " +
-        Bytes.toString(regionName));
+        Bytes.toString(regionName) + " for " + this);
       master.deleteEmptyMetaRows(server, regionName, emptyRows);
     }
 
+    t0 = System.currentTimeMillis();
     synchronized (master.getRegionManager()) {
+      t1 = System.currentTimeMillis();
     // Update server in root/meta entries
       for (ToDoEntry e: toDoList) {
         if (e.info.isMetaTable()) {
@@ -242,18 +248,31 @@ class ProcessServerShutdown extends RegionServerOperation {
         }
       }
     }
+    t2 = System.currentTimeMillis();
+    if (LOG.isDebugEnabled())
+      LOG.debug("Took " + this.toString() + " " + (t2 - t0 ) 
+          + " ms. to update RegionManager. And,"
+        + (t1-t0) + " ms. to get the lock.");
 
     // Let us not do this while we hold the lock on the regionManager.
+    t0 = System.currentTimeMillis();
     for (ToDoEntry e: toDoList) {
       if (e.regionOffline) {
         HRegion.offlineRegionInMETA(server, regionName, e.info);
       }
     }
+    t1 = System.currentTimeMillis();
 
     // Get regions reassigned
     for (HRegionInfo info: regions) {
       master.getRegionManager().setUnassigned(info, true);
     }
+    t2 = System.currentTimeMillis();
+    
+    if (LOG.isDebugEnabled())
+      LOG.debug("Took " + this.toString() + " " 
+          + (t1 - t0 ) + " ms. to mark regions offlineInMeta" 
+          + (t2-t1) + " ms. to set them unassigned");
   }
 
   private class ScanRootRegion extends RetryableMetaOperation<Boolean> {
@@ -265,10 +284,10 @@ class ProcessServerShutdown extends RegionServerOperation {
       if (LOG.isDebugEnabled()) {
         HServerAddress addr = master.getRegionManager().getRootRegionLocation();
         if (addr != null) {
-          LOG.debug("Process server shutdown scanning root region on " +
+          LOG.debug(ProcessServerShutdown.this.toString() + " scanning root region on " +
               addr.getBindAddress());
         } else {
-          LOG.debug("ProcessServerShutdown scanning root, but root is null");
+          LOG.debug(ProcessServerShutdown.this.toString() + " scanning root, but root is null");
         }
       }
       Scan scan = new Scan();
@@ -288,7 +307,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
     public Boolean call() throws IOException {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("process server shutdown scanning " +
+        LOG.debug(ProcessServerShutdown.this.toString() + " scanning " +
           Bytes.toString(m.getRegionName()) + " on " + m.getServer());
       }
       Scan scan = new Scan();
@@ -346,20 +365,22 @@ class ProcessServerShutdown extends RegionServerOperation {
           + this.logSplitResult);
     }
 
-    LOG.info("Log split is completed, meta reassignment and scanning: "
+    LOG.info("Log split is completed for " + deadServer
+        + ", meta reassignment and scanning: "
 	+ "rootRescanned: " + rootRescanned + ", numberOfMetaRegions: "
       + master.getRegionManager().numMetaRegions()
       + ", onlineMetaRegions.size(): "
       + master.getRegionManager().numOnlineMetaRegions());
 
     if (this.isRootServer) {
-      LOG.info("ProcessServerShutdown reassigning ROOT region");
+      LOG.info(this.toString() + " reassigning ROOT region");
       master.getRegionManager().reassignRootRegion();
       isRootServer = false;  // prevent double reassignment... heh.
+      LOG.debug(this.toString() + " reassigning ROOT done");
     }
 
     for (MetaRegion metaRegion : metaRegions) {
-      LOG.info("ProcessServerShutdown setting to unassigned: " + metaRegion.toString());
+      LOG.info(this.toString() + " setting to unassigned: " + metaRegion.toString());
       master.getRegionManager().setUnassigned(metaRegion.getRegionInfo(), true);
     }
     // one the meta regions are online, "forget" about them.  Since there are explicit
@@ -368,16 +389,19 @@ class ProcessServerShutdown extends RegionServerOperation {
 
     if (!rootAvailable()) {
       // We can't proceed because the root region is not online.
+      LOG.debug("Root unavailable -- delaying operation " + this);
       return RegionServerOperationResult.OPERATION_DELAYED;
     }
 
     if (!rootRescanned) {
       // Scan the ROOT region
+      LOG.debug(this.toString() + ". Begin rescan Root ");
       Boolean result = new ScanRootRegion(
           new MetaRegion(master.getRegionManager().getRootRegionLocation(),
               HRegionInfo.ROOT_REGIONINFO), this.master).doWithRetries();
       if (result == null) {
         // Master is closing - give up
+        LOG.debug("Rescan Root " + this + " returned null. Operation considered success");
         return RegionServerOperationResult.OPERATION_SUCCEEDED;
       }
 
@@ -389,27 +413,40 @@ class ProcessServerShutdown extends RegionServerOperation {
       rootRescanned = true;
     }
 
+    LOG.debug(this.toString() + ". Scanning META");
     if (!metaTableAvailable()) {
       // We can't proceed because not all meta regions are online.
+      LOG.debug(this.toString() + ". Could not scan meta. Meta Unavailable");
       return RegionServerOperationResult.OPERATION_DELAYED;
     }
 
     List<MetaRegion> regions = master.getRegionManager().getListOfOnlineMetaRegions();
     for (MetaRegion r: regions) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(this.toString() + ". Begin scan meta region " +
+          Bytes.toString(r.getRegionName()) + " on " + r.getServer());
+      }
       Boolean result = new ScanMetaRegions(r, this.master).doWithRetries();
       if (result == null) {
         break;
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("process server shutdown finished scanning " +
+        LOG.debug(this.toString() + ".  finished scanning " +
           Bytes.toString(r.getRegionName()) + " on " + r.getServer());
       }
     }
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(this.toString() + ". Closing regions in transition ");
+    }
     closeRegionsInTransition();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(this.toString() + ". Removing dead server from the serverManager");
+    }
     this.master.getServerManager().removeDeadServer(deadServer);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Removed " + deadServer + " from deadservers Map");
+      LOG.debug("Processing " + this.toString() + " Succeded. "
+          + "Removed " + deadServer + " from deadservers Map");
     }
     return RegionServerOperationResult.OPERATION_SUCCEEDED;
   }
