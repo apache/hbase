@@ -23,6 +23,8 @@ package org.apache.hadoop.hbase.client;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.BufferOverflowException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -71,6 +73,7 @@ import org.apache.hadoop.io.Writable;
 @InterfaceStability.Stable
 public class Result implements Writable, WritableWithSize {
   private static final byte RESULT_VERSION = (byte)1;
+  private static final int DEFAULT_BUFFER_SIZE = 1024;
 
   private KeyValue [] kvs = null;
   private NavigableMap<byte[],
@@ -79,6 +82,10 @@ public class Result implements Writable, WritableWithSize {
   // that this is where we cache row if we're ever asked for it.
   private transient byte [] row = null;
   private ImmutableBytesWritable bytes = null;
+
+  // never use directly
+  private static byte [] buffer = null;
+  private static final int PAD_WIDTH = 128;
 
   /**
    * Constructor used for Writable.
@@ -228,13 +235,56 @@ public class Result implements Writable, WritableWithSize {
   }
 
   /**
-   * The KeyValue for the most recent for a given column. If the column does
-   * not exist in the result set - if it wasn't selected in the query (Get/Scan)
-   * or just does not exist in the row the return value is null.
+   * Searches for the latest value for the specified column.
+   *
+   * @param kvs the array to search
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   *
+   * @return the index where the value was found, or -1 otherwise
+   */
+  protected int binarySearch(final KeyValue [] kvs,
+      final byte [] family, final int foffset, final int flength,
+      final byte [] qualifier, final int qoffset, final int qlength) {
+
+    double keyValueSize = (double)
+        KeyValue.getKeyValueDataStructureSize(kvs[0].getRowLength(), flength, qlength, 0);
+
+    if (buffer == null || keyValueSize > buffer.length) {
+      // pad to the smallest multiple of the pad width
+      buffer = new byte[(int) Math.ceil(keyValueSize / PAD_WIDTH) * PAD_WIDTH];
+    }
+
+    KeyValue searchTerm = KeyValue.createFirstOnRow(buffer, 0,
+        kvs[0].getBuffer(), kvs[0].getRowOffset(), kvs[0].getRowLength(),
+        family, foffset, flength,
+        qualifier, qoffset, qlength);
+
+    // pos === ( -(insertion point) - 1)
+    int pos = Arrays.binarySearch(kvs, searchTerm, KeyValue.COMPARATOR);
+    // never will exact match
+    if (pos < 0) {
+      pos = (pos+1) * -1;
+      // pos is now insertion point
+    }
+    if (pos == kvs.length) {
+      return -1; // doesn't exist
+    }
+    return pos;
+  }
+
+  /**
+   * The KeyValue for the most recent timestamp for a given column.
    *
    * @param family
    * @param qualifier
-   * @return KeyValue for the column or null
+   *
+   * @return the KeyValue for the column, or null if no value exists in the row or none have been
+   * selected in the query (Get/Scan)
    */
   public KeyValue getColumnLatest(byte [] family, byte [] qualifier) {
     KeyValue [] kvs = raw(); // side effect possibly.
@@ -247,6 +297,37 @@ public class Result implements Writable, WritableWithSize {
     }
     KeyValue kv = kvs[pos];
     if (kv.matchingColumn(family, qualifier)) {
+      return kv;
+    }
+    return null;
+  }
+
+  /**
+   * The KeyValue for the most recent timestamp for a given column.
+   *
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   *
+   * @return the KeyValue for the column, or null if no value exists in the row or none have been
+   * selected in the query (Get/Scan)
+   */
+  public KeyValue getColumnLatest(byte [] family, int foffset, int flength,
+      byte [] qualifier, int qoffset, int qlength) {
+
+    KeyValue [] kvs = raw(); // side effect possibly.
+    if (kvs == null || kvs.length == 0) {
+      return null;
+    }
+    int pos = binarySearch(kvs, family, foffset, flength, qualifier, qoffset, qlength);
+    if (pos == -1) {
+      return null;
+    }
+    KeyValue kv = kvs[pos];
+    if (kv.matchingColumn(family, foffset, flength, qualifier, qoffset, qlength)) {
       return kv;
     }
     return null;
@@ -267,14 +348,187 @@ public class Result implements Writable, WritableWithSize {
   }
 
   /**
-   * Checks for existence of the specified column.
+   * Returns the value wrapped in a new <code>ByteBuffer</code>.
+   *
    * @param family family name
    * @param qualifier column qualifier
+   *
+   * @return the latest version of the column, or <code>null</code> if none found
+   */
+  public ByteBuffer getValueAsByteBuffer(byte [] family, byte [] qualifier) {
+
+    KeyValue kv = getColumnLatest(family, 0, family.length, qualifier, 0, qualifier.length);
+
+    if (kv == null) {
+      return null;
+    }
+    return kv.getValueAsByteBuffer();
+  }
+
+  /**
+   * Returns the value wrapped in a new <code>ByteBuffer</code>.
+   *
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   *
+   * @return the latest version of the column, or <code>null</code> if none found
+   */
+  public ByteBuffer getValueAsByteBuffer(byte [] family, int foffset, int flength,
+      byte [] qualifier, int qoffset, int qlength) {
+
+    KeyValue kv = getColumnLatest(family, foffset, flength, qualifier, qoffset, qlength);
+
+    if (kv == null) {
+      return null;
+    }
+    return kv.getValueAsByteBuffer();
+  }
+
+  /**
+   * Loads the latest version of the specified column into the provided <code>ByteBuffer</code>.
+   * <p>
+   * Does not clear or flip the buffer.
+   *
+   * @param family family name
+   * @param qualifier column qualifier
+   * @param dst the buffer where to write the value
+   *
+   * @return <code>true</code> if a value was found, <code>false</code> otherwise
+   *
+   * @throws BufferOverflowException there is insufficient space remaining in the buffer
+   */
+  public boolean loadValue(byte [] family, byte [] qualifier, ByteBuffer dst)
+          throws BufferOverflowException {
+    return loadValue(family, 0, family.length, qualifier, 0, qualifier.length, dst);
+  }
+
+  /**
+   * Loads the latest version of the specified column into the provided <code>ByteBuffer</code>.
+   * <p>
+   * Does not clear or flip the buffer.
+   *
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   * @param dst the buffer where to write the value
+   *
+   * @return <code>true</code> if a value was found, <code>false</code> otherwise
+   *
+   * @throws BufferOverflowException there is insufficient space remaining in the buffer
+   */
+  public boolean loadValue(byte [] family, int foffset, int flength,
+      byte [] qualifier, int qoffset, int qlength, ByteBuffer dst)
+          throws BufferOverflowException {
+    KeyValue kv = getColumnLatest(family, foffset, flength, qualifier, qoffset, qlength);
+
+    if (kv == null) {
+      return false;
+    }
+    kv.loadValue(dst);
+    return true;
+  }
+
+  /**
+   * Checks if the specified column contains a non-empty value (not a zero-length byte array).
+   *
+   * @param family family name
+   * @param qualifier column qualifier
+   *
+   * @return whether or not a latest value exists and is not empty
+   */
+  public boolean containsNonEmptyColumn(byte [] family, byte [] qualifier) {
+
+    return containsNonEmptyColumn(family, 0, family.length, qualifier, 0, qualifier.length);
+  }
+
+  /**
+   * Checks if the specified column contains a non-empty value (not a zero-length byte array).
+   *
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   *
+   * @return whether or not a latest value exists and is not empty
+   */
+  public boolean containsNonEmptyColumn(byte [] family, int foffset, int flength,
+      byte [] qualifier, int qoffset, int qlength) {
+
+    KeyValue kv = getColumnLatest(family, foffset, flength, qualifier, qoffset, qlength);
+
+    return (kv != null) && (kv.getValueLength() > 0);
+  }
+
+  /**
+   * Checks if the specified column contains an empty value (a zero-length byte array).
+   *
+   * @param family family name
+   * @param qualifier column qualifier
+   *
+   * @return whether or not a latest value exists and is empty
+   */
+  public boolean containsEmptyColumn(byte [] family, byte [] qualifier) {
+
+    return containsEmptyColumn(family, 0, family.length, qualifier, 0, qualifier.length);
+  }
+
+  /**
+   * Checks if the specified column contains an empty value (a zero-length byte array).
+   *
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   *
+   * @return whether or not a latest value exists and is empty
+   */
+  public boolean containsEmptyColumn(byte [] family, int foffset, int flength,
+      byte [] qualifier, int qoffset, int qlength) {
+    KeyValue kv = getColumnLatest(family, foffset, flength, qualifier, qoffset, qlength);
+
+    return (kv != null) && (kv.getValueLength() == 0);
+  }
+
+  /**
+   * Checks for existence of a value for the specified column (empty or not).
+   *
+   * @param family family name
+   * @param qualifier column qualifier
+   *
    * @return true if at least one value exists in the result, false if not
    */
   public boolean containsColumn(byte [] family, byte [] qualifier) {
     KeyValue kv = getColumnLatest(family, qualifier);
     return kv != null;
+  }
+
+  /**
+   * Checks for existence of a value for the specified column (empty or not).
+   *
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   *
+   * @return true if at least one value exists in the result, false if not
+   */
+  public boolean containsColumn(byte [] family, int foffset, int flength,
+      byte [] qualifier, int qoffset, int qlength) {
+
+    return getColumnLatest(family, foffset, flength, qualifier, qoffset, qlength) != null;
   }
 
   /**

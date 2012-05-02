@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -165,6 +166,37 @@ public class KeyValue implements Writable, HeapSize {
 
   // Size of the length ints in a KeyValue datastructure.
   public static final int KEYVALUE_INFRASTRUCTURE_SIZE = ROW_OFFSET;
+
+  /**
+   * Computes the number of bytes that a <code>KeyValue</code> instance with the provided
+   * characteristics would take up for its underlying data structure.
+   *
+   * @param rlength row length
+   * @param flength family length
+   * @param qlength qualifier length
+   * @param vlength value length
+   *
+   * @return the <code>KeyValue</code> data structure length
+   */
+  public static long getKeyValueDataStructureSize(int rlength,
+      int flength, int qlength, int vlength) {
+    return KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE +
+            getKeyDataStructureSize(rlength, flength, qlength) + vlength;
+  }
+
+  /**
+   * Computes the number of bytes that a <code>KeyValue</code> instance with the provided
+   * characteristics would take up in its underlying data structure for the key.
+   *
+   * @param rlength row length
+   * @param flength family length
+   * @param qlength qualifier length
+   *
+   * @return the key data structure length
+   */
+  public static long getKeyDataStructureSize(int rlength, int flength, int qlength) {
+    return KeyValue.KEY_INFRASTRUCTURE_SIZE + rlength + flength + qlength;
+  }
 
   /**
    * Key type.
@@ -478,7 +510,7 @@ public class KeyValue implements Writable, HeapSize {
       throw new IllegalArgumentException("Qualifier > " + Integer.MAX_VALUE);
     }
     // Key length
-    long longkeylength = KEY_INFRASTRUCTURE_SIZE + rlength + flength + qlength;
+    long longkeylength = getKeyDataStructureSize(rlength, flength, qlength);
     if (longkeylength > Integer.MAX_VALUE) {
       throw new IllegalArgumentException("keylength " + longkeylength + " > " +
         Integer.MAX_VALUE);
@@ -491,7 +523,8 @@ public class KeyValue implements Writable, HeapSize {
     }
 
     // Allocate right-sized byte array.
-    byte [] bytes = new byte[KEYVALUE_INFRASTRUCTURE_SIZE + keylength + vlength];
+    byte [] bytes =
+        new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength)];
     // Write the correct size markers
     int pos = 0;
     pos = Bytes.putInt(bytes, pos, keylength);
@@ -503,6 +536,198 @@ public class KeyValue implements Writable, HeapSize {
     pos = Bytes.putLong(bytes, pos, timestamp);
     pos = Bytes.putByte(bytes, pos, type.getCode());
     return bytes;
+  }
+
+  /**
+   * Constructs KeyValue structure filled with specified values. Uses the provided buffer as its
+   * backing data buffer.
+   * <p>
+   * Column is split into two fields, family and qualifier.
+   *
+   * @param buffer the bytes buffer to use
+   * @param row row key
+   * @param roffset row offset
+   * @param rlength row length
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   * @param timestamp version timestamp
+   * @param type key type
+   * @param value column value
+   * @param voffset value offset
+   * @param vlength value length
+   * @throws IllegalArgumentException an illegal value was passed or there is insufficient space
+   * remaining in the buffer
+   */
+  public KeyValue(byte [] buffer,
+      final byte [] row, final int roffset, final int rlength,
+      final byte [] family, final int foffset, final int flength,
+      final byte [] qualifier, final int qoffset, final int qlength,
+      final long timestamp, final Type type,
+      final byte [] value, final int voffset, final int vlength) {
+
+    this(buffer, 0,
+        row, roffset, rlength,
+        family, foffset, flength,
+        qualifier, qoffset, qlength,
+        timestamp, type,
+        value, voffset, vlength);
+  }
+
+  /**
+   * Constructs KeyValue structure filled with specified values. Uses the provided buffer as the
+   * data buffer.
+   * <p>
+   * Column is split into two fields, family and qualifier.
+   *
+   * @param buffer the bytes buffer to use
+   * @param boffset buffer offset
+   * @param row row key
+   * @param roffset row offset
+   * @param rlength row length
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   * @param timestamp version timestamp
+   * @param type key type
+   * @param value column value
+   * @param voffset value offset
+   * @param vlength value length
+   * @throws IllegalArgumentException an illegal value was passed or there is insufficient space
+   * remaining in the buffer
+   */
+  public KeyValue(byte [] buffer, final int boffset,
+      final byte [] row, final int roffset, final int rlength,
+      final byte [] family, final int foffset, final int flength,
+      final byte [] qualifier, final int qoffset, final int qlength,
+      final long timestamp, final Type type,
+      final byte [] value, final int voffset, final int vlength) {
+
+    this.bytes  = buffer;
+    this.length = writeByteArray(buffer, boffset,
+        row, roffset, rlength,
+        family, foffset, flength, qualifier, qoffset, qlength,
+        timestamp, type, value, voffset, vlength);
+    this.offset = boffset;
+  }
+
+  /**
+   * Checks the parameters passed to a constructor.
+   *
+   * @param row row key
+   * @param rlength row length
+   * @param family family name
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qlength qualifier length
+   * @param value column value
+   * @param vlength value length
+   *
+   * @throws IllegalArgumentException an illegal value was passed
+   */
+  private static void checkParameters(final byte [] row, final int rlength,
+      final byte [] family, int flength,
+      final byte [] qualifier, int qlength,
+      final byte [] value, int vlength)
+          throws IllegalArgumentException {
+
+    if (rlength > Short.MAX_VALUE) {
+      throw new IllegalArgumentException("Row > " + Short.MAX_VALUE);
+    }
+    if (row == null) {
+      throw new IllegalArgumentException("Row is null");
+    }
+    // Family length
+    flength = family == null ? 0 : flength;
+    if (flength > Byte.MAX_VALUE) {
+      throw new IllegalArgumentException("Family > " + Byte.MAX_VALUE);
+    }
+    // Qualifier length
+    qlength = qualifier == null ? 0 : qlength;
+    if (qlength > Integer.MAX_VALUE - rlength - flength) {
+      throw new IllegalArgumentException("Qualifier > " + Integer.MAX_VALUE);
+    }
+    // Key length
+    long longKeyLength = getKeyDataStructureSize(rlength, flength, qlength);
+    if (longKeyLength > Integer.MAX_VALUE) {
+      throw new IllegalArgumentException("keylength " + longKeyLength + " > " +
+          Integer.MAX_VALUE);
+    }
+    // Value length
+    vlength = value == null? 0 : vlength;
+    if (vlength > HConstants.MAXIMUM_VALUE_LENGTH) { // FindBugs INT_VACUOUS_COMPARISON
+      throw new IllegalArgumentException("Value length " + vlength + " > " +
+          HConstants.MAXIMUM_VALUE_LENGTH);
+    }
+  }
+
+  /**
+   * Write KeyValue format into the provided byte array.
+   *
+   * @param buffer the bytes buffer to use
+   * @param boffset buffer offset
+   * @param row row key
+   * @param roffset row offset
+   * @param rlength row length
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   * @param timestamp version timestamp
+   * @param type key type
+   * @param value column value
+   * @param voffset value offset
+   * @param vlength value length
+   *
+   * @return The number of useful bytes in the buffer.
+   *
+   * @throws IllegalArgumentException an illegal value was passed or there is insufficient space
+   * remaining in the buffer
+   */
+  static int writeByteArray(byte [] buffer, final int boffset,
+      final byte [] row, final int roffset, final int rlength,
+      final byte [] family, final int foffset, int flength,
+      final byte [] qualifier, final int qoffset, int qlength,
+      final long timestamp, final Type type,
+      final byte [] value, final int voffset, int vlength) {
+
+    checkParameters(row, rlength, family, flength, qualifier, qlength, value, vlength);
+
+    int keyLength = (int) getKeyDataStructureSize(rlength, flength, qlength);
+    int keyValueLength = (int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength);
+    if (keyValueLength > buffer.length - boffset) {
+      throw new IllegalArgumentException("Buffer size " + (buffer.length - boffset) + " < " +
+          keyValueLength);
+    }
+
+    // Write key, value and key row length.
+    int pos = boffset;
+    pos = Bytes.putInt(buffer, pos, keyLength);
+    pos = Bytes.putInt(buffer, pos, vlength);
+    pos = Bytes.putShort(buffer, pos, (short)(rlength & 0x0000ffff));
+    pos = Bytes.putBytes(buffer, pos, row, roffset, rlength);
+    pos = Bytes.putByte(buffer, pos, (byte) (flength & 0x0000ff));
+    if (flength != 0) {
+      pos = Bytes.putBytes(buffer, pos, family, foffset, flength);
+    }
+    if (qlength != 0) {
+      pos = Bytes.putBytes(buffer, pos, qualifier, qoffset, qlength);
+    }
+    pos = Bytes.putLong(buffer, pos, timestamp);
+    pos = Bytes.putByte(buffer, pos, type.getCode());
+    if (value != null && value.length > 0) {
+      pos = Bytes.putBytes(buffer, pos, value, voffset, vlength);
+    }
+
+    return keyValueLength;
   }
 
   /**
@@ -529,41 +754,16 @@ public class KeyValue implements Writable, HeapSize {
       final byte [] qualifier, final int qoffset, int qlength,
       final long timestamp, final Type type,
       final byte [] value, final int voffset, int vlength) {
-    if (rlength > Short.MAX_VALUE) {
-      throw new IllegalArgumentException("Row > " + Short.MAX_VALUE);
-    }
-    if (row == null) {
-      throw new IllegalArgumentException("Row is null");
-    }
-    // Family length
-    flength = family == null ? 0 : flength;
-    if (flength > Byte.MAX_VALUE) {
-      throw new IllegalArgumentException("Family > " + Byte.MAX_VALUE);
-    }
-    // Qualifier length
-    qlength = qualifier == null ? 0 : qlength;
-    if (qlength > Integer.MAX_VALUE - rlength - flength) {
-      throw new IllegalArgumentException("Qualifier > " + Integer.MAX_VALUE);
-    }
-    // Key length
-    long longkeylength = KEY_INFRASTRUCTURE_SIZE + rlength + flength + qlength;
-    if (longkeylength > Integer.MAX_VALUE) {
-      throw new IllegalArgumentException("keylength " + longkeylength + " > " +
-        Integer.MAX_VALUE);
-    }
-    int keylength = (int)longkeylength;
-    // Value length
-    vlength = value == null? 0 : vlength;
-    if (vlength > HConstants.MAXIMUM_VALUE_LENGTH) { // FindBugs INT_VACUOUS_COMPARISON
-      throw new IllegalArgumentException("Valuer > " +
-          HConstants.MAXIMUM_VALUE_LENGTH);
-    }
+
+    checkParameters(row, rlength, family, flength, qualifier, qlength, value, vlength);
 
     // Allocate right-sized byte array.
-    byte [] bytes = new byte[KEYVALUE_INFRASTRUCTURE_SIZE + keylength + vlength];
+    int keyLength = (int) getKeyDataStructureSize(rlength, flength, qlength);
+    byte [] bytes =
+        new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength)];
     // Write key, value and key row length.
     int pos = 0;
-    pos = Bytes.putInt(bytes, pos, keylength);
+    pos = Bytes.putInt(bytes, pos, keyLength);
     pos = Bytes.putInt(bytes, pos, vlength);
     pos = Bytes.putShort(bytes, pos, (short)(rlength & 0x0000ffff));
     pos = Bytes.putBytes(bytes, pos, row, roffset, rlength);
@@ -913,8 +1113,7 @@ public class KeyValue implements Writable, HeapSize {
    * @return Qualifier length
    */
   public int getQualifierLength(int rlength, int flength) {
-    return getKeyLength() -
-      (KEY_INFRASTRUCTURE_SIZE + rlength + flength);
+    return getKeyLength() - (int) getKeyDataStructureSize(rlength, flength, 0);
   }
 
   /**
@@ -1005,6 +1204,28 @@ public class KeyValue implements Writable, HeapSize {
     byte [] result = new byte[l];
     System.arraycopy(getBuffer(), o, result, 0, l);
     return result;
+  }
+
+  /**
+   * Returns the value wrapped in a new <code>ByteBuffer</code>.
+   *
+   * @return the value
+   */
+  public ByteBuffer getValueAsByteBuffer() {
+    return ByteBuffer.wrap(getBuffer(), getValueOffset(), getValueLength());
+  }
+
+  /**
+   * Loads this object's value into the provided <code>ByteBuffer</code>.
+   * <p>
+   * Does not clear or flip the buffer.
+   *
+   * @param dst the buffer where to write the value
+   *
+   * @throws BufferOverflowException if there is insufficient space remaining in the buffer
+   */
+  public void loadValue(ByteBuffer dst) throws BufferOverflowException {
+    dst.put(getBuffer(), getValueOffset(), getValueLength());
   }
 
   /**
@@ -1278,21 +1499,36 @@ public class KeyValue implements Writable, HeapSize {
    * @return True if column matches
    */
   public boolean matchingColumn(final byte[] family, final byte[] qualifier) {
+    return matchingColumn(family, 0, family == null ? 0 : family.length,
+        qualifier, 0, qualifier == null ? 0 : qualifier.length);
+  }
+
+  /**
+   * Checks if column matches.
+   *
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   *
+   * @return True if column matches
+   */
+  public boolean matchingColumn(final byte [] family, final int foffset, final int flength,
+      final byte [] qualifier, final int qoffset, final int qlength) {
     int rl = getRowLength();
     int o = getFamilyOffset(rl);
     int fl = getFamilyLength(o);
-    int ql = getQualifierLength(rl,fl);
-    if (!Bytes.equals(family, 0, family.length, this.bytes, o, fl)) {
+    if (!Bytes.equals(family, foffset, flength, this.bytes, o, fl)) {
       return false;
     }
-    if (qualifier == null || qualifier.length == 0) {
-      if (ql == 0) {
-        return true;
-      }
-      return false;
+
+    int ql = getQualifierLength(rl, fl);
+    if (qualifier == null || qlength == 0) {
+      return (ql == 0);
     }
-    return Bytes.equals(qualifier, 0, qualifier.length,
-        this.bytes, o + fl, ql);
+    return Bytes.equals(qualifier, qoffset, qlength, this.bytes, o + fl, ql);
   }
 
   /**
@@ -1818,6 +2054,78 @@ public class KeyValue implements Writable, HeapSize {
     return new KeyValue(row, roffset, rlength, family,
         foffset, flength, qualifier, qoffset, qlength,
         HConstants.LATEST_TIMESTAMP, Type.Maximum, null, 0, 0);
+  }
+
+  /**
+   * Create a KeyValue for the specified row, family and qualifier that would be
+   * smaller than all other possible KeyValues that have the same row,
+   * family, qualifier.
+   * Used for seeking.
+   *
+   * @param buffer the buffer to use for the new <code>KeyValue</code> object
+   * @param row the value key
+   * @param family family name
+   * @param qualifier column qualifier
+   *
+   * @return First possible key on passed Row, Family, Qualifier.
+   *
+   * @throws IllegalArgumentException The resulting <code>KeyValue</code> object would be larger
+   * than the provided buffer or than <code>Integer.MAX_VALUE</code>
+   */
+  public static KeyValue createFirstOnRow(byte [] buffer, final byte [] row,
+      final byte [] family, final byte [] qualifier)
+          throws IllegalArgumentException {
+
+    return createFirstOnRow(buffer, 0, row, 0, row.length,
+        family, 0, family.length,
+        qualifier, 0, qualifier.length);
+  }
+
+  /**
+   * Create a KeyValue for the specified row, family and qualifier that would be
+   * smaller than all other possible KeyValues that have the same row,
+   * family, qualifier.
+   * Used for seeking.
+   *
+   * @param buffer the buffer to use for the new <code>KeyValue</code> object
+   * @param boffset buffer offset
+   * @param row the value key
+   * @param roffset row offset
+   * @param rlength row length
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   *
+   * @return First possible key on passed Row, Family, Qualifier.
+   *
+   * @throws IllegalArgumentException The resulting <code>KeyValue</code> object would be larger
+   * than the provided buffer or than <code>Integer.MAX_VALUE</code>
+   */
+  public static KeyValue createFirstOnRow(byte [] buffer, final int boffset,
+      final byte [] row, final int roffset, final int rlength,
+      final byte [] family, final int foffset, final int flength,
+      final byte [] qualifier, final int qoffset, final int qlength)
+          throws IllegalArgumentException {
+
+    long lLength = getKeyValueDataStructureSize(rlength, flength, qlength, 0);
+
+    if (lLength > Integer.MAX_VALUE) {
+      throw new IllegalArgumentException("KeyValue length " + lLength + " > " + Integer.MAX_VALUE);
+    }
+    int iLength = (int) lLength;
+    if (buffer.length - boffset < iLength) {
+      throw new IllegalArgumentException("Buffer size " + (buffer.length - boffset) + " < " +
+          iLength);
+    }
+    return new KeyValue(buffer, boffset,
+        row, roffset, rlength,
+        family, foffset, flength,
+        qualifier, qoffset, qlength,
+        HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum,
+        null, 0, 0);
   }
 
   /**

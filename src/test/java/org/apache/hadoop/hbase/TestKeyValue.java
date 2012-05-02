@@ -344,31 +344,47 @@ public class TestKeyValue extends TestCase {
   public void testFirstLastOnRow() {
     final KVComparator c = KeyValue.COMPARATOR;
     long ts = 1;
+    byte[] bufferA = new byte[128];
+    int offsetA = 0;
+    byte[] bufferB = new byte[128];
+    int offsetB = 7;
 
     // These are listed in sort order (ie: every one should be less
     // than the one on the next line).
     final KeyValue firstOnRowA = KeyValue.createFirstOnRow(rowA);
+    final KeyValue firstOnRowABufferFamQual = KeyValue.createFirstOnRow(bufferA, offsetA,
+        rowA, 0, rowA.length, family, 0, family.length, qualA, 0, qualA.length);
     final KeyValue kvA_1 = new KeyValue(rowA, null, null, ts, Type.Put);
     final KeyValue kvA_2 = new KeyValue(rowA, family, qualA, ts, Type.Put);
-        
+
     final KeyValue lastOnRowA = KeyValue.createLastOnRow(rowA);
     final KeyValue firstOnRowB = KeyValue.createFirstOnRow(rowB);
+    final KeyValue firstOnRowBBufferFam = KeyValue.createFirstOnRow(bufferB, offsetB,
+        rowB, 0, rowB.length, family, 0, family.length, null, 0, 0);
     final KeyValue kvB = new KeyValue(rowB, family, qualA, ts, Type.Put);
 
     assertKVLess(c, firstOnRowA, firstOnRowB);
+    assertKVLess(c, firstOnRowA, firstOnRowBBufferFam);
+    assertKVLess(c, firstOnRowABufferFamQual, firstOnRowB);
     assertKVLess(c, firstOnRowA, kvA_1);
     assertKVLess(c, firstOnRowA, kvA_2);
+    assertKVLess(c, firstOnRowABufferFamQual, kvA_2);
     assertKVLess(c, kvA_1, kvA_2);
     assertKVLess(c, kvA_2, firstOnRowB);
     assertKVLess(c, kvA_1, firstOnRowB);
+    assertKVLess(c, kvA_2, firstOnRowBBufferFam);
+    assertKVLess(c, kvA_1, firstOnRowBBufferFam);
 
     assertKVLess(c, lastOnRowA, firstOnRowB);
+    assertKVLess(c, lastOnRowA, firstOnRowBBufferFam);
     assertKVLess(c, firstOnRowB, kvB);
+    assertKVLess(c, firstOnRowBBufferFam, kvB);
     assertKVLess(c, lastOnRowA, kvB);
 
     assertKVLess(c, kvA_2, lastOnRowA);
     assertKVLess(c, kvA_1, lastOnRowA);
     assertKVLess(c, firstOnRowA, lastOnRowA);
+    assertKVLess(c, firstOnRowABufferFamQual, lastOnRowA);
   }
 
   public void testCreateKeyOnly() throws Exception {
