@@ -26,6 +26,8 @@ Release 0.90.7 - Unreleased
    HBASE-5873  TimeOut Monitor thread should be started after atleast one region server registers. (rajeshbabu)
    HBASE-5908  TestHLogSplit.testTralingGarbageCorruptionFileSkipErrorsPasses should not use append to corrupt the HLog (Gregory Chanan)
    HBASE-5883  Backup master is going down due to connection refused exception (Jieshan)
+   HBASE-5911  hbck need an option -help to printout usage
+               (Jimmy Xiang)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
