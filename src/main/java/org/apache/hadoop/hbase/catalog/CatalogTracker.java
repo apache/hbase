@@ -577,7 +577,9 @@ public class CatalogTracker {
       LOG.debug("Exception connecting to " + sn);
     } catch (IOException ioe) {
       Throwable cause = ioe.getCause();
-      if (cause != null && cause instanceof EOFException) {
+      if (ioe instanceof ConnectException) {
+        // Catch. Connect refused.
+      } else if (cause != null && cause instanceof EOFException) {
         // Catch. Other end disconnected us.
       } else if (cause != null && cause.getMessage() != null &&
         cause.getMessage().toLowerCase().contains("connection reset")) {

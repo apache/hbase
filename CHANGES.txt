@@ -57,6 +57,7 @@ Release 0.92.2 - Unreleased
    HBASE-5611  Replayed edits from regions that failed to open during recovery aren't removed from
                the global MemStore size (Jieshan)
    HBASE-5897  prePut coprocessor hook causing substantial CPU usage (Todd)
+   HBASE-5883  Backup master is going down due to connection refused exception (Jieshan)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)

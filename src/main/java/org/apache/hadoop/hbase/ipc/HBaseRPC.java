@@ -234,18 +234,31 @@ public class HBaseRPC {
     while (true) {
       try {
         return getProxy(protocol, clientVersion, addr, conf, rpcTimeout);
-      } catch(ConnectException se) {  // namenode has not been started
-        ioe = se;
-        if (maxAttempts >= 0 && ++reconnectAttempts >= maxAttempts) {
-          LOG.info("Server at " + addr + " could not be reached after " +
-            reconnectAttempts + " tries, giving up.");
-          throw new RetriesExhaustedException("Failed setting up proxy " +
-            protocol + " to " + addr.toString() + " after attempts=" +
-            reconnectAttempts, se);
-      }
       } catch(SocketTimeoutException te) {  // namenode is busy
         LOG.info("Problem connecting to server: " + addr);
         ioe = te;
+      } catch (IOException ioex) {
+        // We only handle the ConnectException.
+        ConnectException ce = null;
+        if (ioex instanceof ConnectException) {
+          ce = (ConnectException) ioex;
+          ioe = ce;
+        } else if (ioex.getCause() != null
+            && ioex.getCause() instanceof ConnectException) {
+          ce = (ConnectException) ioex.getCause();
+          ioe = ce;
+        } else if (ioex.getMessage().toLowerCase()
+            .contains("connection refused")) {
+          ce = new ConnectException(ioex.getMessage());
+          ioe = ce;
+        } else {
+          // This is the exception we can't handle.
+          ioe = ioex;
+        }
+        if (ce != null) {
+          handleConnectionException(++reconnectAttempts, maxAttempts, protocol,
+              addr, ce);
+        }
       }
       // check if timed out
       if (System.currentTimeMillis()-timeout >= startTime) {
@@ -258,6 +271,25 @@ public class HBaseRPC {
       } catch (InterruptedException ie) {
         // IGNORE
       }
+    }
+  }
+
+  /**
+   * @param retries current retried times.
+   * @param maxAttmpts max attempts
+   * @param protocol protocol interface
+   * @param addr address of remote service
+   * @param ce ConnectException
+   * @throws RetriesExhaustedException
+   */
+  private static void handleConnectionException(int retries, int maxAttmpts,
+      Class<?> protocol, InetSocketAddress addr, ConnectException ce)
+      throws RetriesExhaustedException {
+    if (maxAttmpts >= 0 && retries >= maxAttmpts) {
+      LOG.info("Server at " + addr + " could not be reached after "
+          + maxAttmpts + " tries, giving up.");
+      throw new RetriesExhaustedException("Failed setting up proxy " + protocol
+          + " to " + addr.toString() + " after attempts=" + maxAttmpts, ce);
     }
   }
 
