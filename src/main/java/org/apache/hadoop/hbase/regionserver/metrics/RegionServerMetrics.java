@@ -210,6 +210,18 @@ public class RegionServerMetrics implements Updater {
     new MetricsIntValue("memstoreSizeMB", registry);
 
   /**
+   * Number of put with WAL disabled in this regionserver in MB
+   */
+  public final MetricsLongValue numPutsWithoutWAL =
+    new MetricsLongValue("numPutsWithoutWAL", registry);
+
+  /**
+   * Possible data loss sizes (due to put with WAL disabled) in this regionserver in MB
+   */
+  public final MetricsIntValue mbInMemoryWithoutWAL =
+    new MetricsIntValue("mbInMemoryWithoutWAL", registry);
+
+  /**
    * Size of the compaction queue.
    */
   public final MetricsIntValue compactionQueueSize =
@@ -366,6 +378,8 @@ public class RegionServerMetrics implements Updater {
       this.totalStaticIndexSizeKB.pushMetric(this.metricsRecord);
       this.totalStaticBloomSizeKB.pushMetric(this.metricsRecord);
       this.memstoreSizeMB.pushMetric(this.metricsRecord);
+      this.mbInMemoryWithoutWAL.pushMetric(this.metricsRecord);
+      this.numPutsWithoutWAL.pushMetric(this.metricsRecord);
       this.readRequestsCount.pushMetric(this.metricsRecord);
       this.writeRequestsCount.pushMetric(this.metricsRecord);
       this.regions.pushMetric(this.metricsRecord);
@@ -535,6 +549,10 @@ public class RegionServerMetrics implements Updater {
         Integer.valueOf(this.totalStaticBloomSizeKB.get()));
     sb = Strings.appendKeyValue(sb, this.memstoreSizeMB.getName(),
       Integer.valueOf(this.memstoreSizeMB.get()));
+    sb = Strings.appendKeyValue(sb, "mbInMemoryWithoutWAL",
+      Integer.valueOf(this.mbInMemoryWithoutWAL.get()));
+    sb = Strings.appendKeyValue(sb, "numberOfPutsWithoutWAL",
+      Long.valueOf(this.numPutsWithoutWAL.get()));
     sb = Strings.appendKeyValue(sb, "readRequestsCount",
         Long.valueOf(this.readRequestsCount.get()));
     sb = Strings.appendKeyValue(sb, "writeRequestsCount",
