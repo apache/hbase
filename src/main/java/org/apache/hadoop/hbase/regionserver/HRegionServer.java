@@ -67,7 +67,6 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -112,7 +111,6 @@ import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
-import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.Invocation;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
@@ -147,7 +145,6 @@ import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.metrics.util.MBeanUtil;
@@ -156,9 +153,24 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.codehaus.jackson.map.ObjectMapper;
+import com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
+import org.apache.hadoop.hbase.ipc.RegionServerStatusProtocol;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
 
 /**
  * HRegionServer makes a set of HRegions available to clients. It checks in with
@@ -191,7 +203,7 @@ public class HRegionServer extends RegionServer
   protected final int numRegionsToReport;
 
   // Remote HMaster
-  private HMasterRegionInterface hbaseMaster;
+  private RegionServerStatusProtocol hbaseMaster;
 
   // Server to handle client requests. Default access so can be accessed by
   // unit tests.
@@ -589,7 +601,7 @@ public class HRegionServer extends RegionServer
       // Try and register with the Master; tell it we are here.  Break if
       // server is stopped or the clusterup flag is down or hdfs went wacky.
       while (keepLooping()) {
-        MapWritable w = reportForDuty();
+        RegionServerStartupResponse w = reportForDuty();
         if (w == null) {
           LOG.warn("reportForDuty failed; sleeping and then retrying.");
           this.sleeper.sleep();
@@ -737,15 +749,18 @@ public class HRegionServer extends RegionServer
 
   void tryRegionServerReport()
   throws IOException {
-    HServerLoad hsl = buildServerLoad();
+    HBaseProtos.ServerLoad sl = buildServerLoad();
     // Why we do this?
     this.requestCount.set(0);
     try {
-      this.hbaseMaster.regionServerReport(this.serverNameFromMasterPOV.getVersionedBytes(), hsl);
-    } catch (IOException ioe) {
-      if (ioe instanceof RemoteException) {
-        ioe = ((RemoteException)ioe).unwrapRemoteException();
-      }
+      RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();
+      ServerName sn = ServerName.parseVersionedServerName(
+        this.serverNameFromMasterPOV.getVersionedBytes());
+      request.setServer(ProtobufUtil.toServerName(sn));
+      request.setLoad(sl);
+      this.hbaseMaster.regionServerReport(null, request.build());
+    } catch (ServiceException se) {
+      IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof YouAreDeadException) {
         // This will be caught and handled as a fatal error in run()
         throw ioe;
@@ -756,19 +771,26 @@ public class HRegionServer extends RegionServer
     }
   }
 
-  HServerLoad buildServerLoad() {
+  HBaseProtos.ServerLoad buildServerLoad() {
     Collection<HRegion> regions = getOnlineRegionsLocalContext();
-    TreeMap<byte [], HServerLoad.RegionLoad> regionLoads =
-      new TreeMap<byte [], HServerLoad.RegionLoad>(Bytes.BYTES_COMPARATOR);
-    for (HRegion region: regions) {
-      regionLoads.put(region.getRegionName(), createRegionLoad(region));
-    }
     MemoryUsage memory =
       ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-    return new HServerLoad(requestCount.get(),(int)metrics.getRequests(),
-      (int)(memory.getUsed() / 1024 / 1024),
-      (int) (memory.getMax() / 1024 / 1024), regionLoads,
-      this.hlog.getCoprocessorHost().getCoprocessors());
+
+    HBaseProtos.ServerLoad.Builder serverLoad = HBaseProtos.ServerLoad.newBuilder();
+    serverLoad.setRequestsPerSecond((int)metrics.getRequests());
+    serverLoad.setTotalNumberOfRequests(requestCount.get());
+    serverLoad.setUsedHeapMB((int)(memory.getUsed() / 1024 / 1024));
+    serverLoad.setMaxHeapMB((int) (memory.getMax() / 1024 / 1024));
+    Set<String> coprocessors = this.hlog.getCoprocessorHost().getCoprocessors();
+    for (String coprocessor : coprocessors) {
+      serverLoad.addCoprocessors(
+        Coprocessor.newBuilder().setName(coprocessor).build());
+    }
+    for (HRegion region : regions) {
+      serverLoad.addRegionLoads(createRegionLoad(region));
+    }
+
+    return serverLoad.build();
   }
 
   String getOnlineRegionsAsPrintableString() {
@@ -858,14 +880,14 @@ public class HRegionServer extends RegionServer
    *
    * @param c Extra configuration.
    */
-  protected void handleReportForDutyResponse(final MapWritable c)
+  protected void handleReportForDutyResponse(final RegionServerStartupResponse c)
   throws IOException {
     try {
-      for (Map.Entry<Writable, Writable> e :c.entrySet()) {
-        String key = e.getKey().toString();
+      for (NameStringPair e : c.getMapEntriesList()) {
+        String key = e.getName();
         // The hostname the master sees us as.
         if (key.equals(HConstants.KEY_FOR_HOSTNAME_SEEN_BY_MASTER)) {
-          String hostnameFromMasterPOV = e.getValue().toString();
+          String hostnameFromMasterPOV = e.getValue();
           this.serverNameFromMasterPOV = new ServerName(hostnameFromMasterPOV,
             this.isa.getPort(), this.startcode);
           LOG.info("Master passed us hostname to use. Was=" +
@@ -943,7 +965,7 @@ public class HRegionServer extends RegionServer
    *
    * @throws IOException
    */
-  private HServerLoad.RegionLoad createRegionLoad(final HRegion r) {
+  private RegionLoad createRegionLoad(final HRegion r) {
     byte[] name = r.getRegionName();
     int stores = 0;
     int storefiles = 0;
@@ -980,20 +1002,38 @@ public class HRegionServer extends RegionServer
           (int) (store.getTotalStaticBloomSize() / 1024);
       }
     }
-    return new HServerLoad.RegionLoad(name, stores, storefiles,
-        storeUncompressedSizeMB,
-        storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, rootIndexSizeKB,
-        totalStaticIndexSizeKB, totalStaticBloomSizeKB,
-        (int) r.readRequestsCount.get(), (int) r.writeRequestsCount.get(),
-        totalCompactingKVs, currentCompactedKVs,
-        r.getCoprocessorHost().getCoprocessors());
+    RegionLoad.Builder regionLoad = RegionLoad.newBuilder();
+    RegionSpecifier.Builder regionSpecifier = RegionSpecifier.newBuilder();
+    regionSpecifier.setType(RegionSpecifierType.REGION_NAME);
+    regionSpecifier.setValue(ByteString.copyFrom(name));
+    regionLoad.setRegionSpecifier(regionSpecifier.build())
+      .setStores(stores)
+      .setStorefiles(storefiles)
+      .setStoreUncompressedSizeMB(storeUncompressedSizeMB)
+      .setStorefileSizeMB(storefileSizeMB)
+      .setMemstoreSizeMB(memstoreSizeMB)
+      .setStorefileIndexSizeMB(storefileIndexSizeMB)
+      .setRootIndexSizeKB(rootIndexSizeKB)
+      .setTotalStaticIndexSizeKB(totalStaticIndexSizeKB)
+      .setTotalStaticBloomSizeKB(totalStaticBloomSizeKB)
+      .setReadRequestsCount((int) r.readRequestsCount.get())
+      .setWriteRequestsCount((int) r.writeRequestsCount.get())
+      .setTotalCompactingKVs(totalCompactingKVs)
+      .setCurrentCompactedKVs(currentCompactedKVs);
+    Set<String> coprocessors = r.getCoprocessorHost().getCoprocessors();
+    for (String coprocessor : coprocessors) {
+      regionLoad.addCoprocessors(
+        Coprocessor.newBuilder().setName(coprocessor).build());
+    }
+
+    return regionLoad.build();
   }
 
   /**
    * @param encodedRegionName
    * @return An instance of RegionLoad.
    */
-  public HServerLoad.RegionLoad createRegionLoad(final String encodedRegionName) {
+  public RegionLoad createRegionLoad(final String encodedRegionName) {
     HRegion r = null;
     r = this.onlineRegions.get(encodedRegionName);
     return r != null ? createRegionLoad(r) : null;
@@ -1507,8 +1547,14 @@ public class HRegionServer extends RegionServer
         msg += "\nCause:\n" + StringUtils.stringifyException(cause);
       }
       if (hbaseMaster != null) {
+        ReportRSFatalErrorRequest.Builder builder =
+          ReportRSFatalErrorRequest.newBuilder();
+        ServerName sn =
+          ServerName.parseVersionedServerName(this.serverNameFromMasterPOV.getVersionedBytes());
+        builder.setServer(ProtobufUtil.toServerName(sn));
+        builder.setErrorMessage(msg);
         hbaseMaster.reportRSFatalError(
-            this.serverNameFromMasterPOV.getVersionedBytes(), msg);
+          null,builder.build());
       }
     } catch (Throwable t) {
       LOG.warn("Unable to report fatal error to master", t);
@@ -1588,7 +1634,7 @@ public class HRegionServer extends RegionServer
   private ServerName getMaster() {
     ServerName masterServerName = null;
     long previousLogTime = 0;
-    HMasterRegionInterface master = null;
+    RegionServerStatusProtocol master = null;
     boolean refresh = false; // for the first time, use cached data
     while (keepLooping() && master == null) {
       masterServerName = this.masterAddressManager.getMasterAddress(refresh);
@@ -1614,8 +1660,8 @@ public class HRegionServer extends RegionServer
       try {
         // Do initial RPC setup. The final argument indicates that the RPC
         // should retry indefinitely.
-        master = (HMasterRegionInterface) HBaseRPC.waitForProxy(
-            HMasterRegionInterface.class, HMasterRegionInterface.VERSION,
+        master = (RegionServerStatusProtocol) HBaseRPC.waitForProxy(
+            RegionServerStatusProtocol.class, RegionServerStatusProtocol.VERSION,
             isa, this.conf, -1,
             this.rpcTimeout, this.rpcTimeout);
       } catch (IOException e) {
@@ -1658,8 +1704,8 @@ public class HRegionServer extends RegionServer
    * null if we failed to register.
    * @throws IOException
    */
-  private MapWritable reportForDuty() throws IOException {
-    MapWritable result = null;
+  private RegionServerStartupResponse reportForDuty() throws IOException {
+    RegionServerStartupResponse result = null;
     ServerName masterServerName = getMaster();
     if (masterServerName == null) return result;
     try {
@@ -1668,18 +1714,20 @@ public class HRegionServer extends RegionServer
         "with port=" + this.isa.getPort() + ", startcode=" + this.startcode);
       long now = EnvironmentEdgeManager.currentTimeMillis();
       int port = this.isa.getPort();
-      result = this.hbaseMaster.regionServerStartup(port, this.startcode, now);
-    } catch (RemoteException e) {
-      IOException ioe = e.unwrapRemoteException();
+      RegionServerStartupRequest.Builder request = RegionServerStartupRequest.newBuilder();
+      request.setPort(port);
+      request.setServerStartCode(this.startcode);
+      request.setServerCurrentTime(now);
+      result = this.hbaseMaster.regionServerStartup(null, request.build());
+    } catch (ServiceException se) {
+      IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof ClockOutOfSyncException) {
         LOG.fatal("Master rejected startup because clock is out of sync", ioe);
         // Re-throw IOE will cause RS to abort
         throw ioe;
       } else {
-        LOG.warn("remote error telling master we are up", e);
+        LOG.warn("error telling master we are up", se);
       }
-    } catch (IOException e) {
-      LOG.warn("error telling master we are up", e);
     }
     return result;
   }
@@ -3295,8 +3343,9 @@ public class HRegionServer extends RegionServer
 
   // used by org/apache/hbase/tmpl/regionserver/RSStatusTmpl.jamon (HBASE-4070).
   public String[] getCoprocessors() {
-    HServerLoad hsl = buildServerLoad();
-    return hsl == null? null: hsl.getCoprocessors();
+    HBaseProtos.ServerLoad sl = buildServerLoad();
+    return sl == null? null:
+      ServerLoad.getRegionServerCoprocessors(new ServerLoad(sl));
   }
 
   /**

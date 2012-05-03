@@ -37,7 +37,7 @@ org.apache.hadoop.hbase.util.JvmVersion;
 org.apache.hadoop.hbase.util.FSUtils;
 org.apache.hadoop.hbase.master.HMaster;
 org.apache.hadoop.hbase.HConstants;
-org.apache.hadoop.hbase.HServerLoad;
+org.apache.hadoop.hbase.ServerLoad;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.client.HBaseAdmin;
 org.apache.hadoop.hbase.client.HConnectionManager;
@@ -213,11 +213,12 @@ org.apache.hadoop.hbase.HBaseConfiguration;
        // or be set to 0 to get ephemeral ports
        int infoPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
        String url = "http://" + serverName.getHostname() + ":" + infoPort + "/";
-       HServerLoad hsl = master.getServerManager().getLoad(serverName);
-       String loadStr = hsl == null? "-": hsl.toString();
-       if (hsl != null) {
-         totalRegions += hsl.getNumberOfRegions();
-         totalRequests += hsl.getNumberOfRequests();
+       ServerLoad sl = master.getServerManager().getLoad(serverName);
+       String loadStr = sl == null? "-": sl.toString();
+       if (sl != null) {
+         totalRegions += sl.getRegionLoadsCount();
+         // Is this correct?  Adding a rate to a measure.
+         totalRequests += sl.getRequestsPerSecond();
        }
        long startcode = serverName.getStartcode();
 </%java>

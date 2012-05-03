@@ -29,6 +29,7 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.util.*;
+import org.apache.hadoop.hbase.ipc.RegionServerStatusProtocol;
 
 import java.lang.reflect.Method;
 
@@ -64,7 +65,7 @@ public class HBaseRpcMetrics implements Updater {
     context.registerUpdater(this);
 
     initMethods(HMasterInterface.class);
-    initMethods(HMasterRegionInterface.class);
+    initMethods(RegionServerStatusProtocol.class);
     initMethods(HRegionInterface.class);
     rpcStatistics = new HBaseRPCStatistics(this.registry, hostName, port);
   }

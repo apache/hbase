@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.ServerLoad;
 
 /**
  * This is the JMX management interface for Hbase master information
@@ -101,7 +101,7 @@ public interface MXBean {
    * Get the live region servers
    * @return Live region servers
    */
-  public Map<String, HServerLoad> getRegionServers();
+  public Map<String, ServerLoad> getRegionServers();
 
   /**
    * Get the dead region servers

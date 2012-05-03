@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -1401,6 +1402,19 @@ public final class ProtobufUtil {
     } catch (ServiceException se) {
       throw ProtobufUtil.getRemoteException(se);
     }
+  }
+
+  /*
+   * Get the total (read + write) requests from a RegionLoad pb
+   * @param rl - RegionLoad pb
+   * @return total (read + write) requests
+   */
+  public static long getTotalRequestsCount(RegionLoad rl) {
+    if (rl == null) {
+      return 0;
+    }
+
+    return rl.getReadRequestsCount() + rl.getWriteRequestsCount();
   }
 
 // End helpers for Admin

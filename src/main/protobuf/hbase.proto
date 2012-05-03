@@ -54,6 +54,85 @@ message RegionSpecifier {
   }
 }
 
+message RegionLoad {
+  /** the region specifier */
+  required RegionSpecifier regionSpecifier = 1;
+
+  /** the number of stores for the region */
+  optional uint32 stores = 2;
+
+  /** the number of storefiles for the region */
+  optional uint32 storefiles = 3;
+
+  /** the total size of the store files for the region, uncompressed, in MB */
+  optional uint32 storeUncompressedSizeMB = 4;
+
+  /** the current total size of the store files for the region, in MB */
+  optional uint32 storefileSizeMB = 5;
+
+  /** the current size of the memstore for the region, in MB */
+  optional uint32 memstoreSizeMB = 6;
+
+  /**
+   * The current total size of root-level store file indexes for the region,
+   * in MB. The same as {@link #rootIndexSizeKB} but in MB.
+   */
+  optional uint32 storefileIndexSizeMB = 7;
+
+  /** the current total read requests made to region */
+  optional uint64 readRequestsCount = 8;
+
+  /** the current total write requests made to region */
+  optional uint64 writeRequestsCount = 9;
+
+  /** the total compacting key values in currently running compaction */
+  optional uint64 totalCompactingKVs = 10;
+
+  /** the completed count of key values in currently running compaction */
+  optional uint64 currentCompactedKVs = 11;
+
+   /** The current total size of root-level indexes for the region, in KB. */
+  optional uint32 rootIndexSizeKB = 12;
+
+  /** The total size of all index blocks, not just the root level, in KB. */
+  optional uint32 totalStaticIndexSizeKB = 13;
+
+  /**
+   * The total size of all Bloom filter blocks, not just loaded into the
+   * block cache, in KB.
+   */
+  optional uint32 totalStaticBloomSizeKB = 14;
+
+  /** Region-level coprocessors. */
+  repeated Coprocessor coprocessors = 15;
+}
+
+/* Server-level protobufs */
+
+message ServerLoad {
+  /** Number of requests per second since last report. */
+  optional uint32 requestsPerSecond = 1;
+
+  /** Total Number of requests from the start of the region server. */
+  optional uint32 totalNumberOfRequests = 2;
+
+  /** the amount of used heap, in MB. */
+  optional uint32 usedHeapMB = 3;
+
+  /** the maximum allowable size of the heap, in MB. */
+  optional uint32 maxHeapMB = 4;
+
+  /** Information on the load of individual regions. */
+  repeated RegionLoad regionLoads = 5;
+
+  /**
+   * Regionserver-level coprocessors, e.g., WALObserver implementations.
+   * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+   * objects.
+   */
+  repeated Coprocessor coprocessors = 6;
+}
+
 /**
  * A range of time. Both from and to are Java time
  * stamp in milliseconds. If you don't specify a time
@@ -103,6 +182,10 @@ message ServerName {
 }
 
 // Comment data structures
+
+message Coprocessor {
+  required string name = 1;
+}
 
 message NameStringPair {
   required string name = 1;

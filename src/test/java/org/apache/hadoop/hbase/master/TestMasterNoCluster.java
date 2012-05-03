@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -46,9 +47,13 @@ import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.zookeeper.KeeperException;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
+import com.google.protobuf.ServiceException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -127,7 +132,7 @@ public class TestMasterNoCluster {
    */
   @Test
   public void testFailover()
-  throws IOException, KeeperException, InterruptedException {
+  throws IOException, KeeperException, InterruptedException, ServiceException {
     final long now = System.currentTimeMillis();
     // Names for our three servers.  Make the port numbers match hostname.
     // Will come in use down in the server when we need to figure how to respond.
@@ -209,7 +214,11 @@ public class TestMasterNoCluster {
       while (!master.isRpcServerOpen()) Threads.sleep(10);
       // Fake master that there are regionservers out there.  Report in.
       for (int i = 0; i < sns.length; i++) {
-        master.regionServerReport(sns[i].getVersionedBytes(), new HServerLoad());
+        RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();;
+        ServerName sn = ServerName.parseVersionedServerName(sns[i].getVersionedBytes());
+        request.setServer(ProtobufUtil.toServerName(sn));
+        request.setLoad(ServerLoad.EMPTY_SERVERLOAD.getServerLoadPB());
+        master.regionServerReport(null, request.build());
       }
       // Master should now come up.
       while (!master.isInitialized()) {Threads.sleep(10);}
@@ -229,10 +238,11 @@ public class TestMasterNoCluster {
    * @throws KeeperException
    * @throws InterruptedException
    * @throws DeserializationException 
+   * @throws ServiceException
    */
   @Test
   public void testCatalogDeploys()
-  throws IOException, KeeperException, InterruptedException, DeserializationException {
+  throws IOException, KeeperException, InterruptedException, DeserializationException, ServiceException {
     final Configuration conf = TESTUTIL.getConfiguration();
     final long now = System.currentTimeMillis();
     // Name for our single mocked up regionserver.
@@ -286,11 +296,19 @@ public class TestMasterNoCluster {
       // Wait till master is up ready for RPCs.
       while (!master.isRpcServerOpen()) Threads.sleep(10);
       // Fake master that there is a regionserver out there.  Report in.
-      MapWritable mw = master.regionServerStartup(rs0.getServerName().getPort(),
-        rs0.getServerName().getStartcode(), now);
+      RegionServerStartupRequest.Builder request = RegionServerStartupRequest.newBuilder();
+      request.setPort(rs0.getServerName().getPort());
+      request.setServerStartCode(rs0.getServerName().getStartcode());
+      request.setServerCurrentTime(now);
+      RegionServerStartupResponse result =
+        master.regionServerStartup(null, request.build());
+      String rshostname = new String();
+      for (NameStringPair e : result.getMapEntriesList()) {
+        if (e.getName().toString().equals(HConstants.KEY_FOR_HOSTNAME_SEEN_BY_MASTER)) {
+          rshostname = e.getValue();
+        }
+      }
       // Assert hostname is as expected.
-      String rshostname =
-        mw.get(new Text(HConstants.KEY_FOR_HOSTNAME_SEEN_BY_MASTER)).toString();
       assertEquals(rs0.getServerName().getHostname(), rshostname);
       // Now master knows there is at least one regionserver checked in and so
       // it'll wait a while to see if more and when none, will assign root and

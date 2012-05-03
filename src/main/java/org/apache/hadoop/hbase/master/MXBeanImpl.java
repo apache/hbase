@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 
@@ -77,9 +77,9 @@ public class MXBeanImpl implements MXBean {
   }
 
   @Override
-  public Map<String, HServerLoad> getRegionServers() {
-    Map<String, HServerLoad> data = new HashMap<String, HServerLoad>();
-    for (final Entry<ServerName, HServerLoad> entry :
+  public Map<String, ServerLoad> getRegionServers() {
+    Map<String, ServerLoad> data = new HashMap<String, ServerLoad>();
+    for (final Entry<ServerName, ServerLoad> entry :
       master.getServerManager().getOnlineServers().entrySet()) {
       data.put(entry.getKey().getServerName(),
           entry.getValue());

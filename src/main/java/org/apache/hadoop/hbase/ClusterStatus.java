@@ -29,10 +29,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
-
+import java.util.HashSet;
+import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HServerLoad.RegionLoad;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.VersionMismatchException;
@@ -89,14 +94,48 @@ public class ClusterStatus extends VersionedWritable {
   }
 
   public ClusterStatus(final String hbaseVersion, final String clusterid,
-      final Map<ServerName, HServerLoad> servers,
+      final Map<ServerName, ServerLoad> servers,
       final Collection<ServerName> deadServers,
       final ServerName master,
       final Collection<ServerName> backupMasters,
       final Map<String, RegionState> rit,
       final String[] masterCoprocessors) {
     this.hbaseVersion = hbaseVersion;
-    this.liveServers = servers;
+
+    // TODO: This conversion of ServerLoad to HServerLoad is temporary,
+    // will be cleaned up in HBASE-5445.  Using the ClusterStatus proto brings
+    // in a lot of other changes, so it makes sense to break this up.
+    Map<ServerName, HServerLoad> convertedLoad =
+      new HashMap<ServerName,HServerLoad>();
+    for (Map.Entry<ServerName,ServerLoad> entry : servers.entrySet()) {
+      ServerLoad sl = entry.getValue();
+
+      Map<byte[],RegionLoad> regionLoad = new HashMap<byte[],RegionLoad>();
+      for (HBaseProtos.RegionLoad rl : sl.getRegionLoadsList()) {
+        Set<String> regionCoprocessors = new HashSet<String>();
+        for (HBaseProtos.Coprocessor coprocessor
+            : rl.getCoprocessorsList()) {
+          regionCoprocessors.add(coprocessor.getName());
+        }
+
+        byte [] regionName = rl.getRegionSpecifier().getValue().toByteArray();
+        RegionLoad converted = new RegionLoad(regionName,
+          rl.getStores(),rl.getStorefiles(),rl.getStoreUncompressedSizeMB(),
+          rl.getStorefileSizeMB(),rl.getMemstoreSizeMB(),
+          rl.getStorefileIndexSizeMB(),rl.getRootIndexSizeKB(),
+          rl.getTotalStaticIndexSizeKB(),rl.getTotalStaticBloomSizeKB(),
+          rl.getReadRequestsCount(),rl.getWriteRequestsCount(),
+          rl.getTotalCompactingKVs(),rl.getCurrentCompactedKVs(),
+          regionCoprocessors);
+        regionLoad.put(regionName, converted);
+      }
+
+      HServerLoad hsl = new HServerLoad(sl.getTotalNumberOfRequests(),
+        sl.getRequestsPerSecond(),sl.getUsedHeapMB(),sl.getMaxHeapMB(),
+        regionLoad,new HashSet<String>(Arrays.asList(masterCoprocessors)));
+      convertedLoad.put(entry.getKey(), hsl);
+    }
+    this.liveServers = convertedLoad;
     this.deadServers = deadServers;
     this.master = master;
     this.backupMasters = backupMasters;

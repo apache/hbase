@@ -26,14 +26,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
 
 import javax.tools.*;
 import java.io.*;
 import java.util.*;
-import java.util.Arrays;
 import java.util.jar.*;
 
 import org.junit.*;
@@ -550,22 +552,21 @@ public class TestClassLoading {
 
   /**
    * return the subset of all regionservers
-   * (actually returns set of HServerLoads)
+   * (actually returns set of ServerLoads)
    * which host some region in a given table.
    * used by assertAllRegionServers() below to
    * test reporting of loaded coprocessors.
    * @param tableName : given table.
    * @return subset of all servers.
    */
-  Map<ServerName, HServerLoad> serversForTable(String tableName) {
-    Map<ServerName, HServerLoad> serverLoadHashMap =
-        new HashMap<ServerName, HServerLoad>();
-    for(Map.Entry<ServerName,HServerLoad> server:
+  Map<ServerName, ServerLoad> serversForTable(String tableName) {
+    Map<ServerName, ServerLoad> serverLoadHashMap =
+        new HashMap<ServerName, ServerLoad>();
+    for(Map.Entry<ServerName,ServerLoad> server:
         TEST_UTIL.getMiniHBaseCluster().getMaster().getServerManager().
             getOnlineServers().entrySet()) {
-      for(Map.Entry<byte[], HServerLoad.RegionLoad> region:
-          server.getValue().getRegionsLoad().entrySet()) {
-        if (region.getValue().getNameAsString().equals(tableName)) {
+      for (RegionLoad region : server.getValue().getRegionLoadsList()) {
+        if (Bytes.toString(region.getRegionSpecifier().getValue().toByteArray()).equals(tableName)) {
           // this server server hosts a region of tableName: add this server..
           serverLoadHashMap.put(server.getKey(),server.getValue());
           // .. and skip the rest of the regions that it hosts.
@@ -578,7 +579,7 @@ public class TestClassLoading {
 
   void assertAllRegionServers(String[] expectedCoprocessors, String tableName)
       throws InterruptedException {
-    Map<ServerName, HServerLoad> servers;
+    Map<ServerName, ServerLoad> servers;
     String[] actualCoprocessors = null;
     boolean success = false;
     for(int i = 0; i < 5; i++) {
@@ -591,8 +592,9 @@ public class TestClassLoading {
         servers = serversForTable(tableName);
       }
       boolean any_failed = false;
-      for(Map.Entry<ServerName,HServerLoad> server: servers.entrySet()) {
-        actualCoprocessors = server.getValue().getCoprocessors();
+      for(Map.Entry<ServerName,ServerLoad> server: servers.entrySet()) {
+        actualCoprocessors =
+          ServerLoad.getAllCoprocessors(server.getValue());
         if (!Arrays.equals(actualCoprocessors, expectedCoprocessors)) {
           LOG.debug("failed comparison: actual: " +
               Arrays.toString(actualCoprocessors) +

@@ -32,8 +32,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.monitoring.LogMonitoring;
 import org.apache.hadoop.hbase.monitoring.StateDumpServlet;
@@ -114,9 +114,9 @@ public class MasterDumpServlet extends StateDumpServlet {
   }
 
   private void dumpServers(HMaster master, PrintWriter out) {
-    Map<ServerName, HServerLoad> servers =
+    Map<ServerName, ServerLoad> servers =
       master.getServerManager().getOnlineServers();
-    for (Map.Entry<ServerName, HServerLoad> e : servers.entrySet()) {
+    for (Map.Entry<ServerName, ServerLoad> e : servers.entrySet()) {
       out.println(e.getKey() + ": " + e.getValue());
     }
   }

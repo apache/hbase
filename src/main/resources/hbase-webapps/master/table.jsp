@@ -29,12 +29,14 @@
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.HServerInfo"
-  import="org.apache.hadoop.hbase.HServerLoad"
-  import="org.apache.hadoop.hbase.HServerLoad.RegionLoad"
+  import="org.apache.hadoop.hbase.ServerLoad;"
+  import="org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad"
   import="org.apache.hadoop.hbase.io.ImmutableBytesWritable"
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
+  import="org.apache.hadoop.hbase.protobuf.ProtobufUtil"
+  import="java.util.List"
   import="java.util.Map"
   import="org.apache.hadoop.hbase.HConstants"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
@@ -176,11 +178,15 @@
     String urlRegionServer = null;
 
     if (addr != null) {
-      HServerLoad sl = master.getServerManager().getLoad(addr);
+      ServerLoad sl = master.getServerManager().getLoad(addr);
       if (sl != null) {
-        Map<byte[], RegionLoad> map = sl.getRegionsLoad();
-        if (map.containsKey(regionInfo.getRegionName())) {
-          req = map.get(regionInfo.getRegionName()).getRequestsCount();
+        List<RegionLoad> list = sl.getRegionLoadsList();
+        byte [] regionName = regionInfo.getRegionName();
+        for (RegionLoad rgLoad : list) {
+          if (rgLoad.getRegionSpecifier().getValue().toByteArray().equals(regionName)) {
+            req = ProtobufUtil.getTotalRequestsCount(rgLoad);
+            break;
+          }
         }
         // This port might be wrong if RS actually ended up using something else.
         urlRegionServer =

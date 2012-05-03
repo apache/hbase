@@ -43,6 +43,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -132,6 +133,10 @@ public abstract class HBaseServer implements RpcServer {
   protected static final ThreadLocal<RpcServer> SERVER =
     new ThreadLocal<RpcServer>();
   private volatile boolean started = false;
+
+  // For generated protocol classes which doesn't have VERSION field
+  private static final Map<Class<?>, Long>
+    PROTOCOL_VERSION = new HashMap<Class<?>, Long>();
 
   private static final Map<String, Class<? extends VersionedProtocol>>
       PROTOCOL_CACHE =

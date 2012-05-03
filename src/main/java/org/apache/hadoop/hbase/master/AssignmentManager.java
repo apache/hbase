@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -3171,10 +3172,10 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
     }
-    Map<ServerName, HServerLoad> onlineSvrs = this.serverManager.getOnlineServers();
+    Map<ServerName, ServerLoad> onlineSvrs = this.serverManager.getOnlineServers();
     // Take care of servers w/o assignments.
     for (Map<ServerName,List<HRegionInfo>> map : result.values()) {
-      for (Map.Entry<ServerName, HServerLoad> svrEntry: onlineSvrs.entrySet()) {
+      for (Map.Entry<ServerName, ServerLoad> svrEntry: onlineSvrs.entrySet()) {
         if (!map.containsKey(svrEntry.getKey())) {
           map.put(svrEntry.getKey(), new ArrayList<HRegionInfo>());
         }

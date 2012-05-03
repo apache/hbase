@@ -77,7 +77,8 @@ import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
+import org.apache.hadoop.hbase.ipc.RegionServerStatusProtocol;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
@@ -112,12 +113,21 @@ import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
+import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import com.google.protobuf.RpcController;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
+import com.google.protobuf.ServiceException;
 
 /**
  * HMaster is the "master server" for HBase. An HBase cluster has one active
@@ -133,12 +143,12 @@ import org.apache.zookeeper.Watcher;
  * <p>You can also shutdown just this master.  Call {@link #stopMaster()}.
  *
  * @see HMasterInterface
- * @see HMasterRegionInterface
+ * @see MasterRegionInterface
  * @see Watcher
  */
 @InterfaceAudience.Private
 public class HMaster extends HasThread
-implements HMasterInterface, HMasterRegionInterface, MasterServices,
+implements HMasterInterface, RegionServerStatusProtocol, MasterServices,
 Server {
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
@@ -262,7 +272,7 @@ Server {
     int numHandlers = conf.getInt("hbase.master.handler.count",
       conf.getInt("hbase.regionserver.handler.count", 25));
     this.rpcServer = HBaseRPC.getServer(this,
-      new Class<?>[]{HMasterInterface.class, HMasterRegionInterface.class},
+      new Class<?>[]{HMasterInterface.class, RegionServerStatusProtocol.class},
         initialIsa.getHostName(), // BindAddress is IP we got for this server.
         initialIsa.getPort(),
         numHandlers,
@@ -564,7 +574,7 @@ Server {
         // Not registered; add it.
         LOG.info("Registering server found up in zk but who has not yet " +
           "reported in: " + sn);
-        this.serverManager.recordNewServer(sn, HServerLoad.EMPTY_HSERVERLOAD);
+        this.serverManager.recordNewServer(sn, ServerLoad.EMPTY_SERVERLOAD);
       }
     }
 
@@ -795,8 +805,8 @@ Server {
   throws IOException {
     if (HMasterInterface.class.getName().equals(protocol)) {
       return new ProtocolSignature(HMasterInterface.VERSION, null);
-    } else if (HMasterRegionInterface.class.getName().equals(protocol)) {
-      return new ProtocolSignature(HMasterRegionInterface.VERSION, null);
+    } else if (RegionServerStatusProtocol.class.getName().equals(protocol)) {
+      return new ProtocolSignature(RegionServerStatusProtocol.VERSION, null);
     }
     throw new IOException("Unknown protocol: " + protocol);
   }
@@ -804,8 +814,8 @@ Server {
   public long getProtocolVersion(String protocol, long clientVersion) {
     if (HMasterInterface.class.getName().equals(protocol)) {
       return HMasterInterface.VERSION;
-    } else if (HMasterRegionInterface.class.getName().equals(protocol)) {
-      return HMasterRegionInterface.VERSION;
+    } else if (RegionServerStatusProtocol.class.getName().equals(protocol)) {
+      return RegionServerStatusProtocol.VERSION;
     }
     // unknown protocol
     LOG.warn("Version requested for unimplemented protocol: "+protocol);
@@ -952,18 +962,25 @@ Server {
   }
 
   @Override
-  public MapWritable regionServerStartup(final int port,
-    final long serverStartCode, final long serverCurrentTime)
-  throws IOException {
+  public RegionServerStartupResponse regionServerStartup(
+      RpcController controller, RegionServerStartupRequest request) throws ServiceException {
     // Register with server manager
-    InetAddress ia = getRemoteInetAddress(port, serverStartCode);
-    ServerName rs = this.serverManager.regionServerStartup(ia, port,
-      serverStartCode, serverCurrentTime);
-    // Send back some config info
-    MapWritable mw = createConfigurationSubset();
-    mw.put(new Text(HConstants.KEY_FOR_HOSTNAME_SEEN_BY_MASTER),
-      new Text(rs.getHostname()));
-    return mw;
+    try {
+      InetAddress ia = getRemoteInetAddress(request.getPort(), request.getServerStartCode());
+      ServerName rs = this.serverManager.regionServerStartup(ia, request.getPort(),
+        request.getServerStartCode(), request.getServerCurrentTime());
+
+      // Send back some config info
+      RegionServerStartupResponse.Builder resp = createConfigurationSubset();
+      NameStringPair.Builder entry = NameStringPair.newBuilder()
+        .setName(HConstants.KEY_FOR_HOSTNAME_SEEN_BY_MASTER)
+        .setValue(rs.getHostname());
+      resp.addMapEntries(entry.build());
+
+      return resp.build();
+    } catch(IOException ioe) {
+      throw new ServiceException(ioe);
+    }
   }
 
   /**
@@ -981,32 +998,49 @@ Server {
    * @return Subset of configuration to pass initializing regionservers: e.g.
    * the filesystem to use and root directory to use.
    */
-  protected MapWritable createConfigurationSubset() {
-    MapWritable mw = addConfig(new MapWritable(), HConstants.HBASE_DIR);
-    return addConfig(mw, "fs.default.name");
+  protected RegionServerStartupResponse.Builder createConfigurationSubset() {
+    RegionServerStartupResponse.Builder resp = addConfig(
+      RegionServerStartupResponse.newBuilder(), HConstants.HBASE_DIR);
+    return addConfig(resp, "fs.default.name");
   }
 
-  private MapWritable addConfig(final MapWritable mw, final String key) {
-    mw.put(new Text(key), new Text(this.conf.get(key)));
-    return mw;
+  private RegionServerStartupResponse.Builder addConfig(
+      final RegionServerStartupResponse.Builder resp, final String key) {
+    NameStringPair.Builder entry = NameStringPair.newBuilder()
+      .setName(key)
+      .setValue(this.conf.get(key));
+    resp.addMapEntries(entry.build());
+    return resp;
   }
 
   @Override
-  public void regionServerReport(final byte [] sn, final HServerLoad hsl)
-  throws IOException {
-    this.serverManager.regionServerReport(ServerName.parseVersionedServerName(sn), hsl);
-    if (hsl != null && this.metrics != null) {
-      // Up our metrics.
-      this.metrics.incrementRequests(hsl.getTotalNumberOfRequests());
+  public RegionServerReportResponse regionServerReport(
+      RpcController controller,RegionServerReportRequest request) throws ServiceException {
+    try {
+      HBaseProtos.ServerLoad sl = request.getLoad();
+      this.serverManager.regionServerReport(ProtobufUtil.toServerName(request.getServer()), new ServerLoad(sl));
+      if (sl != null && this.metrics != null) {
+        // Up our metrics.
+        this.metrics.incrementRequests(sl.getTotalNumberOfRequests());
+      }
+    } catch(IOException ioe) {
+      throw new ServiceException(ioe);
     }
+
+    return RegionServerReportResponse.newBuilder().build();
   }
 
   @Override
-  public void reportRSFatalError(byte [] sn, String errorText) {
-    String msg = "Region server " + Bytes.toString(sn) +
+  public ReportRSFatalErrorResponse reportRSFatalError(
+      RpcController controller, ReportRSFatalErrorRequest request) throws ServiceException {
+    String errorText = request.getErrorMessage();
+    ServerName sn = ProtobufUtil.toServerName(request.getServer());
+    String msg = "Region server " + Bytes.toString(sn.getVersionedBytes()) +
       " reported a fatal error:\n" + errorText;
     LOG.error(msg);
     rsFatals.add(msg);
+
+    return ReportRSFatalErrorResponse.newBuilder().build();
   }
 
   public boolean isMasterRunning() {

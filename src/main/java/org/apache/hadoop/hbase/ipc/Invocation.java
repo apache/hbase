@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
+import org.apache.hadoop.hbase.ipc.RegionServerStatusProtocol;
 import org.apache.hadoop.io.VersionMismatchException;
 import org.apache.hadoop.io.VersionedWritable;
 
@@ -61,6 +63,8 @@ public class Invocation extends VersionedWritable implements Configurable {
       Long.valueOf(ClientProtocol.VERSION));
     PROTOCOL_VERSION.put(AdminService.BlockingInterface.class,
       Long.valueOf(AdminProtocol.VERSION));
+    PROTOCOL_VERSION.put(RegionServerStatusService.BlockingInterface.class,
+      Long.valueOf(RegionServerStatusProtocol.VERSION));
   }
 
   // For protobuf protocols, which use ServiceException, instead of IOException
@@ -70,6 +74,7 @@ public class Invocation extends VersionedWritable implements Configurable {
   static {
     PROTOBUF_PROTOCOLS.add(ClientProtocol.class);
     PROTOBUF_PROTOCOLS.add(AdminProtocol.class);
+    PROTOBUF_PROTOCOLS.add(RegionServerStatusProtocol.class);
   }
 
   private static byte RPC_VERSION = 1;

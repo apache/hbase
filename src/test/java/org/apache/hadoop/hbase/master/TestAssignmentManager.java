@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
@@ -128,9 +128,9 @@ public class TestAssignmentManager {
     this.serverManager = Mockito.mock(ServerManager.class);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_B)).thenReturn(true);
-    final Map<ServerName, HServerLoad> onlineServers = new HashMap<ServerName, HServerLoad>();
-    onlineServers.put(SERVERNAME_B, new HServerLoad());
-    onlineServers.put(SERVERNAME_A, new HServerLoad());
+    final Map<ServerName, ServerLoad> onlineServers = new HashMap<ServerName, ServerLoad>();
+    onlineServers.put(SERVERNAME_B, ServerLoad.EMPTY_SERVERLOAD);
+    onlineServers.put(SERVERNAME_A, ServerLoad.EMPTY_SERVERLOAD);
     Mockito.when(this.serverManager.getOnlineServersList()).thenReturn(
         new ArrayList<ServerName>(onlineServers.keySet()));
     Mockito.when(this.serverManager.getOnlineServers()).thenReturn(onlineServers);

@@ -38,7 +38,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -51,7 +53,6 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 
 /**
@@ -75,8 +76,8 @@ public class ServerManager {
   private volatile boolean clusterShutdown = false;
 
   /** Map of registered servers to their current load */
-  private final Map<ServerName, HServerLoad> onlineServers =
-    new ConcurrentHashMap<ServerName, HServerLoad>();
+  private final Map<ServerName, ServerLoad> onlineServers =
+    new ConcurrentHashMap<ServerName, ServerLoad>();
 
   // TODO: This is strange to have two maps but HSI above is used on both sides
   /**
@@ -154,11 +155,11 @@ public class ServerManager {
     checkClockSkew(sn, serverCurrentTime);
     checkIsDead(sn, "STARTUP");
     checkAlreadySameHostPort(sn);
-    recordNewServer(sn, HServerLoad.EMPTY_HSERVERLOAD);
+    recordNewServer(sn, ServerLoad.EMPTY_SERVERLOAD);
     return sn;
   }
 
-  void regionServerReport(ServerName sn, HServerLoad hsl)
+  void regionServerReport(ServerName sn, ServerLoad sl)
   throws YouAreDeadException, PleaseHoldException {
     checkIsDead(sn, "REPORT");
     if (!this.onlineServers.containsKey(sn)) {
@@ -169,9 +170,9 @@ public class ServerManager {
       // The only thing we are skipping is passing back to the regionserver
       // the ServerName to use. Here we presume a master has already done
       // that so we'll press on with whatever it gave us for ServerName.
-      recordNewServer(sn, hsl);
+      recordNewServer(sn, sl);
     } else {
-      this.onlineServers.put(sn, hsl);
+      this.onlineServers.put(sn, sl);
     }
   }
 
@@ -255,9 +256,9 @@ public class ServerManager {
    * @param hsl
    * @param serverName The remote servers name.
    */
-  void recordNewServer(final ServerName serverName, final  HServerLoad hsl) {
+  void recordNewServer(final ServerName serverName, final ServerLoad sl) {
     LOG.info("Registering server=" + serverName);
-    this.onlineServers.put(serverName, hsl);
+    this.onlineServers.put(serverName, sl);
     this.serverConnections.remove(serverName);
   }
 
@@ -265,7 +266,7 @@ public class ServerManager {
    * @param serverName
    * @return HServerLoad if serverName is known else null
    */
-  public HServerLoad getLoad(final ServerName serverName) {
+  public ServerLoad getLoad(final ServerName serverName) {
     return this.onlineServers.get(serverName);
   }
 
@@ -274,7 +275,7 @@ public class ServerManager {
    * @return HServerLoad if serverName is known else null
    * @deprecated Use {@link #getLoad(HServerAddress)}
    */
-  public HServerLoad getLoad(final HServerAddress address) {
+  public ServerLoad getLoad(final HServerAddress address) {
     ServerName sn = new ServerName(address.toString(), ServerName.NON_STARTCODE);
     ServerName actual =
       ServerName.findServerWithSameHostnamePort(this.getOnlineServersList(), sn);
@@ -291,9 +292,9 @@ public class ServerManager {
     int totalLoad = 0;
     int numServers = 0;
     double averageLoad = 0.0;
-    for (HServerLoad hsl: this.onlineServers.values()) {
+    for (ServerLoad sl: this.onlineServers.values()) {
         numServers++;
-        totalLoad += hsl.getNumberOfRegions();
+        totalLoad += sl.getRegionLoadsCount();
     }
     averageLoad = (double)totalLoad / (double)numServers;
     return averageLoad;
@@ -308,7 +309,7 @@ public class ServerManager {
   /**
    * @return Read-only map of servers to serverinfo
    */
-  public Map<ServerName, HServerLoad> getOnlineServers() {
+  public Map<ServerName, ServerLoad> getOnlineServers() {
     // Presumption is that iterating the returned Map is OK.
     synchronized (this.onlineServers) {
       return Collections.unmodifiableMap(this.onlineServers);

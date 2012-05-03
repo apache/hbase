@@ -24,7 +24,7 @@ import java.util.Set;
 import junit.framework.Assert;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.MediumTests;
 import org.junit.AfterClass;
@@ -48,7 +48,7 @@ public class TestMXBean {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private void verifyRegionServers(Map<String, HServerLoad> regions) {
+  private void verifyRegionServers(Map<String, ServerLoad> regions) {
     Set<String> expected = new HashSet<String>();
     for (int i = 0; i < 4; ++i) {
       HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i);
@@ -56,7 +56,7 @@ public class TestMXBean {
     }
 
     int found = 0;
-    for (java.util.Map.Entry<String, HServerLoad> entry : regions.entrySet()) {
+    for (java.util.Map.Entry<String, ServerLoad> entry : regions.entrySet()) {
       if (expected.contains(entry.getKey())) {
         ++found;
       }

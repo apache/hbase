@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
@@ -112,7 +113,8 @@ public class MiniHBaseCluster {
      */
 
     @Override
-    protected void handleReportForDutyResponse(MapWritable c) throws IOException {
+    protected void handleReportForDutyResponse(
+        final RegionServerStartupResponse c) throws IOException {
       super.handleReportForDutyResponse(c);
       // Run this thread to shutdown our filesystem on way out.
       this.shutdownThread = new SingleFileSystemShutdownThread(getFileSystem());

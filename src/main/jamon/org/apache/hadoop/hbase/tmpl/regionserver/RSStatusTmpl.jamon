@@ -32,7 +32,8 @@ org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 org.apache.hadoop.hbase.util.Bytes;
 org.apache.hadoop.hbase.HConstants;
 org.apache.hadoop.hbase.HServerInfo;
-org.apache.hadoop.hbase.HServerLoad;
+org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad;
+org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
 org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.HBaseConfiguration;
@@ -118,7 +119,7 @@ String url = "http://" + host + "/";
 </%java>
 <%for HRegionInfo r: onlineRegions %>
 <%java> 
-        HServerLoad.RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
+        RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
 </%java>
 <tr><td><% r.getRegionNameAsString() %></td>
     <td><% Bytes.toStringBinary(r.getStartKey()) %></td><td><% Bytes.toStringBinary(r.getEndKey()) %></td>
