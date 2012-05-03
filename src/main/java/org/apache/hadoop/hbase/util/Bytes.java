@@ -343,6 +343,9 @@ public class Bytes {
    */
   public static String toStringBinary(final byte [] b, int off, int len) {
     StringBuilder result = new StringBuilder();
+    // Just in case we are passed a 'len' that is > buffer length...
+    if (off >= b.length) return result.toString();
+    if (off + len > b.length) len = b.length - off;
     try {
       String first = new String(b, off, len, "ISO-8859-1");
       for (int i = 0; i < first.length() ; ++i ) {

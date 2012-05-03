@@ -538,7 +538,7 @@ public class SplitLogManager extends ZooKeeperListener {
       try {
         getDataSetWatchSuccess(path, null, Integer.MIN_VALUE);
       } catch (DeserializationException e1) {
-        LOG.debug("failed to re-resubmit task " + path + " because of deserialization issue");
+        LOG.debug("Failed to re-resubmit task " + path + " because of deserialization issue", e1);
         task.heartbeatNoDetails(EnvironmentEdgeManager.currentTimeMillis());
         return false;
       }
