@@ -609,6 +609,11 @@ public class MetaReader {
   throws IOException {
     Scan scan = new Scan();
     if (startrow != null) scan.setStartRow(startrow);
+    if (startrow == null && !scanRoot) {
+      int caching = catalogTracker.getConnection().getConfiguration()
+          .getInt(HConstants.HBASE_META_SCANNER_CACHING, 100);
+      scan.setCaching(caching);
+    }
     scan.addFamily(HConstants.CATALOG_FAMILY);
     HTable metaTable = scanRoot?
       getRootHTable(catalogTracker): getMetaHTable(catalogTracker);
