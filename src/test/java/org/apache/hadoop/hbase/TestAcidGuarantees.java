@@ -27,8 +27,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
+import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -36,8 +36,10 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Ignore;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
 
@@ -48,7 +50,7 @@ import com.google.common.collect.Lists;
  * This can run as a junit test, or with a main() function which runs against
  * a real cluster (eg for testing with failures, region movement, etc)
  */
-public class TestAcidGuarantees {
+public class TestAcidGuarantees implements Tool {
   protected static final Log LOG = LogFactory.getLog(TestAcidGuarantees.class);
   public static final byte [] TABLE_NAME = Bytes.toBytes("TestAcidGuarantees");
   public static final byte [] FAMILY_A = Bytes.toBytes("A");
@@ -62,6 +64,9 @@ public class TestAcidGuarantees {
   private HBaseTestingUtility util;
 
   public static int NUM_COLS_TO_CHECK = 50;
+
+  // when run as main
+  private Configuration conf;
 
   private void createTableIfMissing()
     throws IOException {
@@ -235,6 +240,15 @@ public class TestAcidGuarantees {
       int numGetters,
       int numScanners,
       int numUniqueRows) throws Exception {
+      runTestAtomicity(millisToRun, numWriters, numGetters, numScanners,
+		       numUniqueRows, true);
+  }
+
+  public void runTestAtomicity(long millisToRun,
+      int numWriters,
+      int numGetters,
+      int numScanners,
+      int numUniqueRows, boolean useFlusher) throws Exception {
     createTableIfMissing();
     TestContext ctx = new TestContext(util.getConfiguration());
     
@@ -251,11 +265,13 @@ public class TestAcidGuarantees {
       ctx.addThread(writer);
     }
     // Add a flusher
-    ctx.addThread(new RepeatingTestThread(ctx) {
-      public void doAnAction() throws Exception {
-        util.flush();
-      }
-    });
+    if (useFlusher) {
+      ctx.addThread(new RepeatingTestThread(ctx) {
+        public void doAnAction() throws Exception {
+          util.flush();
+        }
+      });
+    }
 
     List<AtomicGetReader> getters = Lists.newArrayList();
     for (int i = 0; i < numGetters; i++) {
@@ -321,14 +337,44 @@ public class TestAcidGuarantees {
     }    
   }
 
-  public static void main(String args[]) throws Exception {
-    Configuration c = HBaseConfiguration.create();
-    TestAcidGuarantees test = new TestAcidGuarantees();
-    test.setConf(c);
-    test.runTestAtomicity(5000, 50, 2, 2, 3);
+  ////////////////////////////////////////////////////////////////////////////
+  // Tool interface
+  ////////////////////////////////////////////////////////////////////////////
+  @Override
+  public Configuration getConf() {
+    return conf;
   }
 
-  private void setConf(Configuration c) {
-    util = new HBaseTestingUtility(c);
+  @Override
+  public void setConf(Configuration c) {
+    this.conf = c;
+    this.util = new HBaseTestingUtility(c);
   }
+
+  @Override
+  public int run(String[] arg0) throws Exception {
+    Configuration c = getConf();
+    int millis = c.getInt("millis", 5000);
+    int numWriters = c.getInt("numWriters", 50);
+    int numGetters = c.getInt("numGetters", 2);
+    int numScanners = c.getInt("numScanners", 2);
+    int numUniqueRows = c.getInt("numUniqueRows", 3);
+    // cannot run flusher in real cluster case.
+    runTestAtomicity(millis, numWriters, numGetters, numScanners, numUniqueRows, false);
+    return 0;
+  }
+
+  public static void main(String args[]) throws Exception {
+    Configuration c = HBaseConfiguration.create();
+    int status;
+    try {
+      TestAcidGuarantees test = new TestAcidGuarantees();
+      status = ToolRunner.run(c, test, args);
+    } catch (Exception e) {
+      LOG.error("Exiting due to error", e);
+      status = -1;
+    }
+    System.exit(status);
+  }
+
 }
