@@ -86,7 +86,7 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
             }
             LOG.debug(message);
           }
-          this.master.checkFileSystem();
+          this.master.checkFileSystem(false);
           throw e;
         }
         if (LOG.isDebugEnabled()) {

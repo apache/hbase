@@ -86,11 +86,13 @@ class MetaScanner extends BaseScanner {
         return false;
       }
       // Make sure the file system is still available
-      this.master.checkFileSystem();
+      this.master.checkFileSystem(false);
+      // TODO: Should we return false here? See RootScanner for more info.
     } catch (Exception e) {
       // If for some reason we get some other kind of exception,
       // at least log it rather than go out silently.
       LOG.error("Unexpected exception", e);
+      // TODO: Should we return false here? See RootScanner for more info.
     }
     return true;
   }

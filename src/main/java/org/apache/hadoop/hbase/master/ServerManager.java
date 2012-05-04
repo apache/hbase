@@ -926,7 +926,7 @@ public class ServerManager {
    * a MSG_REGIONSERVER_STOP.
    */
   void letRegionServersShutdown() {
-    if (!master.checkFileSystem()) {
+    if (!master.checkFileSystem(true)) {
       // Forget waiting for the region servers if the file system has gone
       // away. Just exit as quickly as possible.
       return;

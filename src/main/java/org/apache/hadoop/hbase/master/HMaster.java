@@ -582,14 +582,20 @@ public class HMaster extends Thread implements HMasterInterface,
    * If not, sets closed
    * @return false if file system is not available
    */
-  protected boolean checkFileSystem() {
+  protected boolean checkFileSystem(boolean shutdownClusterOnFail) {
     if (this.fsOk) {
       try {
         FSUtils.checkFileSystemAvailable(this.fs);
       } catch (IOException e) {
-        LOG.fatal("Shutting down HBase cluster: file system not available", e);
-        shutdownClusterNow();
-        this.fsOk = false;
+        if (shutdownClusterOnFail) {
+          LOG.fatal("Shutting down HBase cluster: file system not available", e);
+          shutdownClusterNow();
+          this.fsOk = false;
+        }
+        else {
+          LOG.warn("File system unavailable, but continuing anyway", e);
+          return false;
+        }
       }
     }
     return this.fsOk;
@@ -756,10 +762,10 @@ public class HMaster extends Thread implements HMasterInterface,
             // If FAILED op processing, bad. Exit.
           break FINISHED;
         case REQUEUED_BUT_PROBLEM:
-          if (!checkFileSystem())
-              // If bad filesystem, exit.
-            break FINISHED;
-          default:
+          // LOG if the file system is down, but don't do anything.
+          checkFileSystem(false);
+          break;
+        default:
             // Continue run loop if conditions are PROCESSED, NOOP, REQUEUED
           break;
         }
@@ -985,7 +991,7 @@ public class HMaster extends Thread implements HMasterInterface,
 
   /*
    * Inspect the log directory to recover any log file without
-   * ad active region server.
+   * an active region server.
    */
   private void splitLogAfterStartup() {
     boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
@@ -1031,10 +1037,11 @@ public class HMaster extends Thread implements HMasterInterface,
           LOG.warn("Failed splitting of " + serverNames, ioe);
           // reset serverNames
           serverNames = new ArrayList<String>();
-          if (!checkFileSystem()) {
-            LOG.warn("Bad Filesystem, exiting");
-            Runtime.getRuntime().halt(1);
-          }
+
+          // if the file system is down, then just log it, and retry the log
+          //  splitting after 30 seconds if retry splitting is turned on
+          checkFileSystem(false);
+
           try {
             if (retrySplitting) {
               Thread.sleep(30000); //30s

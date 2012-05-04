@@ -58,12 +58,19 @@ class RootScanner extends BaseScanner {
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.warn("Scan ROOT region", e);
-      // Make sure the file system is still available
-      master.checkFileSystem();
+      // Make sure the file system is still available, but don't do anything
+      //  if it's not available.
+      master.checkFileSystem(false);
+      // TODO: we used to ignore this. Now, we'll enter an infinite loop if
+      // this is an idempotent problem but the web ui will be up.
+      // Revisit this later
+      return false;
     } catch (Exception e) {
       // If for some reason we get some other kind of exception,
       // at least log it rather than go out silently.
       LOG.error("Unexpected exception", e);
+      // TODO: See above
+      return false;
     }
     return true;
   }
