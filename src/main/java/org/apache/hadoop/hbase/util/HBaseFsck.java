@@ -2085,7 +2085,7 @@ public class HBaseFsck {
   }
 
    HTableDescriptor[] getHTableDescriptors(List<String> tableNames) {
-    HTableDescriptor[] htd = null;
+    HTableDescriptor[] htd = new HTableDescriptor[0];
      try {
        LOG.info("getHTableDescriptors == tableNames => " + tableNames);
        htd = new HBaseAdmin(conf).getTableDescriptors(tableNames);

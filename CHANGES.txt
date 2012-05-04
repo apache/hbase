@@ -58,6 +58,7 @@ Release 0.92.2 - Unreleased
                the global MemStore size (Jieshan)
    HBASE-5897  prePut coprocessor hook causing substantial CPU usage (Todd)
    HBASE-5883  Backup master is going down due to connection refused exception (Jieshan)
+   HBASE-5928  Hbck shouldn't npe when there are no tables (Elliott Clark)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
