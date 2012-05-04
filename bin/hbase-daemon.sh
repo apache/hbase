@@ -71,6 +71,15 @@ hbase_rotate_log ()
     fi
 }
 
+cleanZNode() {
+  if [ -f $HBASE_ZNODE_FILE ]; then
+    #call ZK to delete the node
+    ZNODE=`cat $HBASE_ZNODE_FILE`
+    $bin/hbase zkcli delete $ZNODE > /dev/null 2>&1
+    rm $HBASE_ZNODE_FILE
+  fi
+}
+
 wait_until_done ()
 {
     p=$1
@@ -121,6 +130,7 @@ logout=$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.out
 loggc=$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.gc
 loglog="${HBASE_LOG_DIR}/${HBASE_LOGFILE}"
 pid=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.pid
+export HBASE_ZNODE_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.znode
 
 if [ "$HBASE_USE_GC_LOGFILE" = "true" ]; then
   export HBASE_GC_OPTS=" -Xloggc:${loggc}"
@@ -130,6 +140,9 @@ fi
 if [ "$HBASE_NICENESS" = "" ]; then
     export HBASE_NICENESS=0
 fi
+
+thiscmd=$0
+args=$@
 
 case $startStop in
 
@@ -141,18 +154,23 @@ case $startStop in
         exit 1
       fi
     fi
+    nohup $thiscmd --config "${HBASE_CONF_DIR}" internal_start $command $args < /dev/null > /dev/null 2>&1  &
+    ;;
 
+  (internal_start)
     hbase_rotate_log $logout
     hbase_rotate_log $loggc
     echo starting $command, logging to $logout
     # Add to the command log file vital stats on our environment.
     echo "`date` Starting $command on `hostname`" >> $loglog
     echo "`ulimit -a`" >> $loglog 2>&1
-    nohup nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
+    nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
         --config "${HBASE_CONF_DIR}" \
-        $command "$@" $startStop > "$logout" 2>&1 < /dev/null &
+        $command "$@" start > "$logout"  &
     echo $! > $pid
     sleep 1; head "$logout"
+    wait
+    cleanZNode
     ;;
 
   (stop)
@@ -178,8 +196,6 @@ case $startStop in
     ;;
 
   (restart)
-    thiscmd=$0
-    args=$@
     # stop the command
     $thiscmd --config "${HBASE_CONF_DIR}" stop $command $args &
     wait_until_done $!
@@ -192,6 +208,7 @@ case $startStop in
     $thiscmd --config "${HBASE_CONF_DIR}" start $command $args &
     wait_until_done $!
     ;;
+
 
   (*)
     echo $usage
