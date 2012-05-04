@@ -55,6 +55,8 @@ abstract public class MapreduceTestingShim {
   
   abstract public JobConf obtainJobConf(MiniMRCluster cluster);
 
+  abstract public String obtainMROutputDirProp();
+  
   public static JobContext createJobContext(Configuration jobConf)
       throws IOException {
     return instance.newJobContext(jobConf);
@@ -64,6 +66,10 @@ abstract public class MapreduceTestingShim {
     return instance.obtainJobConf(cluster);
   }
 
+  public static String getMROutputDirProp() {
+    return instance.obtainMROutputDirProp();
+  }
+  
   private static class MapreduceV1Shim extends MapreduceTestingShim {
     public JobContext newJobContext(Configuration jobConf) throws IOException {
       // Implementing:
@@ -95,6 +101,11 @@ abstract public class MapreduceTestingShim {
         return null;
       }
     }
+
+    @Override
+    public String obtainMROutputDirProp() {
+      return "mapred.output.dir";
+    }
   };
 
   private static class MapreduceV2Shim extends MapreduceTestingShim {
@@ -122,6 +133,13 @@ abstract public class MapreduceTestingShim {
       } catch (IllegalAccessException iae) {
         return null;
       }
+    }
+
+    @Override
+    public String obtainMROutputDirProp() {
+      // This is a copy of o.a.h.mapreduce.lib.output.FileOutputFormat.OUTDIR 
+      // from Hadoop 0.23.x.  If we use the source directly we break the hadoop 1.x compile. 
+      return "mapreduce.output.fileoutputformat.outputdir";
     }
   };
 

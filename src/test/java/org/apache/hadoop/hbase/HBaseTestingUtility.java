@@ -452,7 +452,7 @@ public class HBaseTestingUtility {
     createDirAndSetProperty("cache_data", "test.cache.data");
     createDirAndSetProperty("hadoop_tmp", "hadoop.tmp.dir");
     hadoopLogDir = createDirAndSetProperty("hadoop_logs", "hadoop.log.dir");
-    createDirAndSetProperty("mapred_output", "mapred.output.dir");
+    createDirAndSetProperty("mapred_output", MapreduceTestingShim.getMROutputDirProp());
     createDirAndSetProperty("mapred_local", "mapred.local.dir");
     createDirAndSetProperty("mapred_system", "mapred.system.dir");
     createDirAndSetProperty("mapred_temp", "mapred.temp.dir");
@@ -1339,9 +1339,11 @@ public class HBaseTestingUtility {
           conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
     }
     LOG.info("Mini mapreduce cluster started");
+
+    // Needed for TestImportTsv.
     conf.set("mapred.job.tracker",
         mrCluster.createJobConf().get("mapred.job.tracker"));
-    /* this for mrv2 support */
+    // this for mrv2 support; mr1 ignores this 
     conf.set("mapreduce.framework.name", "yarn");
   }
 

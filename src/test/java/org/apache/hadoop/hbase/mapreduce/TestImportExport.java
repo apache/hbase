@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
@@ -111,6 +110,7 @@ public class TestImportExport {
     args = opts.getRemainingArgs();
 
     Job job = Export.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
     assertTrue(job.isSuccessful());
 
@@ -128,6 +128,7 @@ public class TestImportExport {
     args = opts.getRemainingArgs();
 
     job = Import.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
     assertTrue(job.isSuccessful());
 
@@ -178,6 +179,7 @@ public class TestImportExport {
     args = opts.getRemainingArgs();
 
     Job job = Export.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
     assertTrue(job.isSuccessful());
 
@@ -201,6 +203,7 @@ public class TestImportExport {
     args = opts.getRemainingArgs();
 
     job = Import.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
     assertTrue(job.isSuccessful());
 
