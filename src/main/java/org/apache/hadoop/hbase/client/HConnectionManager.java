@@ -2152,7 +2152,7 @@ public class HConnectionManager {
 
     @Override
     public HTableDescriptor[] getHTableDescriptors(List<String> tableNames) throws IOException {
-      if (tableNames == null || tableNames.isEmpty()) return null;
+      if (tableNames == null || tableNames.isEmpty()) return new HTableDescriptor[0];
       MasterKeepAliveConnection master = getKeepAliveMaster();
       try {
         return master.getHTableDescriptors(tableNames);
