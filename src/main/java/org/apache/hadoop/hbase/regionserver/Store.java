@@ -1919,6 +1919,13 @@ public class Store extends SchemaConfigured implements HeapSize {
     return this.blockingStoreFileCount - this.storefiles.size();
   }
 
+  boolean throttleCompaction(long compactionSize) {
+    long throttlePoint = conf.getLong(
+        "hbase.regionserver.thread.compaction.throttle",
+        2 * this.minFilesToCompact * this.region.memstoreFlushSize);
+    return compactionSize > throttlePoint;
+  }
+
   HRegion getHRegion() {
     return this.region;
   }

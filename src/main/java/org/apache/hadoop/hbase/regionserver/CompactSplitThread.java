@@ -44,7 +44,6 @@ public class CompactSplitThread {
   private final ThreadPoolExecutor largeCompactions;
   private final ThreadPoolExecutor smallCompactions;
   private final ThreadPoolExecutor splits;
-  private final long throttleSize;
 
   /* The default priority for user-specified compaction requests.
    * The user gets top priority unless we have blocking compactions (Pri <= 0)
@@ -62,26 +61,20 @@ public class CompactSplitThread {
     int largeThreads = Math.max(1, conf.getInt(
         "hbase.regionserver.thread.compaction.large", 1));
     int smallThreads = conf.getInt(
-        "hbase.regionserver.thread.compaction.small", 0);
-    throttleSize = conf.getLong(
-        "hbase.regionserver.thread.compaction.throttle", 0);
+        "hbase.regionserver.thread.compaction.small", 1);
     int splitThreads = conf.getInt("hbase.regionserver.thread.split", 1);
 
-    // if we have throttle threads, make sure the user also specified size
-    Preconditions.checkArgument(smallThreads == 0 || throttleSize > 0);
+    Preconditions.checkArgument(largeThreads > 0 && smallThreads > 0);
 
     this.largeCompactions = new ThreadPoolExecutor(largeThreads, largeThreads,
         60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
     this.largeCompactions
         .setRejectedExecutionHandler(new CompactionRequest.Rejection());
-    if (smallThreads <= 0) {
-      this.smallCompactions = null;
-    } else {
-      this.smallCompactions = new ThreadPoolExecutor(smallThreads, smallThreads,
-          60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
-      this.smallCompactions
-          .setRejectedExecutionHandler(new CompactionRequest.Rejection());
-    }
+    this.smallCompactions = new ThreadPoolExecutor(smallThreads, smallThreads,
+        60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
+    this.smallCompactions
+        .setRejectedExecutionHandler(new CompactionRequest.Rejection());
+
     this.splits = (ThreadPoolExecutor) Executors
         .newFixedThreadPool(splitThreads);
   }
@@ -161,18 +154,13 @@ public class CompactSplitThread {
       if (priority != NO_PRIORITY) {
         cr.setPriority(priority);
       }
-      ThreadPoolExecutor pool = largeCompactions;
-      if (smallCompactions != null && throttleSize > cr.getSize()) {
-        // smallCompactions is like the 10 items or less line at Walmart
-        pool = smallCompactions;
-      }
+      // smallCompactions: like the 10 items or less line at Walmart
+      ThreadPoolExecutor pool = s.throttleCompaction(cr.getSize())
+        ? largeCompactions : smallCompactions;
       pool.execute(cr);
       if (LOG.isDebugEnabled()) {
-        String type = "";
-        if (smallCompactions != null) {
-          type = (pool == smallCompactions) ? "Small " : "Large ";
-        }
-        LOG.debug(type + "Compaction requested: " + cr
+        LOG.debug((pool == smallCompactions) ? "Small " : "Large "
+            + "Compaction requested: " + cr
             + (why != null && !why.isEmpty() ? "; Because: " + why : "")
             + "; " + this);
       }
