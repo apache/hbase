@@ -1319,7 +1319,10 @@ public class RegionManager {
    */
   public void setUnassigned(HRegionInfo info, boolean force) {
     RegionState s = null;
+    long t0, t1, t2, t3;
+    t0 = System.currentTimeMillis();
     synchronized(this.regionsInTransition) {
+      t1 = System.currentTimeMillis();
       s = regionsInTransition.get(info.getRegionNameAsString());
       if (s == null) {
         byte[] data = null;
@@ -1336,13 +1339,24 @@ public class RegionManager {
         s = new RegionState(info, RegionState.State.UNASSIGNED);
         regionsInTransition.put(info.getRegionNameAsString(), s);
       }
+
+      t2 = System.currentTimeMillis();
+      if (force || (!s.isPendingOpen() && !s.isOpen())) {
+        // Refresh assignment information when a region is marked unassigned so
+        // that it opens on the preferred server.
+        this.assignmentManager.executeAssignmentPlan(info);
+        s.setUnassigned();
+      }
+      t3 = System.currentTimeMillis();
     }
-    if (force || (!s.isPendingOpen() && !s.isOpen())) {
-      // Refresh assignment information when a region is marked unassigned so
-      // that it opens on the preferred server.
-      this.assignmentManager.executeAssignmentPlan(info);
-      s.setUnassigned();
-    }
+
+    if (LOG.isDebugEnabled())
+      LOG.debug("Took " + this.toString() + " "
+          + (t3 - t0) + " ms. for RegionManager.setUnassigned "
+          + (t1 - t0) + " ms. to get the lock. "
+          + (t2 - t1) + " ms. to update regionsInTransition. "
+          + (t3 - t2) + " ms. to executeAssignmentPlan. "
+          );
   }
 
   /**

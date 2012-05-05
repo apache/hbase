@@ -48,7 +48,7 @@ class ProcessServerShutdown extends RegionServerOperation {
   // formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
   private final String deadServer;
   private boolean isRootServer;
-  private List<MetaRegion> metaRegions;
+  private List<MetaRegion> metaRegions, metaRegionsUnassigned;
   private boolean rootRescanned;
   private HServerAddress deadServerAddress;
 
@@ -60,6 +60,7 @@ class ProcessServerShutdown extends RegionServerOperation {
   };
 
   private volatile LogSplitResult logSplitResult = LogSplitResult.NOT_RUNNING;
+  private Set<String> successfulMetaScans;
 
   private static class ToDoEntry {
     boolean regionOffline;
@@ -80,6 +81,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     this.deadServer = serverInfo.getServerName();
     this.deadServerAddress = serverInfo.getServerAddress();
     this.rootRescanned = false;
+    this.successfulMetaScans = new HashSet<String>();
     // check to see if I am responsible for either ROOT or any of the META tables.
 
     // TODO Why do we do this now instead of at processing time?
@@ -97,7 +99,10 @@ class ProcessServerShutdown extends RegionServerOperation {
       this.master.getRegionManager().listMetaRegionsForServer(deadServerAddress);
 
     this.metaRegions = new ArrayList<MetaRegion>();
+    this.metaRegionsUnassigned = new ArrayList<MetaRegion>();
     for (byte [] startKey: metaStarts) {
+      LOG.debug(this.toString() + " setting RegionManager.offlineMetaReginWithStartKey : "
+          + Bytes.toString(startKey));
       MetaRegion r = master.getRegionManager().offlineMetaRegionWithStartKey(startKey);
       this.metaRegions.add(r);
     }
@@ -125,6 +130,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
       LOG.info("Region " + regionName + " was in transition " +
           state + " on dead server " + deadServer + " - marking unassigned");
+      LOG.info(this.toString() + " setting to unassigned: " + state.getRegionInfo().toString());
       master.getRegionManager().setUnassigned(state.getRegionInfo(), true);
     }
   }
@@ -136,7 +142,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
   /** Finds regions that the dead region server was serving
    */
-  protected void scanMetaRegion(HRegionInterface server, Scan scan,
+  protected boolean scanMetaRegion(HRegionInterface server, Scan scan,
     byte [] regionName)
   throws IOException {
     long scannerId = server.openScanner(regionName, scan);
@@ -148,7 +154,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     List<ToDoEntry> toDoList = new ArrayList<ToDoEntry>();
     Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
     List<byte []> emptyRows = new ArrayList<byte []>();
-    long t0, t1, t2, t3;
+    long t0, t1, t2;
     try {
       t0 = System.currentTimeMillis();
       while (true) {
@@ -158,7 +164,7 @@ class ProcessServerShutdown extends RegionServerOperation {
         } catch (IOException e) {
           LOG.error("Shutdown scanning of meta region",
             RemoteExceptionHandler.checkIOException(e));
-          break;
+          return false;
         }
         if (values == null || values.length == 0) {
           break;
@@ -208,7 +214,7 @@ class ProcessServerShutdown extends RegionServerOperation {
         }
       }
     }
-    LOG.debug("Took " + (t1 - t0 ) + " ms. to fetch entries during scan meta region for " + this);
+    LOG.debug("Took " + (t1 - t0) + " ms. to fetch entries during scan meta region for " + this);
 
     // Scan complete. Remove any rows which had empty HRegionInfos
 
@@ -224,12 +230,15 @@ class ProcessServerShutdown extends RegionServerOperation {
       t1 = System.currentTimeMillis();
     // Update server in root/meta entries
       for (ToDoEntry e: toDoList) {
-        if (e.info.isMetaTable()) {
+        if (e.info.isMetaTable() && !this.metaRegionsUnassigned.contains(
+              new MetaRegion(this.deadServerAddress, e.info))) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("removing meta region " +
                 Bytes.toString(e.info.getRegionName()) +
             " from online meta regions");
           }
+          LOG.debug(this.toString() + " setting RegionManager.offlineMetaReginWithStartKey : "
+              + Bytes.toString(e.info.getStartKey()));
           master.getRegionManager().offlineMetaRegionWithStartKey(e.info.getStartKey());
         }
 
@@ -250,14 +259,15 @@ class ProcessServerShutdown extends RegionServerOperation {
     }
     t2 = System.currentTimeMillis();
     if (LOG.isDebugEnabled())
-      LOG.debug("Took " + this.toString() + " " + (t2 - t0 ) 
+      LOG.debug("Took " + this.toString() + " " + (t2 - t0)
           + " ms. to update RegionManager. And,"
-        + (t1-t0) + " ms. to get the lock.");
+        + (t1 - t0) + " ms. to get the lock.");
 
     // Let us not do this while we hold the lock on the regionManager.
     t0 = System.currentTimeMillis();
     for (ToDoEntry e: toDoList) {
       if (e.regionOffline) {
+        LOG.debug(this.toString() + " setting offlineRegionInMETA : " + e.info.toString());
         HRegion.offlineRegionInMETA(server, regionName, e.info);
       }
     }
@@ -265,14 +275,30 @@ class ProcessServerShutdown extends RegionServerOperation {
 
     // Get regions reassigned
     for (HRegionInfo info: regions) {
-      master.getRegionManager().setUnassigned(info, true);
+      if (info.isMetaTable()) {
+        MetaRegion mr = new MetaRegion(this.deadServerAddress, info);
+        boolean skip = this.metaRegionsUnassigned.contains(mr);
+
+        LOG.debug(this.toString() +
+            (skip? "skipping set " : "setting ") + " unassigned: " + info.toString());
+        if (skip)
+          continue;
+
+        master.getRegionManager().setUnassigned(info, false);
+        this.metaRegionsUnassigned.add(mr);
+      }
+      else {
+        LOG.debug(this.toString() + "setting " + " unassigned: " + info.toString());
+        master.getRegionManager().setUnassigned(info, false);
+      }
     }
     t2 = System.currentTimeMillis();
-    
+
     if (LOG.isDebugEnabled())
-      LOG.debug("Took " + this.toString() + " " 
-          + (t1 - t0 ) + " ms. to mark regions offlineInMeta" 
-          + (t2-t1) + " ms. to set them unassigned");
+      LOG.debug("Took " + this.toString() + " "
+          + (t1 - t0 ) + " ms. to mark regions offlineInMeta"
+          + (t2 - t1) + " ms. to set " + regions.size() + " regions unassigned");
+    return true;
   }
 
   private class ScanRootRegion extends RetryableMetaOperation<Boolean> {
@@ -294,9 +320,8 @@ class ProcessServerShutdown extends RegionServerOperation {
       scan.addFamily(HConstants.CATALOG_FAMILY);
       scan.setCaching(1000);
       scan.setCacheBlocks(true);
-      scanMetaRegion(server, scan,
+      return scanMetaRegion(server, scan,
           HRegionInfo.ROOT_REGIONINFO.getRegionName());
-      return true;
     }
   }
 
@@ -314,8 +339,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       scan.addFamily(HConstants.CATALOG_FAMILY);
       scan.setCaching(1000);
       scan.setCacheBlocks(true);
-      scanMetaRegion(server, scan, m.getRegionName());
-      return true;
+      return scanMetaRegion(server, scan, m.getRegionName());
     }
   }
 
@@ -379,30 +403,36 @@ class ProcessServerShutdown extends RegionServerOperation {
       LOG.debug(this.toString() + " reassigning ROOT done");
     }
 
+
+    // Why are we un-assigning meta regions here, and not just leave it
+    // up to ScanRootRegion to do it for us.
+    // Looks like we are worried about the case where there were some
+    // meta regions that were transitioning onto the deadServer (but,
+    // not yet updated into ROOT). Need to make sure that they get
+    // reassigned.
     for (MetaRegion metaRegion : metaRegions) {
+      if (metaRegionsUnassigned.contains(metaRegion)) continue;
+
       LOG.info(this.toString() + " setting to unassigned: " + metaRegion.toString());
       master.getRegionManager().setUnassigned(metaRegion.getRegionInfo(), true);
-    }
-    // one the meta regions are online, "forget" about them.  Since there are explicit
-    // checks below to make sure meta/root are online, this is likely to occur.
-    metaRegions.clear();
-
-    if (!rootAvailable()) {
-      // We can't proceed because the root region is not online.
-      LOG.debug("Root unavailable -- delaying operation " + this);
-      return RegionServerOperationResult.OPERATION_DELAYED;
+      metaRegionsUnassigned.add(metaRegion);
     }
 
     if (!rootRescanned) {
+      if (!rootAvailable()) {
+        // We can't proceed because the root region is not online.
+        LOG.debug("Root unavailable -- delaying operation " + this);
+        return RegionServerOperationResult.OPERATION_DELAYED;
+      }
+
       // Scan the ROOT region
       LOG.debug(this.toString() + ". Begin rescan Root ");
       Boolean result = new ScanRootRegion(
           new MetaRegion(master.getRegionManager().getRootRegionLocation(),
               HRegionInfo.ROOT_REGIONINFO), this.master).doWithRetries();
-      if (result == null) {
-        // Master is closing - give up
-        LOG.debug("Rescan Root " + this + " returned null. Operation considered success");
-        return RegionServerOperationResult.OPERATION_SUCCEEDED;
+      if (result == null || result.booleanValue() == false) {
+        LOG.debug("Root scan failed " + this);
+        return RegionServerOperationResult.OPERATION_DELAYED;
       }
 
       if (LOG.isDebugEnabled()) {
@@ -422,14 +452,21 @@ class ProcessServerShutdown extends RegionServerOperation {
 
     List<MetaRegion> regions = master.getRegionManager().getListOfOnlineMetaRegions();
     for (MetaRegion r: regions) {
+      // If we have already scanned successfully, let us skip it
+      if (successfulMetaScans.contains(Bytes.toString(r.getRegionName()))) continue;
+
       if (LOG.isDebugEnabled()) {
         LOG.debug(this.toString() + ". Begin scan meta region " +
           Bytes.toString(r.getRegionName()) + " on " + r.getServer());
       }
       Boolean result = new ScanMetaRegions(r, this.master).doWithRetries();
-      if (result == null) {
-        break;
+      if (result == null || result.booleanValue() == false) {
+        LOG.debug("Meta scan failed " +
+          Bytes.toString(r.getRegionName()) + " on " + r.getServer());
+        return RegionServerOperationResult.OPERATION_DELAYED;
       }
+
+      successfulMetaScans.add(Bytes.toString(r.getRegionName()));
       if (LOG.isDebugEnabled()) {
         LOG.debug(this.toString() + ".  finished scanning " +
           Bytes.toString(r.getRegionName()) + " on " + r.getServer());
