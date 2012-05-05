@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventHandlerListener;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.handler.TotesHRegionInfo;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -107,7 +108,7 @@ public class TestZKBasedOpenCloseRegion {
     int rsIdx = 0;
     HRegionServer regionServer =
       TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
-    HRegionInfo hri = getNonMetaRegion(regionServer.getOnlineRegions());
+    HRegionInfo hri = getNonMetaRegion(ProtobufUtil.getOnlineRegions(regionServer));
     LOG.debug("Asking RS to close region " + hri.getRegionNameAsString());
 
     AtomicBoolean closeEventProcessed = new AtomicBoolean(false);
@@ -242,7 +243,7 @@ public class TestZKBasedOpenCloseRegion {
         cluster.getLiveRegionServerThreads().get(0).getRegionServer();
     HRegionServer hr1 =
         cluster.getLiveRegionServerThreads().get(1).getRegionServer();
-    HRegionInfo hri = getNonMetaRegion(hr0.getOnlineRegions());
+    HRegionInfo hri = getNonMetaRegion(ProtobufUtil.getOnlineRegions(hr0));
 
     // fake that hr1 is processing the region
     hr1.getRegionsInTransitionInRS().putIfAbsent(hri.getEncodedNameAsBytes(), true);
@@ -266,7 +267,7 @@ public class TestZKBasedOpenCloseRegion {
     reopenEventProcessed.set(false);
     
     // now try moving a region when there is no region in transition.
-    hri = getNonMetaRegion(hr1.getOnlineRegions());
+    hri = getNonMetaRegion(ProtobufUtil.getOnlineRegions(hr1));
 
     openListener =
       new ReopenEventListener(hri.getRegionNameAsString(),
@@ -295,7 +296,7 @@ public class TestZKBasedOpenCloseRegion {
 
     int rsIdx = 0;
     HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(rsIdx);
-    HRegionInfo hri = getNonMetaRegion(regionServer.getOnlineRegions());
+    HRegionInfo hri = getNonMetaRegion(ProtobufUtil.getOnlineRegions(regionServer));
     LOG.debug("Asking RS to close region " + hri.getRegionNameAsString());
 
     AtomicBoolean closeEventProcessed = new AtomicBoolean(false);
@@ -327,7 +328,7 @@ public class TestZKBasedOpenCloseRegion {
     Whitebox.setInternalState(regionServer, "tableDescriptors", htd);
     Mockito.doThrow(new IOException()).when(htd).get((byte[]) Mockito.any());
     try {
-      regionServer.openRegion(REGIONINFO);
+      ProtobufUtil.openRegion(regionServer, REGIONINFO);
       fail("It should throw IOException ");
     } catch (IOException e) {
     }

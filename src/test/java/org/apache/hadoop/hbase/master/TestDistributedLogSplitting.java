@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -129,7 +130,7 @@ public class TestDistributedLogSplitting {
     HRegionServer hrs = null;
     for (int i = 0; i < NUM_RS; i++) {
       hrs = rsts.get(i).getRegionServer();
-      regions = hrs.getOnlineRegions();
+      regions = ProtobufUtil.getOnlineRegions(hrs);
       if (regions.size() != 0) break;
     }
     final Path logDir = new Path(rootdir, HLog.getHLogDirectoryName(hrs
@@ -189,7 +190,7 @@ public class TestDistributedLogSplitting {
 
     installTable(new ZooKeeperWatcher(conf, "table-creation", null),
         "table", "family", 40);
-    makeHLog(hrs.getWAL(), hrs.getOnlineRegions(), "table",
+    makeHLog(hrs.getWAL(), ProtobufUtil.getOnlineRegions(hrs), "table",
         NUM_LOG_LINES, 100);
 
     new Thread() {
@@ -378,7 +379,7 @@ public class TestDistributedLogSplitting {
 
     for (RegionServerThread rst : rsts) {
       HRegionServer hrs = rst.getRegionServer();
-      List<HRegionInfo> hris = hrs.getOnlineRegions();
+      List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(hrs);
       for (HRegionInfo hri : hris) {
         if (hri.isMetaTable()) {
           continue;
@@ -459,7 +460,7 @@ public class TestDistributedLogSplitting {
       throws IOException {
     NavigableSet<String> online = new TreeSet<String>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
-      for (HRegionInfo region : rst.getRegionServer().getOnlineRegions()) {
+      for (HRegionInfo region : ProtobufUtil.getOnlineRegions(rst.getRegionServer())) {
         online.add(region.getRegionNameAsString());
       }
     }

@@ -18,8 +18,9 @@
 package org.apache.hadoop.hbase.security;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.AdminProtocol;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.RegionServerStatusProtocol;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
@@ -31,7 +32,8 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
  */
 public class HBasePolicyProvider extends PolicyProvider {
   protected static Service[] services = {
-      new Service("security.client.protocol.acl", HRegionInterface.class),
+      new Service("security.client.protocol.acl", ClientProtocol.class),
+      new Service("security.client.protocol.acl", AdminProtocol.class),
       new Service("security.admin.protocol.acl", HMasterInterface.class),
       new Service("security.masterregion.protocol.acl", RegionServerStatusProtocol.class)
   };

@@ -57,14 +57,14 @@ public class HRegionThriftServer extends Thread {
 
   public static final Log LOG = LogFactory.getLog(HRegionThriftServer.class);
 
-  private final RegionServer rs;
+  private final HRegionServer rs;
   private final ThriftServerRunner serverRunner;
 
   /**
    * Create an instance of the glue object that connects the
    * RegionServer with the standard ThriftServer implementation
    */
-  HRegionThriftServer(RegionServer regionServer, Configuration conf)
+  HRegionThriftServer(HRegionServer regionServer, Configuration conf)
       throws IOException {
     super("Region Thrift Server");
     this.rs = regionServer;

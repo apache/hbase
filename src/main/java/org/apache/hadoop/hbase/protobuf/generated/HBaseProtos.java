@@ -289,13 +289,15 @@ public final class HBaseProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -994,13 +996,15 @@ public final class HBaseProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -4222,13 +4226,15 @@ public final class HBaseProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -4757,13 +4763,15 @@ public final class HBaseProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -5343,12 +5351,12 @@ public final class HBaseProtos {
     private int bitField0_;
     // required string hostName = 1;
     public static final int HOSTNAME_FIELD_NUMBER = 1;
-    private Object hostName_;
+    private java.lang.Object hostName_;
     public boolean hasHostName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     public String getHostName() {
-      Object ref = hostName_;
+      java.lang.Object ref = hostName_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -5362,7 +5370,7 @@ public final class HBaseProtos {
       }
     }
     private com.google.protobuf.ByteString getHostNameBytes() {
-      Object ref = hostName_;
+      java.lang.Object ref = hostName_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -5449,13 +5457,15 @@ public final class HBaseProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -5755,12 +5765,12 @@ public final class HBaseProtos {
       private int bitField0_;
       
       // required string hostName = 1;
-      private Object hostName_ = "";
+      private java.lang.Object hostName_ = "";
       public boolean hasHostName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       public String getHostName() {
-        Object ref = hostName_;
+        java.lang.Object ref = hostName_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           hostName_ = s;
@@ -6301,12 +6311,12 @@ public final class HBaseProtos {
     private int bitField0_;
     // required string name = 1;
     public static final int NAME_FIELD_NUMBER = 1;
-    private Object name_;
+    private java.lang.Object name_;
     public boolean hasName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     public String getName() {
-      Object ref = name_;
+      java.lang.Object ref = name_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -6320,7 +6330,7 @@ public final class HBaseProtos {
       }
     }
     private com.google.protobuf.ByteString getNameBytes() {
-      Object ref = name_;
+      java.lang.Object ref = name_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -6333,12 +6343,12 @@ public final class HBaseProtos {
     
     // required string value = 2;
     public static final int VALUE_FIELD_NUMBER = 2;
-    private Object value_;
+    private java.lang.Object value_;
     public boolean hasValue() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     public String getValue() {
-      Object ref = value_;
+      java.lang.Object ref = value_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -6352,7 +6362,7 @@ public final class HBaseProtos {
       }
     }
     private com.google.protobuf.ByteString getValueBytes() {
-      Object ref = value_;
+      java.lang.Object ref = value_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -6415,13 +6425,15 @@ public final class HBaseProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -6702,12 +6714,12 @@ public final class HBaseProtos {
       private int bitField0_;
       
       // required string name = 1;
-      private Object name_ = "";
+      private java.lang.Object name_ = "";
       public boolean hasName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       public String getName() {
-        Object ref = name_;
+        java.lang.Object ref = name_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           name_ = s;
@@ -6738,12 +6750,12 @@ public final class HBaseProtos {
       }
       
       // required string value = 2;
-      private Object value_ = "";
+      private java.lang.Object value_ = "";
       public boolean hasValue() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public String getValue() {
-        Object ref = value_;
+        java.lang.Object ref = value_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           value_ = s;
@@ -6826,12 +6838,12 @@ public final class HBaseProtos {
     private int bitField0_;
     // required string name = 1;
     public static final int NAME_FIELD_NUMBER = 1;
-    private Object name_;
+    private java.lang.Object name_;
     public boolean hasName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     public String getName() {
-      Object ref = name_;
+      java.lang.Object ref = name_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -6845,7 +6857,7 @@ public final class HBaseProtos {
       }
     }
     private com.google.protobuf.ByteString getNameBytes() {
-      Object ref = name_;
+      java.lang.Object ref = name_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -6914,13 +6926,15 @@ public final class HBaseProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -7197,12 +7211,12 @@ public final class HBaseProtos {
       private int bitField0_;
       
       // required string name = 1;
-      private Object name_ = "";
+      private java.lang.Object name_ = "";
       public boolean hasName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       public String getName() {
-        Object ref = name_;
+        java.lang.Object ref = name_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           name_ = s;

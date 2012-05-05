@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -135,7 +136,7 @@ public class TestRegionRebalancing {
   private int getRegionCount() throws IOException {
     int total = 0;
     for (HRegionServer server : getOnlineRegionServers()) {
-      total += server.getOnlineRegions().size();
+      total += ProtobufUtil.getOnlineRegions(server).size();
     }
     return total;
   }
@@ -167,11 +168,11 @@ public class TestRegionRebalancing {
         + ", up border: " + avgLoadPlusSlop + "; attempt: " + i);
 
       for (HRegionServer server : servers) {
-        int serverLoad = server.getOnlineRegions().size();
+        int serverLoad = ProtobufUtil.getOnlineRegions(server).size();
         LOG.debug(server.getServerName() + " Avg: " + avg + " actual: " + serverLoad);
         if (!(avg > 2.0 && serverLoad <= avgLoadPlusSlop
             && serverLoad >= avgLoadMinusSlop)) {
-          for (HRegionInfo hri : server.getOnlineRegions()) {
+          for (HRegionInfo hri : ProtobufUtil.getOnlineRegions(server)) {
             if (hri.isMetaRegion() || hri.isRootRegion()) serverLoad--;
             // LOG.debug(hri.getRegionNameAsString());
           }

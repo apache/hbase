@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
@@ -153,10 +154,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       HRegionServer hrs = util.getRSForFirstRegionInTable(Bytes
           .toBytes(table));
 
-      for (HRegionInfo hri : hrs.getOnlineRegions()) {
+      for (HRegionInfo hri : ProtobufUtil.getOnlineRegions(hrs)) {
         if (Bytes.equals(hri.getTableName(), Bytes.toBytes(table))) {
           // splitRegion doesn't work if startkey/endkey are null
-          hrs.splitRegion(hri, rowkey(ROWCOUNT / 2)); // hard code split
+          ProtobufUtil.split(hrs, hri, rowkey(ROWCOUNT / 2)); // hard code split
         }
       }
 
@@ -164,7 +165,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       int regions;
       do {
         regions = 0;
-        for (HRegionInfo hri : hrs.getOnlineRegions()) {
+        for (HRegionInfo hri : ProtobufUtil.getOnlineRegions(hrs)) {
           if (Bytes.equals(hri.getTableName(), Bytes.toBytes(table))) {
             regions++;
           }

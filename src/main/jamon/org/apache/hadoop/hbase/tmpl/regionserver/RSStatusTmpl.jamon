@@ -24,31 +24,25 @@ String format = "html";
 </%args>
 <%import>
 java.util.*;
-java.io.IOException;
-org.apache.hadoop.io.Text;
 org.apache.hadoop.hbase.regionserver.HRegionServer;
-org.apache.hadoop.hbase.regionserver.HRegion;
 org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 org.apache.hadoop.hbase.util.Bytes;
-org.apache.hadoop.hbase.HConstants;
-org.apache.hadoop.hbase.HServerInfo;
-org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad;
-org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
 org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.HBaseConfiguration;
+org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
+org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
 </%import>
 <%if format.equals("json") %>
   <& ../common/TaskMonitorTmpl; filter = filter; format = "json" &>
   <%java return; %>
 </%if>
 <%java>
-  HServerInfo serverInfo = null;
-  ServerName serverName = null;
-  serverInfo = regionServer.getHServerInfo();
-  serverName = regionServer.getServerName();
   RegionServerMetrics metrics = regionServer.getMetrics();
-  List<HRegionInfo> onlineRegions = regionServer.getOnlineRegions();
+  ServerInfo serverInfo = ProtobufUtil.getServerInfo(regionServer);
+  ServerName serverName = ProtobufUtil.toServerName(serverInfo.getServerName());
+  List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(regionServer);
   int masterInfoPort = regionServer.getConfiguration().getInt("hbase.master.info.port", 60010);
 </%java>
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -59,7 +53,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 -->
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-<title>HBase Region Server: <% serverName %>:<% serverInfo.getServerAddress().getPort() %></title>
+<title>HBase Region Server: <% serverName %></title>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
 </head>
 

@@ -23,11 +23,14 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
@@ -168,6 +171,40 @@ public final class ResponseConverter {
       (final CloseRegionResponse proto) {
     if (proto == null || !proto.hasClosed()) return false;
     return proto.getClosed();
+  }
+
+  /**
+   * A utility to build a GetServerInfoResponse.
+   *
+   * @param serverName
+   * @param webuiPort
+   * @return the response
+   */
+  public static GetServerInfoResponse buildGetServerInfoResponse(
+      final ServerName serverName, final int webuiPort) {
+    GetServerInfoResponse.Builder builder = GetServerInfoResponse.newBuilder();
+    ServerInfo.Builder serverInfoBuilder = ServerInfo.newBuilder();
+    serverInfoBuilder.setServerName(ProtobufUtil.toServerName(serverName));
+    if (webuiPort >= 0) {
+      serverInfoBuilder.setWebuiPort(webuiPort);
+    }
+    builder.setServerInfo(serverInfoBuilder.build());
+    return builder.build();
+  }
+
+  /**
+   * A utility to build a GetOnlineRegionResponse.
+   *
+   * @param regions
+   * @return the response
+   */
+  public static GetOnlineRegionResponse buildGetOnlineRegionResponse(
+      final List<HRegionInfo> regions) {
+    GetOnlineRegionResponse.Builder builder = GetOnlineRegionResponse.newBuilder();
+    for (HRegionInfo region: regions) {
+      builder.addRegionInfo(ProtobufUtil.toRegionInfo(region));
+    }
+    return builder.build();
   }
 
 // End utilities for Admin

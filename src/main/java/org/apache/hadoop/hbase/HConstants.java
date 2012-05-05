@@ -27,7 +27,6 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -184,14 +183,8 @@ public final class HConstants {
   public static final String REGIONSERVER_INFO_PORT_AUTO =
       REGIONSERVER_INFO_PORT + ".auto";
 
-  /** Parameter name for what region server interface to use. */
-  public static final String REGION_SERVER_CLASS = "hbase.regionserver.class";
-
   /** Parameter name for what region server implementation to use. */
   public static final String REGION_SERVER_IMPL= "hbase.regionserver.impl";
-
-  /** Default region server interface class name. */
-  public static final String DEFAULT_REGION_SERVER_CLASS = HRegionInterface.class.getName();
 
   /** Parameter name for what master implementation to use. */
   public static final String MASTER_IMPL= "hbase.master.impl";

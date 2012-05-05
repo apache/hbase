@@ -20,7 +20,7 @@
  * Specification of (unsecure) HBase RPC:
  *
  * Client needs to set up a connection first to a server serving a certain
- * HBase protocol (like HRegionInterface). Once the connection is set up, the 
+ * HBase protocol (like ClientProtocol). Once the connection is set up, the 
  * client and server communicates on that channel for RPC requests/responses.
  * The sections below describe the flow. 
  * 
@@ -58,7 +58,7 @@ message ConnectionHeader {
   /** Protocol name for next rpc layer
    * the client created a proxy with this protocol name
    */
-  optional string protocol = 2 [default = "org.apache.hadoop.hbase.ipc.HRegionInterface"];
+  optional string protocol = 2 [default = "org.apache.hadoop.hbase.client.ClientProtocol"];
 }
 
 

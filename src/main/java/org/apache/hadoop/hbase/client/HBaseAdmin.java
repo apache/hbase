@@ -66,7 +66,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionReque
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
@@ -1507,13 +1506,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       byte[] splitPoint) throws IOException {
     AdminProtocol admin =
       this.connection.getAdmin(sn.getHostname(), sn.getPort());
-    SplitRegionRequest request =
-      RequestConverter.buildSplitRegionRequest(hri.getRegionName(), splitPoint);
-    try {
-      admin.splitRegion(null, request);
-    } catch (ServiceException se) {
-      throw ProtobufUtil.getRemoteException(se);
-    }
+    ProtobufUtil.split(admin, hri, splitPoint);
   }
 
   /**

@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -340,7 +341,7 @@ public class  TestRollingRestart {
   private RegionServerThread getServerHosting(MiniHBaseCluster cluster,
       HRegionInfo region) throws IOException {
     for (RegionServerThread rst : cluster.getRegionServerThreads()) {
-      if (rst.getRegionServer().getOnlineRegions().contains(region)) {
+      if (ProtobufUtil.getOnlineRegions(rst.getRegionServer()).contains(region)) {
         return rst;
       }
     }
@@ -386,7 +387,7 @@ public class  TestRollingRestart {
       throws IOException {
     NavigableSet<String> online = new TreeSet<String>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
-      for (HRegionInfo region : rst.getRegionServer().getOnlineRegions()) {
+      for (HRegionInfo region : ProtobufUtil.getOnlineRegions(rst.getRegionServer())) {
         online.add(region.getRegionNameAsString());
       }
     }
@@ -398,7 +399,7 @@ public class  TestRollingRestart {
     NavigableSet<String> online = new TreeSet<String>();
     NavigableSet<String> doubled = new TreeSet<String>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
-      for (HRegionInfo region : rst.getRegionServer().getOnlineRegions()) {
+      for (HRegionInfo region : ProtobufUtil.getOnlineRegions(rst.getRegionServer())) {
         if(!online.add(region.getRegionNameAsString())) {
           doubled.add(region.getRegionNameAsString());
         }

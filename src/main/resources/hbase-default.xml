@@ -109,13 +109,6 @@
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.class</name>
-    <value>org.apache.hadoop.hbase.ipc.HRegionInterface</value>
-    <description>The RegionServer interface to use.
-    Used by the client opening proxy to remote region server.
-    </description>
-  </property>
-  <property>
     <name>hbase.client.pause</name>
     <value>1000</value>
     <description>General client pause value.  Used mostly as value to wait

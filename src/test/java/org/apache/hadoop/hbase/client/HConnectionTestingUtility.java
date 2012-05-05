@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionKey;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.mockito.Mockito;
 
 /**
@@ -86,8 +85,9 @@ public class HConnectionTestingUtility {
    * @return Mock up a connection that returns a {@link Configuration} when
    * {@link HConnection#getConfiguration()} is called, a 'location' when
    * {@link HConnection#getRegionLocation(byte[], byte[], boolean)} is called,
-   * and that returns the passed {@link HRegionInterface} instance when
-   * {@link HConnection#getHRegionConnection(String, int)}
+   * and that returns the passed {@link AdminProtocol} instance when
+   * {@link HConnection#getAdmin(String, int)} is called, returns the passed
+   * {@link ClientProtocol} instance when {@link HConnection#getClient(String, int)}
    * is called (Be sure call
    * {@link HConnectionManager#deleteConnection(org.apache.hadoop.conf.Configuration, boolean)}
    * when done with this mocked Connection.

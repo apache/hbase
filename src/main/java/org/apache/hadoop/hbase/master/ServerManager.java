@@ -38,8 +38,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
@@ -54,6 +57,8 @@ import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
+
+import com.google.protobuf.ServiceException;
 
 /**
  * The ServerManager class manages info about region servers.
@@ -484,7 +489,14 @@ public class ServerManager {
         " failed because no RPC connection found to this server");
       return RegionOpeningState.FAILED_OPENING;
     }
-    return ProtobufUtil.openRegion(admin, region, versionOfOfflineNode);
+    OpenRegionRequest request =
+      RequestConverter.buildOpenRegionRequest(region, versionOfOfflineNode);
+    try {
+      OpenRegionResponse response = admin.openRegion(null, request);
+      return ResponseConverter.getRegionOpeningState(response);
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
   }
 
   /**

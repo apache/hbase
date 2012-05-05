@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
@@ -451,7 +452,7 @@ public class TestRegionObserverInterface {
                                   Object value[]) throws IOException {
     try {
       for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
-        for (HRegionInfo r : t.getRegionServer().getOnlineRegions()) {
+        for (HRegionInfo r : ProtobufUtil.getOnlineRegions(t.getRegionServer())) {
           if (!Arrays.equals(r.getTableName(), tableName)) {
             continue;
           }

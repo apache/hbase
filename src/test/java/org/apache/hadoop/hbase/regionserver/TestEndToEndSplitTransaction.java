@@ -30,12 +30,17 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.protobuf.ServiceException;
 
 @Category(LargeTests.class)
 public class TestEndToEndSplitTransaction {
@@ -119,8 +124,14 @@ public class TestEndToEndSplitTransaction {
       byte[] regionName = con.relocateRegion(tableName, row).getRegionInfo()
           .getRegionName();
       // get and scan should now succeed without exception
-      server.get(regionName, new Get(row));
-      server.openScanner(regionName, new Scan(row));
+      ProtobufUtil.get(server, regionName, new Get(row));
+      ScanRequest scanRequest = RequestConverter.buildScanRequest(
+        regionName, new Scan(row), 1, true);
+      try {
+        server.scan(null, scanRequest);
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      }
     } catch (IOException x) {
       return false;
     }

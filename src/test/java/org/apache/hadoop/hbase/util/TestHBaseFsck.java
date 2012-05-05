@@ -916,7 +916,7 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseAdmin().disableTable(table);
       HRegionInfo region = disabledRegions.remove(0);
       ZKAssign.createNodeOffline(zkw, region, serverName);
-      hrs.openRegion(region);
+      ProtobufUtil.openRegion(hrs, region);
 
       int iTimes = 0;
       while (true) {

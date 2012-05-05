@@ -102,13 +102,15 @@ public final class ZooKeeperProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -573,13 +575,15 @@ public final class ZooKeeperProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -988,12 +992,12 @@ public final class ZooKeeperProtos {
     private int bitField0_;
     // required string clusterId = 1;
     public static final int CLUSTERID_FIELD_NUMBER = 1;
-    private Object clusterId_;
+    private java.lang.Object clusterId_;
     public boolean hasClusterId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     public String getClusterId() {
-      Object ref = clusterId_;
+      java.lang.Object ref = clusterId_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -1007,7 +1011,7 @@ public final class ZooKeeperProtos {
       }
     }
     private com.google.protobuf.ByteString getClusterIdBytes() {
-      Object ref = clusterId_;
+      java.lang.Object ref = clusterId_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -1058,13 +1062,15 @@ public final class ZooKeeperProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -1318,12 +1324,12 @@ public final class ZooKeeperProtos {
       private int bitField0_;
       
       // required string clusterId = 1;
-      private Object clusterId_ = "";
+      private java.lang.Object clusterId_ = "";
       public boolean hasClusterId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       public String getClusterId() {
-        Object ref = clusterId_;
+        java.lang.Object ref = clusterId_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           clusterId_ = s;
@@ -1402,12 +1408,12 @@ public final class ZooKeeperProtos {
     private int bitField0_;
     // required string startDate = 1;
     public static final int STARTDATE_FIELD_NUMBER = 1;
-    private Object startDate_;
+    private java.lang.Object startDate_;
     public boolean hasStartDate() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     public String getStartDate() {
-      Object ref = startDate_;
+      java.lang.Object ref = startDate_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -1421,7 +1427,7 @@ public final class ZooKeeperProtos {
       }
     }
     private com.google.protobuf.ByteString getStartDateBytes() {
-      Object ref = startDate_;
+      java.lang.Object ref = startDate_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -1472,13 +1478,15 @@ public final class ZooKeeperProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -1732,12 +1740,12 @@ public final class ZooKeeperProtos {
       private int bitField0_;
       
       // required string startDate = 1;
-      private Object startDate_ = "";
+      private java.lang.Object startDate_ = "";
       public boolean hasStartDate() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       public String getStartDate() {
-        Object ref = startDate_;
+        java.lang.Object ref = startDate_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           startDate_ = s;

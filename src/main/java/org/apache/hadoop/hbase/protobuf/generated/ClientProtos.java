@@ -126,13 +126,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -799,13 +801,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -2066,13 +2070,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -2558,13 +2564,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -3265,13 +3273,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -3960,13 +3970,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -4963,13 +4975,15 @@ public final class ClientProtos {
           return size;
         }
         
+        private static final long serialVersionUID = 0L;
         @java.lang.Override
-        protected Object writeReplace() throws java.io.ObjectStreamException {
+        protected java.lang.Object writeReplace()
+            throws java.io.ObjectStreamException {
           return super.writeReplace();
         }
         
         @java.lang.Override
-        public boolean equals(final Object obj) {
+        public boolean equals(final java.lang.Object obj) {
           if (obj == this) {
            return true;
           }
@@ -5477,13 +5491,15 @@ public final class ClientProtos {
         return size;
       }
       
+      private static final long serialVersionUID = 0L;
       @java.lang.Override
-      protected Object writeReplace() throws java.io.ObjectStreamException {
+      protected java.lang.Object writeReplace()
+          throws java.io.ObjectStreamException {
         return super.writeReplace();
       }
       
       @java.lang.Override
-      public boolean equals(final Object obj) {
+      public boolean equals(final java.lang.Object obj) {
         if (obj == this) {
          return true;
         }
@@ -6229,13 +6245,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -7490,13 +7508,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -8241,13 +8261,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -8994,13 +9016,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -10447,13 +10471,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -11251,13 +11277,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -11992,13 +12020,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -12556,13 +12586,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -13011,13 +13043,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -13495,13 +13529,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -13832,12 +13868,12 @@ public final class ClientProtos {
       
       // required string path = 2;
       public static final int PATH_FIELD_NUMBER = 2;
-      private Object path_;
+      private java.lang.Object path_;
       public boolean hasPath() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public String getPath() {
-        Object ref = path_;
+        java.lang.Object ref = path_;
         if (ref instanceof String) {
           return (String) ref;
         } else {
@@ -13851,7 +13887,7 @@ public final class ClientProtos {
         }
       }
       private com.google.protobuf.ByteString getPathBytes() {
-        Object ref = path_;
+        java.lang.Object ref = path_;
         if (ref instanceof String) {
           com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -13914,13 +13950,15 @@ public final class ClientProtos {
         return size;
       }
       
+      private static final long serialVersionUID = 0L;
       @java.lang.Override
-      protected Object writeReplace() throws java.io.ObjectStreamException {
+      protected java.lang.Object writeReplace()
+          throws java.io.ObjectStreamException {
         return super.writeReplace();
       }
       
       @java.lang.Override
-      public boolean equals(final Object obj) {
+      public boolean equals(final java.lang.Object obj) {
         if (obj == this) {
          return true;
         }
@@ -14225,12 +14263,12 @@ public final class ClientProtos {
         }
         
         // required string path = 2;
-        private Object path_ = "";
+        private java.lang.Object path_ = "";
         public boolean hasPath() {
           return ((bitField0_ & 0x00000002) == 0x00000002);
         }
         public String getPath() {
-          Object ref = path_;
+          java.lang.Object ref = path_;
           if (!(ref instanceof String)) {
             String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
             path_ = s;
@@ -14364,13 +14402,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -15073,13 +15113,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -15440,12 +15482,12 @@ public final class ClientProtos {
     
     // required string protocolName = 2;
     public static final int PROTOCOLNAME_FIELD_NUMBER = 2;
-    private Object protocolName_;
+    private java.lang.Object protocolName_;
     public boolean hasProtocolName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     public String getProtocolName() {
-      Object ref = protocolName_;
+      java.lang.Object ref = protocolName_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -15459,7 +15501,7 @@ public final class ClientProtos {
       }
     }
     private com.google.protobuf.ByteString getProtocolNameBytes() {
-      Object ref = protocolName_;
+      java.lang.Object ref = protocolName_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -15472,12 +15514,12 @@ public final class ClientProtos {
     
     // required string methodName = 3;
     public static final int METHODNAME_FIELD_NUMBER = 3;
-    private Object methodName_;
+    private java.lang.Object methodName_;
     public boolean hasMethodName() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     public String getMethodName() {
-      Object ref = methodName_;
+      java.lang.Object ref = methodName_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -15491,7 +15533,7 @@ public final class ClientProtos {
       }
     }
     private com.google.protobuf.ByteString getMethodNameBytes() {
-      Object ref = methodName_;
+      java.lang.Object ref = methodName_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -15636,13 +15678,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -16094,12 +16138,12 @@ public final class ClientProtos {
       }
       
       // required string protocolName = 2;
-      private Object protocolName_ = "";
+      private java.lang.Object protocolName_ = "";
       public boolean hasProtocolName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public String getProtocolName() {
-        Object ref = protocolName_;
+        java.lang.Object ref = protocolName_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           protocolName_ = s;
@@ -16130,12 +16174,12 @@ public final class ClientProtos {
       }
       
       // required string methodName = 3;
-      private Object methodName_ = "";
+      private java.lang.Object methodName_ = "";
       public boolean hasMethodName() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       public String getMethodName() {
-        Object ref = methodName_;
+        java.lang.Object ref = methodName_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           methodName_ = s;
@@ -16676,13 +16720,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -17281,13 +17327,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -17814,13 +17862,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -18577,13 +18627,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -19245,13 +19297,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -20016,13 +20070,15 @@ public final class ClientProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }

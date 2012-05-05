@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -311,7 +312,7 @@ public class TestMasterFailover {
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     ZKAssign.createNodeOffline(zkw, region, serverName);
-    hrs.openRegion(region);
+    ProtobufUtil.openRegion(hrs, region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -325,7 +326,7 @@ public class TestMasterFailover {
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
     ZKAssign.createNodeOffline(zkw, region, serverName);
-    hrs.openRegion(region);
+    ProtobufUtil.openRegion(hrs, region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -361,7 +362,7 @@ public class TestMasterFailover {
     Set<HRegionInfo> onlineRegions = new TreeSet<HRegionInfo>();
     for (JVMClusterUtil.RegionServerThread rst :
       cluster.getRegionServerThreads()) {
-      onlineRegions.addAll(rst.getRegionServer().getOnlineRegions());
+      onlineRegions.addAll(ProtobufUtil.getOnlineRegions(rst.getRegionServer()));
     }
 
     // Now, everything that should be online should be online
@@ -671,7 +672,7 @@ public class TestMasterFailover {
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
-    hrsDead.openRegion(region);
+    ProtobufUtil.openRegion(hrsDead, region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -687,7 +688,7 @@ public class TestMasterFailover {
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
-    hrsDead.openRegion(region);
+    ProtobufUtil.openRegion(hrsDead, region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -707,7 +708,7 @@ public class TestMasterFailover {
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
-    hrsDead.openRegion(region);
+    ProtobufUtil.openRegion(hrsDead, region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -725,7 +726,7 @@ public class TestMasterFailover {
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
     ZKAssign.createNodeOffline(zkw, region, deadServerName);
-    hrsDead.openRegion(region);
+    ProtobufUtil.openRegion(hrsDead, region);
     while (true) {
       byte [] bytes = ZKAssign.getData(zkw, region.getEncodedName());
       RegionTransition rt = RegionTransition.parseFrom(bytes);
@@ -819,7 +820,7 @@ public class TestMasterFailover {
     for (JVMClusterUtil.RegionServerThread rst :
         cluster.getRegionServerThreads()) {
       try {
-        onlineRegions.addAll(rst.getRegionServer().getOnlineRegions());
+        onlineRegions.addAll(ProtobufUtil.getOnlineRegions(rst.getRegionServer()));
       } catch (org.apache.hadoop.hbase.regionserver.RegionServerStoppedException e) {
         LOG.info("Got RegionServerStoppedException", e);
       }

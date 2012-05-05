@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
@@ -122,7 +123,7 @@ public class TestSplitTransactionOnCluster {
       // Get region pre-split.
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
-      int regionCount = server.getOnlineRegions().size();
+      int regionCount = ProtobufUtil.getOnlineRegions(server).size();
       // Now, before we split, set special flag in master, a flag that has
       // it FAIL the processing of split.
       SplitRegionHandler.TEST_SKIP = true;
@@ -192,7 +193,7 @@ public class TestSplitTransactionOnCluster {
       // Get region pre-split.
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
-      int regionCount = server.getOnlineRegions().size();
+      int regionCount = ProtobufUtil.getOnlineRegions(server).size();
       // Insert into zk a blocking znode, a znode of same name as region
       // so it gets in way of our splitting.
       ZKAssign.createNodeClosing(TESTING_UTIL.getZooKeeperWatcher(),
@@ -205,7 +206,7 @@ public class TestSplitTransactionOnCluster {
       // Wait around a while and assert count of regions remains constant.
       for (int i = 0; i < 10; i++) {
         Thread.sleep(100);
-        assertEquals(regionCount, server.getOnlineRegions().size());
+        assertEquals(regionCount, ProtobufUtil.getOnlineRegions(server).size());
       }
       // Now clear the zknode
       ZKAssign.deleteClosingNode(TESTING_UTIL.getZooKeeperWatcher(), hri);
@@ -251,7 +252,7 @@ public class TestSplitTransactionOnCluster {
       // Get region pre-split.
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
-      int regionCount = server.getOnlineRegions().size();
+      int regionCount = ProtobufUtil.getOnlineRegions(server).size();
       // Now split.
       split(hri, server, regionCount);
       // Get daughters
@@ -308,14 +309,14 @@ public class TestSplitTransactionOnCluster {
       // Get region pre-split.
       HRegionServer server = cluster.getRegionServer(tableRegionIndex);
       printOutRegions(server, "Initial regions: ");
-      int regionCount = server.getOnlineRegions().size();
+      int regionCount = ProtobufUtil.getOnlineRegions(server).size();
       // Now split.
       split(hri, server, regionCount);
       // Get daughters
       List<HRegion> daughters = cluster.getRegions(tableName);
       assertTrue(daughters.size() >= 2);
       // Now split one of the daughters.
-      regionCount = server.getOnlineRegions().size();
+      regionCount = ProtobufUtil.getOnlineRegions(server).size();
       HRegionInfo daughter = daughters.get(0).getRegionInfo();
       // Compact first to ensure we have cleaned up references -- else the split
       // will fail.
@@ -358,7 +359,7 @@ public class TestSplitTransactionOnCluster {
       final int regionCount)
   throws IOException, InterruptedException {
     this.admin.split(hri.getRegionNameAsString());
-    while (server.getOnlineRegions().size() <= regionCount) {
+    while (ProtobufUtil.getOnlineRegions(server).size() <= regionCount) {
       LOG.debug("Waiting on region to split");
       Thread.sleep(100);
     }
@@ -444,7 +445,7 @@ public class TestSplitTransactionOnCluster {
 
   private void printOutRegions(final HRegionServer hrs, final String prefix)
       throws IOException {
-    List<HRegionInfo> regions = hrs.getOnlineRegions();
+    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs);
     for (HRegionInfo region: regions) {
       LOG.info(prefix + region.getRegionNameAsString());
     }

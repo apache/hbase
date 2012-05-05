@@ -25,11 +25,13 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.tmpl.regionserver.RSStatusTmpl;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -41,6 +43,8 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 /**
  * Tests for the region server status page and its template.
@@ -52,24 +56,22 @@ public class TestRSStatusServlet {
   static final int FAKE_IPC_PORT = 1585;
   static final int FAKE_WEB_PORT = 1586;
   
-  @SuppressWarnings("deprecation")
-  private final HServerAddress fakeAddress =
-    new HServerAddress("localhost", FAKE_IPC_PORT);
-  @SuppressWarnings("deprecation")
-  private final HServerInfo fakeInfo =
-    new HServerInfo(fakeAddress, FAKE_WEB_PORT);
+  private final ServerName fakeServerName =
+    new ServerName("localhost", FAKE_IPC_PORT, 11111);
+  private final GetServerInfoResponse fakeResponse =
+    ResponseConverter.buildGetServerInfoResponse(fakeServerName, FAKE_WEB_PORT);
   private final RegionServerMetrics metrics =
     new RegionServerMetrics();
   private final ServerName fakeMasterAddress =
     new ServerName("localhost", 60010, 1212121212);
-  
-  @SuppressWarnings("deprecation")
+
   @Before
-  public void setupBasicMocks() throws IOException {
+  public void setupBasicMocks() throws IOException, ServiceException {
     rs = Mockito.mock(HRegionServer.class);
     Mockito.doReturn(HBaseConfiguration.create())
       .when(rs).getConfiguration();
-    Mockito.doReturn(fakeInfo).when(rs).getHServerInfo();
+    Mockito.doReturn(fakeResponse).when(rs).getServerInfo(
+      (RpcController)Mockito.any(), (GetServerInfoRequest)Mockito.any());
     Mockito.doReturn(metrics).when(rs).getMetrics();
 
     // Fake ZKW
@@ -84,18 +86,20 @@ public class TestRSStatusServlet {
   }
   
   @Test
-  public void testBasic() throws IOException {
+  public void testBasic() throws IOException, ServiceException {
     new RSStatusTmpl().render(new StringWriter(), rs);
   }
   
   @Test
-  public void testWithRegions() throws IOException {
+  public void testWithRegions() throws IOException, ServiceException {
     HTableDescriptor htd = new HTableDescriptor("mytable");
     List<HRegionInfo> regions = Lists.newArrayList(
         new HRegionInfo(htd.getName(), Bytes.toBytes("a"), Bytes.toBytes("d")),
         new HRegionInfo(htd.getName(), Bytes.toBytes("d"), Bytes.toBytes("z"))
         );
-    Mockito.doReturn(regions).when(rs).getOnlineRegions();
+    Mockito.doReturn(ResponseConverter.buildGetOnlineRegionResponse(
+      regions)).when(rs).getOnlineRegion((RpcController)Mockito.any(),
+        (GetOnlineRegionRequest)Mockito.any());
     
     new RSStatusTmpl().render(new StringWriter(), rs);
   }

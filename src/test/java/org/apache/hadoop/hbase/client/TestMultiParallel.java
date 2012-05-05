@@ -28,6 +28,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
@@ -260,7 +261,7 @@ public class TestMultiParallel {
     Assert.assertEquals("Server count=" + count + ", abort=" + doAbort,
       (doAbort ? 1 : 2), count);
     for (JVMClusterUtil.RegionServerThread t: liveRSs) {
-      int regions = t.getRegionServer().getOnlineRegions().size();
+      int regions = ProtobufUtil.getOnlineRegions(t.getRegionServer()).size();
       Assert.assertTrue("Count of regions=" + regions, regions > 10);
     }
     table.close();

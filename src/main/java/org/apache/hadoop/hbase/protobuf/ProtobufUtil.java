@@ -77,8 +77,9 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UUID;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.WALEdit.FamilyScope;
@@ -102,7 +103,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
-import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -1287,19 +1287,16 @@ public final class ProtobufUtil {
    *
    * @param admin
    * @param region
-   * @param versionOfOfflineNode
-   * @return the region opening state
    * @throws IOException
    */
-  public static RegionOpeningState openRegion(final AdminProtocol admin,
-      final HRegionInfo region, final int versionOfOfflineNode) throws IOException {
+  public static void openRegion(final AdminProtocol admin,
+      final HRegionInfo region) throws IOException {
     OpenRegionRequest request =
-      RequestConverter.buildOpenRegionRequest(region, versionOfOfflineNode);
+      RequestConverter.buildOpenRegionRequest(region, -1);
     try {
-      OpenRegionResponse response = admin.openRegion(null, request);
-      return ResponseConverter.getRegionOpeningState(response);
+      admin.openRegion(null, request);
     } catch (ServiceException se) {
-      throw getRemoteException(se);
+      throw ProtobufUtil.getRemoteException(se);
     }
   }
 
@@ -1337,8 +1334,10 @@ public final class ProtobufUtil {
       GetOnlineRegionResponse response =
         admin.getOnlineRegion(null, request);
       regions = new ArrayList<HRegionInfo>();
-      for (RegionInfo regionInfo: response.getRegionInfoList()) {
-        regions.add(toRegionInfo(regionInfo));
+      if (response != null) { // it can be null only mockup testing region sever
+        for (RegionInfo regionInfo: response.getRegionInfoList()) {
+          regions.add(toRegionInfo(regionInfo));
+        }
       }
       return regions;
     } catch (ServiceException se) {
@@ -1353,12 +1352,12 @@ public final class ProtobufUtil {
    * @return the server name
    * @throws IOException
    */
-  public static ServerName getServerInfo(
+  public static ServerInfo getServerInfo(
       final AdminProtocol admin) throws IOException {
     GetServerInfoRequest request = RequestConverter.buildGetServerInfoRequest();
     try {
       GetServerInfoResponse response = admin.getServerInfo(null, request);
-      return toServerName(response.getServerName());
+      return response.getServerInfo();
     } catch (ServiceException se) {
       throw getRemoteException(se);
     }
@@ -1404,6 +1403,27 @@ public final class ProtobufUtil {
     }
   }
 
+  /**
+   * A helper to split a region using admin protocol.
+   *
+   * @param admin
+   * @param hri
+   * @param splitPoint
+   * @throws IOException
+   */
+  public static void split(final AdminProtocol admin,
+      final HRegionInfo hri, byte[] splitPoint) throws IOException {
+    SplitRegionRequest request =
+      RequestConverter.buildSplitRegionRequest(hri.getRegionName(), splitPoint);
+    try {
+      admin.splitRegion(null, request);
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
+  }
+
+// End helpers for Admin
+
   /*
    * Get the total (read + write) requests from a RegionLoad pb
    * @param rl - RegionLoad pb
@@ -1416,6 +1436,4 @@ public final class ProtobufUtil {
 
     return rl.getReadRequestsCount() + rl.getWriteRequestsCount();
   }
-
-// End helpers for Admin
 }

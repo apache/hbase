@@ -174,7 +174,6 @@ message ReplicateWALEntryRequest {
 message ReplicateWALEntryResponse {
 }
 
-// Replacement for rollHLogWriter in HRegionInterface 
 message RollWALWriterRequest {
 }
 
@@ -193,8 +192,13 @@ message StopServerResponse {
 message GetServerInfoRequest {
 }
 
-message GetServerInfoResponse {
+message ServerInfo {
   required ServerName serverName = 1;
+  optional uint32 webuiPort = 2;
+}
+
+message GetServerInfoResponse {
+  required ServerInfo serverInfo = 1;
 }
 
 service AdminService {

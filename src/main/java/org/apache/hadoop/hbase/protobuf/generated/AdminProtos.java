@@ -102,13 +102,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -573,13 +575,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -1076,13 +1080,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -1623,13 +1629,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -2008,13 +2016,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -2351,13 +2361,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -2965,13 +2977,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -3660,13 +3674,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -4138,13 +4154,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -4689,13 +4707,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -5096,13 +5116,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -5625,13 +5647,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -6076,13 +6100,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -6559,13 +6585,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -6914,13 +6942,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -7394,13 +7424,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -7745,13 +7777,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -8321,13 +8355,15 @@ public final class AdminProtos {
         return size;
       }
       
+      private static final long serialVersionUID = 0L;
       @java.lang.Override
-      protected Object writeReplace() throws java.io.ObjectStreamException {
+      protected java.lang.Object writeReplace()
+          throws java.io.ObjectStreamException {
         return super.writeReplace();
       }
       
       @java.lang.Override
-      public boolean equals(final Object obj) {
+      public boolean equals(final java.lang.Object obj) {
         if (obj == this) {
          return true;
         }
@@ -9121,13 +9157,15 @@ public final class AdminProtos {
           return size;
         }
         
+        private static final long serialVersionUID = 0L;
         @java.lang.Override
-        protected Object writeReplace() throws java.io.ObjectStreamException {
+        protected java.lang.Object writeReplace()
+            throws java.io.ObjectStreamException {
           return super.writeReplace();
         }
         
         @java.lang.Override
-        public boolean equals(final Object obj) {
+        public boolean equals(final java.lang.Object obj) {
           if (obj == this) {
            return true;
           }
@@ -9562,13 +9600,15 @@ public final class AdminProtos {
         return size;
       }
       
+      private static final long serialVersionUID = 0L;
       @java.lang.Override
-      protected Object writeReplace() throws java.io.ObjectStreamException {
+      protected java.lang.Object writeReplace()
+          throws java.io.ObjectStreamException {
         return super.writeReplace();
       }
       
       @java.lang.Override
-      public boolean equals(final Object obj) {
+      public boolean equals(final java.lang.Object obj) {
         if (obj == this) {
          return true;
         }
@@ -10215,13 +10255,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -10830,13 +10872,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -11376,13 +11420,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -11674,13 +11720,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -12004,13 +12052,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -12362,12 +12412,12 @@ public final class AdminProtos {
     private int bitField0_;
     // required string reason = 1;
     public static final int REASON_FIELD_NUMBER = 1;
-    private Object reason_;
+    private java.lang.Object reason_;
     public boolean hasReason() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     public String getReason() {
-      Object ref = reason_;
+      java.lang.Object ref = reason_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -12381,7 +12431,7 @@ public final class AdminProtos {
       }
     }
     private com.google.protobuf.ByteString getReasonBytes() {
-      Object ref = reason_;
+      java.lang.Object ref = reason_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
@@ -12432,13 +12482,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -12692,12 +12744,12 @@ public final class AdminProtos {
       private int bitField0_;
       
       // required string reason = 1;
-      private Object reason_ = "";
+      private java.lang.Object reason_ = "";
       public boolean hasReason() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       public String getReason() {
-        Object ref = reason_;
+        java.lang.Object ref = reason_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
           reason_ = s;
@@ -12797,13 +12849,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -13095,13 +13149,15 @@ public final class AdminProtos {
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -13334,13 +13390,552 @@ public final class AdminProtos {
     // @@protoc_insertion_point(class_scope:GetServerInfoRequest)
   }
   
-  public interface GetServerInfoResponseOrBuilder
+  public interface ServerInfoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
     // required .ServerName serverName = 1;
     boolean hasServerName();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder();
+    
+    // optional uint32 webuiPort = 2;
+    boolean hasWebuiPort();
+    int getWebuiPort();
+  }
+  public static final class ServerInfo extends
+      com.google.protobuf.GeneratedMessage
+      implements ServerInfoOrBuilder {
+    // Use ServerInfo.newBuilder() to construct.
+    private ServerInfo(Builder builder) {
+      super(builder);
+    }
+    private ServerInfo(boolean noInit) {}
+    
+    private static final ServerInfo defaultInstance;
+    public static ServerInfo getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public ServerInfo getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_ServerInfo_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_ServerInfo_fieldAccessorTable;
+    }
+    
+    private int bitField0_;
+    // required .ServerName serverName = 1;
+    public static final int SERVERNAME_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_;
+    public boolean hasServerName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName() {
+      return serverName_;
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder() {
+      return serverName_;
+    }
+    
+    // optional uint32 webuiPort = 2;
+    public static final int WEBUIPORT_FIELD_NUMBER = 2;
+    private int webuiPort_;
+    public boolean hasWebuiPort() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public int getWebuiPort() {
+      return webuiPort_;
+    }
+    
+    private void initFields() {
+      serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      webuiPort_ = 0;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      if (!hasServerName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getServerName().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeMessage(1, serverName_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt32(2, webuiPort_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, serverName_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(2, webuiPort_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo other = (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo) obj;
+      
+      boolean result = true;
+      result = result && (hasServerName() == other.hasServerName());
+      if (hasServerName()) {
+        result = result && getServerName()
+            .equals(other.getServerName());
+      }
+      result = result && (hasWebuiPort() == other.hasWebuiPort());
+      if (hasWebuiPort()) {
+        result = result && (getWebuiPort()
+            == other.getWebuiPort());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+    
+    @java.lang.Override
+    public int hashCode() {
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasServerName()) {
+        hash = (37 * hash) + SERVERNAME_FIELD_NUMBER;
+        hash = (53 * hash) + getServerName().hashCode();
+      }
+      if (hasWebuiPort()) {
+        hash = (37 * hash) + WEBUIPORT_FIELD_NUMBER;
+        hash = (53 * hash) + getWebuiPort();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      return hash;
+    }
+    
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfoOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_ServerInfo_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_ServerInfo_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getServerNameFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        if (serverNameBuilder_ == null) {
+          serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+        } else {
+          serverNameBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        webuiPort_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.getDescriptor();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.getDefaultInstance();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo build() {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo result = new org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        if (serverNameBuilder_ == null) {
+          result.serverName_ = serverName_;
+        } else {
+          result.serverName_ = serverNameBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.webuiPort_ = webuiPort_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.getDefaultInstance()) return this;
+        if (other.hasServerName()) {
+          mergeServerName(other.getServerName());
+        }
+        if (other.hasWebuiPort()) {
+          setWebuiPort(other.getWebuiPort());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        if (!hasServerName()) {
+          
+          return false;
+        }
+        if (!getServerName().isInitialized()) {
+          
+          return false;
+        }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder();
+              if (hasServerName()) {
+                subBuilder.mergeFrom(getServerName());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setServerName(subBuilder.buildPartial());
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              webuiPort_ = input.readUInt32();
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // required .ServerName serverName = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverNameBuilder_;
+      public boolean hasServerName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName() {
+        if (serverNameBuilder_ == null) {
+          return serverName_;
+        } else {
+          return serverNameBuilder_.getMessage();
+        }
+      }
+      public Builder setServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
+        if (serverNameBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          serverName_ = value;
+          onChanged();
+        } else {
+          serverNameBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      public Builder setServerName(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
+        if (serverNameBuilder_ == null) {
+          serverName_ = builderForValue.build();
+          onChanged();
+        } else {
+          serverNameBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      public Builder mergeServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
+        if (serverNameBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+              serverName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance()) {
+            serverName_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder(serverName_).mergeFrom(value).buildPartial();
+          } else {
+            serverName_ = value;
+          }
+          onChanged();
+        } else {
+          serverNameBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      public Builder clearServerName() {
+        if (serverNameBuilder_ == null) {
+          serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+          onChanged();
+        } else {
+          serverNameBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getServerNameBuilder() {
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return getServerNameFieldBuilder().getBuilder();
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder() {
+        if (serverNameBuilder_ != null) {
+          return serverNameBuilder_.getMessageOrBuilder();
+        } else {
+          return serverName_;
+        }
+      }
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+          getServerNameFieldBuilder() {
+        if (serverNameBuilder_ == null) {
+          serverNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder>(
+                  serverName_,
+                  getParentForChildren(),
+                  isClean());
+          serverName_ = null;
+        }
+        return serverNameBuilder_;
+      }
+      
+      // optional uint32 webuiPort = 2;
+      private int webuiPort_ ;
+      public boolean hasWebuiPort() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public int getWebuiPort() {
+        return webuiPort_;
+      }
+      public Builder setWebuiPort(int value) {
+        bitField0_ |= 0x00000002;
+        webuiPort_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearWebuiPort() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        webuiPort_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:ServerInfo)
+    }
+    
+    static {
+      defaultInstance = new ServerInfo(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:ServerInfo)
+  }
+  
+  public interface GetServerInfoResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // required .ServerInfo serverInfo = 1;
+    boolean hasServerInfo();
+    org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo getServerInfo();
+    org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfoOrBuilder getServerInfoOrBuilder();
   }
   public static final class GetServerInfoResponse extends
       com.google.protobuf.GeneratedMessage
@@ -13371,32 +13966,32 @@ public final class AdminProtos {
     }
     
     private int bitField0_;
-    // required .ServerName serverName = 1;
-    public static final int SERVERNAME_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_;
-    public boolean hasServerName() {
+    // required .ServerInfo serverInfo = 1;
+    public static final int SERVERINFO_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo serverInfo_;
+    public boolean hasServerInfo() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName() {
-      return serverName_;
+    public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo getServerInfo() {
+      return serverInfo_;
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder() {
-      return serverName_;
+    public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfoOrBuilder getServerInfoOrBuilder() {
+      return serverInfo_;
     }
     
     private void initFields() {
-      serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      serverInfo_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      if (!hasServerName()) {
+      if (!hasServerInfo()) {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (!getServerName().isInitialized()) {
+      if (!getServerInfo().isInitialized()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -13408,7 +14003,7 @@ public final class AdminProtos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(1, serverName_);
+        output.writeMessage(1, serverInfo_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -13421,20 +14016,22 @@ public final class AdminProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, serverName_);
+          .computeMessageSize(1, serverInfo_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
     
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
-    protected Object writeReplace() throws java.io.ObjectStreamException {
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
     
     @java.lang.Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
        return true;
       }
@@ -13444,10 +14041,10 @@ public final class AdminProtos {
       org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse other = (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse) obj;
       
       boolean result = true;
-      result = result && (hasServerName() == other.hasServerName());
-      if (hasServerName()) {
-        result = result && getServerName()
-            .equals(other.getServerName());
+      result = result && (hasServerInfo() == other.hasServerInfo());
+      if (hasServerInfo()) {
+        result = result && getServerInfo()
+            .equals(other.getServerInfo());
       }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
@@ -13458,9 +14055,9 @@ public final class AdminProtos {
     public int hashCode() {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasServerName()) {
-        hash = (37 * hash) + SERVERNAME_FIELD_NUMBER;
-        hash = (53 * hash) + getServerName().hashCode();
+      if (hasServerInfo()) {
+        hash = (37 * hash) + SERVERINFO_FIELD_NUMBER;
+        hash = (53 * hash) + getServerInfo().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -13570,7 +14167,7 @@ public final class AdminProtos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getServerNameFieldBuilder();
+          getServerInfoFieldBuilder();
         }
       }
       private static Builder create() {
@@ -13579,10 +14176,10 @@ public final class AdminProtos {
       
       public Builder clear() {
         super.clear();
-        if (serverNameBuilder_ == null) {
-          serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+        if (serverInfoBuilder_ == null) {
+          serverInfo_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.getDefaultInstance();
         } else {
-          serverNameBuilder_.clear();
+          serverInfoBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
@@ -13626,10 +14223,10 @@ public final class AdminProtos {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        if (serverNameBuilder_ == null) {
-          result.serverName_ = serverName_;
+        if (serverInfoBuilder_ == null) {
+          result.serverInfo_ = serverInfo_;
         } else {
-          result.serverName_ = serverNameBuilder_.build();
+          result.serverInfo_ = serverInfoBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -13647,19 +14244,19 @@ public final class AdminProtos {
       
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse.getDefaultInstance()) return this;
-        if (other.hasServerName()) {
-          mergeServerName(other.getServerName());
+        if (other.hasServerInfo()) {
+          mergeServerInfo(other.getServerInfo());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
       
       public final boolean isInitialized() {
-        if (!hasServerName()) {
+        if (!hasServerInfo()) {
           
           return false;
         }
-        if (!getServerName().isInitialized()) {
+        if (!getServerInfo().isInitialized()) {
           
           return false;
         }
@@ -13690,12 +14287,12 @@ public final class AdminProtos {
               break;
             }
             case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder();
-              if (hasServerName()) {
-                subBuilder.mergeFrom(getServerName());
+              org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.newBuilder();
+              if (hasServerInfo()) {
+                subBuilder.mergeFrom(getServerInfo());
               }
               input.readMessage(subBuilder, extensionRegistry);
-              setServerName(subBuilder.buildPartial());
+              setServerInfo(subBuilder.buildPartial());
               break;
             }
           }
@@ -13704,94 +14301,94 @@ public final class AdminProtos {
       
       private int bitField0_;
       
-      // required .ServerName serverName = 1;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      // required .ServerInfo serverInfo = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo serverInfo_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverNameBuilder_;
-      public boolean hasServerName() {
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfoOrBuilder> serverInfoBuilder_;
+      public boolean hasServerInfo() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName() {
-        if (serverNameBuilder_ == null) {
-          return serverName_;
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo getServerInfo() {
+        if (serverInfoBuilder_ == null) {
+          return serverInfo_;
         } else {
-          return serverNameBuilder_.getMessage();
+          return serverInfoBuilder_.getMessage();
         }
       }
-      public Builder setServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
-        if (serverNameBuilder_ == null) {
+      public Builder setServerInfo(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo value) {
+        if (serverInfoBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          serverName_ = value;
+          serverInfo_ = value;
           onChanged();
         } else {
-          serverNameBuilder_.setMessage(value);
+          serverInfoBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000001;
         return this;
       }
-      public Builder setServerName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
-        if (serverNameBuilder_ == null) {
-          serverName_ = builderForValue.build();
+      public Builder setServerInfo(
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.Builder builderForValue) {
+        if (serverInfoBuilder_ == null) {
+          serverInfo_ = builderForValue.build();
           onChanged();
         } else {
-          serverNameBuilder_.setMessage(builderForValue.build());
+          serverInfoBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000001;
         return this;
       }
-      public Builder mergeServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
-        if (serverNameBuilder_ == null) {
+      public Builder mergeServerInfo(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo value) {
+        if (serverInfoBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              serverName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance()) {
-            serverName_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder(serverName_).mergeFrom(value).buildPartial();
+              serverInfo_ != org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.getDefaultInstance()) {
+            serverInfo_ =
+              org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.newBuilder(serverInfo_).mergeFrom(value).buildPartial();
           } else {
-            serverName_ = value;
+            serverInfo_ = value;
           }
           onChanged();
         } else {
-          serverNameBuilder_.mergeFrom(value);
+          serverInfoBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000001;
         return this;
       }
-      public Builder clearServerName() {
-        if (serverNameBuilder_ == null) {
-          serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      public Builder clearServerInfo() {
+        if (serverInfoBuilder_ == null) {
+          serverInfo_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.getDefaultInstance();
           onChanged();
         } else {
-          serverNameBuilder_.clear();
+          serverInfoBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getServerNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.Builder getServerInfoBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
-        return getServerNameFieldBuilder().getBuilder();
+        return getServerInfoFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder() {
-        if (serverNameBuilder_ != null) {
-          return serverNameBuilder_.getMessageOrBuilder();
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfoOrBuilder getServerInfoOrBuilder() {
+        if (serverInfoBuilder_ != null) {
+          return serverInfoBuilder_.getMessageOrBuilder();
         } else {
-          return serverName_;
+          return serverInfo_;
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
-          getServerNameFieldBuilder() {
-        if (serverNameBuilder_ == null) {
-          serverNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder>(
-                  serverName_,
+          org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfoOrBuilder> 
+          getServerInfoFieldBuilder() {
+        if (serverInfoBuilder_ == null) {
+          serverInfoBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfoOrBuilder>(
+                  serverInfo_,
                   getParentForChildren(),
                   isClean());
-          serverName_ = null;
+          serverInfo_ = null;
         }
-        return serverNameBuilder_;
+        return serverInfoBuilder_;
       }
       
       // @@protoc_insertion_point(builder_scope:GetServerInfoResponse)
@@ -14882,6 +15479,11 @@ public final class AdminProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_GetServerInfoRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_ServerInfo_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_ServerInfo_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_GetServerInfoResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -14940,29 +15542,31 @@ public final class AdminProtos {
       "\n\025RollWALWriterResponse\022\025\n\rregionToFlush" +
       "\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006reason\030\001 " +
       "\002(\t\"\024\n\022StopServerResponse\"\026\n\024GetServerIn" +
-      "foRequest\"8\n\025GetServerInfoResponse\022\037\n\nse" +
-      "rverName\030\001 \002(\0132\013.ServerName2\371\005\n\014AdminSer" +
-      "vice\022>\n\rgetRegionInfo\022\025.GetRegionInfoReq" +
-      "uest\032\026.GetRegionInfoResponse\022;\n\014getStore" +
-      "File\022\024.GetStoreFileRequest\032\025.GetStoreFil",
-      "eResponse\022D\n\017getOnlineRegion\022\027.GetOnline" +
-      "RegionRequest\032\030.GetOnlineRegionResponse\022" +
-      "5\n\nopenRegion\022\022.OpenRegionRequest\032\023.Open" +
-      "RegionResponse\0228\n\013closeRegion\022\023.CloseReg" +
-      "ionRequest\032\024.CloseRegionResponse\0228\n\013flus" +
-      "hRegion\022\023.FlushRegionRequest\032\024.FlushRegi" +
-      "onResponse\0228\n\013splitRegion\022\023.SplitRegionR" +
-      "equest\032\024.SplitRegionResponse\022>\n\rcompactR" +
-      "egion\022\025.CompactRegionRequest\032\026.CompactRe" +
-      "gionResponse\022J\n\021replicateWALEntry\022\031.Repl",
-      "icateWALEntryRequest\032\032.ReplicateWALEntry" +
-      "Response\022>\n\rrollWALWriter\022\025.RollWALWrite" +
-      "rRequest\032\026.RollWALWriterResponse\022>\n\rgetS" +
-      "erverInfo\022\025.GetServerInfoRequest\032\026.GetSe" +
-      "rverInfoResponse\0225\n\nstopServer\022\022.StopSer" +
-      "verRequest\032\023.StopServerResponseBA\n*org.a" +
-      "pache.hadoop.hbase.protobuf.generatedB\013A" +
-      "dminProtosH\001\210\001\001\240\001\001"
+      "foRequest\"@\n\nServerInfo\022\037\n\nserverName\030\001 " +
+      "\002(\0132\013.ServerName\022\021\n\twebuiPort\030\002 \001(\r\"8\n\025G" +
+      "etServerInfoResponse\022\037\n\nserverInfo\030\001 \002(\013" +
+      "2\013.ServerInfo2\371\005\n\014AdminService\022>\n\rgetReg" +
+      "ionInfo\022\025.GetRegionInfoRequest\032\026.GetRegi",
+      "onInfoResponse\022;\n\014getStoreFile\022\024.GetStor" +
+      "eFileRequest\032\025.GetStoreFileResponse\022D\n\017g" +
+      "etOnlineRegion\022\027.GetOnlineRegionRequest\032" +
+      "\030.GetOnlineRegionResponse\0225\n\nopenRegion\022" +
+      "\022.OpenRegionRequest\032\023.OpenRegionResponse" +
+      "\0228\n\013closeRegion\022\023.CloseRegionRequest\032\024.C" +
+      "loseRegionResponse\0228\n\013flushRegion\022\023.Flus" +
+      "hRegionRequest\032\024.FlushRegionResponse\0228\n\013" +
+      "splitRegion\022\023.SplitRegionRequest\032\024.Split" +
+      "RegionResponse\022>\n\rcompactRegion\022\025.Compac",
+      "tRegionRequest\032\026.CompactRegionResponse\022J" +
+      "\n\021replicateWALEntry\022\031.ReplicateWALEntryR" +
+      "equest\032\032.ReplicateWALEntryResponse\022>\n\rro" +
+      "llWALWriter\022\025.RollWALWriterRequest\032\026.Rol" +
+      "lWALWriterResponse\022>\n\rgetServerInfo\022\025.Ge" +
+      "tServerInfoRequest\032\026.GetServerInfoRespon" +
+      "se\0225\n\nstopServer\022\022.StopServerRequest\032\023.S" +
+      "topServerResponseBA\n*org.apache.hadoop.h" +
+      "base.protobuf.generatedB\013AdminProtosH\001\210\001" +
+      "\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -15193,12 +15797,20 @@ public final class AdminProtos {
               new java.lang.String[] { },
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest.Builder.class);
-          internal_static_GetServerInfoResponse_descriptor =
+          internal_static_ServerInfo_descriptor =
             getDescriptor().getMessageTypes().get(25);
+          internal_static_ServerInfo_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_ServerInfo_descriptor,
+              new java.lang.String[] { "ServerName", "WebuiPort", },
+              org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.class,
+              org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.Builder.class);
+          internal_static_GetServerInfoResponse_descriptor =
+            getDescriptor().getMessageTypes().get(26);
           internal_static_GetServerInfoResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetServerInfoResponse_descriptor,
-              new java.lang.String[] { "ServerName", },
+              new java.lang.String[] { "ServerInfo", },
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse.Builder.class);
           return null;

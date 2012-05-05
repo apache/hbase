@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -684,7 +685,7 @@ public class TestMasterObserver {
     // move half the open regions from RS 0 to RS 1
     HRegionServer rs = cluster.getRegionServer(0);
     byte[] destRS = Bytes.toBytes(cluster.getRegionServer(1).getServerName().toString());
-    List<HRegionInfo> openRegions = rs.getOnlineRegions();
+    List<HRegionInfo> openRegions = ProtobufUtil.getOnlineRegions(rs);
     int moveCnt = openRegions.size()/2;
     for (int i=0; i<moveCnt; i++) {
       HRegionInfo info = openRegions.get(i);

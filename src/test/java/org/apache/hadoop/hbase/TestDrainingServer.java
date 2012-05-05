@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -80,7 +81,7 @@ public class TestDrainingServer {
     MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = cluster.getRegionServer(i);
-      Assert.assertFalse(hrs.getOnlineRegions().isEmpty());
+      Assert.assertFalse(ProtobufUtil.getOnlineRegions(hrs).isEmpty());
     }
   }
 
@@ -128,7 +129,7 @@ public class TestDrainingServer {
       final int regionsOnDrainingServer =
         drainingServer.getNumberOfOnlineRegions();
       Assert.assertTrue(regionsOnDrainingServer > 0);
-      List<HRegionInfo> hris = drainingServer.getOnlineRegions();
+      List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(drainingServer);
       for (HRegionInfo hri : hris) {
         // Pass null and AssignmentManager will chose a random server BUT it
         // should exclude draining servers.

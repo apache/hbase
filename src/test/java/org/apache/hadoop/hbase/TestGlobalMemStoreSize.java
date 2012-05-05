@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -81,7 +82,7 @@ public class TestGlobalMemStoreSize {
 
     for (HRegionServer server : getOnlineRegionServers()) {
       long globalMemStoreSize = 0;
-      for (HRegionInfo regionInfo : server.getOnlineRegions()) {
+      for (HRegionInfo regionInfo : ProtobufUtil.getOnlineRegions(server)) {
         globalMemStoreSize += 
           server.getFromOnlineRegions(regionInfo.getEncodedName()).
           getMemstoreSize().get();
@@ -96,7 +97,7 @@ public class TestGlobalMemStoreSize {
       LOG.info("Starting flushes on " + server.getServerName() +
         ", size=" + server.getRegionServerAccounting().getGlobalMemstoreSize());
 
-      for (HRegionInfo regionInfo : server.getOnlineRegions()) {
+      for (HRegionInfo regionInfo : ProtobufUtil.getOnlineRegions(server)) {
         HRegion r = server.getFromOnlineRegions(regionInfo.getEncodedName());
         flush(r, server);
       }
@@ -111,7 +112,7 @@ public class TestGlobalMemStoreSize {
       if (size > 0) {
         // If size > 0, see if its because the meta region got edits while
         // our test was running....
-        for (HRegionInfo regionInfo : server.getOnlineRegions()) {
+        for (HRegionInfo regionInfo : ProtobufUtil.getOnlineRegions(server)) {
           HRegion r = server.getFromOnlineRegions(regionInfo.getEncodedName());
           long l = r.getMemstoreSize().longValue();
           if (l > 0) {
@@ -148,7 +149,7 @@ public class TestGlobalMemStoreSize {
   private int getRegionCount() throws IOException {
     int total = 0;
     for (HRegionServer server : getOnlineRegionServers()) {
-      total += server.getOnlineRegions().size();
+      total += ProtobufUtil.getOnlineRegions(server).size();
     }
     return total;
   }

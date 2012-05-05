@@ -23,6 +23,8 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.AdminProtocol;
+import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -66,7 +68,8 @@ public class HBaseRpcMetrics implements Updater {
 
     initMethods(HMasterInterface.class);
     initMethods(RegionServerStatusProtocol.class);
-    initMethods(HRegionInterface.class);
+    initMethods(ClientProtocol.class);
+    initMethods(AdminProtocol.class);
     rpcStatistics = new HBaseRPCStatistics(this.registry, hostName, port);
   }
 

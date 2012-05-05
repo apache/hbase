@@ -196,7 +196,6 @@ implements Configurable {
         ZKUtil.applyClusterKeyToConf(this.conf, address);
       }
       if (serverClass != null) {
-        this.conf.set(HConstants.REGION_SERVER_CLASS, serverClass);
         this.conf.set(HConstants.REGION_SERVER_IMPL, serverImpl);
       }
       if (zkClientPort != 0) {

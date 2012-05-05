@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
@@ -234,7 +235,7 @@ public class TestRegionServerMetrics {
     final HRegionServer rs =
         TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
 
-    assertEquals(NUM_REGIONS + META_AND_ROOT, rs.getOnlineRegions().size());
+    assertEquals(NUM_REGIONS + META_AND_ROOT, ProtobufUtil.getOnlineRegions(rs).size());
 
     rs.doMetrics();
     for (HRegion r : TEST_UTIL.getMiniHBaseCluster().getRegions(

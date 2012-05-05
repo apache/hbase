@@ -83,7 +83,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
 
 /**
  * Helper utility to build protocol buffer requests,

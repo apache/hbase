@@ -194,7 +194,6 @@ class CatalogJanitor extends Chore {
 
   /**
    * If daughters no longer hold reference to the parents, delete the parent.
-   * @param server HRegionInterface of meta server to talk to 
    * @param parent HRegionInfo of split offlined parent
    * @param rowContent Content of <code>parent</code> row in
    * <code>metaRegionName</code>

@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -132,7 +133,7 @@ public class TestMasterRestartAfterDisablingTable {
       throws IOException {
     NavigableSet<String> online = new TreeSet<String>();
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
-      for (HRegionInfo region : rst.getRegionServer().getOnlineRegions()) {
+      for (HRegionInfo region : ProtobufUtil.getOnlineRegions(rst.getRegionServer())) {
         online.add(region.getRegionNameAsString());
       }
     }
