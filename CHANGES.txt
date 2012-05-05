@@ -28,6 +28,7 @@ Release 0.90.7 - Unreleased
    HBASE-5883  Backup master is going down due to connection refused exception (Jieshan)
    HBASE-5911  hbck need an option -help to printout usage
                (Jimmy Xiang)
+   HBASE-5894  Table deletion failed but HBaseAdmin#deletetable reports it as success (Xufeng)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition

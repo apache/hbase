@@ -423,6 +423,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     isMasterRunning();
     HTableDescriptor.isLegalTableName(tableName);
     HRegionLocation firstMetaServer = getFirstMetaServerForTable(tableName);
+    Result values = null;
     try {
       getMaster().deleteTable(tableName);
     } catch (RemoteException e) {
@@ -441,7 +442,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         scannerId = server.openScanner(
           firstMetaServer.getRegionInfo().getRegionName(), scan);
         // Get a batch at a time.
-        Result values = server.next(scannerId);
+        values = server.next(scannerId);
         if (values == null) {
           break;
         }
@@ -466,6 +467,11 @@ public class HBaseAdmin implements Abortable, Closeable {
       } catch (InterruptedException e) {
         // continue
       }
+    }
+    
+    if (values != null) {
+      throw new IOException("Retries exhausted, it took too long to wait"+
+        " for the table " + Bytes.toString(tableName) + " to be deleted.");
     }
     // Delete cached information to prevent clients from using old locations
     this.connection.clearRegionCache(tableName);
