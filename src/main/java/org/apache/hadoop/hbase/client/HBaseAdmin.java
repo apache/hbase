@@ -510,6 +510,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void deleteTable(final byte [] tableName) throws IOException {
     HTableDescriptor.isLegalTableName(tableName);
     HRegionLocation firstMetaServer = getFirstMetaServerForTable(tableName);
+    boolean tableExists = true;
 
     execute(new MasterCallable<Void>() {
       @Override
@@ -541,7 +542,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         // let us wait until .META. table is updated and
         // HMaster removes the table from its HTableDescriptors
         if (values == null || values.length == 0) {
-          boolean tableExists = false;
+          tableExists = false;
           HTableDescriptor[] htds;
           MasterKeepAliveConnection master = connection.getKeepAliveMaster();
           try {
@@ -575,6 +576,11 @@ public class HBaseAdmin implements Abortable, Closeable {
       } catch (InterruptedException e) {
         // continue
       }
+    }
+    
+    if (tableExists) {
+      throw new IOException("Retries exhausted, it took too long to wait"+
+        " for the table " + Bytes.toString(tableName) + " to be deleted.");
     }
     // Delete cached information to prevent clients from using old locations
     this.connection.clearRegionCache(tableName);
