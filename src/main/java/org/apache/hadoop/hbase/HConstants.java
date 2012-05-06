@@ -93,6 +93,20 @@ public final class HConstants {
   /** by default every master is a possible primary master unless the conf explicitly overrides it */
   public static final boolean DEFAULT_MASTER_TYPE_BACKUP = false;
 
+  /** Configuration key for enabling table-level locks for schema changes */
+  public static final String MASTER_SCHEMA_CHANGES_LOCK_ENABLE =
+    "hbase.master.schemaChanges.lock.enable";
+
+  /** by default we should enable table-level locks for schema changes */
+  public static final boolean DEFAULT_MASTER_SCHEMA_CHANGES_LOCK_ENABLE = true;
+
+  /** Configuration key for time out for schema modification locks */
+  public static final String MASTER_SCHEMA_CHANGES_LOCK_TIMEOUT_MS =
+    "hbase.master.schemaChanges.lock.timeout.ms";
+
+  public static final int DEFAULT_MASTER_SCHEMA_CHANGES_LOCK_TIMEOUT_MS =
+    60 * 1000;
+
   /** Name of ZooKeeper quorum configuration parameter. */
   public static final String ZOOKEEPER_QUORUM = "hbase.zookeeper.quorum";
 

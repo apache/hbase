@@ -148,6 +148,10 @@ public class ZooKeeperWrapper implements Watcher {
    */
   public final String splitLogZNode;
   /*
+   * ZNode used for table-level schema modification locks
+   */
+  public final String tableLockZNode;
+  /*
    * List of ZNodes in the unassgined region that are already being watched
    */
   private Set<String> unassignedZNodesWatched = new HashSet<String>();
@@ -263,12 +267,13 @@ public class ZooKeeperWrapper implements Watcher {
     String stateZNodeName      = conf.get("zookeeper.znode.state", "shutdown");
     String regionsInTransitZNodeName = conf.get("zookeeper.znode.regionInTransition", "UNASSIGNED");
     String splitLogZNodeName   = conf.get("zookeeper.znode.splitlog", "splitlog");
-
+    String tableLockZNodeName  = conf.get("zookeeper.znode.tableLock", "tableLock");
     rootRegionZNode     = getZNode(parentZNode, rootServerZNodeName);
     rsZNode             = getZNode(parentZNode, rsZNodeName);
     rgnsInTransitZNode  = getZNode(parentZNode, regionsInTransitZNodeName);
     masterElectionZNode = getZNode(parentZNode, masterAddressZNodeName);
     clusterStateZNode   = getZNode(parentZNode, stateZNodeName);
+    tableLockZNode      = getZNode(parentZNode, tableLockZNodeName);
     int retryNum = conf.getInt(HConstants.ZOOKEEPER_CONNECTION_RETRY_NUM, 6);
     int retryFreq = conf.getInt("zookeeper.connection.retry.freq", 1000);
     zkDumpConnectionTimeOut = conf.getInt("zookeeper.dump.connection.timeout",
@@ -775,6 +780,20 @@ public class ZooKeeperWrapper implements Watcher {
    * @throws InterruptedException
    */
   public void deleteZNode(String znode, boolean recursive)
+  throws KeeperException, InterruptedException {
+    deleteZNode(znode, recursive, -1);
+  }
+
+  /**
+   * Atomically delete a ZNode if the ZNode's version matches
+   * the expected version.
+   * @param znode Fully qualified path to the ZNode
+   * @param recursive If true, will recursively delete ZNode's children
+   * @param version Expected version, as obtained from a Stat object
+   * @throws KeeperException
+   * @throws InterruptedException
+   */
+  public void deleteZNode(String znode, boolean recursive, int version)
     throws KeeperException, InterruptedException {
     if (recursive) {
       LOG.info("<" + instanceName + ">" + "deleteZNode get children for " + znode);
@@ -783,11 +802,11 @@ public class ZooKeeperWrapper implements Watcher {
         for (String child : znodes) {
           String childFullPath = getZNode(znode, child);
           LOG.info("<" + instanceName + ">" + "deleteZNode recursive call " + childFullPath);
-          this.deleteZNode(childFullPath, true);
+          this.deleteZNode(childFullPath, true, version);
         }
       }
     }
-    this.recoverableZK.delete(znode, -1);
+    this.recoverableZK.delete(znode, version);
     LOG.debug("<" + instanceName + ">" + "Deleted ZNode " + znode);
   }
 
@@ -1271,6 +1290,60 @@ public class ZooKeeperWrapper implements Watcher {
     return fullyQualifiedZNodeName;
   }
 
+  /**
+   * Atomically create a ZNode, if and only if the ZNode doesn't exist.
+   * If watcher parameter is not null, and no exception is thrown, the
+   * supplied watcher will be set (to be triggered by the ZNode's deletion).
+   * @param zNodeName
+   * @param data
+   * @param createMode
+   * @param watcher Watcher to be set, or null to not set a watcher
+   * @throws IOException If there is an unrecoverable ZooKeeper error
+   * @throws NoNodeException If the node is deleted before watch can be set
+   * @return False if the ZNode already exists, true otherwise
+   */
+  public boolean checkExistsAndCreate(String zNodeName, byte[] data,
+    CreateMode createMode, Watcher watcher)
+  throws IOException, InterruptedException, NoNodeException {
+    String fullyQualifiedZNodeName = getZNode(parentZNode, zNodeName);
+    if (!ensureParentExists(fullyQualifiedZNodeName)) {
+      throw new IOException("Parent for " + zNodeName +
+        " does not exist and could not be created");
+    }
+    try {
+      if (watcher != null) {
+        registerListener(watcher);
+      }
+      recoverableZK.create(fullyQualifiedZNodeName, data, Ids.OPEN_ACL_UNSAFE,
+        createMode);
+    } catch (KeeperException.NodeExistsException e) {
+      if (watcher != null) {
+        boolean exists;
+        try {
+          exists = watchAndCheckExists(fullyQualifiedZNodeName);
+        } catch (KeeperException ke) {
+          LOG.error("Unrecoverable ZooKeeper error setting the watcher on " +
+          fullyQualifiedZNodeName, ke);
+          throw new IOException("Unrecoverable ZooKeeper error setting watcher",
+            ke);
+        }
+        if (!exists) {
+          throw new NoNodeException(fullyQualifiedZNodeName +
+            " deleted before watch could be set");
+        }
+      }
+      return false;
+    } catch (KeeperException e) {
+      LOG.error("Unrecoverable ZooKeeper error encountered on " +
+        fullyQualifiedZNodeName, e);
+      throw new IOException("Unrecoverable ZooKeeper error", e);
+    } catch(InterruptedException e) {
+      LOG.warn("Interrupted waiting for " + fullyQualifiedZNodeName, e);
+      throw e;
+    }
+    return true;
+  }
+
   public byte[] readZNode(String znodeName, Stat stat) throws IOException {
     byte[] data;
     try {
@@ -1284,6 +1357,23 @@ public class ZooKeeperWrapper implements Watcher {
     return data;
   }
 
+  public byte[] readZNodeIfExists(String znodeName, Stat stat)
+    throws IOException, InterruptedException {
+    byte[] data;
+    String fullyQualifiedZNodeName = getZNode(parentZNode, znodeName);
+    try {
+      data = recoverableZK.getData(fullyQualifiedZNodeName, this, stat);
+    } catch (InterruptedException e) {
+      LOG.warn("Reading from ZNode interrupted ");
+      throw e;
+    } catch (NoNodeException e) {
+      LOG.warn(fullyQualifiedZNodeName + " no longer exists");
+      return null;
+    } catch (KeeperException e) {
+      throw new IOException(e);
+    }
+    return data;
+  }
   // TODO: perhaps return the version number from this write?
   public boolean writeZNode(String znodeName, byte[] data, int version, boolean watch) throws IOException {
       try {

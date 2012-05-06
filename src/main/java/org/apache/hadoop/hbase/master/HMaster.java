@@ -78,7 +78,6 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.StopStatus;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -107,6 +106,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
+import org.apache.hadoop.hbase.util.InjectionEvent;
+import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Sleeper;
@@ -141,6 +142,8 @@ public class HMaster extends Thread implements HMasterInterface,
   //instance into web context.
   public static final String MASTER = "master";
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
+
+
   private static final String LOCALITY_SNAPSHOT_FILE_NAME = "regionLocality-snapshot";
 
   /**
@@ -179,6 +182,8 @@ public class HMaster extends Thread implements HMasterInterface,
   private ZooKeeperWrapper zooKeeperWrapper;
   // Watcher for master address and for cluster shutdown.
   private final ZKMasterAddressWatcher zkMasterAddressWatcher;
+  // Table level lock manager for schema changes
+  private final TableLockManager tableLockManager;
   // A Sleeper that sleeps for threadWakeFrequency; sleep if nothing todo.
   private final Sleeper sleeper;
   // Keep around for convenience.
@@ -346,6 +351,18 @@ public class HMaster extends Thread implements HMasterInterface,
         RegionManager.AssignmentLoadBalancer.class);
     LOG.debug("Whether to read the favoredNodes from meta: " +
         (shouldAssignRegionsWithFavoredNodes ? "Yes" : "No"));
+
+    // Initialize table level lock manager for schema changes, if enabled.
+    if (conf.getBoolean(HConstants.MASTER_SCHEMA_CHANGES_LOCK_ENABLE,
+      HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_LOCK_ENABLE)) {
+      int schemaChangeLockTimeoutMs = conf.getInt(
+        HConstants.MASTER_SCHEMA_CHANGES_LOCK_TIMEOUT_MS,
+        HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_LOCK_TIMEOUT_MS);
+      tableLockManager = new TableLockManager(zooKeeperWrapper,
+        address, schemaChangeLockTimeoutMs);
+    } else {
+      tableLockManager = null;
+    }
   }
 
   public boolean shouldAssignRegionsWithFavoredNodes() {
@@ -1294,6 +1311,24 @@ public class HMaster extends Thread implements HMasterInterface,
     requestClusterShutdown();
   }
 
+  private boolean isTableLockEnabled() {
+    return tableLockManager != null;
+  }
+
+  protected void lockTable(byte[] tableName, String purpose)
+  throws IOException {
+    if (isTableLockEnabled()) {
+      tableLockManager.lockTable(tableName, purpose);
+    }
+  }
+
+  protected void unlockTable(byte[] tableName)
+  throws IOException {
+    if (isTableLockEnabled()) {
+      tableLockManager.unlockTable(tableName);
+    }
+  }
+
   @Override
   public void createTable(HTableDescriptor desc, byte [][] splitKeys)
   throws IOException {
@@ -1334,16 +1369,9 @@ public class HMaster extends Thread implements HMasterInterface,
     }
   }
 
-  private synchronized void createTable(final HRegionInfo [] newRegions)
+  private static boolean tableExists(HRegionInterface srvr,
+    byte[] metaRegionName, String tableName)
   throws IOException {
-    String tableName = newRegions[0].getTableDesc().getNameAsString();
-    // 1. Check to see if table already exists. Get meta region where
-    // table would sit should it exist. Open scanner on it. If a region
-    // for the table we want to create already exists, then table already
-    // created. Throw already-exists exception.
-    MetaRegion m = regionManager.getFirstMetaRegionForRegion(newRegions[0]);
-    byte [] metaRegionName = m.getRegionName();
-    HRegionInterface srvr = this.connection.getHRegionConnection(m.getServer());
     byte[] firstRowInTable = Bytes.toBytes(tableName + ",,");
     Scan scan = new Scan(firstRowInTable);
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
@@ -1356,41 +1384,68 @@ public class HMaster extends Thread implements HMasterInterface,
               HConstants.REGIONINFO_QUALIFIER));
         if (info.getTableDesc().getNameAsString().equals(tableName)) {
           // A region for this table already exists. Ergo table exists.
-          throw new TableExistsException(tableName);
+          return true;
         }
       }
     } finally {
       srvr.close(scannerid);
     }
+    return false;
+  }
 
-    AssignmentPlan assignmentPlan = null;
-    if (this.shouldAssignRegionsWithFavoredNodes) {
-      // Get the assignment domain for this table
-      AssignmentDomain domain = this.getAssignmentDomain(tableName);
-      // Get the assignment plan for the new regions
-      assignmentPlan =
-        regionPlacement.getNewAssignmentPlan(newRegions, domain);
+  private synchronized void createTable(final HRegionInfo [] newRegions)
+  throws IOException {
+    String tableName = newRegions[0].getTableDesc().getNameAsString();
+    // 1. Check to see if table already exists. Get meta region where
+    // table would sit should it exist. Open scanner on it. If a region
+    // for the table we want to create already exists, then table already
+    // created. Throw already-exists exception.
+    MetaRegion m = regionManager.getFirstMetaRegionForRegion(newRegions[0]);
+    byte [] metaRegionName = m.getRegionName();
+    HRegionInterface srvr = this.connection.getHRegionConnection(m.getServer());
+    if (tableExists(srvr, metaRegionName, tableName)) {
+      throw new TableExistsException(tableName);
     }
-
-    if (assignmentPlan == null) {
-      LOG.info("Generated the assignment plan for new table " + tableName);
-    } else {
-      LOG.info("NO assignment plan for new table " + tableName);
-    }
-
-    for(HRegionInfo newRegion : newRegions) {
-      if (assignmentPlan != null) {
-        // create the region with favorite nodes.
-        List<HServerAddress> favoredNodes =
-          assignmentPlan.getAssignment(newRegion);
-        regionManager.createRegion(newRegion, srvr, metaRegionName,
-            favoredNodes);
-      } else {
-        regionManager.createRegion(newRegion, srvr, metaRegionName);
+    byte [] tableNameBytes = Bytes.toBytes(tableName);
+    lockTable(tableNameBytes, "create");
+    try {
+      InjectionHandler.processEvent(InjectionEvent.HMASTER_CREATE_TABLE);
+      // After acquiring the lock, verify again that the table does not
+      // exist.
+      if (tableExists(srvr, metaRegionName, tableName)) {
+        throw new TableExistsException(tableName);
       }
+      AssignmentPlan assignmentPlan = null;
+      if (this.shouldAssignRegionsWithFavoredNodes) {
+        // Get the assignment domain for this table
+        AssignmentDomain domain = this.getAssignmentDomain(tableName);
+        // Get the assignment plan for the new regions
+        assignmentPlan =
+          regionPlacement.getNewAssignmentPlan(newRegions, domain);
+      }
+
+      if (assignmentPlan == null) {
+        LOG.info("Generated the assignment plan for new table " + tableName);
+      } else {
+        LOG.info("NO assignment plan for new table " + tableName);
+      }
+
+      for(HRegionInfo newRegion : newRegions) {
+        if (assignmentPlan != null) {
+          // create the region with favorite nodes.
+          List<HServerAddress> favoredNodes =
+            assignmentPlan.getAssignment(newRegion);
+          regionManager.createRegion(newRegion, srvr, metaRegionName,
+              favoredNodes);
+        } else {
+          regionManager.createRegion(newRegion, srvr, metaRegionName);
+        }
+      }
+      // kick off a meta scan right away to assign the newly created regions
+      regionManager.metaScannerThread.triggerNow();
+    } finally {
+      unlockTable(tableNameBytes);
     }
-    // kick off a meta scan right away to assign the newly created regions
-    regionManager.metaScannerThread.triggerNow();
   }
 
   /**
@@ -1420,10 +1475,16 @@ public class HMaster extends Thread implements HMasterInterface,
 
   @Override
   public void deleteTable(final byte [] tableName) throws IOException {
-    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
-      throw new IOException("Can't delete root table");
+    lockTable(tableName, "delete");
+    try {
+      InjectionHandler.processEvent(InjectionEvent.HMASTER_DELETE_TABLE);
+      if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+        throw new IOException("Can't delete root table");
+      }
+      new TableDelete(this, tableName).process();
+    } finally {
+      unlockTable(tableName);
     }
-    new TableDelete(this, tableName).process();
     LOG.info("deleted table: " + Bytes.toString(tableName));
   }
 
@@ -1432,12 +1493,18 @@ public class HMaster extends Thread implements HMasterInterface,
       List<HColumnDescriptor> columnAdditions,
       List<Pair<byte[], HColumnDescriptor>> columnModifications,
       List<byte[]> columnDeletions) throws IOException {
-    ThrottledRegionReopener reopener = this.regionManager.
-            createThrottledReopener(Bytes.toString(tableName));
-    // Regions are added to the reopener in MultiColumnOperation
-    new MultiColumnOperation(this, tableName, columnAdditions,
-        columnModifications, columnDeletions).process();
-    reopener.reOpenRegionsThrottle();
+    lockTable(tableName, "alter");
+    try {
+      InjectionHandler.processEvent(InjectionEvent.HMASTER_ALTER_TABLE);
+      ThrottledRegionReopener reopener = this.regionManager.
+        createThrottledReopener(Bytes.toString(tableName));
+      // Regions are added to the reopener in MultiColumnOperation
+      new MultiColumnOperation(this, tableName, columnAdditions,
+                               columnModifications, columnDeletions).process();
+      reopener.reOpenRegionsThrottle();
+    } finally {
+      unlockTable(tableName);
+    }
   }
 
   public Pair<Integer, Integer> getAlterStatus(byte[] tableName)
@@ -1475,18 +1542,30 @@ public class HMaster extends Thread implements HMasterInterface,
 
   @Override
   public void enableTable(final byte [] tableName) throws IOException {
-    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
-      throw new IOException("Can't enable root table");
+    lockTable(tableName, "enable");
+    try {
+      InjectionHandler.processEvent(InjectionEvent.HMASTER_ENABLE_TABLE);
+      if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+        throw new IOException("Can't enable root table");
+      }
+      new ChangeTableState(this, tableName, true).process();
+    } finally {
+      unlockTable(tableName);
     }
-    new ChangeTableState(this, tableName, true).process();
   }
 
   @Override
   public void disableTable(final byte [] tableName) throws IOException {
-    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
-      throw new IOException("Can't disable root table");
+    lockTable(tableName, "disable");
+    try {
+      InjectionHandler.processEvent(InjectionEvent.HMASTER_DISABLE_TABLE);
+      if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+        throw new IOException("Can't disable root table");
+      }
+      new ChangeTableState(this, tableName, false).process();
+    } finally {
+      unlockTable(tableName);
     }
-    new ChangeTableState(this, tableName, false).process();
   }
 
   /**
