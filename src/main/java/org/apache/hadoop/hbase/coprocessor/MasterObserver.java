@@ -36,7 +36,8 @@ public interface MasterObserver extends Coprocessor {
 
   /**
    * Called before a new table is created by
-   * {@link org.apache.hadoop.hbase.master.HMaster}.
+   * {@link org.apache.hadoop.hbase.master.HMaster}.  Called as part of create
+   * table RPC call.
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param desc the HTableDescriptor for the table
@@ -47,7 +48,8 @@ public interface MasterObserver extends Coprocessor {
       HTableDescriptor desc, HRegionInfo[] regions) throws IOException;
 
   /**
-   * Called after the createTable operation has been requested.
+   * Called after the createTable operation has been requested.  Called as part
+   * of create table RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param desc the HTableDescriptor for the table
    * @param regions the initial regions created for the table
@@ -55,10 +57,34 @@ public interface MasterObserver extends Coprocessor {
    */
   void postCreateTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       HTableDescriptor desc, HRegionInfo[] regions) throws IOException;
+  /**
+   * Called before a new table is created by
+   * {@link org.apache.hadoop.hbase.master.HMaster}.  Called as part of create
+   * table handler and it is async to the create RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param desc the HTableDescriptor for the table
+   * @param regions the initial regions created for the table
+   * @throws IOException
+   */
+  void preCreateTableHandler(final ObserverContext<MasterCoprocessorEnvironment>
+      ctx, HTableDescriptor desc, HRegionInfo[] regions) throws IOException;
+
+  /**
+   * Called after the createTable operation has been requested.  Called as part
+   * of create table RPC call.  Called as part of create table handler and
+   * it is async to the create RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param desc the HTableDescriptor for the table
+   * @param regions the initial regions created for the table
+   * @throws IOException
+   */
+  void postCreateTableHandler(final ObserverContext<MasterCoprocessorEnvironment>
+  ctx, HTableDescriptor desc, HRegionInfo[] regions) throws IOException;
 
   /**
    * Called before {@link org.apache.hadoop.hbase.master.HMaster} deletes a
-   * table
+   * table.  Called as part of delete table RPC call.
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
@@ -67,7 +93,8 @@ public interface MasterObserver extends Coprocessor {
       byte[] tableName) throws IOException;
 
   /**
-   * Called after the deleteTable operation has been requested.
+   * Called after the deleteTable operation has been requested.  Called as part
+   * of delete table RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    */
@@ -75,7 +102,32 @@ public interface MasterObserver extends Coprocessor {
       byte[] tableName) throws IOException;
 
   /**
-   * Called prior to modifying a table's properties.
+   * Called before {@link org.apache.hadoop.hbase.master.HMaster} deletes a
+   * table.  Called as part of delete table handler and
+   * it is async to the delete RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   */
+  void preDeleteTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      throws IOException;
+
+  /**
+   * Called after {@link org.apache.hadoop.hbase.master.HMaster} deletes a
+   * table.  Called as part of delete table handler and it is async to the
+   * delete RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   */
+  void postDeleteTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      throws IOException;
+
+  /**
+   * Called prior to modifying a table's properties.  Called as part of modify
+   * table RPC call.
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
@@ -85,7 +137,8 @@ public interface MasterObserver extends Coprocessor {
       final byte[] tableName, HTableDescriptor htd) throws IOException;
 
   /**
-   * Called after the modifyTable operation has been requested.
+   * Called after the modifyTable operation has been requested.  Called as part
+   * of modify table RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    * @param htd the HTableDescriptor
@@ -94,7 +147,32 @@ public interface MasterObserver extends Coprocessor {
       final byte[] tableName, HTableDescriptor htd) throws IOException;
 
   /**
-   * Called prior to adding a new column family to the table.
+   * Called prior to modifying a table's properties.  Called as part of modify
+   * table handler and it is async to the modify table RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param htd the HTableDescriptor
+   */
+  void preModifyTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final byte[] tableName, HTableDescriptor htd) throws IOException;
+
+  /**
+   * Called after to modifying a table's properties.  Called as part of modify
+   * table handler and it is async to the modify table RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param htd the HTableDescriptor
+   */
+  void postModifyTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final byte[] tableName, HTableDescriptor htd) throws IOException;
+
+  /**
+   * Called prior to adding a new column family to the table.  Called as part of
+   * add column RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    * @param column the HColumnDescriptor
@@ -103,7 +181,8 @@ public interface MasterObserver extends Coprocessor {
       byte[] tableName, HColumnDescriptor column) throws IOException;
 
   /**
-   * Called after the new column family has been created.
+   * Called after the new column family has been created.  Called as part of
+   * add column RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    * @param column the HColumnDescriptor
@@ -112,7 +191,30 @@ public interface MasterObserver extends Coprocessor {
       byte[] tableName, HColumnDescriptor column) throws IOException;
 
   /**
-   * Called prior to modifying a column family's attributes.
+   * Called prior to adding a new column family to the table.  Called as part of
+   * add column handler.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param column the HColumnDescriptor
+   */
+  void preAddColumnHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName, HColumnDescriptor column) throws IOException;
+
+  /**
+   * Called after the new column family has been created.  Called as part of
+   * add column handler.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param column the HColumnDescriptor
+   */
+  void postAddColumnHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName, HColumnDescriptor column) throws IOException;
+
+  /**
+   * Called prior to modifying a column family's attributes.  Called as part of
+   * modify column RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    * @param descriptor the HColumnDescriptor
@@ -121,7 +223,8 @@ public interface MasterObserver extends Coprocessor {
       byte [] tableName, HColumnDescriptor descriptor) throws IOException;
 
   /**
-   * Called after the column family has been updated.
+   * Called after the column family has been updated.  Called as part of modify
+   * column RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    * @param descriptor the HColumnDescriptor
@@ -130,7 +233,31 @@ public interface MasterObserver extends Coprocessor {
       byte[] tableName, HColumnDescriptor descriptor) throws IOException;
 
   /**
-   * Called prior to deleting the entire column family.
+   * Called prior to modifying a column family's attributes.  Called as part of
+   * modify column handler.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param descriptor the HColumnDescriptor
+   */
+  void preModifyColumnHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName, HColumnDescriptor descriptor) throws IOException;
+
+  /**
+   * Called after the column family has been updated.  Called as part of modify
+   * column handler.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param descriptor the HColumnDescriptor
+   */
+  void postModifyColumnHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName, HColumnDescriptor descriptor) throws IOException;
+
+
+  /**
+   * Called prior to deleting the entire column family.  Called as part of
+   * delete column RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    * @param c the column
@@ -139,7 +266,8 @@ public interface MasterObserver extends Coprocessor {
       final byte [] tableName, final byte[] c) throws IOException;
 
   /**
-   * Called after the column family has been deleted.
+   * Called after the column family has been deleted.  Called as part of delete
+   * column RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    * @param c the column
@@ -148,7 +276,29 @@ public interface MasterObserver extends Coprocessor {
       final byte [] tableName, final byte[] c) throws IOException;
 
   /**
-   * Called prior to enabling a table.
+   * Called prior to deleting the entire column family.  Called as part of
+   * delete column handler.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param c the column
+   */
+  void preDeleteColumnHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final byte[] tableName, final byte[] c) throws IOException;
+
+  /**
+   * Called after the column family has been deleted.  Called as part of
+   * delete column handler.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param c the column
+   */
+  void postDeleteColumnHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final byte[] tableName, final byte[] c) throws IOException;
+
+  /**
+   * Called prior to enabling a table.  Called as part of enable table RPC call.
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
@@ -157,7 +307,8 @@ public interface MasterObserver extends Coprocessor {
       final byte[] tableName) throws IOException;
 
   /**
-   * Called after the enableTable operation has been requested.
+   * Called after the enableTable operation has been requested.  Called as part
+   * of enable table RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    */
@@ -165,7 +316,29 @@ public interface MasterObserver extends Coprocessor {
       final byte[] tableName) throws IOException;
 
   /**
-   * Called prior to disabling a table.
+   * Called prior to enabling a table.  Called as part of enable table handler
+   * and it is async to the enable table RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   */
+  void preEnableTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final byte[] tableName) throws IOException;
+
+  /**
+   * Called after the enableTable operation has been requested.  Called as part
+   * of enable table handler and it is async to the enable table RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   */
+  void postEnableTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final byte[] tableName) throws IOException;
+
+  /**
+   * Called prior to disabling a table.  Called as part of disable table RPC
+   * call.
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
@@ -174,11 +347,33 @@ public interface MasterObserver extends Coprocessor {
       final byte[] tableName) throws IOException;
 
   /**
-   * Called after the disableTable operation has been requested.
+   * Called after the disableTable operation has been requested.  Called as part
+   * of disable table RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
    */
   void postDisableTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final byte[] tableName) throws IOException;
+
+  /**
+   * Called prior to disabling a table.  Called as part of disable table handler
+   * and it is asyn to the disable table RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   */
+  void preDisableTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final byte[] tableName) throws IOException;
+
+  /**
+   * Called after the disableTable operation has been requested.  Called as part
+   * of disable table handler and it is asyn to the disable table RPC call.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   */
+  void postDisableTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final byte[] tableName) throws IOException;
 
   /**
@@ -212,7 +407,7 @@ public interface MasterObserver extends Coprocessor {
    */
   void preAssign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final HRegionInfo regionInfo) throws IOException;
-  
+
   /**
    * Called after the region assignment has been requested.
    * @param ctx the environment to interact with the framework and master
@@ -220,7 +415,7 @@ public interface MasterObserver extends Coprocessor {
    */
   void postAssign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final HRegionInfo regionInfo) throws IOException;
-  
+
   /**
    * Called prior to unassigning a given region.
    * @param ctx the environment to interact with the framework and master

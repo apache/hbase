@@ -26,6 +26,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
 
 @InterfaceAudience.Private
@@ -46,8 +48,16 @@ public class ModifyTableHandler extends TableEventHandler {
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris)
   throws IOException {
+    MasterCoprocessorHost cpHost = ((HMaster) this.server)
+        .getCoprocessorHost();
+    if (cpHost != null) {
+      cpHost.preModifyTableHandler(this.tableName, this.htd);
+    }
     // Update descriptor
     this.masterServices.getTableDescriptors().add(this.htd);
+    if (cpHost != null) {
+      cpHost.postModifyTableHandler(this.tableName, this.htd);
+    }
   }
 
   @Override

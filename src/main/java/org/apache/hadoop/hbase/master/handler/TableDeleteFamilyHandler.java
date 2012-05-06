@@ -26,6 +26,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -46,11 +48,19 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
 
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris) throws IOException {
+    MasterCoprocessorHost cpHost = ((HMaster) this.server)
+        .getCoprocessorHost();
+    if (cpHost != null) {
+      cpHost.preDeleteColumnHandler(this.tableName, this.familyName);
+    }
     // Update table descriptor in HDFS
     HTableDescriptor htd =
       this.masterServices.getMasterFileSystem().deleteColumn(tableName, familyName);
     // Update in-memory descriptor cache
     this.masterServices.getTableDescriptors().add(htd);
+    if (cpHost != null) {
+      cpHost.postDeleteColumnHandler(this.tableName, this.familyName);
+    }
   }
 
   @Override

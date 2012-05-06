@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -49,6 +51,11 @@ public class DeleteTableHandler extends TableEventHandler {
   @Override
   protected void handleTableOperation(List<HRegionInfo> regions)
   throws IOException, KeeperException {
+    MasterCoprocessorHost cpHost = ((HMaster) this.server)
+        .getCoprocessorHost();
+    if (cpHost != null) {
+      cpHost.preDeleteTableHandler(this.tableName);
+    }
     AssignmentManager am = this.masterServices.getAssignmentManager();
     long waitTime = server.getConfiguration().
       getLong("hbase.master.wait.on.region", 5 * 60 * 1000);
@@ -80,8 +87,11 @@ public class DeleteTableHandler extends TableEventHandler {
     // If entry for this table in zk, and up in AssignmentManager, remove it.
 
     am.getZKTable().setDeletedTable(Bytes.toString(tableName));
+    if (cpHost != null) {
+      cpHost.postDeleteTableHandler(this.tableName);
+    }
   }
-  
+
   @Override
   public String toString() {
     String name = "UnknownServerName";

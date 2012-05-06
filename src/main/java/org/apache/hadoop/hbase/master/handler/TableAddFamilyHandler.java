@@ -28,6 +28,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
 
 /**
@@ -52,11 +54,19 @@ public class TableAddFamilyHandler extends TableEventHandler {
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris)
   throws IOException {
+    MasterCoprocessorHost cpHost = ((HMaster) this.server)
+        .getCoprocessorHost();
+    if(cpHost != null){
+      cpHost.preAddColumnHandler(this.tableName, this.familyDesc);
+    }
     // Update table descriptor in HDFS
     HTableDescriptor htd = this.masterServices.getMasterFileSystem()
         .addColumn(tableName, familyDesc);
     // Update in-memory descriptor cache
     this.masterServices.getTableDescriptors().add(htd);
+    if(cpHost != null){
+      cpHost.postAddColumnHandler(this.tableName, this.familyDesc);
+    }
   }
   @Override
   public String toString() {

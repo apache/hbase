@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -125,7 +127,15 @@ public class CreateTableHandler extends EventHandler {
     String tableName = this.hTableDescriptor.getNameAsString();
     try {
       LOG.info("Attemping to create the table " + tableName);
+      MasterCoprocessorHost cpHost = ((HMaster) this.server)
+          .getCoprocessorHost();
+      if (cpHost != null) {
+        cpHost.preCreateTableHandler(this.hTableDescriptor, this.newRegions);
+      }
       handleCreateTable();
+      if (cpHost != null) {
+        cpHost.postCreateTableHandler(this.hTableDescriptor, this.newRegions);
+      }
     } catch (IOException e) {
       LOG.error("Error trying to create the table " + tableName, e);
     } catch (KeeperException e) {

@@ -45,6 +45,18 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
+  public void preCreateTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+  }
+
+  @Override
+  public void postCreateTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+  }
+
+  @Override
   public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
       byte[] tableName) throws IOException {
   }
@@ -55,8 +67,32 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
+  public void preDeleteTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      throws IOException{
+  }
+
+  @Override
+  public void postDeleteTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      throws IOException {
+  }
+
+  @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
       byte[] tableName, HTableDescriptor htd) throws IOException {
+  }
+
+  @Override
+  public void postModifyTableHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      HTableDescriptor htd) throws IOException {
+  }
+
+  @Override
+  public void preModifyTableHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      HTableDescriptor htd) throws IOException {
   }
 
   @Override
@@ -75,6 +111,18 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
+  public void preAddColumnHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      HColumnDescriptor column) throws IOException {
+  }
+
+  @Override
+  public void postAddColumnHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      HColumnDescriptor column) throws IOException {
+  }
+
+  @Override
   public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
       byte[] tableName, HColumnDescriptor descriptor) throws IOException {
   }
@@ -82,6 +130,18 @@ public class BaseMasterObserver implements MasterObserver {
   @Override
   public void postModifyColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
       byte[] tableName, HColumnDescriptor descriptor) throws IOException {
+  }
+
+  @Override
+  public void preModifyColumnHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      HColumnDescriptor descriptor) throws IOException {
+  }
+
+  @Override
+  public void postModifyColumnHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      HColumnDescriptor descriptor) throws IOException {
   }
 
   @Override
@@ -95,6 +155,19 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
+  public void preDeleteColumnHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      byte[] c) throws IOException {
+  }
+
+  @Override
+  public void postDeleteColumnHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      byte[] c) throws IOException {
+  }
+
+
+  @Override
   public void preEnableTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
       byte[] tableName) throws IOException {
   }
@@ -102,6 +175,18 @@ public class BaseMasterObserver implements MasterObserver {
   @Override
   public void postEnableTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
       byte[] tableName) throws IOException {
+  }
+
+  @Override
+  public void preEnableTableHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      throws IOException {
+  }
+
+  @Override
+  public void postEnableTableHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      throws IOException {
   }
 
   @Override
@@ -115,10 +200,22 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
+  public void preDisableTableHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      throws IOException {
+  }
+
+  @Override
+  public void postDisableTableHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      throws IOException {
+  }
+
+  @Override
   public void preAssign(ObserverContext<MasterCoprocessorEnvironment> ctx,
       HRegionInfo regionInfo) throws IOException {
   }
-  
+
   @Override
   public void postAssign(ObserverContext<MasterCoprocessorEnvironment> ctx,
       HRegionInfo regionInfo) throws IOException {

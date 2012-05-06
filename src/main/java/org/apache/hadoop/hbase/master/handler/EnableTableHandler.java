@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.BulkAssigner;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 
@@ -96,7 +98,15 @@ public class EnableTableHandler extends EventHandler {
   public void process() {
     try {
       LOG.info("Attemping to enable the table " + this.tableNameStr);
+      MasterCoprocessorHost cpHost = ((HMaster) this.server)
+          .getCoprocessorHost();
+      if (cpHost != null) {
+        cpHost.preEnableTableHandler(this.tableName);
+      }
       handleEnableTable();
+      if (cpHost != null) {
+        cpHost.postEnableTableHandler(this.tableName);
+      }
     } catch (IOException e) {
       LOG.error("Error trying to enable the table " + this.tableNameStr, e);
     } catch (KeeperException e) {
