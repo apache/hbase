@@ -189,7 +189,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
     // Try null mutation
     List<Mutation> mutations = new ArrayList<Mutation>();
-    mutations.add(new Mutation(false, columnAname, null));
+    mutations.add(new Mutation(false, columnAname, null, true));
     handler.mutateRow(tableAname, rowAname, mutations);
     TRowResult rowResult3 = handler.getRow(tableAname, rowAname).get(0);
     assertEquals(rowAname, rowResult3.row);
@@ -457,8 +457,8 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
    */
   private List<Mutation> getMutations2() {
     List<Mutation> mutations = new ArrayList<Mutation>();
-    mutations.add(new Mutation(false, columnAname, valueCname));
-    mutations.add(new Mutation(false, columnBname, valueDname));
+    mutations.add(new Mutation(false, columnAname, valueCname, true));
+    mutations.add(new Mutation(false, columnBname, valueDname, true));
     return mutations;
   }
 

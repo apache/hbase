@@ -20,8 +20,9 @@ package org.apache.hadoop.hbase.thrift;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.TreeMap;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -133,18 +134,18 @@ public class ThriftUtilities {
   static public List<TRowResult> rowResultFromHBase(Result[] in) {
     List<TRowResult> results = new ArrayList<TRowResult>();
     for ( Result result_ : in) {
-        if(result_ == null || result_.isEmpty()) {
-            continue;
-        }
-        TRowResult result = new TRowResult();
-        result.row = ByteBuffer.wrap(result_.getRow());
-        result.columns = new TreeMap<ByteBuffer, TCell>(Bytes.BYTE_BUFFER_COMPARATOR);
-        for(KeyValue kv : result_.sorted()) {
-          result.columns.put(ByteBuffer.wrap(KeyValue.makeColumn(kv.getFamily(),
-              kv.getQualifier())), new TCell(ByteBuffer.wrap(kv.getValue()),
-                  kv.getTimestamp()));
-        }
-        results.add(result);
+      if(result_ == null || result_.isEmpty()) {
+        continue;
+      }
+      TRowResult result = new TRowResult();
+      result.row = ByteBuffer.wrap(result_.getRow());
+      // No reason to use TreeMap because this will become a HashMap on the client side anyway.
+      result.columns = new HashMap<ByteBuffer, TCell>();
+      for(KeyValue kv : result_.raw()) {
+        result.columns.put(ByteBuffer.wrap(kv.makeColumn()),
+            new TCell(ByteBuffer.wrap(kv.getValue()), kv.getTimestamp()));
+      }
+      results.add(result);
     }
     return results;
   }

@@ -1275,6 +1275,12 @@ public class KeyValue implements Writable, HeapSize {
     return Bytes.add(family, COLUMN_FAMILY_DELIM_ARRAY, qualifier);
   }
 
+  public byte[] makeColumn() {
+    return Bytes.add(bytes, getFamilyOffset(), getFamilyLength(),
+        COLUMN_FAMILY_DELIM_ARRAY, 0, COLUMN_FAMILY_DELIM_ARRAY.length,
+        bytes, getQualifierOffset(), getQualifierLength());
+  }
+
   /**
    * @param b
    * @return Index of the family-qualifier colon delimiter character in passed

@@ -2367,7 +2367,7 @@ public class HRegionServer implements HRegionInterface,
   throws IOException {
     checkOpen();
     try {
-      boolean writeToWAL = true;
+      boolean writeToWAL = delete.getWriteToWAL();
       this.requestCount.incrementAndGet();
       HRegion region = getRegion(regionName);
       if (!region.getRegionInfo().isMetaTable()) {

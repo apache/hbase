@@ -16,11 +16,15 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.Collections;
 
+import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /** Similar to {@link HConstants} but for tests. */
@@ -31,6 +35,7 @@ public class HTestConst {
 
   public static final String DEFAULT_TABLE_STR = "MyTestTable";
   public static final byte[] DEFAULT_TABLE_BYTES = Bytes.toBytes(DEFAULT_TABLE_STR);
+  public static final ByteBuffer DEFAULT_TABLE_BYTE_BUF = ByteBuffer.wrap(DEFAULT_TABLE_BYTES);
 
   public static final String DEFAULT_CF_STR = "MyDefaultCF";
   public static final byte[] DEFAULT_CF_BYTES = Bytes.toBytes(DEFAULT_CF_STR);
@@ -38,5 +43,15 @@ public class HTestConst {
   public static final Set<String> DEFAULT_CF_STR_SET =
       Collections.unmodifiableSet(new HashSet<String>(
           Arrays.asList(new String[] { DEFAULT_CF_STR })));
+
+  public static final List<ColumnDescriptor> DEFAULT_COLUMN_DESC_LIST;
+
+  static {
+    List<ColumnDescriptor> cdList = new ArrayList<ColumnDescriptor>();
+    ColumnDescriptor cd = new ColumnDescriptor();
+    cd.setName(DEFAULT_CF_BYTES);
+    cdList.add(cd);
+    DEFAULT_COLUMN_DESC_LIST = Collections.unmodifiableList(cdList);
+  }
 
 }

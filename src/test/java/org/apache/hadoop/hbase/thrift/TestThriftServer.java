@@ -301,7 +301,7 @@ public class TestThriftServer {
 
     // Try null mutation
     List<Mutation> mutations = new ArrayList<Mutation>();
-    mutations.add(new Mutation(false, columnAname, null));
+    mutations.add(new Mutation(false, columnAname, null, true));
     handler.mutateRow(tableAname, rowAname, mutations);
     TRowResult rowResult3 = handler.getRow(tableAname, rowAname).get(0);
     assertEquals(rowAname, rowResult3.row);
@@ -565,8 +565,8 @@ public class TestThriftServer {
    */
   static List<Mutation> getMutations() {
     List<Mutation> mutations = new ArrayList<Mutation>();
-    mutations.add(new Mutation(false, columnAname, valueAname));
-    mutations.add(new Mutation(false, columnBname, valueBname));
+    mutations.add(new Mutation(false, columnAname, valueAname, true));
+    mutations.add(new Mutation(false, columnBname, valueBname, true));
     return mutations;
   }
 
@@ -583,17 +583,17 @@ public class TestThriftServer {
 
     // Mutations to rowA.  You can't mix delete and put anymore.
     List<Mutation> rowAmutations = new ArrayList<Mutation>();
-    rowAmutations.add(new Mutation(true, columnAname, null));
+    rowAmutations.add(new Mutation(true, columnAname, null, true));
     batchMutations.add(new BatchMutation(rowAname, rowAmutations));
 
     rowAmutations = new ArrayList<Mutation>();
-    rowAmutations.add(new Mutation(false, columnBname, valueCname));
+    rowAmutations.add(new Mutation(false, columnBname, valueCname, true));
     batchMutations.add(new BatchMutation(rowAname, rowAmutations));
 
     // Mutations to rowB
     List<Mutation> rowBmutations = new ArrayList<Mutation>();
-    rowBmutations.add(new Mutation(false, columnAname, valueCname));
-    rowBmutations.add(new Mutation(false, columnBname, valueDname));
+    rowBmutations.add(new Mutation(false, columnAname, valueCname, true));
+    rowBmutations.add(new Mutation(false, columnBname, valueDname, true));
     batchMutations.add(new BatchMutation(rowBname, rowBmutations));
 
     return batchMutations;

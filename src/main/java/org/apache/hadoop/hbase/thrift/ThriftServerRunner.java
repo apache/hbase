@@ -254,9 +254,8 @@ public class ThriftServerRunner implements Runnable {
       setupServer();
       tserver.serve();
     } catch (Exception e) {
-      LOG.fatal("Cannot run ThriftServer");
-      // Crash the process if the ThriftServer is not running
-      System.exit(-1);
+      LOG.fatal("Cannot run ThriftServer", e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -904,29 +903,52 @@ public class ThriftServerRunner implements Runnable {
       try {
         table = getTable(getBytes(tableName));
         byte[] rowBytes = getBytes(row);
-        Put put = new Put(rowBytes, timestamp, null);
-        Delete delete = new Delete(rowBytes);
+        Put put = null;
+        Delete delete = null;
 
+        boolean firstMutation = true;
+        boolean writeToWAL = false;
         for (Mutation m : mutations) {
           byte[][] famAndQf = KeyValue.parseColumn(getBytes(m.column));
           if (m.isDelete) {
+            if (delete == null) {
+              delete = new Delete(rowBytes);
+            }
             if (famAndQf.length == 1) {
               delete.deleteFamily(famAndQf[0], timestamp);
             } else {
               delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
             }
           } else {
+            if (put == null) {
+              put = new Put(rowBytes, timestamp, null);
+            }
             if (famAndQf.length == 1) {
               put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, getBytes(m.value));
             } else {
               put.add(famAndQf[0], famAndQf[1], getBytes(m.value));
             }
           }
+
+          if (firstMutation) {
+            // Remember the first mutation's writeToWAL status.
+            firstMutation = false;
+            writeToWAL = m.writeToWAL;
+          } else {
+            // Make sure writeToWAL status is consistent in all mutations.
+            if (m.writeToWAL != writeToWAL) {
+              throw new IllegalArgument("Mutations with contradicting writeToWal settings");
+            }
+          }
         }
-        if (!delete.isEmpty())
+        if (delete != null) {
+          delete.setWriteToWAL(writeToWAL);
           table.delete(delete);
-        if (!put.isEmpty())
+        }
+        if (put != null) {
+          put.setWriteToWAL(writeToWAL);
           table.put(put);
+        }
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       } catch (IllegalArgumentException e) {
@@ -944,8 +966,8 @@ public class ThriftServerRunner implements Runnable {
     public void mutateRowsTs(
         ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp)
         throws IOError, IllegalArgument, TException {
-      List<Put> puts = new ArrayList<Put>();
-      List<Delete> deletes = new ArrayList<Delete>();
+      List<Put> puts = null;
+      List<Delete> deletes = null;
       if (metrics != null) {
         metrics.incNumBatchMutateRowKeys(rowBatches.size());
       }
@@ -953,11 +975,16 @@ public class ThriftServerRunner implements Runnable {
       for (BatchMutation batch : rowBatches) {
         byte[] row = getBytes(batch.row);
         List<Mutation> mutations = batch.mutations;
-        Delete delete = new Delete(row);
-        Put put = new Put(row, timestamp, null);
+        Delete delete = null;
+        Put put = null;
+        boolean firstMutation = true;
+        boolean writeToWAL = false;
         for (Mutation m : mutations) {
           byte[][] famAndQf = KeyValue.parseColumn(getBytes(m.column));
           if (m.isDelete) {
+            if (delete == null) {
+              delete = new Delete(row);
+            }
             // no qualifier, family only.
             if (famAndQf.length == 1) {
               delete.deleteFamily(famAndQf[0], timestamp);
@@ -965,26 +992,53 @@ public class ThriftServerRunner implements Runnable {
               delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
             }
           } else {
+            if (put == null) {
+              put = new Put(row, timestamp, null);
+            }
             if(famAndQf.length == 1) {
               put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, getBytes(m.value));
             } else {
               put.add(famAndQf[0], famAndQf[1], getBytes(m.value));
             }
           }
+          if (firstMutation) {
+            // Remember the first mutation's writeToWAL status.
+            firstMutation = false;
+            writeToWAL = m.writeToWAL;
+          } else {
+            // Make sure writeToWAL status is consistent in all mutations in this batch.
+            if (m.writeToWAL != writeToWAL) {
+              throw new IllegalArgument("Mutations with contradicting writeToWal settings in " +
+                  "the same batch");
+            }
+          }
         }
-        if (!delete.isEmpty())
+        if (delete != null) {
+          delete.setWriteToWAL(writeToWAL);
+          if (deletes == null) {
+            deletes = new ArrayList<Delete>();
+          }
           deletes.add(delete);
-        if (!put.isEmpty())
+        }
+        if (put != null) {
+          put.setWriteToWAL(writeToWAL);
+          if (puts == null) {
+            puts = new ArrayList<Put>();
+          }
           puts.add(put);
+        }
       }
 
       HTable table = null;
       try {
         table = getTable(tableName);
-        if (!puts.isEmpty())
+        if (puts != null) {
           table.put(puts);
-        for (Delete del : deletes) {
-          table.delete(del);
+        }
+        if (deletes != null) {
+          for (Delete del : deletes) {
+            table.delete(del);
+          }
         }
       } catch (IOException e) {
         throw new IOError(e.getMessage());

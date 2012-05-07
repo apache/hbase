@@ -1017,6 +1017,22 @@ public class Bytes {
   }
 
   /**
+   * @param a first third
+   * @param b second third
+   * @param c third third
+   * @return New array made from a, b and c
+   */
+  public static byte [] add(final byte [] a, int aOffset, int aLength,
+      final byte [] b, int bOffset, int bLength,
+      final byte [] c, int cOffset, int cLength) {
+    byte [] result = new byte[aLength + bLength + cLength];
+    System.arraycopy(a, aOffset, result, 0, aLength);
+    System.arraycopy(b, bOffset, result, aLength, bLength);
+    System.arraycopy(c, cOffset, result, aLength + bLength, cLength);
+    return result;
+  }
+
+  /**
    * @param a array
    * @param length amount of bytes to grab
    * @return First <code>length</code> bytes from <code>a</code>

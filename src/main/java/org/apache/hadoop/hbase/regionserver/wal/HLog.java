@@ -131,7 +131,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class HLog implements Syncable {
   static final Log LOG = LogFactory.getLog(HLog.class);
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
-  static final byte [] METAROW = Bytes.toBytes("METAROW");
+  public static final byte [] METAROW = Bytes.toBytes("METAROW");
   public static final boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
 
   /*
