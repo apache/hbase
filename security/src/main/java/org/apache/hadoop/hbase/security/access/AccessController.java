@@ -1049,4 +1049,84 @@ public class AccessController extends BaseRegionObserver
     String activeUser = getActiveUser().getShortName();
     return activeUser.equals(getTableOwner(e, tableName));
   }
+
+  @Override
+  public void preCreateTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+  }
+
+  @Override
+  public void postCreateTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+  }
+
+  @Override
+  public void preDeleteTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName) throws IOException {
+  }
+
+  @Override
+  public void postDeleteTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName) throws IOException {
+  }
+
+  @Override
+  public void preModifyTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName, HTableDescriptor htd) throws IOException {
+  }
+
+  @Override
+  public void postModifyTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName, HTableDescriptor htd) throws IOException {
+  }
+
+  @Override
+  public void preAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName, HColumnDescriptor column) throws IOException {
+  }
+
+  @Override
+  public void postAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName, HColumnDescriptor column) throws IOException {
+  }
+
+  @Override
+  public void preModifyColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName, HColumnDescriptor descriptor) throws IOException {
+  }
+
+  @Override
+  public void postModifyColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName, HColumnDescriptor descriptor) throws IOException {
+  }
+
+  @Override
+  public void preDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName, byte[] c) throws IOException {
+  }
+
+  @Override
+  public void postDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName, byte[] c) throws IOException {
+  }
+
+  @Override
+  public void preEnableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName) throws IOException {
+  }
+
+  @Override
+  public void postEnableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName) throws IOException {
+  }
+
+  @Override
+  public void preDisableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName) throws IOException {
+  }
+
+  @Override
+  public void postDisableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      byte[] tableName) throws IOException {
+  }
 }
