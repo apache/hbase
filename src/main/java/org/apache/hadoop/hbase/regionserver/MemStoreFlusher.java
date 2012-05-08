@@ -107,10 +107,6 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
     this.globalMemStoreLimitLowMark = lower;
     this.blockingStoreFilesNumber =
       conf.getInt("hbase.hstore.blockingStoreFiles", 7);
-    if (this.blockingStoreFilesNumber == -1) {
-      this.blockingStoreFilesNumber = 1 +
-        conf.getInt("hbase.hstore.compactionThreshold", 3);
-    }
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
       90000);
     LOG.info("globalMemStoreLimit=" +
