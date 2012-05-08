@@ -1322,8 +1322,11 @@ public class HConnectionManager {
         try {
           callable.beforeCall();
           callable.connect(tries != 0);
-          return callable.call();
+          T result = callable.call();
+          callable.afterCall();
+          return result;
         } catch (Throwable t) {
+          callable.afterCall();
           callable.shouldRetry(t);
           t = translateException(t);
           if (t instanceof SocketTimeoutException ||
@@ -1344,8 +1347,6 @@ public class HConnectionManager {
           if (tries == numRetries - 1) {
             throw new RetriesExhaustedException(tries, exceptions);
           }
-        } finally {
-          callable.afterCall();
         }
         try {
           Thread.sleep(getPauseTime(tries));
