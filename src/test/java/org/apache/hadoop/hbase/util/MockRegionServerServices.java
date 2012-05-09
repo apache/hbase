@@ -50,7 +50,7 @@ public class MockRegionServerServices implements RegionServerServices {
   private HFileSystem hfs = null;
 
   @Override
-  public boolean removeFromOnlineRegions(String encodedRegionName) {
+  public boolean removeFromOnlineRegions(String encodedRegionName, ServerName destination) {
     return this.regions.remove(encodedRegionName) != null;
   }
 

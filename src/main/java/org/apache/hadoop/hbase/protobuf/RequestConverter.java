@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -642,6 +643,19 @@ public final class RequestConverter {
    builder.setVersionOfClosingNode(versionOfClosingNode);
    return builder.build();
  }
+
+  public static CloseRegionRequest buildCloseRegionRequest(
+    final byte[] regionName, final int versionOfClosingNode, ServerName destinationServer) {
+    CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
+    RegionSpecifier region = buildRegionSpecifier(
+      RegionSpecifierType.REGION_NAME, regionName);
+    builder.setRegion(region);
+    builder.setVersionOfClosingNode(versionOfClosingNode);
+    if (destinationServer != null){
+      builder.setDestinationServer(ProtobufUtil.toServerName( destinationServer) );
+    }
+    return builder.build();
+  }
 
  /**
   * Create a CloseRegionRequest for a given encoded region name

@@ -528,11 +528,12 @@ public class ServerManager {
    * @param versionOfClosingNode
    *   the version of znode to compare when RS transitions the znode from
    *   CLOSING state.
+   * @param dest - if the region is moved to another server, the destination server. null otherwise.
    * @return true if server acknowledged close, false if not
    * @throws IOException
    */
   public boolean sendRegionClose(ServerName server, HRegionInfo region,
-    int versionOfClosingNode) throws IOException {
+    int versionOfClosingNode, ServerName dest) throws IOException {
     if (server == null) throw new NullPointerException("Passed server is null");
     AdminProtocol admin = getServerConnection(server);
     if (admin == null) {
@@ -542,16 +543,21 @@ public class ServerManager {
         " failed because no RPC connection found to this server");
     }
     return ProtobufUtil.closeRegion(admin, region.getRegionName(),
-      versionOfClosingNode);
+      versionOfClosingNode, dest);
   }
 
-  /**
-   * @param sn
-   * @return
-   * @throws IOException
-   * @throws RetriesExhaustedException wrapping a ConnectException if failed
-   * putting up proxy.
-   */
+  public boolean sendRegionClose(ServerName server, HRegionInfo region,
+                                 int versionOfClosingNode) throws IOException {
+    return sendRegionClose(server, region, versionOfClosingNode, null);
+  }
+
+    /**
+    * @param sn
+    * @return
+    * @throws IOException
+    * @throws RetriesExhaustedException wrapping a ConnectException if failed
+    * putting up proxy.
+    */
   private AdminProtocol getServerConnection(final ServerName sn)
   throws IOException {
     AdminProtocol admin = this.serverConnections.get(sn.toString());

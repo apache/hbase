@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.RegionMovedException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -1716,6 +1717,81 @@ public class HConnectionManager {
      };
    }
 
+    void updateCachedLocation(HRegionLocation hrl, String hostname, int port) {
+      HRegionLocation newHrl = new HRegionLocation(hrl.getRegionInfo(), hostname, port);
+      synchronized (this.cachedRegionLocations) {
+        cacheLocation(hrl.getRegionInfo().getTableName(), newHrl);
+      }
+    }
+
+    void deleteCachedLocation(HRegionLocation rl) {
+      synchronized (this.cachedRegionLocations) {
+        Map<byte[], HRegionLocation> tableLocations =
+          getTableLocations(rl.getRegionInfo().getTableName());
+        tableLocations.remove(rl.getRegionInfo().getStartKey());
+      }
+    }
+
+    private void updateCachedLocations(
+      UpdateHistory updateHistory, HRegionLocation hrl, Object t) {
+      updateCachedLocations(updateHistory, hrl, null, null, t);
+    }
+
+    private void updateCachedLocations(UpdateHistory updateHistory, byte[] tableName, Row row,
+      Object t) {
+      updateCachedLocations(updateHistory, null, tableName, row, t);
+    }
+
+    /**
+     * Update the location with the new value (if the exception is a RegionMovedException) or delete
+     *  it from the cache.
+     * We need to keep an history of the modifications, because we can have first an update then a
+     *  delete. The delete would remove the update.
+     * @param updateHistory - The set used for the history
+     * @param hrl - can be null. If it's the case, tableName and row should not be null
+     * @param tableName - can be null if hrl is not null.
+     * @param row  - can be null if hrl is not null.
+     * @param exception - An object (to simplify user code) on which we will try to find a nested
+     *                  or wrapped or both RegionMovedException
+     */
+    private void updateCachedLocations(
+      UpdateHistory updateHistory, final HRegionLocation hrl, final byte[] tableName,
+      Row row, final Object exception) {
+
+      if ((row == null || tableName == null) && hrl == null){
+        LOG.warn ("Coding error, see method javadoc. row="+row+", tableName="+
+          Bytes.toString(tableName)+", hrl="+hrl);
+        return;
+      }
+
+      // Is it something we have already updated?
+      final HRegionLocation myLoc = (hrl != null ?
+        hrl : getCachedLocation(tableName, row.getRow()));
+      if (myLoc == null) {
+        // There is no such location in the cache => it's been removed already => nothing to do
+        return;
+      }
+
+      final String regionName = myLoc.getRegionInfo().getRegionNameAsString();
+
+      if (updateHistory.contains(regionName)) {
+        // Already updated/deleted => nothing to do
+        return;
+      }
+
+      updateHistory.add(regionName);
+
+      final RegionMovedException rme = RegionMovedException.find(exception);
+      if (rme != null) {
+        LOG.info("Region " + myLoc.getRegionInfo().getRegionNameAsString() + " moved from " +
+          myLoc.getHostnamePort() + ", updating client location cache." +
+          " New server: " + rme.getHostname() + ":" + rme.getPort());
+        updateCachedLocation(myLoc, rme.getHostname(), rme.getPort());
+      } else {
+        deleteCachedLocation(myLoc);
+      }
+    }
+
     @Override
     @Deprecated
     public void processBatch(List<? extends Row> list,
@@ -1799,6 +1875,19 @@ public class HConnectionManager {
       }
     }
 
+    private static class UpdateHistory{
+      private final Set<String> updateHistory = new HashSet<String>(100); // size: if we're doing a
+      // rolling restart we may have 100 regions with a wrong location if we're really unlucky
+
+      public boolean contains(String regionName) {
+        return updateHistory.contains(regionName);
+      }
+
+      public void add(String regionName) {
+        updateHistory.add(regionName);
+      }
+    }
+
     /**
      * Parameterized batch processing, allowing varying return types for
      * different {@link Row} implementations.
@@ -1833,6 +1922,7 @@ public class HConnectionManager {
       int actionCount = 0;
 
       for (int tries = 0; tries < numRetries && retry; ++tries) {
+        UpdateHistory updateHistory = new UpdateHistory();
 
         // sleep first, if this is a retry
         if (tries >= 1) {
@@ -1910,6 +2000,7 @@ public class HConnectionManager {
             }
           } catch (ExecutionException e) {
             LOG.debug("Failed all from " + loc, e);
+            updateCachedLocations(updateHistory, loc, e);
           }
         }
 
@@ -1931,7 +2022,7 @@ public class HConnectionManager {
             actionCount++;
             Row row = list.get(i);
             workingList.add(row);
-            deleteCachedLocation(tableName, row.getRow());
+            updateCachedLocations(updateHistory, tableName, row, results[i]);
           } else {
             if (results[i] != null && results[i] instanceof Throwable) {
               actionCount++;

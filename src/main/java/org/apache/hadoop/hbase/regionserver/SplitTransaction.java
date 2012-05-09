@@ -274,7 +274,7 @@ public class SplitTransaction {
     }
 
     if (!testing) {
-      services.removeFromOnlineRegions(this.parent.getRegionInfo().getEncodedName());
+      services.removeFromOnlineRegions(this.parent.getRegionInfo().getEncodedName(), null);
     }
     this.journal.add(JournalEntry.OFFLINED_PARENT);
 

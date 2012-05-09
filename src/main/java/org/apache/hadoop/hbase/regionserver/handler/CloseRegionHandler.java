@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -60,11 +61,12 @@ public class CloseRegionHandler extends EventHandler {
   // close -- not the master process so state up in zk will unlikely be
   // CLOSING.
   private final boolean zk;
+  private ServerName destination;
 
   // This is executed after receiving an CLOSE RPC from the master.
   public CloseRegionHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo) {
-    this(server, rsServices, regionInfo, false, true, -1);
+    this(server, rsServices, regionInfo, false, true, -1, EventType.M_RS_CLOSE_REGION, null);
   }
 
   /**
@@ -80,13 +82,28 @@ public class CloseRegionHandler extends EventHandler {
       final HRegionInfo regionInfo, final boolean abort, final boolean zk,
       final int versionOfClosingNode) {
     this(server, rsServices,  regionInfo, abort, zk, versionOfClosingNode,
-      EventType.M_RS_CLOSE_REGION);
+      EventType.M_RS_CLOSE_REGION, null);
   }
 
-  protected CloseRegionHandler(final Server server,
+  public CloseRegionHandler(final Server server,
+      final RegionServerServices rsServices,
+      final HRegionInfo regionInfo, final boolean abort, final boolean zk,
+      final int versionOfClosingNode, ServerName destination) {
+    this(server, rsServices, regionInfo, abort, zk, versionOfClosingNode,
+      EventType.M_RS_CLOSE_REGION, destination);
+  }
+
+  public CloseRegionHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
       boolean abort, final boolean zk, final int versionOfClosingNode,
       EventType eventType) {
+    this(server, rsServices, regionInfo, abort, zk, versionOfClosingNode, eventType, null);
+  }
+
+    protected CloseRegionHandler(final Server server,
+      final RegionServerServices rsServices, HRegionInfo regionInfo,
+      boolean abort, final boolean zk, final int versionOfClosingNode,
+      EventType eventType, ServerName destination) {
     super(server, eventType);
     this.server = server;
     this.rsServices = rsServices;
@@ -94,6 +111,7 @@ public class CloseRegionHandler extends EventHandler {
     this.abort = abort;
     this.zk = zk;
     this.expectedVersion = versionOfClosingNode;
+    this.destination = destination;
   }
 
   public HRegionInfo getRegionInfo() {
@@ -135,7 +153,7 @@ public class CloseRegionHandler extends EventHandler {
         throw new RuntimeException(t);
       }
 
-      this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
+      this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName(), destination);
 
       if (this.zk) {
         if (setClosedState(this.expectedVersion, region)) {
@@ -183,5 +201,4 @@ public class CloseRegionHandler extends EventHandler {
     }
     return true;
   }
-
 }

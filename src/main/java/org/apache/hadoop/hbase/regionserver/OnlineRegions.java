@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
 
 /**
  * Interface to Map of online regions.  In the  Map, the key is the region's
@@ -41,9 +43,10 @@ interface OnlineRegions extends Server {
    * This method removes HRegion corresponding to hri from the Map of onlineRegions.
    *
    * @param encodedRegionName
+   * @param destination - destination, if any. Null otherwise
    * @return True if we removed a region from online list.
    */
-  public boolean removeFromOnlineRegions(String encodedRegionName);
+  public boolean removeFromOnlineRegions(String encodedRegionName, ServerName destination);
 
   /**
    * Return {@link HRegion} instance.

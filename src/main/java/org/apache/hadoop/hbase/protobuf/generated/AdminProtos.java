@@ -4031,6 +4031,11 @@ public final class AdminProtos {
     // optional bool transitionInZK = 3 [default = true];
     boolean hasTransitionInZK();
     boolean getTransitionInZK();
+    
+    // optional .ServerName destinationServer = 4;
+    boolean hasDestinationServer();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getDestinationServer();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getDestinationServerOrBuilder();
   }
   public static final class CloseRegionRequest extends
       com.google.protobuf.GeneratedMessage
@@ -4094,10 +4099,24 @@ public final class AdminProtos {
       return transitionInZK_;
     }
     
+    // optional .ServerName destinationServer = 4;
+    public static final int DESTINATIONSERVER_FIELD_NUMBER = 4;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName destinationServer_;
+    public boolean hasDestinationServer() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getDestinationServer() {
+      return destinationServer_;
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getDestinationServerOrBuilder() {
+      return destinationServer_;
+    }
+    
     private void initFields() {
       region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       versionOfClosingNode_ = 0;
       transitionInZK_ = true;
+      destinationServer_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4111,6 +4130,12 @@ public final class AdminProtos {
       if (!getRegion().isInitialized()) {
         memoizedIsInitialized = 0;
         return false;
+      }
+      if (hasDestinationServer()) {
+        if (!getDestinationServer().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
       }
       memoizedIsInitialized = 1;
       return true;
@@ -4127,6 +4152,9 @@ public final class AdminProtos {
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeBool(3, transitionInZK_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeMessage(4, destinationServer_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -4148,6 +4176,10 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(3, transitionInZK_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, destinationServer_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4187,6 +4219,11 @@ public final class AdminProtos {
         result = result && (getTransitionInZK()
             == other.getTransitionInZK());
       }
+      result = result && (hasDestinationServer() == other.hasDestinationServer());
+      if (hasDestinationServer()) {
+        result = result && getDestinationServer()
+            .equals(other.getDestinationServer());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -4207,6 +4244,10 @@ public final class AdminProtos {
       if (hasTransitionInZK()) {
         hash = (37 * hash) + TRANSITIONINZK_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getTransitionInZK());
+      }
+      if (hasDestinationServer()) {
+        hash = (37 * hash) + DESTINATIONSERVER_FIELD_NUMBER;
+        hash = (53 * hash) + getDestinationServer().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -4317,6 +4358,7 @@ public final class AdminProtos {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getRegionFieldBuilder();
+          getDestinationServerFieldBuilder();
         }
       }
       private static Builder create() {
@@ -4335,6 +4377,12 @@ public final class AdminProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         transitionInZK_ = true;
         bitField0_ = (bitField0_ & ~0x00000004);
+        if (destinationServerBuilder_ == null) {
+          destinationServer_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+        } else {
+          destinationServerBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
       
@@ -4389,6 +4437,14 @@ public final class AdminProtos {
           to_bitField0_ |= 0x00000004;
         }
         result.transitionInZK_ = transitionInZK_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        if (destinationServerBuilder_ == null) {
+          result.destinationServer_ = destinationServer_;
+        } else {
+          result.destinationServer_ = destinationServerBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4414,6 +4470,9 @@ public final class AdminProtos {
         if (other.hasTransitionInZK()) {
           setTransitionInZK(other.getTransitionInZK());
         }
+        if (other.hasDestinationServer()) {
+          mergeDestinationServer(other.getDestinationServer());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -4426,6 +4485,12 @@ public final class AdminProtos {
         if (!getRegion().isInitialized()) {
           
           return false;
+        }
+        if (hasDestinationServer()) {
+          if (!getDestinationServer().isInitialized()) {
+            
+            return false;
+          }
         }
         return true;
       }
@@ -4470,6 +4535,15 @@ public final class AdminProtos {
             case 24: {
               bitField0_ |= 0x00000004;
               transitionInZK_ = input.readBool();
+              break;
+            }
+            case 34: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder();
+              if (hasDestinationServer()) {
+                subBuilder.mergeFrom(getDestinationServer());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setDestinationServer(subBuilder.buildPartial());
               break;
             }
           }
@@ -4608,6 +4682,96 @@ public final class AdminProtos {
         transitionInZK_ = true;
         onChanged();
         return this;
+      }
+      
+      // optional .ServerName destinationServer = 4;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName destinationServer_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> destinationServerBuilder_;
+      public boolean hasDestinationServer() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getDestinationServer() {
+        if (destinationServerBuilder_ == null) {
+          return destinationServer_;
+        } else {
+          return destinationServerBuilder_.getMessage();
+        }
+      }
+      public Builder setDestinationServer(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
+        if (destinationServerBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          destinationServer_ = value;
+          onChanged();
+        } else {
+          destinationServerBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      public Builder setDestinationServer(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
+        if (destinationServerBuilder_ == null) {
+          destinationServer_ = builderForValue.build();
+          onChanged();
+        } else {
+          destinationServerBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      public Builder mergeDestinationServer(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
+        if (destinationServerBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008) &&
+              destinationServer_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance()) {
+            destinationServer_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder(destinationServer_).mergeFrom(value).buildPartial();
+          } else {
+            destinationServer_ = value;
+          }
+          onChanged();
+        } else {
+          destinationServerBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      public Builder clearDestinationServer() {
+        if (destinationServerBuilder_ == null) {
+          destinationServer_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+          onChanged();
+        } else {
+          destinationServerBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getDestinationServerBuilder() {
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return getDestinationServerFieldBuilder().getBuilder();
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getDestinationServerOrBuilder() {
+        if (destinationServerBuilder_ != null) {
+          return destinationServerBuilder_.getMessageOrBuilder();
+        } else {
+          return destinationServer_;
+        }
+      }
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+          getDestinationServerFieldBuilder() {
+        if (destinationServerBuilder_ == null) {
+          destinationServerBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder>(
+                  destinationServer_,
+                  getParentForChildren(),
+                  isClean());
+          destinationServer_ = null;
+        }
+        return destinationServerBuilder_;
       }
       
       // @@protoc_insertion_point(builder_scope:CloseRegionRequest)
@@ -15511,62 +15675,63 @@ public final class AdminProtos {
       "esponse\022<\n\014openingState\030\001 \003(\0162&.OpenRegi" +
       "onResponse.RegionOpeningState\"H\n\022RegionO" +
       "peningState\022\n\n\006OPENED\020\000\022\022\n\016ALREADY_OPENE" +
-      "D\020\001\022\022\n\016FAILED_OPENING\020\002\"r\n\022CloseRegionRe" +
-      "quest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022" +
-      "\034\n\024versionOfClosingNode\030\002 \001(\r\022\034\n\016transit" +
-      "ionInZK\030\003 \001(\010:\004true\"%\n\023CloseRegionRespon" +
-      "se\022\016\n\006closed\030\001 \002(\010\"M\n\022FlushRegionRequest" +
-      "\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\025\n\rif",
-      "OlderThanTs\030\002 \001(\004\"=\n\023FlushRegionResponse" +
-      "\022\025\n\rlastFlushTime\030\001 \002(\004\022\017\n\007flushed\030\002 \001(\010" +
-      "\"J\n\022SplitRegionRequest\022 \n\006region\030\001 \002(\0132\020" +
-      ".RegionSpecifier\022\022\n\nsplitPoint\030\002 \001(\014\"\025\n\023" +
-      "SplitRegionResponse\"G\n\024CompactRegionRequ" +
-      "est\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\r\n" +
-      "\005major\030\002 \001(\010\"\027\n\025CompactRegionResponse\"1\n" +
-      "\004UUID\022\024\n\014leastSigBits\030\001 \002(\004\022\023\n\013mostSigBi" +
-      "ts\030\002 \002(\004\"\270\003\n\010WALEntry\022\035\n\003key\030\001 \002(\0132\020.WAL" +
-      "Entry.WALKey\022\037\n\004edit\030\002 \002(\0132\021.WALEntry.WA",
-      "LEdit\032~\n\006WALKey\022\031\n\021encodedRegionName\030\001 \002" +
-      "(\014\022\021\n\ttableName\030\002 \002(\014\022\031\n\021logSequenceNumb" +
-      "er\030\003 \002(\004\022\021\n\twriteTime\030\004 \002(\004\022\030\n\tclusterId" +
-      "\030\005 \001(\0132\005.UUID\032\353\001\n\007WALEdit\022\025\n\rkeyValueByt" +
-      "es\030\001 \003(\014\0222\n\013familyScope\030\002 \003(\0132\035.WALEntry" +
-      ".WALEdit.FamilyScope\032M\n\013FamilyScope\022\016\n\006f" +
-      "amily\030\001 \002(\014\022.\n\tscopeType\030\002 \002(\0162\033.WALEntr" +
-      "y.WALEdit.ScopeType\"F\n\tScopeType\022\033\n\027REPL" +
-      "ICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATION_SCO" +
-      "PE_GLOBAL\020\001\"4\n\030ReplicateWALEntryRequest\022",
-      "\030\n\005entry\030\001 \003(\0132\t.WALEntry\"\033\n\031ReplicateWA" +
-      "LEntryResponse\"\026\n\024RollWALWriterRequest\"." +
-      "\n\025RollWALWriterResponse\022\025\n\rregionToFlush" +
-      "\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006reason\030\001 " +
-      "\002(\t\"\024\n\022StopServerResponse\"\026\n\024GetServerIn" +
-      "foRequest\"@\n\nServerInfo\022\037\n\nserverName\030\001 " +
-      "\002(\0132\013.ServerName\022\021\n\twebuiPort\030\002 \001(\r\"8\n\025G" +
-      "etServerInfoResponse\022\037\n\nserverInfo\030\001 \002(\013" +
-      "2\013.ServerInfo2\371\005\n\014AdminService\022>\n\rgetReg" +
-      "ionInfo\022\025.GetRegionInfoRequest\032\026.GetRegi",
-      "onInfoResponse\022;\n\014getStoreFile\022\024.GetStor" +
-      "eFileRequest\032\025.GetStoreFileResponse\022D\n\017g" +
-      "etOnlineRegion\022\027.GetOnlineRegionRequest\032" +
-      "\030.GetOnlineRegionResponse\0225\n\nopenRegion\022" +
-      "\022.OpenRegionRequest\032\023.OpenRegionResponse" +
-      "\0228\n\013closeRegion\022\023.CloseRegionRequest\032\024.C" +
-      "loseRegionResponse\0228\n\013flushRegion\022\023.Flus" +
-      "hRegionRequest\032\024.FlushRegionResponse\0228\n\013" +
-      "splitRegion\022\023.SplitRegionRequest\032\024.Split" +
-      "RegionResponse\022>\n\rcompactRegion\022\025.Compac",
-      "tRegionRequest\032\026.CompactRegionResponse\022J" +
-      "\n\021replicateWALEntry\022\031.ReplicateWALEntryR" +
-      "equest\032\032.ReplicateWALEntryResponse\022>\n\rro" +
-      "llWALWriter\022\025.RollWALWriterRequest\032\026.Rol" +
-      "lWALWriterResponse\022>\n\rgetServerInfo\022\025.Ge" +
-      "tServerInfoRequest\032\026.GetServerInfoRespon" +
-      "se\0225\n\nstopServer\022\022.StopServerRequest\032\023.S" +
-      "topServerResponseBA\n*org.apache.hadoop.h" +
-      "base.protobuf.generatedB\013AdminProtosH\001\210\001" +
-      "\001\240\001\001"
+      "D\020\001\022\022\n\016FAILED_OPENING\020\002\"\232\001\n\022CloseRegionR" +
+      "equest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier" +
+      "\022\034\n\024versionOfClosingNode\030\002 \001(\r\022\034\n\016transi" +
+      "tionInZK\030\003 \001(\010:\004true\022&\n\021destinationServe" +
+      "r\030\004 \001(\0132\013.ServerName\"%\n\023CloseRegionRespo" +
+      "nse\022\016\n\006closed\030\001 \002(\010\"M\n\022FlushRegionReques",
+      "t\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\025\n\ri" +
+      "fOlderThanTs\030\002 \001(\004\"=\n\023FlushRegionRespons" +
+      "e\022\025\n\rlastFlushTime\030\001 \002(\004\022\017\n\007flushed\030\002 \001(" +
+      "\010\"J\n\022SplitRegionRequest\022 \n\006region\030\001 \002(\0132" +
+      "\020.RegionSpecifier\022\022\n\nsplitPoint\030\002 \001(\014\"\025\n" +
+      "\023SplitRegionResponse\"G\n\024CompactRegionReq" +
+      "uest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\r" +
+      "\n\005major\030\002 \001(\010\"\027\n\025CompactRegionResponse\"1" +
+      "\n\004UUID\022\024\n\014leastSigBits\030\001 \002(\004\022\023\n\013mostSigB" +
+      "its\030\002 \002(\004\"\270\003\n\010WALEntry\022\035\n\003key\030\001 \002(\0132\020.WA",
+      "LEntry.WALKey\022\037\n\004edit\030\002 \002(\0132\021.WALEntry.W" +
+      "ALEdit\032~\n\006WALKey\022\031\n\021encodedRegionName\030\001 " +
+      "\002(\014\022\021\n\ttableName\030\002 \002(\014\022\031\n\021logSequenceNum" +
+      "ber\030\003 \002(\004\022\021\n\twriteTime\030\004 \002(\004\022\030\n\tclusterI" +
+      "d\030\005 \001(\0132\005.UUID\032\353\001\n\007WALEdit\022\025\n\rkeyValueBy" +
+      "tes\030\001 \003(\014\0222\n\013familyScope\030\002 \003(\0132\035.WALEntr" +
+      "y.WALEdit.FamilyScope\032M\n\013FamilyScope\022\016\n\006" +
+      "family\030\001 \002(\014\022.\n\tscopeType\030\002 \002(\0162\033.WALEnt" +
+      "ry.WALEdit.ScopeType\"F\n\tScopeType\022\033\n\027REP" +
+      "LICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATION_SC",
+      "OPE_GLOBAL\020\001\"4\n\030ReplicateWALEntryRequest" +
+      "\022\030\n\005entry\030\001 \003(\0132\t.WALEntry\"\033\n\031ReplicateW" +
+      "ALEntryResponse\"\026\n\024RollWALWriterRequest\"" +
+      ".\n\025RollWALWriterResponse\022\025\n\rregionToFlus" +
+      "h\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006reason\030\001" +
+      " \002(\t\"\024\n\022StopServerResponse\"\026\n\024GetServerI" +
+      "nfoRequest\"@\n\nServerInfo\022\037\n\nserverName\030\001" +
+      " \002(\0132\013.ServerName\022\021\n\twebuiPort\030\002 \001(\r\"8\n\025" +
+      "GetServerInfoResponse\022\037\n\nserverInfo\030\001 \002(" +
+      "\0132\013.ServerInfo2\371\005\n\014AdminService\022>\n\rgetRe",
+      "gionInfo\022\025.GetRegionInfoRequest\032\026.GetReg" +
+      "ionInfoResponse\022;\n\014getStoreFile\022\024.GetSto" +
+      "reFileRequest\032\025.GetStoreFileResponse\022D\n\017" +
+      "getOnlineRegion\022\027.GetOnlineRegionRequest" +
+      "\032\030.GetOnlineRegionResponse\0225\n\nopenRegion" +
+      "\022\022.OpenRegionRequest\032\023.OpenRegionRespons" +
+      "e\0228\n\013closeRegion\022\023.CloseRegionRequest\032\024." +
+      "CloseRegionResponse\0228\n\013flushRegion\022\023.Flu" +
+      "shRegionRequest\032\024.FlushRegionResponse\0228\n" +
+      "\013splitRegion\022\023.SplitRegionRequest\032\024.Spli",
+      "tRegionResponse\022>\n\rcompactRegion\022\025.Compa" +
+      "ctRegionRequest\032\026.CompactRegionResponse\022" +
+      "J\n\021replicateWALEntry\022\031.ReplicateWALEntry" +
+      "Request\032\032.ReplicateWALEntryResponse\022>\n\rr" +
+      "ollWALWriter\022\025.RollWALWriterRequest\032\026.Ro" +
+      "llWALWriterResponse\022>\n\rgetServerInfo\022\025.G" +
+      "etServerInfoRequest\032\026.GetServerInfoRespo" +
+      "nse\0225\n\nstopServer\022\022.StopServerRequest\032\023." +
+      "StopServerResponseBA\n*org.apache.hadoop." +
+      "hbase.protobuf.generatedB\013AdminProtosH\001\210",
+      "\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -15642,7 +15807,7 @@ public final class AdminProtos {
           internal_static_CloseRegionRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CloseRegionRequest_descriptor,
-              new java.lang.String[] { "Region", "VersionOfClosingNode", "TransitionInZK", },
+              new java.lang.String[] { "Region", "VersionOfClosingNode", "TransitionInZK", "DestinationServer", },
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest.Builder.class);
           internal_static_CloseRegionResponse_descriptor =

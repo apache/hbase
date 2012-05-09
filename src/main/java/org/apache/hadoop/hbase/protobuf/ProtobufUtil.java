@@ -1283,6 +1283,29 @@ public final class ProtobufUtil {
   }
 
   /**
+   * A helper to close a region given a region name
+   * using admin protocol.
+   *
+   * @param admin
+   * @param regionName
+   * @param versionOfClosingNode
+   * @return true if the region is closed
+   * @throws IOException
+   */
+  public static boolean closeRegion(final AdminProtocol admin, final byte[] regionName,
+                                    final int versionOfClosingNode, final ServerName destinationServer) throws IOException {
+    CloseRegionRequest closeRegionRequest =
+      RequestConverter.buildCloseRegionRequest(regionName, versionOfClosingNode, destinationServer);
+    try {
+      CloseRegionResponse response = admin.closeRegion(null, closeRegionRequest);
+      return ResponseConverter.isClosed(response);
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+
+  /**
    * A helper to open a region using admin protocol.
    *
    * @param admin

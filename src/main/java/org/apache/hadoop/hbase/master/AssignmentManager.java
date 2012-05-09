@@ -1943,7 +1943,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param region server to be unassigned
    * @param force if region should be closed even if already closing
    */
-  public void unassign(HRegionInfo region, boolean force) {
+  public void unassign(HRegionInfo region, boolean force, ServerName dest) {
     // TODO: Method needs refactoring.  Ugly buried returns throughout.  Beware!
     LOG.debug("Starting unassignment of region " +
       region.getRegionNameAsString() + " (offlining)");
@@ -2045,7 +2045,7 @@ public class AssignmentManager extends ZooKeeperListener {
       // TODO: We should consider making this look more like it does for the
       // region open where we catch all throwables and never abort
       if (serverManager.sendRegionClose(server, state.getRegion(),
-        versionOfClosingNode)) {
+        versionOfClosingNode, dest)) {
         LOG.debug("Sent CLOSE to " + server + " for region " +
           region.getRegionNameAsString());
         return;
@@ -2086,9 +2086,13 @@ public class AssignmentManager extends ZooKeeperListener {
         state.update(state.getState());
       }
       LOG.info("Server " + server + " returned " + t + " for " +
-        region.getRegionNameAsString());
+        region.getRegionNameAsString(), t);
       // Presume retry or server will expire.
     }
+  }
+
+  public void unassign(HRegionInfo region, boolean force){
+     unassign(region, force, null);
   }
   
   private void deleteClosingOrClosedNode(HRegionInfo region) {
@@ -3228,7 +3232,7 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized (this.regionPlans) {
       this.regionPlans.put(plan.getRegionName(), plan);
     }
-    unassign(plan.getRegionInfo());
+    unassign(plan.getRegionInfo(), false, plan.getDestination());
   }
 
   /**

@@ -39,6 +39,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -73,6 +74,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.RegionMovedException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -230,7 +232,7 @@ import com.google.protobuf.RpcController;
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
-public class HRegionServer implements ClientProtocol,
+public class  HRegionServer implements ClientProtocol,
     AdminProtocol, Runnable, RegionServerServices, HBaseRPCErrorHandler {
 
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
@@ -415,6 +417,12 @@ public class HRegionServer implements ClientProtocol,
    * MX Bean for RegionServerInfo
    */
   private ObjectName mxBean = null;
+
+  /**
+   * Chore to clean periodically the moved region list
+   */
+  private MovedRegionsCleaner movedRegionsCleaner;
+
 
   /**
    * Starts a HRegionServer at the default location
@@ -709,6 +717,9 @@ public class HRegionServer implements ClientProtocol,
       thriftServer.start();
       LOG.info("Started Thrift API from Region Server.");
     }
+
+    // Create the thread to clean the moved regions list
+    movedRegionsCleaner = MovedRegionsCleaner.createAndStart(this);
   }
 
   /**
@@ -804,6 +815,8 @@ public class HRegionServer implements ClientProtocol,
     if (cacheConfig.isBlockCacheEnabled()) {
       cacheConfig.getBlockCache().shutdown();
     }
+
+    movedRegionsCleaner.stop("Region Server stopping");
 
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive? If OOME could have exited already
@@ -2048,21 +2061,6 @@ public class HRegionServer implements ClientProtocol,
     this.onlineRegions.put(region.getRegionInfo().getEncodedName(), region);
   }
 
-  @Override
-  public boolean removeFromOnlineRegions(final String encodedName) {
-    HRegion toReturn = null;
-    toReturn = this.onlineRegions.remove(encodedName);
-    
-    //Clear all of the dynamic metrics as they are now probably useless.
-    //This is a clear because dynamic metrics could include metrics per cf and
-    //per hfile.  Figuring out which cfs, hfiles, and regions are still relevant to
-    //this region server would be an onerous task.  Instead just clear everything
-    //and on the next tick of the metrics everything that is still relevant will be
-    //re-added.
-    this.dynamicMetrics.clear();
-    return toReturn != null;
-  }
-
   /**
    * @return A new Map of online regions sorted by region size with the first
    *         entry being the biggest.
@@ -2491,7 +2489,7 @@ public class HRegionServer implements ClientProtocol,
    */
   protected boolean closeRegion(HRegionInfo region, final boolean abort,
       final boolean zk) {
-    return closeRegion(region, abort, zk, -1);
+    return closeRegion(region, abort, zk, -1, null);
   }
 
     /**
@@ -2506,7 +2504,7 @@ public class HRegionServer implements ClientProtocol,
    * @return True if closed a region.
    */
   protected boolean closeRegion(HRegionInfo region, final boolean abort,
-      final boolean zk, final int versionOfClosingNode) {
+      final boolean zk, final int versionOfClosingNode, ServerName sn) {
     if (this.regionsInTransitionInRS.containsKey(region.getEncodedNameAsBytes())) {
       LOG.warn("Received close for region we are already opening or closing; " +
         region.getEncodedName());
@@ -2521,8 +2519,7 @@ public class HRegionServer implements ClientProtocol,
       crh = new CloseMetaHandler(this, this, region, abort, zk,
         versionOfClosingNode);
     } else {
-      crh = new CloseRegionHandler(this, this, region, abort, zk,
-        versionOfClosingNode);
+      crh = new CloseRegionHandler(this, this, region, abort, zk, versionOfClosingNode, sn);
     }
     this.service.submit(crh);
     return true;
@@ -2543,6 +2540,25 @@ public class HRegionServer implements ClientProtocol,
     return this.onlineRegions.get(encodedRegionName);
   }
 
+
+  @Override
+  public boolean removeFromOnlineRegions(final String encodedRegionName, ServerName destination) {
+    HRegion toReturn = this.onlineRegions.remove(encodedRegionName);
+
+    if (destination != null){
+      addToMovedRegions(encodedRegionName, destination);
+    }
+    
+    //Clear all of the dynamic metrics as they are now probably useless.
+    //This is a clear because dynamic metrics could include metrics per cf and
+    //per hfile.  Figuring out which cfs, hfiles, and regions are still relevant to
+    //this region server would be an onerous task.  Instead just clear everything
+    //and on the next tick of the metrics everything that is still relevant will be
+    //re-added.
+    this.dynamicMetrics.clear();
+    return toReturn != null;
+  }
+
   /**
    * Protected utility method for safely obtaining an HRegion handle.
    *
@@ -2553,11 +2569,21 @@ public class HRegionServer implements ClientProtocol,
    */
   protected HRegion getRegion(final byte[] regionName)
       throws NotServingRegionException {
-    HRegion region = null;
-    region = getOnlineRegion(regionName);
+    String encodedRegionName = HRegionInfo.encodeRegionName(regionName);
+    return getRegionByEncodedName(encodedRegionName);
+  }
+
+  protected HRegion getRegionByEncodedName(String encodedRegionName)
+    throws NotServingRegionException {
+
+    HRegion region = this.onlineRegions.get(encodedRegionName);
     if (region == null) {
-      throw new NotServingRegionException("Region is not online: " +
-        Bytes.toStringBinary(regionName));
+      ServerName sn = getMovedRegion(encodedRegionName);
+      if (sn != null) {
+        throw new RegionMovedException(sn.getHostname(), sn.getPort());
+      } else {
+        throw new NotServingRegionException("Region is not online: " + encodedRegionName);
+      }
     }
     return region;
   }
@@ -3396,7 +3422,7 @@ public class HRegionServer implements ClientProtocol,
           } else {
             LOG.warn("The region " + region.getEncodedName()
               + " is online on this server but META does not have this server.");
-            removeFromOnlineRegions(region.getEncodedName());
+            removeFromOnlineRegions(region.getEncodedName(), null);
           }
         }
         LOG.info("Received request to open region: "
@@ -3438,6 +3464,9 @@ public class HRegionServer implements ClientProtocol,
       versionOfClosingNode = request.getVersionOfClosingNode();
     }
     boolean zk = request.getTransitionInZK();
+    final ServerName sn = (request.hasDestinationServer() ?
+      ProtobufUtil.toServerName(request.getDestinationServer()) : null);
+
     try {
       checkOpen();
       requestCount.incrementAndGet();
@@ -3445,11 +3474,12 @@ public class HRegionServer implements ClientProtocol,
       CloseRegionResponse.Builder
         builder = CloseRegionResponse.newBuilder();
       LOG.info("Received close region: " + region.getRegionNameAsString() +
-        ". Version of ZK closing node:" + versionOfClosingNode);
+        ". Version of ZK closing node:" + versionOfClosingNode +
+        ". Destination server:" + sn);
       HRegionInfo regionInfo = region.getRegionInfo();
       checkIfRegionInTransition(regionInfo, CLOSE);
       boolean closed = closeRegion(
-        regionInfo, false, zk, versionOfClosingNode);
+        regionInfo, false, zk, versionOfClosingNode, sn);
       builder.setClosed(closed);
       return builder.build();
     } catch (IOException ie) {
@@ -3648,16 +3678,10 @@ public class HRegionServer implements ClientProtocol,
     RegionSpecifierType type = regionSpecifier.getType();
     checkOpen();
     switch (type) {
-    case REGION_NAME:
-      return getRegion(value);
-    case ENCODED_REGION_NAME:
-      String encodedRegionName = Bytes.toString(value);
-      HRegion region = this.onlineRegions.get(encodedRegionName);
-      if (region == null) {
-        throw new NotServingRegionException(
-          "Region is not online: " + encodedRegionName);
-      }
-      return region;
+      case REGION_NAME:
+        return getRegion(value);
+      case ENCODED_REGION_NAME:
+        return getRegionByEncodedName(Bytes.toString(value));
       default:
         throw new DoNotRetryIOException(
           "Unsupported region specifier type: " + type);
@@ -3792,5 +3816,96 @@ public class HRegionServer implements ClientProtocol,
       }
     }
     region.mutateRow(rm);
+  }
+
+
+  // This map will containsall the regions that we closed for a move.
+  //  We add the time it was moved as we don't want to keep too old information
+  protected Map<String, Pair<Long, ServerName>> movedRegions =
+    new ConcurrentHashMap<String, Pair<Long, ServerName>>(3000);
+
+  // We need a timeout. If not there is a risk of giving a wrong information: this would double
+  //  the number of network calls instead of reducing them.
+  private static final int TIMEOUT_REGION_MOVED = (2 * 60 * 1000);
+
+  protected void addToMovedRegions(HRegionInfo hri, ServerName destination){
+    addToMovedRegions(hri.getEncodedName(), destination);
+  }
+
+  protected void addToMovedRegions(String encodedName, ServerName destination){
+    final  Long time = System.currentTimeMillis();
+
+    movedRegions.put(
+      encodedName,
+      new Pair<Long, ServerName>(time, destination));
+  }
+
+  private ServerName getMovedRegion(final String encodedRegionName) {
+    Pair<Long, ServerName> dest = movedRegions.get(encodedRegionName);
+
+    if (dest != null) {
+      if (dest.getFirst() > (System.currentTimeMillis() - TIMEOUT_REGION_MOVED)) {
+        return dest.getSecond();
+      } else {
+        movedRegions.remove(encodedRegionName);
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Remove the expired entries from the moved regions list.
+   */
+  protected void cleanMovedRegions(){
+    final long cutOff = System.currentTimeMillis() - TIMEOUT_REGION_MOVED;
+    Iterator<Entry<String, Pair<Long, ServerName>>> it = movedRegions.entrySet().iterator();
+
+    while (it.hasNext()){
+      Map.Entry<String, Pair<Long, ServerName>> e = it.next();
+      if (e.getValue().getFirst() < cutOff){
+        it.remove();
+      }
+    }
+  }
+
+  /**
+   * Creates a Chore thread to clean the moved region cache.
+   */
+  protected static class MovedRegionsCleaner extends Chore implements Stoppable {
+    private HRegionServer regionServer;
+    Stoppable stoppable;
+
+    private MovedRegionsCleaner(
+      HRegionServer regionServer, Stoppable stoppable){
+      super("MovedRegionsCleaner for region "+regionServer, TIMEOUT_REGION_MOVED, stoppable);
+      this.regionServer = regionServer;
+      this.stoppable = stoppable;
+    }
+
+    static MovedRegionsCleaner createAndStart(HRegionServer rs){
+      Stoppable stoppable = new Stoppable() {
+        private volatile boolean isStopped = false;
+        @Override public void stop(String why) { isStopped = true;}
+        @Override public boolean isStopped() {return isStopped;}
+      };
+
+      return new MovedRegionsCleaner(rs, stoppable);
+    }
+
+    @Override
+    protected void chore() {
+      regionServer.cleanMovedRegions();
+    }
+
+    @Override
+    public void stop(String why) {
+      stoppable.stop(why);
+    }
+
+    @Override
+    public boolean isStopped() {
+      return stoppable.isStopped();
+    }
   }
 }

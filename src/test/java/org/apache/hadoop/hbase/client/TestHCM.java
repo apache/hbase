@@ -24,6 +24,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -36,6 +38,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable.DaemonThreadFactory;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -57,7 +61,7 @@ public class TestHCM {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(1);
+    TEST_UTIL.startMiniCluster(2);
   }
 
   @AfterClass public static void tearDownAfterClass() throws Exception {
@@ -121,7 +125,7 @@ public class TestHCM {
    * that we really delete it.
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 60000)
   public void testRegionCaching() throws Exception{
     HTable table = TEST_UTIL.createTable(TABLE_NAME, FAM_NAM);
     TEST_UTIL.createMultiRegions(table, FAM_NAM);
@@ -129,11 +133,143 @@ public class TestHCM {
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
     HConnectionManager.HConnectionImplementation conn =
-        (HConnectionManager.HConnectionImplementation)table.getConnection();
+      (HConnectionManager.HConnectionImplementation)table.getConnection();
+
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
-    conn.deleteCachedLocation(TABLE_NAME, ROW);
+    assertNotNull(conn.getCachedLocation(TABLE_NAME.clone(), ROW.clone()));
+    assertNotNull(conn.getCachedLocation(
+      Bytes.toString(TABLE_NAME).getBytes() , Bytes.toString(ROW).getBytes()));
+
+    final int nextPort = conn.getCachedLocation(TABLE_NAME, ROW).getPort() + 1;
+    conn.updateCachedLocation(conn.getCachedLocation(TABLE_NAME, ROW), "127.0.0.1", nextPort);
+    Assert.assertEquals(conn.getCachedLocation(TABLE_NAME, ROW).getPort(), nextPort);
+
+    conn.deleteCachedLocation(TABLE_NAME.clone(), ROW.clone());
     HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);
     assertNull("What is this location?? " + rl, rl);
+
+    // We're now going to move the region and check that it works for the client
+    // First a new put to add the location in the cache
+    conn.clearRegionCache(TABLE_NAME);
+    Assert.assertEquals(0, conn.getNumberOfCachedRegionLocations(TABLE_NAME));
+    Put put2 = new Put(ROW);
+    put2.add(FAM_NAM, ROW, ROW);
+    table.put(put2);
+    assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
+
+    // We can wait for all regions to be onlines, that makes log reading easier when debugging
+    while (!TEST_UTIL.getMiniHBaseCluster().getMaster().
+      getAssignmentManager().getRegionsInTransition().isEmpty()) {
+    }
+
+    // Now moving the region to the second server
+    TEST_UTIL.getHBaseAdmin().balanceSwitch(false);
+    HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME, ROW);
+    byte[] regionName = toMove.getRegionInfo().getRegionName();
+
+    // Choose the other server.
+    int curServerId = TEST_UTIL.getHBaseCluster().getServerWith( regionName  );
+    int destServerId = (curServerId == 0 ? 1 : 0);
+
+    HRegionServer curServer = TEST_UTIL.getHBaseCluster().getRegionServer(curServerId);
+    HRegionServer destServer = TEST_UTIL.getHBaseCluster().getRegionServer(destServerId);
+
+    ServerName destServerName = destServer.getServerName();
+
+    // Check that we are in the expected state
+    Assert.assertTrue(curServer != destServer);
+    Assert.assertFalse(curServer.getServerName().equals(destServer.getServerName()));
+    Assert.assertFalse( toMove.getPort() == destServerName.getPort());
+    Assert.assertNotNull(curServer.getOnlineRegion(regionName));
+    Assert.assertNull(destServer.getOnlineRegion(regionName));
+
+    // Moving. It's possible that we don't have all the regions online at this point, so
+    //  the test must depends only on the region we're looking at.
+    LOG.info("Move starting region="+toMove.getRegionInfo().getRegionNameAsString());
+    TEST_UTIL.getHBaseAdmin().move(
+      toMove.getRegionInfo().getEncodedNameAsBytes(),
+      destServerName.getServerName().getBytes()
+    );
+
+    while ( destServer.getOnlineRegion(regionName) == null ){
+      // wait for the move to be finished
+    }
+
+
+    // Check our new state.
+    Assert.assertNull(curServer.getOnlineRegion(regionName));
+    Assert.assertNotNull(destServer.getOnlineRegion(regionName));
+    LOG.info("Move finished for region="+toMove.getRegionInfo().getRegionNameAsString());
+
+    // Cache was NOT updated and points to the wrong server
+    Assert.assertFalse( conn.getCachedLocation(TABLE_NAME, ROW).getPort() == destServerName.getPort());
+
+    // Hijack the number of retry to fail immediately instead of retrying: there will be no new
+    //  connection to the master
+    Field numRetries = conn.getClass().getDeclaredField("numRetries");
+    numRetries.setAccessible(true);
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(numRetries, numRetries.getModifiers() & ~Modifier.FINAL);
+    final int prevNumRetriesVal = (Integer)numRetries.get(conn);
+    numRetries.set(conn, 1);
+
+    // We do a put and expect the cache to be updated, even if we don't retry
+    LOG.info("Put starting");
+    Put put3 = new Put(ROW);
+    put3.add(FAM_NAM, ROW, ROW);
+    try {
+      table.put(put3);
+      Assert.assertFalse("Unreachable point", true);
+    }catch (Throwable e){
+      LOG.info("Put done, expected exception caught: "+e.getClass());
+    }
+    Assert.assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
+    Assert.assertEquals(
+      "Previous server was "+curServer.getServerName().getHostAndPort(),
+      destServerName.getPort(), conn.getCachedLocation(TABLE_NAME, ROW).getPort());
+
+
+    // We move it back to do another test with a scan
+    LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
+    TEST_UTIL.getHBaseAdmin().move(
+      toMove.getRegionInfo().getEncodedNameAsBytes(),
+      curServer.getServerName().getServerName().getBytes()
+    );
+
+    while ( curServer.getOnlineRegion(regionName) == null ){
+      // wait for the move to be finished
+    }
+
+    // Check our new state.
+    Assert.assertNotNull(curServer.getOnlineRegion(regionName));
+    Assert.assertNull(destServer.getOnlineRegion(regionName));
+    LOG.info("Move finished for region=" + toMove.getRegionInfo().getRegionNameAsString());
+
+    // Cache was NOT updated and points to the wrong server
+    Assert.assertFalse(conn.getCachedLocation(TABLE_NAME, ROW).getPort() ==
+      curServer.getServerName().getPort());
+
+
+    Scan sc = new Scan();
+    sc.setStopRow(ROW);
+    sc.setStopRow(ROW);
+
+    try {
+    ResultScanner rs = table.getScanner(sc);
+    while (rs.next() != null){}
+      Assert.assertFalse("Unreachable point", true);
+    }catch (Throwable e){
+      LOG.info("Put done, expected exception caught: "+e.getClass());
+    }
+
+    // Cache is updated with the right value.
+    Assert.assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
+    Assert.assertEquals(
+      "Previous server was "+destServer.getServerName().getHostAndPort(),
+      curServer.getServerName().getPort(), conn.getCachedLocation(TABLE_NAME, ROW).getPort());
+
+    numRetries.set(conn, prevNumRetriesVal);
     table.close();
   }
 

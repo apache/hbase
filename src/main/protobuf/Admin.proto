@@ -77,6 +77,7 @@ message CloseRegionRequest {
   required RegionSpecifier region = 1;
   optional uint32 versionOfClosingNode = 2;
   optional bool transitionInZK = 3 [default = true];
+  optional ServerName destinationServer = 4;
 }
 
 message CloseRegionResponse {
