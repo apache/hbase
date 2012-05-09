@@ -161,8 +161,6 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(Result[].class, code++);
     addToMap(Scan.class, code++);
 
-    addToMap(RowMutations.class, code++);
-
     addToMap(WhileMatchFilter.class, code++);
     addToMap(PrefixFilter.class, code++);
     addToMap(PageFilter.class, code++);
@@ -202,6 +200,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
 
     // Favored Assignment
     addToMap(AssignmentPlan.class, code++);
+
+    addToMap(RowMutations.class, code++);
   }
 
   private Class<?> declaredClass;
