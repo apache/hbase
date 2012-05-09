@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Progressable;
 
@@ -141,12 +142,23 @@ public class HFileSystem extends FilterFileSystem {
   private static FileSystem newInstanceFileSystem(Configuration conf)
     throws IOException {
     URI uri = FileSystem.getDefaultUri(conf);
+    FileSystem fs = null;
     Class<?> clazz = conf.getClass("fs." + uri.getScheme() + ".impl", null);
-    if (clazz == null) {
+    if (clazz != null) {
+      // This will be true for Hadoop 1.0, or 0.20.
+      fs = (FileSystem)ReflectionUtils.newInstance(clazz, conf);
+      fs.initialize(uri, conf);
+    } else {
+      // For Hadoop 2.0, we have to go through FileSystem for the filesystem
+      // implementation to be loaded by the service loader in case it has not
+      // been loaded yet.
+      Configuration clone = new Configuration(conf);
+      clone.setBoolean("fs." + uri.getScheme() + ".impl.disable.cache", true);
+      fs = FileSystem.get(uri, clone);
+    }
+    if (fs == null) {
       throw new IOException("No FileSystem for scheme: " + uri.getScheme());
     }
-    FileSystem fs = (FileSystem)ReflectionUtils.newInstance(clazz, conf);
-    fs.initialize(uri, conf);
     return fs;
   }
 
