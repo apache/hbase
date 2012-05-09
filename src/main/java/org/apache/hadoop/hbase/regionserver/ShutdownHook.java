@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.util.ShutdownHookManager;
 import org.apache.hadoop.hbase.util.Threads;
 
 /**
@@ -81,7 +82,7 @@ public class ShutdownHook {
       final Stoppable stop, final Thread threadToJoin) {
     Thread fsShutdownHook = suppressHdfsShutdownHook(fs);
     Thread t = new ShutdownHookThread(conf, stop, threadToJoin, fsShutdownHook);
-    Runtime.getRuntime().addShutdownHook(t);
+    ShutdownHookManager.affixShutdownHook(t, 0);
     LOG.info("Installed shutdown hook thread: " + t.getName());
   }
 
@@ -178,7 +179,10 @@ public class ShutdownHook {
         Field cacheField = FileSystem.class.getDeclaredField("CACHE");
         cacheField.setAccessible(true);
         Object cacheInstance = cacheField.get(fs);
-        hdfsClientFinalizer = (Thread)field.get(cacheInstance);
+        Runnable finalizerRunnable = (Runnable)field.get(cacheInstance);
+        if (!(finalizerRunnable instanceof Thread)) {
+          hdfsClientFinalizer = new Thread(finalizerRunnable);
+        } else hdfsClientFinalizer = (Thread)finalizerRunnable;
       } else {
         // Then we didnt' find clientFinalizer in Cache.  Presume clean 0.20 hadoop.
         field = FileSystem.class.getDeclaredField(CLIENT_FINALIZER_DATA_METHOD);
@@ -189,7 +193,7 @@ public class ShutdownHook {
         throw new RuntimeException("Client finalizer is null, can't suppress!");
       }
       if (!fsShutdownHooks.containsKey(hdfsClientFinalizer) &&
-          !Runtime.getRuntime().removeShutdownHook(hdfsClientFinalizer)) {
+          !ShutdownHookManager.deleteShutdownHook(hdfsClientFinalizer)) {
         throw new RuntimeException("Failed suppression of fs shutdown hook: " +
           hdfsClientFinalizer);
       }
