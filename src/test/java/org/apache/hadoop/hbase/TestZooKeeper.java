@@ -112,8 +112,7 @@ public class TestZooKeeper {
   public void testClientSessionExpired() throws Exception {
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 
-    // We don't want to share the connection as we will check
-    //  its state
+    // We don't want to share the connection as we will check its state
     c.set(HConstants.HBASE_CLIENT_INSTANCE_ID, "1111");
 
     HConnection connection = HConnectionManager.getConnection(c);

@@ -1058,8 +1058,7 @@ public class ZKUtil {
                                               zkw.backupMasterAddressesZNode)) {
         sb.append("\n ").append(child);
       }
-      sb.append("\nRegion server holding ROOT: ").append(
-          Bytes.toStringBinary(getData(zkw, zkw.rootServerZNode)));
+      sb.append("\nRegion server holding ROOT: " + RootRegionTracker.getRootRegionLocation(zkw));
       sb.append("\nRegion servers:");
       for (String child : listChildrenNoWatch(zkw, zkw.rsZNode)) {
         sb.append("\n ").append(child);

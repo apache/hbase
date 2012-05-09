@@ -27,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.zookeeper.KeeperException;
 
@@ -119,5 +118,4 @@ public class DrainingServerTracker extends ZooKeeperListener {
       }
     }
   }
-
 }

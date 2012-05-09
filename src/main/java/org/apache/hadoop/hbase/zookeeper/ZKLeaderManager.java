@@ -37,7 +37,9 @@ import org.apache.zookeeper.KeeperException;
  * If the current master instance fails, the ephemeral leader znode will
  * be removed, and all waiting instances will be notified, with the race
  * to claim the leader znode beginning all over again.
+ * @deprecated Not used
  */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ZKLeaderManager extends ZooKeeperListener {

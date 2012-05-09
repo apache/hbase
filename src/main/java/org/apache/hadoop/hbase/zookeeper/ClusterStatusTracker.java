@@ -26,10 +26,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Tracker on cluster settings up in zookeeper.
@@ -69,7 +66,7 @@ public class ClusterStatusTracker extends ZooKeeperNodeTracker {
    */
   public void setClusterUp()
   throws KeeperException {
-    byte [] upData = getZNodeData();
+    byte [] upData = toByteArray();
     try {
       ZKUtil.createAndWatch(watcher, watcher.clusterStateZNode, upData);
     } catch(KeeperException.NodeExistsException nee) {
@@ -95,7 +92,7 @@ public class ClusterStatusTracker extends ZooKeeperNodeTracker {
    * @return Content of the clusterup znode as a serialized pb with the pb
    * magic as prefix.
    */
-  static byte [] getZNodeData() {
+  static byte [] toByteArray() {
     ZooKeeperProtos.ClusterUp.Builder builder =
       ZooKeeperProtos.ClusterUp.newBuilder();
     builder.setStartDate(new java.util.Date().toString());

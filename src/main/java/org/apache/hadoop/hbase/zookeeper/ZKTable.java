@@ -28,9 +28,13 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.zookeeper.KeeperException;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Helper class for table state tracking for use by {@link AssignmentManager}.
@@ -58,22 +62,11 @@ public class ZKTable {
    * for every query.  Synchronize access rather than use concurrent Map because
    * synchronization needs to span query of zk.
    */
-  private final Map<String, TableState> cache =
-    new HashMap<String, TableState>();
+  private final Map<String, ZooKeeperProtos.Table.State> cache =
+    new HashMap<String, ZooKeeperProtos.Table.State>();
 
   // TODO: Make it so always a table znode. Put table schema here as well as table state.
   // Have watcher on table znode so all are notified of state or schema change.
-  /**
-   * States a Table can be in.
-   * {@link TableState#ENABLED} is not used currently; its the absence of state
-   * in zookeeper that indicates an enabled table currently.
-   */
-  public static enum TableState {
-    ENABLED,
-    DISABLED,
-    DISABLING,
-    ENABLING
-  };
 
   public ZKTable(final ZooKeeperWatcher zkw) throws KeeperException {
     super();
@@ -88,11 +81,10 @@ public class ZKTable {
   private void populateTableStates()
   throws KeeperException {
     synchronized (this.cache) {
-      List<String> children =
-        ZKUtil.listChildrenNoWatch(this.watcher, this.watcher.tableZNode);
+      List<String> children = ZKUtil.listChildrenNoWatch(this.watcher, this.watcher.tableZNode);
       if (children == null) return;
       for (String child: children) {
-        TableState state = getTableState(this.watcher, child);
+        ZooKeeperProtos.Table.State state = getTableState(this.watcher, child);
         if (state != null) this.cache.put(child, state);
       }
     }
@@ -104,20 +96,24 @@ public class ZKTable {
    * @return Null or {@link TableState} found in znode.
    * @throws KeeperException
    */
-  private static TableState getTableState(final ZooKeeperWatcher zkw,
+  private static ZooKeeperProtos.Table.State getTableState(final ZooKeeperWatcher zkw,
       final String child)
   throws KeeperException {
     String znode = ZKUtil.joinZNode(zkw.tableZNode, child);
     byte [] data = ZKUtil.getData(zkw, znode);
-    if (data == null || data.length <= 0) {
-      // Null if table is enabled.
-      return null;
-    }
-    String str = Bytes.toString(data);
+    if (data == null || data.length <= 0) return ZooKeeperProtos.Table.State.ENABLED;
     try {
-      return TableState.valueOf(str);
-    } catch (IllegalArgumentException e) {
-      throw new IllegalArgumentException(str);
+      ProtobufUtil.expectPBMagicPrefix(data);
+      ZooKeeperProtos.Table.Builder builder = ZooKeeperProtos.Table.newBuilder();
+      int magicLen = ProtobufUtil.lengthOfPBMagic();
+      ZooKeeperProtos.Table t = builder.mergeFrom(data, magicLen, data.length - magicLen).build();
+      return t.getState();
+    } catch (InvalidProtocolBufferException e) {
+      KeeperException ke = new KeeperException.DataInconsistencyException();
+      ke.initCause(e);
+      throw ke;
+    } catch (DeserializationException e) {
+      throw ZKUtil.convert(e);
     }
   }
 
@@ -134,7 +130,7 @@ public class ZKTable {
         LOG.warn("Moving table " + tableName + " state to disabled but was " +
           "not first in disabling state: " + this.cache.get(tableName));
       }
-      setTableState(tableName, TableState.DISABLED);
+      setTableState(tableName, ZooKeeperProtos.Table.State.DISABLED);
     }
   }
 
@@ -151,7 +147,7 @@ public class ZKTable {
         LOG.warn("Moving table " + tableName + " state to disabling but was " +
           "not first in enabled state: " + this.cache.get(tableName));
       }
-      setTableState(tableName, TableState.DISABLING);
+      setTableState(tableName, ZooKeeperProtos.Table.State.DISABLING);
     }
   }
 
@@ -168,7 +164,7 @@ public class ZKTable {
         LOG.warn("Moving table " + tableName + " state to enabling but was " +
           "not first in disabled state: " + this.cache.get(tableName));
       }
-      setTableState(tableName, TableState.ENABLING);
+      setTableState(tableName, ZooKeeperProtos.Table.State.ENABLING);
     }
   }
 
@@ -185,7 +181,7 @@ public class ZKTable {
       if (isEnablingTable(tableName)) {
         return false;
       }
-      setTableState(tableName, TableState.ENABLING);
+      setTableState(tableName, ZooKeeperProtos.Table.State.ENABLING);
       return true;
     }
   }
@@ -203,7 +199,7 @@ public class ZKTable {
       if (!isDisabledTable(tableName)) {
         return false;
       }
-      setTableState(tableName, TableState.ENABLING);
+      setTableState(tableName, ZooKeeperProtos.Table.State.ENABLING);
       return true;
     }
   }
@@ -221,25 +217,28 @@ public class ZKTable {
       if (this.cache.get(tableName) != null && !isEnabledTable(tableName)) {
         return false;
       }
-      setTableState(tableName, TableState.DISABLING);
+      setTableState(tableName, ZooKeeperProtos.Table.State.DISABLING);
       return true;
     }
   }
 
-  private void setTableState(final String tableName, final TableState state)
+  private void setTableState(final String tableName, final ZooKeeperProtos.Table.State state)
   throws KeeperException {
     String znode = ZKUtil.joinZNode(this.watcher.tableZNode, tableName);
     if (ZKUtil.checkExists(this.watcher, znode) == -1) {
       ZKUtil.createAndFailSilent(this.watcher, znode);
     }
     synchronized (this.cache) {
-      ZKUtil.setData(this.watcher, znode, Bytes.toBytes(state.toString()));
+      ZooKeeperProtos.Table.Builder builder = ZooKeeperProtos.Table.newBuilder();
+      builder.setState(state);
+      byte [] data = ProtobufUtil.prependPBMagic(builder.build().toByteArray());
+      ZKUtil.setData(this.watcher, znode, data);
       this.cache.put(tableName, state);
     }
   }
 
   public boolean isDisabledTable(final String tableName) {
-    return isTableState(tableName, TableState.DISABLED);
+    return isTableState(tableName, ZooKeeperProtos.Table.State.DISABLED);
   }
 
   /**
@@ -254,20 +253,20 @@ public class ZKTable {
   public static boolean isDisabledTable(final ZooKeeperWatcher zkw,
       final String tableName)
   throws KeeperException {
-    TableState state = getTableState(zkw, tableName);
-    return isTableState(TableState.DISABLED, state);
+    ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
+    return isTableState(ZooKeeperProtos.Table.State.DISABLED, state);
   }
 
   public boolean isDisablingTable(final String tableName) {
-    return isTableState(tableName, TableState.DISABLING);
+    return isTableState(tableName, ZooKeeperProtos.Table.State.DISABLING);
   }
 
   public boolean isEnablingTable(final String tableName) {
-    return isTableState(tableName, TableState.ENABLING);
+    return isTableState(tableName, ZooKeeperProtos.Table.State.ENABLING);
   }
 
   public boolean isEnabledTable(String tableName) {
-    return isTableState(tableName, TableState.ENABLED);
+    return isTableState(tableName, ZooKeeperProtos.Table.State.ENABLED);
   }
 
   /**
@@ -282,7 +281,7 @@ public class ZKTable {
   public static boolean isEnabledTable(final ZooKeeperWatcher zkw,
       final String tableName)
   throws KeeperException {
-    return getTableState(zkw, tableName) == TableState.ENABLED;
+    return getTableState(zkw, tableName) == ZooKeeperProtos.Table.State.ENABLED;
   }
 
   public boolean isDisablingOrDisabledTable(final String tableName) {
@@ -304,9 +303,9 @@ public class ZKTable {
   public static boolean isDisablingOrDisabledTable(final ZooKeeperWatcher zkw,
       final String tableName)
   throws KeeperException {
-    TableState state = getTableState(zkw, tableName);
-    return isTableState(TableState.DISABLING, state) ||
-      isTableState(TableState.DISABLED, state);
+    ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
+    return isTableState(ZooKeeperProtos.Table.State.DISABLING, state) ||
+      isTableState(ZooKeeperProtos.Table.State.DISABLED, state);
   }
 
   public boolean isEnabledOrDisablingTable(final String tableName) {
@@ -321,15 +320,15 @@ public class ZKTable {
     }
   }
 
-  private boolean isTableState(final String tableName, final TableState state) {
+  private boolean isTableState(final String tableName, final ZooKeeperProtos.Table.State state) {
     synchronized (this.cache) {
-      TableState currentState = this.cache.get(tableName);
+      ZooKeeperProtos.Table.State currentState = this.cache.get(tableName);
       return isTableState(currentState, state);
     }
   }
 
-  private static boolean isTableState(final TableState expectedState,
-      final TableState currentState) {
+  private static boolean isTableState(final ZooKeeperProtos.Table.State expectedState,
+      final ZooKeeperProtos.Table.State currentState) {
     return currentState != null && currentState.equals(expectedState);
   }
 
@@ -359,7 +358,7 @@ public class ZKTable {
    * @throws KeeperException
    */
   public void setEnabledTable(final String tableName) throws KeeperException {
-    setTableState(tableName, TableState.ENABLED);
+    setTableState(tableName, ZooKeeperProtos.Table.State.ENABLED);
   }
 
   /**
@@ -370,7 +369,7 @@ public class ZKTable {
    */
   public boolean isTablePresent(final String tableName) {
     synchronized (this.cache) {
-      TableState state = this.cache.get(tableName);
+      ZooKeeperProtos.Table.State state = this.cache.get(tableName);
       return !(state == null);
     }
   }
@@ -401,8 +400,8 @@ public class ZKTable {
     List<String> children =
       ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
     for (String child: children) {
-      TableState state = getTableState(zkw, child);
-      if (state == TableState.DISABLED) disabledTables.add(child);
+      ZooKeeperProtos.Table.State state = getTableState(zkw, child);
+      if (state == ZooKeeperProtos.Table.State.DISABLED) disabledTables.add(child);
     }
     return disabledTables;
   }
@@ -418,8 +417,9 @@ public class ZKTable {
     List<String> children =
       ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
     for (String child: children) {
-      TableState state = getTableState(zkw, child);
-      if (state == TableState.DISABLED || state == TableState.DISABLING)
+      ZooKeeperProtos.Table.State state = getTableState(zkw, child);
+      if (state == ZooKeeperProtos.Table.State.DISABLED ||
+          state == ZooKeeperProtos.Table.State.DISABLING)
         disabledTables.add(child);
     }
     return disabledTables;

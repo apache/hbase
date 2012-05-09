@@ -79,10 +79,9 @@ public class MXBeanImpl implements MXBean {
   @Override
   public Map<String, ServerLoad> getRegionServers() {
     Map<String, ServerLoad> data = new HashMap<String, ServerLoad>();
-    for (final Entry<ServerName, ServerLoad> entry :
-      master.getServerManager().getOnlineServers().entrySet()) {
-      data.put(entry.getKey().getServerName(),
-          entry.getValue());
+    for (final Entry<ServerName, ServerLoad> entry:
+        this.master.getServerManager().getOnlineServers().entrySet()) {
+      data.put(entry.getKey().getServerName(), entry.getValue());
     }
     return data;
   }

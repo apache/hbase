@@ -90,3 +90,20 @@ message SplitLogTask {
   required State state = 1;
   required ServerName serverName = 2;
 }
+
+/**
+ * The znode that holds state of table.
+ */
+message Table {
+  // Table's current state
+  enum State {
+    ENABLED = 0;
+    DISABLED = 1;
+    DISABLING = 2;
+    ENABLING = 3;
+  }
+  // This is the table's state.  If no znode for a table,
+  // its state is presumed enabled.  See o.a.h.h.zookeeper.ZKTable class
+  // for more.
+  required State state = 1 [default = ENABLED];
+}
