@@ -426,6 +426,7 @@ public class TestAssignmentManager {
       // I need a services instance that will return the AM
       MasterServices services = Mockito.mock(MasterServices.class);
       Mockito.when(services.getAssignmentManager()).thenReturn(am);
+      Mockito.when(services.getServerManager()).thenReturn(this.serverManager);
       ServerShutdownHandler handler = new ServerShutdownHandler(this.server,
         services, deadServers, SERVERNAME_A, false);
       handler.process();

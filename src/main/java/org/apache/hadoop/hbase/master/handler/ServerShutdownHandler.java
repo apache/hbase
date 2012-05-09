@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -285,6 +286,7 @@ public class ServerShutdownHandler extends EventHandler {
 
       // Iterate regions that were on this server and assign them
       if (hris != null) {
+        List<HRegionInfo> toAssignRegions = new ArrayList<HRegionInfo>();
         for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
           if (processDeadRegion(e.getKey(), e.getValue(),
               this.services.getAssignmentManager(),
@@ -303,10 +305,15 @@ public class ServerShutdownHandler extends EventHandler {
                     + " because it has been opened in "
                     + addressFromAM.getServerName());
               } else {
-                this.services.getAssignmentManager().assign(e.getKey(), true);
+                toAssignRegions.add(e.getKey());
               }
           }
         }
+        // Get all available servers
+        List<ServerName> availableServers = services.getServerManager()
+            .getOnlineServersList();
+        this.services.getAssignmentManager().assign(toAssignRegions,
+            availableServers);
       }
     } finally {
       this.deadServers.finish(serverName);

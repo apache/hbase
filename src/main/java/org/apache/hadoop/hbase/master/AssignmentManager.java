@@ -1372,11 +1372,12 @@ public class AssignmentManager extends ZooKeeperListener {
    * Bulk assign regions to <code>destination</code>.
    * @param destination
    * @param regions Regions to assign.
+   * @return true if successful
    */
-  void assign(final ServerName destination,
+  boolean assign(final ServerName destination,
       final List<HRegionInfo> regions) {
     if (regions.size() == 0) {
-      return;
+      return true;
     }
     LOG.debug("Bulk assigning " + regions.size() + " region(s) to " +
       destination.toString());
@@ -1403,7 +1404,7 @@ public class AssignmentManager extends ZooKeeperListener {
       new CreateUnassignedAsyncCallback(this.watcher, destination, counter);
     for (RegionState state: states) {
       if (!asyncSetOfflineInZooKeeper(state, cb, state)) {
-        return;
+        return false;
       }
     }
     // Wait until all unassigned nodes have been put up and watchers set.
@@ -1434,7 +1435,7 @@ public class AssignmentManager extends ZooKeeperListener {
           if (decodedException instanceof RegionServerStoppedException) {
             LOG.warn("The region server was shut down, ", decodedException);
             // No need to retry, the region server is a goner.
-            return;
+            return false;
           } else if (decodedException instanceof ServerNotRunningYetException) {
             // This is the one exception to retry.  For all else we should just fail
             // the startup.
@@ -1452,10 +1453,53 @@ public class AssignmentManager extends ZooKeeperListener {
       // Can be a socket timeout, EOF, NoRouteToHost, etc
       LOG.info("Unable to communicate with the region server in order" +
           " to assign regions", e);
+      return false;
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
     LOG.debug("Bulk assigning done for " + destination.toString());
+    return true;
+  }
+
+  /**
+   * Bulk assign regions to available servers if any with retry, else assign
+   * region singly.
+   * 
+   * @param regions all regions to assign
+   * @param servers all available servers
+   */
+  public void assign(List<HRegionInfo> regions, List<ServerName> servers) {
+    LOG.info("Quickly assigning " + regions.size() + " region(s) across "
+        + servers.size() + " server(s)");
+    Map<ServerName, List<HRegionInfo>> bulkPlan = balancer
+        .roundRobinAssignment(regions, servers);
+    if (bulkPlan == null || bulkPlan.isEmpty()) {
+      LOG.info("Failed getting bulk plan, assigning region singly");
+      for (HRegionInfo region : regions) {
+        assign(region, true);
+      }
+      return;
+    }
+    Map<ServerName, List<HRegionInfo>> failedPlans = new HashMap<ServerName, List<HRegionInfo>>();
+    for (Map.Entry<ServerName, List<HRegionInfo>> e : bulkPlan.entrySet()) {
+      try {
+        if (!assign(e.getKey(), e.getValue())) {
+          failedPlans.put(e.getKey(), e.getValue());
+        }
+      } catch (Throwable t) {
+        failedPlans.put(e.getKey(), e.getValue());
+      }
+    }
+    if (!failedPlans.isEmpty()) {
+      servers.removeAll(failedPlans.keySet());
+      List<HRegionInfo> reassigningRegions = new ArrayList<HRegionInfo>();
+      for (Map.Entry<ServerName, List<HRegionInfo>> e : failedPlans.entrySet()) {
+        LOG.info("Failed assigning " + e.getValue().size()
+            + " regions to server " + e.getKey() + ", reassigning them");
+        reassigningRegions.addAll(e.getValue());
+      }
+      assign(reassigningRegions, servers);
+    }
   }
 
   /**
