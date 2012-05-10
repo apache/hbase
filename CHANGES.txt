@@ -72,6 +72,7 @@ Release 0.92.2 - Unreleased
    HBASE-5656  LoadIncrementalHFiles createTable should detect and set compression algorithm(Cosmin Lehene)
    HBASE-5712  Parallelize load of .regioninfo files in diagnostic/repair portion of hbck
    HBASE-5887  Make TestAcidGuarantees usable for system testing
+   HBASE-5973  Add ability for potentially long-running IPC calls to abort if client disconnects.
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems

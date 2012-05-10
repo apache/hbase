@@ -246,7 +246,7 @@ public abstract class HBaseServer implements RpcServer {
   }
 
   /** A call queued for handling. */
-  protected class Call implements Delayable {
+  protected class Call implements RpcCallContext {
     protected int id;                             // the client's call id
     protected Writable param;                     // the parameter passed
     protected Connection connection;              // connection to client
@@ -399,6 +399,16 @@ public abstract class HBaseServer implements RpcServer {
     @Override
     public synchronized boolean isReturnValueDelayed() {
       return this.delayReturnValue;
+    }
+    
+    @Override
+    public void throwExceptionIfCallerDisconnected() throws CallerDisconnectedException {
+      if (!connection.channel.isOpen()) {
+        long afterTime = System.currentTimeMillis() - timestamp;
+        throw new CallerDisconnectedException(
+            "Aborting call " + this + " after " + afterTime + " ms, since " +
+            "caller disconnected");
+      }
     }
 
     /**
@@ -1724,7 +1734,12 @@ public abstract class HBaseServer implements RpcServer {
     return (nBytes > 0) ? nBytes : ret;
   }
 
-  public Delayable getCurrentCall() {
+  /**
+   * Needed for delayed calls.  We need to be able to store the current call
+   * so that we can complete it later.
+   * @return Call the server is currently handling.
+   */
+  public static RpcCallContext getCurrentCall() {
     return CurCall.get();
   }
 }
