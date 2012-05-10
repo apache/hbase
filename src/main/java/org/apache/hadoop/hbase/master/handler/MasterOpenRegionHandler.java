@@ -99,8 +99,9 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
     serverManager.processRegionOpen(serverInfo, hbEventData.getHmsg().getRegionInfo(), returnMsgs);
     if(returnMsgs.size() > 0) {
-      LOG.error("Open region tried to send message: " + returnMsgs.get(0).getType() +
+      LOG.debug("Open region tried to send message: " + returnMsgs.get(0).getType() + 
                 " about " + returnMsgs.get(0).getRegionInfo().getRegionNameAsString());
+      serverManager.holdMessages(serverInfo, returnMsgs);
     }
   }
 

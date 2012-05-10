@@ -89,6 +89,18 @@ public class ServerManager {
   private final Set<String> deadServers =
     Collections.synchronizedSet(new HashSet<String>());
 
+  /*
+   * Set of messages that we want to send to a server.
+   * 
+   * Most of the messages that we wish to send to a server is generated and 
+   * sent during processMsgs. The only exception is when we process a region 
+   * open. processRegionOpen gets called from handleRegionOpenedEvent in 
+   * response to the ZK event. It stores the intended message (for example:
+   *  MSG_REGION_CLOSE_WITHOUT_REPORT, in the case of duplicate assignment)
+   *  to be piggybacked upon the next processMsgs;
+   */
+  private ConcurrentHashMap<HServerInfo, ArrayList<HMsg>> pendingMsgsToSvrsMap;
+  
   // SortedMap server load -> Set of server names
   private final SortedMap<HServerLoad, Set<String>> loadToServers =
     Collections.synchronizedSortedMap(new TreeMap<HServerLoad, Set<String>>());
@@ -179,6 +191,8 @@ public class ServerManager {
     rackManager = new RackManager(c);
     Threads.setDaemonThreadRunning(new ServerTimeoutMonitor(c),
         n + "ServerManager-Timeout-Monitor");
+    
+    this.pendingMsgsToSvrsMap = new ConcurrentHashMap<HServerInfo, ArrayList<HMsg>>();
   }
 
   /**
@@ -530,6 +544,9 @@ public class ServerManager {
           break;
 
         case MSG_REPORT_OPEN:
+          // Amit: This case is never being executed. So let us not bother
+          LOG.fatal("Amit believes this stmt should never be executed");
+          System.exit(-1);
           processRegionOpen(serverInfo, region, returnMsgs);
           break;
 
@@ -587,8 +604,56 @@ public class ServerManager {
 
       // Send any pending table actions.
       this.master.getRegionManager().applyActions(serverInfo, returnMsgs);
+      // add any pending messages that we may be holding for the server     
+      piggyBackPendingMessages(serverInfo, returnMsgs);
     }
     return returnMsgs.toArray(new HMsg[returnMsgs.size()]);
+  }
+  
+  /*
+   * Holds a set of messages that we want to send to a server.
+   * 
+   * Most of the messages that we wish to send to a server is generated and sent
+   * during processMsgs. The only exception is when we process a region open.
+   * In this case, processRegionOpen gets called from handleRegionOpenedEvent in 
+   * response to the ZK event. 
+   * 
+   * This method stores the intended message (for example: 
+   * MSG_REGION_CLOSE_WITHOUT_REPORT, in the case of duplicate assignment ) to be
+   * piggybacked upon the next processMsgs;
+   * 
+   * @param serverInfo  The server for whom the messages are intended
+   * @param msgsToSend  Messages to send
+   */
+  public void holdMessages(HServerInfo serverInfo, ArrayList<HMsg> msgsToSend) {
+    ArrayList<HMsg> msgsForServer = pendingMsgsToSvrsMap.get(serverInfo);
+    
+    if (msgsForServer == null) {
+      msgsForServer = pendingMsgsToSvrsMap.putIfAbsent(serverInfo,
+        new ArrayList<HMsg>());
+    }
+    
+    synchronized(msgsForServer) {
+      msgsForServer.addAll(msgsToSend);
+    }
+  }
+  
+  /*
+   * Get the set of messages that we want to send to a server.
+   * 
+   * @param serverInfo  The server whose messages we want to get
+   * @param returnMsgs  List to which pending messages are added.
+   */
+  public void piggyBackPendingMessages(HServerInfo serverInfo,
+      List<HMsg> returnMsgs) {
+    ArrayList<HMsg> msgsForServer = pendingMsgsToSvrsMap.get(serverInfo);
+    
+    if (msgsForServer != null) {
+      synchronized(msgsForServer) {
+        returnMsgs.addAll(msgsForServer);
+        msgsForServer.clear();
+      }
+    }
   }
 
   /*
@@ -1315,4 +1380,5 @@ public class ServerManager {
     }
     return waitingForMoreServersInRackToTimeOut;
   }
+
 }
