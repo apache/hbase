@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,12 +43,14 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
+import com.google.common.base.Throwables;
+
 /**
  * Test filters at the HRegion doorstep.
  */
 @Category(SmallTests.class)
 public class TestFilter extends HBaseTestCase {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private final static Log LOG = LogFactory.getLog(TestFilter.class);
   private HRegion region;
 
   //
@@ -1616,6 +1620,41 @@ public class TestFilter extends HBaseTestCase {
       verifyScanFullNoValues(s, expectedKVs, useLen);
     }
   }
+  
+  /**
+   * Filter which makes sleeps for a second between each row of a scan.
+   * This can be useful for manual testing of bugs like HBASE-5973. For example:
+   * <code>
+   * create 't1', 'f1'
+   * 1.upto(100)  { |x| put 't1', 'r' + x.to_s, 'f1:q1', 'hi' }
+   * import org.apache.hadoop.hbase.filter.TestFilter
+   * scan 't1', { FILTER => TestFilter::SlowScanFilter.new(), CACHE => 50 }
+   * </code>
+   */
+  public static class SlowScanFilter extends FilterBase {
+    private static Thread ipcHandlerThread = null;
+    
+    @Override
+    public void readFields(DataInput arg0) throws IOException {
+    }
+
+    @Override
+    public void write(DataOutput arg0) throws IOException {
+    }
+
+    @Override
+    public boolean filterRow() {
+      ipcHandlerThread = Thread.currentThread();
+      try {
+        LOG.info("Handler thread " + ipcHandlerThread + " sleeping in filter...");
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        Throwables.propagate(e);
+      }
+      return super.filterRow();
+    }
+  }
+
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =

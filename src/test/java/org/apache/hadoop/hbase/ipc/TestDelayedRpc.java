@@ -186,7 +186,7 @@ public class TestDelayedRpc {
       if (!delay) {
         return UNDELAYED;
       }
-      final Delayable call = rpcServer.getCurrentCall();
+      final Delayable call = HBaseServer.getCurrentCall();
       call.startDelay(delayReturnValue);
       new Thread() {
         public void run() {
@@ -288,7 +288,7 @@ public class TestDelayedRpc {
     public int test(boolean delay) {
       if (!delay)
         return UNDELAYED;
-      Delayable call = rpcServer.getCurrentCall();
+      Delayable call = HBaseServer.getCurrentCall();
       call.startDelay(true);
       try {
         call.endDelayThrowing(new Exception("Something went wrong"));

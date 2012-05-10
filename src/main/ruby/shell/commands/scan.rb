@@ -26,7 +26,7 @@ module Shell
 Scan a table; pass table name and optionally a dictionary of scanner
 specifications.  Scanner specifications may include one or more of:
 TIMERANGE, FILTER, LIMIT, STARTROW, STOPROW, TIMESTAMP, MAXLENGTH,
-or COLUMNS.
+or COLUMNS, CACHE
 
 If no columns are specified, all columns will be scanned.
 To scan all members of a column family, leave the qualifier empty as in
