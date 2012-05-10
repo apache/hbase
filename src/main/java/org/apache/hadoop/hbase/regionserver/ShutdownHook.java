@@ -59,7 +59,7 @@ public class ShutdownHook {
    * to be executed after the last regionserver referring to a given filesystem
    * stops. We keep track of the # of regionserver references in values of the map.
    */
-  private final static Map<Thread, Integer> fsShutdownHooks = new HashMap<Thread, Integer>();
+  private final static Map<Runnable, Integer> fsShutdownHooks = new HashMap<Runnable, Integer>();
 
   /**
    * Install a shutdown hook that calls stop on the passed Stoppable
@@ -82,7 +82,7 @@ public class ShutdownHook {
    */
   public static void install(final Configuration conf, final FileSystem fs,
       final Stoppable stop, final Thread threadToJoin) {
-    Thread fsShutdownHook = suppressHdfsShutdownHook(fs);
+    Runnable fsShutdownHook = suppressHdfsShutdownHook(fs);
     Thread t = new ShutdownHookThread(conf, stop, threadToJoin, fsShutdownHook);
     ShutdownHookManager.affixShutdownHook(t, 0);
     LOG.info("Installed shutdown hook thread: " + t.getName());
@@ -94,11 +94,11 @@ public class ShutdownHook {
   private static class ShutdownHookThread extends Thread {
     private final Stoppable stop;
     private final Thread threadToJoin;
-    private final Thread fsShutdownHook;
+    private final Runnable fsShutdownHook;
     private final Configuration conf;
 
     ShutdownHookThread(final Configuration conf, final Stoppable stop,
-        final Thread threadToJoin, final Thread fsShutdownHook) {
+        final Thread threadToJoin, final Runnable fsShutdownHook) {
       super("Shutdownhook:" + threadToJoin.getName());
       this.stop = stop;
       this.threadToJoin = threadToJoin;
@@ -119,8 +119,10 @@ public class ShutdownHook {
             int refs = fsShutdownHooks.get(fsShutdownHook);
             if (refs == 1) {
               LOG.info("Starting fs shutdown hook thread.");
-              this.fsShutdownHook.start();
-              Threads.shutdown(this.fsShutdownHook,
+              Thread fsShutdownHookThread = (fsShutdownHook instanceof Thread) ?
+                (Thread)fsShutdownHook : new Thread(fsShutdownHook);
+              fsShutdownHookThread.start();
+              Threads.shutdown(fsShutdownHookThread,
               this.conf.getLong(FS_SHUTDOWN_HOOK_WAIT, 30000));
             }
             if (refs > 0) {
@@ -150,7 +152,7 @@ public class ShutdownHook {
    * @return The fs shutdown hook
    * @throws RuntimeException if we fail to find or grap the shutdown hook.
    */
-  private static Thread suppressHdfsShutdownHook(final FileSystem fs) {
+  private static Runnable suppressHdfsShutdownHook(final FileSystem fs) {
     try {
       // This introspection has been updated to work for hadoop 0.20, 0.21 and for
       // cloudera 0.20.  0.21 and cloudera 0.20 both have hadoop-4829.  With the
@@ -159,7 +161,7 @@ public class ShutdownHook {
       // FileSystem and one in the innner class named Cache that actually gets
       // registered as a shutdown hook.  If the latter is present, then we are
       // on 0.21 or cloudera patched 0.20.
-      Thread hdfsClientFinalizer = null;
+      Runnable hdfsClientFinalizer = null;
       // Look into the FileSystem#Cache class for clientFinalizer
       Class<?> [] classes = FileSystem.class.getDeclaredClasses();
       Class<?> cache = null;
@@ -187,15 +189,12 @@ public class ShutdownHook {
         Field cacheField = FileSystem.class.getDeclaredField("CACHE");
         cacheField.setAccessible(true);
         Object cacheInstance = cacheField.get(fs);
-        Runnable finalizerRunnable = (Runnable)field.get(cacheInstance);
-        if (!(finalizerRunnable instanceof Thread)) {
-          hdfsClientFinalizer = new Thread(finalizerRunnable);
-        } else hdfsClientFinalizer = (Thread)finalizerRunnable;
+        hdfsClientFinalizer = (Runnable)field.get(cacheInstance);
       } else {
         // Then we didnt' find clientFinalizer in Cache.  Presume clean 0.20 hadoop.
         field = FileSystem.class.getDeclaredField(CLIENT_FINALIZER_DATA_METHOD);
         field.setAccessible(true);
-        hdfsClientFinalizer = (Thread)field.get(null);
+        hdfsClientFinalizer = (Runnable)field.get(null);
       }
       if (hdfsClientFinalizer == null) {
         throw new RuntimeException("Client finalizer is null, can't suppress!");
