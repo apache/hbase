@@ -83,6 +83,19 @@ public class TestScanDeleteTracker extends HBaseTestCase {
     assertEquals(DeleteResult.COLUMN_DELETED, ret);
   }
 
+  public void testDelete_KeepVersionZero(){
+    byte [] qualifier = Bytes.toBytes("qualifier");
+    deleteType = KeyValue.Type.Delete.getCode();
+
+    long deleteTimestamp = 10;
+    long valueTimestamp = 0;
+
+    sdt.reset();
+    sdt.add(qualifier, 0, qualifier.length, deleteTimestamp, deleteType);
+    DeleteResult ret = sdt.isDeleted(qualifier, 0, qualifier.length, valueTimestamp);
+    assertEquals(DeleteResult.NOT_DELETED, ret);
+  }
+
 
   public void testDeleteColumn_Delete() {
     byte [] qualifier = Bytes.toBytes("qualifier");

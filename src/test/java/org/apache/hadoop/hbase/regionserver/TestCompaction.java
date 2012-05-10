@@ -360,11 +360,10 @@ public class TestCompaction extends HBaseTestCase {
     deleteVersion.deleteColumn(fam2, col2, 1);
     /*
      * the table has 4 versions: 0, 1, 2, and 3.
-     * 0 does not count.
      * We delete 1.
-     * Should have 2 remaining.
+     * Should have 3 remaining.
      */
-    testMinorCompactionWithDelete(deleteVersion, 2);
+    testMinorCompactionWithDelete(deleteVersion, 3);
   }
 
   /*
@@ -550,7 +549,7 @@ public class TestCompaction extends HBaseTestCase {
   private void createSmallerStoreFile(final HRegion region) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region);
     addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
-    		"bbb").getBytes(), null);
+        "bbb").getBytes(), null);
     loader.flushcache();
   }
 
