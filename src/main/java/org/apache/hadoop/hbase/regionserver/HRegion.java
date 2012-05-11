@@ -77,6 +77,8 @@ import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.ipc.HBaseServer;
+import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -2449,7 +2451,16 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     private boolean nextInternal(int limit) throws IOException {
+      RpcCallContext rpcCall = HBaseServer.getCurrentCall();
       while (true) {
+        if (rpcCall != null) {
+          // If a user specifies a too-restrictive or too-slow scanner, the
+          // client might time out and disconnect while the server side
+          // is still processing the request. We should abort aggressively
+          // in that case.
+          rpcCall.throwExceptionIfCallerDisconnected();
+        }
+
         byte [] currentRow = peekRow();
         if (isStopRow(currentRow)) {
           if (filter != null && filter.hasFilterRow()) {

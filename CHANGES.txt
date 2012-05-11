@@ -37,6 +37,7 @@ Release 0.90.7 - Unreleased
    HBASE-5801  [hbck] Hbck should handle case where some regions have different HTD settings in .regioninfo files (0.90 specific) (Jimmy Xiang)
    HBASE-5712  Parallelize load of .regioninfo files in diagnostic/repair portion of hbck
    HBASE-3691  Add compressor support for 'snappy', google's compressor
+   HBASE-5973  Add ability for potentially long-running IPC calls to abort if client disconnects (backport by David S. Wang)
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems
