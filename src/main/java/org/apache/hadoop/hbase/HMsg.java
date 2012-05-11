@@ -73,7 +73,7 @@ public class HMsg implements Writable {
 
     // Message types sent from the region server to the master
     /** region server is now serving the specified region */
-    MSG_REPORT_OPEN,
+    MSG_REPORT_OPEN, // sent to the master through the ZK node. Not directly.
 
     /** region server is no longer serving the specified region */
     MSG_REPORT_CLOSE,

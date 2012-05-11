@@ -110,13 +110,13 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
       if(master.getRegionManager().
           isOfflined(regionInfo.getRegionNameAsString())) {
         LOG.warn("We opened a region while it was asked to be closed.");
+        ZooKeeperWrapper zkWrapper =
+            ZooKeeperWrapper.getInstance(master.getConfiguration(),
+                master.getZKWrapperName());
+        zkWrapper.deleteUnassignedRegion(regionInfo.getEncodedName());
       } else {
         master.getRegionManager().removeRegion(regionInfo);
       }
-      ZooKeeperWrapper zkWrapper =
-          ZooKeeperWrapper.getInstance(master.getConfiguration(),
-              master.getZKWrapperName());
-      zkWrapper.deleteUnassignedRegion(regionInfo.getEncodedName());
       return RegionServerOperationResult.OPERATION_SUCCEEDED;
     }
   }

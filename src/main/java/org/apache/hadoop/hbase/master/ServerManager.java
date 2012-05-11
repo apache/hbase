@@ -544,10 +544,7 @@ public class ServerManager {
           break;
 
         case MSG_REPORT_OPEN:
-          // Amit: This case is never being executed. So let us not bother
-          LOG.fatal("Amit believes this stmt should never be executed");
-          System.exit(-1);
-          processRegionOpen(serverInfo, region, returnMsgs);
+          LOG.error("MSG_REPORT_OPEN is not expected to be received from RS.");
           break;
 
         case MSG_REPORT_CLOSE:
