@@ -144,9 +144,10 @@ public class HalfStoreFileReader extends StoreFile.Reader {
             return false;
           }
         } else {
+          // The equals sign isn't strictly necessary just here to be consistent with seekTo
           if (getComparator().compare(key, offset, length, splitkey, 0,
               splitkey.length) >= 0) {
-            return seekBefore(splitkey, 0, splitkey.length);
+            return this.delegate.seekBefore(splitkey, 0, splitkey.length);
           }
         }
         return this.delegate.seekBefore(key, offset, length);
