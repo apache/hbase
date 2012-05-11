@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.io;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -121,6 +123,89 @@ public class TestHalfStoreFileReader {
     assertTrue( ret > 0 );
 
     halfreader.close(true);
+  }
+
+
+  // Tests the scanner on an HFile that is backed by HalfStoreFiles
+  @Test
+  public void testHalfScanner() throws IOException {
+      HBaseTestingUtility test_util = new HBaseTestingUtility();
+      String root_dir = test_util.getDataTestDir("TestHalfStoreFileScanBefore").toString();
+      Path p = new Path(root_dir, "test");
+      Configuration conf = test_util.getConfiguration();
+      FileSystem fs = FileSystem.get(conf);
+      CacheConfig cacheConf = new CacheConfig(conf);
+
+      HFile.Writer w = HFile.getWriterFactory(conf, cacheConf)
+              .withPath(fs, p)
+              .withBlockSize(1024)
+              .withComparator(KeyValue.KEY_COMPARATOR)
+              .create();
+
+      // write some things.
+      List<KeyValue> items = genSomeKeys();
+      for (KeyValue kv : items) {
+          w.append(kv);
+      }
+      w.close();
+
+
+      HFile.Reader r = HFile.createReader(fs, p, cacheConf);
+      r.loadFileInfo();
+      byte[] midkey = r.midkey();
+      KeyValue midKV = KeyValue.createKeyValueFromKey(midkey);
+      midkey = midKV.getRow();
+
+      Reference bottom = new Reference(midkey, Reference.Range.bottom);
+      Reference top = new Reference(midkey, Reference.Range.top);
+
+      // Ugly code to get the item before the midkey
+      KeyValue beforeMidKey = null;
+      for (KeyValue item : items) {
+          if (item.equals(midKV)) {
+              break;
+          }
+          beforeMidKey = item;
+      }
+
+
+      // Seek on the splitKey, should be in top, not in bottom
+      KeyValue foundKeyValue = doTestOfSeekBefore(p, fs, bottom, midKV, cacheConf);
+      assertEquals(beforeMidKey, foundKeyValue);
+
+      // Seek tot the last thing should be the penultimate on the top, the one before the midkey on the bottom.
+      foundKeyValue = doTestOfSeekBefore(p, fs, top, items.get(items.size() - 1), cacheConf);
+      assertEquals(items.get(items.size() - 2), foundKeyValue);
+
+      foundKeyValue = doTestOfSeekBefore(p, fs, bottom, items.get(items.size() - 1), cacheConf);
+      assertEquals(beforeMidKey, foundKeyValue);
+
+      // Try and seek before something that is in the bottom.
+      foundKeyValue = doTestOfSeekBefore(p, fs, top, items.get(0), cacheConf);
+      assertNull(foundKeyValue);
+
+      // Try and seek before the first thing.
+      foundKeyValue = doTestOfSeekBefore(p, fs, bottom, items.get(0), cacheConf);
+      assertNull(foundKeyValue);
+
+      // Try and seek before the second thing in the top and bottom.
+      foundKeyValue = doTestOfSeekBefore(p, fs, top, items.get(1), cacheConf);
+      assertNull(foundKeyValue);
+
+      foundKeyValue = doTestOfSeekBefore(p, fs, bottom, items.get(1), cacheConf);
+      assertEquals(items.get(0), foundKeyValue);
+
+    }
+
+  private KeyValue doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, KeyValue seekBefore,
+                                        CacheConfig cacheConfig)
+            throws IOException {
+      final HalfStoreFileReader halfreader = new HalfStoreFileReader(fs, p,
+              cacheConfig, bottom, DataBlockEncoding.NONE);
+      halfreader.loadFileInfo();
+      final HFileScanner scanner = halfreader.getScanner(false, false);
+      scanner.seekBefore(seekBefore.getKey());
+      return scanner.getKeyValue();
   }
 
   private KeyValue getLastOnCol(KeyValue curr) {
