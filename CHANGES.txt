@@ -29,6 +29,7 @@ Release 0.90.7 - Unreleased
    HBASE-5911  hbck need an option -help to printout usage
                (Jimmy Xiang)
    HBASE-5894  Table deletion failed but HBaseAdmin#deletetable reports it as success (Xufeng)
+   HBASE-5922  HalfStoreFileReader seekBefore causes StackOverflowError (Nate Putnam)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
