@@ -38,17 +38,25 @@ then
   exit $errCode
 fi
 
+
+if [ "$1" = "autorestart" ]
+then
+  commandToRun="autorestart"
+else 
+  commandToRun="start"
+fi
+
 distMode=`$bin/hbase --config "$HBASE_CONF_DIR" org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed`
 
 
 if [ "$distMode" == 'false' ] 
 then
-  "$bin"/hbase-daemon.sh start master
+  "$bin"/hbase-daemon.sh $commandToRun master
 else
-  "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" start zookeeper
-  "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" start master 
+  "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" $commandToRun zookeeper
+  "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" $commandToRun master 
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
-    --hosts "${HBASE_REGIONSERVERS}" start regionserver
+    --hosts "${HBASE_REGIONSERVERS}" $commandToRun regionserver
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
-    --hosts "${HBASE_BACKUP_MASTERS}" start master-backup
+    --hosts "${HBASE_BACKUP_MASTERS}" $commandToRun master-backup
 fi

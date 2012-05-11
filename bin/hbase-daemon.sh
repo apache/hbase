@@ -33,7 +33,7 @@
 # Modelled after $HADOOP_HOME/bin/hadoop-daemon.sh
 
 usage="Usage: hbase-daemon.sh [--config <conf-dir>]\
- (start|stop|restart) <hbase-command> \
+ (start|stop|restart|autorestart) <hbase-command> \
  <args...>"
 
 # if no args specified, show usage
@@ -80,6 +80,17 @@ cleanZNode() {
   fi
 }
 
+check_before_start(){
+    #ckeck if the process is not running
+    mkdir -p "$HBASE_PID_DIR"
+    if [ -f $pid ]; then
+      if kill -0 `cat $pid` > /dev/null 2>&1; then
+        echo $command running as process `cat $pid`.  Stop it first.
+        exit 1
+      fi
+    fi
+}
+
 wait_until_done ()
 {
     p=$1
@@ -122,15 +133,18 @@ if [ "$JAVA_HOME" = "" ]; then
   echo "Error: JAVA_HOME is not set."
   exit 1
 fi
+
 JAVA=$JAVA_HOME/bin/java
 export HBASE_LOG_PREFIX=hbase-$HBASE_IDENT_STRING-$command-$HOSTNAME
 export HBASE_LOGFILE=$HBASE_LOG_PREFIX.log
 export HBASE_ROOT_LOGGER=${HBASE_ROOT_LOGGER:-"INFO,RFA"}
-logout=$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.out  
+logout=$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.out
 loggc=$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.gc
 loglog="${HBASE_LOG_DIR}/${HBASE_LOGFILE}"
 pid=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.pid
 export HBASE_ZNODE_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.znode
+export HBASE_START_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.autorestart
+
 
 if [ "$HBASE_USE_GC_LOGFILE" = "true" ]; then
   export HBASE_GC_OPTS=" -Xloggc:${loggc}"
@@ -146,18 +160,17 @@ args=$@
 
 case $startStop in
 
-  (start)
-    mkdir -p "$HBASE_PID_DIR"
-    if [ -f $pid ]; then
-      if kill -0 `cat $pid` > /dev/null 2>&1; then
-        echo $command running as process `cat $pid`.  Stop it first.
-        exit 1
-      fi
-    fi
+(start)
+    check_before_start
     nohup $thiscmd --config "${HBASE_CONF_DIR}" internal_start $command $args < /dev/null > /dev/null 2>&1  &
-    ;;
+  ;;
 
-  (internal_start)
+(autorestart)
+    check_before_start
+    nohup $thiscmd --config "${HBASE_CONF_DIR}" internal_autorestart $command $args < /dev/null > /dev/null 2>&1  &
+  ;;
+
+(internal_start)
     hbase_rotate_log $logout
     hbase_rotate_log $loggc
     echo starting $command, logging to $logout
@@ -171,31 +184,74 @@ case $startStop in
     sleep 1; head "$logout"
     wait
     cleanZNode
+  ;;
+
+(internal_autorestart)
+    touch "$HBASE_START_FILE"
+    #keep starting the command until asked to stop. Reloop on software crash
+    while true
+      do
+        lastLaunchDate=`date +%s`
+        $thiscmd --config "${HBASE_CONF_DIR}" internal_start $command $args
+
+        #if the file does not exist it means that it was not stopped properly by the stop command
+        if [ ! -f "$HBASE_START_FILE" ]; then
+          exit 1
+        fi
+
+        #if the cluster is being stopped then do not restart it again.
+        zparent=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.parent`
+        if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
+        zshutdown=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.state`
+        if [ "$zshutdown" == "null" ]; then zshutdown="shutdown"; fi
+        zFullShutdown=$zparent/$zshutdown
+        $bin/hbase zkcli stat $zFullShutdown 2>&1 | grep "Node does not exist"  1>/dev/null 2>&1
+        #grep returns 0 if it found something, 1 otherwise
+        if [ $? -eq 0 ]; then
+          exit 1
+        fi
+
+        #If ZooKeeper cannot be found, then do not restart
+        $bin/hbase zkcli stat $zFullShutdown 2>&1 | grep Exception | grep ConnectionLoss  1>/dev/null 2>&1
+        if [ $? -eq 0 ]; then
+          exit 1
+        fi
+
+        #if it was launched less than 5 minutes ago, then wait for 5 minutes before starting it again.
+        curDate=`date +%s`
+        limitDate=`expr $lastLaunchDate + 300`
+        if [ $limitDate -gt $curDate ]; then
+          sleep 300
+        fi
+      done
     ;;
 
-  (stop)
+(stop)
+    rm -f "$HBASE_START_FILE"
     if [ -f $pid ]; then
-      # kill -0 == see if the PID exists 
-      if kill -0 `cat $pid` > /dev/null 2>&1; then
+      pidToKill=`cat $pid`
+      # kill -0 == see if the PID exists
+      if kill -0 $pidToKill > /dev/null 2>&1; then
         echo -n stopping $command
         echo "`date` Terminating $command" >> $loglog
-        kill `cat $pid` > /dev/null 2>&1
-        while kill -0 `cat $pid` > /dev/null 2>&1; do
-          echo -n "."
-          sleep 1;
-        done
+        kill $pidToKill > /dev/null 2>&1
+        while kill -0 $pidToKill > /dev/null 2>&1;
+         do
+           echo -n "."
+           sleep 1;
+         done
         rm $pid
         echo
       else
         retval=$?
-        echo no $command to stop because kill -0 of pid `cat $pid` failed with status $retval
+        echo no $command to stop because kill -0 of pid $pidToKill failed with status $retval
       fi
     else
       echo no $command to stop because no pid file $pid
     fi
-    ;;
+  ;;
 
-  (restart)
+(restart)
     # stop the command
     $thiscmd --config "${HBASE_CONF_DIR}" stop $command $args &
     wait_until_done $!
@@ -207,12 +263,10 @@ case $startStop in
     # start the command
     $thiscmd --config "${HBASE_CONF_DIR}" start $command $args &
     wait_until_done $!
-    ;;
+  ;;
 
-
-  (*)
-    echo $usage
-    exit 1
-    ;;
-
+(*)
+  echo $usage
+  exit 1
+  ;;
 esac
