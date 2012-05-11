@@ -15,7 +15,7 @@ public final class RPCProtos {
     boolean hasEffectiveUser();
     String getEffectiveUser();
     
-    // required string realUser = 2;
+    // optional string realUser = 2;
     boolean hasRealUser();
     String getRealUser();
   }
@@ -80,7 +80,7 @@ public final class RPCProtos {
       }
     }
     
-    // required string realUser = 2;
+    // optional string realUser = 2;
     public static final int REALUSER_FIELD_NUMBER = 2;
     private java.lang.Object realUser_;
     public boolean hasRealUser() {
@@ -122,10 +122,6 @@ public final class RPCProtos {
       if (isInitialized != -1) return isInitialized == 1;
       
       if (!hasEffectiveUser()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasRealUser()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -406,10 +402,6 @@ public final class RPCProtos {
           
           return false;
         }
-        if (!hasRealUser()) {
-          
-          return false;
-        }
         return true;
       }
       
@@ -488,7 +480,7 @@ public final class RPCProtos {
         onChanged();
       }
       
-      // required string realUser = 2;
+      // optional string realUser = 2;
       private java.lang.Object realUser_ = "";
       public boolean hasRealUser() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2081,9 +2073,9 @@ public final class RPCProtos {
     boolean hasCallId();
     int getCallId();
     
-    // required bool error = 2;
-    boolean hasError();
-    boolean getError();
+    // required .RpcResponse.Status status = 2;
+    boolean hasStatus();
+    org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status getStatus();
     
     // optional bytes response = 3;
     boolean hasResponse();
@@ -2122,6 +2114,78 @@ public final class RPCProtos {
       return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcResponse_fieldAccessorTable;
     }
     
+    public enum Status
+        implements com.google.protobuf.ProtocolMessageEnum {
+      SUCCESS(0, 0),
+      ERROR(1, 1),
+      FATAL(2, 2),
+      ;
+      
+      public static final int SUCCESS_VALUE = 0;
+      public static final int ERROR_VALUE = 1;
+      public static final int FATAL_VALUE = 2;
+      
+      
+      public final int getNumber() { return value; }
+      
+      public static Status valueOf(int value) {
+        switch (value) {
+          case 0: return SUCCESS;
+          case 1: return ERROR;
+          case 2: return FATAL;
+          default: return null;
+        }
+      }
+      
+      public static com.google.protobuf.Internal.EnumLiteMap<Status>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<Status>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<Status>() {
+              public Status findValueByNumber(int number) {
+                return Status.valueOf(number);
+              }
+            };
+      
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.getDescriptor().getEnumTypes().get(0);
+      }
+      
+      private static final Status[] VALUES = {
+        SUCCESS, ERROR, FATAL, 
+      };
+      
+      public static Status valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+      
+      private final int index;
+      private final int value;
+      
+      private Status(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+      
+      // @@protoc_insertion_point(enum_scope:RpcResponse.Status)
+    }
+    
     private int bitField0_;
     // required int32 callId = 1;
     public static final int CALLID_FIELD_NUMBER = 1;
@@ -2133,14 +2197,14 @@ public final class RPCProtos {
       return callId_;
     }
     
-    // required bool error = 2;
-    public static final int ERROR_FIELD_NUMBER = 2;
-    private boolean error_;
-    public boolean hasError() {
+    // required .RpcResponse.Status status = 2;
+    public static final int STATUS_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status status_;
+    public boolean hasStatus() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    public boolean getError() {
-      return error_;
+    public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status getStatus() {
+      return status_;
     }
     
     // optional bytes response = 3;
@@ -2168,7 +2232,7 @@ public final class RPCProtos {
     
     private void initFields() {
       callId_ = 0;
-      error_ = false;
+      status_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status.SUCCESS;
       response_ = com.google.protobuf.ByteString.EMPTY;
       exception_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.getDefaultInstance();
     }
@@ -2181,7 +2245,7 @@ public final class RPCProtos {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (!hasError()) {
+      if (!hasStatus()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -2202,7 +2266,7 @@ public final class RPCProtos {
         output.writeInt32(1, callId_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeBool(2, error_);
+        output.writeEnum(2, status_.getNumber());
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeBytes(3, response_);
@@ -2225,7 +2289,7 @@ public final class RPCProtos {
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBoolSize(2, error_);
+          .computeEnumSize(2, status_.getNumber());
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
@@ -2263,10 +2327,10 @@ public final class RPCProtos {
         result = result && (getCallId()
             == other.getCallId());
       }
-      result = result && (hasError() == other.hasError());
-      if (hasError()) {
-        result = result && (getError()
-            == other.getError());
+      result = result && (hasStatus() == other.hasStatus());
+      if (hasStatus()) {
+        result = result &&
+            (getStatus() == other.getStatus());
       }
       result = result && (hasResponse() == other.hasResponse());
       if (hasResponse()) {
@@ -2291,9 +2355,9 @@ public final class RPCProtos {
         hash = (37 * hash) + CALLID_FIELD_NUMBER;
         hash = (53 * hash) + getCallId();
       }
-      if (hasError()) {
-        hash = (37 * hash) + ERROR_FIELD_NUMBER;
-        hash = (53 * hash) + hashBoolean(getError());
+      if (hasStatus()) {
+        hash = (37 * hash) + STATUS_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getStatus());
       }
       if (hasResponse()) {
         hash = (37 * hash) + RESPONSE_FIELD_NUMBER;
@@ -2422,7 +2486,7 @@ public final class RPCProtos {
         super.clear();
         callId_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
-        error_ = false;
+        status_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status.SUCCESS;
         bitField0_ = (bitField0_ & ~0x00000002);
         response_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000004);
@@ -2477,7 +2541,7 @@ public final class RPCProtos {
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
-        result.error_ = error_;
+        result.status_ = status_;
         if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
           to_bitField0_ |= 0x00000004;
         }
@@ -2509,8 +2573,8 @@ public final class RPCProtos {
         if (other.hasCallId()) {
           setCallId(other.getCallId());
         }
-        if (other.hasError()) {
-          setError(other.getError());
+        if (other.hasStatus()) {
+          setStatus(other.getStatus());
         }
         if (other.hasResponse()) {
           setResponse(other.getResponse());
@@ -2527,7 +2591,7 @@ public final class RPCProtos {
           
           return false;
         }
-        if (!hasError()) {
+        if (!hasStatus()) {
           
           return false;
         }
@@ -2569,8 +2633,14 @@ public final class RPCProtos {
               break;
             }
             case 16: {
-              bitField0_ |= 0x00000002;
-              error_ = input.readBool();
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status value = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(2, rawValue);
+              } else {
+                bitField0_ |= 0x00000002;
+                status_ = value;
+              }
               break;
             }
             case 26: {
@@ -2614,23 +2684,26 @@ public final class RPCProtos {
         return this;
       }
       
-      // required bool error = 2;
-      private boolean error_ ;
-      public boolean hasError() {
+      // required .RpcResponse.Status status = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status status_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status.SUCCESS;
+      public boolean hasStatus() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public boolean getError() {
-        return error_;
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status getStatus() {
+        return status_;
       }
-      public Builder setError(boolean value) {
+      public Builder setStatus(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
         bitField0_ |= 0x00000002;
-        error_ = value;
+        status_ = value;
         onChanged();
         return this;
       }
-      public Builder clearError() {
+      public Builder clearStatus() {
         bitField0_ = (bitField0_ & ~0x00000002);
-        error_ = false;
+        status_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status.SUCCESS;
         onChanged();
         return this;
       }
@@ -2795,17 +2868,19 @@ public final class RPCProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\tRPC.proto\":\n\017UserInformation\022\025\n\reffect" +
-      "iveUser\030\001 \002(\t\022\020\n\010realUser\030\002 \002(\t\"w\n\020Conne" +
+      "iveUser\030\001 \002(\t\022\020\n\010realUser\030\002 \001(\t\"w\n\020Conne" +
       "ctionHeader\022\"\n\010userInfo\030\001 \001(\0132\020.UserInfo" +
       "rmation\022?\n\010protocol\030\002 \001(\t:-org.apache.ha" +
       "doop.hbase.client.ClientProtocol\"-\n\nRpcR" +
       "equest\022\016\n\006callId\030\001 \002(\005\022\017\n\007request\030\002 \001(\014\"" +
       "9\n\014RpcException\022\025\n\rexceptionName\030\001 \002(\t\022\022" +
-      "\n\nstackTrace\030\002 \001(\t\"`\n\013RpcResponse\022\016\n\006cal" +
-      "lId\030\001 \002(\005\022\r\n\005error\030\002 \002(\010\022\020\n\010response\030\003 \001" +
-      "(\014\022 \n\texception\030\004 \001(\0132\r.RpcExceptionB<\n*",
-      "org.apache.hadoop.hbase.protobuf.generat" +
-      "edB\tRPCProtosH\001\240\001\001"
+      "\n\nstackTrace\030\002 \001(\t\"\243\001\n\013RpcResponse\022\016\n\006ca" +
+      "llId\030\001 \002(\005\022#\n\006status\030\002 \002(\0162\023.RpcResponse" +
+      ".Status\022\020\n\010response\030\003 \001(\014\022 \n\texception\030\004",
+      " \001(\0132\r.RpcException\"+\n\006Status\022\013\n\007SUCCESS" +
+      "\020\000\022\t\n\005ERROR\020\001\022\t\n\005FATAL\020\002B<\n*org.apache.h" +
+      "adoop.hbase.protobuf.generatedB\tRPCProto" +
+      "sH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -2849,7 +2924,7 @@ public final class RPCProtos {
           internal_static_RpcResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RpcResponse_descriptor,
-              new java.lang.String[] { "CallId", "Error", "Response", "Exception", },
+              new java.lang.String[] { "CallId", "Status", "Response", "Exception", },
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Builder.class);
           return null;

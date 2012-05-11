@@ -23,7 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
 import org.apache.hadoop.hbase.security.TokenInfo;
-import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.hbase.security.KerberosInfo;
 
 /**
  * Protocol that a RegionServer uses to communicate its status to the Master.

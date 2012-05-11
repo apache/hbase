@@ -32,10 +32,9 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.coprocessor.BaseEndpointCoprocessor;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.ipc.SecureRpcEngine;
-import org.apache.hadoop.hbase.ipc.SecureServer;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -84,17 +83,18 @@ public class TestTokenAuthentication {
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.set(HBaseRPC.RPC_ENGINE_PROP, SecureRpcEngine.class.getName());
     conf.set("hbase.coprocessor.region.classes",
         IdentityCoprocessor.class.getName());
     TEST_UTIL.startMiniCluster();
     HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
-    RpcServer server = rs.getRpcServer();
-    assertTrue(server instanceof SecureServer);
-    SecretManager mgr =
-        ((SecureServer)server).getSecretManager();
-    assertTrue(mgr instanceof AuthenticationTokenSecretManager);
-    secretManager = (AuthenticationTokenSecretManager)mgr;
+    secretManager = new AuthenticationTokenSecretManager(conf, rs.getZooKeeper(),
+        rs.getServerName().toString(), 
+        conf.getLong("hbase.auth.key.update.interval", 24*60*60*1000), 
+        conf.getLong("hbase.auth.token.max.lifetime", 7*24*60*60*1000));
+    secretManager.start(); 
+    while(secretManager.getCurrentKey() == null) {
+      Thread.sleep(1);
+    }
   }
 
   @AfterClass

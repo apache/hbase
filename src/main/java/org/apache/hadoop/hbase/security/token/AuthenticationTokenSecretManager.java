@@ -233,6 +233,10 @@ public class AuthenticationTokenSecretManager
       }
     }
   }
+  
+  synchronized boolean isCurrentKeyRolled() {
+    return currentKey != null;
+  }
 
   synchronized void rollCurrentKey() {
     if (!leaderElector.isMaster()) {

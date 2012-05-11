@@ -1624,64 +1624,6 @@
       </build>
     </profile>
 
-    <!-- profile for building against Hadoop 0.20+security-->
-    <profile>
-      <id>security</id>
-      <properties>
-        <hadoop.version>1.0.2</hadoop.version>
-      </properties>
-      <build>
-        <finalName>${project.artifactId}-${project.version}-security</finalName>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>build-helper-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>add-source</id>
-                <goals>
-                  <goal>add-source</goal>
-                </goals>
-                <configuration>
-                  <sources>
-                    <source>${project.basedir}/security/src/main/java</source>
-                  </sources>
-                </configuration>
-              </execution>
-              <execution>
-                <id>add-test-source</id>
-                <goals>
-                  <goal>add-test-source</goal>
-                </goals>
-                <configuration>
-                  <sources>
-                    <source>${project.basedir}/security/src/test/java</source>
-                  </sources>
-                </configuration>
-              </execution>
-              <execution>
-                <id>add-test-resource</id>
-                <goals>
-                  <goal>add-test-resource</goal>
-                </goals>
-                <configuration>
-                  <resources>
-                    <resource>
-                      <directory>${project.basedir}/security/src/test/resources</directory>
-                      <includes>
-                        <include>hbase-site.xml</include>
-                      </includes>
-                    </resource>
-                  </resources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-
     <!--
       profile for building against Hadoop 0.22.0. Activate using:
        mvn -Dhadoop.profile=22

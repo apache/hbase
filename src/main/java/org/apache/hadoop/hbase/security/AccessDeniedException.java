@@ -15,23 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.security;
 
-package org.apache.hadoop.hbase.client;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.security.TokenInfo;
-import org.apache.hadoop.hbase.security.KerberosInfo;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 
 /**
- * Protocol that a HBase client uses to communicate with a region server.
+ * Exception thrown by access-related methods.
  */
-@KerberosInfo(
-  serverPrincipal = "hbase.regionserver.kerberos.principal")
-@TokenInfo("HBASE_AUTH_TOKEN")
-@InterfaceAudience.Private
-public interface AdminProtocol extends
-    AdminService.BlockingInterface, VersionedProtocol {
-  public static final long VERSION = 1L;
+public class AccessDeniedException extends DoNotRetryIOException {
+  private static final long serialVersionUID = 1913879564363001780L;
+
+  public AccessDeniedException() {
+    super();
+  }
+
+  public AccessDeniedException(Class<?> clazz, String s) {
+    super( "AccessDenied [" + clazz.getName() + "]: " + s);
+  }
+
+  public AccessDeniedException(String s) {
+    super(s);
+  }
 }

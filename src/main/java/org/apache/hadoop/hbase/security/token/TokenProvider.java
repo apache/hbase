@@ -25,9 +25,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.BaseEndpointCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.ipc.SecureServer;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -56,11 +56,9 @@ public class TokenProvider extends BaseEndpointCoprocessor
       RegionCoprocessorEnvironment regionEnv =
           (RegionCoprocessorEnvironment)env;
       RpcServer server = regionEnv.getRegionServerServices().getRpcServer();
-      if (server instanceof SecureServer) {
-        SecretManager mgr = ((SecureServer)server).getSecretManager();
-        if (mgr instanceof AuthenticationTokenSecretManager) {
-          secretManager = (AuthenticationTokenSecretManager)mgr;
-        }
+      SecretManager<?> mgr = ((HBaseServer)server).getSecretManager();
+      if (mgr instanceof AuthenticationTokenSecretManager) {
+        secretManager = (AuthenticationTokenSecretManager)mgr;
       }
     }
   }

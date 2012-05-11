@@ -23,7 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.security.TokenInfo;
-import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.hbase.security.KerberosInfo;
 
 /**
  * Protocol that a HBase client uses to communicate with a region server.

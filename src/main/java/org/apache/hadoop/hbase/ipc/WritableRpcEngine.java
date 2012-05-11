@@ -50,8 +50,11 @@ import org.apache.hadoop.hbase.util.Objects;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.*;
 
@@ -252,9 +255,6 @@ class WritableRpcEngine implements RpcEngine {
     private Class<?>[] ifaces;
     private boolean verbose;
 
-    // for JSON encoding
-    private static ObjectMapper mapper = new ObjectMapper();
-
     private static final String WARN_RESPONSE_TIME =
       "hbase.ipc.warn.response.time";
     private static final String WARN_RESPONSE_SIZE =
@@ -308,6 +308,36 @@ class WritableRpcEngine implements RpcEngine {
           DEFAULT_WARN_RESPONSE_TIME);
       this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE,
           DEFAULT_WARN_RESPONSE_SIZE);
+    }
+
+    public AuthenticationTokenSecretManager createSecretManager(){
+      if (!User.isSecurityEnabled() ||
+          !(instance instanceof org.apache.hadoop.hbase.Server)) {
+        return null;
+      }
+      org.apache.hadoop.hbase.Server server =
+          (org.apache.hadoop.hbase.Server)instance;
+      Configuration conf = server.getConfiguration();
+      long keyUpdateInterval =
+          conf.getLong("hbase.auth.key.update.interval", 24*60*60*1000);
+      long maxAge =
+          conf.getLong("hbase.auth.token.max.lifetime", 7*24*60*60*1000);
+      return new AuthenticationTokenSecretManager(conf, server.getZooKeeper(),
+          server.getServerName().toString(), keyUpdateInterval, maxAge);
+    }
+
+    @Override
+    public void startThreads() {
+      AuthenticationTokenSecretManager mgr = createSecretManager();
+      if (mgr != null) {
+        setSecretManager(mgr);
+        mgr.start();
+      }
+      this.authManager = new ServiceAuthorizationManager();
+      HBasePolicyProvider.init(conf, authManager);
+
+      // continue with base startup
+      super.startThreads();
     }
 
     @Override

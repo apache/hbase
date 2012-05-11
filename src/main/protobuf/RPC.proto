@@ -47,7 +47,7 @@ option optimize_for = SPEED;
 
 message UserInformation {
   required string effectiveUser = 1;
-  required string realUser = 2;
+  optional string realUser = 2;
 }
 
 message ConnectionHeader {
@@ -94,7 +94,12 @@ message RpcResponse {
   /** Echo back the callId the client sent */
   required int32 callId = 1;
   /** Did the RPC execution encounter an error at the server */
-  required bool error = 2;
+  enum Status {
+    SUCCESS = 0;
+    ERROR = 1;
+    FATAL = 2;
+  }
+  required Status status = 2;
   /** Optional response bytes */
   optional bytes response = 3;
   /** Optional exception when error is true*/
