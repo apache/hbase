@@ -226,6 +226,7 @@ Shell.load_command_group(
     status
     version
     table_help
+    whoami
   ]
 )
 

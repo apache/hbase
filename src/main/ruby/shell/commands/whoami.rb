@@ -18,26 +18,19 @@
 
 module Shell
   module Commands
-    class Grant < Command
+    class Whoami < Command
       def help
         return <<-EOF
-Grant users specific rights.
-Syntax : grant <user> <permissions> <table> <column family> <column qualifier>
-
-permissions is either zero or more letters from the set "RWXCA".
-READ('R'), WRITE('W'), EXEC('X'), CREATE('C'), ADMIN('A')
-
+Show the current hbase user.
+Syntax : whoami
 For example:
 
-    hbase> grant 'bobsmith', 'RWXCA'
-    hbase> grant 'bobsmith', 'RW', 't1', 'f1', 'col1'
+    hbase> whoami
 EOF
       end
 
-      def command(user, rights, table_name=nil, family=nil, qualifier=nil)
-        format_simple_command do
-          security_admin.grant(user, rights, table_name, family, qualifier)
-        end
+      def command()
+        puts "#{org.apache.hadoop.hbase.security.User.getCurrent().toString()}"
       end
     end
   end

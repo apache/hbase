@@ -79,6 +79,7 @@ public class AccessControlLists {
   /** Internal storage table for access control lists */
   public static final String ACL_TABLE_NAME_STR = "_acl_";
   public static final byte[] ACL_TABLE_NAME = Bytes.toBytes(ACL_TABLE_NAME_STR);
+  public static final byte[] ACL_GLOBAL_NAME = ACL_TABLE_NAME;
   /** Column family used to store ACL grants */
   public static final String ACL_LIST_FAMILY_STR = "l";
   public static final byte[] ACL_LIST_FAMILY = Bytes.toBytes(ACL_LIST_FAMILY_STR);
@@ -117,31 +118,20 @@ public class AccessControlLists {
   }
 
   /**
-   * Stores a new table permission grant in the access control lists table.
+   * Stores a new user permission grant in the access control lists table.
    * @param conf the configuration
-   * @param tableName the table to which access is being granted
-   * @param username the user or group being granted the permission
-   * @param perm the details of the permission being granted
+   * @param userPerm the details of the permission to be granted
    * @throws IOException in the case of an error accessing the metadata table
    */
-  static void addTablePermission(Configuration conf,
-      byte[] tableName, String username, TablePermission perm)
-    throws IOException {
+  static void addUserPermission(Configuration conf, UserPermission userPerm)
+      throws IOException {
+    Permission.Action[] actions = userPerm.getActions();
 
-    Put p = new Put(tableName);
-    byte[] key = Bytes.toBytes(username);
-    if (perm.getFamily() != null && perm.getFamily().length > 0) {
-      key = Bytes.add(key,
-          Bytes.add(new byte[]{ACL_KEY_DELIMITER}, perm.getFamily()));
-      if (perm.getQualifier() != null && perm.getQualifier().length > 0) {
-        key = Bytes.add(key,
-            Bytes.add(new byte[]{ACL_KEY_DELIMITER}, perm.getQualifier()));
-      }
-    }
+    Put p = new Put(userPerm.isGlobal() ? ACL_GLOBAL_NAME : userPerm.getTable());
+    byte[] key = userPermissionKey(userPerm);
 
-    TablePermission.Action[] actions = perm.getActions();
     if ((actions == null) || (actions.length == 0)) {
-      LOG.warn("No actions associated with user '"+username+"'");
+      LOG.warn("No actions associated with user '"+Bytes.toString(userPerm.getUser())+"'");
       return;
     }
 
@@ -152,7 +142,7 @@ public class AccessControlLists {
     p.add(ACL_LIST_FAMILY, key, value);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Writing permission for table "+
-          Bytes.toString(tableName)+" "+
+          Bytes.toString(userPerm.getTable())+" "+
           Bytes.toString(key)+": "+Bytes.toStringBinary(value)
       );
     }
@@ -175,34 +165,17 @@ public class AccessControlLists {
    * column qualifier "info:colA") will have no effect.
    *
    * @param conf the configuration
-   * @param tableName the table of the current permission grant
-   * @param userName the user or group currently granted the permission
-   * @param perm the details of the permission to be revoked
+   * @param userPerm the details of the permission to be revoked
    * @throws IOException if there is an error accessing the metadata table
    */
-  static void removeTablePermission(Configuration conf,
-      byte[] tableName, String userName, TablePermission perm)
-    throws IOException {
+  static void removeUserPermission(Configuration conf, UserPermission userPerm)
+      throws IOException {
 
-    Delete d = new Delete(tableName);
-    byte[] key = null;
-    if (perm.getFamily() != null && perm.getFamily().length > 0) {
-      key = Bytes.toBytes(userName + ACL_KEY_DELIMITER +
-          Bytes.toString(perm.getFamily()));
-      if (perm.getQualifier() != null && perm.getQualifier().length > 0) {
-       key = Bytes.toBytes(userName + ACL_KEY_DELIMITER +
-          Bytes.toString(perm.getFamily()) + ACL_KEY_DELIMITER +
-          Bytes.toString(perm.getQualifier()));
-      } else {
-        key = Bytes.toBytes(userName + ACL_KEY_DELIMITER +
-          Bytes.toString(perm.getFamily()));
-      }
-    } else {
-      key = Bytes.toBytes(userName);
-    }
+    Delete d = new Delete(userPerm.isGlobal() ? ACL_GLOBAL_NAME : userPerm.getTable());
+    byte[] key = userPermissionKey(userPerm);
+
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing permission for user '" + userName+ "': "+
-          perm.toString());
+      LOG.debug("Removing permission "+ userPerm.toString());
     }
     d.deleteColumns(ACL_LIST_FAMILY, key);
     HTable acls = null;
@@ -212,6 +185,48 @@ public class AccessControlLists {
     } finally {
       if (acls != null) acls.close();
     }
+  }
+
+  /**
+   * Remove specified table from the _acl_ table.
+   */
+  static void removeTablePermissions(Configuration conf, byte[] tableName) 
+      throws IOException{    
+
+    Delete d = new Delete(tableName);
+    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Removing permissions of removed table "+ Bytes.toString(tableName));
+    }
+
+    HTable acls = null;
+    try {
+      acls = new HTable(conf, ACL_TABLE_NAME);
+      acls.delete(d);
+    } finally {
+      if (acls != null) acls.close();
+    } 
+  }
+
+  /**
+   * Build qualifier key from user permission:
+   *  username
+   *  username,family
+   *  username,family,qualifier
+   */
+  static byte[] userPermissionKey(UserPermission userPerm) {
+    byte[] qualifier = userPerm.getQualifier();
+    byte[] family = userPerm.getFamily();
+    byte[] key = userPerm.getUser();
+
+    if (family != null && family.length > 0) {
+      key = Bytes.add(key, Bytes.add(new byte[]{ACL_KEY_DELIMITER}, family));
+      if (qualifier != null && qualifier.length > 0) {
+        key = Bytes.add(key, Bytes.add(new byte[]{ACL_KEY_DELIMITER}, qualifier));
+      }
+    }
+
+    return key;
   }
 
   /**
@@ -328,12 +343,13 @@ public class AccessControlLists {
   static ListMultimap<String,TablePermission> getTablePermissions(
       Configuration conf, byte[] tableName)
   throws IOException {
+    if (tableName == null) tableName = ACL_TABLE_NAME;
+
     /* TODO: -ROOT- and .META. cannot easily be handled because they must be
      * online before _acl_ table.  Can anything be done here?
      */
     if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME) ||
-        Bytes.equals(tableName, HConstants.META_TABLE_NAME) ||
-        Bytes.equals(tableName, AccessControlLists.ACL_TABLE_NAME)) {
+        Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
       return ArrayListMultimap.create(0,0);
     }
 

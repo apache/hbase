@@ -21,15 +21,16 @@ module Shell
     class UserPermission < Command
       def help
         return <<-EOF
-Show all table access permissions for the particular user.
+Show all permissions for the particular user.
 Syntax : user_permission <table>
 For example:
 
+    hbase> user_permission
     hbase> user_permission 'table1'
 EOF
       end
 
-      def command(table)
+      def command(table=nil)
         #format_simple_command do
         #admin.user_permission(table)
         now = Time.now
