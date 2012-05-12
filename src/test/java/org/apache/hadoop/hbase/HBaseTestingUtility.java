@@ -1334,17 +1334,26 @@ public class HBaseTestingUtility {
     mrCluster = new MiniMRCluster(servers,
       FS_URI != null ? FS_URI : FileSystem.get(conf).getUri().toString(), 1);
     JobConf jobConf = MapreduceTestingShim.getJobConf(mrCluster);
-    if (jobConf != null) {
-      jobConf.set("mapred.local.dir",
-          conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
+    if (jobConf == null) {
+      jobConf = mrCluster.createJobConf();
     }
+    jobConf.set("mapred.local.dir",
+      conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
     LOG.info("Mini mapreduce cluster started");
 
     // Needed for TestImportTsv.
-    conf.set("mapred.job.tracker",
-        mrCluster.createJobConf().get("mapred.job.tracker"));
+    conf.set("mapred.job.tracker", jobConf.get("mapred.job.tracker"));
     // this for mrv2 support; mr1 ignores this 
     conf.set("mapreduce.framework.name", "yarn");
+    String rmAdress = jobConf.get("yarn.resourcemanager.address");
+    if (rmAdress != null) {
+      conf.set("yarn.resourcemanager.address", rmAdress);
+    }
+    String schedulerAdress =
+      jobConf.get("yarn.resourcemanager.scheduler.address");
+    if (schedulerAdress != null) {
+      conf.set("yarn.resourcemanager.scheduler.address", schedulerAdress);
+    }
   }
 
   /**
