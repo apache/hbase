@@ -205,8 +205,8 @@ public class ServerManager {
   }
 
   /**
-   * Checks if the clock skew between the server and the master. If the clock skew exceeds the 
-   * configured max, it will throw an exception; if it exceeds the configured warning threshold, 
+   * Checks if the clock skew between the server and the master. If the clock skew exceeds the
+   * configured max, it will throw an exception; if it exceeds the configured warning threshold,
    * it will log a warning but start normally.
    * @param serverName Incoming servers's name
    * @param serverCurrentTime
@@ -223,7 +223,7 @@ public class ServerManager {
       throw new ClockOutOfSyncException(message);
     } else if (skew > warningSkew){
       String message = "Reported time for server " + serverName + " is out of sync with master " +
-        "by " + skew + "ms. (Warning threshold is " + warningSkew + "ms; " + 
+        "by " + skew + "ms. (Warning threshold is " + warningSkew + "ms; " +
         "error threshold is " + maxSkew + "ms)";
       LOG.warn(message);
     }
@@ -687,4 +687,55 @@ public class ServerManager {
       }
     }
   }
+
+  /**
+   * Creates a list of possible destinations for a region. It contains the online servers, but not
+   *  the draining or dying servers.
+   *  @param serverToExclude can be null if there is no server to exclude
+   */
+  public List<ServerName> createDestinationServersList(final ServerName serverToExclude){
+    final List<ServerName> destServers = getOnlineServersList();
+
+    if (serverToExclude != null){
+      destServers.remove(serverToExclude);
+    }
+
+    // Loop through the draining server list and remove them from the server list
+    final List<ServerName> drainingServersCopy = getDrainingServersList();
+    if (!drainingServersCopy.isEmpty()) {
+      for (final ServerName server: drainingServersCopy) {
+        destServers.remove(server);
+      }
+    }
+
+    // Remove the deadNotExpired servers from the server list.
+    removeDeadNotExpiredServers(destServers);
+
+    return destServers;
+  }
+
+  /**
+   * Calls {@link #createDestinationServersList} without server to exclude.
+   */
+  public List<ServerName> createDestinationServersList(){
+    return createDestinationServersList(null);
+  }
+
+    /**
+    * Loop through the deadNotExpired server list and remove them from the
+    * servers.
+    * This function should be used carefully outside of this class. You should use a high level
+    *  method such as {@link #createDestinationServersList()} instead of managing you own list.
+    */
+  void removeDeadNotExpiredServers(List<ServerName> servers) {
+    Set<ServerName> deadNotExpiredServersCopy = this.getDeadNotExpiredServers();
+    if (!deadNotExpiredServersCopy.isEmpty()) {
+      for (ServerName server : deadNotExpiredServersCopy) {
+        LOG.debug("Removing dead but not expired server: " + server
+          + " from eligible server pool.");
+        servers.remove(server);
+      }
+    }
+  }
+
 }

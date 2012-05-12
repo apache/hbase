@@ -311,7 +311,7 @@ public class ServerShutdownHandler extends EventHandler {
         }
         // Get all available servers
         List<ServerName> availableServers = services.getServerManager()
-            .getOnlineServersList();
+            .createDestinationServersList();
         this.services.getAssignmentManager().assign(toAssignRegions,
             availableServers);
       }

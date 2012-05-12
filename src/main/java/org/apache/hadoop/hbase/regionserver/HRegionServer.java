@@ -3426,7 +3426,7 @@ public class  HRegionServer implements ClientProtocol,
           }
         }
         LOG.info("Received request to open region: "
-          + region.getRegionNameAsString());
+          + region.getRegionNameAsString() + " on "+this.serverNameFromMasterPOV);
         HTableDescriptor htd = this.tableDescriptors.get(region.getTableName());
         this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(), true);
         // Need to pass the expected version in the constructor.

@@ -181,9 +181,7 @@ public class CreateTableHandler extends EventHandler {
     }
 
     // 4. Trigger immediate assignment of the regions in round-robin fashion
-    List<ServerName> servers = serverManager.getOnlineServersList();
-    // Remove the deadNotExpired servers from the server list.
-    assignmentManager.removeDeadNotExpiredServers(servers);
+    List<ServerName> servers = serverManager.createDestinationServersList();
     try {
       this.assignmentManager.assignUserRegions(Arrays.asList(newRegions),
         servers);

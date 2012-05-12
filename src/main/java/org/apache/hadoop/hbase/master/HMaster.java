@@ -91,7 +91,6 @@ import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableEventHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
-import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -1200,38 +1199,41 @@ Server {
     if (p == null)
       throw new UnknownRegionException(Bytes.toStringBinary(encodedRegionName));
     HRegionInfo hri = p.getFirst();
-    ServerName dest = null;
+    ServerName dest;
     if (destServerName == null || destServerName.length == 0) {
       LOG.info("Passed destination servername is null/empty so " +
         "choosing a server at random");
-      this.assignmentManager.clearRegionPlan(hri);
-      // Unassign will reassign it elsewhere choosing random server.
-      this.assignmentManager.unassign(hri);
+      final List<ServerName> destServers = this.serverManager.createDestinationServersList(
+        p.getSecond());
+      dest = balancer.randomAssignment(hri, destServers);
     } else {
       dest = new ServerName(Bytes.toString(destServerName));
       if (dest.equals(p.getSecond())) {
         LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
-            + " because region already assigned to the same server " + dest +".");
+          + " because region already assigned to the same server " + dest + ".");
         return;
       }
-      try {
-        if (this.cpHost != null) {
-          if (this.cpHost.preMove(p.getFirst(), p.getSecond(), dest)) {
-            return;
-          }
+    }
+
+    // Now we can do the move
+    RegionPlan rp = new RegionPlan(p.getFirst(), p.getSecond(), dest);
+
+    try {
+      if (this.cpHost != null) {
+        if (this.cpHost.preMove(hri, rp.getSource(), rp.getDestination())) {
+          return;
         }
-        RegionPlan rp = new RegionPlan(p.getFirst(), p.getSecond(), dest);
-        LOG.info("Added move plan " + rp + ", running balancer");
-        this.assignmentManager.balance(rp);
-        if (this.cpHost != null) {
-          this.cpHost.postMove(p.getFirst(), p.getSecond(), dest);
-        }
-      } catch (IOException ioe) {
-        UnknownRegionException ure = new UnknownRegionException(
-            Bytes.toStringBinary(encodedRegionName));
-        ure.initCause(ioe);
-        throw ure;
       }
+      LOG.info("Added move plan " + rp + ", running balancer");
+      this.assignmentManager.balance(rp);
+      if (this.cpHost != null) {
+        this.cpHost.postMove(hri, rp.getSource(), rp.getDestination());
+      }
+    } catch (IOException ioe) {
+      UnknownRegionException ure = new UnknownRegionException(
+        Bytes.toStringBinary(encodedRegionName));
+      ure.initCause(ioe);
+      throw ure;
     }
   }
 

@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
@@ -583,6 +582,7 @@ public class AssignmentManager extends ZooKeeperListener {
           // So we will assign the ROOT and .META. region immediately.
           processOpeningState(regionInfo);
           break;
+
         }
         regionsInTransition.put(encodedRegionName,
           getRegionState(regionInfo, RegionState.State.OPENING, rt));
@@ -1847,28 +1847,14 @@ public class AssignmentManager extends ZooKeeperListener {
       final ServerName serverToExclude, final boolean forceNewPlan) {
     // Pickup existing plan or make a new one
     final String encodedName = state.getRegion().getEncodedName();
-    final List<ServerName> servers = this.serverManager.getOnlineServersList();
-    final List<ServerName> drainingServers = this.serverManager.getDrainingServersList();
+    final List<ServerName> destServers =
+      serverManager.createDestinationServersList(serverToExclude);
 
-
-    if (serverToExclude != null) servers.remove(serverToExclude);
-
-    // Loop through the draining server list and remove them from the server
-    // list.
-    if (!drainingServers.isEmpty()) {
-      for (final ServerName server: drainingServers) {
-        LOG.debug("Removing draining server: " + server +
-            " from eligible server pool.");
-        servers.remove(server);
-      }
+    if (destServers.isEmpty()){
+      LOG.warn("Can't move the region " + encodedName +
+        ", there is no destination server available.");
+      return null;
     }
-
-    // Remove the deadNotExpired servers from the server list.
-    removeDeadNotExpiredServers(servers);
-
-
-
-    if (servers.isEmpty()) return null;
 
     RegionPlan randomPlan = null;
     boolean newPlan = false;
@@ -1886,10 +1872,10 @@ public class AssignmentManager extends ZooKeeperListener {
       if (forceNewPlan
           || existingPlan == null
           || existingPlan.getDestination() == null
-          || drainingServers.contains(existingPlan.getDestination())) {
+          || !destServers.contains(existingPlan.getDestination())) {
         newPlan = true;
         randomPlan = new RegionPlan(state.getRegion(), null,
-            balancer.randomAssignment(state.getRegion(), servers));
+            balancer.randomAssignment(state.getRegion(), destServers));
         this.regionPlans.put(encodedName, randomPlan);
       }
     }
@@ -1900,7 +1886,7 @@ public class AssignmentManager extends ZooKeeperListener {
         " so generated a random one; " + randomPlan + "; " +
         serverManager.countOfRegionServers() +
                " (online=" + serverManager.getOnlineServers().size() +
-               ", available=" + servers.size() + ") available servers");
+               ", available=" + destServers.size() + ") available servers");
         return randomPlan;
       }
     LOG.debug("Using pre-existing plan for region " +
@@ -1912,17 +1898,11 @@ public class AssignmentManager extends ZooKeeperListener {
    * Loop through the deadNotExpired server list and remove them from the
    * servers.
    * @param servers
+   * @deprecated the method is now available in ServerManager - deprecated in 0.96
    */
-  public void removeDeadNotExpiredServers(List<ServerName> servers) {
-    Set<ServerName> deadNotExpiredServers = this.serverManager
-        .getDeadNotExpiredServers();
-    if (!deadNotExpiredServers.isEmpty()) {
-      for (ServerName server : deadNotExpiredServers) {
-        LOG.debug("Removing dead but not expired server: " + server
-            + " from eligible server pool.");
-        servers.remove(server);
-      }
-    }
+  @Deprecated
+  void removeDeadNotExpiredServers(List<ServerName> servers) {
+    this.serverManager.removeDeadNotExpiredServers(servers);
   }
 
   /**
@@ -2246,9 +2226,8 @@ public class AssignmentManager extends ZooKeeperListener {
   public void assignUserRegionsToOnlineServers(List<HRegionInfo> regions)
       throws IOException,
       InterruptedException {
-    List<ServerName> servers = this.serverManager.getOnlineServersList();
-    removeDeadNotExpiredServers(servers);
-    assignUserRegions(regions, servers);
+    List<ServerName> destServers = serverManager.createDestinationServersList();
+    assignUserRegions(regions, destServers);
   }
 
   /**
@@ -2297,13 +2276,10 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   public void assignAllUserRegions() throws IOException, InterruptedException {
     // Get all available servers
-    List<ServerName> servers = serverManager.getOnlineServersList();
-
-    // Remove the deadNotExpired servers from the server list.
-    removeDeadNotExpiredServers(servers);
+    List<ServerName> destServers = serverManager.createDestinationServersList();
 
     // If there are no servers we need not proceed with region assignment.
-    if(servers.isEmpty()) return;
+    if(destServers.isEmpty()) return;
 
     // Scan META for all user regions, skipping any disabled tables
     Map<HRegionInfo, ServerName> allRegions =
@@ -2317,17 +2293,17 @@ public class AssignmentManager extends ZooKeeperListener {
     Map<ServerName, List<HRegionInfo>> bulkPlan = null;
     if (retainAssignment) {
       // Reuse existing assignment info
-      bulkPlan = balancer.retainAssignment(allRegions, servers);
+      bulkPlan = balancer.retainAssignment(allRegions, destServers);
     } else {
       // assign regions in round-robin fashion
-      assignUserRegions(new ArrayList<HRegionInfo>(allRegions.keySet()), servers);
+      assignUserRegions(new ArrayList<HRegionInfo>(allRegions.keySet()), destServers);
       for (HRegionInfo hri : allRegions.keySet()) {
         setEnabledTable(hri);
       }
       return;
     }
     LOG.info("Bulk assigning " + allRegions.size() + " region(s) across " +
-      servers.size() + " server(s), retainAssignment=" + retainAssignment);
+      destServers.size() + " server(s), retainAssignment=" + retainAssignment);
 
     // Use fixed count thread pool assigning.
     BulkAssigner ba = new StartupBulkAssigner(this.master, bulkPlan, this);
@@ -2947,8 +2923,7 @@ public class AssignmentManager extends ZooKeeperListener {
     protected void chore() {
       // If bulkAssign in progress, suspend checks
       if (this.bulkAssign) return;
-      boolean allRSsOffline = this.serverManager.getOnlineServersList().
-        isEmpty();
+      boolean noRSAvailable = this.serverManager.createDestinationServersList().isEmpty();
 
       synchronized (regionsInTransition) {
         // Iterate all regions in transition checking for time outs
@@ -2957,14 +2932,14 @@ public class AssignmentManager extends ZooKeeperListener {
           if (regionState.getStamp() + timeout <= now) {
            //decide on action upon timeout
             actOnTimeOut(regionState);
-          } else if (this.allRegionServersOffline && !allRSsOffline) {
+          } else if (this.allRegionServersOffline && !noRSAvailable) {
             // if some RSs just came back online, we can start the
             // the assignment right away
             actOnTimeOut(regionState);
           }
         }
       }
-      setAllRegionServersOffline(allRSsOffline);
+      setAllRegionServersOffline(noRSAvailable);
     }
 
     private void actOnTimeOut(RegionState regionState) {
