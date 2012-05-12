@@ -1563,9 +1563,8 @@ public class TestAdmin {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
 
     // Change the ZK address to go to something not used.
-    conf.setInt(
-      "hbase.zookeeper.quorum",
-      conf.getInt("hbase.zookeeper.quorum", 9999)+10);
+    conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT,
+      conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 9999)+10);
 
     int initialCount = HConnectionTestingUtility.getConnectionCount();
 
