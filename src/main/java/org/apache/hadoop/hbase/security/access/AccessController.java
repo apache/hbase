@@ -595,7 +595,10 @@ public class AccessController extends BaseRegionObserver
       byte[] tableName, byte[] col) throws IOException {}
   @Override
   public void postDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> c,
-      byte[] tableName, byte[] col) throws IOException {}
+      byte[] tableName, byte[] col) throws IOException {
+    AccessControlLists.removeTablePermissions(c.getEnvironment().getConfiguration(),
+                                              tableName, col);
+  }
   @Override
   public void postDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> c,
       byte[] tableName, byte[] col) throws IOException {}
