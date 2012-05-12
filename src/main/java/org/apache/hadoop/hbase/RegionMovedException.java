@@ -66,7 +66,7 @@ public class RegionMovedException extends NotServingRegionException {
     int tmpPort = -1;
     try {
       tmpHostname = s.substring(posHostname, s.indexOf(' ', posHostname));
-      tmpPort = Integer.parseInt(s.substring(posPort));
+      tmpPort = Integer.parseInt(s.substring(posPort, s.indexOf('.', posPort)));
     } catch (Exception ignored) {
       LOG.warn("Can't parse the hostname and the port from this string: " + s + ", "+
         "Continuing");
@@ -78,7 +78,7 @@ public class RegionMovedException extends NotServingRegionException {
 
   @Override
   public String getMessage() {
-    return "Region moved to: " + HOST_FIELD + hostname + " " + PORT_FIELD + port;
+    return "Region moved to: " + HOST_FIELD + hostname + " " + PORT_FIELD + port + ".";
   }
 
   /**
