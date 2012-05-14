@@ -265,7 +265,7 @@ public class ServerShutdownHandler extends EventHandler {
 
       // Skip regions that were in transition unless CLOSING or PENDING_CLOSE
       for (RegionState rit : regionsInTransition) {
-        if (!rit.isClosing() && !rit.isPendingClose()) {
+        if (!rit.isClosing() && !rit.isPendingClose() && !rit.isSplitting()) {
           LOG.debug("Removed " + rit.getRegion().getRegionNameAsString() +
           " from list of regions to assign because in RIT" + " region state: "
           + rit.getState());

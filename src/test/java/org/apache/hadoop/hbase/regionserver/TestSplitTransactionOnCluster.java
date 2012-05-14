@@ -28,9 +28,12 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -41,11 +44,13 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
@@ -357,6 +362,175 @@ public class TestSplitTransactionOnCluster {
       cluster.getMaster().setCatalogJanitorEnabled(true);
     }
   }
+  /**
+   * Verifies HBASE-5806.  When splitting is partially done and the master goes down
+   * when the SPLIT node is in either SPLIT or SPLITTING state.
+   * 
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws NodeExistsException
+   * @throws KeeperException
+   */
+  @Test(timeout = 300000)
+  public void testMasterRestartWhenSplittingIsPartial()
+      throws IOException, InterruptedException, NodeExistsException,
+      KeeperException {
+    final byte[] tableName = Bytes.toBytes("testMasterRestartWhenSplittingIsPartial");
+
+    // Create table then get the single region for our new table.
+    HTable t = TESTING_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+
+    List<HRegion> regions = cluster.getRegions(tableName);
+    HRegionInfo hri = getAndCheckSingleTableRegion(regions);
+
+    int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
+
+    // Turn off the meta scanner so it don't remove parent on us.
+    cluster.getMaster().setCatalogJanitorEnabled(false);
+    // Turn off balancer so it doesn't cut in and mess up our placements.
+    this.admin.balanceSwitch(false);
+    
+    try {
+      // Add a bit of load up into the table so splittable.
+      TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
+      // Get region pre-split.
+      HRegionServer server = cluster.getRegionServer(tableRegionIndex);
+      printOutRegions(server, "Initial regions: ");
+      int regionCount = server.getOnlineRegions().size();
+      // Now, before we split, set special flag in master, a flag that has
+      // it FAIL the processing of split.
+      SplitRegionHandler.TEST_SKIP = true;
+      // Now try splitting and it should work.
+      split(hri, server, regionCount);
+      // Get daughters
+      List<HRegion> daughters = cluster.getRegions(tableName);
+      assertTrue(daughters.size() >= 2);
+      // Assert the ephemeral node is up in zk.
+      String path = ZKAssign.getNodeName(t.getConnection()
+          .getZooKeeperWatcher(), hri.getEncodedName());
+      Stat stats = t.getConnection().getZooKeeperWatcher()
+          .getRecoverableZooKeeper().exists(path, false);
+      LOG.info("EPHEMERAL NODE BEFORE SERVER ABORT, path=" + path + ", stats="
+          + stats);
+      RegionTransitionData rtd = ZKAssign.getData(t.getConnection()
+          .getZooKeeperWatcher(), hri.getEncodedName());
+      // State could be SPLIT or SPLITTING.
+      assertTrue(rtd.getEventType().equals(EventType.RS_ZK_REGION_SPLIT)
+          || rtd.getEventType().equals(EventType.RS_ZK_REGION_SPLITTING));
+
+
+      // abort and wait for new master.
+      MockMasterWithoutCatalogJanitor master = abortAndWaitForMaster();
+
+      this.admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
+
+      // update the hri to be offlined and splitted. 
+      hri.setOffline(true);
+      hri.setSplit(true);
+      ServerName regionServerOfRegion = master.getAssignmentManager()
+          .getRegionServerOfRegion(hri);
+      assertTrue(regionServerOfRegion != null);
+
+    } finally {
+      // Set this flag back.
+      SplitRegionHandler.TEST_SKIP = false;
+      admin.balanceSwitch(true);
+      cluster.getMaster().setCatalogJanitorEnabled(true);
+    }
+  }
+
+
+  /**
+   * Verifies HBASE-5806.  Here the case is that splitting is completed but before the
+   * CJ could remove the parent region the master is killed and restarted.
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws NodeExistsException
+   * @throws KeeperException
+   */
+  @Test (timeout = 300000)
+  public void testMasterRestartAtRegionSplitPendingCatalogJanitor()
+      throws IOException, InterruptedException, NodeExistsException,
+      KeeperException {
+    final byte[] tableName = Bytes.toBytes("testMasterRestartAtRegionSplitPendingCatalogJanitor");
+
+    // Create table then get the single region for our new table.
+    this.admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HColumnDescriptor hcd = new HColumnDescriptor(HConstants.CATALOG_FAMILY);
+    htd.addFamily(hcd);
+    this.admin.createTable(htd);
+    HTable t = new HTable(TESTING_UTIL.getConfiguration(), tableName);
+
+    List<HRegion> regions = cluster.getRegions(tableName);
+    HRegionInfo hri = getAndCheckSingleTableRegion(regions);
+
+    int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
+
+    // Turn off balancer so it doesn't cut in and mess up our placements.
+    this.admin.balanceSwitch(false);
+    // Turn off the meta scanner so it don't remove parent on us.
+    cluster.getMaster().setCatalogJanitorEnabled(false);
+    try {
+      // Add a bit of load up into the table so splittable.
+      TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
+      // Get region pre-split.
+      HRegionServer server = cluster.getRegionServer(tableRegionIndex);
+      printOutRegions(server, "Initial regions: ");
+      int regionCount = server.getOnlineRegions().size();
+      
+      split(hri, server, regionCount);
+      // Get daughters
+      List<HRegion> daughters = cluster.getRegions(tableName);
+      assertTrue(daughters.size() >= 2);
+      // Assert the ephemeral node is up in zk.
+      String path = ZKAssign.getNodeName(t.getConnection()
+          .getZooKeeperWatcher(), hri.getEncodedName());
+      Stat stats = t.getConnection().getZooKeeperWatcher()
+          .getRecoverableZooKeeper().exists(path, false);
+      LOG.info("EPHEMERAL NODE BEFORE SERVER ABORT, path=" + path + ", stats="
+          + stats);
+      String node = ZKAssign.getNodeName(t.getConnection()
+          .getZooKeeperWatcher(), hri.getEncodedName());
+      Stat stat = new Stat();
+      byte[] data = ZKUtil.getDataNoWatch(t.getConnection()
+          .getZooKeeperWatcher(), node, stat);
+      // ZKUtil.create
+      while (data != null) {
+        Thread.sleep(1000);
+        data = ZKUtil.getDataNoWatch(t.getConnection().getZooKeeperWatcher(),
+            node, stat);
+
+      }
+      
+      MockMasterWithoutCatalogJanitor master = abortAndWaitForMaster();
+
+      this.admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
+
+      hri.setOffline(true);
+      hri.setSplit(true);
+      ServerName regionServerOfRegion = master.getAssignmentManager()
+          .getRegionServerOfRegion(hri);
+      assertTrue(regionServerOfRegion == null);
+    } finally {
+      // Set this flag back.
+      SplitRegionHandler.TEST_SKIP = false;
+      this.admin.balanceSwitch(true);
+      cluster.getMaster().setCatalogJanitorEnabled(true);
+    }
+  }
+
+  private MockMasterWithoutCatalogJanitor abortAndWaitForMaster() 
+  throws IOException, InterruptedException {
+    cluster.abortMaster(0);
+    cluster.waitOnMaster(0);
+    cluster.getConfiguration().setClass(HConstants.MASTER_IMPL, 
+        MockMasterWithoutCatalogJanitor.class, HMaster.class);
+    MockMasterWithoutCatalogJanitor master = null;
+    master = (MockMasterWithoutCatalogJanitor) cluster.startMaster().getMaster();
+    cluster.waitForActiveAndReadyMaster();
+    return master;
+  }
 
   private void split(final HRegionInfo hri, final HRegionServer server,
       final int regionCount)
@@ -457,6 +631,18 @@ public class TestSplitTransactionOnCluster {
         getServers().size() == NB_SERVERS) {
       LOG.info("Waiting on server to go down");
       Thread.sleep(100);
+    }
+  }
+  
+  public static class MockMasterWithoutCatalogJanitor extends HMaster {
+
+    public MockMasterWithoutCatalogJanitor(Configuration conf)
+        throws IOException, KeeperException, InterruptedException {
+      super(conf);
+    }
+
+    protected void startCatalogJanitorChore() {
+      LOG.debug("Customised master executed.");
     }
   }
 }
