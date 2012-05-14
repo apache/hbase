@@ -500,7 +500,7 @@
       </description>
   </property>
   <property>
-      <name>io.storefile.bloom.cacheonwrite</name>
+      <name>hfile.block.bloom.cacheonwrite</name>
       <value>false</value>
       <description>
           Enables cache-on-write for inline blocks of a compound Bloom filter.
