@@ -2502,6 +2502,19 @@ public class AssignmentManager extends ZooKeeperListener {
         enableTableIfNotDisabledOrDisablingOrEnabling(disabled,
             disablingOrEnabling, tableName);
       } else {
+        // If region is in offline and split state check the ZKNode
+        if (regionInfo.isOffline() && regionInfo.isSplit()) {
+          String node = ZKAssign.getNodeName(this.watcher, regionInfo
+              .getEncodedName());
+          Stat stat = new Stat();
+          byte[] data = ZKUtil.getDataNoWatch(this.watcher, node, stat);
+          // If znode does not exist dont consider this region
+          if (data == null) {
+            LOG.debug("Region "+ regionInfo.getRegionNameAsString() + " split is completed. " 
+                + "Hence need not add to regions list");
+            continue;
+          }
+        }
         // Region is being served and on an active server
         // add only if region not in disabled and enabling table
         if (false == checkIfRegionBelongsToDisabled(regionInfo)

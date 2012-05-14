@@ -549,8 +549,7 @@ Server {
     status.setStatus("Starting balancer and catalog janitor");
     this.balancerChore = getAndStartBalancerChore(this);
     this.catalogJanitorChore = new CatalogJanitor(this, this);
-    Threads.setDaemonThreadRunning(catalogJanitorChore.getThread());
-
+    startCatalogJanitorChore();
     registerMBean();
 
     status.markComplete("Initialization successful");
@@ -565,6 +564,14 @@ Server {
         LOG.error("Coprocessor postStartMaster() hook failed", ioe);
       }
     }
+  }
+  
+  /**
+   * Useful for testing purpose also where we have
+   * master restart scenarios.
+   */
+  protected void startCatalogJanitorChore() {
+    Threads.setDaemonThreadRunning(catalogJanitorChore.getThread());
   }
 
   /**
