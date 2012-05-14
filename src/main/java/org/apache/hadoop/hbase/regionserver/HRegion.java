@@ -1649,7 +1649,7 @@ public class HRegion implements HeapSize {
   /*
    * @param delete The passed delete is modified by this method. WARNING!
    */
-  private void prepareDelete(Delete delete) throws IOException {
+  private void prepareDeleteFamilyMap(Delete delete) throws IOException {
     // Check to see if this is a deleteRow insert
     if(delete.getFamilyMap().isEmpty()){
       for(byte [] family : regionInfo.getTableDesc().getFamiliesKeys()){
@@ -1707,7 +1707,7 @@ public class HRegion implements HeapSize {
       lid = getLock(lockid, row, true);
 
       // All edits for the given row (across all column families) must happen atomically.
-      prepareDelete(delete);
+      prepareDeleteFamilyMap(delete);
       delete(delete.getFamilyMap(), writeToWAL);
 
     } finally {
@@ -1919,23 +1919,25 @@ public class HRegion implements HeapSize {
    */
   public OperationStatusCode[] put(Put[] puts) throws IOException {
     @SuppressWarnings("unchecked")
-    Pair<Put, Integer> putsAndLocks[] = new Pair[puts.length];
+    Pair<Mutation, Integer> putsAndLocks[] = new Pair[puts.length];
 
     for (int i = 0; i < puts.length; i++) {
-      putsAndLocks[i] = new Pair<Put, Integer>(puts[i], null);
+      putsAndLocks[i] = new Pair<Mutation, Integer>(puts[i], null);
     }
-    return put(putsAndLocks);
+    return batchMutateWithLocks(putsAndLocks, "multiput_");
   }
 
   /**
    * Perform a batch of puts.
    * @param putsAndLocks the list of puts paired with their requested lock IDs.
+   * @param methodName "multiput_/multidelete_" to update metrics correctly.
    * @throws IOException
    */
-  public OperationStatusCode[] put(Pair<Put, Integer>[] putsAndLocks) throws IOException {
+  public OperationStatusCode[] batchMutateWithLocks(Pair<Mutation, Integer>[] putsAndLocks, 
+      String methodName) throws IOException {
     this.writeRequests.incrTotalRequstCount();
-    BatchOperationInProgress<Pair<Put, Integer>> batchOp =
-      new BatchOperationInProgress<Pair<Put,Integer>>(putsAndLocks);
+    BatchOperationInProgress<Pair<Mutation, Integer>> batchOp =
+      new BatchOperationInProgress<Pair<Mutation,Integer>>(putsAndLocks);
 
     while (!batchOp.isDone()) {
       checkReadOnly();
@@ -1944,7 +1946,7 @@ public class HRegion implements HeapSize {
       long newSize;
       splitsAndClosesLock.readLock().lock();
       try {
-        long addedSize = doMiniBatchPut(batchOp);
+        long addedSize = doMiniBatchOp(batchOp, methodName);
         newSize = this.incMemoryUsage(addedSize);
       } finally {
         splitsAndClosesLock.readLock().unlock();
@@ -1957,7 +1959,8 @@ public class HRegion implements HeapSize {
     return batchOp.retCodes;
   }
 
-  private long doMiniBatchPut(BatchOperationInProgress<Pair<Put, Integer>> batchOp) throws IOException {
+  private long doMiniBatchOp(BatchOperationInProgress<Pair<Mutation, Integer>> batchOp, 
+      String methodNameForMetricsUpdate) throws IOException {
     String signature = null;
     // variable to note if all Put items are for the same CF -- metrics related
     boolean isSignatureClear = true;
@@ -1979,25 +1982,27 @@ public class HRegion implements HeapSize {
       // ----------------------------------
       int numReadyToWrite = 0;
       while (lastIndexExclusive < batchOp.operations.length) {
-        Pair<Put, Integer> nextPair = batchOp.operations[lastIndexExclusive];
-        Put put = nextPair.getFirst();
+        Pair<Mutation, Integer> nextPair = batchOp.operations[lastIndexExclusive];
+        Mutation op = nextPair.getFirst();
         Integer providedLockId = nextPair.getSecond();
 
         // Check the families in the put. If bad, skip this one.
-        try {
-          checkFamilies(put.getFamilyMap().keySet());
-          checkTimestamps(put, now);
-        } catch (DoNotRetryIOException dnrioe) {
-          LOG.warn("Sanity check error in batch put", dnrioe);
-          batchOp.retCodes[lastIndexExclusive] = OperationStatusCode.SANITY_CHECK_FAILURE;
-          lastIndexExclusive++;
-          continue;
+        if (op instanceof Put) {
+          try {
+            checkFamilies(op.getFamilyMap().keySet());
+            checkTimestamps(op, now);
+          } catch (DoNotRetryIOException dnrioe) {
+            LOG.warn("Sanity check error in batch processing", dnrioe);
+            batchOp.retCodes[lastIndexExclusive] = OperationStatusCode.SANITY_CHECK_FAILURE;
+            lastIndexExclusive++;
+            continue;
+          }
         }
 
         // If we haven't got any rows in our batch, we should block to
         // get the next one.
         boolean shouldBlock = numReadyToWrite == 0;
-        Integer acquiredLockId = getLock(providedLockId, put.getRow(), shouldBlock);
+        Integer acquiredLockId = getLock(providedLockId, op.getRow(), shouldBlock);
         if (acquiredLockId == null) {
           // We failed to grab another lock
           assert !shouldBlock : "Should never fail to get lock when blocking";
@@ -2014,13 +2019,13 @@ public class HRegion implements HeapSize {
         // all else, designate failure signature and mark as unclear
         if (null == signature) {
           signature = SchemaMetrics.generateSchemaMetricsPrefix(
-              this.getTableDesc().getNameAsString(), put.getFamilyMap()
+              this.getTableDesc().getNameAsString(), op.getFamilyMap()
               .keySet());
         } else {
           if (isSignatureClear) {
             if (!signature.equals(SchemaMetrics.generateSchemaMetricsPrefix(
                 this.getTableDesc().getNameAsString(),
-                put.getFamilyMap().keySet()))) {
+                op.getFamilyMap().keySet()))) {
               isSignatureClear = false;
               signature = SchemaMetrics.CF_UNKNOWN_PREFIX;
             }
@@ -2030,7 +2035,6 @@ public class HRegion implements HeapSize {
       // We've now grabbed as many puts off the list as we can
       assert numReadyToWrite > 0;
 
-
       this.updatesLock.readLock().lock();
       locked = true;
 
@@ -2038,9 +2042,17 @@ public class HRegion implements HeapSize {
       // STEP 2. Update any LATEST_TIMESTAMP timestamps
       // ----------------------------------
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
-        updateKVTimestamps(
-            batchOp.operations[i].getFirst().getFamilyMap().values(),
-            byteNow);
+        Mutation op = batchOp.operations[i].getFirst();
+        
+        if (op instanceof Put) {
+          updateKVTimestamps(
+              op.getFamilyMap().values(),
+              byteNow);
+        }
+        else if (op instanceof Delete) {
+          prepareDeleteFamilyMap((Delete)op);
+          prepareDeleteTimestamps(op.getFamilyMap(), byteNow);
+        }
       }
 
       // ------------------------------------
@@ -2051,9 +2063,9 @@ public class HRegion implements HeapSize {
         // Skip puts that were determined to be invalid during preprocessing
         if (batchOp.retCodes[i] != OperationStatusCode.NOT_RUN) continue;
 
-        Put p = batchOp.operations[i].getFirst();
-        if (!p.getWriteToWAL()) continue;
-        addFamilyMapToWALEdit(p.getFamilyMap(), walEdit);
+        Mutation op = batchOp.operations[i].getFirst();
+        if (!op.getWriteToWAL()) continue;
+        addFamilyMapToWALEdit(op.getFamilyMap(), walEdit);
       }
 
       // Append the edit to WAL
@@ -2063,12 +2075,13 @@ public class HRegion implements HeapSize {
       // ------------------------------------
       // STEP 4. Write back to memstore
       // ----------------------------------
+
       long addedSize = 0;
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         if (batchOp.retCodes[i] != OperationStatusCode.NOT_RUN) continue;
 
-        Put p = batchOp.operations[i].getFirst();
-        addedSize += applyFamilyMapToMemstore(p.getFamilyMap());
+        Mutation op = batchOp.operations[i].getFirst();
+        addedSize += applyFamilyMapToMemstore(op.getFamilyMap());
         batchOp.retCodes[i] = OperationStatusCode.SUCCESS;
       }
       success = true;
@@ -2086,7 +2099,7 @@ public class HRegion implements HeapSize {
       if (null == signature) {
         signature = SchemaMetrics.CF_BAD_FAMILY_PREFIX;
       }
-      HRegion.incrTimeVaryingMetric(signature + "multiput_", after - now);
+      HRegion.incrTimeVaryingMetric(signature + methodNameForMetricsUpdate, after - now);
 
       if (!success) {
         for (int i = firstIndex; i < lastIndexExclusive; i++) {
@@ -2154,7 +2167,7 @@ public class HRegion implements HeapSize {
             put(((Put)w).getFamilyMap(), writeToWAL);
           } else {
             Delete d = (Delete)w;
-            prepareDelete(d);
+            prepareDeleteFamilyMap(d);
             delete(d.getFamilyMap(), writeToWAL);
           }
           return true;
@@ -2372,8 +2385,8 @@ public class HRegion implements HeapSize {
       checkFamily(family);
     }
   }
-  private void checkTimestamps(Put p, long now) throws DoNotRetryIOException {
-    checkTimestamps(p.getFamilyMap(), now);
+  private void checkTimestamps(Mutation op, long now) throws DoNotRetryIOException {
+    checkTimestamps(op.getFamilyMap(), now);
   }
 
   private void checkTimestamps(final Map<byte[], List<KeyValue>> familyMap,
@@ -3713,7 +3726,7 @@ public class HRegion implements HeapSize {
             updateKVTimestamps(familyMap.values(), byteNow);
           } else if (m instanceof Delete) {
             Delete d = (Delete) m;
-            prepareDelete(d);
+            prepareDeleteFamilyMap(d);
             Map<byte[], List<KeyValue>> familyMap = m.getFamilyMap();
             prepareDeleteTimestamps(familyMap, byteNow);
           } else {

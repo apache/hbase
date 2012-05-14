@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HMsg.Type;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -764,6 +765,7 @@ public class HRegionServer implements HRegionInterface,
    * Add to the passed <code>msgs</code> messages to pass to the master.
    * @param msgs Current outboundMsgs array; we'll add messages to this List.
    */
+  // Amit: Warning n^2 loop. Can bring it down to O(n) using a hash map.
   private void addOutboundMsgs(final List<HMsg> msgs) {
     if (msgs.isEmpty()) {
       this.outboundMsgs.drainTo(msgs);
@@ -2107,6 +2109,13 @@ public class HRegionServer implements HRegionInterface,
   @Override
   public int put(final byte[] regionName, final List<Put> puts)
   throws IOException {
+    return applyMutations(regionName, puts, "multiput_");
+  }
+  
+  private int applyMutations(final byte[] regionName, 
+      final List<? extends Mutation> mutations,
+      String methodName)
+  throws IOException {
     checkOpen();
     HRegion region = null;
     try {
@@ -2116,16 +2125,17 @@ public class HRegionServer implements HRegionInterface,
       }
 
       @SuppressWarnings("unchecked")
-      Pair<Put, Integer>[] putsWithLocks = new Pair[puts.size()];
+      Pair<Mutation, Integer>[] opWithLocks = new Pair[mutations.size()];
 
       int i = 0;
-      for (Put p : puts) {
+      for (Mutation p : mutations) {
         Integer lock = getLockFromId(p.getLockId());
-        putsWithLocks[i++] = new Pair<Put, Integer>(p, lock);
+        opWithLocks[i++] = new Pair<Mutation, Integer>(p, lock);
       }
 
-      this.requestCount.addAndGet(puts.size());
-      OperationStatusCode[] codes = region.put(putsWithLocks);
+      this.requestCount.addAndGet(mutations.size());
+      OperationStatusCode[] codes = region.batchMutateWithLocks(opWithLocks,
+          methodName);
       for (i = 0; i < codes.length; i++) {
         if (codes[i] != OperationStatusCode.SUCCESS)
           return i;
@@ -2383,33 +2393,7 @@ public class HRegionServer implements HRegionInterface,
   @Override
   public int delete(final byte[] regionName, final List<Delete> deletes)
   throws IOException {
-    // Count of Deletes processed.
-    int i = 0;
-    checkOpen();
-    HRegion region = null;
-    try {
-      boolean writeToWAL = true;
-      region = getRegion(regionName);
-      if (!region.getRegionInfo().isMetaTable()) {
-        this.cacheFlusher.reclaimMemStoreMemory();
-      }
-      int size = deletes.size();
-      Integer[] locks = new Integer[size];
-      for (Delete delete: deletes) {
-        this.requestCount.incrementAndGet();
-        locks[i] = getLockFromId(delete.getLockId());
-        region.delete(delete, locks[i], writeToWAL);
-        i++;
-      }
-    } catch (WrongRegionException ex) {
-      LOG.debug("Batch deletes: " + i, ex);
-      return i;
-    } catch (NotServingRegionException ex) {
-      return i;
-    } catch (Throwable t) {
-      throw convertThrowableToIOE(cleanup(t));
-    }
-    return -1;
+    return applyMutations(regionName, deletes, "multidelete_");
   }
 
   @Override

@@ -430,7 +430,7 @@ public class TestHRegion extends HBaseTestCase {
       putsAndLocks.add(pair);
     }
 
-    codes = region.put(putsAndLocks.toArray(new Pair[0]));
+    codes = region.batchMutateWithLocks(putsAndLocks.toArray(new Pair[0]), "multiput_");
     LOG.info("...performed put");
     for (int i = 0; i < 10; i++) {
       assertEquals((i == 5) ? OperationStatusCode.SANITY_CHECK_FAILURE :
