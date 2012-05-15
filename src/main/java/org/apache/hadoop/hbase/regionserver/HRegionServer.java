@@ -3404,6 +3404,9 @@ public class  HRegionServer implements ClientProtocol,
       requestCount.incrementAndGet();
       OpenRegionResponse.Builder
         builder = OpenRegionResponse.newBuilder();
+      Map<String, HTableDescriptor> htds =
+        new HashMap<String, HTableDescriptor>(request.getRegionList().size());
+
       for (RegionInfo regionInfo: request.getRegionList()) {
         HRegionInfo region = ProtobufUtil.toRegionInfo(regionInfo);
         checkIfRegionInTransition(region, OPEN);
@@ -3427,7 +3430,11 @@ public class  HRegionServer implements ClientProtocol,
         }
         LOG.info("Received request to open region: "
           + region.getRegionNameAsString() + " on "+this.serverNameFromMasterPOV);
-        HTableDescriptor htd = this.tableDescriptors.get(region.getTableName());
+        HTableDescriptor htd = htds.get(region.getTableNameAsString());
+        if (htd == null) {
+          htd = this.tableDescriptors.get(region.getTableName());
+          htds.put(region.getTableNameAsString(), htd);
+        }
         this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(), true);
         // Need to pass the expected version in the constructor.
         if (region.isRootRegion()) {
