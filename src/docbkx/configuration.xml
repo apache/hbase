@@ -401,36 +401,22 @@ to ensure well-formedness of your document after an edit session.
           HBase. Do not use this configuration for production nor for
           evaluating HBase performance.</para>
 
-          <para>Once you have confirmed your HDFS setup, edit
-          <filename>conf/hbase-site.xml</filename>. This is the file into
+	      <para>First, confirm your local HDFS setup.  Below is an example <filename>conf/hdfs-site.xml</filename>.  Note
+	      that the replication is set to 1 because this is a pseudo-distributed setup.  The properties <varname>dfs.name.dir</varname>
+	      and <varname>dfs.data.dir</varname> are being set explicitly, the latter being where HDFS data will exist on your machine.
+   		  </para>
+	      <para>Next, configure HBase for usage.  Below is an example <filename>conf/hbase-site.xml</filename>.  Note
+	      that the <varname>hbase.rootdir</varname> property points to the local HDFS instance.  This is the file into
           which you add local customizations and overrides for
-          <xreg linkend="hbase_default_configurations" /> and <xref linkend="hdfs_client_conf" />. Point HBase at the running Hadoop HDFS
-          instance by setting the <varname>hbase.rootdir</varname> property.
-          This property points HBase at the Hadoop filesystem instance to use.
-          For example, adding the properties below to your
-          <filename>hbase-site.xml</filename> says that HBase should use the
-          <filename>/hbase</filename> directory in the HDFS whose namenode is
-          at port 8020 on your local machine, and that it should run with one
-          replica only (recommended for pseudo-distributed mode):</para>
+          <xref linkend="hbase_default_configurations" /> and <xref linkend="hdfs_client_conf" />
+   		  </para>
 
-          <programlisting>
-&lt;configuration&gt;
-  ...
-  &lt;property&gt;
-    &lt;name&gt;hbase.rootdir&lt;/name&gt;
-    &lt;value&gt;hdfs://localhost:8020/hbase&lt;/value&gt;
-    &lt;description&gt;The directory shared by RegionServers.
-    &lt;/description&gt;
-  &lt;/property&gt;
-  &lt;property&gt;
-    &lt;name&gt;dfs.replication&lt;/name&gt;
-    &lt;value&gt;1&lt;/value&gt;
-    &lt;description&gt;The replication count for HLog and HFile storage. Should not be greater than HDFS datanode count.
-    &lt;/description&gt;
-  &lt;/property&gt;
-  ...
-&lt;/configuration&gt;
-</programlisting>
+          <para>Now skip to <xref linkend="confirm" /> for how to start and verify your
+          pseudo-distributed install. <footnote>
+              <para>See <xref linkend="pseudo.extras">Pseudo-distributed
+              mode extras</xref> for notes on how to start extra Masters and
+              RegionServers when running pseudo-distributed.</para>
+            </footnote></para>
 
           <note>
             <para>Let HBase create the <varname>hbase.rootdir</varname>
@@ -445,14 +431,90 @@ to ensure well-formedness of your document after an edit session.
             want to connect from a remote location.</para>
           </note>
 
-          <para>Now skip to <xref linkend="confirm" /> for how to start and verify your
-          pseudo-distributed install. <footnote>
-              <para>See <link
-              xlink:href="http://hbase.apache.org/pseudo-distributed.html">Pseudo-distributed
-              mode extras</link> for notes on how to start extra Masters and
-              RegionServers when running pseudo-distributed.</para>
-            </footnote></para>
-        </section>
+			
+  		  <section xml:id="pseudo.config">
+  		  	<title>Pseudo-distributed Configuration Files</title>
+			<para>The following are exmaple configuration files from a pseudo-distributed setup.
+			</para>
+<filename>hdfs-site.xml</filename>  		  
+<programlisting>
+&lt;configuration&gt;
+  ...
+  &lt;property&gt;
+    &lt;name&gt;dfs.name.dir&lt;/name&gt;
+    &lt;value&gt;/Users/local/user.name/hdfs-data-name&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.data.dir&lt;/name&gt;
+    &lt;value&gt;/Users/local/user.name/hdfs-data&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;dfs.replication&lt;/name&gt;
+    &lt;value&gt;1&lt;/value&gt;
+  &lt;/property&gt;
+  ...
+&lt;/configuration&gt;
+</programlisting>
+
+<filename>hbase-site.xml</filename>
+<programlisting>
+&lt;configuration&gt;
+  ...
+  &lt;property&gt;
+    &lt;name&gt;hbase.rootdir&lt;/name&gt;
+    &lt;value&gt;hdfs://localhost:8020/hbase&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;hbase.zookeeper.quorum&lt;/name&gt;
+    &lt;value&gt;localhost&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;hbase.cluster.distributed&lt;/name&gt;
+    &lt;value&gt;true&lt;/value&gt;
+  &lt;/property&gt;
+  ...
+&lt;/configuration&gt;
+</programlisting>
+
+  		  </section>
+
+		  <section xml:id="pseudo.extras">
+		    <title>Pseudo-distributed Extras</title>
+
+		  <section xml:id="pseudo.extras.start">
+		  	<title>Startup</title>
+		    	<para>To start up the initial HBase cluster...
+                   <programlisting>% bin/start-hbase.sh</programlisting>
+                </para>
+            	<para>To start up an extra backup master(s) on the same server run...
+                       <programlisting>% bin/local-master-backup.sh start 1</programlisting>
+                       ... the '1' means use ports 60001 &amp; 60011, and this backup master's logfile will be at <filename>logs/hbase-${USER}-1-master-${HOSTNAME}.log</filename>.
+                </para>
+                <para>To startup multiple backup masters run... <programlisting>% bin/local-master-backup.sh start 2 3</programlisting> You can start up to 9 backup masters (10 total).
+ 				</para>
+				<para>To start up more regionservers...
+     			  <programlisting>% bin/local-regionservers.sh start 1</programlisting>
+     			where '1' means use ports 60201 &amp; 60301 and its logfile will be at <filename>logs/hbase-${USER}-1-regionserver-${HOSTNAME}.log</filename>.
+     			</para>
+     			<para>To add 4 more regionservers in addition to the one you just started by running... <programlisting>% bin/local-regionservers.sh start 2 3 4 5</programlisting>
+     			This supports up to 99 extra regionservers (100 total).
+				</para>
+			</section>
+			<section xml:id="pseudo.options.stop">
+		  	<title>Stop</title>
+    			<para>Assuming you want to stop master backup # 1, run...
+            	<programlisting>% cat /tmp/hbase-${USER}-1-master.pid |xargs kill -9</programlisting>
+            	Note that bin/local-master-backup.sh stop 1 will try to stop the cluster along with the master.
+            	</para>
+            	<para>To stop an individual regionserver, run...
+                	<programlisting>% bin/local-regionservers.sh stop 1
+	                </programlisting>
+				</para>
+			</section>
+		    		    
+		  </section>
+
+        </section>  
 
         <section xml:id="fully_dist">
           <title>Fully-distributed</title>
