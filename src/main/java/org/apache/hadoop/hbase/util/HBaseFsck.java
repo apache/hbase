@@ -383,10 +383,12 @@ public class HBaseFsck {
 
     // turn the balancer off
     boolean oldBalancer = admin.balanceSwitch(false);
-
-    onlineConsistencyRepair();
-
-    admin.balanceSwitch(oldBalancer);
+    try {
+      onlineConsistencyRepair();
+    }
+    finally {
+      admin.balanceSwitch(oldBalancer);
+    }
 
     // Print table summary
     printTableSummary(tablesInfo);
