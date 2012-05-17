@@ -2077,7 +2077,11 @@ public class AssignmentManager extends ZooKeeperListener {
     }
   }
   
-  private void deleteClosingOrClosedNode(HRegionInfo region) {
+  /**
+   * 
+   * @param region regioninfo of znode to be deleted.
+   */
+  public void deleteClosingOrClosedNode(HRegionInfo region) {
     try {
       if (!ZKAssign.deleteNode(master.getZooKeeper(), region.getEncodedName(),
           EventHandler.EventType.M_ZK_REGION_CLOSING)) {

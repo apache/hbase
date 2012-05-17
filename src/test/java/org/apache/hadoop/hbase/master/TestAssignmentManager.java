@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -47,6 +48,8 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState.State;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,6 +59,7 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKTable.TableState;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.junit.After;
@@ -379,48 +383,114 @@ public class TestAssignmentManager {
     AssignmentManager am =
       new AssignmentManager(this.server, this.serverManager, ct, balancer, executor);
     try {
-      // Make sure our new AM gets callbacks; once registered, can't unregister.
-      // Thats ok because we make a new zk watcher for each test.
-      this.watcher.registerListenerFirst(am);
-
-      // Need to set up a fake scan of meta for the servershutdown handler
-      // Make an RS Interface implementation.  Make it so a scanner can go against it.
-      HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
-      // Get a meta row result that has region up on SERVERNAME_A
-      Result r = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
-      Mockito.when(implementation.openScanner((byte [])Mockito.any(), (Scan)Mockito.any())).
-        thenReturn(System.currentTimeMillis());
-      // Return a good result first and then return null to indicate end of scan
-      Mockito.when(implementation.next(Mockito.anyLong(), Mockito.anyInt())).
-        thenReturn(new Result [] {r}, (Result [])null);
-
-      // Get a connection w/ mocked up common methods.
-      HConnection connection =
-        HConnectionTestingUtility.getMockedConnectionAndDecorate(HTU.getConfiguration(),
-          implementation, SERVERNAME_B, REGIONINFO);
-
-      // Make it so we can get a catalogtracker from servermanager.. .needed
-      // down in guts of server shutdown handler.
-      Mockito.when(ct.getConnection()).thenReturn(connection);
-      Mockito.when(this.server.getCatalogTracker()).thenReturn(ct);
-
-      // Now make a server shutdown handler instance and invoke process.
-      // Have it that SERVERNAME_A died.
-      DeadServer deadServers = new DeadServer();
-      deadServers.add(SERVERNAME_A);
-      // I need a services instance that will return the AM
-      MasterServices services = Mockito.mock(MasterServices.class);
-      Mockito.when(services.getAssignmentManager()).thenReturn(am);
-      ServerShutdownHandler handler = new ServerShutdownHandler(this.server,
-        services, deadServers, SERVERNAME_A, false);
-      handler.process();
-      // The region in r will have been assigned.  It'll be up in zk as unassigned.
+      processServerShutdownHandler(ct, am);
     } finally {
       executor.shutdown();
       am.shutdown();
       // Clean up all znodes
       ZKAssign.deleteAllNodes(this.watcher);
     }
+  }
+
+  /**
+   * To test closed region handler to remove rit and delete corresponding znode if region in pending
+   * close or closing while processing shutdown of a region server.(HBASE-5927). 
+   * @throws KeeperException
+   * @throws IOException
+   */
+  @Test
+  public void testSSHWhenDisableTableInProgress()
+      throws KeeperException, IOException {
+    testCaseWithPartiallyDisabledState(TableState.DISABLING);
+    testCaseWithPartiallyDisabledState(TableState.DISABLED);
+  }
+
+  private void testCaseWithPartiallyDisabledState(TableState state) throws KeeperException, IOException, NodeExistsException {
+    // Create and startup an executor. This is used by AssignmentManager
+    // handling zk callbacks.
+    ExecutorService executor = startupMasterExecutor("testSSHWhenDisableTableInProgress");
+
+    // We need a mocked catalog tracker.
+    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server.getConfiguration());
+    // Create an AM.
+    AssignmentManager am = new AssignmentManager(this.server, this.serverManager, ct, balancer,
+        executor);
+    // adding region to regions and servers maps.
+    am.regionOnline(REGIONINFO, SERVERNAME_A);
+    // adding region in pending close.
+    am.regionsInTransition.put(REGIONINFO.getEncodedName(), new RegionState(REGIONINFO,
+        State.PENDING_CLOSE));
+
+    if (state == TableState.DISABLING) {
+      am.getZKTable().setDisablingTable(REGIONINFO.getTableNameAsString());
+    } else {
+      am.getZKTable().setDisabledTable(REGIONINFO.getTableNameAsString());
+    }
+    
+    RegionTransitionData data = new RegionTransitionData(EventType.M_ZK_REGION_CLOSING,
+        REGIONINFO.getRegionName(), SERVERNAME_A);
+    String node = ZKAssign.getNodeName(this.watcher, REGIONINFO.getEncodedName());
+    // create znode in M_ZK_REGION_CLOSING state.
+    ZKUtil.createAndWatch(this.watcher, node, data.getBytes());
+
+    try {
+      processServerShutdownHandler(ct, am);
+      // check znode deleted or not.
+      // In both cases the znode should be deleted.
+      assertTrue("The znode should be deleted.",ZKUtil.checkExists(this.watcher, node) == -1);
+      // check whether in rit or not.  In the DISABLING case also the below assert will be true
+      // but the piece of code added for HBASE-5927 will not do that.
+      if (state == TableState.DISABLED) {
+        assertTrue("Region state of region in pending close should be removed from rit.",
+            am.regionsInTransition.isEmpty());
+      }
+    } finally {
+      executor.shutdown();
+      am.shutdown();
+      // Clean up all znodes
+      ZKAssign.deleteAllNodes(this.watcher);
+    }
+  }
+
+  private void processServerShutdownHandler(CatalogTracker ct, AssignmentManager am)
+      throws IOException {
+    // Make sure our new AM gets callbacks; once registered, can't unregister.
+    // Thats ok because we make a new zk watcher for each test.
+    this.watcher.registerListenerFirst(am);
+
+    // Need to set up a fake scan of meta for the servershutdown handler
+    // Make an RS Interface implementation.  Make it so a scanner can go against it.
+    HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
+    // Get a meta row result that has region up on SERVERNAME_A
+    Result r = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+    Mockito.when(implementation.openScanner((byte [])Mockito.any(), (Scan)Mockito.any())).
+      thenReturn(System.currentTimeMillis());
+    // Return a good result first and then return null to indicate end of scan
+    Mockito.when(implementation.next(Mockito.anyLong(), Mockito.anyInt())).
+      thenReturn(new Result [] {r}, (Result [])null);
+
+    // Get a connection w/ mocked up common methods.
+    HConnection connection =
+      HConnectionTestingUtility.getMockedConnectionAndDecorate(HTU.getConfiguration(),
+        implementation, SERVERNAME_B, REGIONINFO);
+
+    // Make it so we can get a catalogtracker from servermanager.. .needed
+    // down in guts of server shutdown handler.
+    Mockito.when(ct.getConnection()).thenReturn(connection);
+    Mockito.when(this.server.getCatalogTracker()).thenReturn(ct);
+
+    // Now make a server shutdown handler instance and invoke process.
+    // Have it that SERVERNAME_A died.
+    DeadServer deadServers = new DeadServer();
+    deadServers.add(SERVERNAME_A);
+    // I need a services instance that will return the AM
+    MasterServices services = Mockito.mock(MasterServices.class);
+    Mockito.when(services.getAssignmentManager()).thenReturn(am);
+    ServerShutdownHandler handler = new ServerShutdownHandler(this.server,
+      services, deadServers, SERVERNAME_A, false);
+    handler.process();
+    // The region in r will have been assigned.  It'll be up in zk as unassigned.
   }
 
   /**
