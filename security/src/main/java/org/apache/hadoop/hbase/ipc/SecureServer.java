@@ -339,7 +339,7 @@ public abstract class SecureServer extends HBaseServer {
           ticket = getAuthorizedUgi(saslServer.getAuthorizationID());
           LOG.debug("SASL server successfully authenticated client: " + ticket);
           rpcMetrics.authenticationSuccesses.inc();
-          AUDITLOG.trace(AUTH_SUCCESSFUL_FOR + ticket);
+          AUDITLOG.info(AUTH_SUCCESSFUL_FOR + ticket);
           saslContextEstablished = true;
         }
       } else {

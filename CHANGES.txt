@@ -78,7 +78,8 @@ Release 0.92.2 - Unreleased
    HBASE-5887  Make TestAcidGuarantees usable for system testing
    HBASE-5973  Add ability for potentially long-running IPC calls to abort if client disconnects.
    HBASE-6001  Upgrade slf4j to 1.6.1 (Jimmy Xiang)
-   HBASE-6034  Upgrade Hadoop dependencies"
+   HBASE-6034  Upgrade Hadoop dependencies
+   HBASE-6023  Normalize security audit logging level with Hadoop
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems
