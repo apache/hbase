@@ -92,7 +92,7 @@
 </ol>
 </section>
 <section name="HBase">
-<p style="text-align: justify; ">Download the <strong>latest release </strong>of HBase from the <a title="HBase Releases" href="http://hadoop.apache.org/hbase/releases.html" target="_blank">website</a>. As the HBase distributable is just a zipped archive, installation is as simple as unpacking the archive so it ends up in its final <strong>installation</strong> directory. Notice that HBase has to be installed in Cygwin and a good directory suggestion is to use <code>/usr/local/</code> (or [<code><strong>Root</strong> directory]\usr\local</code> in Windows slang). You should end up with a <code>/usr/local/hbase-<em>&lt;version&gt;</em></code> installation in Cygwin.</p>
+<p style="text-align: justify; ">Download the <strong>latest release </strong>of HBase from the <a title="HBase Releases" href="http://www.apache.org/dyn/closer.cgi/hbase/" target="_blank">website</a>. As the HBase distributable is just a zipped archive, installation is as simple as unpacking the archive so it ends up in its final <strong>installation</strong> directory. Notice that HBase has to be installed in Cygwin and a good directory suggestion is to use <code>/usr/local/</code> (or [<code><strong>Root</strong> directory]\usr\local</code> in Windows slang). You should end up with a <code>/usr/local/hbase-<em>&lt;version&gt;</em></code> installation in Cygwin.</p>
 
 This finishes installation. We go on with the configuration.
 </section>
