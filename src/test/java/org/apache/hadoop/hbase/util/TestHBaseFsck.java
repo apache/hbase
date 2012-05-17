@@ -351,6 +351,27 @@ public class TestHBaseFsck {
   }
 
   /**
+   * Test thread pooling in the case where there are more regions than threads
+   */
+  @Test
+  public void testHbckThreadpooling() throws Exception {
+    String table = "tableDupeStartKey";
+    try {
+      // Create table with 4 regions
+      setupTable(table);
+
+      // limit number of threads to 1.
+      Configuration newconf = new Configuration(conf);
+      newconf.setInt("hbasefsck.numthreads", 1);  
+      assertNoErrors(doFsck(newconf, false));
+      
+      // We should pass without triggering a RejectedExecutionException
+    } finally {
+      deleteTable(table);
+    }    
+  }
+
+  /**
    * This create and fixes a bad table with regions that have a duplicate
    * start key
    */

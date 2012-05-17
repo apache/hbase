@@ -62,6 +62,7 @@ Release 0.92.2 - Unreleased
    HBASE-5894  Table deletion failed but HBaseAdmin#deletetable reports it as success (Xufeng)
    HBASE-5942  HConnnectionManager.getRegionServerWithRetries doesn't call afterCall properly
    HBASE-5922  HalfStoreFileReader seekBefore causes StackOverflowError (Nate Putnam)
+   HBASE-6018  hbck fails with a RejectedExecutionException when >50 regions present
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
