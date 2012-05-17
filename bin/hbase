@@ -325,6 +325,13 @@ if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
   HBASE_OPTS="$HBASE_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
 fi
 
+# Enable security logging on the master and regionserver only
+if [ "$COMMAND" = "master" ] || [ "$COMMAND" = "regionserver" ]; then
+  HBASE_OPTS="$HBASE_OPTS -Dhbase.security.logger=${HBASE_SECURITY_LOGGER:-INFO,RFAS}"
+else
+  HBASE_OPTS="$HBASE_OPTS -Dhbase.security.logger=${HBASE_SECURITY_LOGGER:-INFO,NullAppender}"
+fi
+
 # Exec unless HBASE_NOEXEC is set.
 if [ "${HBASE_NOEXEC}" != "" ]; then
   "$JAVA" -XX:OnOutOfMemoryError="kill -9 %p" $JAVA_HEAP_MAX $HBASE_OPTS -classpath "$CLASSPATH" $CLASS "$@"
