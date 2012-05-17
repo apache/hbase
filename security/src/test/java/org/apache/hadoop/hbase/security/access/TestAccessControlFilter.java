@@ -89,10 +89,12 @@ public class TestAccessControlFilter {
             AccessControlLists.ACL_TABLE_NAME);
         AccessControllerProtocol acls = aclmeta.coprocessorProxy(
             AccessControllerProtocol.class, Bytes.toBytes("testtable"));
-        TablePermission perm = new TablePermission(TABLE, null, Permission.Action.READ);
-        acls.grant(Bytes.toBytes(READER.getShortName()), perm);
-        perm = new TablePermission(TABLE, FAMILY, PUBLIC_COL, Permission.Action.READ);
-        acls.grant(Bytes.toBytes(LIMITED.getShortName()), perm);
+        UserPermission perm = new UserPermission(Bytes.toBytes(READER.getShortName()), 
+                                                 TABLE, null, Permission.Action.READ);
+        acls.grant(perm);
+        perm = new UserPermission(Bytes.toBytes(LIMITED.getShortName()), 
+                                  TABLE, FAMILY, PUBLIC_COL, Permission.Action.READ);
+        acls.grant(perm);
         return null;
       }
     });

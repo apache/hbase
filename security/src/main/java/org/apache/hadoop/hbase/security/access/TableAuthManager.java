@@ -40,8 +40,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
  * Performs authorization checks for a given user's assigned permissions
  */
 public class TableAuthManager {
-  /** Key for the user and group cache maps for globally assigned permissions */
-  private static final String GLOBAL_CACHE_KEY = ".access.";
   private static Log LOG = LogFactory.getLog(TableAuthManager.class);
 
   private static TableAuthManager instance;
@@ -103,11 +101,33 @@ public class TableAuthManager {
 
   public void refreshCacheFromWritable(byte[] table, byte[] data) throws IOException {
     if (data != null && data.length > 0) {
-      DataInput in = new DataInputStream( new ByteArrayInputStream(data) );
+      DataInput in = new DataInputStream(new ByteArrayInputStream(data));
       ListMultimap<String,TablePermission> perms = AccessControlLists.readPermissions(in, conf);
-      cache(table, perms);
+      if (perms != null) {
+        if (Bytes.equals(table, AccessControlLists.ACL_GLOBAL_NAME)) {
+          updateGlobalCache(perms);
+        } else {
+          updateTableCache(table, perms);
+        }
+      }
     } else {
       LOG.debug("Skipping permission cache refresh because writable data is empty");
+    }
+  }
+
+  /**
+   * Updates the internal global permissions cache
+   *
+   * @param userPerms
+   */
+  private void updateGlobalCache(ListMultimap<String,TablePermission> userPerms) {
+    for (Map.Entry<String,TablePermission> entry : userPerms.entries()) {
+      if (AccessControlLists.isGroupPrincipal(entry.getKey())) {
+        GROUP_CACHE.put(AccessControlLists.getGroupName(entry.getKey()),
+                        new Permission(entry.getValue().getActions()));
+      } else {
+        USER_CACHE.put(entry.getKey(), new Permission(entry.getValue().getActions()));
+      }
     }
   }
 
@@ -119,26 +139,22 @@ public class TableAuthManager {
    * @param table
    * @param tablePerms
    */
-  private void cache(byte[] table,
-      ListMultimap<String,TablePermission> tablePerms) {
+  private void updateTableCache(byte[] table, ListMultimap<String,TablePermission> tablePerms) {
     // split user from group assignments so we don't have to prepend the group
     // prefix every time we query for groups
     ListMultimap<String,TablePermission> userPerms = ArrayListMultimap.create();
     ListMultimap<String,TablePermission> groupPerms = ArrayListMultimap.create();
 
-    if (tablePerms != null) {
-      for (Map.Entry<String,TablePermission> entry : tablePerms.entries()) {
-        if (AccessControlLists.isGroupPrincipal(entry.getKey())) {
-          groupPerms.put(
-              entry.getKey().substring(AccessControlLists.GROUP_PREFIX.length()),
-              entry.getValue());
-        } else {
-          userPerms.put(entry.getKey(), entry.getValue());
-        }
+    for (Map.Entry<String,TablePermission> entry : tablePerms.entries()) {
+      if (AccessControlLists.isGroupPrincipal(entry.getKey())) {
+        groupPerms.put(AccessControlLists.getGroupName(entry.getKey()), entry.getValue());
+      } else {
+        userPerms.put(entry.getKey(), entry.getValue());
       }
-      TABLE_GROUP_CACHE.put(table, groupPerms);
-      TABLE_USER_CACHE.put(table, userPerms);
     }
+
+    TABLE_GROUP_CACHE.put(table, groupPerms);
+    TABLE_USER_CACHE.put(table, userPerms);
   }
 
   private List<TablePermission> getUserPermissions(String username, byte[] table) {
@@ -464,7 +480,7 @@ public class TableAuthManager {
       }
     }
     byte[] serialized = AccessControlLists.writePermissionsAsBytes(tmp, conf);
-    zkperms.writeToZookeeper(Bytes.toString(table), serialized);
+    zkperms.writeToZookeeper(table, serialized);
   }
 
   static Map<ZooKeeperWatcher,TableAuthManager> managerMap =

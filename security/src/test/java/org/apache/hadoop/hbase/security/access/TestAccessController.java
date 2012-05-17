@@ -69,6 +69,8 @@ public class TestAccessController {
 
   // user with all permissions
   private static User SUPERUSER;
+  // user granted with all global permission
+  private static User USER_ADMIN;
   // table owner user
   private static User USER_OWNER;
   // user with rw permissions
@@ -101,6 +103,7 @@ public class TestAccessController {
 
     // create a set of test users
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[]{"supergroup"});
+    USER_ADMIN = User.createUserForTesting(conf, "admin2", new String[0]);
     USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
     USER_RW = User.createUserForTesting(conf, "rwuser", new String[0]);
     USER_RO = User.createUserForTesting(conf, "rouser", new String[0]);
@@ -116,12 +119,16 @@ public class TestAccessController {
     HTable meta = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     AccessControllerProtocol protocol =
         meta.coprocessorProxy(AccessControllerProtocol.class, TEST_TABLE);
-    protocol.grant(Bytes.toBytes(USER_RW.getShortName()),
-        new TablePermission(TEST_TABLE, TEST_FAMILY, Permission.Action.READ,
-            Permission.Action.WRITE));
 
-    protocol.grant(Bytes.toBytes(USER_RO.getShortName()),
-        new TablePermission(TEST_TABLE, TEST_FAMILY, Permission.Action.READ));
+    protocol.grant(new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
+                      Permission.Action.ADMIN, Permission.Action.CREATE,
+                      Permission.Action.READ, Permission.Action.WRITE));
+
+    protocol.grant(new UserPermission(Bytes.toBytes(USER_RW.getShortName()),
+        TEST_TABLE, TEST_FAMILY, Permission.Action.READ, Permission.Action.WRITE));
+
+    protocol.grant(new UserPermission(Bytes.toBytes(USER_RO.getShortName()),
+                   TEST_TABLE, TEST_FAMILY, Permission.Action.READ));
   }
 
   @AfterClass
@@ -192,6 +199,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, createTable);
+    verifyAllowed(USER_ADMIN, createTable);
 
     // all others should be denied
     verifyDenied(USER_OWNER, createTable);
@@ -220,6 +228,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, modifyTable);
+    verifyAllowed(USER_ADMIN, modifyTable);
   }
 
   @Test
@@ -239,6 +248,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, deleteTable);
+    verifyAllowed(USER_ADMIN, deleteTable);
   }
 
   @Test
@@ -259,6 +269,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, action);
+    verifyAllowed(USER_ADMIN, action);
   }
 
   @Test
@@ -280,6 +291,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, action);
+    verifyAllowed(USER_ADMIN, action);
   }
 
   @Test
@@ -299,6 +311,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, action);
+    verifyAllowed(USER_ADMIN, action);
   }
 
   @Test
@@ -318,6 +331,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, disableTable);
+    verifyAllowed(USER_ADMIN, disableTable);
   }
 
   @Test
@@ -337,6 +351,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, enableTable);
+    verifyAllowed(USER_ADMIN, enableTable);
   }
 
   @Test
@@ -362,6 +377,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, action);
+    verifyAllowed(USER_ADMIN, action);
   }
 
   @Test
@@ -387,6 +403,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, action);
+    verifyAllowed(USER_ADMIN, action);
   }
 
   @Test
@@ -412,6 +429,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, action);
+    verifyAllowed(USER_ADMIN, action);
   }
 
   @Test
@@ -431,6 +449,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, action);
+    verifyAllowed(USER_ADMIN, action);
   }
 
   @Test
@@ -450,6 +469,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, action);
+    verifyAllowed(USER_ADMIN, action);
   }
 
   @Test
@@ -469,6 +489,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, action);
+    verifyAllowed(USER_ADMIN, action);
   }
 
   @Test
@@ -488,6 +509,7 @@ public class TestAccessController {
 
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, action);
+    verifyAllowed(USER_ADMIN, action);
   }
 
   private void verifyWrite(PrivilegedExceptionAction action) throws Exception {
@@ -497,6 +519,7 @@ public class TestAccessController {
 
     // should be allowed
     verifyAllowed(SUPERUSER, action);
+    verifyAllowed(USER_ADMIN, action);
     verifyAllowed(USER_OWNER, action);
     verifyAllowed(USER_RW, action);
   }
@@ -507,6 +530,7 @@ public class TestAccessController {
 
     // should be allowed
     verifyAllowed(SUPERUSER, action);
+    verifyAllowed(USER_ADMIN, action);
     verifyAllowed(USER_OWNER, action);
     verifyAllowed(USER_RW, action);
     verifyAllowed(USER_RO, action);
@@ -717,8 +741,8 @@ public class TestAccessController {
     verifyDenied(user, deleteAction2);
 
     // grant table read permission
-    protocol.grant(Bytes.toBytes(user.getShortName()),
-      new TablePermission(tableName, null, Permission.Action.READ));
+    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()),
+                   tableName, null, Permission.Action.READ));
     Thread.sleep(100);
     // check
     verifyAllowed(user, getActionAll);
@@ -734,8 +758,8 @@ public class TestAccessController {
     verifyDenied(user, deleteAction2);
 
     // grant table write permission
-    protocol.grant(Bytes.toBytes(user.getShortName()),
-      new TablePermission(tableName, null, Permission.Action.WRITE));
+    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()),
+                   tableName, null, Permission.Action.WRITE));
     Thread.sleep(100);
     verifyDenied(user, getActionAll);
     verifyDenied(user, getAction1);
@@ -750,12 +774,11 @@ public class TestAccessController {
     verifyAllowed(user, deleteAction2);
 
     // revoke table permission
-    protocol.grant(Bytes.toBytes(user.getShortName()),
-      new TablePermission(tableName, null, Permission.Action.READ,
-        Permission.Action.WRITE));
+    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()),
+                   tableName, null, Permission.Action.READ, Permission.Action.WRITE));
 
-    protocol.revoke(Bytes.toBytes(user.getShortName()),
-        new TablePermission(tableName, null));
+    protocol.revoke(new UserPermission(Bytes.toBytes(user.getShortName()),
+                    tableName, null));
     Thread.sleep(100);
     verifyDenied(user, getActionAll);
     verifyDenied(user, getAction1);
@@ -770,8 +793,8 @@ public class TestAccessController {
     verifyDenied(user, deleteAction2);
 
     // grant column family read permission
-    protocol.grant(Bytes.toBytes(user.getShortName()),
-      new TablePermission(tableName, family1, Permission.Action.READ));
+    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()),
+                   tableName, family1, Permission.Action.READ));
     Thread.sleep(100);
 
     verifyAllowed(user, getActionAll);
@@ -787,8 +810,8 @@ public class TestAccessController {
     verifyDenied(user, deleteAction2);
 
     // grant column family write permission
-    protocol.grant(Bytes.toBytes(user.getShortName()),
-      new TablePermission(tableName, family2, Permission.Action.WRITE));
+    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()),
+                   tableName, family2, Permission.Action.WRITE));
     Thread.sleep(100);
 
     verifyAllowed(user, getActionAll);
@@ -804,8 +827,8 @@ public class TestAccessController {
     verifyAllowed(user, deleteAction2);
 
     // revoke column family permission
-    protocol.revoke(Bytes.toBytes(user.getShortName()),
-      new TablePermission(tableName, family2));
+    protocol.revoke(new UserPermission(Bytes.toBytes(user.getShortName()),
+                    tableName, family2));
     Thread.sleep(100);
 
     verifyAllowed(user, getActionAll);
@@ -887,15 +910,14 @@ public class TestAccessController {
       }
     };
 
-    protocol.revoke(Bytes.toBytes(user.getShortName()),
-        new TablePermission(tableName, family1));
+    protocol.revoke(new UserPermission(Bytes.toBytes(user.getShortName()),
+                    tableName, family1));
     verifyDenied(user, getQualifierAction);
     verifyDenied(user, putQualifierAction);
     verifyDenied(user, deleteQualifierAction);
 
-    protocol.grant(Bytes.toBytes(user.getShortName()),
-        new TablePermission(tableName, family1, qualifier,
-            Permission.Action.READ));
+    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()),
+                   tableName, family1, qualifier, Permission.Action.READ));
     Thread.sleep(100);
 
     verifyAllowed(user, getQualifierAction);
@@ -904,9 +926,8 @@ public class TestAccessController {
 
     // only grant write permission
     // TODO: comment this portion after HBASE-3583
-    protocol.grant(Bytes.toBytes(user.getShortName()),
-        new TablePermission(tableName, family1, qualifier,
-            Permission.Action.WRITE));
+    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()),
+                   tableName, family1, qualifier, Permission.Action.WRITE));
     Thread.sleep(100);
 
     verifyDenied(user, getQualifierAction);
@@ -914,9 +935,9 @@ public class TestAccessController {
     verifyAllowed(user, deleteQualifierAction);
 
     // grant both read and write permission.
-    protocol.grant(Bytes.toBytes(user.getShortName()),
-        new TablePermission(tableName, family1, qualifier,
-            Permission.Action.READ, Permission.Action.WRITE));
+    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()),
+                   tableName, family1, qualifier,
+                   Permission.Action.READ, Permission.Action.WRITE));
     Thread.sleep(100);
 
     verifyAllowed(user, getQualifierAction);
@@ -924,8 +945,8 @@ public class TestAccessController {
     verifyAllowed(user, deleteQualifierAction);
 
     // revoke family level permission won't impact column level.
-    protocol.revoke(Bytes.toBytes(user.getShortName()),
-        new TablePermission(tableName, family1, qualifier));
+    protocol.revoke(new UserPermission(Bytes.toBytes(user.getShortName()),
+                    tableName, family1, qualifier));
     Thread.sleep(100);
 
     verifyDenied(user, getQualifierAction);
@@ -971,7 +992,7 @@ public class TestAccessController {
     // grant read permission
     UserPermission upToSet = new UserPermission(user,
         tableName, family1, qualifier, Permission.Action.READ);
-    protocol.grant(user, upToSet);
+    protocol.grant(upToSet);
     perms = protocol.getUserPermissions(tableName);
 
     UserPermission upToVerify = new UserPermission(user,
@@ -987,7 +1008,7 @@ public class TestAccessController {
     // grant read+write
     upToSet = new UserPermission(user, tableName, family1, qualifier,
         Permission.Action.WRITE, Permission.Action.READ);
-    protocol.grant(user, upToSet);
+    protocol.grant(upToSet);
     perms = protocol.getUserPermissions(tableName);
 
     upToVerify = new UserPermission(user, tableName, family1, qualifier,
@@ -995,7 +1016,7 @@ public class TestAccessController {
     assertTrue("User should be granted permission: " + upToVerify.toString(),
             hasFoundUserPermission(upToVerify, perms));
 
-    protocol.revoke(user, upToSet);
+    protocol.revoke(upToSet);
     perms = protocol.getUserPermissions(tableName);
     assertFalse("User should not be granted permission: " + upToVerify.toString(),
       hasFoundUserPermission(upToVerify, perms));
@@ -1050,7 +1071,7 @@ public class TestAccessController {
 
   public void grant(AccessControllerProtocol protocol, User user, byte[] t, byte[] f,
       byte[] q, Permission.Action... actions) throws IOException {
-    protocol.grant(Bytes.toBytes(user.getShortName()), new TablePermission(t, f, q, actions));
+    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()), t, f, q, actions));
   }
 
   @Test

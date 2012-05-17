@@ -65,6 +65,7 @@ Release 0.92.2 - Unreleased
    HBASE-6018  hbck fails with a RejectedExecutionException when >50 regions present
    HBASE-6011  Unable to start master in local mode
    HBASE-6021  NullPointerException when running LoadTestTool without specifying compression type
+   HBASE-5342  Grant/Revoke global permissions (Matteo)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
