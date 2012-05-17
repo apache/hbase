@@ -988,7 +988,6 @@
     <log4j.version>1.2.16</log4j.version>
     <mockito-all.version>1.8.5</mockito-all.version>
     <protobuf.version>2.4.0a</protobuf.version>
-    <slf4j.version>1.5.8</slf4j.version><!-- newer version available -->
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.8.0</thrift.version>
     <zookeeper.version>3.4.3</zookeeper.version>
@@ -1517,6 +1516,7 @@
       </activation>
       <properties>
         <hadoop.version>1.0.2</hadoop.version>
+        <slf4j.version>1.4.3</slf4j.version>
       </properties>
       <dependencies>
         <dependency>
@@ -1655,6 +1655,7 @@
       </activation>
       <properties>
         <hadoop.version>0.22.0</hadoop.version>
+        <slf4j.version>1.6.1</slf4j.version>
       </properties>
       <dependencies>
         <dependency>
@@ -1833,6 +1834,7 @@
       </activation>
       <properties>
         <hadoop.version>0.23.2-SNAPSHOT</hadoop.version>
+        <slf4j.version>1.6.1</slf4j.version>
       </properties>
       <dependencies>
         <dependency>
@@ -1914,6 +1916,7 @@
       </activation>
       <properties>
         <hadoop.version>0.24.0-SNAPSHOT</hadoop.version>
+        <slf4j.version>1.6.1</slf4j.version>
       </properties>
       <dependencies>
         <dependency>
