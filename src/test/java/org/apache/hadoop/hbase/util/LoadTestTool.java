@@ -249,7 +249,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   private void parseColumnFamilyOptions(CommandLine cmd) {
     String compressStr = cmd.getOptionValue(OPT_COMPRESSION);
-    compressAlgo = compressStr == null ? null :
+    compressAlgo = compressStr == null ? Compression.Algorithm.NONE :
         Compression.Algorithm.valueOf(compressStr);
 
     String bloomStr = cmd.getOptionValue(OPT_BLOOM);
