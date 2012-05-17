@@ -41,6 +41,27 @@ public class UserPermission extends TablePermission {
   }
 
   /**
+   * Creates a new instance for the given user.
+   * @param user the user
+   * @param assigned the list of allowed actions
+   */
+  public UserPermission(byte[] user, Action... assigned) {
+    super(null, null, null, assigned);
+    this.user = user;
+  }
+
+  /**
+   * Creates a new instance for the given user,
+   * matching the actions with the given codes.
+   * @param user the user
+   * @param actionCodes the list of allowed action codes
+   */
+  public UserPermission(byte[] user, byte[] actionCodes) {
+    super(null, null, null, actionCodes);
+    this.user = user;
+  }
+
+  /**
    * Creates a new instance for the given user, table and column family.
    * @param user the user
    * @param table the table
@@ -90,6 +111,14 @@ public class UserPermission extends TablePermission {
 
   public byte[] getUser() {
     return user;
+  }
+
+  /**
+   * Returns true if this permission describes a global user permission.
+   */
+  public boolean isGlobal() {
+    byte[] tableName = getTable();
+    return(tableName == null || tableName.length == 0);
   }
 
   @Override

@@ -21,15 +21,15 @@ module Shell
     class Revoke < Command
       def help
         return <<-EOF
-Revoke a user's access rights to tables.
-Syntax : revoke <user> <table> <column family>
+Revoke a user's access rights.
+Syntax : revoke <user> <table> <column family> <column qualifier>
 For example:
 
-    hbase> revoke 'bobsmith', 't1', 'f1'
+    hbase> revoke 'bobsmith', 't1', 'f1', 'col1'
 EOF
       end
 
-      def command(user, table_name, family=nil, qualifier=nil)
+      def command(user, table_name=nil, family=nil, qualifier=nil)
         format_simple_command do
           security_admin.revoke(user, table_name, family, qualifier)
         end

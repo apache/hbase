@@ -31,62 +31,117 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    def grant(user, permissions, table_name, family=nil, qualifier=nil)
+    def grant(user, permissions, table_name=nil, family=nil, qualifier=nil)
       security_available?
 
-      # Table should exist
-      raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
+      # TODO: need to validate user name
 
-      htd = @admin.getTableDescriptor(table_name.to_java_bytes)
+      if (table_name != nil)
+        # Table should exist
+        raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
-      if (family != nil)
-        raise(ArgumentError, "Can't find a family: #{family}") unless htd.hasFamily(family.to_java_bytes)
+        htd = @admin.getTableDescriptor(table_name.to_java_bytes)
+
+        if (family != nil)
+          raise(ArgumentError, "Can't find a family: #{family}") unless htd.hasFamily(family.to_java_bytes)
+        end
+
+        # invoke cp endpoint to perform access controlse
+        fambytes = family.to_java_bytes if (family != nil)
+        qualbytes = qualifier.to_java_bytes if (qualifier != nil)
+        user_permission = org.apache.hadoop.hbase.security.access.UserPermission.new(
+                                                user.to_java_bytes, table_name.to_java_bytes, 
+                                                fambytes, qualbytes, permissions.to_java_bytes)
+      else
+        user_permission = org.apache.hadoop.hbase.security.access.UserPermission.new(
+                                                user.to_java_bytes, permissions.to_java_bytes)
       end
 
-      #TODO: need to validate user name
-
-      # invoke cp endpoint to perform access control
-      fambytes = family.to_java_bytes if (family != nil)
-      qualbytes = qualifier.to_java_bytes if (qualifier != nil)
-      tp = org.apache.hadoop.hbase.security.access.TablePermission.new(table_name.to_java_bytes, fambytes, qualbytes, permissions.to_java_bytes)
-      meta_table = org.apache.hadoop.hbase.client.HTable.new(@config, org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
-      protocol = meta_table.coprocessorProxy(org.apache.hadoop.hbase.security.access.AccessControllerProtocol.java_class,
+      meta_table = org.apache.hadoop.hbase.client.HTable.new(@config,
+                      org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
+      protocol = meta_table.coprocessorProxy(
+                      org.apache.hadoop.hbase.security.access.AccessControllerProtocol.java_class,
                                              org.apache.hadoop.hbase.HConstants::EMPTY_START_ROW)
-      protocol.grant(user.to_java_bytes, tp)
+      begin
+        protocol.grant(user_permission)
+      rescue java.io.IOException => e
+        if !(e.message.include? "java.lang.NoSuchMethodException")
+          raise e
+        end
+
+        # Server has not the new API, try the old one
+        if (table_name == nil)
+          raise "Global permissions not supported by HBase Server"
+        end
+
+        tp = org.apache.hadoop.hbase.security.access.TablePermission.new(table_name.to_java_bytes, fambytes, qualbytes, permissions.to_java_bytes)
+        protocol.grant(user.to_java_bytes, tp)
+      end
     end
 
     #----------------------------------------------------------------------------------------------
-    def revoke(user, table_name, family=nil, qualifier=nil)
+    def revoke(user, table_name=nil, family=nil, qualifier=nil)
       security_available?
 
-      # Table should exist
-      raise(ArgumentError, "Can't find table: #{table_name}") unless exists?(table_name)
+      # TODO: need to validate user name
 
-      htd = @admin.getTableDescriptor(table_name.to_java_bytes)
+      if (table_name != nil)
+        # Table should exist
+        raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
 
-      if (family != nil)
-        raise(ArgumentError, "Can't find a family: #{family}") unless htd.hasFamily(family.to_java_bytes)
+        htd = @admin.getTableDescriptor(table_name.to_java_bytes)
+
+        if (family != nil)
+          raise(ArgumentError, "Can't find family: #{family}") unless htd.hasFamily(family.to_java_bytes)
+        end
+
+        # invoke cp endpoint to perform access control
+        fambytes = family.to_java_bytes if (family != nil)
+        qualbytes = qualifier.to_java_bytes if (qualifier != nil)
+        user_permission = org.apache.hadoop.hbase.security.access.UserPermission.new(
+                                                    user.to_java_bytes, table_name.to_java_bytes,
+                                                    fambytes, qualbytes, "".to_java_bytes)
+      else
+        user_permission = org.apache.hadoop.hbase.security.access.UserPermission.new(
+                                                    user.to_java_bytes, "".to_java_bytes)
       end
 
-      fambytes = family.to_java_bytes if (family != nil)
-      qualbytes = qualifier.to_java_bytes if (qualifier != nil)
-      tp = org.apache.hadoop.hbase.security.access.TablePermission.new(table_name.to_java_bytes, fambytes, qualbytes, "".to_java_bytes)
-      meta_table = org.apache.hadoop.hbase.client.HTable.new(@config, org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
-      protocol = meta_table.coprocessorProxy(org.apache.hadoop.hbase.security.access.AccessControllerProtocol.java_class,
+      meta_table = org.apache.hadoop.hbase.client.HTable.new(@config,
+                        org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
+      protocol = meta_table.coprocessorProxy(
+                        org.apache.hadoop.hbase.security.access.AccessControllerProtocol.java_class,
                                              org.apache.hadoop.hbase.HConstants::EMPTY_START_ROW)
-      protocol.revoke(user.to_java_bytes, tp)
+      begin
+        protocol.revoke(user_permission)
+      rescue java.io.IOException => e
+        if !(e.message.include? "java.lang.NoSuchMethodException")
+          raise e
+        end
+
+        # Server has not the new API, try the old one
+        if (table_name == nil)
+          raise "Global permissions not supported by HBase Server"
+        end
+
+        tp = org.apache.hadoop.hbase.security.access.TablePermission.new(table_name.to_java_bytes, fambytes, qualbytes, "".to_java_bytes)
+        protocol.revoke(user.to_java_bytes, tp)
+      end
     end
 
     #----------------------------------------------------------------------------------------------
-    def user_permission(table_name)
+    def user_permission(table_name=nil)
       security_available?
 
-      raise(ArgumentError, "Can't find table: #{table_name}") unless exists?(table_name)
+      if (table_name != nil)
+        raise(ArgumentError, "Can't find table: #{table_name}") unless exists?(table_name)
+      end
 
-      meta_table = org.apache.hadoop.hbase.client.HTable.new(@config, org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
-      protocol = meta_table.coprocessorProxy(org.apache.hadoop.hbase.security.access.AccessControllerProtocol.java_class,
-                                             org.apache.hadoop.hbase.HConstants::EMPTY_START_ROW)
-      perms = protocol.getUserPermissions(table_name.to_java_bytes)
+      meta_table = org.apache.hadoop.hbase.client.HTable.new(@config, 
+                        org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
+      protocol = meta_table.coprocessorProxy(
+                      org.apache.hadoop.hbase.security.access.AccessControllerProtocol.java_class,
+                      org.apache.hadoop.hbase.HConstants::EMPTY_START_ROW)
+      perms = protocol.getUserPermissions(table_name != nil ? table_name.to_java_bytes : nil)
 
       res = {}
       count  = 0

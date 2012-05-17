@@ -211,6 +211,7 @@ Shell.load_command_group(
   :commands => %w[
     status
     version
+    whoami
   ]
 )
 
