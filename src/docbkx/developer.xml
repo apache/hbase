@@ -165,7 +165,8 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.1
         <para>A strange issue I ran into was the one where the upload into the apache
         repository was being sprayed across multiple apache machines making it so I could
         not release.  See <link xlink:href="https://issues.apache.org/jira/browse/INFRA-4482">INFRA-4482 Why is my upload to mvn spread across multiple repositories?</link>.</para>
-        <para>Here is my <filename>~/.m2/settings.xml</filename>.
+
+        <para xml:id="mvn.settings.file">Here is my <filename>~/.m2/settings.xml</filename>.
         <programlisting>&lt;settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
@@ -235,6 +236,16 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.1
            </para>
       </section>
     </section> <!--  build -->
+    <section xml:id="hbase.site.publishing">
+    <title>Publishing a new version of hbase.apache.org</title>
+    <para>Set up your apache credentials and the target site location locally in a place and
+    form that maven can pick it up, in <filename>~/.m2/settings.xml</filename>.  See <xref linked="" /> for an example.
+    Next, run the following:
+    <programlisting>$ mvn -DskipTests -Papache-release site site:deploy</programlisting>
+    You will be asked for your password.  It can take a little time.
+    Remember that it can take a few hours for your site changes to show up.
+    </para>
+    </section>
 
     <section xml:id="hbase.tests">
     <title>Tests</title>
