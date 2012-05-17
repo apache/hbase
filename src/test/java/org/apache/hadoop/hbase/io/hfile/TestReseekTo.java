@@ -24,6 +24,8 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -82,7 +84,7 @@ public class TestReseekTo {
       Integer key = keyList.get(i);
       String value = valueList.get(i);
       scanner.reseekTo(Bytes.toBytes(key));
-      assertEquals(value, scanner.getValueString());
+      assertEquals("i is " + i, value, scanner.getValueString());
     }
   }
 

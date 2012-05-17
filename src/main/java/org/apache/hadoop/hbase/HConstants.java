@@ -541,6 +541,12 @@ public final class HConstants {
 
   /** Configuration key suffix for Thrift server port */
   public static final String THRIFT_PORT_SUFFIX = "port";
+  
+  /** 
+   * The byte array represents for NO_NEXT_INDEXED_KEY;
+   * The actual value is irrelevant because this is always compared by reference. 
+   */
+  public static final byte [] NO_NEXT_INDEXED_KEY = Bytes.toBytes("NO_NEXT_INDEXED_KEY");
 
   private HConstants() {
     // Can't be instantiated with this ctor.

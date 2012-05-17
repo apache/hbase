@@ -30,6 +30,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Delete;
@@ -144,8 +145,14 @@ public abstract class HBaseTestCase extends TestCase {
     return testUtil.getTestDir(testName);
   }
 
-  protected HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
+  public HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
       byte [] endKey)
+  throws IOException {
+    return createNewHRegion(desc, startKey, endKey, this.conf);
+  }
+  
+  public static HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
+      byte [] endKey, Configuration conf)
   throws IOException {
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = filesystem.makeQualified(
@@ -198,10 +205,11 @@ public abstract class HBaseTestCase extends TestCase {
    * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
    * @param r
    * @param columnFamily
+   * @param column
    * @throws IOException
    * @return count of what we added.
    */
-  protected static long addContent(final HRegion r, final byte [] columnFamily)
+  public static long addContent(final HRegion r, final byte [] columnFamily, final byte[] column)
   throws IOException {
     byte [] startKey = r.getRegionInfo().getStartKey();
     byte [] endKey = r.getRegionInfo().getEndKey();
@@ -209,8 +217,22 @@ public abstract class HBaseTestCase extends TestCase {
     if (startKeyBytes == null || startKeyBytes.length == 0) {
       startKeyBytes = START_KEY_BYTES;
     }
-    return addContent(new HRegionIncommon(r), Bytes.toString(columnFamily), null,
+    return addContent(new HRegionIncommon(r), Bytes.toString(columnFamily), Bytes.toString(column),
       startKeyBytes, endKey, -1);
+  }
+  
+  /**
+   * Add content to region <code>r</code> on the passed column
+   * <code>column</code>.
+   * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
+   * @param r
+   * @param columnFamily
+   * @throws IOException
+   * @return count of what we added.
+   */
+  protected static long addContent(final HRegion r, final byte [] columnFamily)
+  throws IOException {
+    return addContent(r, columnFamily, null);
   }
 
   /**
