@@ -23,11 +23,13 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
@@ -35,6 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl.LOG_PER_ROW_COUNT;
 
 /**
  * Iterate over an HBase table data, return (Text, RowResult) pairs
@@ -49,6 +52,10 @@ public class TableRecordReaderImpl {
   private ResultScanner scanner;
   private HTable htable;
   private byte [][] trrInputColumns;
+  private long timestamp;
+  private int rowcount;
+  private boolean logScannerActivity = false;
+  private int logPerRowCount = 100;
 
   /**
    * Restart from survivable exceptions by creating a new scanner.
@@ -57,6 +64,7 @@ public class TableRecordReaderImpl {
    * @throws IOException
    */
   public void restart(byte[] firstRow) throws IOException {
+    Scan currentScan;
     if ((endRow != null) && (endRow.length > 0)) {
       if (trrRowFilter != null) {
         Scan scan = new Scan(firstRow, endRow);
@@ -64,6 +72,7 @@ public class TableRecordReaderImpl {
         scan.setFilter(trrRowFilter);
         scan.setCacheBlocks(false);
         this.scanner = this.htable.getScanner(scan);
+        currentScan = scan;
       } else {
         LOG.debug("TIFB.restart, firstRow: " +
             Bytes.toStringBinary(firstRow) + ", endRow: " +
@@ -71,6 +80,7 @@ public class TableRecordReaderImpl {
         Scan scan = new Scan(firstRow, endRow);
         TableInputFormat.addColumns(scan, trrInputColumns);
         this.scanner = this.htable.getScanner(scan);
+        currentScan = scan;
       }
     } else {
       LOG.debug("TIFB.restart, firstRow: " +
@@ -80,6 +90,12 @@ public class TableRecordReaderImpl {
       TableInputFormat.addColumns(scan, trrInputColumns);
       scan.setFilter(trrRowFilter);
       this.scanner = this.htable.getScanner(scan);
+      currentScan = scan;
+    }
+    if (logScannerActivity) {
+      LOG.info("Current scan=" + currentScan.toString());
+      timestamp = System.currentTimeMillis();
+      rowcount = 0;
     }
   }
 
@@ -99,6 +115,10 @@ public class TableRecordReaderImpl {
    * @param htable the {@link HTable} to scan.
    */
   public void setHTable(HTable htable) {
+    Configuration conf = htable.getConfiguration();
+    logScannerActivity = conf.getBoolean(
+      ScannerCallable.LOG_SCANNER_ACTIVITY, false);
+    logPerRowCount = conf.getInt(LOG_PER_ROW_COUNT, 100);
     this.htable = htable;
   }
 
@@ -174,32 +194,55 @@ public class TableRecordReaderImpl {
   throws IOException {
     Result result;
     try {
-      result = this.scanner.next();
-    } catch (DoNotRetryIOException e) {
-      throw e;
-    } catch (IOException e) {
-      LOG.debug("recovered from " + StringUtils.stringifyException(e));
-      if (lastSuccessfulRow == null) {
-        LOG.warn("We are restarting the first next() invocation," +
-            " if your mapper's restarted a few other times like this" +
-            " then you should consider killing this job and investigate" +
-            " why it's taking so long.");
+      try {
+        result = this.scanner.next();
+        if (logScannerActivity) {
+          rowcount ++;
+          if (rowcount >= logPerRowCount) {
+            long now = System.currentTimeMillis();
+            LOG.info("Mapper took " + (now-timestamp)
+              + "ms to process " + rowcount + " rows");
+            timestamp = now;
+            rowcount = 0;
+          }
+        }
+      } catch (DoNotRetryIOException e) {
+        throw e;
+      } catch (IOException e) {
+        LOG.debug("recovered from " + StringUtils.stringifyException(e));
+        if (lastSuccessfulRow == null) {
+          LOG.warn("We are restarting the first next() invocation," +
+              " if your mapper has restarted a few other times like this" +
+              " then you should consider killing this job and investigate" +
+              " why it's taking so long.");
+        }
+        if (lastSuccessfulRow == null) {
+          restart(startRow);
+        } else {
+          restart(lastSuccessfulRow);
+          this.scanner.next();    // skip presumed already mapped row
+        }
+        result = this.scanner.next();
       }
-      if (lastSuccessfulRow == null) {
-        restart(startRow);
-      } else {
-        restart(lastSuccessfulRow);
-        this.scanner.next();    // skip presumed already mapped row
-      }
-      result = this.scanner.next();
-    }
 
-    if (result != null && result.size() > 0) {
-      key.set(result.getRow());
-      lastSuccessfulRow = key.get();
-      Writables.copyWritable(result, value);
-      return true;
+      if (result != null && result.size() > 0) {
+        key.set(result.getRow());
+        lastSuccessfulRow = key.get();
+        Writables.copyWritable(result, value);
+        return true;
+      }
+      return false;
+    } catch (IOException ioe) {
+      if (logScannerActivity) {
+        long now = System.currentTimeMillis();
+        LOG.info("Mapper took " + (now-timestamp)
+          + "ms to process " + rowcount + " rows");
+        LOG.info(ioe);
+        String lastRow = lastSuccessfulRow == null ?
+          "null" : Bytes.toStringBinary(lastSuccessfulRow);
+        LOG.info("lastSuccessfulRow=" + lastRow);
+      }
+      throw ioe;
     }
-    return false;
   }
 }
