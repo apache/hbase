@@ -33,7 +33,7 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -217,9 +217,9 @@ public class HBaseFsck {
     this.conf = conf;
 
     int numThreads = conf.getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
-    executor = new ThreadPoolExecutor(1, numThreads,
+    executor = new ThreadPoolExecutor(numThreads, numThreads,
         THREADS_KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>());
+        new LinkedBlockingQueue<Runnable>());
     executor.allowCoreThreadTimeOut(true);
   }
 
