@@ -548,9 +548,8 @@ public class TestHLog  {
         KeyValue kv = val.getKeyValues().get(0);
         assertTrue(Bytes.equals(HLog.METAROW, kv.getRow()));
         assertTrue(Bytes.equals(HLog.METAFAMILY, kv.getFamily()));
-        assertTrue(Bytes.startsWith(
-          val.getKeyValues().get(0).getValue(),
-          HLog.COMPLETE_CACHE_FLUSH));
+        assertEquals(0, Bytes.compareTo(HLog.COMPLETE_CACHE_FLUSH,
+          val.getKeyValues().get(0).getValue()));
         System.out.println(key + " " + val);
       }
     } finally {
@@ -617,9 +616,8 @@ public class TestHLog  {
         assertTrue(Bytes.equals(tableName, entry.getKey().getTablename()));
         assertTrue(Bytes.equals(HLog.METAROW, val.getRow()));
         assertTrue(Bytes.equals(HLog.METAFAMILY, val.getFamily()));
-        assertTrue(Bytes.startsWith(
-          val.getValue(),
-          HLog.COMPLETE_CACHE_FLUSH));
+        assertEquals(0, Bytes.compareTo(HLog.COMPLETE_CACHE_FLUSH,
+          val.getValue()));
         System.out.println(entry.getKey() + " " + val);
       }
     } finally {

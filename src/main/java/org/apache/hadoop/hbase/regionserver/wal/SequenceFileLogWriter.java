@@ -245,7 +245,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
 
   @Override
   public void sync() throws IOException {
-    if (this.writer != null) this.writer.syncFs();
+    this.writer.syncFs();
   }
 
   @Override
