@@ -252,6 +252,14 @@
       <organization>Huawei</organization>
       <organizationUrl>http://www.huawei.com</organizationUrl>
     </developer>
+    <developer>
+      <id>liyin</id>
+      <name>Liyin Tang</name>
+      <email>liyin.tang@fb.com</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
   </developers>
 
   <repositories>
