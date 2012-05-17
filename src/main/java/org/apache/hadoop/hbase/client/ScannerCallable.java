@@ -25,10 +25,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -48,6 +51,10 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class ScannerCallable extends ServerCallable<Result[]> {
+  public static final String LOG_SCANNER_LATENCY_CUTOFF
+    = "hbase.client.log.scanner.latency.cutoff";
+  public static final String LOG_SCANNER_ACTIVITY = "hbase.client.log.scanner.activity";
+
   private static final Log LOG = LogFactory.getLog(ScannerCallable.class);
   private long scannerId = -1L;
   private boolean instantiated = false;
@@ -55,6 +62,8 @@ public class ScannerCallable extends ServerCallable<Result[]> {
   private Scan scan;
   private int caching = 1;
   private ScanMetrics scanMetrics;
+  private boolean logScannerActivity = false;
+  private int logCutOffLatency = 1000;
 
   // indicate if it is a remote server call
   private boolean isRegionServerRemote = true;
@@ -71,6 +80,9 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     super(connection, tableName, scan.getStartRow());
     this.scan = scan;
     this.scanMetrics = scanMetrics;
+    Configuration conf = connection.getConfiguration();
+    logScannerActivity = conf.getBoolean(LOG_SCANNER_ACTIVITY, false);
+    logCutOffLatency = conf.getInt(LOG_SCANNER_LATENCY_CUTOFF, 1000);
   }
 
   /**
@@ -129,7 +141,16 @@ public class ScannerCallable extends ServerCallable<Result[]> {
             RequestConverter.buildScanRequest(scannerId, caching, false);
           try {
             ScanResponse response = server.scan(null, request);
+            long timestamp = System.currentTimeMillis();
             rrs = ResponseConverter.getResults(response);
+            if (logScannerActivity) {
+              long now = System.currentTimeMillis();
+              if (now - timestamp > logCutOffLatency) {
+                int rows = rrs == null ? 0 : rrs.length;
+                LOG.info("Took " + (now-timestamp) + "ms to fetch "
+                  + rows + " rows from scanner=" + scannerId);
+              }
+            }
             if (response.hasMoreResults()
                 && !response.getMoreResults()) {
               scannerId = -1L;
@@ -141,9 +162,24 @@ public class ScannerCallable extends ServerCallable<Result[]> {
           }
           updateResultsMetrics(rrs);
         } catch (IOException e) {
+          if (logScannerActivity) {
+            LOG.info("Got exception in fetching from scanner="
+              + scannerId, e);
+          }
           IOException ioe = e;
           if (e instanceof RemoteException) {
             ioe = RemoteExceptionHandler.decodeRemoteException((RemoteException)e);
+          }
+          if (logScannerActivity && (ioe instanceof UnknownScannerException)) {
+            try {
+              HRegionLocation location =
+                connection.relocateRegion(tableName, scan.getStartRow());
+              LOG.info("Scanner=" + scannerId
+                + " expired, current region location is " + location.toString()
+                + " ip:" + location.getServerAddress().getBindAddress());
+            } catch (Throwable t) {
+              LOG.info("Failed to relocate region", t);
+            }
           }
           if (ioe instanceof NotServingRegionException) {
             // Throw a DNRE so that we break out of cycle of calling NSRE
@@ -221,7 +257,13 @@ public class ScannerCallable extends ServerCallable<Result[]> {
         this.scan, 0, false);
     try {
       ScanResponse response = server.scan(null, request);
-      return response.getScannerId();
+      long id = response.getScannerId();
+      if (logScannerActivity) {
+        LOG.info("Open scanner=" + id + " for scan=" + scan.toString()
+          + " on region " + this.location.toString() + " ip:"
+          + this.location.getServerAddress().getBindAddress());
+      }
+      return id;
     } catch (ServiceException se) {
       throw ProtobufUtil.getRemoteException(se);
     }
