@@ -230,28 +230,28 @@
     <section xml:id="data_model_operations">
        <title>Data Model Operations</title>
        <para>The four primary data model operations are Get, Put, Scan, and Delete.  Operations are applied via 
-       <link xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/HTable.html">HTable</link> instances.
+       <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link> instances.
        </para>
       <section xml:id="get">
         <title>Get</title>
-        <para><link xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/Get.html">Get</link> returns
+        <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link> returns
         attributes for a specified row.  Gets are executed via 
-        <link xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/HTable.html#get%28org.apache.hadoop.hbase.client.Get%29">
+        <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#get%28org.apache.hadoop.hbase.client.Get%29">
         HTable.get</link>.
         </para>
       </section>
       <section xml:id="put">
         <title>Put</title>
-        <para><link xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/Put.html">Put</link> either 
+        <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html">Put</link> either 
         adds new rows to a table (if the key is new) or can update existing rows (if the key already exists).  Puts are executed via
-        <link xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/HTable.html#put%28org.apache.hadoop.hbase.client.Put%29">
-        HTable.put</link> (writeBuffer) or <link xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29">
+        <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#put%28org.apache.hadoop.hbase.client.Put%29">
+        HTable.put</link> (writeBuffer) or <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29">
         HTable.batch</link> (non-writeBuffer).  
         </para>
       </section>
       <section xml:id="scan">
           <title>Scans</title>
-          <para><link xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/Scan.html">Scan</link> allow
+          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link> allow
           iteration over multiple rows for specified attributes.
           </para>
           <para>The following is an example of a 
@@ -277,9 +277,9 @@ try {
         </section>
       <section xml:id="delete">
         <title>Delete</title>
-        <para><link xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/Delete.html">Delete</link> removes
+        <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Delete.html">Delete</link> removes
         a row from a table.  Deletes are executed via 
-        <link xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/HTable.html#delete%28org.apache.hadoop.hbase.client.Delete%29">
+        <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#delete%28org.apache.hadoop.hbase.client.Delete%29">
         HTable.delete</link>.
         </para>
         <para>HBase does not modify data in place, and so deletes are handled by creating new markers called <emphasis>tombstones</emphasis>.
@@ -356,8 +356,8 @@ try {
           <title>Get/Scan</title>
 
           <para>Gets are implemented on top of Scans. The below discussion of
-            <link xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/Get.html">Get</link> applies equally to <link
-            xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/Scan.html">Scans</link>.</para>
+            <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link> applies equally to <link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scans</link>.</para>
 
           <para>By default, i.e. if you specify no explicit version, when
           doing a <literal>get</literal>, the cell whose version has the
@@ -368,7 +368,7 @@ try {
           <itemizedlist>
             <listitem>
               <para>to return more than one version, see <link
-              xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/Get.html#setMaxVersions()">Get.setMaxVersions()</link></para>
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setMaxVersions()">Get.setMaxVersions()</link></para>
             </listitem>
 
             <listitem>
