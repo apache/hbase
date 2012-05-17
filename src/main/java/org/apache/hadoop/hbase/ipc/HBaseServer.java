@@ -1339,7 +1339,7 @@ public abstract class HBaseServer implements RpcServer {
               + saslServer.getNegotiatedProperty(Sasl.QOP));
           }          
           rpcMetrics.authenticationSuccesses.inc();
-          AUDITLOG.trace(AUTH_SUCCESSFUL_FOR + user);
+          AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user);
           saslContextEstablished = true;
         }
       }
