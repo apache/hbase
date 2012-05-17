@@ -32,13 +32,37 @@ public interface AccessControllerProtocol extends CoprocessorProtocol {
 
   /**
    * Grants the given user or group the privilege to perform the given actions
+   * @param userPermission the details of the provided user permissions
+   * @throws IOException if the grant could not be applied
+   */
+  public void grant(UserPermission userPermission)
+      throws IOException;
+
+  /**
+   * Grants the given user or group the privilege to perform the given actions
    * over the specified scope contained in {@link TablePermission}
    * @param user the user name, or, if prefixed with "@", group name receiving
    * the grant
    * @param permission the details of the provided permissions
    * @throws IOException if the grant could not be applied
+   * @deprecated Use {@link #revoke(UserPermission userPermission)} instead
    */
+  @Deprecated
   public void grant(byte[] user, TablePermission permission)
+      throws IOException;
+
+  /**
+   * Revokes a previously granted privilege from a user or group.
+   * Note that the provided {@link TablePermission} details must exactly match
+   * a stored grant.  For example, if user "bob" has been granted "READ" access
+   * to table "data", over column family and qualifer "info:colA", then the
+   * table, column family and column qualifier must all be specified.
+   * Attempting to revoke permissions over just the "data" table will have
+   * no effect.
+   * @param permission the details of the previously granted permission to revoke
+   * @throws IOException if the revocation could not be performed
+   */
+  public void revoke(UserPermission userPermission)
       throws IOException;
 
   /**
@@ -53,7 +77,9 @@ public interface AccessControllerProtocol extends CoprocessorProtocol {
    * privileges are being revoked
    * @param permission the details of the previously granted permission to revoke
    * @throws IOException if the revocation could not be performed
+   * @deprecated Use {@link #revoke(UserPermission userPermission)} instead
    */
+  @Deprecated
   public void revoke(byte[] user, TablePermission permission)
       throws IOException;
 
@@ -81,5 +107,4 @@ public interface AccessControllerProtocol extends CoprocessorProtocol {
    */
   public void checkPermissions(Permission[] permissions)
       throws IOException;
-
 }
