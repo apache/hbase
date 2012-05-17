@@ -288,10 +288,10 @@ public class ServerShutdownHandler extends EventHandler {
       if (hris != null) {
         List<HRegionInfo> toAssignRegions = new ArrayList<HRegionInfo>();
         for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
+          RegionState rit = this.services.getAssignmentManager().isRegionInTransition(e.getKey());
           if (processDeadRegion(e.getKey(), e.getValue(),
               this.services.getAssignmentManager(),
               this.server.getCatalogTracker())) {
-            RegionState rit = this.services.getAssignmentManager().isRegionInTransition(e.getKey());
             ServerName addressFromAM = this.services.getAssignmentManager()
                 .getRegionServerOfRegion(e.getKey());
             if (rit != null && !rit.isClosing() && !rit.isPendingClose()) {
@@ -307,6 +307,22 @@ public class ServerShutdownHandler extends EventHandler {
               } else {
                 toAssignRegions.add(e.getKey());
               }
+          }
+          // If the table was partially disabled and the RS went down, we should clear the RIT
+          // and remove the node for the region.
+          // The rit that we use may be stale in case the table was in DISABLING state
+          // but though we did assign we will not be clearing the znode in CLOSING state.
+          // Doing this will have no harm. See HBASE-5927
+          if (rit != null
+              && (rit.isClosing() || rit.isPendingClose())
+              && this.services.getAssignmentManager().getZKTable()
+                  .isDisablingOrDisabledTable(rit.getRegion().getTableNameAsString())) {
+            HRegionInfo hri = rit.getRegion();
+            AssignmentManager am = this.services.getAssignmentManager();
+            am.deleteClosingOrClosedNode(hri);
+            am.regionOffline(hri);
+            // To avoid region assignment if table is in disabling or disabled state.
+            toAssignRegions.remove(hri);
           }
         }
         // Get all available servers
