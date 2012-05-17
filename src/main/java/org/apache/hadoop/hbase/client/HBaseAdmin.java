@@ -37,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -69,6 +71,11 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1352,8 +1359,18 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws UnknownRegionException, MasterNotRunningException, ZooKeeperConnectionException {
     MasterKeepAliveConnection master = connection.getKeepAliveMaster();
     try {
-      master.move(encodedRegionName, destServerName);
-    } finally {
+      MoveRegionRequest request = RequestConverter.buildMoveRegionRequest(encodedRegionName, destServerName);
+      master.moveRegion(null,request);
+    } catch (ServiceException se) {
+      IOException ioe = ProtobufUtil.getRemoteException(se);
+      if (ioe instanceof UnknownRegionException) {
+        throw (UnknownRegionException)ioe;
+      }
+      LOG.error("Unexpected exception: " + se + " from calling HMaster.moveRegion");
+    } catch (DeserializationException de) {
+      LOG.error("Could not parse destination server name: " + de);
+    }
+    finally {
       master.close();
     }
   }
@@ -1369,8 +1386,9 @@ public class HBaseAdmin implements Abortable, Closeable {
       ZooKeeperConnectionException, IOException {
     execute(new MasterCallable<Void>() {
       @Override
-      public Void call() throws IOException {
-        master.assign(regionName);
+      public Void call() throws ServiceException {
+        AssignRegionRequest request = RequestConverter.buildAssignRegionRequest(regionName);
+        master.assignRegion(null,request);
         return null;
       }
     });
@@ -1394,8 +1412,10 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     execute(new MasterCallable<Void>() {
       @Override
-      public Void call() throws IOException {
-        master.unassign(regionName, force);
+      public Void call() throws ServiceException {
+        UnassignRegionRequest request =
+          RequestConverter.buildUnassignRegionRequest(regionName, force);
+        master.unassignRegion(null,request);
         return null;
       }
     });
@@ -1806,6 +1826,8 @@ public class HBaseAdmin implements Abortable, Closeable {
       throw re.unwrapRemoteException();
     } catch (IOException e) {
       throw e;
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
     } catch (Exception e) {
       // This should not happen...
       throw new IOException("Unexpected exception when calling master", e);

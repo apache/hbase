@@ -117,8 +117,16 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import com.google.protobuf.RpcController;
+
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
@@ -1200,12 +1208,24 @@ Server {
   }
 
   @Override
-  public void move(final byte[] encodedRegionName, final byte[] destServerName)
-  throws UnknownRegionException {
+  public MoveRegionResponse moveRegion(RpcController controller, MoveRegionRequest req)
+  throws ServiceException {
+    final byte [] encodedRegionName = req.getRegion().getValue().toByteArray();
+    RegionSpecifierType type = req.getRegion().getType();
+    final byte [] destServerName = (req.hasDestServerName())?
+      Bytes.toBytes(ProtobufUtil.toServerName(req.getDestServerName()).getServerName()):null;
+    MoveRegionResponse mrr = MoveRegionResponse.newBuilder().build();
+
+    if (type != RegionSpecifierType.ENCODED_REGION_NAME) {
+      LOG.warn("moveRegion specifier type: expected: " + RegionSpecifierType.ENCODED_REGION_NAME
+        + " actual: " + RegionSpecifierType.REGION_NAME);
+    }
     Pair<HRegionInfo, ServerName> p =
-      this.assignmentManager.getAssignment(encodedRegionName);
-    if (p == null)
-      throw new UnknownRegionException(Bytes.toStringBinary(encodedRegionName));
+	  this.assignmentManager.getAssignment(encodedRegionName);
+    if (p == null) {
+	  throw new ServiceException(
+        new UnknownRegionException(Bytes.toStringBinary(encodedRegionName)));
+    }
     HRegionInfo hri = p.getFirst();
     ServerName dest;
     if (destServerName == null || destServerName.length == 0) {
@@ -1219,7 +1239,7 @@ Server {
       if (dest.equals(p.getSecond())) {
         LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
           + " because region already assigned to the same server " + dest + ".");
-        return;
+        return mrr;
       }
     }
 
@@ -1229,7 +1249,7 @@ Server {
     try {
       if (this.cpHost != null) {
         if (this.cpHost.preMove(hri, rp.getSource(), rp.getDestination())) {
-          return;
+          return mrr;
         }
       }
       LOG.info("Added move plan " + rp + ", running balancer");
@@ -1241,8 +1261,9 @@ Server {
       UnknownRegionException ure = new UnknownRegionException(
         Bytes.toStringBinary(encodedRegionName));
       ure.initCause(ioe);
-      throw ure;
+      throw new ServiceException(ure);
     }
+    return mrr;
   }
 
   public void createTable(HTableDescriptor hTableDescriptor,
@@ -1783,56 +1804,77 @@ Server {
   }
 
   @Override
-  @Deprecated
-  public void assign(final byte[] regionName, final boolean force)
-      throws IOException {
-    assign(regionName);
-  }
+  public AssignRegionResponse assignRegion(RpcController controller, AssignRegionRequest req)
+  throws ServiceException {
+    try {
+      final byte [] regionName = req.getRegion().getValue().toByteArray();
+      RegionSpecifierType type = req.getRegion().getType();
+      AssignRegionResponse arr = AssignRegionResponse.newBuilder().build();
 
-  @Override
-  public void assign(final byte [] regionName)throws IOException {
-    checkInitialized();
-    Pair<HRegionInfo, ServerName> pair =
-      MetaReader.getRegion(this.catalogTracker, regionName);
-    if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
-    if (cpHost != null) {
-      if (cpHost.preAssign(pair.getFirst())) {
-        return;
+      checkInitialized();
+      if (type != RegionSpecifierType.REGION_NAME) {
+        LOG.warn("assignRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
+          + " actual: " + RegionSpecifierType.ENCODED_REGION_NAME);
       }
-    }
-    assignRegion(pair.getFirst());
-    if (cpHost != null) {
-      cpHost.postAssign(pair.getFirst());
+      Pair<HRegionInfo, ServerName> pair =
+        MetaReader.getRegion(this.catalogTracker, regionName);
+      if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
+      if (cpHost != null) {
+        if (cpHost.preAssign(pair.getFirst())) {
+          return arr;
+        }
+      }
+      assignRegion(pair.getFirst());
+     if (cpHost != null) {
+       cpHost.postAssign(pair.getFirst());
+     }
+
+     return arr;
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
     }
   }
-  
-  
 
   public void assignRegion(HRegionInfo hri) {
     assignmentManager.assign(hri, true);
   }
 
   @Override
-  public void unassign(final byte [] regionName, final boolean force)
-  throws IOException {
-    checkInitialized();
-    Pair<HRegionInfo, ServerName> pair =
-      MetaReader.getRegion(this.catalogTracker, regionName);
-    if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
-    HRegionInfo hri = pair.getFirst();
-    if (cpHost != null) {
-      if (cpHost.preUnassign(hri, force)) {
-        return;
+  public UnassignRegionResponse unassignRegion(RpcController controller, UnassignRegionRequest req)
+  throws ServiceException {
+    try {
+      final byte [] regionName = req.getRegion().getValue().toByteArray();
+      RegionSpecifierType type = req.getRegion().getType();
+      final boolean force = req.getForce();
+      UnassignRegionResponse urr = UnassignRegionResponse.newBuilder().build();
+
+      checkInitialized();
+      if (type != RegionSpecifierType.REGION_NAME) {
+        LOG.warn("unassignRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
+          + " actual: " + RegionSpecifierType.ENCODED_REGION_NAME);
       }
-    }
-    if (force) {
-      this.assignmentManager.regionOffline(hri);
-      assignRegion(hri);
-    } else {
-      this.assignmentManager.unassign(hri, force);
-    }
-    if (cpHost != null) {
-      cpHost.postUnassign(hri, force);
+      Pair<HRegionInfo, ServerName> pair =
+        MetaReader.getRegion(this.catalogTracker, regionName);
+      if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
+      HRegionInfo hri = pair.getFirst();
+      if (cpHost != null) {
+        if (cpHost.preUnassign(hri, force)) {
+          return urr;
+        }
+      }
+      if (force) {
+        this.assignmentManager.regionOffline(hri);
+        assignRegion(hri);
+      } else {
+        this.assignmentManager.unassign(hri, force);
+      }
+      if (cpHost != null) {
+        cpHost.postUnassign(hri, force);
+      }
+
+      return urr;
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
     }
   }
 

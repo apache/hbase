@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -46,6 +47,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.protobuf.ServiceException;
 
 /**
  * Test the draining servers feature.
@@ -138,7 +141,7 @@ public class TestDrainingServer {
    */
   @Test  // (timeout=30000)
   public void testDrainingServerOffloading()
-  throws IOException, KeeperException {
+  throws IOException, KeeperException, ServiceException, DeserializationException {
     // I need master in the below.
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     HRegionInfo hriToMoveBack = null;
@@ -153,7 +156,8 @@ public class TestDrainingServer {
       for (HRegionInfo hri : hris) {
         // Pass null and AssignmentManager will chose a random server BUT it
         // should exclude draining servers.
-        master.move(hri.getEncodedNameAsBytes(), null);
+        master.moveRegion(null,
+          RequestConverter.buildMoveRegionRequest(hri.getEncodedNameAsBytes(), null));
         // Save off region to move back.
         hriToMoveBack = hri;
       }
@@ -165,8 +169,9 @@ public class TestDrainingServer {
     }
     // Now we've unset the draining server, we should be able to move a region
     // to what was the draining server.
-    master.move(hriToMoveBack.getEncodedNameAsBytes(),
-      Bytes.toBytes(drainingServer.getServerName().toString()));
+    master.moveRegion(null,
+      RequestConverter.buildMoveRegionRequest(hriToMoveBack.getEncodedNameAsBytes(),
+      Bytes.toBytes(drainingServer.getServerName().toString())));
     // Wait for regions to come back on line again.
     waitForAllRegionsOnline();
     Assert.assertEquals(1, drainingServer.getNumberOfOnlineRegions());

@@ -24,6 +24,7 @@ import java.util.NavigableMap;
 import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -77,6 +78,9 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -830,6 +834,54 @@ public final class RequestConverter {
     builder.setQualifier(ByteString.copyFrom(qualifier));
     builder.setComparator(ProtobufUtil.toParameter(comparator));
     builder.setCompareType(compareType);
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer MoveRegionRequest
+   *
+   * @param encodedRegionName
+   * @param destServerName
+   * @return A MoveRegionRequest
+   * @throws DeserializationException
+   */
+  public static MoveRegionRequest buildMoveRegionRequest(
+      final byte [] encodedRegionName, final byte [] destServerName) throws DeserializationException {
+	MoveRegionRequest.Builder builder = MoveRegionRequest.newBuilder();
+    builder.setRegion(
+      buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME,encodedRegionName));
+    if (destServerName != null) {
+      builder.setDestServerName(
+        ProtobufUtil.toServerName(new ServerName(Bytes.toString(destServerName))));
+    }
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer AssignRegionRequest
+   *
+   * @param regionName
+   * @return An AssignRegionRequest
+   */
+  public static AssignRegionRequest buildAssignRegionRequest(final byte [] regionName) {
+    AssignRegionRequest.Builder builder = AssignRegionRequest.newBuilder();
+    builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME,regionName));
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer UnassignRegionRequest
+   *
+   * @param regionName
+   * @param force
+   * @return An UnassignRegionRequest
+   */
+  public static UnassignRegionRequest buildUnassignRegionRequest(
+      final byte [] regionName, final boolean force) {
+    UnassignRegionRequest.Builder builder = UnassignRegionRequest.newBuilder();
+    RegionSpecifier.Builder rspec = RegionSpecifier.newBuilder();
+    builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME,regionName));
+    builder.setForce(force);
     return builder.build();
   }
 }

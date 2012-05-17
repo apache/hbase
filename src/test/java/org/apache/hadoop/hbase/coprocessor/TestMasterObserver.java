@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -945,8 +946,8 @@ public class TestMasterObserver {
     }
     assertTrue("Found server", found);
     LOG.info("Found " + destName);
-    master.move(firstGoodPair.getKey().getEncodedNameAsBytes(),
-      Bytes.toBytes(destName));
+    master.moveRegion(null,RequestConverter.buildMoveRegionRequest(
+      firstGoodPair.getKey().getEncodedNameAsBytes(),Bytes.toBytes(destName)));
     assertTrue("Coprocessor should have been called on region move",
       cp.wasMoveCalled());
 
@@ -965,7 +966,8 @@ public class TestMasterObserver {
     for (int i=0; i<moveCnt; i++) {
       HRegionInfo info = openRegions.get(i);
       if (!info.isMetaTable()) {
-        master.move(openRegions.get(i).getEncodedNameAsBytes(), destRS);
+        master.moveRegion(null,RequestConverter.buildMoveRegionRequest(
+          openRegions.get(i).getEncodedNameAsBytes(), destRS));
       }
     }
 

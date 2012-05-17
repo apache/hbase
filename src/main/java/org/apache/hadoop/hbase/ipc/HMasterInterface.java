@@ -27,10 +27,18 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
 import org.apache.hadoop.hbase.security.TokenInfo;
 import org.apache.hadoop.hbase.security.KerberosInfo;
 import org.apache.hadoop.hbase.util.Pair;
+
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 /**
  * Clients interact with the HMasterInterface to gain access to meta-level
@@ -56,7 +64,8 @@ public interface HMasterInterface extends VersionedProtocol {
   // had changed.  This has since been undone.
   // 29:  4/3/2010 - changed ClusterStatus serialization
   // 30: 3/20/2012 - HBASE-5589: Added offline method
-  public static final long VERSION = 30L;
+  // 31: 5/8/2012 - HBASE-5445: Converted to PB-based calls
+  public static final long VERSION = 31L;
 
   /** @return true if master is available */
   public boolean isMasterRunning();
@@ -166,58 +175,6 @@ public interface HMasterInterface extends VersionedProtocol {
    */
   public ClusterStatus getClusterStatus();
 
-
-  /**
-   * Move the region <code>r</code> to <code>dest</code>.
-   * @param encodedRegionName The encoded region name; i.e. the hash that makes
-   * up the region name suffix: e.g. if regionname is
-   * <code>TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.</code>,
-   * then the encoded region name is: <code>527db22f95c8a9e0116f0cc13c680396</code>.
-   * @param destServerName The servername of the destination regionserver.  If
-   * passed the empty byte array we'll assign to a random server.  A server name
-   * is made of host, port and startcode.  Here is an example:
-   * <code> host187.example.com,60020,1289493121758</code>.
-   * @throws UnknownRegionException Thrown if we can't find a region named
-   * <code>encodedRegionName</code>
-   */
-  public void move(final byte [] encodedRegionName, final byte [] destServerName)
-  throws UnknownRegionException;
-
-  /**
-   * Assign a region to a server chosen at random.
-   * @param regionName Region to assign.  Will use existing RegionPlan if one
-   * found.
-   * @param force If true, will force the assignment.
-   * @throws IOException
-   * @deprecated The <code>force</code> is unused.Use {@link #assign(byte[])}
-   */
-  public void assign(final byte [] regionName, final boolean force)
-  throws IOException;
-
-  /**
-   * Assign a region to a server chosen at random.
-   * 
-   * @param regionName
-   *          Region to assign. Will use existing RegionPlan if one found.
-   * @throws IOException
-   */
-  public void assign(final byte[] regionName) throws IOException;
-  
-  /**
-   * Unassign a region from current hosting regionserver.  Region will then be
-   * assigned to a regionserver chosen at random.  Region could be reassigned
-   * back to the same server.  Use {@link #move(byte[], byte[])} if you want
-   * to control the region movement.
-   * @param regionName Region to unassign. Will clear any existing RegionPlan
-   * if one found.
-   * @param force If true, force unassign (Will remove region from
-   * regions-in-transition too if present as well as from assigned regions --
-   * radical!.If results in double assignment use hbck -fix to resolve.
-   * @throws IOException
-   */
-  public void unassign(final byte [] regionName, final boolean force)
-  throws IOException;
-
   /**
    * Offline a region from the assignment manager's in-memory state.  The
    * region should be in a closed state and there will be no attempt to
@@ -266,4 +223,49 @@ public interface HMasterInterface extends VersionedProtocol {
    * @return array of HTableDescriptor
    */
   public HTableDescriptor[] getHTableDescriptors(List<String> tableNames);
+
+  /**
+   * Assign a region to a server chosen at random.
+   * @param controller Unused (set to null).
+   * @param req contains the region to assign.  Will use existing RegionPlan if one
+   * found.
+   * @throws ServiceException
+   */
+  public AssignRegionResponse assignRegion(RpcController controller, AssignRegionRequest req)
+  throws ServiceException;
+
+  /**
+   * Unassign a region from current hosting regionserver.  Region will then be
+   * assigned to a regionserver chosen at random.  Region could be reassigned
+   * back to the same server.  Use {@link #moveRegion(RpcController,MoveRegionRequest}
+   * if you want to control the region movement.
+   * @param controller Unused (set to null).
+   * @param req The request which contains:
+   * - region: Region to unassign. Will clear any existing RegionPlan
+   * if one found.
+   * - force: If true, force unassign (Will remove region from
+   * regions-in-transition too if present as well as from assigned regions --
+   * radical!.If results in double assignment use hbck -fix to resolve.
+   * @throws ServiceException
+   */
+  public UnassignRegionResponse unassignRegion(RpcController controller, UnassignRegionRequest req)
+  throws ServiceException;
+
+  /**
+   * Move a region to a specified destination server.
+   * @param controller Unused (set to null).
+   * @param req The request which contains:
+   * - region: The encoded region name; i.e. the hash that makes
+   * up the region name suffix: e.g. if regionname is
+   * <code>TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.</code>,
+   * then the encoded region name is: <code>527db22f95c8a9e0116f0cc13c680396</code>.
+   * - destServerName: The servername of the destination regionserver.  If
+   * passed the empty byte array we'll assign to a random server.  A server name
+   * is made of host, port and startcode.  Here is an example:
+   * <code> host187.example.com,60020,1289493121758</code>.
+   * @throws ServiceException that wraps a UnknownRegionException if we can't find a
+   * region named <code>encodedRegionName</code>
+   */
+  public MoveRegionResponse moveRegion(RpcController controller, MoveRegionRequest req)
+		  throws ServiceException;
 }
