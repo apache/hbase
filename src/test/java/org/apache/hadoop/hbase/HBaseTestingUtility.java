@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -59,6 +60,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
@@ -87,6 +89,12 @@ public class HBaseTestingUtility {
   private static final Log LOG = LogFactory.getLog(HBaseTestingUtility.class);
   private Configuration conf;
   private MiniZooKeeperCluster zkCluster = null;
+  /**
+   * The default number of regions per regionserver when creating a pre-split
+   * table.
+   */
+  private static int DEFAULT_REGIONS_PER_SERVER = 5;
+
   /**
    * Set if we were passed a zkCluster.  If so, we won't shutdown zk as
    * part of general shutdown.
@@ -1596,4 +1604,48 @@ public class HBaseTestingUtility {
     return zkw;
   }
   
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf,
+      byte[] tableName, byte[] columnFamily, Algorithm compression) throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
+    hcd.setCompressionType(compression);
+    desc.addFamily(hcd);
+
+    int totalNumberOfRegions = 0;
+    try {
+      HBaseAdmin admin = new HBaseAdmin(conf);
+
+      // create a table a pre-splits regions.
+      // The number of splits is set as:
+      //    region servers * regions per region server).
+      int numberOfServers = admin.getClusterStatus().getServers().size();
+      if (numberOfServers == 0) {
+        throw new IllegalStateException("No live regionservers");
+      }
+
+      totalNumberOfRegions = numberOfServers * DEFAULT_REGIONS_PER_SERVER;
+      LOG.info("Number of live regionservers: " + numberOfServers + ", " +
+          "pre-splitting table into " + totalNumberOfRegions + " regions " +
+          "(default regions per server: " + DEFAULT_REGIONS_PER_SERVER + ")");
+
+      byte[][] splits = new RegionSplitter.MD5StringSplit().split(
+          totalNumberOfRegions);
+
+      admin.createTable(desc, splits);
+      admin.close();
+    } catch (MasterNotRunningException e) {
+      LOG.error("Master not running", e);
+      throw new IOException(e);
+    } catch (TableExistsException e) {
+      LOG.warn("Table " + Bytes.toStringBinary(tableName) +
+          " already exists, continuing");
+    }
+    return totalNumberOfRegions;
+  }
+
 }

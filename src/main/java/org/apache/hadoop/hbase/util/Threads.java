@@ -151,4 +151,27 @@ public class Threads {
       }
     };
   }
+
+  /**
+   * Sleeps for the given amount of time even if interrupted. Preserves
+   * the interrupt status.
+   * @param msToWait the amount of time to sleep in milliseconds
+   */
+  public static void sleepWithoutInterrupt(final long msToWait) {
+    long timeMillis = System.currentTimeMillis();
+    long endTime = timeMillis + msToWait;
+    boolean interrupted = false;
+    while (timeMillis < endTime) {
+      try {
+        Thread.sleep(endTime - timeMillis);
+      } catch (InterruptedException ex) {
+        interrupted = true;
+      }
+      timeMillis = System.currentTimeMillis();
+    }
+
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
+  }
 }

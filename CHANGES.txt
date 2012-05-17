@@ -82,6 +82,7 @@ Release 0.92.2 - Unreleased
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems
    HBASE-5599  [hbck] handle NO_VERSION_FILE and SHOULD_NOT_BE_DEPLOYED inconsistencies (fulin wang)
    HBASE-5719  Enhance hbck to sideline overlapped mega regions (Jimmy Xiang)
+   HBASE-5124  Backport LoadTestTool to 0.92 (Ted and Andrew)
 
 Release 0.92.1 - March 17th, 2012
   INCOMPATIBLE CHANGES
