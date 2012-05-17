@@ -829,7 +829,7 @@
     <commons-math.version>2.1</commons-math.version>
     <commons-configuration.version>1.6</commons-configuration.version>
     <guava.version>r09</guava.version>
-    <jackson.version>1.5.5</jackson.version>
+    <jackson.version>1.8.8</jackson.version>
     <jasper.version>5.5.23</jasper.version>
     <jaxb-api.version>2.1</jaxb-api.version>
     <jetty.version>6.1.26</jetty.version>
@@ -1354,7 +1354,7 @@
         </property>
       </activation>
       <properties>
-        <hadoop.version>1.0.0</hadoop.version>
+        <hadoop.version>1.0.3</hadoop.version>
         <slf4j.version>1.4.3</slf4j.version>
       </properties>
       <dependencies>
@@ -1467,7 +1467,7 @@
     <profile>
       <id>security</id>
       <properties>
-        <hadoop.version>1.0.0</hadoop.version>
+        <hadoop.version>1.0.3</hadoop.version>
         <slf4j.version>1.4.3</slf4j.version>
       </properties>
       <build>
