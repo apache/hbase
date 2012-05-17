@@ -69,8 +69,8 @@
       <p>
       To enable JMX support in HBase, first edit 
       <code>$HBASE_HOME/conf/hadoop-metrics.properties</code> to support 
-      metrics refreshing. (If you've already configured 
-      <code>hadoop-metrics.properties</code> for another output context, 
+      metrics refreshing. (If you've running 0.94.1 and above, or have already configured 
+      <code>hadoop-metrics.properties</code> for another output context,
       you can skip this step).
       </p>
       <source>
