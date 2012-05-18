@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState.State;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
@@ -98,6 +100,7 @@ public class TestAssignmentManager {
   private Server server;
   private ServerManager serverManager;
   private ZooKeeperWatcher watcher;
+  private LoadBalancer balancer;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -604,6 +607,74 @@ public class TestAssignmentManager {
       assertEquals("Aborted", e.getLocalizedMessage());
     }
   }
+  /**
+   * TestCase verifies that the regionPlan is updated whenever a region fails to open 
+   * and the master tries to process RS_ZK_FAILED_OPEN state.(HBASE-5546).
+   */
+  @Test
+  public void testRegionPlanIsUpdatedWhenRegionFailsToOpen() throws IOException, KeeperException,
+      ServiceException, InterruptedException {
+    this.server.getConfiguration().setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        MockedLoadBalancer.class, LoadBalancer.class);
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(this.server,
+        this.serverManager);
+    // Boolean variable used for waiting until randomAssignment is called and new
+    // plan is generated.
+    AtomicBoolean gate = new AtomicBoolean(false);
+    if (balancer instanceof MockedLoadBalancer) {
+      ((MockedLoadBalancer) balancer).setGateVariable(gate);
+    }
+    ZKAssign.createNodeOffline(this.watcher, REGIONINFO, SERVERNAME_A);
+    int v = ZKAssign.getVersion(this.watcher, REGIONINFO);
+    ZKAssign.transitionNode(this.watcher, REGIONINFO, SERVERNAME_A, EventType.M_ZK_REGION_OFFLINE,
+        EventType.RS_ZK_REGION_FAILED_OPEN, v);
+    String path = ZKAssign.getNodeName(this.watcher, REGIONINFO.getEncodedName());
+    RegionState state = new RegionState(REGIONINFO, State.OPENING, System.currentTimeMillis(),
+        SERVERNAME_A);
+    am.regionsInTransition.put(REGIONINFO.getEncodedName(), state);
+    // a dummy plan inserted into the regionPlans. This plan is cleared and new one is formed
+    am.regionPlans.put(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, null, SERVERNAME_A));
+    RegionPlan regionPlan = am.regionPlans.get(REGIONINFO.getEncodedName());
+    List<ServerName> serverList = new ArrayList<ServerName>(2);
+    serverList.add(SERVERNAME_B);
+    Mockito.when(this.serverManager.createDestinationServersList(SERVERNAME_A)).thenReturn(serverList);
+    am.nodeDataChanged(path);
+    // here we are waiting until the random assignment in the load balancer is called.
+    while (!gate.get()) {
+      Thread.sleep(10);
+    }
+    // new region plan may take some time to get updated after random assignment is called and 
+    // gate is set to true.
+    RegionPlan newRegionPlan = am.regionPlans.get(REGIONINFO.getEncodedName());
+    while (newRegionPlan == null) {
+      Thread.sleep(10);
+      newRegionPlan = am.regionPlans.get(REGIONINFO.getEncodedName());
+    }
+    // the new region plan created may contain the same RS as destination but it should
+    // be new plan.
+    assertNotSame("Same region plan should not come", regionPlan, newRegionPlan);
+    assertTrue("Destnation servers should be different.", !(regionPlan.getDestination().equals(
+        newRegionPlan.getDestination())));
+  }
+  
+  /**
+   * Mocked load balancer class used in the testcase to make sure that the testcase waits until
+   * random assignment is called and the gate variable is set to true.
+   */
+  public static class MockedLoadBalancer extends DefaultLoadBalancer {
+    private AtomicBoolean gate;
+
+    public void setGateVariable(AtomicBoolean gate) {
+      this.gate = gate;
+    }
+
+    @Override
+    public ServerName randomAssignment(HRegionInfo regionInfo, List<ServerName> servers) {
+      ServerName randomServerName = super.randomAssignment(regionInfo, servers);
+      this.gate.set(true);
+      return randomServerName;
+    }
+  }
   
   /**
    * Creates a new ephemeral node in the SPLITTING state for the specified region.
@@ -696,10 +767,9 @@ public class TestAssignmentManager {
     Mockito.when(ct.getConnection()).thenReturn(connection);
     // Create and startup an executor. Used by AM handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("mockedAMExecutor");
-    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server
-        .getConfiguration());
+    this.balancer = LoadBalancerFactory.getLoadBalancer(server.getConfiguration());
     AssignmentManagerWithExtrasForTesting am = new AssignmentManagerWithExtrasForTesting(
-        server, manager, ct, balancer, executor);
+        server, manager, ct, this.balancer, executor);
     return am;
   }
 

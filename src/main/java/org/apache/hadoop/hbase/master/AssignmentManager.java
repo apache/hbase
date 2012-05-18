@@ -857,6 +857,9 @@ public class AssignmentManager extends ZooKeeperListener {
           }
           // Handle this the same as if it were opened and then closed.
           regionState.update(RegionState.State.CLOSED, createTime, sn);
+          // When there are more than one region server a new RS is selected as the 
+          // destination and the same is updated in the regionplan. (HBASE-5546)
+          getRegionPlan(regionState, sn, true);
           this.executorService.submit(new ClosedRegionHandler(master,
             this, regionState.getRegion()));
           break;
