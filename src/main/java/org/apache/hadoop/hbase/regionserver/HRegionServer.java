@@ -19,9 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -82,6 +79,7 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
@@ -865,7 +863,7 @@ public class  HRegionServer implements ClientProtocol,
     }
     // We may have failed to delete the znode at the previous step, but
     //  we delete the file anyway: a second attempt to delete the znode is likely to fail again.
-    deleteMyEphemeralNodeOnDisk();
+    ZNodeClearer.deleteMyEphemeralNodeOnDisk();
     this.zooKeeper.close();
     LOG.info("stopping server " + this.serverNameFromMasterPOV +
       "; zookeeper connection closed.");
@@ -1054,7 +1052,7 @@ public class  HRegionServer implements ClientProtocol,
       createMyEphemeralNode();
 
       // Save it in a file, this will allow to see if we crash
-      writeMyEphemeralNodeOnDisk();
+      ZNodeClearer.writeMyEphemeralNodeOnDisk(getMyEphemeralNodePath());
 
       // Master sent us hbase.rootdir to use. Should be fully qualified
       // path with file system specification included. Set 'fs.defaultFS'
@@ -1086,51 +1084,10 @@ public class  HRegionServer implements ClientProtocol,
     }
   }
 
-  private String getMyEphemeralNodePath() {
-    return ZKUtil.joinZNode(this.zooKeeper.rsZNode, getServerName().toString());
-  }
-
-  private String getMyEphemeralNodeFileName() {
-    return System.getenv().get("HBASE_ZNODE_FILE");
-  }
-
   private void createMyEphemeralNode() throws KeeperException {
     ZKUtil.createEphemeralNodeAndWatch(this.zooKeeper, getMyEphemeralNodePath(),
       HConstants.EMPTY_BYTE_ARRAY);
   }
-
-  private void writeMyEphemeralNodeOnDisk() throws IOException {
-    String fileName = getMyEphemeralNodeFileName();
-
-    if (fileName == null) {
-      LOG.warn("No filename given to save the znode used, it won't be saved " +
-          "(Environment variable HBASE_ZNODE_FILE is not set).");
-      return;
-    }
-
-    FileWriter fstream = new FileWriter(fileName);
-    BufferedWriter out = new BufferedWriter(fstream);
-    try {
-      out.write(getMyEphemeralNodePath() + "\n");
-    } finally {
-      try {
-        out.close();
-      } finally {
-        fstream.close();
-      }
-    }
-  }
-
-  private void deleteMyEphemeralNodeOnDisk(){
-        String fileName = getMyEphemeralNodeFileName();
-
-        if (fileName == null){
-         return;
-       }
-
-        File f = new File(fileName);
-       f.delete();
-      }
 
   private void deleteMyEphemeralNode() throws KeeperException {
     ZKUtil.deleteNode(this.zooKeeper, getMyEphemeralNodePath());
@@ -3914,5 +3871,9 @@ public class  HRegionServer implements ClientProtocol,
     public boolean isStopped() {
       return stoppable.isStopped();
     }
+  }
+
+  private String getMyEphemeralNodePath() {
+    return ZKUtil.joinZNode(this.zooKeeper.rsZNode, getServerName().toString());
   }
 }

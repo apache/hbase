@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -141,11 +142,16 @@ class ActiveMasterManager extends ZooKeeperListener {
       try {
         String backupZNode =
             ZKUtil.joinZNode(this.watcher.backupMasterAddressesZNode, this.sn.toString());
-        if (MasterAddressTracker.setMasterAddress(this.watcher, this.watcher.getMasterAddressZNode(), this.sn)) {
+        if (MasterAddressTracker.setMasterAddress(this.watcher,
+            this.watcher.getMasterAddressZNode(), this.sn)) {
+
           // If we were a backup master before, delete our ZNode from the backup
           // master directory since we are the active now
           LOG.info("Deleting ZNode for " + backupZNode + " from backup master directory");
           ZKUtil.deleteNodeFailSilent(this.watcher, backupZNode);
+
+          // Save the znode in a file, this will allow to check if we crash in the launch scripts
+          ZNodeClearer.writeMyEphemeralNodeOnDisk(this.sn.toString());
 
           // We are the master, return
           startupStatus.setStatus("Successfully registered as active master.");
@@ -189,6 +195,10 @@ class ActiveMasterManager extends ZooKeeperListener {
               currentMaster + "; master was restarted? Deleting node.");
             // Hurry along the expiration of the znode.
             ZKUtil.deleteNode(this.watcher, this.watcher.getMasterAddressZNode());
+
+            // We may have failed to delete the znode at the previous step, but
+            //  we delete the file anyway: a second attempt to delete the znode is likely to fail again.
+            ZNodeClearer.deleteMyEphemeralNodeOnDisk();
           } else {
             msg = "Another master is the active master, " + currentMaster +
               "; waiting to become the next active master";
@@ -249,6 +259,9 @@ class ActiveMasterManager extends ZooKeeperListener {
       }
       if (activeMaster != null &&  activeMaster.equals(this.sn)) {
         ZKUtil.deleteNode(watcher, watcher.getMasterAddressZNode());
+        // We may have failed to delete the znode at the previous step, but
+        //  we delete the file anyway: a second attempt to delete the znode is likely to fail again.
+        ZNodeClearer.deleteMyEphemeralNodeOnDisk();
       }
     } catch (KeeperException e) {
       LOG.error(this.watcher.prefix("Error deleting our own master address node"), e);

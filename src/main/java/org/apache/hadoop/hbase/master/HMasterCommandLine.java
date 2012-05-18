@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -47,9 +48,10 @@ public class HMasterCommandLine extends ServerCommandLine {
   private static final Log LOG = LogFactory.getLog(HMasterCommandLine.class);
 
   private static final String USAGE =
-    "Usage: Master [opts] start|stop\n" +
+    "Usage: Master [opts] start|stop|clear\n" +
     " start  Start Master. If local mode, start Master and RegionServer in same JVM\n" +
     " stop   Start cluster shutdown; Master signals RegionServer shutdown\n" +
+    " clear  Delete the master znode in ZooKeeper after a master crashes\n "+
     " where [opts] are:\n" +
     "   --minServers=<servers>    Minimum RegionServers needed to host user tables.\n" +
     "   --backup                  Master should start in backup mode";
@@ -105,6 +107,8 @@ public class HMasterCommandLine extends ServerCommandLine {
       return startMaster();
     } else if ("stop".equals(command)) {
       return stopMaster();
+    } else if ("clear".equals(command)) {
+      return (ZNodeClearer.clear(getConf()) ? 0 : -1);
     } else {
       usage("Invalid command: " + command);
       return -1;

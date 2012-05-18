@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.data.Stat;
 
 /**
  * Manages the location of the current active Master for the RegionServer.
@@ -153,4 +154,28 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
      mbuilder.setMaster(snbuilder.build());
      return ProtobufUtil.prependPBMagic(mbuilder.build().toByteArray());
    }
+
+  /**
+   * delete the master znode if its content is same as the parameter
+   */
+  public static boolean deleteIfEquals(ZooKeeperWatcher zkw, final String content) {
+    if (content == null){
+      throw new IllegalArgumentException("Content must not be null");
+    }
+
+    try {
+      Stat stat = new Stat();
+      byte[] data = ZKUtil.getDataNoWatch(zkw, zkw.getMasterAddressZNode(), stat);
+      ServerName sn = ServerName.parseFrom(data);
+      if (sn != null && content.equals(sn.toString())) {
+        return (ZKUtil.deleteNode(zkw, zkw.getMasterAddressZNode(), stat.getVersion()));
+      }
+    } catch (KeeperException e) {
+      LOG.warn("Can't get or delete the master znode", e);
+    } catch (DeserializationException e) {
+      LOG.warn("Can't get or delete the master znode", e);
+    }
+
+    return false;
+  }
 }
