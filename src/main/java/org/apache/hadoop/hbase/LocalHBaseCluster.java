@@ -195,7 +195,8 @@ public class LocalHBaseCluster {
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
     // the guts of HConnectionManager.
     JVMClusterUtil.MasterThread mt = JVMClusterUtil.createMasterThread(c,
-        this.masterClass, index);
+        (Class<? extends HMaster>) conf.getClass(HConstants.MASTER_IMPL,
+            this.masterClass), index);
     this.masterThreads.add(mt);
     return mt;
   }
