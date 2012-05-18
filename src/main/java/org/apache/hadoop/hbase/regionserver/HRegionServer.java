@@ -3532,9 +3532,11 @@ public class  HRegionServer implements ClientProtocol,
       if (major) {
         region.triggerMajorCompaction();
       }
+      LOG.trace("User-triggered compaction requested for region " +
+        region.getRegionNameAsString());
       compactSplitThread.requestCompaction(region,
         "User-triggered " + (major ? "major " : "") + "compaction",
-          CompactSplitThread.PRIORITY_USER);
+          Store.PRIORITY_USER);
       return CompactRegionResponse.newBuilder().build();
     } catch (IOException ie) {
       throw new ServiceException(ie);

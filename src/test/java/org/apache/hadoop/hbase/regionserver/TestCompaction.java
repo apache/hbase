@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
@@ -76,6 +77,7 @@ public class TestCompaction extends HBaseTestCase {
   private int compactionThreshold;
   private byte[] firstRowBytes, secondRowBytes, thirdRowBytes;
   final private byte[] col1, col2;
+  private static final long MAX_FILES_TO_COMPACT = 10;
 
   /** constructor */
   public TestCompaction() throws Exception {
@@ -613,6 +615,43 @@ public class TestCompaction extends HBaseTestCase {
     }
     fail("testCompactionWithCorruptResult failed since no exception was" +
         "thrown while completing a corrupt file");
+  }
+  
+  /**
+   * Test for HBASE-5920 - Test user requested major compactions always occurring
+   */
+  public void testNonUserMajorCompactionRequest() throws Exception {
+    Store store = r.getStore(COLUMN_FAMILY);
+    createStoreFile(r);
+    for (int i = 0; i < MAX_FILES_TO_COMPACT + 1; i++) {
+      createStoreFile(r);
+    }
+    store.triggerMajorCompaction();
+
+    CompactionRequest request = store.requestCompaction(Store.NO_PRIORITY);
+    assertNotNull("Expected to receive a compaction request", request);
+    assertEquals(
+      "System-requested major compaction should not occur if there are too many store files",
+      false,
+      request.isMajor());
+  }
+
+  /**
+   * Test for HBASE-5920
+   */
+  public void testUserMajorCompactionRequest() throws IOException{
+    Store store = r.getStore(COLUMN_FAMILY);
+    createStoreFile(r);
+    for (int i = 0; i < MAX_FILES_TO_COMPACT + 1; i++) {
+      createStoreFile(r);
+    }
+    store.triggerMajorCompaction();
+    CompactionRequest request = store.requestCompaction(Store.PRIORITY_USER);
+    assertNotNull("Expected to receive a compaction request", request);
+    assertEquals(
+      "User-requested major compaction should always occur, even if there are too many store files",
+      true, 
+      request.isMajor());
   }
 
   @org.junit.Rule
