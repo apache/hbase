@@ -2915,9 +2915,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (major) {
       region.triggerMajorCompaction();
     }
+    LOG.trace("User-triggered compaction requested for region " +
+      region.getRegionNameAsString());
     compactSplitThread.requestCompaction(region, "User-triggered "
         + (major ? "major " : "") + "compaction",
-        CompactSplitThread.PRIORITY_USER);
+        Store.PRIORITY_USER);
   }
 
   /** @return the info server */
