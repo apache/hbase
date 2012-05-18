@@ -88,6 +88,13 @@ import com.google.common.collect.Lists;
  */
 public class Store implements HeapSize {
   static final Log LOG = LogFactory.getLog(Store.class);
+
+  /* The default priority for user-specified compaction requests.
+  * The user gets top priority unless we have blocking compactions. (Pri <= 0)
+  */
+  public static final int PRIORITY_USER = 1;
+  public static final int NO_PRIORITY = Integer.MIN_VALUE;
+
   protected final MemStore memstore;
   // This stores directory in the filesystem.
   private final Path homedir;
@@ -970,6 +977,11 @@ public class Store implements HeapSize {
   }
 
   public CompactionRequest requestCompaction() {
+    return requestCompaction(NO_PRIORITY);
+  }
+
+
+  public CompactionRequest requestCompaction(int priority) {
     // don't even select for compaction if writes are disabled
     if (!this.region.areWritesEnabled()) {
       return null;
@@ -1000,7 +1012,7 @@ public class Store implements HeapSize {
           // coprocessor is overriding normal file selection
           filesToCompact = candidates;
         } else {
-          filesToCompact = compactSelection(candidates);
+          filesToCompact = compactSelection(candidates, priority);
         }
 
         if (region.getCoprocessorHost() != null) {
@@ -1031,7 +1043,7 @@ public class Store implements HeapSize {
         }
 
         // everything went better than expected. create a compaction request
-        int pri = getCompactPriority();
+        int pri = getCompactPriority(priority);
         ret = new CompactionRequest(region, this, filesToCompact, isMajor, pri);
       }
     } catch (IOException ex) {
@@ -1049,6 +1061,18 @@ public class Store implements HeapSize {
     }
   }
 
+
+  /**
+   * Default priority version of {@link #compactSelection(java.util.List, int)}
+   * @param candidates
+   * @return
+   * @throws IOException
+   */
+  List<StoreFile> compactSelection(List<StoreFile> candidates) throws IOException {
+    return compactSelection(candidates,NO_PRIORITY);
+  }
+
+
   /**
    * Algorithm to choose which files to compact
    *
@@ -1064,11 +1088,13 @@ public class Store implements HeapSize {
    *  "hbase.hstore.compaction.max"
    *    max files to compact at once (avoids OOM)
    *
+   *
    * @param candidates candidate files, ordered from oldest to newest
+   * @param priority
    * @return subset copy of candidate list that meets compaction criteria
    * @throws IOException
    */
-  List<StoreFile> compactSelection(List<StoreFile> candidates)
+  List<StoreFile> compactSelection(List<StoreFile> candidates, int priority)
       throws IOException {
     // ASSUMPTION!!! filesCompacting is locked when calling this function
 
@@ -1103,8 +1129,14 @@ public class Store implements HeapSize {
     }
 
     // major compact on user action or age (caveat: we have too many files)
-    boolean majorcompaction = filesToCompact.size() < this.maxFilesToCompact
-      && (forcemajor || isMajorCompaction(filesToCompact));
+    // Force a major compaction if this is a user-requested major compaction,
+    // or if we do not have too many files to compact and this was requested
+    // as a major compaction
+    boolean majorcompaction = (forcemajor && priority == PRIORITY_USER) ||
+        (filesToCompact.size() < this.maxFilesToCompact
+        && (forcemajor || isMajorCompaction(filesToCompact)));
+    LOG.debug(this.getHRegionInfo().getEncodedName() + " - " +
+            this.storeNameStr + ": Initiating " + (majorcompaction ? "major" : "minor") + "compaction");
 
     if (!majorcompaction && !hasReferences(filesToCompact)) {
       // we're doing a minor compaction, let's see what files are applicable
@@ -1113,6 +1145,11 @@ public class Store implements HeapSize {
 
       // skip selection algorithm if we don't have enough files
       if (filesToCompact.size() < this.minFilesToCompact) {
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Not compacting files because we only have " + filesToCompact.size() +
+              " files ready for compaction.  Need " + this.minFilesToCompact + " to initiate.");
+
+        }
         return Collections.emptyList();
       }
 
@@ -1169,10 +1206,17 @@ public class Store implements HeapSize {
         return Collections.emptyList();
       }
     } else {
-      // all files included in this compaction, up to max
-      if (filesToCompact.size() > this.maxFilesToCompact) {
-        int pastMax = filesToCompact.size() - this.maxFilesToCompact;
-        filesToCompact.subList(0, pastMax).clear();
+      if(!majorcompaction) {
+        // all files included in this compaction, up to max
+        if (filesToCompact.size() > this.maxFilesToCompact) {
+          int pastMax = filesToCompact.size() - this.maxFilesToCompact;
+          filesToCompact.subList(0, pastMax).clear();
+        }
+      } else if (filesToCompact.size() > this.maxFilesToCompact) {
+        LOG.debug("Warning, compacting more than " + this.maxFilesToCompact + " files, probably because of a user-requested major compaction");
+        if(priority != PRIORITY_USER) {
+          LOG.error("Compacting more than max files on a non user-requested compaction");
+        }
       }
     }
     return filesToCompact;
@@ -1807,10 +1851,23 @@ public class Store implements HeapSize {
   }
 
   /**
-   * @return The priority that this store should have in the compaction queue
+   * Same as {@link #getCompactPriority(int)} with a default priority
    */
   public int getCompactPriority() {
-    return this.blockingStoreFileCount - this.storefiles.size();
+    return getCompactPriority(NO_PRIORITY);
+  }
+
+  /**
+   * @return The priority that this store should have in the compaction queue
+   * @param priority
+   */
+  public int getCompactPriority(int priority) {
+    // If this is a user-requested compaction, leave this at the highest priority
+    if(priority == PRIORITY_USER) {
+      return PRIORITY_USER;
+    } else {
+      return this.blockingStoreFileCount - this.storefiles.size();
+    }
   }
 
   HRegion getHRegion() {

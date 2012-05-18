@@ -181,7 +181,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
         if (completed) {
           server.getMetrics().addCompaction(now - start, this.totalSize);
           // degenerate case: blocked regions require recursive enqueues
-          if (s.getCompactPriority() <= 0) {
+          if (s.getCompactPriority(Store.NO_PRIORITY) <= 0) {
             server.compactSplitThread
               .requestCompaction(r, s, "Recursive enqueue");
           } else {

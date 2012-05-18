@@ -49,12 +49,6 @@ public class CompactSplitThread implements CompactionRequestor {
   private final ThreadPoolExecutor splits;
   private final long throttleSize;
 
-  /* The default priority for user-specified compaction requests.
-   * The user gets top priority unless we have blocking compactions. (Pri <= 0)
-   */
-  public static final int PRIORITY_USER = 1;
-  public static final int NO_PRIORITY = Integer.MIN_VALUE;
-
   /**
    * Splitting should not take place if the total number of regions exceed this.
    * This is not a hard limit to the number of regions but it is a guideline to
@@ -145,7 +139,7 @@ public class CompactSplitThread implements CompactionRequestor {
 
   public synchronized boolean requestSplit(final HRegion r) {
     // don't split regions that are blocking
-    if (shouldSplitRegion() && r.getCompactPriority() >= PRIORITY_USER) {
+    if (shouldSplitRegion() && r.getCompactPriority() >= Store.PRIORITY_USER) {
       byte[] midKey = r.checkSplit();
       if (midKey != null) {
         requestSplit(r, midKey);
@@ -174,13 +168,13 @@ public class CompactSplitThread implements CompactionRequestor {
   public synchronized void requestCompaction(final HRegion r,
       final String why) {
     for(Store s : r.getStores().values()) {
-      requestCompaction(r, s, why, NO_PRIORITY);
+      requestCompaction(r, s, why, Store.NO_PRIORITY);
     }
   }
 
   public synchronized void requestCompaction(final HRegion r, final Store s,
       final String why) {
-    requestCompaction(r, s, why, NO_PRIORITY);
+    requestCompaction(r, s, why, Store.NO_PRIORITY);
   }
 
   public synchronized void requestCompaction(final HRegion r, final String why,
@@ -201,10 +195,10 @@ public class CompactSplitThread implements CompactionRequestor {
     if (this.server.isStopped()) {
       return;
     }
-    CompactionRequest cr = s.requestCompaction();
+    CompactionRequest cr = s.requestCompaction(priority);
     if (cr != null) {
       cr.setServer(server);
-      if (priority != NO_PRIORITY) {
+      if (priority != Store.NO_PRIORITY) {
         cr.setPriority(priority);
       }
       ThreadPoolExecutor pool = largeCompactions;
@@ -221,6 +215,10 @@ public class CompactSplitThread implements CompactionRequestor {
         LOG.debug(type + "Compaction requested: " + cr
             + (why != null && !why.isEmpty() ? "; Because: " + why : "")
             + "; " + this);
+      }
+    } else {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Not compacting " + r.getRegionNameAsString() + " because compaction request was cancelled");
       }
     }
   }

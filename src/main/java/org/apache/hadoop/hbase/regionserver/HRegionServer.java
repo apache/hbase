@@ -38,7 +38,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
@@ -152,8 +151,6 @@ import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
-import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -2672,9 +2669,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (major) {
       region.triggerMajorCompaction();
     }
+    LOG.trace("User-triggered compaction requested for region " + region.getRegionNameAsString());
     compactSplitThread.requestCompaction(region, "User-triggered "
         + (major ? "major " : "") + "compaction",
-        CompactSplitThread.PRIORITY_USER);
+        Store.PRIORITY_USER);
   }
 
   /** @return the info server */
