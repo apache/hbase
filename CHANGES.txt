@@ -81,6 +81,7 @@ Release 0.92.2 - Unreleased
    HBASE-6001  Upgrade slf4j to 1.6.1 (Jimmy Xiang)
    HBASE-6034  Upgrade Hadoop dependencies
    HBASE-6023  Normalize security audit logging level with Hadoop
+   HBASE-6013  Polish sharp edges from CopyTable
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems

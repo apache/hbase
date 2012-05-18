@@ -111,9 +111,9 @@ public class CopyTable {
     System.err.println(" rs.class     hbase.regionserver.class of the peer cluster");
     System.err.println("              specify if different from current cluster");
     System.err.println(" rs.impl      hbase.regionserver.impl of the peer cluster");
-    System.err.println(" starttime    beginning of the time range");
+    System.err.println(" starttime    beginning of the time range (unixtime in millis)");
     System.err.println("              without endtime means from starttime to forever");
-    System.err.println(" endtime      end of the time range");
+    System.err.println(" endtime      end of the time range.  Ignored if no starttime specified.");
     System.err.println(" new.name     new table's name");
     System.err.println(" peer.adr     Address of the peer cluster given in the format");
     System.err.println("              hbase.zookeeer.quorum:hbase.zookeeper.client.port:zookeeper.znode.parent");
@@ -191,11 +191,18 @@ public class CopyTable {
 
         if (i == args.length-1) {
           tableName = cmd;
+        } else {
+          printUsage("Invalid argument '" + cmd + "'" );
+          return false;
         }
       }
       if (newTableName == null && peerAddress == null) {
         printUsage("At least a new table name or a " +
             "peer address must be specified");
+        return false;
+      }
+      if (startTime > endTime) {
+        printUsage("Invalid time range filter: starttime=" + startTime + " >  endtime=" + endTime);
         return false;
       }
     } catch (Exception e) {
