@@ -239,7 +239,7 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.1
     <section xml:id="hbase.site.publishing">
     <title>Publishing a new version of hbase.apache.org</title>
     <para>Set up your apache credentials and the target site location locally in a place and
-    form that maven can pick it up, in <filename>~/.m2/settings.xml</filename>.  See <xref linked="" /> for an example.
+    form that maven can pick it up, in <filename>~/.m2/settings.xml</filename>.  See <xref linked="mvn.settings.file" /> for an example.
     Next, run the following:
     <programlisting>$ mvn -DskipTests -Papache-release site site:deploy</programlisting>
     You will be asked for your password.  It can take a little time.
