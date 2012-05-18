@@ -39,10 +39,13 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+
+import com.google.common.primitives.Ints;
 
 
 /**
@@ -395,15 +398,25 @@ public class FSTableDescriptors implements TableDescriptors {
     if (tableDir == null) throw new NullPointerException();
     FileStatus status = getTableInfoPath(fs, tableDir);
     if (status == null) return null;
+    int len = Ints.checkedCast(status.getLen());
+    byte [] content = new byte[len];
     FSDataInputStream fsDataInputStream = fs.open(status.getPath());
-    HTableDescriptor hTableDescriptor = null;
     try {
-      hTableDescriptor = new HTableDescriptor();
-      hTableDescriptor.readFields(fsDataInputStream);
+      fsDataInputStream.readFully(content);
     } finally {
       fsDataInputStream.close();
     }
-    return hTableDescriptor;
+    HTableDescriptor htd = null;
+    try {
+      htd = HTableDescriptor.parseFrom(content);
+    } catch (DeserializationException e) {
+      throw new IOException("content=" + Bytes.toShort(content), e);
+    }
+    if (!ProtobufUtil.isPBMagicPrefix(content)) {
+      // Convert the file over to be pb before leaving here.
+      createTableDescriptor(fs, tableDir.getParent(), htd, true);
+    }
+    return htd;
   }
 
   /**
@@ -451,16 +464,14 @@ public class FSTableDescriptors implements TableDescriptors {
       final HTableDescriptor hTableDescriptor, final Path tableDir,
       final FileStatus status)
   throws IOException {
-    // Get temporary dir into which we'll first write a file to avoid
-    // half-written file phenomeon.
+    // Get temporary dir into which we'll first write a file to avoid half-written file phenomenon.
     Path tmpTableDir = new Path(tableDir, ".tmp");
     // What is current sequenceid?  We read the current sequenceid from
     // the current file.  After we read it, another thread could come in and
     // compete with us writing out next version of file.  The below retries
     // should help in this case some but its hard to do guarantees in face of
     // concurrent schema edits.
-    int currentSequenceid =
-      status == null? 0: getTableInfoSequenceid(status.getPath());
+    int currentSequenceid = status == null? 0: getTableInfoSequenceid(status.getPath());
     int sequenceid = currentSequenceid;
     // Put arbitrary upperbound on how often we retry
     int retries = 10;
@@ -499,15 +510,13 @@ public class FSTableDescriptors implements TableDescriptors {
     return tableInfoPath;
   }
 
-  private static void writeHTD(final FileSystem fs, final Path p,
-      final HTableDescriptor htd)
+  private static void writeHTD(final FileSystem fs, final Path p, final HTableDescriptor htd)
   throws IOException {
     FSDataOutputStream out = fs.create(p, false);
     try {
-      htd.write(out);
-      out.write('\n');
-      out.write('\n');
-      out.write(Bytes.toBytes(htd.toString()));
+      // We used to write this file out as a serialized HTD Writable followed by two '\n's and then
+      // the toString version of HTD.  Now we just write out the pb serialization.
+      out.write(htd.toByteArray());
     } finally {
       out.close();
     }
@@ -538,8 +547,7 @@ public class FSTableDescriptors implements TableDescriptors {
       final Configuration conf, boolean forceCreation)
   throws IOException {
     FileSystem fs = FSUtils.getCurrentFileSystem(conf);
-    return createTableDescriptor(fs, FSUtils.getRootDir(conf), htableDescriptor,
-        forceCreation);
+    return createTableDescriptor(fs, FSUtils.getRootDir(conf), htableDescriptor, forceCreation);
   }
 
   /**
@@ -569,8 +577,7 @@ public class FSTableDescriptors implements TableDescriptors {
   public static boolean createTableDescriptor(FileSystem fs, Path rootdir,
       HTableDescriptor htableDescriptor, boolean forceCreation)
   throws IOException {
-    FileStatus status =
-      getTableInfoPath(fs, rootdir, htableDescriptor.getNameAsString());
+    FileStatus status = getTableInfoPath(fs, rootdir, htableDescriptor.getNameAsString());
     if (status != null) {
       LOG.info("Current tableInfoPath = " + status.getPath());
       if (!forceCreation) {

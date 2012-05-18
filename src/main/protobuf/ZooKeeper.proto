@@ -43,15 +43,6 @@ message Master {
   required ServerName master = 1;
 }
 
-// TODO: Put these two cluster attributes into the one znode.
-/**
- * Content of the '/hbase/hbaseid', cluster id, znode.
- */
-message ClusterId {
-  // This is the cluster id, a uuid as a String
-  required string clusterId = 1;
-}
-
 /**
  * Content of the '/hbase/shutdown', cluster state, znode.
  */

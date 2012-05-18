@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -37,11 +38,16 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.WritableComparable;
+
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * HTableDescriptor contains the details about an HBase table  such as the descriptors of
@@ -73,10 +79,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   protected final Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
     new HashMap<ImmutableBytesWritable, ImmutableBytesWritable>();
 
-  private static final String FAMILIES = "FAMILIES";
-
   public static final String SPLIT_POLICY = "SPLIT_POLICY";
-  
+
   /**
    * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata 
    * attribute which denotes the maximum size of the store file after which 
@@ -154,7 +158,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     new ImmutableBytesWritable(Bytes.toBytes(Boolean.TRUE.toString()));
 
   private static final boolean DEFAULT_DEFERRED_LOG_FLUSH = false;
-  
+
   /**
    * Constant that denotes whether the table is READONLY by default and is false
    */
@@ -185,9 +189,18 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     RESERVED_KEYWORDS.add(IS_META_KEY);
   }
 
+  /**
+   * Cache of whether this is a meta table or not.
+   */
   private volatile Boolean meta = null;
+  /**
+   * Cache of whether this is root table or not.
+   */
   private volatile Boolean root = null;
-  private Boolean isDeferredLog = null;
+  /**
+   * Cache of whether deferred logging set.
+   */
+  private Boolean deferredLog = null;
 
   /**
    * Maps column family name to the respective HColumnDescriptors
@@ -230,7 +243,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * Default constructor which constructs an empty object.
    * For deserializing an HTableDescriptor instance only.
    * @see #HTableDescriptor(byte[])
+   * @deprecated Used by Writables and Writables are going away.
    */
+  @Deprecated
   public HTableDescriptor() {
     super();
   }
@@ -548,11 +563,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #setDeferredLogFlush(boolean)
    */
   public synchronized boolean isDeferredLogFlush() {
-    if(this.isDeferredLog == null) {
-      this.isDeferredLog =
+    if(this.deferredLog == null) {
+      this.deferredLog =
           isSomething(DEFERRED_LOG_FLUSH_KEY, DEFAULT_DEFERRED_LOG_FLUSH);
     }
-    return this.isDeferredLog;
+    return this.deferredLog;
   }
 
   /**
@@ -571,7 +586,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public void setDeferredLogFlush(final boolean isDeferredLogFlush) {
     setValue(DEFERRED_LOG_FLUSH_KEY, isDeferredLogFlush? TRUE: FALSE);
-    this.isDeferredLog = isDeferredLogFlush;
+    this.deferredLog = isDeferredLogFlush;
   }
 
   /**
@@ -836,11 +851,12 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     return result;
   }
 
-  // Writable
   /**
    * <em> INTERNAL </em> This method is a part of {@link WritableComparable} interface 
    * and is used for de-serialization of the HTableDescriptor over RPC
+   * @deprecated Writables are going away.  Use pb {@link #parseFrom(byte[])} instead.
    */
+  @Deprecated
   @Override
   public void readFields(DataInput in) throws IOException {
     int version = in.readInt();
@@ -875,7 +891,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * <em> INTERNAL </em> This method is a part of {@link WritableComparable} interface 
    * and is used for serialization of the HTableDescriptor over RPC
+   * @deprecated Writables are going away.  Use pb {@link #toByteArray()(byte[])} instead.
    */
+  @Deprecated
   @Override
   public void write(DataOutput out) throws IOException {
 	out.writeInt(TABLE_DESCRIPTOR_VERSION);
@@ -1197,5 +1215,72 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     // Note that every table should have an owner (i.e. should have OWNER_KEY set).
     // .META. and -ROOT- should return system user as owner, not null (see MasterFileSystem.java:bootstrap()).
     return null;
+  }
+
+  /**
+   * @return This instance serialized with pb with pb magic prefix
+   * @see {@link #parseFrom(byte[])}
+   */
+  public byte [] toByteArray() {
+    return ProtobufUtil.prependPBMagic(convert().toByteArray());
+  }
+
+  /**
+   * @param bytes A pb serialized {@link HTableDescriptor} instance with pb magic prefix
+   * @return An instance of {@link HTableDescriptor} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @throws IOException 
+   * @see {@link #toByteArray()}
+   */
+  public static HTableDescriptor parseFrom(final byte [] bytes)
+  throws DeserializationException, IOException {
+    if (!ProtobufUtil.isPBMagicPrefix(bytes)) {
+      return (HTableDescriptor)Writables.getWritable(bytes, new HTableDescriptor());
+    }
+    int pblen = ProtobufUtil.lengthOfPBMagic();
+    TableSchema.Builder builder = TableSchema.newBuilder();
+    TableSchema ts = null;
+    try {
+      ts = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return convert(ts);
+  }
+
+  /**
+   * @return Convert the current {@link HTableDescriptor} into a pb TableSchema instance.
+   */
+  TableSchema convert() {
+    TableSchema.Builder builder = TableSchema.newBuilder();
+    builder.setName(ByteString.copyFrom(getName()));
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: this.values.entrySet()) {
+      TableSchema.Attribute.Builder aBuilder = TableSchema.Attribute.newBuilder();
+      aBuilder.setName(ByteString.copyFrom(e.getKey().get()));
+      aBuilder.setValue(ByteString.copyFrom(e.getValue().get()));
+      builder.addAttributes(aBuilder.build());
+    }
+    for (HColumnDescriptor hcd: getColumnFamilies()) {
+      builder.addColumnFamilies(hcd.convert());
+    }
+    return builder.build();
+  }
+
+  /**
+   * @param ts A pb TableSchema instance.
+   * @return An {@link HTableDescriptor} made from the passed in pb <code>ts</code>.
+   */
+  static HTableDescriptor convert(final TableSchema ts) {
+    List<ColumnFamilySchema> list = ts.getColumnFamiliesList();
+    HColumnDescriptor [] hcds = new HColumnDescriptor[list.size()];
+    int index = 0;
+    for (ColumnFamilySchema cfs: list) {
+      hcds[index++] = HColumnDescriptor.convert(cfs);
+    }
+    HTableDescriptor htd = new HTableDescriptor(ts.getName().toByteArray(), hcds);
+    for (TableSchema.Attribute a: ts.getAttributesList()) {
+      htd.setValue(a.getName().toByteArray(), a.getValue().toByteArray());
+    }
+    return htd;
   }
 }

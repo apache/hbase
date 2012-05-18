@@ -21,9 +21,12 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
@@ -32,6 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -46,6 +50,30 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestFSUtils {
+  @Test
+  public void testVersion() throws DeserializationException, IOException {
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    final FileSystem fs = htu.getTestFileSystem();
+    final Path rootdir = htu.getDataTestDir();
+    assertNull(FSUtils.getVersion(fs, rootdir));
+    // Write out old format version file.  See if we can read it in and convert.
+    Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
+    FSDataOutputStream s = fs.create(versionFile);
+    final String version = HConstants.FILE_SYSTEM_VERSION;
+    s.writeUTF(version);
+    s.close();
+    assertTrue(fs.exists(versionFile));
+    FileStatus [] status = fs.listStatus(versionFile);
+    assertNotNull(status);
+    assertTrue(status.length > 0);
+    String newVersion = FSUtils.getVersion(fs, rootdir);
+    assertEquals(version.length(), newVersion.length());
+    assertEquals(version, newVersion);
+    // File will have been converted. Exercise the pb format
+    assertEquals(version, FSUtils.getVersion(fs, rootdir));
+    FSUtils.checkVersion(fs, rootdir, true);
+  }
+
   @Test public void testIsHDFS() throws Exception {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     htu.getConfiguration().setBoolean("dfs.support.append", false);

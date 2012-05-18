@@ -204,14 +204,10 @@ public class TestSplitTransaction {
     // to be under the daughter region dirs.
     assertEquals(0, this.fs.listStatus(st.getSplitDir()).length);
     // Check daughters have correct key span.
-    assertTrue(Bytes.equals(this.parent.getStartKey(),
-      daughters.getFirst().getStartKey()));
-    assertTrue(Bytes.equals(GOOD_SPLIT_ROW,
-      daughters.getFirst().getEndKey()));
-    assertTrue(Bytes.equals(daughters.getSecond().getStartKey(),
-      GOOD_SPLIT_ROW));
-    assertTrue(Bytes.equals(this.parent.getEndKey(),
-      daughters.getSecond().getEndKey()));
+    assertTrue(Bytes.equals(this.parent.getStartKey(), daughters.getFirst().getStartKey()));
+    assertTrue(Bytes.equals(GOOD_SPLIT_ROW, daughters.getFirst().getEndKey()));
+    assertTrue(Bytes.equals(daughters.getSecond().getStartKey(), GOOD_SPLIT_ROW));
+    assertTrue(Bytes.equals(this.parent.getEndKey(), daughters.getSecond().getEndKey()));
     // Count rows.
     int daughtersRowCount = 0;
     for (HRegion r: daughters) {

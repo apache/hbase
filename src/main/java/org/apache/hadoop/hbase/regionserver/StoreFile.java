@@ -876,7 +876,7 @@ public class StoreFile extends SchemaConfigured {
    * <code>SOME_DIRECTORY/REGIONNAME/FAMILY</code>.
    * @param f File to split.
    * @param splitRow
-   * @param range
+   * @param top True if we are referring to the top half of the hfile.
    * @return Path to created reference.
    * @throws IOException
    */
@@ -884,10 +884,11 @@ public class StoreFile extends SchemaConfigured {
                     final Path splitDir,
                     final StoreFile f,
                     final byte [] splitRow,
-                    final Reference.Range range)
+                    final boolean top)
       throws IOException {
     // A reference to the bottom half of the hsf store file.
-    Reference r = new Reference(splitRow, range);
+    Reference r =
+      top? Reference.createTopReference(splitRow): Reference.createBottomReference(splitRow);
     // Add the referred-to regions name as a dot separated suffix.
     // See REF_NAME_PARSER regex above.  The referred-to regions name is
     // up in the path of the passed in <code>f</code> -- parentdir is family,

@@ -31,7 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.zookeeper.ClusterId;
+import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKLeaderManager;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -67,7 +67,7 @@ public class AuthenticationTokenSecretManager
   private long tokenMaxLifetime;
   private ZKSecretWatcher zkWatcher;
   private LeaderElector leaderElector;
-  private ClusterId clusterId;
+  private ZKClusterId clusterId;
 
   private Map<Integer,AuthenticationKey> allKeys =
       new ConcurrentHashMap<Integer, AuthenticationKey>();
@@ -96,7 +96,7 @@ public class AuthenticationTokenSecretManager
     this.tokenMaxLifetime = tokenMaxLifetime;
     this.leaderElector = new LeaderElector(zk, serverName);
     this.name = NAME_PREFIX+serverName;
-    this.clusterId = new ClusterId(zk, zk);
+    this.clusterId = new ZKClusterId(zk, zk);
   }
 
   public void start() {

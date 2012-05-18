@@ -103,6 +103,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -110,6 +111,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -162,7 +164,7 @@ public final class ProtobufUtil {
    * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
    */
   public static boolean isPBMagicPrefix(final byte [] bytes) {
-    if (bytes == null || bytes.length <= PB_MAGIC.length) return false;
+    if (bytes == null || bytes.length < PB_MAGIC.length) return false;
     return Bytes.compareTo(PB_MAGIC, 0, PB_MAGIC.length, bytes, 0, PB_MAGIC.length) == 0;
   }
 
@@ -285,63 +287,6 @@ public final class ProtobufUtil {
       startCode = proto.getStartCode();
     }
     return new ServerName(hostName, port, startCode);
-  }
-
-  /**
-   * Convert a RegionInfo to a HRegionInfo
-   *
-   * @param proto the RegionInfo to convert
-   * @return the converted HRegionInfo
-   */
-  public static HRegionInfo toRegionInfo(final RegionInfo proto) {
-    if (proto == null) return null;
-    byte[] tableName = proto.getTableName().toByteArray();
-    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
-      return HRegionInfo.ROOT_REGIONINFO;
-    } else if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
-      return HRegionInfo.FIRST_META_REGIONINFO;
-    }
-    long regionId = proto.getRegionId();
-    byte[] startKey = null;
-    byte[] endKey = null;
-    if (proto.hasStartKey()) {
-      startKey = proto.getStartKey().toByteArray();
-    }
-    if (proto.hasEndKey()) {
-      endKey = proto.getEndKey().toByteArray();
-    }
-    boolean split = false;
-    if (proto.hasSplit()) {
-      split = proto.getSplit();
-    }
-    HRegionInfo hri = new HRegionInfo(tableName,
-      startKey, endKey, split, regionId);
-    if (proto.hasOffline()) {
-      hri.setOffline(proto.getOffline());
-    }
-    return hri;
-  }
-
-  /**
-   * Convert a HRegionInfo to a RegionInfo
-   *
-   * @param info the HRegionInfo to convert
-   * @return the converted RegionInfo
-   */
-  public static RegionInfo toRegionInfo(final HRegionInfo info) {
-    if (info == null) return null;
-    RegionInfo.Builder builder = RegionInfo.newBuilder();
-    builder.setTableName(ByteString.copyFrom(info.getTableName()));
-    builder.setRegionId(info.getRegionId());
-    if (info.getStartKey() != null) {
-        builder.setStartKey(ByteString.copyFrom(info.getStartKey()));
-    }
-    if (info.getEndKey() != null) {
-      builder.setEndKey(ByteString.copyFrom(info.getEndKey()));
-    }
-    builder.setOffline(info.isOffline());
-    builder.setSplit(info.isSplit());
-    return builder.build();
   }
 
   /**
@@ -1234,7 +1179,7 @@ public final class ProtobufUtil {
         RequestConverter.buildGetRegionInfoRequest(regionName);
       GetRegionInfoResponse response =
         admin.getRegionInfo(null, request);
-      return toRegionInfo(response.getRegionInfo());
+      return HRegionInfo.convert(response.getRegionInfo());
     } catch (ServiceException se) {
       throw getRemoteException(se);
     }
@@ -1349,23 +1294,30 @@ public final class ProtobufUtil {
    * @return a list of online region info
    * @throws IOException
    */
-  public static List<HRegionInfo> getOnlineRegions(
-      final AdminProtocol admin) throws IOException {
+  public static List<HRegionInfo> getOnlineRegions(final AdminProtocol admin) throws IOException {
     GetOnlineRegionRequest request = RequestConverter.buildGetOnlineRegionRequest();
-    List<HRegionInfo> regions = null;
+    GetOnlineRegionResponse response = null;
     try {
-      GetOnlineRegionResponse response =
-        admin.getOnlineRegion(null, request);
-      regions = new ArrayList<HRegionInfo>();
-      if (response != null) { // it can be null only mockup testing region sever
-        for (RegionInfo regionInfo: response.getRegionInfoList()) {
-          regions.add(toRegionInfo(regionInfo));
-        }
-      }
-      return regions;
+      response = admin.getOnlineRegion(null, request);
     } catch (ServiceException se) {
       throw getRemoteException(se);
     }
+    return getRegionInfos(response);
+  }
+
+  /**
+   * Get the list of region info from a GetOnlineRegionResponse
+   *
+   * @param proto the GetOnlineRegionResponse
+   * @return the list of region info or null if <code>proto</code> is null
+   */
+  static List<HRegionInfo> getRegionInfos(final GetOnlineRegionResponse proto) {
+    if (proto == null) return null;
+    List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
+    for (RegionInfo regionInfo: proto.getRegionInfoList()) {
+      regionInfos.add(HRegionInfo.convert(regionInfo));
+    }
+    return regionInfos;
   }
 
   /**
@@ -1458,5 +1410,17 @@ public final class ProtobufUtil {
     }
 
     return rl.getReadRequestsCount() + rl.getWriteRequestsCount();
+  }
+
+
+  /**
+   * @param m Message to get delimited pb serialization of (with pb magic prefix)
+   */
+  public static byte [] toDelimitedByteArray(final Message m) throws IOException {
+    // Allocate arbitrary big size so we avoid resizing.
+    ByteArrayOutputStream baos = new ByteArrayOutputStream(4096);
+    m.writeDelimitedTo(baos);
+    baos.close();
+    return ProtobufUtil.prependPBMagic(baos.toByteArray());
   }
 }

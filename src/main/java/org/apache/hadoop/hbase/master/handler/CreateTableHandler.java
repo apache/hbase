@@ -102,8 +102,7 @@ public class CreateTableHandler extends EventHandler {
     // table in progress. This will introduce a new zookeeper call. Given
     // createTable isn't a frequent operation, that should be ok.
     try {
-      if (!this.assignmentManager.getZKTable().checkAndSetEnablingTable(
-        tableName))
+      if (!this.assignmentManager.getZKTable().checkAndSetEnablingTable(tableName))
         throw new TableExistsException(tableName);
     } catch (KeeperException e) {
       throw new IOException("Unable to ensure that the table will be" +
@@ -127,8 +126,7 @@ public class CreateTableHandler extends EventHandler {
     String tableName = this.hTableDescriptor.getNameAsString();
     try {
       LOG.info("Attemping to create the table " + tableName);
-      MasterCoprocessorHost cpHost = ((HMaster) this.server)
-          .getCoprocessorHost();
+      MasterCoprocessorHost cpHost = ((HMaster) this.server).getCoprocessorHost();
       if (cpHost != null) {
         cpHost.preCreateTableHandler(this.hTableDescriptor, this.newRegions);
       }

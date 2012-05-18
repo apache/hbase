@@ -24,6 +24,33 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 /**
+ * Table Schema
+ * Inspired by the rest TableSchema
+ */
+message TableSchema {
+  optional bytes name = 1;
+  message Attribute {
+    required bytes name = 1;
+    required bytes value = 2;
+  }
+  repeated Attribute attributes = 2;
+  repeated ColumnFamilySchema columnFamilies = 3;
+}
+
+/**
+ * Column Family Schema
+ * Inspired by the rest ColumSchemaMessage
+ */
+message ColumnFamilySchema {
+  required bytes name = 1;
+  message Attribute {
+    required bytes name = 1;
+    required bytes value = 2;
+  }
+  repeated Attribute attributes = 2;
+}
+
+/**
  * Protocol buffer version of HRegionInfo.
  */
 message RegionInfo {
@@ -196,4 +223,3 @@ message NameBytesPair {
   required string name = 1;
   optional bytes value = 2;
 }
-

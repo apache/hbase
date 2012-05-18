@@ -163,8 +163,7 @@ public class TestMultipleTimestamps {
   IOException {
     LOG.info("testReseeksWithMultipleColumnMultipleTimestamp");
 
-    byte [] TABLE = Bytes.toBytes("testReseeksWithMultiple" +
-    "ColumnMiltipleTimestamps");
+    byte [] TABLE = Bytes.toBytes("testReseeksWithMultipleColumnMiltipleTimestamps");
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
@@ -183,12 +182,20 @@ public class TestMultipleTimestamps {
     put(ht, FAMILY, putRows, putColumns, putTimestamps);
 
     TEST_UTIL.flush(TABLE);
-
-    ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
-        scanTimestamps, scanMaxVersions);
+    Scan scan = new Scan();
+    scan.setMaxVersions(10);
+    ResultScanner scanner = ht.getScanner(scan);
+    while (true) {
+      Result r = scanner.next();
+      if (r == null) break;
+      LOG.info("r=" + r);
+    }
+    scanner = scan(ht, FAMILY, scanRows, scanColumns, scanTimestamps, scanMaxVersions);
 
     KeyValue[] kvs;
 
+    // This looks like wrong answer.  Should be 2.  Even then we are returning wrong result,
+    // timestamps that are 3 whereas should be 2 since min is inclusive.
     kvs = scanner.next().raw();
     assertEquals(4, kvs.length);
     checkOneCell(kvs[0], FAMILY, 5, 3, 3);
@@ -275,12 +282,8 @@ public class TestMultipleTimestamps {
   }
 
   public void testWithVersionDeletes(boolean flushTables) throws IOException {
-    LOG.info("testWithVersionDeletes_"+
-        (flushTables ? "flush" : "noflush"));
-
-    byte [] TABLE = Bytes.toBytes("testWithVersionDeletes_" +
-        (flushTables ? "flush" : "noflush"));
-
+    LOG.info("testWithVersionDeletes_"+ (flushTables ? "flush" : "noflush"));
+    byte [] TABLE = Bytes.toBytes("testWithVersionDeletes_" + (flushTables ? "flush" : "noflush"));
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 

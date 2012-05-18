@@ -579,7 +579,7 @@ public final class RequestConverter {
      buildOpenRegionRequest(final List<HRegionInfo> regions) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
    for (HRegionInfo region: regions) {
-     builder.addRegion(ProtobufUtil.toRegionInfo(region));
+     builder.addRegion(HRegionInfo.convert(region));
    }
    return builder.build();
  }
@@ -605,7 +605,7 @@ public final class RequestConverter {
  public static OpenRegionRequest buildOpenRegionRequest(
      final HRegionInfo region, final int versionOfOfflineNode) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-   builder.addRegion(ProtobufUtil.toRegionInfo(region));
+   builder.addRegion(HRegionInfo.convert(region));
    if (versionOfOfflineNode >= 0) {
      builder.setVersionOfOfflineNode(versionOfOfflineNode);
    }

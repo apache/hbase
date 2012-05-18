@@ -207,7 +207,7 @@ public class OfflineMetaRebuildTestCore {
     fs.mkdirs(p);
     Path riPath = new Path(p, HRegion.REGIONINFO_FILE);
     FSDataOutputStream out = fs.create(riPath);
-    hri.write(out);
+    out.write(hri.toDelimitedByteArray());
     out.close();
 
     // add to meta.

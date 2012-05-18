@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.EOFException;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
@@ -65,6 +66,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -493,10 +495,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public long initialize(final CancelableProgressable reporter)
   throws IOException {
-
-    MonitoredTask status = TaskMonitor.get().createStatus(
-        "Initializing region " + this);
-
+    MonitoredTask status = TaskMonitor.get().createStatus("Initializing region " + this);
     long nextSeqId = -1;
     try {
       nextSeqId = initializeRegionInternals(reporter, status);
@@ -739,8 +738,16 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private void checkRegioninfoOnFilesystem() throws IOException {
     Path regioninfoPath = new Path(this.regiondir, REGIONINFO_FILE);
-    if (this.fs.exists(regioninfoPath) &&
-        this.fs.getFileStatus(regioninfoPath).getLen() > 0) {
+    // Compose the content of the file so we can compare to length in filesystem.  If not same,
+    // rewrite it (it may have been written in the old format using Writables instead of pb).  The
+    // pb version is much shorter -- we write now w/o the toString version -- so checking length
+    // only should be sufficient.  I don't want to read the file every time to check if it pb
+    // serialized.
+    byte [] content = getDotRegionInfoFileContent(this.getRegionInfo());
+    boolean exists = this.fs.exists(regioninfoPath);
+    FileStatus status = exists? this.fs.getFileStatus(regioninfoPath): null;
+    if (status != null && status.getLen() == content.length) {
+      // Then assume the content good and move on.
       return;
     }
     // Create in tmpdir and then move into place in case we crash after
@@ -748,34 +755,65 @@ public class HRegion implements HeapSize { // , Writable{
     // subsequent region reopens will fail the below because create is
     // registered in NN.
 
-    // first check to get the permissions
-    FsPermission perms = FSUtils.getFilePermissions(fs, conf,
-        HConstants.DATA_FILE_UMASK_KEY);
+    // First check to get the permissions
+    FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
 
-    // and then create the file
+    // And then create the file
     Path tmpPath = new Path(getTmpDir(), REGIONINFO_FILE);
-    
-    // if datanode crashes or if the RS goes down just before the close is called while trying to
+
+    // If datanode crashes or if the RS goes down just before the close is called while trying to
     // close the created regioninfo file in the .tmp directory then on next
     // creation we will be getting AlreadyCreatedException.
     // Hence delete and create the file if exists.
     if (FSUtils.isExists(fs, tmpPath)) {
       FSUtils.delete(fs, tmpPath, true);
     }
-    
-    FSDataOutputStream out = FSUtils.create(fs, tmpPath, perms);
 
+    FSDataOutputStream out = FSUtils.create(fs, tmpPath, perms);
     try {
-      this.regionInfo.write(out);
-      out.write('\n');
-      out.write('\n');
-      out.write(Bytes.toBytes(this.regionInfo.toString()));
+      // We used to write out this file as serialized Writable followed by '\n\n' and then the
+      // toString of the HRegionInfo but now we just write out the pb serialized bytes so we can
+      // for sure tell whether the content has been pb'd or not just by looking at file length; the
+      // pb version will be shorter.
+      out.write(content);
     } finally {
       out.close();
     }
+    if (exists) {
+      LOG.info("Rewriting .regioninfo file at " + regioninfoPath);
+      if (!fs.delete(regioninfoPath, false)) {
+        throw new IOException("Unable to remove existing " + regioninfoPath);
+      }
+    }
     if (!fs.rename(tmpPath, regioninfoPath)) {
-      throw new IOException("Unable to rename " + tmpPath + " to " +
-        regioninfoPath);
+      throw new IOException("Unable to rename " + tmpPath + " to " + regioninfoPath);
+    }
+  }
+
+  /**
+   * @param hri
+   * @return Content of the file we write out to the filesystem under a region
+   * @throws IOException 
+   */
+  private static byte [] getDotRegionInfoFileContent(final HRegionInfo hri) throws IOException {
+    return hri.toDelimitedByteArray();
+  }
+
+  /**
+   * @param fs
+   * @param dir
+   * @return An HRegionInfo instance gotten from the <code>.regioninfo</code> file under region dir
+   * @throws IOException
+   */
+  public static HRegionInfo loadDotRegionInfoFileContent(final FileSystem fs, final Path dir)
+  throws IOException {
+    Path regioninfo = new Path(dir, HRegion.REGIONINFO_FILE);
+    if (!fs.exists(regioninfo)) throw new FileNotFoundException(regioninfo.toString());
+    FSDataInputStream in = fs.open(regioninfo);
+    try {
+      return HRegionInfo.parseFrom(in);
+    } finally {
+      in.close();
     }
   }
 
@@ -2031,7 +2069,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   @SuppressWarnings("unchecked")
   private long doMiniBatchPut(
-      BatchOperationInProgress<Pair<Put, Integer>> batchOp) throws IOException {
+    BatchOperationInProgress<Pair<Put, Integer>> batchOp) throws IOException {
 
     // variable to note if all Put items are for the same CF -- metrics related
     boolean cfSetConsistent = true;
@@ -3452,7 +3490,7 @@ public class HRegion implements HeapSize { // , Writable{
           // in that case.
           rpcCall.throwExceptionIfCallerDisconnected();
         }
-        
+
         byte [] currentRow = peekRow();
         if (isStopRow(currentRow)) {
           if (filter != null && filter.hasFilterRow()) {
@@ -3789,10 +3827,8 @@ public class HRegion implements HeapSize { // , Writable{
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
     }
-    Path dir = HTableDescriptor.getTableDir(tableDir,
-        info.getTableName());
-    HRegion r = HRegion.newHRegion(dir, wal, FileSystem.get(conf), conf, info,
-        htd, rsServices);
+    Path dir = HTableDescriptor.getTableDir(tableDir, info.getTableName());
+    HRegion r = HRegion.newHRegion(dir, wal, FileSystem.get(conf), conf, info, htd, rsServices);
     return r.openHRegion(reporter);
   }
 

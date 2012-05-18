@@ -105,7 +105,7 @@ import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hadoop.hbase.zookeeper.ClusterId;
+import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
@@ -555,7 +555,7 @@ Server {
 
     // publish cluster ID
     status.setStatus("Publishing Cluster ID in ZooKeeper");
-    ClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
+    ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
 
     this.executorService = new ExecutorService(getServerName().toString());
 
@@ -1524,7 +1524,7 @@ Server {
       }});
 
     return new ClusterStatus(VersionInfo.getVersion(),
-      this.fileSystemManager.getClusterId(),
+      this.fileSystemManager.getClusterId().toString(),
       this.serverManager.getOnlineServers(),
       this.serverManager.getDeadServers(),
       this.serverName,
@@ -1534,7 +1534,7 @@ Server {
   }
 
   public String getClusterId() {
-    return fileSystemManager.getClusterId();
+    return fileSystemManager.getClusterId().toString();
   }
 
   /**

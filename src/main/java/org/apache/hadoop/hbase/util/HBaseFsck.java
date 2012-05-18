@@ -43,7 +43,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -599,14 +598,7 @@ public class HBaseFsck {
       // already loaded data
       return;
     }
-
-    Path regioninfo = new Path(regionDir, HRegion.REGIONINFO_FILE);
-    FileSystem fs = regioninfo.getFileSystem(conf);
-
-    FSDataInputStream in = fs.open(regioninfo);
-    HRegionInfo hri = new HRegionInfo();
-    hri.readFields(in);
-    in.close();
+    HRegionInfo hri = HRegion.loadDotRegionInfoFileContent(FileSystem.get(this.conf), regionDir);
     LOG.debug("HRegionInfo read: " + hri.toString());
     hbi.hdfsEntry.hri = hri;
   }

@@ -83,7 +83,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.zookeeper.ClusterId;
+import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
@@ -637,7 +637,7 @@ public class HConnectionManager {
           ZooKeeperKeepAliveConnection zkw = null;
           try {
             zkw = getKeepAliveZooKeeperWatcher();
-            this.clusterId = ClusterId.readClusterIdZNode(zkw);
+            this.clusterId = ZKClusterId.readClusterIdZNode(zkw);
             if (clusterId == null) {
               LOG.info("ClusterId read in ZooKeeper is null");
             }

@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
@@ -93,10 +92,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class LoadIncrementalHFiles extends Configured implements Tool {
-
   private static Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
-  private static final int  TABLE_CREATE_MAX_RETRIES = 20;
-  private static final long TABLE_CREATE_SLEEP = 60000;
   static AtomicLong regionCount = new AtomicLong(0);
   private HBaseAdmin hbAdmin;
   private Configuration cfg;
@@ -519,8 +515,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       Path bottomOut, Path topOut) throws IOException
   {
     // Open reader with no block cache, and not in-memory
-    Reference topReference = new Reference(splitKey, Range.top);
-    Reference bottomReference = new Reference(splitKey, Range.bottom);
+    Reference topReference = Reference.createTopReference(splitKey);
+    Reference bottomReference = Reference.createBottomReference(splitKey);
 
     copyHFileHalf(conf, inFile, topOut, topReference, familyDesc);
     copyHFileHalf(conf, inFile, bottomOut, bottomReference, familyDesc);

@@ -19,10 +19,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -43,16 +45,24 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+
+import com.google.common.primitives.Ints;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -252,23 +262,72 @@ public abstract class FSUtils {
    * @param rootdir root hbase directory
    * @return null if no version file exists, version string otherwise.
    * @throws IOException e
+   * @throws DeserializationException 
    */
   public static String getVersion(FileSystem fs, Path rootdir)
-  throws IOException {
+  throws IOException, DeserializationException {
     Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
+    FileStatus [] status = fs.listStatus(versionFile);
+    if (status == null || status.length == 0) return null;
     String version = null;
-    if (fs.exists(versionFile)) {
-      FSDataInputStream s =
-        fs.open(versionFile);
-      try {
-        version = DataInputStream.readUTF(s);
-      } catch (EOFException eof) {
-        LOG.warn("Version file was empty, odd, will try to set it.");
-      } finally {
-        s.close();
+    byte [] content = new byte [(int)status[0].getLen()];
+    FSDataInputStream s = fs.open(versionFile);
+    try {
+      IOUtils.readFully(s, content, 0, content.length);
+      if (ProtobufUtil.isPBMagicPrefix(content)) {
+        version = parseVersionFrom(content);
+      } else {
+        // Presume it pre-pb format.
+        InputStream is = new ByteArrayInputStream(content);
+        DataInputStream dis = new DataInputStream(is);
+        try {
+          version = dis.readUTF();
+        } finally {
+          dis.close();
+        }
+        // Update the format
+        LOG.info("Updating the hbase.version file format with version=" + version);
+        setVersion(fs, rootdir, version, 0, HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS);
       }
+    } catch (EOFException eof) {
+      LOG.warn("Version file was empty, odd, will try to set it.");
+    } finally {
+      s.close();
     }
     return version;
+  }
+
+  /**
+   * Parse the content of the ${HBASE_ROOTDIR}/hbase.version file.
+   * @param bytes The byte content of the hbase.version file.
+   * @return The version found in the file as a String.
+   * @throws DeserializationException
+   */
+  static String parseVersionFrom(final byte [] bytes)
+  throws DeserializationException {
+    ProtobufUtil.expectPBMagicPrefix(bytes);
+    int pblen = ProtobufUtil.lengthOfPBMagic();
+    FSProtos.HBaseVersionFileContent.Builder builder =
+      FSProtos.HBaseVersionFileContent.newBuilder();
+    FSProtos.HBaseVersionFileContent fileContent;
+    try {
+      fileContent = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
+      return fileContent.getVersion();
+    } catch (InvalidProtocolBufferException e) {
+      // Convert
+      throw new DeserializationException(e);
+    }
+  }
+
+  /**
+   * Create the content to write into the ${HBASE_ROOTDIR}/hbase.version file.
+   * @param version Version to persist
+   * @return Serialized protobuf with <code>version</code> content and a bit of pb magic for a prefix.
+   */
+  static byte [] toVersionByteArray(final String version) {
+    FSProtos.HBaseVersionFileContent.Builder builder =
+      FSProtos.HBaseVersionFileContent.newBuilder();
+    return ProtobufUtil.prependPBMagic(builder.setVersion(version).build().toByteArray());
   }
 
   /**
@@ -279,11 +338,11 @@ public abstract class FSUtils {
    * @param message if true, issues a message on System.out
    *
    * @throws IOException e
+   * @throws DeserializationException 
    */
-  public static void checkVersion(FileSystem fs, Path rootdir,
-      boolean message) throws IOException {
-    checkVersion(fs, rootdir, message, 0, 
-    		HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS);
+  public static void checkVersion(FileSystem fs, Path rootdir, boolean message)
+  throws IOException, DeserializationException {
+    checkVersion(fs, rootdir, message, 0, HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS);
   }
 
   /**
@@ -296,20 +355,20 @@ public abstract class FSUtils {
    * @param retries number of times to retry
    *
    * @throws IOException e
+   * @throws DeserializationException 
    */
   public static void checkVersion(FileSystem fs, Path rootdir,
-      boolean message, int wait, int retries) throws IOException {
+      boolean message, int wait, int retries)
+  throws IOException, DeserializationException {
     String version = getVersion(fs, rootdir);
-
     if (version == null) {
       if (!rootRegionExists(fs, rootdir)) {
         // rootDir is empty (no version file and no root region)
         // just create new version file (HBASE-1195)
-        FSUtils.setVersion(fs, rootdir, wait, retries);
+        setVersion(fs, rootdir, wait, retries);
         return;
       }
-    } else if (version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0)
-        return;
+    } else if (version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0) return;
 
     // version is deprecated require migration
     // Output on stdout so user sees it in terminal.
@@ -332,8 +391,8 @@ public abstract class FSUtils {
    */
   public static void setVersion(FileSystem fs, Path rootdir)
   throws IOException {
-    setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION, 0, 
-    		HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS);
+    setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION, 0,
+      HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS);
   }
 
   /**
@@ -367,19 +426,17 @@ public abstract class FSUtils {
     while (true) {
       try {
         FSDataOutputStream s = fs.create(versionFile);
-        s.writeUTF(version);
-        LOG.debug("Created version file at " + rootdir.toString() +
-            " set its version at:" + version);
+        s.write(toVersionByteArray(version));
         s.close();
+        LOG.debug("Created version file at " + rootdir.toString() + " with version=" + version);
         return;
       } catch (IOException e) {
         if (retries > 0) {
-          LOG.warn("Unable to create version file at " + rootdir.toString() +
-              ", retrying: " + e.getMessage());
+          LOG.warn("Unable to create version file at " + rootdir.toString() + ", retrying", e);
           fs.delete(versionFile, false);
           try {
             if (wait > 0) {
-              Thread.sleep(wait);  						
+              Thread.sleep(wait);
             }
           } catch (InterruptedException ex) {
             // ignore
@@ -431,23 +488,52 @@ public abstract class FSUtils {
    * @return the unique cluster identifier
    * @throws IOException if reading the cluster ID file fails
    */
-  public static String getClusterId(FileSystem fs, Path rootdir)
-      throws IOException {
+  public static ClusterId getClusterId(FileSystem fs, Path rootdir)
+  throws IOException {
     Path idPath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
-    String clusterId = null;
-    if (fs.exists(idPath)) {
+    ClusterId clusterId = null;
+    FileStatus status = fs.exists(idPath)? fs.getFileStatus(idPath):  null;
+    if (status != null) {
+      int len = Ints.checkedCast(status.getLen());
+      byte [] content = new byte[len];
       FSDataInputStream in = fs.open(idPath);
       try {
-        clusterId = in.readUTF();
+        in.readFully(content);
       } catch (EOFException eof) {
-        LOG.warn("Cluster ID file "+idPath.toString()+" was empty");
+        LOG.warn("Cluster ID file " + idPath.toString() + " was empty");
       } finally{
         in.close();
       }
+      try {
+        clusterId = ClusterId.parseFrom(content);
+      } catch (DeserializationException e) {
+        throw new IOException("content=" + Bytes.toString(content), e);
+      }
+      // If not pb'd, make it so.
+      if (!ProtobufUtil.isPBMagicPrefix(content)) rewriteAsPb(fs, rootdir, idPath, clusterId);
+      return clusterId;
     } else {
       LOG.warn("Cluster ID file does not exist at " + idPath.toString());
     }
     return clusterId;
+  }
+
+  /**
+   * @param cid
+   * @throws IOException 
+   */
+  private static void rewriteAsPb(final FileSystem fs, final Path rootdir, final Path p,
+      final ClusterId cid)
+  throws IOException {
+    // Rewrite the file as pb.  Move aside the old one first, write new
+    // then delete the moved-aside file.
+    Path movedAsideName = new Path(p + "." + System.currentTimeMillis());
+    if (!fs.rename(p, movedAsideName)) throw new IOException("Failed rename of " + p);
+    setClusterId(fs, rootdir, cid, 100);
+    if (!fs.delete(movedAsideName, false)) {
+      throw new IOException("Failed delete of " + movedAsideName);
+    }
+    LOG.debug("Rewrote the hbase.id file as pb");
   }
 
   /**
@@ -459,23 +545,25 @@ public abstract class FSUtils {
    * @param wait how long (in milliseconds) to wait between retries
    * @throws IOException if writing to the FileSystem fails and no wait value
    */
-  public static void setClusterId(FileSystem fs, Path rootdir, String clusterId,
+  public static void setClusterId(FileSystem fs, Path rootdir, ClusterId clusterId,
       int wait) throws IOException {
     while (true) {
       try {
         Path filePath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
         FSDataOutputStream s = fs.create(filePath);
-        s.writeUTF(clusterId);
-        s.close();
+        try {
+          s.write(clusterId.toByteArray());
+        } finally {
+          s.close();
+        }
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Created cluster ID file at " + filePath.toString() +
-              " with ID: " + clusterId);
+          LOG.debug("Created cluster ID file at " + filePath.toString() + " with ID: " + clusterId);
         }
         return;
       } catch (IOException ioe) {
         if (wait > 0) {
           LOG.warn("Unable to create cluster ID file in " + rootdir.toString() +
-              ", retrying in "+wait+"msec: "+StringUtils.stringifyException(ioe));
+              ", retrying in " + wait + "msec: " + StringUtils.stringifyException(ioe));
           try {
             Thread.sleep(wait);
           } catch (InterruptedException ie) {
@@ -669,6 +757,7 @@ public abstract class FSUtils {
    *
    * @param master  The master defining the HBase root and file system.
    * @return A map for each table and its percentage.
+   * 
    * @throws IOException When scanning the directory fails.
    */
   public static Map<String, Integer> getTableFragmentation(

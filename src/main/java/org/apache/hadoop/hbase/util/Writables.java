@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.migration.HRegionInfo090x;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Writable;
 
@@ -143,6 +142,7 @@ public class Writables {
    * @param bytes serialized bytes
    * @return A HRegionInfo instance built out of passed <code>bytes</code>.
    * @throws IOException e
+   * @deprecated Use {@link HRegionInfo#parseFrom(byte[])}
    */
   public static HRegionInfo getHRegionInfo(final byte [] bytes)
   throws IOException {
@@ -182,6 +182,7 @@ public class Writables {
    * @return A HRegionInfo instance built out of passed <code>bytes</code>
    * or <code>null</code> if passed bytes are null or an empty array.
    * @throws IOException e
+   * @deprecated Use {@link HRegionInfo#parseFromOrNull(byte[])}
    */
   public static HRegionInfo getHRegionInfoOrNull(final byte [] bytes)
   throws IOException {

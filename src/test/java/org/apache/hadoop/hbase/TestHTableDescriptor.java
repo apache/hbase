@@ -21,6 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -30,6 +32,20 @@ import org.junit.experimental.categories.Category;
  */
 @Category(SmallTests.class)
 public class TestHTableDescriptor {
+  @Test
+  public void testPb() throws DeserializationException, IOException {
+    HTableDescriptor htd = HTableDescriptor.META_TABLEDESC;
+    final int v = 123;
+    htd.setMaxFileSize(v);
+    htd.setDeferredLogFlush(true);
+    htd.setReadOnly(true);
+    byte [] bytes = htd.toByteArray();
+    HTableDescriptor deserializedHtd = HTableDescriptor.parseFrom(bytes);
+    assertEquals(htd, deserializedHtd);
+    assertEquals(v, deserializedHtd.getMaxFileSize());
+    assertTrue(deserializedHtd.isReadOnly());
+    assertTrue(deserializedHtd.isDeferredLogFlush());
+  }
 
   /**
    * Test cps in the table description
@@ -62,5 +78,4 @@ public class TestHTableDescriptor {
     desc.remove(key);
     assertEquals(null, desc.getValue(key));
   }
-
 }

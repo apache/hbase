@@ -34,6 +34,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -67,7 +69,7 @@ public class MasterFileSystem {
   // metrics for master
   MasterMetrics metrics;
   // Persisted unique cluster ID
-  private String clusterId;
+  private ClusterId clusterId;
   // Keep around for convenience.
   private final FileSystem fs;
   // Is the fileystem ok?
@@ -178,7 +180,7 @@ public class MasterFileSystem {
   /**
    * @return The unique identifier generated for this cluster
    */
-  public String getClusterId() {
+  public ClusterId getClusterId() {
     return clusterId;
   }
 
@@ -322,8 +324,7 @@ public class MasterFileSystem {
     final FileSystem fs)
   throws IOException {
     // If FS is in safe mode wait till out of it.
-    FSUtils.waitOnSafeMode(c, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-        10 * 1000));
+    FSUtils.waitOnSafeMode(c, c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
     // Filesystem is good. Go ahead and check for hbase.rootdir.
     try {
       if (!fs.exists(rd)) {
@@ -336,17 +337,22 @@ public class MasterFileSystem {
         // there is one datanode it will succeed. Permission problems should have
         // already been caught by mkdirs above.
         FSUtils.setVersion(fs, rd, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS, 
-        		  HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
+          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
+            HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
       } else {
         if (!fs.isDirectory(rd)) {
           throw new IllegalArgumentException(rd.toString() + " is not a directory");
         }
         // as above
         FSUtils.checkVersion(fs, rd, true, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
-          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS, 
-        		  HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
+          10 * 1000), c.getInt(HConstants.VERSION_FILE_WRITE_ATTEMPTS,
+            HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS));
       }
+    } catch (DeserializationException de) {
+      LOG.fatal("Please fix invalid configuration for " + HConstants.HBASE_DIR, de);
+      IOException ioe = new IOException();
+      ioe.initCause(de);
+      throw ioe;
     } catch (IllegalArgumentException iae) {
       LOG.fatal("Please fix invalid configuration for "
         + HConstants.HBASE_DIR + " " + rd.toString(), iae);
@@ -355,8 +361,7 @@ public class MasterFileSystem {
     // Make sure cluster ID exists
     if (!FSUtils.checkClusterIdExists(fs, rd, c.getInt(
         HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000))) {
-      FSUtils.setClusterId(fs, rd, UUID.randomUUID().toString(), c.getInt(
-          HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
+      FSUtils.setClusterId(fs, rd, new ClusterId(), c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
     }
     clusterId = FSUtils.getClusterId(fs, rd);
 

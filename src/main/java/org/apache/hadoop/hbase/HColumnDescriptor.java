@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -41,6 +43,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * An HColumnDescriptor contains information about a column family such as the
@@ -94,7 +98,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public static final String DEFAULT_COMPRESSION =
     Compression.Algorithm.NONE.getName();
-  
+
   /**
    * Default value of the flag that enables data block encoding on disk, as
    * opposed to encoding in cache only. We encode blocks everywhere by default,
@@ -172,14 +176,14 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       DEFAULT_VALUES.put(HConstants.IN_MEMORY, String.valueOf(DEFAULT_IN_MEMORY));
       DEFAULT_VALUES.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
       DEFAULT_VALUES.put(KEEP_DELETED_CELLS, String.valueOf(DEFAULT_KEEP_DELETED));
-      DEFAULT_VALUES.put(ENCODE_ON_DISK,
-          String.valueOf(DEFAULT_ENCODE_ON_DISK));
-      DEFAULT_VALUES.put(DATA_BLOCK_ENCODING,
-          String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
+      DEFAULT_VALUES.put(ENCODE_ON_DISK, String.valueOf(DEFAULT_ENCODE_ON_DISK));
+      DEFAULT_VALUES.put(DATA_BLOCK_ENCODING, String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
       for (String s : DEFAULT_VALUES.keySet()) {
         RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
       }
   }
+
+  private static final int UNINITIALIZED = -1;
 
   // Column family name
   private byte [] name;
@@ -191,11 +195,15 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /*
    * Cache the max versions rather than calculate it every time.
    */
-  private int cachedMaxVersions = -1;
+  private int cachedMaxVersions = UNINITIALIZED;
 
   /**
    * Default constructor. Must be present for Writable.
+   * @deprecated Used by Writables and Writables are going away.
    */
+  @Deprecated
+  // Make this private rather than remove after deprecation period elapses.  Its needed by pb
+  // deserializations.
   public HColumnDescriptor() {
     this.name = null;
   }
@@ -499,6 +507,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   /** @return maximum number of versions */
   public int getMaxVersions() {
+    if (this.cachedMaxVersions == UNINITIALIZED) {
+      String v = getValue(HConstants.VERSIONS);
+      this.cachedMaxVersions = Integer.parseInt(v);
+    }
     return this.cachedMaxVersions;
   }
 
@@ -877,8 +889,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     return result;
   }
 
-  // Writable
-
+  /**
+   * @deprecated Writables are going away.  Use pb {@link #parseFrom(byte[])} instead.
+   */
+  @Deprecated
   public void readFields(DataInput in) throws IOException {
     int version = in.readByte();
     if (version < 6) {
@@ -945,6 +959,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     }
   }
 
+  /**
+   * @deprecated Writables are going away.  Use {@link #toByteArray()} instead.
+   */
+  @Deprecated
   public void write(DataOutput out) throws IOException {
     out.writeByte(COLUMN_DESCRIPTOR_VERSION);
     Bytes.writeByteArray(out, this.name);
@@ -969,5 +987,63 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
         result = 1;
     }
     return result;
+  }
+
+  /**
+   * @return This instance serialized with pb with pb magic prefix
+   * @see {@link #parseFrom(byte[])}
+   */
+  public byte [] toByteArray() {
+    return ProtobufUtil.prependPBMagic(convert().toByteArray());
+  }
+
+  /**
+   * @param bytes A pb serialized {@link HColumnDescriptor} instance with pb magic prefix
+   * @return An instance of {@link HColumnDescriptor} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static HColumnDescriptor parseFrom(final byte [] bytes) throws DeserializationException {
+    if (!ProtobufUtil.isPBMagicPrefix(bytes)) throw new DeserializationException("No magic");
+    int pblen = ProtobufUtil.lengthOfPBMagic();
+    ColumnFamilySchema.Builder builder = ColumnFamilySchema.newBuilder();
+    ColumnFamilySchema cfs = null;
+    try {
+      cfs = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return convert(cfs);
+  }
+
+  /**
+   * @param cfs
+   * @return An {@link HColumnDescriptor} made from the passed in <code>cfs</code>
+   */
+  static HColumnDescriptor convert(final ColumnFamilySchema cfs) {
+    // Use the empty constructor so we preserve the initial values set on construction for things
+    // like maxVersion.  Otherwise, we pick up wrong values on deserialization which makes for
+    // unrelated-looking test failures that are hard to trace back to here.
+    HColumnDescriptor hcd = new HColumnDescriptor();
+    hcd.name = cfs.getName().toByteArray();
+    for (ColumnFamilySchema.Attribute a: cfs.getAttributesList()) {
+      hcd.setValue(a.getName().toByteArray(), a.getValue().toByteArray());
+    }
+    return hcd;
+  }
+
+  /**
+   * @return Convert this instance to a the pb column family type
+   */
+  ColumnFamilySchema convert() {
+    ColumnFamilySchema.Builder builder = ColumnFamilySchema.newBuilder();
+    builder.setName(ByteString.copyFrom(getName()));
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: this.values.entrySet()) {
+      ColumnFamilySchema.Attribute.Builder aBuilder = ColumnFamilySchema.Attribute.newBuilder();
+      aBuilder.setName(ByteString.copyFrom(e.getKey().get()));
+      aBuilder.setValue(ByteString.copyFrom(e.getValue().get()));
+      builder.addAttributes(aBuilder.build());
+    }
+    return builder.build();
   }
 }

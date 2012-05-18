@@ -19,10 +19,12 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.BufferedInputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
@@ -30,21 +32,28 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.migration.HRegionInfo090x;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.VersionedWritable;
 import org.apache.hadoop.io.WritableComparable;
 
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
+
 /**
  * HRegion information.
- * Contains HRegion id, start and end keys, a reference to this
- * HRegions' table descriptor, etc.
+ * Contains HRegion id, start and end keys, a reference to this HRegions' table descriptor, etc.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -194,7 +203,10 @@ implements WritableComparable<HRegionInfo> {
     setHashCode();
   }
 
-  /** Default constructor - creates empty object */
+  /** Default constructor - creates empty object
+   * @deprecated Used by Writables and Writables are going away.
+   */
+  @Deprecated
   public HRegionInfo() {
     super();
   }
@@ -229,8 +241,7 @@ implements WritableComparable<HRegionInfo> {
    * @param endKey end of key range
    * @throws IllegalArgumentException
    */
-  public HRegionInfo(final byte[] tableName, final byte[] startKey,
-                     final byte[] endKey)
+  public HRegionInfo(final byte[] tableName, final byte[] startKey, final byte[] endKey)
   throws IllegalArgumentException {
     this(tableName, startKey, endKey, false);
   }
@@ -246,8 +257,8 @@ implements WritableComparable<HRegionInfo> {
    * regions that may or may not hold references to this region.
    * @throws IllegalArgumentException
    */
-  public HRegionInfo(final byte[] tableName, final byte[] startKey,
-                     final byte[] endKey, final boolean split)
+  public HRegionInfo(final byte[] tableName, final byte[] startKey, final byte[] endKey,
+      final boolean split)
   throws IllegalArgumentException {
     this(tableName, startKey, endKey, split, System.currentTimeMillis());
   }
@@ -539,7 +550,7 @@ implements WritableComparable<HRegionInfo> {
       Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY);
     return firstKeyInRange && lastKeyInRange;
   }
-  
+
   /**
    * Return true if the given row falls in this region.
    */
@@ -700,10 +711,11 @@ implements WritableComparable<HRegionInfo> {
     return VERSION;
   }
 
-  //
-  // Writable
-  //
-
+  /**
+   * @deprecated Use protobuf serialization instead.  See {@link #toByteArray()} and
+   * {@link #toDelimitedByteArray()}
+   */
+  @Deprecated
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
@@ -717,6 +729,11 @@ implements WritableComparable<HRegionInfo> {
     out.writeInt(hashCode);
   }
 
+  /**
+   * @deprecated Use protobuf deserialization instead. See {@link #parseFrom(byte[])} and
+   * {@link #parseFrom(FSDataInputStream)}
+   */
+  @Deprecated
   @Override
   public void readFields(DataInput in) throws IOException {
     // Read the single version byte.  We don't ask the super class do it
@@ -813,5 +830,157 @@ implements WritableComparable<HRegionInfo> {
   public KVComparator getComparator() {
     return isRootRegion()? KeyValue.ROOT_COMPARATOR: isMetaRegion()?
       KeyValue.META_COMPARATOR: KeyValue.COMPARATOR;
+  }
+
+  /**
+   * Convert a HRegionInfo to a RegionInfo
+   *
+   * @param info the HRegionInfo to convert
+   * @return the converted RegionInfo
+   */
+  RegionInfo convert() {
+    return convert(this);
+  }
+
+  /**
+   * Convert a HRegionInfo to a RegionInfo
+   *
+   * @param info the HRegionInfo to convert
+   * @return the converted RegionInfo
+   */
+  public static RegionInfo convert(final HRegionInfo info) {
+    if (info == null) return null;
+    RegionInfo.Builder builder = RegionInfo.newBuilder();
+    builder.setTableName(ByteString.copyFrom(info.getTableName()));
+    builder.setRegionId(info.getRegionId());
+    if (info.getStartKey() != null) {
+      builder.setStartKey(ByteString.copyFrom(info.getStartKey()));
+    }
+    if (info.getEndKey() != null) {
+      builder.setEndKey(ByteString.copyFrom(info.getEndKey()));
+    }
+    builder.setOffline(info.isOffline());
+    builder.setSplit(info.isSplit());
+    return builder.build();
+  }
+
+  /**
+   * Convert a RegionInfo to a HRegionInfo
+   *
+   * @param proto the RegionInfo to convert
+   * @return the converted HRegionInfo
+   */
+  public static HRegionInfo convert(final RegionInfo proto) {
+    if (proto == null) return null;
+    byte [] tableName = proto.getTableName().toByteArray();
+    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+      return ROOT_REGIONINFO;
+    } else if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
+      return FIRST_META_REGIONINFO;
+    }
+    long regionId = proto.getRegionId();
+    byte[] startKey = null;
+    byte[] endKey = null;
+    if (proto.hasStartKey()) {
+      startKey = proto.getStartKey().toByteArray();
+    }
+    if (proto.hasEndKey()) {
+      endKey = proto.getEndKey().toByteArray();
+    }
+    boolean split = false;
+    if (proto.hasSplit()) {
+      split = proto.getSplit();
+    }
+    HRegionInfo hri = new HRegionInfo(tableName, startKey, endKey, split, regionId);
+    if (proto.hasOffline()) {
+      hri.setOffline(proto.getOffline());
+    }
+    return hri;
+  }
+
+  /**
+   * @return This instance serialized as protobuf w/ a magic pb prefix.
+   * @see #parseFrom(byte[]);
+   */
+  public byte [] toByteArray() {
+    byte [] bytes = convert().toByteArray();
+    return ProtobufUtil.prependPBMagic(bytes);
+  }
+
+  /**
+   * @param bytes
+   * @return A deserialized {@link HRegionInfo} or null if we failed deserialize or passed bytes null
+   * @see {@link #toByteArray()}
+   */
+  public static HRegionInfo parseFromOrNull(final byte [] bytes) {
+    if (bytes == null || bytes.length <= 0) return null;
+    try {
+      return parseFrom(bytes);
+    } catch (DeserializationException e) {
+      return null;
+    }
+  }
+
+  /**
+   * @param bytes A pb RegionInfo serialized with a pb magic prefix.
+   * @return
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static HRegionInfo parseFrom(final byte [] bytes) throws DeserializationException {
+    if (ProtobufUtil.isPBMagicPrefix(bytes)) {
+      int pblen = ProtobufUtil.lengthOfPBMagic();
+      try {
+        HBaseProtos.RegionInfo ri =
+          HBaseProtos.RegionInfo.newBuilder().mergeFrom(bytes, pblen, bytes.length - pblen).build();
+        return convert(ri);
+      } catch (InvalidProtocolBufferException e) {
+        throw new DeserializationException(e);
+      }
+    } else {
+      try {
+        return (HRegionInfo)Writables.getWritable(bytes, new HRegionInfo());
+      } catch (IOException e) {
+        throw new DeserializationException(e);
+      }
+    }
+  }
+
+  /**
+   * Use this instead of {@link #toByteArray()} when writing to a stream and you want to use
+   * the pb mergeDelimitedFrom (w/o the delimiter, pb reads to EOF which may not be what you want).
+   * @return This instance serialized as a delimited protobuf w/ a magic pb prefix.
+   * @throws IOException
+   * @see {@link #toByteArray()}
+   */
+  public byte [] toDelimitedByteArray() throws IOException {
+    return ProtobufUtil.toDelimitedByteArray(convert());
+  }
+
+  /**
+   * Parses an HRegionInfo instance from the passed in stream.  Presumes the HRegionInfo was
+   * serialized to the stream with {@link #toDelimitedByteArray()}
+   * @param in
+   * @return An instance of HRegionInfo.
+   * @throws IOException
+   */
+  public static HRegionInfo parseFrom(final FSDataInputStream in) throws IOException {
+    // I need to be able to move back in the stream if this is not a pb serialization so I can
+    // do the Writable decoding instead.
+    InputStream is = in.markSupported()? in: new BufferedInputStream(in);
+    int pblen = ProtobufUtil.lengthOfPBMagic();
+    is.mark(pblen);
+    byte [] pbuf = new byte[pblen];
+    int read = is.read(pbuf);
+    if (read != pblen) throw new IOException("read=" + read + ", wanted=" + pblen);
+    if (ProtobufUtil.isPBMagicPrefix(pbuf)) {
+      return convert(HBaseProtos.RegionInfo.parseDelimitedFrom(is));
+    } else {
+      // Presume Writables.  Need to reset the stream since it didn't start w/ pb.
+      in.reset();
+      HRegionInfo hri = new HRegionInfo();
+      hri.readFields(in);
+      return hri;
+    }
   }
 }

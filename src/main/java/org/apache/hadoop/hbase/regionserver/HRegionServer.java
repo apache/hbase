@@ -3287,7 +3287,7 @@ public class  HRegionServer implements ClientProtocol,
       HRegion region = getRegion(request.getRegion());
       HRegionInfo info = region.getRegionInfo();
       GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
-      builder.setRegionInfo(ProtobufUtil.toRegionInfo(info));
+      builder.setRegionInfo(HRegionInfo.convert(info));
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
@@ -3350,8 +3350,8 @@ public class  HRegionServer implements ClientProtocol,
    */
   @Override
   @QosPriority(priority=HIGH_QOS)
-  public OpenRegionResponse openRegion(final RpcController controller,
-      final OpenRegionRequest request) throws ServiceException {
+  public OpenRegionResponse openRegion(final RpcController controller, final OpenRegionRequest request)
+  throws ServiceException {
     int versionOfOfflineNode = -1;
     if (request.hasVersionOfOfflineNode()) {
       versionOfOfflineNode = request.getVersionOfOfflineNode();
@@ -3359,13 +3359,11 @@ public class  HRegionServer implements ClientProtocol,
     try {
       checkOpen();
       requestCount.incrementAndGet();
-      OpenRegionResponse.Builder
-        builder = OpenRegionResponse.newBuilder();
+      OpenRegionResponse.Builder builder = OpenRegionResponse.newBuilder();
       Map<String, HTableDescriptor> htds =
         new HashMap<String, HTableDescriptor>(request.getRegionList().size());
-
       for (RegionInfo regionInfo: request.getRegionList()) {
-        HRegionInfo region = ProtobufUtil.toRegionInfo(regionInfo);
+        HRegionInfo region = HRegionInfo.convert(regionInfo);
         checkIfRegionInTransition(region, OPEN);
 
         HRegion onlineRegion = getFromOnlineRegions(region.getEncodedName());

@@ -22,11 +22,9 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Publishes and synchronizes a unique identifier specific to a given HBase
@@ -35,12 +33,12 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * clients).
  */
 @InterfaceAudience.Private
-public class ClusterId {
+public class ZKClusterId {
   private ZooKeeperWatcher watcher;
   private Abortable abortable;
   private String id;
 
-  public ClusterId(ZooKeeperWatcher watcher, Abortable abortable) {
+  public ZKClusterId(ZooKeeperWatcher watcher, Abortable abortable) {
     this.watcher = watcher;
     this.abortable = abortable;
   }
@@ -62,49 +60,22 @@ public class ClusterId {
   }
 
   public static String readClusterIdZNode(ZooKeeperWatcher watcher)
-      throws KeeperException {
+  throws KeeperException {
     if (ZKUtil.checkExists(watcher, watcher.clusterIdZNode) != -1) {
       byte [] data = ZKUtil.getData(watcher, watcher.clusterIdZNode);
       if (data != null) {
-        return getZNodeClusterId(data);
+        try {
+          return ClusterId.parseFrom(data).toString();
+        } catch (DeserializationException e) {
+          throw ZKUtil.convert(e);
+        }
       }
     }
     return null;
   }
 
-  public static void setClusterId(ZooKeeperWatcher watcher, String id)
+  public static void setClusterId(ZooKeeperWatcher watcher, ClusterId id)
       throws KeeperException {
-    ZKUtil.createSetData(watcher, watcher.clusterIdZNode, getZNodeData(id));
-  }
-
-  /**
-   * @param clusterid
-   * @return Content of the clusterid znode as a serialized pb with the pb
-   * magic as prefix.
-   */
-  static byte [] getZNodeData(final String clusterid) {
-    ZooKeeperProtos.ClusterId.Builder builder =
-      ZooKeeperProtos.ClusterId.newBuilder();
-    builder.setClusterId(clusterid);
-    return ProtobufUtil.prependPBMagic(builder.build().toByteArray());
-  }
-
-  /**
-   * @param data
-   * @return The clusterid extracted from the passed znode <code>data</code>
-   */
-  static String getZNodeClusterId(final byte [] data) {
-    if (data == null || data.length <= 0) return null;
-    // If no magic, something is seriously wrong.  Fail fast.
-    if (!ProtobufUtil.isPBMagicPrefix(data)) throw new RuntimeException("No magic preamble");
-    int prefixLen = ProtobufUtil.lengthOfPBMagic();
-    try {
-      ZooKeeperProtos.ClusterId clusterid =
-        ZooKeeperProtos.ClusterId.newBuilder().mergeFrom(data, prefixLen, data.length - prefixLen).build();
-      return clusterid.getClusterId();
-    } catch (InvalidProtocolBufferException e) {
-      // A failed parse of the znode is pretty catastrophic. Fail fast.
-      throw new RuntimeException(e);
-    }
+    ZKUtil.createSetData(watcher, watcher.clusterIdZNode, id.toByteArray());
   }
 }

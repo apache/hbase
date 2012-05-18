@@ -344,7 +344,7 @@ public class TestCatalogJanitor {
         HTableDescriptor.getTableDir(rootdir, htd.getName());
       Path storedir = Store.getStoreHomedir(tabledir, splita.getEncodedName(),
           htd.getColumnFamilies()[0].getName());
-      Reference ref = new Reference(Bytes.toBytes("ccc"), Reference.Range.top);
+      Reference ref = Reference.createTopReference(Bytes.toBytes("ccc"));
       long now = System.currentTimeMillis();
       // Reference name has this format: StoreFile#REF_NAME_PARSER
       Path p = new Path(storedir, Long.toString(now) + "." + parent.getEncodedName());
@@ -518,8 +518,8 @@ public class TestCatalogJanitor {
     Path tabledir = HTableDescriptor.getTableDir(rootdir, parent.getTableName());
     Path storedir = Store.getStoreHomedir(tabledir, daughter.getEncodedName(),
       htd.getColumnFamilies()[0].getName());
-    Reference ref = new Reference(midkey,
-      top? Reference.Range.top: Reference.Range.bottom);
+    Reference ref =
+      top? Reference.createTopReference(midkey): Reference.createBottomReference(midkey);
     long now = System.currentTimeMillis();
     // Reference name has this format: StoreFile#REF_NAME_PARSER
     Path p = new Path(storedir, Long.toString(now) + "." + parent.getEncodedName());

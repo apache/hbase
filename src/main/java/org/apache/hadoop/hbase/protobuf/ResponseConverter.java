@@ -138,14 +138,9 @@ public final class ResponseConverter {
    * @param proto the GetOnlineRegionResponse
    * @return the list of region info
    */
-  public static List<HRegionInfo> getRegionInfos
-      (final GetOnlineRegionResponse proto) {
+  public static List<HRegionInfo> getRegionInfos(final GetOnlineRegionResponse proto) {
     if (proto == null || proto.getRegionInfoCount() == 0) return null;
-    List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
-    for (RegionInfo regionInfo: proto.getRegionInfoList()) {
-      regionInfos.add(ProtobufUtil.toRegionInfo(regionInfo));
-    }
-    return regionInfos;
+    return ProtobufUtil.getRegionInfos(proto);
   }
 
   /**
@@ -202,7 +197,7 @@ public final class ResponseConverter {
       final List<HRegionInfo> regions) {
     GetOnlineRegionResponse.Builder builder = GetOnlineRegionResponse.newBuilder();
     for (HRegionInfo region: regions) {
-      builder.addRegionInfo(ProtobufUtil.toRegionInfo(region));
+      builder.addRegionInfo(HRegionInfo.convert(region));
     }
     return builder.build();
   }

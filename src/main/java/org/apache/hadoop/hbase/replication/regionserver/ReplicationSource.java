@@ -58,7 +58,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ClusterId;
+import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
@@ -188,7 +188,7 @@ public class ReplicationSource extends Thread
     this.metrics = new ReplicationSourceMetrics(peerClusterZnode);
 
     try {
-      this.clusterId = UUID.fromString(ClusterId.readClusterIdZNode(zkHelper
+      this.clusterId = UUID.fromString(ZKClusterId.readClusterIdZNode(zkHelper
           .getZookeeperWatcher()));
     } catch (KeeperException ke) {
       throw new IOException("Could not read cluster id", ke);
@@ -250,7 +250,7 @@ public class ReplicationSource extends Thread
     }
     // delay this until we are in an asynchronous thread
     try {
-      this.peerClusterId = UUID.fromString(ClusterId
+      this.peerClusterId = UUID.fromString(ZKClusterId
           .readClusterIdZNode(zkHelper.getPeerClusters().get(peerId).getZkw()));
     } catch (KeeperException ke) {
       this.terminate("Could not read peer's cluster id", ke);

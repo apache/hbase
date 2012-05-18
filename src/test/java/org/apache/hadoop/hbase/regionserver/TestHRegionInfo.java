@@ -27,16 +27,60 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.DeserializationException;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestHRegionInfo {
+  @Test
+  public void testPb() throws DeserializationException {
+    HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
+    byte [] bytes = hri.toByteArray();
+    HRegionInfo pbhri = HRegionInfo.parseFrom(bytes);
+    assertTrue(hri.equals(pbhri));
+  }
+
+  @Test
+  public void testReadAndWriteHRegionInfoFile() throws IOException, InterruptedException {
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
+    Path basedir = htu.getDataTestDir();
+    // Create a region.  That'll write the .regioninfo file.
+    HRegion r = HRegion.createHRegion(hri, basedir, htu.getConfiguration(),
+      HTableDescriptor.META_TABLEDESC);
+    // Get modtime on the file.
+    long modtime = getModTime(r);
+    HRegion.closeHRegion(r);
+    Thread.sleep(1001);
+    r = HRegion.createHRegion(hri, basedir, htu.getConfiguration(), HTableDescriptor.META_TABLEDESC);
+    // Ensure the file is not written for a second time.
+    long modtime2 = getModTime(r);
+    assertEquals(modtime, modtime2);
+    // Now load the file.
+    HRegionInfo deserializedHri =
+      HRegion.loadDotRegionInfoFileContent(FileSystem.get(htu.getConfiguration()), r.getRegionDir());
+    assertTrue(hri.equals(deserializedHri));
+  }
+
+  long getModTime(final HRegion r) throws IOException {
+    FileStatus [] statuses =
+      r.getFilesystem().listStatus(new Path(r.getRegionDir(), HRegion.REGIONINFO_FILE));
+    assertTrue(statuses != null && statuses.length == 1);
+    return statuses[0].getModificationTime();
+  }
+
   @Test
   public void testCreateHRegionInfoName() throws Exception {
     String tableName = "tablename";
@@ -60,11 +104,11 @@ public class TestHRegionInfo {
                  + id + "." + md5HashInHex + ".",
                  nameStr);
   }
-  
+
   @Test
   public void testGetSetOfHTD() throws IOException {
     HBaseTestingUtility HTU = new HBaseTestingUtility();
-        final String tablename = "testGetSetOfHTD";
+    final String tablename = "testGetSetOfHTD";
 
     // Delete the temporary table directory that might still be there from the
     // previous test run.

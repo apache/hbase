@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.ServerCallable;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
@@ -205,7 +204,7 @@ public class TestCatalogTracker {
       // If a 'getRegionInfo' is called on mocked AdminProtocol, throw IOE
       // the first time.  'Succeed' the second time we are called.
       GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
-      builder.setRegionInfo(ProtobufUtil.toRegionInfo(new HRegionInfo(Bytes.toBytes("test"))));
+      builder.setRegionInfo(HRegionInfo.convert(new HRegionInfo(Bytes.toBytes("test"))));
       Mockito.when(admin.getRegionInfo((RpcController)Mockito.any(),
         (GetRegionInfoRequest)Mockito.any())).thenThrow(
           new ServiceException(new IOException("Server not running, aborting"))).
@@ -412,7 +411,7 @@ public class TestCatalogTracker {
       Mockito.when(connection.getRegionServerWithRetries((ServerCallable<Result>)Mockito.any())).
         thenReturn(result);
       GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
-      builder.setRegionInfo(ProtobufUtil.toRegionInfo(HRegionInfo.FIRST_META_REGIONINFO));
+      builder.setRegionInfo(HRegionInfo.convert(HRegionInfo.FIRST_META_REGIONINFO));
       Mockito.when(implementation.getRegionInfo((RpcController)Mockito.any(),
         (GetRegionInfoRequest)Mockito.any())).thenReturn(builder.build());
       final CatalogTracker ct = constructAndStartCatalogTracker(connection);

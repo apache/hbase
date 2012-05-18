@@ -18,6 +18,12 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.junit.experimental.categories.Category;
 
 import org.junit.Test;
@@ -25,9 +31,44 @@ import org.junit.Test;
 /** Tests the HColumnDescriptor with appropriate arguments */
 @Category(SmallTests.class)
 public class TestHColumnDescriptor {
+  @Test
+  public void testPb() throws DeserializationException {
+    HColumnDescriptor hcd = HTableDescriptor.META_TABLEDESC.getColumnFamilies()[0];
+    final int v = 123;
+    hcd.setBlocksize(v);
+    hcd.setTimeToLive(v);
+    hcd.setBlockCacheEnabled(!HColumnDescriptor.DEFAULT_BLOCKCACHE);
+    hcd.setValue("a", "b");
+    hcd.setMaxVersions(v);
+    assertEquals(v, hcd.getMaxVersions());
+    hcd.setMinVersions(v);
+    assertEquals(v, hcd.getMinVersions());
+    hcd.setKeepDeletedCells(!HColumnDescriptor.DEFAULT_KEEP_DELETED);
+    hcd.setInMemory(!HColumnDescriptor.DEFAULT_IN_MEMORY);
+    boolean inmemory = hcd.isInMemory();
+    hcd.setScope(v);
+    hcd.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
+    hcd.setBloomFilterType(StoreFile.BloomType.ROW);
+    hcd.setCompressionType(Algorithm.SNAPPY);
+
+
+    byte [] bytes = hcd.toByteArray();
+    HColumnDescriptor deserializedHcd = HColumnDescriptor.parseFrom(bytes);
+    assertTrue(hcd.equals(deserializedHcd));
+    assertEquals(v, hcd.getBlocksize());
+    assertEquals(v, hcd.getTimeToLive());
+    assertEquals(hcd.getValue("a"), deserializedHcd.getValue("a"));
+    assertEquals(hcd.getMaxVersions(), deserializedHcd.getMaxVersions());
+    assertEquals(hcd.getMinVersions(), deserializedHcd.getMinVersions());
+    assertEquals(hcd.getKeepDeletedCells(), deserializedHcd.getKeepDeletedCells());
+    assertEquals(inmemory, deserializedHcd.isInMemory());
+    assertEquals(hcd.getScope(), deserializedHcd.getScope());
+    assertTrue(deserializedHcd.getCompressionType().equals(Compression.Algorithm.SNAPPY));
+    assertTrue(deserializedHcd.getDataBlockEncoding().equals(DataBlockEncoding.FAST_DIFF));
+    assertTrue(deserializedHcd.getBloomFilterType().equals(StoreFile.BloomType.ROW));
+  }
 
   @Test
-  @SuppressWarnings("deprecation")
   /** Tests HColumnDescriptor with empty familyName*/
   public void testHColumnDescriptorShouldThrowIAEWhenFamiliyNameEmpty()
       throws Exception {
