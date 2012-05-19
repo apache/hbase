@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -240,6 +239,26 @@ public interface HConnection extends Closeable {
       final byte[] tableName)
     throws IOException;
 
+  /**
+   * Process the MultiPut request by submitting it to the multiPutThreadPool in HTable.
+   * The request will be sent to its destination region server by one thread in 
+   * the HTable's multiPutThreadPool.
+   * 
+   * Also it will return the list of failed put among the MultiPut request or return null if all
+   * puts are sent to the HRegionServer successfully.
+   * @param mput The MultiPut request
+   * @return the list of failed put among the MultiPut request, otherwise return null 
+   *         if all puts are sent to the HRegionServer successfully.
+   */
+  public List<Put> processSingleMultiPut(MultiPut mput);
+  
+  /**
+   * Delete the cached location
+   * @param tableName
+   * @param row
+   */
+  public void deleteCachedLocation(final byte [] tableName, final byte [] row);
+  
   /**
    * Enable or disable region cache prefetch for the table. It will be
    * applied for the given table's all HTable instances within this

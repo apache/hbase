@@ -2140,7 +2140,7 @@ public class HRegionServer implements HRegionInterface,
         if (codes[i] != OperationStatusCode.SUCCESS)
           return i;
       }
-      return -1;
+      return HConstants.MULTIPUT_SUCCESS;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }

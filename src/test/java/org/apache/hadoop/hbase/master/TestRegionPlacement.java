@@ -289,8 +289,8 @@ public class TestRegionPlacement {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
 
-    int retry = 5;
-    long sleep = 2 * TEST_UTIL.getConfiguration().
+    int retry = 10;
+    long sleep = 3 * TEST_UTIL.getConfiguration().
       getInt("hbase.regionserver.msginterval", 1000);
     int attempt = 0;
     int currentRegionOpened, regionMovement;

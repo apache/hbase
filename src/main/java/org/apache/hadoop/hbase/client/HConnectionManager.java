@@ -1029,8 +1029,7 @@ public class HConnectionManager {
      * Delete a cached location, if it satisfies the table name and row
      * requirements.
      */
-    void deleteCachedLocation(final byte [] tableName,
-                                      final byte [] row) {
+    public void deleteCachedLocation(final byte [] tableName, final byte [] row) {
       synchronized (this.cachedRegionLocations) {
         SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
             getTableLocations(tableName);
@@ -1722,6 +1721,44 @@ public class HConnectionManager {
           }
         }
       }
+    }
+
+    /** {@inheritDoc} */
+    public List<Put> processSingleMultiPut(MultiPut mput) {
+      if (mput == null || mput.address == null)
+        return null;
+      List<Put> failedPuts = null;
+
+      Future<MultiPutResponse> future = HTable.multiPutThreadPool.submit(
+          createPutCallable(mput.address, mput, null));
+
+      try {
+        MultiPutResponse resp = future.get();
+        // Process the response for each region
+        for (Map.Entry<byte[], List<Put>> e : mput.puts.entrySet()) {
+          Integer result = resp.getAnswer(e.getKey());
+          if (result == null) {
+            // Prepare all the failed puts for retry
+            if (failedPuts == null) {
+              failedPuts = new ArrayList<Put>();
+            }
+            failedPuts.addAll(e.getValue());
+
+          } else if (result >= 0) {
+            // Prepared the failed puts for retry
+            if (failedPuts == null) {
+              failedPuts = new ArrayList<Put>();
+            }
+            List<Put> lst = e.getValue();
+            failedPuts.addAll(lst.subList(result, lst.size()));
+          } 
+        }
+      } catch (Exception e) {
+        LOG.error("Failed all puts request to " + mput.address.getHostNameWithPort() +
+            " because of " + e);
+        return (List<Put>) mput.allPuts();
+      }
+      return failedPuts;
     }
 
     /**

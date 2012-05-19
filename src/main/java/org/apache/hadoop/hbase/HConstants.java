@@ -548,6 +548,7 @@ public final class HConstants {
    */
   public static final byte [] NO_NEXT_INDEXED_KEY = Bytes.toBytes("NO_NEXT_INDEXED_KEY");
 
+  public static final int MULTIPUT_SUCCESS = -1;
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

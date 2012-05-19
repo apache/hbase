@@ -20,11 +20,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -37,6 +32,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Data type class for putting multiple regions worth of puts in one RPC.
@@ -80,7 +80,20 @@ public class MultiPut extends Operation implements Writable {
     }
     rsput.add(aPut);
   }
+  
+  public void addAll(byte[] regionName, List<Put> putList) {
+    List<Put> rsput = puts.get(regionName);
+    if (rsput == null) {
+      rsput = new ArrayList<Put>();
+      puts.put(regionName, rsput);
+    }
+    rsput.addAll(putList);
+  }
 
+  public void clear() {
+    puts.clear();
+  }
+  
   public Collection<Put> allPuts() {
     List<Put> res = new ArrayList<Put>();
     for ( List<Put> pp : puts.values() ) {
