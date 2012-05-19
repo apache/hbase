@@ -583,11 +583,19 @@ public class ThriftServerRunner implements Runnable {
       }
     }
 
+    /**
+     * @return the list of regions in the given table, or an empty list if the table does not exist
+     */
     @Override
     public List<TRegionInfo> getTableRegions(ByteBuffer tableName)
     throws IOError {
       try {
-        HTable table = getTable(tableName);
+        HTable table;
+        try {
+          table = getTable(tableName);
+        } catch (TableNotFoundException ex) {
+          return new ArrayList<TRegionInfo>();
+        }
         Map<HRegionInfo, ServerName> regionLocations =
             table.getRegionLocations();
         List<TRegionInfo> results = new ArrayList<TRegionInfo>();
