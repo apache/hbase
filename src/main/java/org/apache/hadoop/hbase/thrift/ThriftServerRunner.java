@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -566,11 +567,19 @@ public class ThriftServerRunner implements Runnable {
       }
     }
 
+    /**
+     * @return the list of regions in the given table, or an empty list of the table does not exist
+     */
     @Override
     public List<TRegionInfo> getTableRegions(ByteBuffer tableName)
     throws IOError {
       try{
-        HTable table = getTable(tableName);
+        HTable table;
+        try {
+          table = getTable(tableName);
+        } catch (TableNotFoundException ex) {
+          return new ArrayList<TRegionInfo>();
+        }
         Map<HRegionInfo, HServerAddress> regionsInfo = table.getRegionsInfo();
         List<TRegionInfo> regions = new ArrayList<TRegionInfo>();
 
