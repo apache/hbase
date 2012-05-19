@@ -582,12 +582,8 @@ public class AssignmentManager extends ZooKeeperListener {
           // So we will assign the ROOT and .META. region immediately.
           processOpeningState(regionInfo);
           break;
-        } else if (deadServers.keySet().contains(sn)) {
-          // if the region is found on a dead server, we can assign
-          // it to a new RS. (HBASE-5882)
-          processOpeningState(regionInfo);
-          break;
-        } 
+
+        }
         regionsInTransition.put(encodedRegionName,
           getRegionState(regionInfo, RegionState.State.OPENING, rt));
         failoverProcessedRegions.put(encodedRegionName, regionInfo);
@@ -625,6 +621,7 @@ public class AssignmentManager extends ZooKeeperListener {
     }
   }
   
+
   /**
    * Put the region <code>hri</code> into an offline state up in zk.
    * @param hri
