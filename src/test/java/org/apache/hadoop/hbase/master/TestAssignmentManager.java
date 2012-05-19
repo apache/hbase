@@ -472,6 +472,7 @@ public class TestAssignmentManager {
             am.regionsInTransition.isEmpty());
       }
     } finally {
+      am.setEnabledTable(REGIONINFO.getTableNameAsString());
       executor.shutdown();
       am.shutdown();
       // Clean up all znodes
@@ -677,6 +678,35 @@ public class TestAssignmentManager {
   }
   
   /**
+   * Test the scenario when the master is in failover and trying to process a
+   * region which is in Opening state on a dead RS. Master should immediately
+   * assign the region and not wait for Timeout Monitor.(Hbase-5882).
+   */
+  @Test
+  public void testRegionInOpeningStateOnDeadRSWhileMasterFailover() throws IOException,
+      KeeperException, ServiceException, InterruptedException {
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(this.server,
+        this.serverManager);
+    ZKAssign.createNodeOffline(this.watcher, REGIONINFO, SERVERNAME_A);
+    int version = ZKAssign.getVersion(this.watcher, REGIONINFO);
+    ZKAssign.transitionNode(this.watcher, REGIONINFO, SERVERNAME_A, EventType.M_ZK_REGION_OFFLINE,
+        EventType.RS_ZK_REGION_OPENING, version);
+    RegionTransition rt = RegionTransition.createRegionTransition(EventType.RS_ZK_REGION_OPENING,
+        REGIONINFO.getRegionName(), SERVERNAME_A, HConstants.EMPTY_BYTE_ARRAY);
+    Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers = 
+      new HashMap<ServerName, List<Pair<HRegionInfo, Result>>>();
+    deadServers.put(SERVERNAME_A, null);
+    version = ZKAssign.getVersion(this.watcher, REGIONINFO);
+    am.gate.set(false);
+    am.processRegionsInTransition(rt, REGIONINFO, deadServers, version);
+    // Waiting for the assignment to get completed.
+    while (!am.gate.get()) {
+      Thread.sleep(10);
+    }
+    assertTrue("The region should be assigned immediately.", null != am.regionPlans.get(REGIONINFO
+        .getEncodedName()));
+  }
+  /**
    * Creates a new ephemeral node in the SPLITTING state for the specified region.
    * Create it ephemeral in case regionserver dies mid-split.
    *
@@ -810,7 +840,13 @@ public class TestAssignmentManager {
       while (this.gate.get()) Threads.sleep(1);
       super.processRegionsInTransition(rt, regionInfo, deadServers, expectedVersion);
     }
-    
+
+    @Override
+    public void assign(HRegionInfo region, boolean setOfflineInZK, boolean forceNewPlan,
+        boolean hijack) {
+      super.assign(region, setOfflineInZK, forceNewPlan, hijack);
+      this.gate.set(true);
+    }
     /** reset the watcher */
     void setWatcher(ZooKeeperWatcher watcher) {
       this.watcher = watcher;
