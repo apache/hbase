@@ -23,7 +23,6 @@ import java.lang.reflect.Method;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -61,6 +60,7 @@ public class TableRecordReaderImpl {
   private Result value = null;
   private TaskAttemptContext context = null;
   private Method getCounter = null;
+  private long numRestarts = 0;
   private long timestamp;
   private int rowcount;
   private boolean logScannerActivity = false;
@@ -198,9 +198,9 @@ public class TableRecordReaderImpl {
             rowcount = 0;
           }
         }
-      } catch (DoNotRetryIOException e) {
-        throw e;
       } catch (IOException e) {
+        // try to handle all IOExceptions by restarting
+        // the scanner, if the second call fails, it will be rethrown
         LOG.info("recovered from " + StringUtils.stringifyException(e));
         if (lastSuccessfulRow == null) {
           LOG.warn("We are restarting the first next() invocation," +
@@ -215,6 +215,7 @@ public class TableRecordReaderImpl {
           scanner.next();    // skip presumed already mapped row
         }
         value = scanner.next();
+        numRestarts++;
       }
       if (value != null && value.size() > 0) {
         key.set(value.getRow());
@@ -270,6 +271,8 @@ public class TableRecordReaderImpl {
           HBASE_COUNTER_GROUP_NAME, mlv.getName());
         ct.increment(mlv.getCurrentIntervalValue());
       }
+      ((Counter) this.getCounter.invoke(context, HBASE_COUNTER_GROUP_NAME,
+          "NUM_SCANNER_RESTARTS")).increment(numRestarts);
     } catch (Exception e) {
       LOG.debug("can't update counter." + StringUtils.stringifyException(e));
     }
