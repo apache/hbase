@@ -226,9 +226,13 @@ public class AssignmentManager extends ZooKeeperListener {
     // this far.  Caller takes care of it.
     HServerInfo hsi =
       this.serverManager.getHServerInfo(this.catalogTracker.getMetaLocation());
-    regionOnline(HRegionInfo.FIRST_META_REGIONINFO, hsi);
+    if (hsi != null) {
+      regionOnline(HRegionInfo.FIRST_META_REGIONINFO, hsi);
+    }
     hsi = this.serverManager.getHServerInfo(this.catalogTracker.getRootLocation());
-    regionOnline(HRegionInfo.ROOT_REGIONINFO, hsi);
+    if (hsi != null) {
+      regionOnline(HRegionInfo.ROOT_REGIONINFO, hsi);
+    }
 
     // Scan META to build list of existing regions, servers, and assignment
     // Returns servers who have not checked in (assumed dead) and their regions
