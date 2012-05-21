@@ -195,16 +195,16 @@ public class TestTableInputFormat {
    * 
    * @throws IOException
    */
-  static HTable createIOEScannerTable(byte[] name) throws IOException {
+  static HTable createIOEScannerTable(byte[] name, final int failCnt)
+      throws IOException {
     // build up a mock scanner stuff to fail the first time
     Answer<ResultScanner> a = new Answer<ResultScanner>() {
-      boolean first = true;
+      int cnt = 0;
 
       @Override
       public ResultScanner answer(InvocationOnMock invocation) throws Throwable {
         // first invocation return the busted mock scanner
-        if (first) {
-          first = false;
+        if (cnt++ < failCnt) {
           // create mock ResultScanner that always fails.
           Scan scan = mock(Scan.class);
           doReturn("bogus".getBytes()).when(scan).getStartRow(); // avoid npe
@@ -230,16 +230,16 @@ public class TestTableInputFormat {
    * 
    * @throws IOException
    */
-  static HTable createDNRIOEScannerTable(byte[] name) throws IOException {
+  static HTable createDNRIOEScannerTable(byte[] name, final int failCnt)
+      throws IOException {
     // build up a mock scanner stuff to fail the first time
     Answer<ResultScanner> a = new Answer<ResultScanner>() {
-      boolean first = true;
+      int cnt = 0;
 
       @Override
       public ResultScanner answer(InvocationOnMock invocation) throws Throwable {
         // first invocation return the busted mock scanner
-        if (first) {
-          first = false;
+        if (cnt++ < failCnt) {
           // create mock ResultScanner that always fails.
           Scan scan = mock(Scan.class);
           doReturn("bogus".getBytes()).when(scan).getStartRow(); // avoid npe
@@ -280,7 +280,30 @@ public class TestTableInputFormat {
    */
   @Test
   public void testTableRecordReaderScannerFail() throws IOException {
-    HTable htable = createIOEScannerTable("table2".getBytes());
+    HTable htable = createIOEScannerTable("table2".getBytes(), 1);
+    runTestMapred(htable);
+  }
+
+  /**
+   * Run test assuming Scanner IOException failure using mapred api,
+   * 
+   * @throws IOException
+   */
+  @Test(expected = IOException.class)
+  public void testTableRecordReaderScannerFailTwice() throws IOException {
+    HTable htable = createIOEScannerTable("table3".getBytes(), 2);
+    runTestMapred(htable);
+  }
+
+  /**
+   * Run test assuming UnknownScannerException (which is a type of
+   * DoNotRetryIOException) using mapred api.
+   * 
+   * @throws DoNotRetryIOException
+   */
+  @Test
+  public void testTableRecordReaderScannerTimeout() throws IOException {
+    HTable htable = createDNRIOEScannerTable("table4".getBytes(), 1);
     runTestMapred(htable);
   }
 
@@ -291,8 +314,8 @@ public class TestTableInputFormat {
    * @throws DoNotRetryIOException
    */
   @Test(expected = DoNotRetryIOException.class)
-  public void testTableRecordReaderScannerTimeout() throws IOException {
-    HTable htable = createDNRIOEScannerTable("table3".getBytes());
+  public void testTableRecordReaderScannerTimeoutTwice() throws IOException {
+    HTable htable = createDNRIOEScannerTable("table5".getBytes(), 2);
     runTestMapred(htable);
   }
 
@@ -318,7 +341,34 @@ public class TestTableInputFormat {
   @Test
   public void testTableRecordReaderScannerFailMapreduce() throws IOException,
       InterruptedException {
-    HTable htable = createIOEScannerTable("table2-mr".getBytes());
+    HTable htable = createIOEScannerTable("table2-mr".getBytes(), 1);
+    runTestMapreduce(htable);
+  }
+
+  /**
+   * Run test assuming Scanner IOException failure using newer mapreduce api
+   * 
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @Test(expected = IOException.class)
+  public void testTableRecordReaderScannerFailMapreduceTwice() throws IOException,
+      InterruptedException {
+    HTable htable = createIOEScannerTable("table3-mr".getBytes(), 2);
+    runTestMapreduce(htable);
+  }
+
+  /**
+   * Run test assuming UnknownScannerException (which is a type of
+   * DoNotRetryIOException) using newer mapreduce api
+   * 
+   * @throws InterruptedException
+   * @throws DoNotRetryIOException
+   */
+  @Test
+  public void testTableRecordReaderScannerTimeoutMapreduce()
+      throws IOException, InterruptedException {
+    HTable htable = createDNRIOEScannerTable("table4-mr".getBytes(), 1);
     runTestMapreduce(htable);
   }
 
@@ -330,9 +380,9 @@ public class TestTableInputFormat {
    * @throws DoNotRetryIOException
    */
   @Test(expected = DoNotRetryIOException.class)
-  public void testTableRecordReaderScannerTimeoutMapreduce()
+  public void testTableRecordReaderScannerTimeoutMapreduceTwice()
       throws IOException, InterruptedException {
-    HTable htable = createDNRIOEScannerTable("table3-mr".getBytes());
+    HTable htable = createDNRIOEScannerTable("table5-mr".getBytes(), 2);
     runTestMapreduce(htable);
   }
 }

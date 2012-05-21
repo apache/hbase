@@ -30,6 +30,7 @@ Release 0.90.7 - Unreleased
                (Jimmy Xiang)
    HBASE-5894  Table deletion failed but HBaseAdmin#deletetable reports it as success (Xufeng)
    HBASE-5922  HalfStoreFileReader seekBefore causes StackOverflowError (Nate Putnam)
+   HBASE-5757  TableInputFormat should handle as many errors as possible (Jan Lukavsky)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
