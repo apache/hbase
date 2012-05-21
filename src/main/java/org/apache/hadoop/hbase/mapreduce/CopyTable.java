@@ -39,8 +39,6 @@ import java.util.Map;
 public class CopyTable {
 
   final static String NAME = "copytable";
-  static String rsClass = null;
-  static String rsImpl = null;
   static long startTime = 0;
   static long endTime = 0;
   static String tableName = null;
@@ -91,7 +89,7 @@ public class CopyTable {
         Import.Importer.class, null, null, job);
     TableMapReduceUtil.initTableReducerJob(
         newTableName == null ? tableName : newTableName, null, job,
-        null, peerAddress, rsClass, rsImpl);
+        null, peerAddress, null, null);
     job.setNumReduceTasks(0);
     return job;
   }
@@ -103,14 +101,10 @@ public class CopyTable {
     if (errorMsg != null && errorMsg.length() > 0) {
       System.err.println("ERROR: " + errorMsg);
     }
-    System.err.println("Usage: CopyTable [--rs.class=CLASS] " +
-        "[--rs.impl=IMPL] [--starttime=X] [--endtime=Y] " +
+    System.err.println("Usage: CopyTable [general options] [--starttime=X] [--endtime=Y] " +
         "[--new.name=NEW] [--peer.adr=ADR] <tablename>");
     System.err.println();
     System.err.println("Options:");
-    System.err.println(" rs.class     hbase.regionserver.class of the peer cluster");
-    System.err.println("              specify if different from current cluster");
-    System.err.println(" rs.impl      hbase.regionserver.impl of the peer cluster");
     System.err.println(" starttime    beginning of the time range (unixtime in millis)");
     System.err.println("              without endtime means from starttime to forever");
     System.err.println(" endtime      end of the time range.  Ignored if no starttime specified.");
@@ -127,8 +121,7 @@ public class CopyTable {
     System.err.println("Examples:");
     System.err.println(" To copy 'TestTable' to a cluster that uses replication for a 1 hour window:");
     System.err.println(" $ bin/hbase " +
-        "org.apache.hadoop.hbase.mapreduce.CopyTable --rs.class=org.apache.hadoop.hbase.ipc.ReplicationRegionInterface " +
-        "--rs.impl=org.apache.hadoop.hbase.regionserver.replication.ReplicationRegionServer --starttime=1265875194289 --endtime=1265878794289 " +
+        "org.apache.hadoop.hbase.mapreduce.CopyTable --starttime=1265875194289 --endtime=1265878794289 " +
         "--peer.adr=server1,server2,server3:2181:/hbase --families=myOldCf:myNewCf,cf2,cf3 TestTable ");
   }
 
@@ -145,18 +138,6 @@ public class CopyTable {
         if (cmd.equals("-h") || cmd.startsWith("--h")) {
           printUsage(null);
           return false;
-        }
-
-        final String rsClassArgKey = "--rs.class=";
-        if (cmd.startsWith(rsClassArgKey)) {
-          rsClass = cmd.substring(rsClassArgKey.length());
-          continue;
-        }
-
-        final String rsImplArgKey = "--rs.impl=";
-        if (cmd.startsWith(rsImplArgKey)) {
-          rsImpl = cmd.substring(rsImplArgKey.length());
-          continue;
         }
 
         final String startTimeArgKey = "--starttime=";
