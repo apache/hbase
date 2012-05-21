@@ -363,6 +363,25 @@ public class AccessController extends BaseRegionObserver
   }
 
   /**
+   * Authorizes that the current user has "admin" privileges for the given table.
+   * that means he/she can edit/modify/delete the table.
+   * If current user is the table owner, and has CREATE permission,
+   * then he/she has table admin permission. otherwise ADMIN rights are checked.
+   * @param e Master coprocessor environment
+   * @param tableName Table requested
+   * @throws IOException if obtaining the current user fails
+   * @throws AccessDeniedException if authorization is denied
+   */
+  private void requireTableAdminPermission(MasterCoprocessorEnvironment e,
+      byte[] tableName) throws IOException {
+    if (isActiveUserTableOwner(e, tableName)) {
+      requirePermission(Permission.Action.CREATE);
+    } else {
+      requirePermission(Permission.Action.ADMIN);
+    }
+  }
+
+  /**
    * Authorizes that the current user has global privileges for the given action.
    * @param perm The action being requested
    * @throws IOException if obtaining the current user fails
@@ -520,11 +539,7 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> c,
       byte[] tableName) throws IOException {
-    if (isActiveUserTableOwner(c.getEnvironment(), tableName)) {
-      requirePermission(Permission.Action.CREATE);
-    } else {
-      requirePermission(Permission.Action.ADMIN);
-    }
+    requireTableAdminPermission(c.getEnvironment(), tableName);
   }
   @Override
   public void preDeleteTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
@@ -541,7 +556,7 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> c,
       byte[] tableName, HTableDescriptor htd) throws IOException {
-    requirePermission(Permission.Action.CREATE);
+    requireTableAdminPermission(c.getEnvironment(), tableName);
   }
   @Override
   public void preModifyTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
@@ -557,7 +572,7 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> c,
       byte[] tableName, HColumnDescriptor column) throws IOException {
-    requirePermission(Permission.Action.CREATE);
+    requireTableAdminPermission(c.getEnvironment(), tableName);
   }
   @Override
   public void preAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> c,
@@ -572,7 +587,7 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> c,
       byte[] tableName, HColumnDescriptor descriptor) throws IOException {
-    requirePermission(Permission.Action.CREATE);
+    requireTableAdminPermission(c.getEnvironment(), tableName);
   }
   @Override
   public void preModifyColumnHandler(ObserverContext<MasterCoprocessorEnvironment> c,
@@ -588,7 +603,7 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> c,
       byte[] tableName, byte[] col) throws IOException {
-    requirePermission(Permission.Action.CREATE);
+    requireTableAdminPermission(c.getEnvironment(), tableName);
   }
   @Override
   public void preDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> c,
@@ -606,11 +621,7 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preEnableTable(ObserverContext<MasterCoprocessorEnvironment> c,
       byte[] tableName) throws IOException {
-    if (isActiveUserTableOwner(c.getEnvironment(), tableName)) {
-      requirePermission(Permission.Action.CREATE);
-    } else {
-      requirePermission(Permission.Action.ADMIN);
-    }
+    requireTableAdminPermission(c.getEnvironment(), tableName);
   }
   @Override
   public void preEnableTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
@@ -625,11 +636,7 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> c,
       byte[] tableName) throws IOException {
-    if (isActiveUserTableOwner(c.getEnvironment(), tableName)) {
-      requirePermission(Permission.Action.CREATE);
-    } else {
-      requirePermission(Permission.Action.ADMIN);
-    }
+    requireTableAdminPermission(c.getEnvironment(), tableName);
   }
   @Override
   public void preDisableTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
