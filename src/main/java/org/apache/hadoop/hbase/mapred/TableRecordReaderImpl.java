@@ -175,9 +175,9 @@ public class TableRecordReaderImpl {
     Result result;
     try {
       result = this.scanner.next();
-    } catch (DoNotRetryIOException e) {
-      throw e;
     } catch (IOException e) {
+      // try to handle all IOExceptions by restarting
+      // the scanner, if the second call fails, it will be rethrown
       LOG.debug("recovered from " + StringUtils.stringifyException(e));
       if (lastSuccessfulRow == null) {
         LOG.warn("We are restarting the first next() invocation," +
