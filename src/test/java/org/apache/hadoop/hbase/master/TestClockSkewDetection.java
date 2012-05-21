@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category(SmallTests.class)
 public class TestClockSkewDetection {
   private static final Log LOG =
     LogFactory.getLog(TestClockSkewDetection.class);

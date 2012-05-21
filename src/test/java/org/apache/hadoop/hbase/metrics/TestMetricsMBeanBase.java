@@ -27,7 +27,7 @@ import java.util.Map;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -38,7 +38,7 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category(SmallTests.class)
 public class TestMetricsMBeanBase extends TestCase {
 
   private class TestStatistics extends MetricsMBeanBase {

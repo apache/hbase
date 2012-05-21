@@ -41,7 +41,7 @@ import org.junit.experimental.categories.Category;
  * {@link TestGet} is a medley of tests of get all done up as a single test.
  * This class
  */
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestGetClosestAtOrBefore extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(TestGetClosestAtOrBefore.class);
 

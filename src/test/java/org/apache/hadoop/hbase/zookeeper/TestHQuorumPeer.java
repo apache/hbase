@@ -41,7 +41,7 @@ import static org.junit.Assert.*;
 /**
  * Test for HQuorumPeer.
  */
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestHQuorumPeer {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static int PORT_NO = 21818;

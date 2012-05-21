@@ -25,9 +25,9 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.hbase.MediumTests;
 import org.junit.Test;
 
 import com.google.protobuf.DescriptorProtos;
@@ -36,7 +36,7 @@ import com.google.protobuf.DescriptorProtos.EnumDescriptorProto;
 import org.junit.experimental.categories.Category;
 
 /** Unit tests to test PB-based types on WritableRpcEngine. */
-@Category(MediumTests.class)
+@Category(SmallTests.class)
 public class TestPBOnWritableRpc {
 
   private static Configuration conf = new Configuration();

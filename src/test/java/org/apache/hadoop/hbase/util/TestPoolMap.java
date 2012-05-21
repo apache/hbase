@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import junit.framework.Test;
 import junit.framework.TestCase;
 
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 import org.junit.experimental.categories.Category;
@@ -37,7 +36,7 @@ import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({TestPoolMap.TestRoundRobinPoolType.class, TestPoolMap.TestThreadLocalPoolType.class, TestPoolMap.TestReusablePoolType.class})
-@Category(MediumTests.class)
+@Category(SmallTests.class)
 public class TestPoolMap {
   public abstract static class TestPoolType extends TestCase {
     protected PoolMap<String, String> poolMap;
@@ -75,7 +74,7 @@ public class TestPoolMap {
     }
   }
 
-  @Category(MediumTests.class)
+  @Category(SmallTests.class)
   public static class TestRoundRobinPoolType extends TestPoolType {
     @Override
     protected PoolType getPoolType() {
@@ -137,7 +136,7 @@ public class TestPoolMap {
 
   }
 
-  @Category(MediumTests.class)
+  @Category(SmallTests.class)
   public static class TestThreadLocalPoolType extends TestPoolType {
     @Override
     protected PoolType getPoolType() {
@@ -182,7 +181,7 @@ public class TestPoolMap {
 
   }
 
-  @Category(MediumTests.class)
+  @Category(SmallTests.class)
   public static class TestReusablePoolType extends TestPoolType {
     @Override
     protected PoolType getPoolType() {

@@ -59,7 +59,7 @@ import org.junit.experimental.categories.Category;
  * Tests writing Bloom filter blocks in the same part of the file as data
  * blocks.
  */
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestCompoundBloomFilter {
 
   private static final HBaseTestingUtility TEST_UTIL =

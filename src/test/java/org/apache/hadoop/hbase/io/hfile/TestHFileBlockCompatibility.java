@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
@@ -62,7 +62,7 @@ import com.google.common.base.Preconditions;
  * This class has unit tests to prove that older versions of
  * HFiles (without checksums) are compatible with current readers.
  */
-@Category(MediumTests.class)
+@Category(SmallTests.class)
 @RunWith(Parameterized.class)
 public class TestHFileBlockCompatibility {
   // change this value to activate more logs

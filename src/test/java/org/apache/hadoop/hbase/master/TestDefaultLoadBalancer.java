@@ -47,7 +47,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test the load balancer that is created by default.
  */
-@Category(MediumTests.class)
+@Category(SmallTests.class)
 public class TestDefaultLoadBalancer {
   private static final Log LOG = LogFactory.getLog(TestDefaultLoadBalancer.class);
 

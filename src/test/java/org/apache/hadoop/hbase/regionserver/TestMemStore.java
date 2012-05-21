@@ -46,7 +46,7 @@ import com.google.common.collect.Lists;
 import org.junit.experimental.categories.Category;
 
 /** memstore test case */
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestMemStore extends TestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private MemStore memstore;

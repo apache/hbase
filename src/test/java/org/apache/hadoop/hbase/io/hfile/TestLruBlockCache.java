@@ -27,7 +27,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.EvictionThread;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
@@ -49,7 +49,7 @@ import org.junit.runners.Parameterized.Parameters;
  * and that cached blocks are accessible when expected to be.
  */
 @RunWith(Parameterized.class)
-@Category(MediumTests.class)
+@Category(SmallTests.class)
 public class TestLruBlockCache {
 
   private Map<String, Long> startingMetrics;
