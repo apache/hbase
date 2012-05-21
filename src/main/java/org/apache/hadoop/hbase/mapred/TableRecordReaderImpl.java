@@ -24,7 +24,6 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -206,9 +205,9 @@ public class TableRecordReaderImpl {
             rowcount = 0;
           }
         }
-      } catch (DoNotRetryIOException e) {
-        throw e;
       } catch (IOException e) {
+        // try to handle all IOExceptions by restarting
+        // the scanner, if the second call fails, it will be rethrown
         LOG.debug("recovered from " + StringUtils.stringifyException(e));
         if (lastSuccessfulRow == null) {
           LOG.warn("We are restarting the first next() invocation," +
