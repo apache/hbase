@@ -73,7 +73,6 @@ else
 end
 scan.cache_blocks = false
 scan.caching = 10
-scan.setFilter(FirstKeyOnlyFilter.new)
 INFO = 'info'.to_java_bytes
 REGION_INFO = 'regioninfo'.to_java_bytes
 scan.addColumn INFO, REGION_INFO
