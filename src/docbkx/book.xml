@@ -2372,7 +2372,118 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
      </section>   
      </section>   <!--  bloom  -->  
      
+    </section>  <!--  regions -->
+	
+	<section xml:id="arch.bulk.load"><title>Bulk Loading</title>
+      <section xml:id="arch.bulk.load.overview"><title>Overview</title>
+      <para>
+        HBase includes several methods of loading data into tables.
+        The most straightforward method is to either use the <code>TableOutputFormat</code>
+        class from a MapReduce job, or use the normal client APIs; however,
+        these are not always the most efficient methods.
+      </para>
+      <para>
+        The bulk load feature uses a MapReduce job to output table data in HBase's internal
+        data format, and then directly loads the generated StoreFiles into a running
+        cluster. Using bulk load will use less CPU and network resources than
+        simply using the HBase API.
+      </para>
     </section>
+    <section xml:id="arch.bulk.load.arch"><title>Bulk Load Architecture</title>
+      <para>
+        The HBase bulk load process consists of two main steps.
+      </para>
+      <section xml:id="arch.bulk.load.prep"><title>Preparing data via a MapReduce job</title>
+        <para>
+          The first step of a bulk load is to generate HBase data files (StoreFiles) from
+          a MapReduce job using <code>HFileOutputFormat</code>. This output format writes
+          out data in HBase's internal storage format so that they can be
+          later loaded very efficiently into the cluster.
+        </para>
+        <para>
+          In order to function efficiently, <code>HFileOutputFormat</code> must be
+          configured such that each output HFile fits within a single region.
+          In order to do this, jobs whose output will be bulk loaded into HBase
+          use Hadoop's <code>TotalOrderPartitioner</code> class to partition the map output
+          into disjoint ranges of the key space, corresponding to the key
+          ranges of the regions in the table.
+        </para>
+        <para>
+          <code>HFileOutputFormat</code> includes a convenience function,
+          <code>configureIncrementalLoad()</code>, which automatically sets up
+          a <code>TotalOrderPartitioner</code> based on the current region boundaries of a
+          table.
+        </para>
+      </section>
+      <section xml:id="arch.bulk.load.complete"><title>Completing the data load</title>
+        <para>
+          After the data has been prepared using
+          <code>HFileOutputFormat</code>, it is loaded into the cluster using
+          <code>completebulkload</code>. This command line tool iterates
+          through the prepared data files, and for each one determines the
+          region the file belongs to. It then contacts the appropriate Region
+          Server which adopts the HFile, moving it into its storage directory
+          and making the data available to clients.
+        </para>
+        <para>
+          If the region boundaries have changed during the course of bulk load
+          preparation, or between the preparation and completion steps, the
+          <code>completebulkloads</code> utility will automatically split the
+          data files into pieces corresponding to the new boundaries. This
+          process is not optimally efficient, so users should take care to
+          minimize the delay between preparing a bulk load and importing it
+          into the cluster, especially if other clients are simultaneously
+          loading data through other means.
+        </para>
+      </section>
+    </section>
+    <section xml:id="arch.bulk.load.import"><title>Importing the prepared data using the completebulkload tool</title>
+      <para>
+        After a data import has been prepared, either by using the
+        <code>importtsv</code> tool with the
+        "<code>importtsv.bulk.output</code>" option or by some other MapReduce
+        job using the <code>HFileOutputFormat</code>, the
+        <code>completebulkload</code> tool is used to import the data into the
+        running cluster.
+      </para>
+      <para>
+        The <code>completebulkload</code> tool simply takes the output path
+        where <code>importtsv</code> or your MapReduce job put its results, and
+        the table name to import into. For example:
+      </para>
+      <code>$ hadoop jar hbase-VERSION.jar completebulkload [-c /path/to/hbase/config/hbase-site.xml] /user/todd/myoutput mytable</code>
+      <para>
+        The <code>-c config-file</code> option can be used to specify a file
+        containing the appropriate hbase parameters (e.g., hbase-site.xml) if
+        not supplied already on the CLASSPATH (In addition, the CLASSPATH must
+        contain the directory that has the zookeeper configuration file if
+        zookeeper is NOT managed by HBase).
+      </para>
+      <para>
+        Note: If the target table does not already exist in HBase, this
+        tool will create the table automatically.</para>
+      <para>
+        This tool will run quickly, after which point the new data will be visible in
+        the cluster.
+      </para>
+    </section>
+    <section xml:id="arch.bulk.load.also"><title>See Also</title>
+      <para>For more information about the referenced utilities, see <xref linkend="importtsv"/> and  <xref linkend="completebulkload"/>.
+      </para>
+    </section>
+    <section xml:id="arch.bulk.load.adv"><title>Advanced Usage</title>
+      <para>
+        Although the <code>importtsv</code> tool is useful in many cases, advanced users may
+        want to generate data programatically, or import data from other formats. To get
+        started doing so, dig into <code>ImportTsv.java</code> and check the JavaDoc for
+        HFileOutputFormat.
+      </para>
+      <para>
+        The import step of the bulk load can also be done programatically. See the
+        <code>LoadIncrementalHFiles</code> class for more information.
+      </para>
+    </section>	
+	</section>  <!--  bulk loading -->
     
     <section xml:id="arch.hdfs"><title>HDFS</title>
        <para>As HBase runs on HDFS (and each StoreFile is written as a file on HDFS),

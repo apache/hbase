@@ -36,6 +36,25 @@
 
     <para>Here we list HBase tools for administration, analysis, fixup, and
     debugging.</para>
+    <section xml:id="driver"><title>Driver</title>
+      <para>There is a <code>Driver</code> class that is executed by the HBase jar can be used to invoke frequently accessed utilities.  For example, 
+<programlisting>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar 
+</programlisting>
+... will return...
+<programlisting>
+An example program must be given as the first argument.
+Valid program names are:
+  completebulkload: Complete a bulk data load.
+  copytable: Export a table from local cluster to peer cluster
+  export: Write table data to HDFS.
+  import: Import data written by Export.
+  importtsv: Import data in TSV format.
+  rowcounter: Count rows in HBase table
+  verifyrep: Compare the data from tables in two different clusters. WARNING: It doesn't work for incrementColumnValues'd cells since the timestamp is chan
+</programlisting>
+... for allowable program names.
+      </para>
+    </section>
     <section xml:id="hbck">
         <title>HBase <application>hbck</application></title>
         <subtitle>An <emphasis>fsck</emphasis> for your HBase install</subtitle>
@@ -133,15 +152,92 @@
     </section>
     <section xml:id="importtsv">
        <title>ImportTsv</title>
-       <para>Import is a utility that will load data in TSV format into HBase.  Invoke via:
-<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.ImportTsv -Dimporttsv.columns=a,b,c &lt;tablename&gt; &lt;inputdir&gt;
+       <para>ImportTsv is a utility that will load data in TSV format into HBase.  It has two distinct usages:  loading data from TSV format in HDFS 
+       into HBase via Puts, and preparing StoreFiles to be loaded via the <code>completebulkload</code>.
+       </para>
+       <para>To load data via Puts (i.e., non-bulk loading):
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.ImportTsv -Dimporttsv.columns=a,b,c &lt;tablename&gt; &lt;hdfs-inputdir&gt;
 </programlisting>
        </para>
+       <para>To generate StoreFiles for bulk-loading:
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.ImportTsv -Dimporttsv.columns=a,b,c -Dimporttsv.bulk.output=hdfs://storefile-outputdir &lt;tablename&gt; &lt;hdfs-data-inputdir&gt;
+</programlisting>
+       </para>
+       <para>These generated StoreFiles can be loaded into HBase via <xref linkend="completebulkload"/>. 
+       </para>
+       <section xml:id="importtsv.options"><title>ImportTsv Options</title>
+       Running ImportTsv with no arguments prints brief usage information:
+<programlisting>
+Usage: importtsv -Dimporttsv.columns=a,b,c &lt;tablename&gt; &lt;inputdir&gt;
+
+Imports the given input directory of TSV data into the specified table.
+
+The column names of the TSV data must be specified using the -Dimporttsv.columns
+option. This option takes the form of comma-separated column names, where each
+column name is either a simple column family, or a columnfamily:qualifier. The special
+column name HBASE_ROW_KEY is used to designate that this column should be used
+as the row key for each imported record. You must specify exactly one column
+to be the row key, and you must specify a column name for every column that exists in the
+input data.
+
+By default importtsv will load data directly into HBase. To instead generate
+HFiles of data to prepare for a bulk data load, pass the option:
+  -Dimporttsv.bulk.output=/path/for/output
+  Note: if you do not use this option, then the target table must already exist in HBase
+
+Other options that may be specified with -D include:
+  -Dimporttsv.skip.bad.lines=false - fail if encountering an invalid line
+  '-Dimporttsv.separator=|' - eg separate on pipes instead of tabs
+  -Dimporttsv.timestamp=currentTimeAsLong - use the specified timestamp for the import
+  -Dimporttsv.mapper.class=my.Mapper - A user-defined Mapper to use instead of org.apache.hadoop.hbase.mapreduce.TsvImporterMapper
+</programlisting>       
+       </section>
+       <section xml:id="importtsv.example"><title>ImportTsv Example</title>
+         <para>For example, assume that we are loading data into a table called 'datatsv' with a ColumnFamily called 'd' with two columns "c1" and "c2".
+         </para>
+         <para>Assume that an input file exists as follows:
+<programlisting>
+row1	c1	c2
+row2	c1	c2
+row3	c1	c2
+row4	c1	c2
+row5	c1	c2
+row6	c1	c2
+row7	c1	c2
+row8	c1	c2
+row9	c1	c2
+row10	c1	c2
+</programlisting>
+         </para>
+         <para>For ImportTsv to use this imput file, the command line needs to look like this:
+ <programlisting>
+ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar importtsv -Dimporttsv.columns=HBASE_ROW_KEY,d:c1,d:c2 -Dimporttsv.bulk.output=hdfs://storefileoutput  datatsv hdfs://inputfile
+ </programlisting>
+         ... and in this example the first column is the rowkey, which is why the HBASE_ROW_KEY is used.  The second and third columns in the file will be imported as "d:c1" and "d:c2", respectively.
+         </para>
+       </section>
+       <section xml:id="importtsv.warning"><title>ImportTsv Warning</title>
+         <para>If you have preparing a lot of data for bulk loading, make sure the target HBase table is pre-split appropriately.
+         </para>
+       </section>
+       <section xml:id="importtsv.also"><title>See Also</title>
+       For more information about bulk-loading HFiles into HBase, see <xref linkend="arch.bulk.load"/>
+       </section>       
     </section>
-    <section xml:id="bulk.loading">
-       <title>Bulk Loading</title>
-       <para>For imformation about bulk-loading HFiles into HBase, see <link xlink:href="http://hbase.apache.org/bulk-loads.html">Bulk Loads</link>.
-       This page currently exists on the website and will eventually be migrated into the RefGuide.
+    
+    <section xml:id="completebulkload">
+       <title>CompleteBulkLoad</title>
+	   <para>The <code>completebulkload</code> utility will move generated StoreFiles into an HBase table.  This utility is often used
+	   in conjunction with output from <xref linkend="importtsv"/>.  
+	   </para>
+	   <para>There are two ways to invoke this utility, with explicit classname and via the driver: 
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFile &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;
+</programlisting>
+.. and via the Driver..
+<programlisting>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar completebulkload &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;
+</programlisting>
+	  </para>
+       <para>For more information about bulk-loading HFiles into HBase, see <xref linkend="arch.bulk.load"/>.
        </para>
     </section>
     <section xml:id="walplayer">
