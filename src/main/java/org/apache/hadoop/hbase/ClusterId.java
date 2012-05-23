@@ -92,4 +92,12 @@ public class ClusterId {
   static ClusterId convert(final ClusterIdProtos.ClusterId cid) {
     return new ClusterId(cid.getClusterId());
   }
+
+  /**
+   * @see java.lang.Object#toString()
+   */
+  @Override
+  public String toString() {
+    return this.id;
+  }
 }
