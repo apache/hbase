@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -124,6 +125,11 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     sc.setStopRow(tSplit.getEndRow());
     trr.setScan(sc);
     trr.setHTable(table);
+    try {
+      trr.initialize(tSplit, context);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException(e.getMessage());
+    }
     return trr;
   }
 
