@@ -273,7 +273,7 @@
     <section xml:id="perf.batch.loading">
       <title>Batch Loading</title>
       <para>Use the bulk load tool if you can.  See
-        <link xlink:href="http://hbase.apache.org/bulk-loads.html">Bulk Loads</link>.
+        <xref linkend="arch.bulk.load"/>.
         Otherwise, pay attention to the below.
       </para>
     </section>  <!-- batch loading -->

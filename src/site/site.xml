@@ -54,7 +54,7 @@
       <item name="Videos/Presentations" href="book.html#other.info" />
       <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" />
       <item name="ACID Semantics" href="acid-semantics.html" />
-      <item name="Bulk Loads" href="bulk-loads.html" />
+      <item name="Bulk Loads" href="book.html#arch.bulk.load" />
       <item name="Metrics"      href="metrics.html" />
       <item name="HBase on Windows"      href="cygwin.html" />
       <item name="Cluster replication"      href="replication.html" />
