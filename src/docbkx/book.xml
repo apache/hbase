@@ -2820,7 +2820,14 @@ hbase> describe 't1'</programlisting>
 
     </para>
     </section>
-
+    <section xml:id="changing.compression">
+      <title>Changing Compression Schemes</title>
+      <para>A frequent question on the dist-list is how to change compression schemes for ColumnFamilies.  This is actually quite simple, 
+      and can be done via an alter command.  Because the compression scheme is encoded at the block-level in StoreFiles, the table does 
+      <emphasis>not</emphasis> need to be re-created and the data does <emphasis>not</emphasis> copied somewhere else.  Just make sure
+      the old codec is still available until you are sure that all of the old StoreFiles have been compacted.
+      </para>
+    </section>
   </appendix>
 
   <appendix>
