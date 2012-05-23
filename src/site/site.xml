@@ -40,6 +40,7 @@
       <item name="Issue Tracking" href="issue-tracking.html" />
       <item name="Mailing Lists" href="mail-lists.html" />
       <item name="Source Repository" href="source-repository.html" />
+      <item name="ReviewBoard" href="https://reviews.apache.org"/>
       <item name="Team" href="team-list.html" />
       <item name="Sponsors" href="sponsors.html" />
       <item name="Blog" href="http://blogs.apache.org/hbase/" />
