@@ -252,8 +252,8 @@ public class Put extends Mutation
    * @return returns true if the given family, qualifier timestamp and value
    * already has an existing KeyValue object in the family map.
    */
-  private boolean has(byte [] family, byte [] qualifier, long ts, byte [] value,
-      boolean ignoreTS, boolean ignoreValue) {
+  private boolean has(byte[] family, byte[] qualifier, long ts, byte[] value,
+                      boolean ignoreTS, boolean ignoreValue) {
     List<KeyValue> list = getKeyValueList(family);
     if (list.size() == 0) {
       return false;
@@ -264,20 +264,32 @@ public class Put extends Mutation
     // F T => 2
     // F F => 1
     if (!ignoreTS && !ignoreValue) {
-      KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
-      return (list.contains(kv));
-    } else if (ignoreValue) {
-      for (KeyValue kv: list) {
+      for (KeyValue kv : list) {
+        if (Arrays.equals(kv.getFamily(), family) &&
+            Arrays.equals(kv.getQualifier(), qualifier) &&
+            Arrays.equals(kv.getValue(), value) &&
+            kv.getTimestamp() == ts) {
+          return true;
+        }
+      }
+    } else if (ignoreValue && !ignoreTS) {
+      for (KeyValue kv : list) {
         if (Arrays.equals(kv.getFamily(), family) && Arrays.equals(kv.getQualifier(), qualifier)
             && kv.getTimestamp() == ts) {
           return true;
         }
       }
+    } else if (!ignoreValue && ignoreTS) {
+      for (KeyValue kv : list) {
+        if (Arrays.equals(kv.getFamily(), family) && Arrays.equals(kv.getQualifier(), qualifier)
+            && Arrays.equals(kv.getValue(), value)) {
+          return true;
+        }
+      }
     } else {
-      // ignoreTS is always true
-      for (KeyValue kv: list) {
-      if (Arrays.equals(kv.getFamily(), family) && Arrays.equals(kv.getQualifier(), qualifier)
-              && Arrays.equals(kv.getValue(), value)) {
+      for (KeyValue kv : list) {
+        if (Arrays.equals(kv.getFamily(), family) &&
+            Arrays.equals(kv.getQualifier(), qualifier)) {
           return true;
         }
       }

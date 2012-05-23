@@ -71,6 +71,7 @@ Release 0.92.2 - Unreleased
                (Derek Wollenstein)
    HBASE-5757  TableInputFormat should handle as many errors as possible (Jan Lukavsky)
    HBASE-6061  Fix ACL "Admin" Table inconsistent permission check (Matteo Bertozzi)
+   HBASE-6047  Put.has() can't determine result correctly (Alex Newman)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
