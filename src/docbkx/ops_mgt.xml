@@ -69,6 +69,8 @@ Valid program names are:
         Passing <command>-fix</command> may correct the inconsistency (This latter
         is an experimental feature).
         </para>
+        <para>For more information, see <xref linkend="hbck.in.depth"/>.
+        </para>
     </section>
     <section xml:id="hfile_tool2"><title>HFile Tool</title>
         <para>See <xref linkend="hfile_tool" />.</para>
