@@ -1303,8 +1303,15 @@ public class HLogSplitter {
      * Update region's maximum edit log SeqNum.
      */
     void updateRegionMaximumEditLogSeqNum(Entry entry) {
-      regionMaximumEditLogSeqNum.put(entry.getKey().getEncodedRegionName(),
-          entry.getKey().getLogSeqNum());
+      synchronized (regionMaximumEditLogSeqNum) {
+        Long currentMaxSeqNum=regionMaximumEditLogSeqNum.get(entry.getKey().getEncodedRegionName());
+        if (currentMaxSeqNum == null
+            || entry.getKey().getLogSeqNum() > currentMaxSeqNum) {
+          regionMaximumEditLogSeqNum.put(entry.getKey().getEncodedRegionName(),
+              entry.getKey().getLogSeqNum());
+        }
+      }
+
     }
 
     Long getRegionMaximumEditLogSeqNum(byte[] region) {
