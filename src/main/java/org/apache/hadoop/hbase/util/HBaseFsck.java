@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -2185,7 +2186,7 @@ public class HBaseFsck {
       return false;
     }
 
-    MetaScannerVisitor visitor = new MetaScannerVisitor() {
+    MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
       int countRecord = 1;
 
       // comparator to sort KeyValues with latest modtime

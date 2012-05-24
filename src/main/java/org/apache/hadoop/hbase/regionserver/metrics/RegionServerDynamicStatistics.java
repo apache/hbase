@@ -20,12 +20,12 @@
 
 package org.apache.hadoop.hbase.regionserver.metrics;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.metrics.util.MBeanUtil;
-import org.apache.hadoop.metrics.util.MetricsDynamicMBeanBase;
-import org.apache.hadoop.metrics.util.MetricsRegistry;
-
 import javax.management.ObjectName;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.metrics.MetricsMBeanBase;
+import org.apache.hadoop.metrics.util.MBeanUtil;
+import org.apache.hadoop.metrics.util.MetricsRegistry;
 
 /**
  * Exports dynamic region server metric recorded in
@@ -33,7 +33,7 @@ import javax.management.ObjectName;
  * for JMX monitoring.
  */
 @InterfaceAudience.Private
-public class RegionServerDynamicStatistics extends MetricsDynamicMBeanBase {
+public class RegionServerDynamicStatistics extends MetricsMBeanBase {
   private final ObjectName mbeanName;
 
   public RegionServerDynamicStatistics(MetricsRegistry registry) {

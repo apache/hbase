@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -400,7 +401,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       ++tries) {
       // Wait for new table to come on-line
       final AtomicInteger actualRegCount = new AtomicInteger(0);
-      MetaScannerVisitor visitor = new MetaScannerVisitor() {
+      MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
         @Override
         public boolean processRow(Result rowResult) throws IOException {
           HRegionInfo info = Writables.getHRegionInfoOrNull(
