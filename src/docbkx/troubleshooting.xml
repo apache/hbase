@@ -611,19 +611,19 @@ invocation of the admin API.
 There can be several causes that produce this symptom.
            </para>
            <para>
-First, check that you have a valid Kerberos ticket. One is required in order to set up communication with a secure HBase cluster. Examine the ticket currently in the credential cache, if any, by running the <tt>klist</tt> command line utility. If no ticket is listed, you must obtain a ticket by running the <tt>kinit</tt> command with either a keytab specified, or by interactively entering a password for the desired principal.
+First, check that you have a valid Kerberos ticket. One is required in order to set up communication with a secure HBase cluster. Examine the ticket currently in the credential cache, if any, by running the klist command line utility. If no ticket is listed, you must obtain a ticket by running the kinit command with either a keytab specified, or by interactively entering a password for the desired principal.
            </para>
            <para>
-Then, consult the <a href="http://docs.oracle.com/javase/1.5.0/docs/guide/security/jgss/tutorials/Troubleshooting.html">Java Security Guide troubleshooting section</a>. The most common problem addressed there is resolved by setting <tt>javax.security.auth.useSubjectCredsOnly</tt> system property value to <tt>false</tt>.
+Then, consult the <link xlink:href="http://docs.oracle.com/javase/1.5.0/docs/guide/security/jgss/tutorials/Troubleshooting.html">Java Security Guide troubleshooting section</link>. The most common problem addressed there is resolved by setting javax.security.auth.useSubjectCredsOnly system property value to false.
            </para>
            <para>
-Because of a change in the format in which MIT Kerberos writes its credentials cache, there is a bug in the Oracle JDK 6 Update 26 and earlier that causes Java to be unable to read the Kerberos credentials cache created by versions of MIT Kerberos 1.8.1 or higher. If you have this problematic combination of components in your environment, to work around this problem, first log in with <tt>kinit</tt> and then immediately refresh the credential cache with <tt>kinit -R</tt>. The refresh will rewrite the credential cache without the problematic formatting.
+Because of a change in the format in which MIT Kerberos writes its credentials cache, there is a bug in the Oracle JDK 6 Update 26 and earlier that causes Java to be unable to read the Kerberos credentials cache created by versions of MIT Kerberos 1.8.1 or higher. If you have this problematic combination of components in your environment, to work around this problem, first log in with kinit</tt> and then immediately refresh the credential cache with kinit -R. The refresh will rewrite the credential cache without the problematic formatting.
            </para>
            <para>
-Finally, depending on your Kerberos configuration, you may need to install the <a href="http://docs.oracle.com/javase/1.4.2/docs/guide/security/jce/JCERefGuide.html">Java Cryptography Extension</a>, or JCE. Insure the JCE jars are on the classpath on both server and client systems.
+Finally, depending on your Kerberos configuration, you may need to install the <link xlink:href="http://docs.oracle.com/javase/1.4.2/docs/guide/security/jce/JCERefGuide.html">Java Cryptography Extension</link>, or JCE. Insure the JCE jars are on the classpath on both server and client systems.
            </para>
            <para>
-You may also need to download the <a href="http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html">unlimited strength JCE policy files</a>. Uncompress and extract the downloaded file, and install the policy jars into <tt>&lt;java-home&gt;/lib/security</tt>.
+You may also need to download the <link xlink:href="http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html">unlimited strength JCE policy files</link>. Uncompress and extract the downloaded file, and install the policy jars into &lt;java-home&gt;/lib/security.
            </para>
        </section>    
 
