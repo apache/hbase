@@ -57,6 +57,8 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 
+import com.google.protobuf.ServiceException;
+
 
 /**
  * Class to test HBaseAdmin.
@@ -1574,6 +1576,7 @@ public class TestAdmin {
       assertTrue(false);
     } catch (MasterNotRunningException ignored) {
     } catch (ZooKeeperConnectionException ignored) {
+    } catch (ServiceException ignored) {
     }
     long end = System.currentTimeMillis();
 

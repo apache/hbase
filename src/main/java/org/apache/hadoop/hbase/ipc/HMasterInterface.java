@@ -31,8 +31,19 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionReque
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.security.TokenInfo;
 import org.apache.hadoop.hbase.security.KerberosInfo;
 import org.apache.hadoop.hbase.util.Pair;
@@ -67,8 +78,15 @@ public interface HMasterInterface extends VersionedProtocol {
   // 31: 5/8/2012 - HBASE-5445: Converted to PB-based calls
   public static final long VERSION = 31L;
 
-  /** @return true if master is available */
-  public boolean isMasterRunning();
+  /**
+   * @param c Unused (set to null).
+   * @param req IsMasterRunningRequest
+   * @return IsMasterRunningRequest that contains:<br>
+   * isMasterRunning: true if master is available
+   * @throws ServiceException
+   */
+  public IsMasterRunningResponse isMasterRunning(RpcController c, IsMasterRunningRequest req)
+  throws ServiceException;
 
   // Admin tools would use these cmds
 
@@ -158,16 +176,24 @@ public interface HMasterInterface extends VersionedProtocol {
 
   /**
    * Shutdown an HBase cluster.
-   * @throws IOException e
+   * @param controller Unused (set to null).
+   * @param request ShutdownRequest
+   * @return ShutdownResponse
+   * @throws ServiceException
    */
-  public void shutdown() throws IOException;
+  public ShutdownResponse shutdown(RpcController controller, ShutdownRequest request)
+  throws ServiceException;
 
   /**
    * Stop HBase Master only.
    * Does not shutdown the cluster.
-   * @throws IOException e
+   * @param controller Unused (set to null).
+   * @param request StopMasterRequest
+   * @return StopMasterResponse
+   * @throws ServiceException
    */
-  public void stopMaster() throws IOException;
+  public StopMasterResponse stopMaster(RpcController controller, StopMasterRequest request)
+  throws ServiceException;
 
   /**
    * Return cluster status.
@@ -190,26 +216,27 @@ public interface HMasterInterface extends VersionedProtocol {
    * Run the balancer.  Will run the balancer and if regions to move, it will
    * go ahead and do the reassignments.  Can NOT run for various reasons.  Check
    * logs.
-   * @return True if balancer ran and was able to tell the region servers to
+   * @param c Unused (set to null).
+   * @param request BalanceRequest
+   * @return BalanceResponse that contains:<br>
+   * - balancerRan: True if balancer ran and was able to tell the region servers to
    * unassign all the regions to balance (the re-assignment itself is async),
    * false otherwise.
    */
-  public boolean balance();
+  public BalanceResponse balance(RpcController c, BalanceRequest request) throws ServiceException;
 
   /**
    * Turn the load balancer on or off.
-   * @param b If true, enable balancer. If false, disable balancer.
-   * @return Previous balancer value
+   * @param controller Unused (set to null).
+   * @param req SetBalancerRunningRequest that contains:<br>
+   * - on: If true, enable balancer. If false, disable balancer.<br>
+   * - synchronous: if true, wait until current balance() call, if outstanding, to return.
+   * @return SetBalancerRunningResponse that contains:<br>
+   * - prevBalanceValue: Previous balancer value
+   * @throws ServiceException
    */
-  public boolean balanceSwitch(final boolean b);
-
-  /**
-   * Turn the load balancer on or off.
-   * It waits until current balance() call, if outstanding, to return.
-   * @param b If true, enable balancer. If false, disable balancer.
-   * @return Previous balancer value
-   */
-  public boolean synchronousBalanceSwitch(final boolean b);
+  public SetBalancerRunningResponse loadBalancerIs(RpcController controller, SetBalancerRunningRequest req)
+  throws ServiceException;
 
   /**
    * Get array of all HTDs.
@@ -240,9 +267,9 @@ public interface HMasterInterface extends VersionedProtocol {
    * back to the same server.  Use {@link #moveRegion(RpcController,MoveRegionRequest}
    * if you want to control the region movement.
    * @param controller Unused (set to null).
-   * @param req The request which contains:
+   * @param req The request which contains:<br>
    * - region: Region to unassign. Will clear any existing RegionPlan
-   * if one found.
+   * if one found.<br>
    * - force: If true, force unassign (Will remove region from
    * regions-in-transition too if present as well as from assigned regions --
    * radical!.If results in double assignment use hbck -fix to resolve.
@@ -254,11 +281,11 @@ public interface HMasterInterface extends VersionedProtocol {
   /**
    * Move a region to a specified destination server.
    * @param controller Unused (set to null).
-   * @param req The request which contains:
+   * @param req The request which contains:<br>
    * - region: The encoded region name; i.e. the hash that makes
    * up the region name suffix: e.g. if regionname is
    * <code>TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.</code>,
-   * then the encoded region name is: <code>527db22f95c8a9e0116f0cc13c680396</code>.
+   * then the encoded region name is: <code>527db22f95c8a9e0116f0cc13c680396</code>.<br>
    * - destServerName: The servername of the destination regionserver.  If
    * passed the empty byte array we'll assign to a random server.  A server name
    * is made of host, port and startcode.  Here is an example:

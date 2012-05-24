@@ -76,7 +76,10 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1431,7 +1434,20 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws MasterNotRunningException, ZooKeeperConnectionException {
     MasterKeepAliveConnection master = connection.getKeepAliveMaster();
     try {
-      return master.balanceSwitch(b);
+      SetBalancerRunningRequest req = RequestConverter.buildLoadBalancerIsRequest(b, false);
+      return master.loadBalancerIs(null, req).getPrevBalanceValue();
+    } catch (ServiceException se) {
+      IOException ioe = ProtobufUtil.getRemoteException(se);
+      if (ioe instanceof MasterNotRunningException) {
+        throw (MasterNotRunningException)ioe;
+      }
+      if (ioe instanceof ZooKeeperConnectionException) {
+        throw (ZooKeeperConnectionException)ioe;
+      }
+
+      // Throwing MasterNotRunningException even though not really valid in order to not
+      // break interface by adding additional exception type.
+      throw new MasterNotRunningException("Unexpected exception when calling balanceSwitch",se);
     } finally {
       master.close();
     }
@@ -1444,10 +1460,10 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @return True if balancer ran, false otherwise.
    */
   public boolean balancer()
-  throws MasterNotRunningException, ZooKeeperConnectionException {
+  throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException {
     MasterKeepAliveConnection master = connection.getKeepAliveMaster();
     try {
-      return master.balance();
+      return master.balance(null,RequestConverter.buildBalanceRequest()).getBalancerRan();
     } finally {
       master.close();
     }
@@ -1599,8 +1615,8 @@ public class HBaseAdmin implements Abortable, Closeable {
   public synchronized void shutdown() throws IOException {
     execute(new MasterCallable<Void>() {
       @Override
-      public Void call() throws IOException {
-        master.shutdown();
+      public Void call() throws ServiceException {
+        master.shutdown(null,ShutdownRequest.newBuilder().build());
         return null;
       }
     });
@@ -1615,8 +1631,8 @@ public class HBaseAdmin implements Abortable, Closeable {
   public synchronized void stopMaster() throws IOException {
     execute(new MasterCallable<Void>() {
       @Override
-      public Void call() throws IOException {
-        master.stopMaster();
+      public Void call() throws ServiceException {
+        master.stopMaster(null,StopMasterRequest.newBuilder().build());
         return null;
       }
     });
@@ -1678,7 +1694,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
   public static void checkHBaseAvailable(Configuration conf)
-    throws MasterNotRunningException, ZooKeeperConnectionException {
+    throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
 
     // We set it to make it fail as soon as possible if HBase is not available
@@ -1716,7 +1732,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       MasterKeepAliveConnection master = null;
       try {
         master = connection.getKeepAliveMaster();
-        master.isMasterRunning();
+        master.isMasterRunning(null,RequestConverter.buildIsMasterRunningRequest());
       } finally {
         if (master != null) {
           master.close();

@@ -52,6 +52,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import com.google.protobuf.ServiceException;
+
 /**
  * Like {@link TestSplitTransaction} in that we're testing {@link SplitTransaction}
  * only the below tests are against a running cluster where {@link TestSplitTransaction}
@@ -104,7 +106,7 @@ public class TestSplitTransactionOnCluster {
    * @throws DeserializationException 
    */
   @Test (timeout = 300000) public void testRSSplitEphemeralsDisappearButDaughtersAreOnlinedAfterShutdownHandling()
-  throws IOException, InterruptedException, NodeExistsException, KeeperException, DeserializationException {
+  throws IOException, InterruptedException, NodeExistsException, KeeperException, DeserializationException, ServiceException {
     final byte [] tableName =
       Bytes.toBytes("ephemeral");
 
@@ -174,7 +176,7 @@ public class TestSplitTransactionOnCluster {
   }
 
   @Test (timeout = 300000) public void testExistingZnodeBlocksSplitAndWeRollback()
-  throws IOException, InterruptedException, NodeExistsException, KeeperException {
+  throws IOException, InterruptedException, NodeExistsException, KeeperException, ServiceException {
     final byte [] tableName =
       Bytes.toBytes("testExistingZnodeBlocksSplitAndWeRollback");
 
@@ -234,7 +236,7 @@ public class TestSplitTransactionOnCluster {
    * @throws InterruptedException
    */
   @Test (timeout = 300000) public void testShutdownSimpleFixup()
-  throws IOException, InterruptedException {
+  throws IOException, InterruptedException, ServiceException {
     final byte [] tableName = Bytes.toBytes("testShutdownSimpleFixup");
 
     // Create table then get the single region for our new table.
@@ -290,7 +292,7 @@ public class TestSplitTransactionOnCluster {
    * @throws InterruptedException
    */
   @Test (timeout=300000) public void testShutdownFixupWhenDaughterHasSplit()
-  throws IOException, InterruptedException {
+  throws IOException, InterruptedException, ServiceException {
     final byte [] tableName =
       Bytes.toBytes("testShutdownFixupWhenDaughterHasSplit");
 
@@ -371,7 +373,7 @@ public class TestSplitTransactionOnCluster {
   @Test(timeout = 300000)
   public void testMasterRestartWhenSplittingIsPartial()
       throws IOException, InterruptedException, NodeExistsException,
-      KeeperException, DeserializationException {
+      KeeperException, DeserializationException, ServiceException {
     final byte[] tableName = Bytes.toBytes("testMasterRestartWhenSplittingIsPartial");
 
     // Create table then get the single region for our new table.
@@ -451,7 +453,7 @@ public class TestSplitTransactionOnCluster {
   @Test (timeout = 300000)
   public void testMasterRestartAtRegionSplitPendingCatalogJanitor()
       throws IOException, InterruptedException, NodeExistsException,
-      KeeperException {
+      KeeperException, ServiceException {
     final byte[] tableName = Bytes.toBytes("testMasterRestartAtRegionSplitPendingCatalogJanitor");
 
     // Create table then get the single region for our new table.

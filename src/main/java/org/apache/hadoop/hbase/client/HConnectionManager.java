@@ -78,6 +78,8 @@ import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -672,7 +674,7 @@ public class HConnectionManager {
      * Create a new Master proxy. Try once only.
      */
     private HMasterInterface createMasterInterface()
-      throws IOException, KeeperException {
+      throws IOException, KeeperException, ServiceException {
 
       ZooKeeperKeepAliveConnection zkw;
       try {
@@ -699,7 +701,8 @@ public class HConnectionManager {
           HMasterInterface.class, HMasterInterface.VERSION, isa, this.conf,
           this.rpcTimeout);
 
-        if (tryMaster.isMasterRunning()) {
+        if (tryMaster.isMasterRunning(
+            null, RequestConverter.buildIsMasterRunningRequest()).getIsMasterRunning()) {
           return tryMaster;
         } else {
           HBaseRPC.stopProxy(tryMaster);
@@ -759,6 +762,8 @@ public class HConnectionManager {
           } catch (IOException e) {
             exceptionCaught = e;
           } catch (KeeperException e) {
+            exceptionCaught = e;
+          } catch (ServiceException e) {
             exceptionCaught = e;
           }
 
@@ -1640,13 +1645,17 @@ public class HConnectionManager {
         return false;
       }
       try {
-         return keepAliveMaster.isMasterRunning();
+         return keepAliveMaster.isMasterRunning(
+           null, RequestConverter.buildIsMasterRunningRequest()).getIsMasterRunning();
       }catch (UndeclaredThrowableException e){
         // It's somehow messy, but we can receive exceptions such as
         //  java.net.ConnectException but they're not declared. So we catch
         //  it...
         LOG.info("Master connection is not running anymore",
           e.getUndeclaredThrowable());
+        return false;
+      } catch (ServiceException se) {
+        LOG.warn("Checking master connection", se);
         return false;
       }
     }

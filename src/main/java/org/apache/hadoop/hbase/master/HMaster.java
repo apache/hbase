@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
@@ -134,6 +135,16 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -1062,6 +1073,11 @@ Server {
     return !isStopped();
   }
 
+  public IsMasterRunningResponse isMasterRunning(RpcController c, IsMasterRunningRequest req)
+  throws ServiceException {
+    return IsMasterRunningResponse.newBuilder().setIsMasterRunning(isMasterRunning()).build();
+  }
+
   /**
    * @return Maximum time we should run balancer for
    */
@@ -1079,7 +1095,6 @@ Server {
     return balancerCutoffTime;
   }
 
-  @Override
   public boolean balance() {
     // If balance not true, don't run balancer.
     if (!this.balanceSwitch) return false;
@@ -1154,6 +1169,11 @@ Server {
     return balancerRan;
   }
 
+  @Override
+  public BalanceResponse balance(RpcController c, BalanceRequest request) throws ServiceException {
+    return BalanceResponse.newBuilder().setBalancerRan(balance()).build();
+  }
+
   enum BalanceSwitchMode {
     SYNC,
     ASYNC
@@ -1185,17 +1205,23 @@ Server {
     } catch (IOException ioe) {
       LOG.warn("Error flipping balance switch", ioe);
     }
-    return oldValue;    
+    return oldValue;
   }
-  
-  @Override
+
   public boolean synchronousBalanceSwitch(final boolean b) {
     return switchBalancer(b, BalanceSwitchMode.SYNC);
   }
-  
-  @Override
+
   public boolean balanceSwitch(final boolean b) {
     return switchBalancer(b, BalanceSwitchMode.ASYNC);
+  }
+
+  @Override
+  public SetBalancerRunningResponse loadBalancerIs(RpcController controller, SetBalancerRunningRequest req)
+  throws ServiceException {
+    boolean prevValue = (req.getSynchronous())?
+      synchronousBalanceSwitch(req.getOn()):balanceSwitch(req.getOn());
+    return SetBalancerRunningResponse.newBuilder().setPrevBalanceValue(prevValue).build();
   }
 
   /**
@@ -1705,7 +1731,6 @@ Server {
   }
 
   @SuppressWarnings("deprecation")
-  @Override
   public void shutdown() {
     if (cpHost != null) {
       try {
@@ -1730,6 +1755,12 @@ Server {
   }
 
   @Override
+  public ShutdownResponse shutdown(RpcController controller, ShutdownRequest request)
+  throws ServiceException {
+    shutdown();
+    return ShutdownResponse.newBuilder().build();
+  }
+
   public void stopMaster() {
     if (cpHost != null) {
       try {
@@ -1739,6 +1770,13 @@ Server {
       }
     }
     stop("Stopped by " + Thread.currentThread().getName());
+  }
+
+  @Override
+  public StopMasterResponse stopMaster(RpcController controller, StopMasterRequest request)
+  throws ServiceException {
+    stopMaster();
+    return StopMasterResponse.newBuilder().build();
   }
 
   @Override

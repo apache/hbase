@@ -81,6 +81,9 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Re
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -883,5 +886,34 @@ public final class RequestConverter {
     builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME,regionName));
     builder.setForce(force);
     return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer IsMasterRunningRequest
+   *
+   * @return a IsMasterRunningRequest
+   */
+  public static IsMasterRunningRequest buildIsMasterRunningRequest() {
+    return IsMasterRunningRequest.newBuilder().build();
+  }
+
+  /**
+   * Creates a protocol buffer BalanceRequest
+   *
+   * @return a BalanceRequest
+   */
+  public static BalanceRequest buildBalanceRequest() {
+    return BalanceRequest.newBuilder().build();
+  }
+
+  /**
+   * Creates a protocol buffer SetBalancerRunningRequest
+   *
+   * @param on
+   * @param synchronous
+   * @return a SetBalancerRunningRequest
+   */
+  public static SetBalancerRunningRequest buildLoadBalancerIsRequest(boolean on, boolean synchronous) {
+    return SetBalancerRunningRequest.newBuilder().setOn(on).setSynchronous(synchronous).build();
   }
 }

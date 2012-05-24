@@ -90,6 +90,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.TreeMultimap;
+import com.google.protobuf.ServiceException;
 
 /**
  * HBaseFsck (hbck) is a tool for checking and repairing region consistency and
@@ -376,7 +377,7 @@ public class HBaseFsck {
    * Contacts the master and prints out cluster-wide information
    * @return 0 on success, non-zero on failure
    */
-  public int onlineHbck() throws IOException, KeeperException, InterruptedException {
+  public int onlineHbck() throws IOException, KeeperException, InterruptedException, ServiceException {
     // print hbase server version
     errors.print("Version: " + status.getHBaseVersion());
     offlineHdfsIntegrityRepair();
