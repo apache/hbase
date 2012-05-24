@@ -28,10 +28,19 @@ import "hbase.proto";
 
 message GetRegionInfoRequest {
   required RegionSpecifier region = 1;
+  optional bool compactionState = 2;
 }
 
 message GetRegionInfoResponse {
   required RegionInfo regionInfo = 1;
+  optional CompactionState compactionState = 2;
+
+  enum CompactionState {
+    NONE = 0;
+    MINOR = 1;
+    MAJOR = 2;
+    MAJOR_AND_MINOR = 3;
+  }
 }
 
 /**

@@ -62,7 +62,9 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -72,8 +74,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
@@ -1821,6 +1821,98 @@ public class HBaseAdmin implements Abortable, Closeable {
       LOG.error("Could not getClusterStatus()",e);
       return null;
     }
+  }
+
+  /**
+   * Get the current compaction state of a table or region.
+   * It could be in a major compaction, a minor compaction, both, or none.
+   *
+   * @param tableNameOrRegionName table or region to major compact
+   * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException
+   * @return the current compaction state
+   */
+  public CompactionState getCompactionState(final String tableNameOrRegionName)
+      throws IOException, InterruptedException {
+    return getCompactionState(Bytes.toBytes(tableNameOrRegionName));
+  }
+
+  /**
+   * Get the current compaction state of a table or region.
+   * It could be in a major compaction, a minor compaction, both, or none.
+   *
+   * @param tableNameOrRegionName table or region to major compact
+   * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException
+   * @return the current compaction state
+   */
+  public CompactionState getCompactionState(final byte [] tableNameOrRegionName)
+      throws IOException, InterruptedException {
+    CompactionState state = CompactionState.NONE;
+    CatalogTracker ct = getCatalogTracker();
+    try {
+      if (isRegionName(tableNameOrRegionName, ct)) {
+        Pair<HRegionInfo, ServerName> pair =
+          MetaReader.getRegion(ct, tableNameOrRegionName);
+        if (pair == null || pair.getSecond() == null) {
+          LOG.info("No server in .META. for " +
+            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + pair);
+        } else {
+          ServerName sn = pair.getSecond();
+          AdminProtocol admin =
+            this.connection.getAdmin(sn.getHostname(), sn.getPort());
+          GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
+            pair.getFirst().getRegionName(), true);
+          GetRegionInfoResponse response = admin.getRegionInfo(null, request);
+          return response.getCompactionState();
+        }
+      } else {
+        final String tableName = tableNameString(tableNameOrRegionName, ct);
+        List<Pair<HRegionInfo, ServerName>> pairs =
+          MetaReader.getTableRegionsAndLocations(ct, tableName);
+        for (Pair<HRegionInfo, ServerName> pair: pairs) {
+          if (pair.getFirst().isOffline()) continue;
+          if (pair.getSecond() == null) continue;
+          try {
+            ServerName sn = pair.getSecond();
+            AdminProtocol admin =
+              this.connection.getAdmin(sn.getHostname(), sn.getPort());
+            GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
+              pair.getFirst().getRegionName(), true);
+            GetRegionInfoResponse response = admin.getRegionInfo(null, request);
+            switch (response.getCompactionState()) {
+            case MAJOR_AND_MINOR:
+              return CompactionState.MAJOR_AND_MINOR;
+            case MAJOR:
+              if (state == CompactionState.MINOR) {
+                return CompactionState.MAJOR_AND_MINOR;
+              }
+              state = CompactionState.MAJOR;
+              break;
+            case MINOR:
+              if (state == CompactionState.MAJOR) {
+                return CompactionState.MAJOR_AND_MINOR;
+              }
+              state = CompactionState.MINOR;
+              break;
+            case NONE:
+              default: // nothing, continue
+            }
+          } catch (NotServingRegionException e) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Trying to get compaction state of " +
+                pair.getFirst() + ": " +
+                StringUtils.stringifyException(e));
+            }
+          }
+        }
+      }
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    } finally {
+      cleanupCatalogTracker(ct);
+    }
+    return state;
   }
 
   /**

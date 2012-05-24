@@ -37,6 +37,10 @@
     before running a retry of a failed get, region lookup, etc.</description>
   </property>
   <property>
+    <name>hbase.defaults.for.version.skip</name>
+    <value>true</value>
+  </property>
+  <property>
     <name>hbase.client.retries.number</name>
     <value>10</value>
     <description>Maximum retries.  Used as maximum for all retryable

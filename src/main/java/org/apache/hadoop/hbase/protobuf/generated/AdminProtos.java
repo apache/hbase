@@ -15,6 +15,10 @@ public final class AdminProtos {
     boolean hasRegion();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegion();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionOrBuilder();
+    
+    // optional bool compactionState = 2;
+    boolean hasCompactionState();
+    boolean getCompactionState();
   }
   public static final class GetRegionInfoRequest extends
       com.google.protobuf.GeneratedMessage
@@ -58,8 +62,19 @@ public final class AdminProtos {
       return region_;
     }
     
+    // optional bool compactionState = 2;
+    public static final int COMPACTIONSTATE_FIELD_NUMBER = 2;
+    private boolean compactionState_;
+    public boolean hasCompactionState() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public boolean getCompactionState() {
+      return compactionState_;
+    }
+    
     private void initFields() {
       region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
+      compactionState_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -84,6 +99,9 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeMessage(1, region_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBool(2, compactionState_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -96,6 +114,10 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, region_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(2, compactionState_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -125,6 +147,11 @@ public final class AdminProtos {
         result = result && getRegion()
             .equals(other.getRegion());
       }
+      result = result && (hasCompactionState() == other.hasCompactionState());
+      if (hasCompactionState()) {
+        result = result && (getCompactionState()
+            == other.getCompactionState());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -137,6 +164,10 @@ public final class AdminProtos {
       if (hasRegion()) {
         hash = (37 * hash) + REGION_FIELD_NUMBER;
         hash = (53 * hash) + getRegion().hashCode();
+      }
+      if (hasCompactionState()) {
+        hash = (37 * hash) + COMPACTIONSTATE_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getCompactionState());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -261,6 +292,8 @@ public final class AdminProtos {
           regionBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
+        compactionState_ = false;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
       
@@ -307,6 +340,10 @@ public final class AdminProtos {
         } else {
           result.region_ = regionBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.compactionState_ = compactionState_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -325,6 +362,9 @@ public final class AdminProtos {
         if (other == org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest.getDefaultInstance()) return this;
         if (other.hasRegion()) {
           mergeRegion(other.getRegion());
+        }
+        if (other.hasCompactionState()) {
+          setCompactionState(other.getCompactionState());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -372,6 +412,11 @@ public final class AdminProtos {
               }
               input.readMessage(subBuilder, extensionRegistry);
               setRegion(subBuilder.buildPartial());
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              compactionState_ = input.readBool();
               break;
             }
           }
@@ -470,6 +515,27 @@ public final class AdminProtos {
         return regionBuilder_;
       }
       
+      // optional bool compactionState = 2;
+      private boolean compactionState_ ;
+      public boolean hasCompactionState() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public boolean getCompactionState() {
+        return compactionState_;
+      }
+      public Builder setCompactionState(boolean value) {
+        bitField0_ |= 0x00000002;
+        compactionState_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearCompactionState() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        compactionState_ = false;
+        onChanged();
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:GetRegionInfoRequest)
     }
     
@@ -488,6 +554,10 @@ public final class AdminProtos {
     boolean hasRegionInfo();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionInfo();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionInfoOrBuilder();
+    
+    // optional .GetRegionInfoResponse.CompactionState compactionState = 2;
+    boolean hasCompactionState();
+    org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState getCompactionState();
   }
   public static final class GetRegionInfoResponse extends
       com.google.protobuf.GeneratedMessage
@@ -517,6 +587,81 @@ public final class AdminProtos {
       return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_GetRegionInfoResponse_fieldAccessorTable;
     }
     
+    public enum CompactionState
+        implements com.google.protobuf.ProtocolMessageEnum {
+      NONE(0, 0),
+      MINOR(1, 1),
+      MAJOR(2, 2),
+      MAJOR_AND_MINOR(3, 3),
+      ;
+      
+      public static final int NONE_VALUE = 0;
+      public static final int MINOR_VALUE = 1;
+      public static final int MAJOR_VALUE = 2;
+      public static final int MAJOR_AND_MINOR_VALUE = 3;
+      
+      
+      public final int getNumber() { return value; }
+      
+      public static CompactionState valueOf(int value) {
+        switch (value) {
+          case 0: return NONE;
+          case 1: return MINOR;
+          case 2: return MAJOR;
+          case 3: return MAJOR_AND_MINOR;
+          default: return null;
+        }
+      }
+      
+      public static com.google.protobuf.Internal.EnumLiteMap<CompactionState>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<CompactionState>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<CompactionState>() {
+              public CompactionState findValueByNumber(int number) {
+                return CompactionState.valueOf(number);
+              }
+            };
+      
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.getDescriptor().getEnumTypes().get(0);
+      }
+      
+      private static final CompactionState[] VALUES = {
+        NONE, MINOR, MAJOR, MAJOR_AND_MINOR, 
+      };
+      
+      public static CompactionState valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+      
+      private final int index;
+      private final int value;
+      
+      private CompactionState(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+      
+      // @@protoc_insertion_point(enum_scope:GetRegionInfoResponse.CompactionState)
+    }
+    
     private int bitField0_;
     // required .RegionInfo regionInfo = 1;
     public static final int REGIONINFO_FIELD_NUMBER = 1;
@@ -531,8 +676,19 @@ public final class AdminProtos {
       return regionInfo_;
     }
     
+    // optional .GetRegionInfoResponse.CompactionState compactionState = 2;
+    public static final int COMPACTIONSTATE_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState compactionState_;
+    public boolean hasCompactionState() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState getCompactionState() {
+      return compactionState_;
+    }
+    
     private void initFields() {
       regionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance();
+      compactionState_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -557,6 +713,9 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeMessage(1, regionInfo_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeEnum(2, compactionState_.getNumber());
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -569,6 +728,10 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, regionInfo_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(2, compactionState_.getNumber());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -598,6 +761,11 @@ public final class AdminProtos {
         result = result && getRegionInfo()
             .equals(other.getRegionInfo());
       }
+      result = result && (hasCompactionState() == other.hasCompactionState());
+      if (hasCompactionState()) {
+        result = result &&
+            (getCompactionState() == other.getCompactionState());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -610,6 +778,10 @@ public final class AdminProtos {
       if (hasRegionInfo()) {
         hash = (37 * hash) + REGIONINFO_FIELD_NUMBER;
         hash = (53 * hash) + getRegionInfo().hashCode();
+      }
+      if (hasCompactionState()) {
+        hash = (37 * hash) + COMPACTIONSTATE_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getCompactionState());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -734,6 +906,8 @@ public final class AdminProtos {
           regionInfoBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
+        compactionState_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
       
@@ -780,6 +954,10 @@ public final class AdminProtos {
         } else {
           result.regionInfo_ = regionInfoBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.compactionState_ = compactionState_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -798,6 +976,9 @@ public final class AdminProtos {
         if (other == org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.getDefaultInstance()) return this;
         if (other.hasRegionInfo()) {
           mergeRegionInfo(other.getRegionInfo());
+        }
+        if (other.hasCompactionState()) {
+          setCompactionState(other.getCompactionState());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -845,6 +1026,17 @@ public final class AdminProtos {
               }
               input.readMessage(subBuilder, extensionRegistry);
               setRegionInfo(subBuilder.buildPartial());
+              break;
+            }
+            case 16: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState value = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(2, rawValue);
+              } else {
+                bitField0_ |= 0x00000002;
+                compactionState_ = value;
+              }
               break;
             }
           }
@@ -941,6 +1133,30 @@ public final class AdminProtos {
           regionInfo_ = null;
         }
         return regionInfoBuilder_;
+      }
+      
+      // optional .GetRegionInfoResponse.CompactionState compactionState = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState compactionState_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
+      public boolean hasCompactionState() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState getCompactionState() {
+        return compactionState_;
+      }
+      public Builder setCompactionState(org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
+        compactionState_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearCompactionState() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        compactionState_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
+        onChanged();
+        return this;
       }
       
       // @@protoc_insertion_point(builder_scope:GetRegionInfoResponse)
@@ -15661,77 +15877,81 @@ public final class AdminProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013Admin.proto\032\013hbase.proto\"8\n\024GetRegionI" +
+      "\n\013Admin.proto\032\013hbase.proto\"Q\n\024GetRegionI" +
       "nfoRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpeci" +
-      "fier\"8\n\025GetRegionInfoResponse\022\037\n\nregionI" +
-      "nfo\030\001 \002(\0132\013.RegionInfo\"G\n\023GetStoreFileRe" +
-      "quest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022" +
-      "\016\n\006family\030\002 \003(\014\")\n\024GetStoreFileResponse\022" +
-      "\021\n\tstoreFile\030\001 \003(\t\"\030\n\026GetOnlineRegionReq" +
-      "uest\":\n\027GetOnlineRegionResponse\022\037\n\nregio" +
-      "nInfo\030\001 \003(\0132\013.RegionInfo\"N\n\021OpenRegionRe" +
-      "quest\022\033\n\006region\030\001 \003(\0132\013.RegionInfo\022\034\n\024ve",
-      "rsionOfOfflineNode\030\002 \001(\r\"\234\001\n\022OpenRegionR" +
-      "esponse\022<\n\014openingState\030\001 \003(\0162&.OpenRegi" +
-      "onResponse.RegionOpeningState\"H\n\022RegionO" +
-      "peningState\022\n\n\006OPENED\020\000\022\022\n\016ALREADY_OPENE" +
-      "D\020\001\022\022\n\016FAILED_OPENING\020\002\"\232\001\n\022CloseRegionR" +
-      "equest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier" +
-      "\022\034\n\024versionOfClosingNode\030\002 \001(\r\022\034\n\016transi" +
-      "tionInZK\030\003 \001(\010:\004true\022&\n\021destinationServe" +
-      "r\030\004 \001(\0132\013.ServerName\"%\n\023CloseRegionRespo" +
-      "nse\022\016\n\006closed\030\001 \002(\010\"M\n\022FlushRegionReques",
-      "t\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\025\n\ri" +
-      "fOlderThanTs\030\002 \001(\004\"=\n\023FlushRegionRespons" +
-      "e\022\025\n\rlastFlushTime\030\001 \002(\004\022\017\n\007flushed\030\002 \001(" +
-      "\010\"J\n\022SplitRegionRequest\022 \n\006region\030\001 \002(\0132" +
-      "\020.RegionSpecifier\022\022\n\nsplitPoint\030\002 \001(\014\"\025\n" +
-      "\023SplitRegionResponse\"G\n\024CompactRegionReq" +
-      "uest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\r" +
-      "\n\005major\030\002 \001(\010\"\027\n\025CompactRegionResponse\"1" +
-      "\n\004UUID\022\024\n\014leastSigBits\030\001 \002(\004\022\023\n\013mostSigB" +
-      "its\030\002 \002(\004\"\270\003\n\010WALEntry\022\035\n\003key\030\001 \002(\0132\020.WA",
-      "LEntry.WALKey\022\037\n\004edit\030\002 \002(\0132\021.WALEntry.W" +
-      "ALEdit\032~\n\006WALKey\022\031\n\021encodedRegionName\030\001 " +
-      "\002(\014\022\021\n\ttableName\030\002 \002(\014\022\031\n\021logSequenceNum" +
-      "ber\030\003 \002(\004\022\021\n\twriteTime\030\004 \002(\004\022\030\n\tclusterI" +
-      "d\030\005 \001(\0132\005.UUID\032\353\001\n\007WALEdit\022\025\n\rkeyValueBy" +
-      "tes\030\001 \003(\014\0222\n\013familyScope\030\002 \003(\0132\035.WALEntr" +
-      "y.WALEdit.FamilyScope\032M\n\013FamilyScope\022\016\n\006" +
-      "family\030\001 \002(\014\022.\n\tscopeType\030\002 \002(\0162\033.WALEnt" +
-      "ry.WALEdit.ScopeType\"F\n\tScopeType\022\033\n\027REP" +
-      "LICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATION_SC",
-      "OPE_GLOBAL\020\001\"4\n\030ReplicateWALEntryRequest" +
-      "\022\030\n\005entry\030\001 \003(\0132\t.WALEntry\"\033\n\031ReplicateW" +
-      "ALEntryResponse\"\026\n\024RollWALWriterRequest\"" +
-      ".\n\025RollWALWriterResponse\022\025\n\rregionToFlus" +
-      "h\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006reason\030\001" +
-      " \002(\t\"\024\n\022StopServerResponse\"\026\n\024GetServerI" +
-      "nfoRequest\"@\n\nServerInfo\022\037\n\nserverName\030\001" +
-      " \002(\0132\013.ServerName\022\021\n\twebuiPort\030\002 \001(\r\"8\n\025" +
-      "GetServerInfoResponse\022\037\n\nserverInfo\030\001 \002(" +
-      "\0132\013.ServerInfo2\371\005\n\014AdminService\022>\n\rgetRe",
-      "gionInfo\022\025.GetRegionInfoRequest\032\026.GetReg" +
-      "ionInfoResponse\022;\n\014getStoreFile\022\024.GetSto" +
-      "reFileRequest\032\025.GetStoreFileResponse\022D\n\017" +
-      "getOnlineRegion\022\027.GetOnlineRegionRequest" +
-      "\032\030.GetOnlineRegionResponse\0225\n\nopenRegion" +
-      "\022\022.OpenRegionRequest\032\023.OpenRegionRespons" +
-      "e\0228\n\013closeRegion\022\023.CloseRegionRequest\032\024." +
-      "CloseRegionResponse\0228\n\013flushRegion\022\023.Flu" +
-      "shRegionRequest\032\024.FlushRegionResponse\0228\n" +
-      "\013splitRegion\022\023.SplitRegionRequest\032\024.Spli",
-      "tRegionResponse\022>\n\rcompactRegion\022\025.Compa" +
-      "ctRegionRequest\032\026.CompactRegionResponse\022" +
-      "J\n\021replicateWALEntry\022\031.ReplicateWALEntry" +
-      "Request\032\032.ReplicateWALEntryResponse\022>\n\rr" +
-      "ollWALWriter\022\025.RollWALWriterRequest\032\026.Ro" +
-      "llWALWriterResponse\022>\n\rgetServerInfo\022\025.G" +
-      "etServerInfoRequest\032\026.GetServerInfoRespo" +
-      "nse\0225\n\nstopServer\022\022.StopServerRequest\032\023." +
-      "StopServerResponseBA\n*org.apache.hadoop." +
-      "hbase.protobuf.generatedB\013AdminProtosH\001\210",
-      "\001\001\240\001\001"
+      "fier\022\027\n\017compactionState\030\002 \001(\010\"\301\001\n\025GetReg" +
+      "ionInfoResponse\022\037\n\nregionInfo\030\001 \002(\0132\013.Re" +
+      "gionInfo\022?\n\017compactionState\030\002 \001(\0162&.GetR" +
+      "egionInfoResponse.CompactionState\"F\n\017Com" +
+      "pactionState\022\010\n\004NONE\020\000\022\t\n\005MINOR\020\001\022\t\n\005MAJ" +
+      "OR\020\002\022\023\n\017MAJOR_AND_MINOR\020\003\"G\n\023GetStoreFil" +
+      "eRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifi" +
+      "er\022\016\n\006family\030\002 \003(\014\")\n\024GetStoreFileRespon",
+      "se\022\021\n\tstoreFile\030\001 \003(\t\"\030\n\026GetOnlineRegion" +
+      "Request\":\n\027GetOnlineRegionResponse\022\037\n\nre" +
+      "gionInfo\030\001 \003(\0132\013.RegionInfo\"N\n\021OpenRegio" +
+      "nRequest\022\033\n\006region\030\001 \003(\0132\013.RegionInfo\022\034\n" +
+      "\024versionOfOfflineNode\030\002 \001(\r\"\234\001\n\022OpenRegi" +
+      "onResponse\022<\n\014openingState\030\001 \003(\0162&.OpenR" +
+      "egionResponse.RegionOpeningState\"H\n\022Regi" +
+      "onOpeningState\022\n\n\006OPENED\020\000\022\022\n\016ALREADY_OP" +
+      "ENED\020\001\022\022\n\016FAILED_OPENING\020\002\"\232\001\n\022CloseRegi" +
+      "onRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecif",
+      "ier\022\034\n\024versionOfClosingNode\030\002 \001(\r\022\034\n\016tra" +
+      "nsitionInZK\030\003 \001(\010:\004true\022&\n\021destinationSe" +
+      "rver\030\004 \001(\0132\013.ServerName\"%\n\023CloseRegionRe" +
+      "sponse\022\016\n\006closed\030\001 \002(\010\"M\n\022FlushRegionReq" +
+      "uest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\025" +
+      "\n\rifOlderThanTs\030\002 \001(\004\"=\n\023FlushRegionResp" +
+      "onse\022\025\n\rlastFlushTime\030\001 \002(\004\022\017\n\007flushed\030\002" +
+      " \001(\010\"J\n\022SplitRegionRequest\022 \n\006region\030\001 \002" +
+      "(\0132\020.RegionSpecifier\022\022\n\nsplitPoint\030\002 \001(\014" +
+      "\"\025\n\023SplitRegionResponse\"G\n\024CompactRegion",
+      "Request\022 \n\006region\030\001 \002(\0132\020.RegionSpecifie" +
+      "r\022\r\n\005major\030\002 \001(\010\"\027\n\025CompactRegionRespons" +
+      "e\"1\n\004UUID\022\024\n\014leastSigBits\030\001 \002(\004\022\023\n\013mostS" +
+      "igBits\030\002 \002(\004\"\270\003\n\010WALEntry\022\035\n\003key\030\001 \002(\0132\020" +
+      ".WALEntry.WALKey\022\037\n\004edit\030\002 \002(\0132\021.WALEntr" +
+      "y.WALEdit\032~\n\006WALKey\022\031\n\021encodedRegionName" +
+      "\030\001 \002(\014\022\021\n\ttableName\030\002 \002(\014\022\031\n\021logSequence" +
+      "Number\030\003 \002(\004\022\021\n\twriteTime\030\004 \002(\004\022\030\n\tclust" +
+      "erId\030\005 \001(\0132\005.UUID\032\353\001\n\007WALEdit\022\025\n\rkeyValu" +
+      "eBytes\030\001 \003(\014\0222\n\013familyScope\030\002 \003(\0132\035.WALE",
+      "ntry.WALEdit.FamilyScope\032M\n\013FamilyScope\022" +
+      "\016\n\006family\030\001 \002(\014\022.\n\tscopeType\030\002 \002(\0162\033.WAL" +
+      "Entry.WALEdit.ScopeType\"F\n\tScopeType\022\033\n\027" +
+      "REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATION" +
+      "_SCOPE_GLOBAL\020\001\"4\n\030ReplicateWALEntryRequ" +
+      "est\022\030\n\005entry\030\001 \003(\0132\t.WALEntry\"\033\n\031Replica" +
+      "teWALEntryResponse\"\026\n\024RollWALWriterReque" +
+      "st\".\n\025RollWALWriterResponse\022\025\n\rregionToF" +
+      "lush\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006reaso" +
+      "n\030\001 \002(\t\"\024\n\022StopServerResponse\"\026\n\024GetServ",
+      "erInfoRequest\"@\n\nServerInfo\022\037\n\nserverNam" +
+      "e\030\001 \002(\0132\013.ServerName\022\021\n\twebuiPort\030\002 \001(\r\"" +
+      "8\n\025GetServerInfoResponse\022\037\n\nserverInfo\030\001" +
+      " \002(\0132\013.ServerInfo2\371\005\n\014AdminService\022>\n\rge" +
+      "tRegionInfo\022\025.GetRegionInfoRequest\032\026.Get" +
+      "RegionInfoResponse\022;\n\014getStoreFile\022\024.Get" +
+      "StoreFileRequest\032\025.GetStoreFileResponse\022" +
+      "D\n\017getOnlineRegion\022\027.GetOnlineRegionRequ" +
+      "est\032\030.GetOnlineRegionResponse\0225\n\nopenReg" +
+      "ion\022\022.OpenRegionRequest\032\023.OpenRegionResp",
+      "onse\0228\n\013closeRegion\022\023.CloseRegionRequest" +
+      "\032\024.CloseRegionResponse\0228\n\013flushRegion\022\023." +
+      "FlushRegionRequest\032\024.FlushRegionResponse" +
+      "\0228\n\013splitRegion\022\023.SplitRegionRequest\032\024.S" +
+      "plitRegionResponse\022>\n\rcompactRegion\022\025.Co" +
+      "mpactRegionRequest\032\026.CompactRegionRespon" +
+      "se\022J\n\021replicateWALEntry\022\031.ReplicateWALEn" +
+      "tryRequest\032\032.ReplicateWALEntryResponse\022>" +
+      "\n\rrollWALWriter\022\025.RollWALWriterRequest\032\026" +
+      ".RollWALWriterResponse\022>\n\rgetServerInfo\022",
+      "\025.GetServerInfoRequest\032\026.GetServerInfoRe" +
+      "sponse\0225\n\nstopServer\022\022.StopServerRequest" +
+      "\032\023.StopServerResponseBA\n*org.apache.hado" +
+      "op.hbase.protobuf.generatedB\013AdminProtos" +
+      "H\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -15743,7 +15963,7 @@ public final class AdminProtos {
           internal_static_GetRegionInfoRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetRegionInfoRequest_descriptor,
-              new java.lang.String[] { "Region", },
+              new java.lang.String[] { "Region", "CompactionState", },
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest.Builder.class);
           internal_static_GetRegionInfoResponse_descriptor =
@@ -15751,7 +15971,7 @@ public final class AdminProtos {
           internal_static_GetRegionInfoResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetRegionInfoResponse_descriptor,
-              new java.lang.String[] { "RegionInfo", },
+              new java.lang.String[] { "RegionInfo", "CompactionState", },
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.Builder.class);
           internal_static_GetStoreFileRequest_descriptor =

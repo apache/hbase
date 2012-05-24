@@ -169,6 +169,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
@@ -3288,6 +3289,10 @@ public class  HRegionServer implements ClientProtocol,
       HRegionInfo info = region.getRegionInfo();
       GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
       builder.setRegionInfo(HRegionInfo.convert(info));
+      if (request.hasCompactionState() && request.getCompactionState()) {
+        builder.setCompactionState(
+          CompactionRequest.getCompactionState(info.getRegionId()));
+      }
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);

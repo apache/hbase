@@ -516,20 +516,36 @@ public final class RequestConverter {
 // End utilities for Client
 //Start utilities for Admin
 
- /**
-  * Create a protocol buffer GetRegionInfoRequest for a given region name
-  *
-  * @param regionName the name of the region to get info
-  * @return a protocol buffer GetRegionInfoRequest
-  */
- public static GetRegionInfoRequest
-     buildGetRegionInfoRequest(final byte[] regionName) {
-   GetRegionInfoRequest.Builder builder = GetRegionInfoRequest.newBuilder();
-   RegionSpecifier region = buildRegionSpecifier(
-     RegionSpecifierType.REGION_NAME, regionName);
-   builder.setRegion(region);
-   return builder.build();
- }
+  /**
+   * Create a protocol buffer GetRegionInfoRequest for a given region name
+   *
+   * @param regionName the name of the region to get info
+   * @return a protocol buffer GetRegionInfoRequest
+   */
+  public static GetRegionInfoRequest
+      buildGetRegionInfoRequest(final byte[] regionName) {
+    return buildGetRegionInfoRequest(regionName, false);
+  }
+
+  /**
+   * Create a protocol buffer GetRegionInfoRequest for a given region name
+   *
+   * @param regionName the name of the region to get info
+   * @param includeCompactionState indicate if the compaction state is requested
+   * @return a protocol buffer GetRegionInfoRequest
+   */
+  public static GetRegionInfoRequest
+      buildGetRegionInfoRequest(final byte[] regionName,
+        final boolean includeCompactionState) {
+    GetRegionInfoRequest.Builder builder = GetRegionInfoRequest.newBuilder();
+    RegionSpecifier region = buildRegionSpecifier(
+      RegionSpecifierType.REGION_NAME, regionName);
+    builder.setRegion(region);
+    if (includeCompactionState) {
+      builder.setCompactionState(includeCompactionState);
+    }
+    return builder.build();
+  }
 
  /**
   * Create a protocol buffer GetStoreFileRequest for a given region name
@@ -882,7 +898,6 @@ public final class RequestConverter {
   public static UnassignRegionRequest buildUnassignRegionRequest(
       final byte [] regionName, final boolean force) {
     UnassignRegionRequest.Builder builder = UnassignRegionRequest.newBuilder();
-    RegionSpecifier.Builder rspec = RegionSpecifier.newBuilder();
     builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME,regionName));
     builder.setForce(force);
     return builder.build();

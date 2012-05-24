@@ -1315,10 +1315,14 @@ public class Store extends SchemaConfigured implements HeapSize {
     } finally {
       this.lock.readLock().unlock();
     }
+    if (ret != null) {
+      CompactionRequest.preRequest(ret);
+    }
     return ret;
   }
 
   public void finishRequest(CompactionRequest cr) {
+    CompactionRequest.postRequest(cr);
     cr.finishRequest();
     synchronized (filesCompacting) {
       filesCompacting.removeAll(cr.getFiles());
