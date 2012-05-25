@@ -386,7 +386,7 @@ public class TestAssignmentManager {
     AssignmentManager am =
       new AssignmentManager(this.server, this.serverManager, ct, balancer, executor);
     try {
-      processServerShutdownHandler(ct, am);
+      processServerShutdownHandler(ct, am, false);
     } finally {
       executor.shutdown();
       am.shutdown();
@@ -406,6 +406,72 @@ public class TestAssignmentManager {
       throws KeeperException, IOException {
     testCaseWithPartiallyDisabledState(TableState.DISABLING);
     testCaseWithPartiallyDisabledState(TableState.DISABLED);
+  }
+  
+  /**
+   * To test if the split region is removed from RIT if the region was in SPLITTING state
+   * but the RS has actually completed the splitting in META but went down. See HBASE-6070
+   * and also HBASE-5806
+   * @throws KeeperException
+   * @throws IOException
+   */
+  @Test
+  public void testSSHWhenSplitRegionInProgress()
+      throws KeeperException, IOException, Exception {
+    // true indicates the region is split but still in RIT
+    testCaseWithSplitRegionPartial(true);
+    // false indicate the region is not split
+    testCaseWithSplitRegionPartial(false);
+
+  }
+
+  private void testCaseWithSplitRegionPartial(boolean regionSplitDone) throws KeeperException, IOException,
+      NodeExistsException, InterruptedException {
+    // Create and startup an executor. This is used by AssignmentManager
+    // handling zk callbacks.
+    ExecutorService executor = startupMasterExecutor("testSSHWhenSplitRegionInProgress");
+
+    // We need a mocked catalog tracker.
+    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    // Create an AM.
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(this.server, this.serverManager);
+    // adding region to regions and servers maps.
+    am.regionOnline(REGIONINFO, SERVERNAME_A);
+    // adding region in pending close.
+    am.regionsInTransition.put(REGIONINFO.getEncodedName(), new RegionState(REGIONINFO,
+        State.SPLITTING, System.currentTimeMillis(), SERVERNAME_A));
+    am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
+    
+    RegionTransitionData data = new RegionTransitionData(EventType.RS_ZK_REGION_SPLITTING,
+        REGIONINFO.getRegionName(), SERVERNAME_A);
+    String node = ZKAssign.getNodeName(this.watcher, REGIONINFO.getEncodedName());
+    // create znode in M_ZK_REGION_CLOSING state.
+    ZKUtil.createAndWatch(this.watcher, node, data.getBytes());
+
+    try {
+      
+      processServerShutdownHandler(ct, am, regionSplitDone);
+      // check znode deleted or not.
+      // In both cases the znode should be deleted.
+      
+      if(regionSplitDone){
+        assertTrue("Region state of region in SPLITTING should be removed from rit.",
+            am.regionsInTransition.isEmpty());
+      }
+      else{
+        while (!am.assignInvoked) {
+          Thread.sleep(1);
+        }
+        assertTrue("Assign should be invoked.", am.assignInvoked);
+      }
+    } finally {
+      REGIONINFO.setOffline(false);
+      REGIONINFO.setSplit(false);
+      executor.shutdown();
+      am.shutdown();
+      // Clean up all znodes
+      ZKAssign.deleteAllNodes(this.watcher);
+    }
   }
 
   private void testCaseWithPartiallyDisabledState(TableState state) throws KeeperException, IOException, NodeExistsException {
@@ -438,7 +504,7 @@ public class TestAssignmentManager {
     ZKUtil.createAndWatch(this.watcher, node, data.getBytes());
 
     try {
-      processServerShutdownHandler(ct, am);
+      processServerShutdownHandler(ct, am, false);
       // check znode deleted or not.
       // In both cases the znode should be deleted.
       assertTrue("The znode should be deleted.",ZKUtil.checkExists(this.watcher, node) == -1);
@@ -456,17 +522,21 @@ public class TestAssignmentManager {
     }
   }
 
-  private void processServerShutdownHandler(CatalogTracker ct, AssignmentManager am)
+  private void processServerShutdownHandler(CatalogTracker ct, AssignmentManager am, boolean splitRegion)
       throws IOException {
     // Make sure our new AM gets callbacks; once registered, can't unregister.
     // Thats ok because we make a new zk watcher for each test.
     this.watcher.registerListenerFirst(am);
-
     // Need to set up a fake scan of meta for the servershutdown handler
     // Make an RS Interface implementation.  Make it so a scanner can go against it.
     HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
     // Get a meta row result that has region up on SERVERNAME_A
-    Result r = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+    Result r = null;
+    if (splitRegion) {
+      r = getMetaTableRowResultAsSplitRegion(REGIONINFO, SERVERNAME_A);
+    } else {
+      r = getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+    }
     Mockito.when(implementation.openScanner((byte [])Mockito.any(), (Scan)Mockito.any())).
       thenReturn(System.currentTimeMillis());
     // Return a good result first and then return null to indicate end of scan
@@ -519,6 +589,20 @@ public class TestAssignmentManager {
       HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
       Bytes.toBytes(sn.getStartcode())));
     return new Result(kvs);
+  }
+  
+  /**
+   * @param sn ServerName to use making startcode and server in meta
+   * @param hri Region to serialize into HRegionInfo
+   * @return A mocked up Result that fakes a Get on a row in the
+   * <code>.META.</code> table.
+   * @throws IOException 
+   */
+  private Result getMetaTableRowResultAsSplitRegion(final HRegionInfo hri, final ServerName sn)
+      throws IOException {
+    hri.setOffline(true);
+    hri.setSplit(true);
+    return getMetaTableRowResult(hri, sn);
   }
 
   /**
@@ -747,6 +831,7 @@ public class TestAssignmentManager {
     // Ditto for ct
     private final CatalogTracker ct;
     boolean processRITInvoked = false;
+    boolean assignInvoked = false;
     AtomicBoolean gate = new AtomicBoolean(true);
 
     public AssignmentManagerWithExtrasForTesting(final Server master,
@@ -774,6 +859,18 @@ public class TestAssignmentManager {
         final int expectedVersion) throws KeeperException {
       while (this.gate.get()) Threads.sleep(1);
       super.processRegionsInTransition(data, regionInfo, deadServers, expectedVersion);
+    }
+    
+    @Override
+    public void assign(HRegionInfo region, boolean setOfflineInZK, boolean forceNewPlan,
+        boolean hijack) {
+      assignInvoked = true;
+      super.assign(region, setOfflineInZK, forceNewPlan, hijack);
+    }
+    
+    @Override
+    public ServerName getRegionServerOfRegion(HRegionInfo hri) {
+      return SERVERNAME_A;
     }
 
     /**
