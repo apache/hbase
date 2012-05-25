@@ -1039,6 +1039,7 @@ public final class ProtobufUtil {
       RequestConverter.buildGetRequest(regionName, get);
     try {
       GetResponse response = client.get(null, request);
+      if (response == null) return null;
       return toResult(response.getResult());
     } catch (ServiceException se) {
       throw getRemoteException(se);

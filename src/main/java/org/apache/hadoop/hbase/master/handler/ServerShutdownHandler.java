@@ -294,7 +294,7 @@ public class ServerShutdownHandler extends EventHandler {
               this.server.getCatalogTracker())) {
             ServerName addressFromAM = this.services.getAssignmentManager()
                 .getRegionServerOfRegion(e.getKey());
-            if (rit != null && !rit.isClosing() && !rit.isPendingClose()) {
+            if (rit != null && !rit.isClosing() && !rit.isPendingClose() && !rit.isSplitting()) {
               // Skip regions that were in transition unless CLOSING or
               // PENDING_CLOSE
               LOG.info("Skip assigning region " + rit.toString());
@@ -307,6 +307,16 @@ public class ServerShutdownHandler extends EventHandler {
               } else {
                 toAssignRegions.add(e.getKey());
               }
+          } else if (rit != null && (rit.isSplitting() || rit.isSplit())) {
+            // This will happen when the RS went down and the call back for the SPLIITING or SPLIT
+            // has not yet happened for node Deleted event. In that case if the region was actually
+            // split
+            // but the RS had gone down before completing the split process then will not try to
+            // assign the parent region again. In that case we should make the region offline and
+            // also delete the region from RIT.
+            HRegionInfo region = rit.getRegion();
+            AssignmentManager am = this.services.getAssignmentManager();
+            am.regionOffline(region);
           }
           // If the table was partially disabled and the RS went down, we should clear the RIT
           // and remove the node for the region.

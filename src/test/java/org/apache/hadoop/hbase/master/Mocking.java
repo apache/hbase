@@ -67,6 +67,22 @@ public class Mocking {
       Bytes.toBytes(sn.getStartcode())));
     return new Result(kvs);
   }
+  
+    
+  /**
+   * @param sn
+   *          ServerName to use making startcode and server in meta
+   * @param hri
+   *          Region to serialize into HRegionInfo
+   * @return A mocked up Result that fakes a Get on a row in the <code>.META.</code> table.
+   * @throws IOException
+   */
+  static Result getMetaTableRowResultAsSplitRegion(final HRegionInfo hri, final ServerName sn)
+      throws IOException {
+    hri.setOffline(true);
+    hri.setSplit(true);
+    return getMetaTableRowResult(hri, sn);
+  }
 
   /**
    * Fakes the regionserver-side zk transitions of a region open.
