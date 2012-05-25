@@ -1114,7 +1114,7 @@ public class AssignmentManager extends ZooKeeperListener {
       RegionState rs = this.regionsInTransition.get(regionName);
       if (rs != null) {
         HRegionInfo regionInfo = rs.getRegion();
-        if (rs.isSplitting() || rs.isSplit()) {
+        if (rs.isSplit()) {
           LOG.debug("Ephemeral node deleted, regionserver crashed?, " +
             "clearing from RIT; rs=" + rs);
           regionOffline(rs.getRegion());

@@ -283,13 +283,14 @@ public class ServerShutdownHandler extends EventHandler {
       // Iterate regions that were on this server and assign them
       if (hris != null) {
         for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
+          RegionState rit = this.services.getAssignmentManager().isRegionInTransition(e.getKey());
           if (processDeadRegion(e.getKey(), e.getValue(),
               this.services.getAssignmentManager(),
               this.server.getCatalogTracker())) {
-            RegionState rit = this.services.getAssignmentManager().isRegionInTransition(e.getKey());
             ServerName addressFromAM = this.services.getAssignmentManager()
                 .getRegionServerOfRegion(e.getKey());
-            if (rit != null && !rit.isClosing() && !rit.isPendingClose()) {
+            if (rit != null && !rit.isClosing() && !rit.isPendingClose()
+                && !rit.isSplitting()) {
               // Skip regions that were in transition unless CLOSING or
               // PENDING_CLOSE
               LOG.info("Skip assigning region " + rit.toString());
@@ -302,6 +303,15 @@ public class ServerShutdownHandler extends EventHandler {
               } else {
                 this.services.getAssignmentManager().assign(e.getKey(), true);
               }
+          }else if (rit != null && (rit.isSplitting() || rit.isSplit())) {
+            // This will happen when the RS went down and the call back for the SPLIITING or SPLIT
+            // has not yet happened for node Deleted event.  In that case if the region was actually split
+            // but the RS had gone down before completing the split process then will not try to
+            // assign the parent region again. In that case we should make the region offline and
+            // also delete the region from RIT.
+            HRegionInfo region = rit.getRegion();
+            AssignmentManager am = this.services.getAssignmentManager();
+            am.regionOffline(region);
           }
         }
       }
