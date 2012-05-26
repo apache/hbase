@@ -124,11 +124,18 @@ if [ "$HBASE_HEAPSIZE" != "" ]; then
 fi
 
 # so that filenames w/ spaces are handled correctly in loops below
+ORIG_IFS=$IFS
 IFS=
 
 # CLASSPATH initially contains $HBASE_CONF_DIR
 CLASSPATH="${HBASE_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
+
+add_to_cp_if_exists() {
+  if [ -d "$@" ]; then
+    CLASSPATH=${CLASSPATH}:"$@"
+  fi
+}
 
 add_maven_deps_to_classpath() {
   # Need to generate classpath from maven pom. This is costly so generate it
@@ -142,18 +149,25 @@ add_maven_deps_to_classpath() {
   CLASSPATH=${CLASSPATH}:`cat "${f}"`
 }
 
+
 add_maven_main_classes_to_classpath() {
-  if [ -d "$HBASE_HOME/target/classes" ]; then
-    CLASSPATH=${CLASSPATH}:$HBASE_HOME/target/classes
-  fi
+ # assumes all modules are named hbase-* in the top level directory
+  IFS=$ORIG_IFS
+  for module in `ls $HBASE_HOME | grep 'hbase-*'`
+  do
+    add_to_cp_if_exists "$HBASE_HOME/$module/target/classes"
+    # Add the root dir too.  We need to do this so we can find hbase-webapps
+    #add_to_cp_if_exists "$HBASE_HOME/$module/target/"
+  done
 }
 
-add_maven_test_classes_to_classpath() {
-  # For developers, add hbase classes to CLASSPATH
-  f="$HBASE_HOME/target/test-classes"
-  if [ -d "${f}" ]; then
-    CLASSPATH=${CLASSPATH}:${f}
-  fi
+add_maven_test_classes_to_classpath(){
+ # assumes all modules are named hbase-* in the top level directory
+  IFS=$ORIG_IFS
+  for module in `ls $HBASE_HOME | grep 'hbase-*'`
+  do
+    add_to_cp_if_exists "$HBASE_HOME/$module/target/test-classes"
+  done
 }
 
 # Add maven target directory
@@ -165,14 +179,16 @@ fi
 
 # For releases, add hbase & webapps to CLASSPATH
 # Webapps must come first else it messes up Jetty
-if [ -d "$HBASE_HOME/hbase-webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HBASE_HOME
+if [ -d "$HBASE_HOME/hbase-server/src/main/resources/hbase-webapps" ]; then
+  add_to_cp_if_exists "$HBASE_HOME/hbase-server/"
 fi
-if [ -d "$HBASE_HOME/target/hbase-webapps" ]; then
-  CLASSPATH="${CLASSPATH}:${HBASE_HOME}/target"
+if [ -d "$HBASE_HOME/hbase-server/target/hbase-webapps" ]; then
+  add_to_cp_if_exists "${HBASE_HOME}/hbase-server/target"
 fi
-for f in $HBASE_HOME/hbase*.jar; do
-  if [[ $f = *sources.jar ]]
+
+#add the hbase jars for each module
+for f in $HBASE_HOME/hbase-jars/hbase*.jar; do
+	if [[ $f = *sources.jar ]]
   then
     : # Skip sources.jar
   elif [ -f $f ]
@@ -254,6 +270,12 @@ if [ "$COMMAND" = "shell" ] ; then
   if [ "$JRUBY_HOME" != "" ] ; then
     CLASSPATH="$JRUBY_HOME/lib/jruby.jar:$CLASSPATH"
     HBASE_OPTS="$HBASE_OPTS -Djruby.home=$JRUBY_HOME -Djruby.lib=$JRUBY_HOME/lib"
+  fi
+	#find the hbase ruby sources
+  if [ -d "$HBASE_HOME/lib/ruby" ]; then
+    HBASE_OPTS="$HBASE_OPTS -Dhbase.ruby.sources=$HBASE_HOME/lib/ruby"
+  else
+    HBASE_OPTS="$HBASE_OPTS -Dhbase.ruby.sources=$HBASE_HOME/hbase-server/src/main/ruby"
   fi
   CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/bin/hirb.rb"
 elif [ "$COMMAND" = "hbck" ] ; then

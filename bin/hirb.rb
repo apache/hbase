@@ -36,14 +36,12 @@ include Java
 
 # Some goodies for hirb. Should these be left up to the user's discretion?
 require 'irb/completion'
+require 'pathname'
 
-# Add the $HBASE_HOME/lib/ruby OR $HBASE_HOME/src/main/ruby/lib directory
+# Add the directory names in hbase.jruby.sources commandline option
 # to the ruby load path so I can load up my HBase ruby modules
-if File.exists?(File.join(File.dirname(__FILE__), "..", "lib", "ruby", "hbase.rb"))
-  $LOAD_PATH.unshift File.join(File.dirname(__FILE__), "..", "lib", "ruby")
-else
-  $LOAD_PATH.unshift File.join(File.dirname(__FILE__), "..", "src", "main", "ruby")
-end
+sources = java.lang.System.getProperty('hbase.ruby.sources')
+$LOAD_PATH.unshift Pathname.new(sources)
 
 #
 # FIXME: Switch args processing to getopt

@@ -25,11 +25,9 @@
 
     $ MAVEN_OPTS="-Xmx2g" mvn clean site install assembly:single -Prelease
 
-
      To build the site:
 
     $  MAVEN_OPTS="-Xmx2g" ~/bin/apache-maven-3.0.4/bin/mvn  clean  -DskipTests site
-
 
      Use mvn3.
    -->
@@ -43,7 +41,7 @@
 
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
-  <packaging>jar</packaging>
+  <packaging>pom</packaging>
   <version>0.95-SNAPSHOT</version>
   <name>HBase</name>
   <description>
@@ -53,6 +51,12 @@
     of commodity hardware.
   </description>
   <url>http://hbase.apache.org</url>
+
+  <modules>
+    <module>hbase-assembly</module>
+    <module>hbase-server</module>
+    <module>hbase-site</module>
+  </modules>
 
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
@@ -78,7 +82,7 @@
       <post>user@hbase.apache.org</post>
       <archive>http://mail-archives.apache.org/mod_mbox/hbase-user/</archive>
       <otherArchives>
-          <otherArchive>http://hbase.apache.org/mail/user/</otherArchive>
+        <otherArchive>http://hbase.apache.org/mail/user/</otherArchive>
         <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.user</otherArchive>
         <otherArchive>http://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
@@ -90,7 +94,7 @@
       <post>dev@hbase.apache.org</post>
       <archive>http://mail-archives.apache.org/mod_mbox/hbase-dev/</archive>
       <otherArchives>
-          <otherArchive>http://hbase.apache.org/mail/dev/</otherArchive>
+        <otherArchive>http://hbase.apache.org/mail/dev/</otherArchive>
         <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.devel</otherArchive>
         <otherArchive>http://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
@@ -124,7 +128,7 @@
       <organization>Trend Micro</organization>
       <organizationUrl>http://www.trendmicro.com</organizationUrl>
     </developer>
-  <developer>
+    <developer>
       <id>dmeil</id>
       <name>Doug Meil</name>
       <email>dmeil@apache.org</email>
@@ -335,11 +339,34 @@
   </pluginRepositories>
 
   <build>
-    <!-- Some plugins (javadoc for example) can be used in the normal build- and the site phase.
+    <!-- Some plugins (for example) can be used in the normal build- and the site phase.
          These plugins inherit their options from the <reporting> section below. These settings
          can be overwritten here. -->
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>${javadoc.version}</version>
+          <executions>
+            <execution>
+              <id>javadoc</id>
+              <goals>
+                <goal>javadoc</goal>
+                <goal>test-javadoc</goal>
+              </goals>
+              <phase>pre-site</phase>
+            </execution>
+          </executions>
+          <configuration>
+            <docfilessubdirs>true</docfilessubdirs>
+            <excludePackageNames>org.apache.hadoop.hbase.protobuf.generated.*:org.apache.hadoop.hbase.avro.generated.*:org.apache.hadoop.hbase.thrift.generated:org.apache.hadoop.hbase.rest.generated</excludePackageNames>
+            <debug>true</debug>
+            <maxmemory>2g</maxmemory>
+            <verbose>true</verbose>
+            <reportOutputDirectory>target</reportOutputDirectory>
+          </configuration>
+        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
@@ -351,11 +378,6 @@
               <version>2.2</version>
             </dependency>
           </dependencies>
-          <configuration>
-            <inputEncoding>UTF-8</inputEncoding>
-            <outputEncoding>UTF-8</outputEncoding>
-            <templateFile>src/site/site.vm</templateFile>
-          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -390,69 +412,56 @@
             <showDeprecation>false</showDeprecation>
           </configuration>
         </plugin>
+      
+        <!-- Test oriented plugins -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${surefire.version}</version>
           <dependencies>
-            <!-- by default surefire selects dynamically the connector to the unit tests tool.
-              We want to use always the same as the different connectors
-               can have different bugs and behaviour.
-            -->
+            <!-- by default surefire selects dynamically the connector to the unit tests 
+              tool. We want to use always the same as the different connectors can have different 
+              bugs and behaviour. -->
             <dependency>
               <groupId>org.apache.maven.surefire</groupId>
               <artifactId>${surefire.provider}</artifactId>
               <version>${surefire.version}</version>
             </dependency>
           </dependencies>
-
           <configuration>
+            <skip>${surefire.skipFirstPart}</skip>
+            <forkMode>${surefire.firstPartForkMode}</forkMode>
+            <parallel>${surefire.firstPartParallel}</parallel>
+            <perCoreThreadCount>false</perCoreThreadCount>
+            <threadCount>${surefire.firstPartThreadCount}</threadCount>
+            <parallel>classes</parallel><!-- surefire hack, if not we're using method parallelisation 
+              class ! -->
+            <groups>${surefire.firstPartGroups}</groups>
+            <testFailureIgnore>false</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
-            <argLine>-enableassertions -Xmx1900m -Djava.security.egd=file:/dev/./urandom</argLine>
+            <argLine>-enableassertions -Xmx1900m
+              -Djava.security.egd=file:/dev/./urandom</argLine>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-failsafe-plugin</artifactId>
-          <version>${surefire.version}</version>
-          <dependencies>
-            <dependency>
-              <groupId>org.apache.maven.surefire</groupId>
-              <artifactId>${surefire.provider}</artifactId>
-              <version>${surefire.version}</version>
-            </dependency>
-          </dependencies>
-          <configuration>
-            <includes>
-              <include>${integrationtest.include}</include>
-            </includes>
-            <excludes>
-              <exlude>${unittest.include}</exlude>
-              <exclude>**/*$*</exclude>
-              <exclude>${test.exclude.pattern}</exclude>
-            </excludes>
-            <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
-            <environmentVariables>
-              <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/nativelib</LD_LIBRARY_PATH>
-              <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/nativelib</DYLD_LIBRARY_PATH>
-              <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
-            </environmentVariables>
           </configuration>
           <executions>
             <execution>
-              <id>integration-test</id>
+              <id>secondPartTestsExecution</id>
+              <phase>test</phase>
               <goals>
-                <goal>integration-test</goal>
+                <goal>test</goal>
               </goals>
-            </execution>
-            <execution>
-              <id>verify</id>
-              <goals>
-                <goal>verify</goal>
-              </goals>
+              <configuration>
+                <skip>${surefire.skipSecondPart}</skip>
+                <testFailureIgnore>false</testFailureIgnore>
+                <forkMode>perThread</forkMode>
+                <perCoreThreadCount>false</perCoreThreadCount>
+                <threadCount>${surefire.secondPartThreadCount}</threadCount>
+                <parallel>classes</parallel><!-- surefire hack, if not we're using method 
+                  parallelisation class ! -->
+                <groups>${surefire.secondPartGroups}</groups>
+              </configuration>
             </execution>
           </executions>
-        </plugin>
+        </plugin>        
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
           <configuration>
@@ -470,6 +479,19 @@
           <version>${surefire.version}</version>
         </plugin>
         <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>findbugs-maven-plugin</artifactId>
+          <version>${findbugs.version}</version>
+          <configuration>
+            <findbugsXmlOutput>true</findbugsXmlOutput>
+            <xmlOutput>true</xmlOutput>
+            <excludeFilterFile>${parent.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+            <effort>Max</effort>
+          </configuration>
+        </plugin>
+        
+        <!-- Build plugins -->
+        <plugin>
           <groupId>org.apache.avro</groupId>
           <artifactId>avro-maven-plugin</artifactId>
           <version>${avro.version}</version>
@@ -479,63 +501,80 @@
           <artifactId>build-helper-maven-plugin</artifactId>
           <version>1.5</version>
         </plugin>
+        <plugin>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>${maven.antrun.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.jamon</groupId>
+          <artifactId>jamon-maven-plugin</artifactId>
+          <version>${jamon.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>${maven.resources.plugin.version}</version><!--$NO-MVN-MAN-VER$ -->
+        </plugin>
+        <!-- Make a jar and put the sources in the jar.
+        In the parent pom, so submodules will do the right thing. -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>attach-sources</id>
+              <phase>prepare-package</phase>
+              <goals>
+                <goal>jar-no-fork</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <!-- General configuration for submodules who want to build a test jar -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <executions>
+            <execution>
+              <phase>prepare-package</phase>
+              <goals>
+                <goal>test-jar</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <excludes>
+              <exclude>hbase-site.xml</exclude>
+              <exclude>log4j.properties</exclude>
+            </excludes>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>${maven.assembly.version}</version>
+        </plugin>
+
+        <!-- General config for eclipse classpath/settings -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-eclipse-plugin</artifactId>
+          <version>2.8</version>
+        </plugin>
+        
         <!--This plugin's configuration is used to store Eclipse m2e settings only. It 
           has no influence on the Maven build itself. m2e does not provide any safeguards against 
           rogue maven plugins that leak classloaders, modify random files inside workspace 
           or throw nasty exceptions to fail the build -->
+        <!-- Top level doesn't do any specific configuration currently - left to modules 
+          to decide what they want to bind -->
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>
           <version>1.0.0</version>
-          <configuration>
-            <lifecycleMappingMetadata>
-              <pluginExecutions>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.avro</groupId>
-                    <artifactId>avro-maven-plugin</artifactId>
-                    <versionRange>[1.5.3,)</versionRange>
-                    <goals>
-                      <goal>protocol</goal>
-                      <goal>schema</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <execute></execute>
-                  </action>
-                </pluginExecution> 
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-antrun-plugin</artifactId>
-                    <versionRange>[1.3,)</versionRange>
-                    <goals>
-                      <goal>run</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <execute></execute>
-                  </action>
-                </pluginExecution>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.jamon</groupId>
-                    <artifactId>jamon-maven-plugin</artifactId>
-                    <versionRange>[2.3.4,)</versionRange>
-                    <goals>
-                      <goal>translate</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <execute></execute>
-                  </action>
-                </pluginExecution>
-              </pluginExecutions>
-            </lifecycleMappingMetadata>
-          </configuration>
         </plugin>
-	<plugin> <!-- in plugin management section so excludes can be inherited -->
-	  <groupId>org.apache.rat</groupId>
+
+    	<plugin> <!-- excludes are inherited -->
+    	  <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>	  
           <version>0.8</version>
           <configuration>
@@ -555,16 +594,30 @@
               <exclude>**/*.vm</exclude> <!-- apache doxia generated -->
               <exclude>**/control</exclude>
               <exclude>**/conffile</exclude>
-	      <exclude>docs/*</exclude> <!-- auto-gen docs -->
+	          <exclude>docs/*</exclude> <!-- auto-gen docs -->
               <!--It don't like freebsd license-->
               <exclude>**/src/site/resources/css/freebsd_docbook.css</exclude>
             </excludes>
           </configuration>
-	</plugin>
+	   </plugin>
+        <!-- Website/Reference Guide building -->
         <plugin>
-          <groupId>com.atlassian.maven.plugins</groupId>
-          <artifactId>maven-clover2-plugin</artifactId>
-          <version>${clover.version}</version>
+          <groupId>com.agilejava.docbkx</groupId>
+          <artifactId>docbkx-maven-plugin</artifactId>
+          <version>2.0.14</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.docbook</groupId>
+              <artifactId>docbook-xml</artifactId>
+              <version>4.4</version>
+              <scope>runtime</scope>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>xml-maven-plugin</artifactId>
+          <version>1.0-beta-3</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -576,13 +629,8 @@
           <include>hbase-default.xml</include>
         </includes>
       </resource>
-      <resource>
-        <directory>${project.build.directory}</directory>
-        <includes>
-          <include>hbase-webapps/**</include>
-        </includes>
-      </resource>
     </resources>
+
     <testResources>
       <testResource>
         <directory>src/test/resources</directory>
@@ -592,421 +640,52 @@
       </testResource>
     </testResources>
 
+    <!-- Plugins inherited by all modules -->
     <plugins>
+      <!-- All submodules build their javadocs -->
       <plugin>
-        <groupId>org.apache.avro</groupId>
-        <artifactId>avro-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>generate-avro-sources</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>schema</goal>
-              <goal>protocol</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <outputDirectory>${project.build.directory}/generated-sources/java</outputDirectory>
-        </configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
       </plugin>
+      <!-- All submodules move their javadocs to the apidocs directory -->
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>xml-maven-plugin</artifactId>
-        <version>1.0-beta-3</version>
+        <artifactId>maven-resources-plugin</artifactId>
         <executions>
           <execution>
-            <goals>
-              <goal>transform</goal>
-            </goals>
+            <id>copy-javadocs</id>
+            <!-- fetch the  before creating site documentation -->
             <phase>pre-site</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${javadoc.output.dir}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>target/apidocs</directory>
+                </resource>
+              </resources>
+            </configuration>
           </execution>
         </executions>
-        <configuration>
-          <transformationSets>
-            <transformationSet>
-              <dir>${basedir}/src/main/resources/</dir>
-              <includes>
-                <include>hbase-default.xml</include>
-              </includes>
-              <stylesheet>${basedir}/src/main/xslt/configuration_to_docbook_section.xsl</stylesheet>
-              <outputDir>${basedir}/target/site/</outputDir>
-            </transformationSet>
-          </transformationSets>
-        </configuration>
       </plugin>
-      <plugin>
-        <groupId>com.agilejava.docbkx</groupId>
-        <artifactId>docbkx-maven-plugin</artifactId>
-        <version>2.0.14</version>
-        <executions>
-          <execution>
-              <id>multipage</id>
-              <phase>pre-site</phase>
-        <configuration>
-          <xincludeSupported>true</xincludeSupported>
-          <navigShowtitles>true</navigShowtitles>
-          <chunkedOutput>true</chunkedOutput>
-          <useIdAsFilename>true</useIdAsFilename>
-          <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
-          <sectionAutolabel>true</sectionAutolabel>
-          <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
-          <targetDirectory>${basedir}/target/site/</targetDirectory>
-          <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
-          <htmlCustomization>src/docbkx/customization.xsl</htmlCustomization>
-          <imgSrcPath>../images/</imgSrcPath>
-          <tocMaxDepth>2</tocMaxDepth>
-          <insertXrefPageNumber>yes</insertXrefPageNumber>
-        </configuration>
-            <goals>
-              <goal>generate-html</goal>
-            </goals>
-          </execution>
-          <execution>
-              <id>onepage</id>
-            <phase>pre-site</phase>
-        <configuration>
-          <xincludeSupported>true</xincludeSupported>
-          <useIdAsFilename>true</useIdAsFilename>
-          <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
-          <sectionAutolabel>true</sectionAutolabel>
-          <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
-          <targetDirectory>${basedir}/target/site/</targetDirectory>
-          <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
-          <imgSrcPath>images/</imgSrcPath>
-          <tocMaxDepth>2</tocMaxDepth>
-          <insertXrefPageNumber>yes</insertXrefPageNumber>
-        </configuration>
-            <goals>
-              <goal>generate-html</goal>
-            </goals>
-          </execution>
-        </executions>
-        <dependencies>
-          <dependency>
-            <groupId>org.docbook</groupId>
-            <artifactId>docbook-xml</artifactId>
-            <version>4.4</version>
-            <scope>runtime</scope>
-          </dependency>
-        </dependencies>
-      </plugin>
+      <!-- Ignore running the assembly in the top-level.
+       That's all handled by hbase-assembly -->
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
-          <tarLongFileMode>gnu</tarLongFileMode>
-          <appendAssemblyId>false</appendAssemblyId>
-          <descriptors>
-            <descriptor>src/assembly/all.xml</descriptor>
-          </descriptors>
-        </configuration>
-        <executions>
-          <execution>
-            <id>tarball</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running tests (this is needed for upstream projects whose tests need this jar simply for compilation)-->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>test-jar</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <archive>
-            <manifest>
-              <mainClass>org/apache/hadoop/hbase/mapreduce/Driver</mainClass>
-            </manifest>
-          </archive>
-          <!-- Exclude these 2 packages, because their dependency _binary_ files include the sources, and Maven 2.2 appears to add them to the sources to compile, weird-->
-          <excludes>
-            <exclude>org/apache/jute/**</exclude>
-            <exclude>org/apache/zookeeper/**</exclude>
-            <exclude>**/*.jsp</exclude>
-            <exclude>hbase-site.xml</exclude>
-            <exclude>log4j.properties</exclude>
-            <exclude>mapred-queues.xml</exclude>
-          </excludes>
+          <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>attach-sources</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>jar-no-fork</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-                <skip>${surefire.skipFirstPart}</skip>
-                <forkMode>${surefire.firstPartForkMode}</forkMode>
-                <parallel>${surefire.firstPartParallel}</parallel>
-                <perCoreThreadCount>false</perCoreThreadCount>
-                <threadCount>${surefire.firstPartThreadCount}</threadCount>
-                <parallel>classes</parallel><!-- surefire hack, if not we're using method parallelisation class !-->
-                <groups>${surefire.firstPartGroups}</groups>
-                <testFailureIgnore>false</testFailureIgnore>
-        </configuration>
-        <executions>
-          <execution>
-            <id>secondPartTestsExecution</id>
-            <phase>test</phase>
-            <goals><goal>test</goal></goals>
-            <configuration>
-              <skip>${surefire.skipSecondPart}</skip>
-              <testFailureIgnore>false</testFailureIgnore>
-              <forkMode>perThread</forkMode>
-              <perCoreThreadCount>false</perCoreThreadCount>
-              <threadCount>${surefire.secondPartThreadCount}</threadCount>
-              <parallel>classes</parallel><!-- surefire hack, if not we're using method parallelisation class !-->
-              <groups>${surefire.secondPartGroups}</groups>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <!--  Run integration tests with mvn verify -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-failsafe-plugin</artifactId>
-          <configuration>
-            <skip>false</skip>
-            <forkMode>always</forkMode>
-          </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.6</version>
-        <executions>
-          <execution>
-            <id>arc-setup</id>
-            <phase>initialize</phase>
-            <configuration>
-              <tasks if="arc">
-                <get dest="${project.build.directory}/arc-jira.tar.gz"
-                     src="https://github.com/facebook/arc-jira/tarball/master"/>
-                <untar src="${project.build.directory}/arc-jira.tar.gz" compression="gzip"
-                 dest="${project.build.directory}">
-                  <patternset>
-                    <include name="facebook-arc-jira-*/arc_jira_lib/**"/>
-                  </patternset>
-                </untar>
-                <move todir="${basedir}">
-                  <fileset dir="${project.build.directory}">
-                    <include name="facebook-arc-jira-*/arc_jira_lib/**"/>
-                   </fileset>
-                  <mapper type="regexp" from="^facebook-arc-jira-([^/])*/(.*)" to="\.\2"/>
-                </move>
-                <delete includeemptydirs="true">
-                  <fileset dir="${project.build.directory}">
-                    <include name="facebook-arc-jira-*"/>
-                    <include name="arc-jira.tar.gz"/>
-                  </fileset>
-                </delete>
-              </tasks>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>generate</id>
-            <phase>generate-sources</phase>
-            <configuration>
-              <target>
-                <property name="build.webapps"
-                          location="${project.build.directory}/hbase-webapps"/>
-                <property name="src.webapps"
-                          location="${basedir}/src/main/resources/hbase-webapps"/>
-                <property name="generated.sources"
-                          location="${project.build.directory}/generated-sources"/>
-
-                <mkdir dir="${build.webapps}"/>
-                <copy todir="${build.webapps}">
-                  <fileset dir="${src.webapps}">
-                    <exclude name="**/*.jsp"/>
-                    <exclude name="**/.*"/>
-                    <exclude name="**/*~"/>
-                  </fileset>
-                </copy>
-
-                <!--The compile.classpath is passed in by maven-->
-                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" classpathref="maven.compile.classpath"/>
-
-                <mkdir dir="${build.webapps}/master/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/master"
-                             outputdir="${generated.sources}/java"
-                             package="org.apache.hadoop.hbase.generated.master"
-                             webxml="${build.webapps}/master/WEB-INF/web.xml"/>
-
-                <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/regionserver"
-                             outputdir="${generated.sources}/java"
-                             package="org.apache.hadoop.hbase.generated.regionserver"
-                             webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
-
-                <exec executable="sh">
-                  <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}/java"/>
-                </exec>
-              </target>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-          <execution>
-            <phase>process-resources</phase>
-            <configuration>
-              <target>
-                <replace file="${project.build.outputDirectory}/hbase-default.xml"
-                  token="@@@VERSION@@@" value="${project.version}" />
-                <mkdir dir="${project.build.directory}/nativelib"/>
-                <exec executable="tar" dir="${project.build.directory}/nativelib" failonerror="false">
-                  <arg value="xf"/>
-                  <arg value="hadoop-snappy-nativelibs.tar"/>
-                </exec>
-              </target>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>package</id>
-            <phase>package</phase>
-            <configuration>
-              <target>
-                <!-- Complements the assembly -->
-
-                <mkdir dir="${project.build.directory}/${project.build.finalName}/${project.build.finalName}/lib/native/${build.platform}"/>
-
-                <!-- Using Unix cp to preserve symlinks, using script to handle wildcards -->
-                <echo file="${project.build.directory}/copynativelibs.sh">
-                    if [ `ls ${project.build.directory}/nativelib | wc -l` -ne 0 ]; then
-                      cp -PR ${project.build.directory}/nativelib/lib* ${project.build.directory}/${project.build.finalName}/${project.build.finalName}/lib/native/${build.platform}
-                    fi
-                </echo>
-                <exec executable="sh" dir="${project.build.directory}" failonerror="true">
-                    <arg line="./copynativelibs.sh"/>
-                </exec>
-
-                <!-- Using Unix tar to preserve symlinks -->
-                <exec executable="tar" failonerror="yes"
-                  dir="${project.build.directory}/${project.build.finalName}">
-                    <arg value="czf"/>
-                    <arg value="${project.build.directory}/${project.build.finalName}.tar.gz"/>
-                    <arg value="${project.build.finalName}/" />
-                </exec>
-
-              </target>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.5</version>
-        <executions>
-          <execution>
-            <id>jspcSource-packageInfo-Avro-source</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-jamon</source>
-                <source>${project.build.directory}/generated-sources/java</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.jamon</groupId>
-        <artifactId>jamon-maven-plugin</artifactId>
-        <version>2.3.4</version>
-        <executions>
-          <execution>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>translate</goal>
-            </goals>
-            <configuration>
-              <templateSourceDir>src/main/jamon</templateSourceDir>
-              <templateOutputDir>target/generated-jamon</templateOutputDir>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-eclipse-plugin</artifactId>
-        <version>2.8</version>
-        <configuration>
-          <additionalProjectnatures>
-            <projectnature>org.jamon.project.jamonnature</projectnature>
-          </additionalProjectnatures>
-          <buildcommands>
-            <buildcommand>org.jamon.project.templateBuilder</buildcommand>
-            <buildcommand>org.eclipse.jdt.core.javabuilder</buildcommand>
-            <buildcommand>org.jamon.project.markerUpdater</buildcommand>
-          </buildcommands>
-          <additionalConfig>
-             <file>
-                 <name>.settings/org.jamon.prefs</name>
-                 <content># now
-    eclipse.preferences.version=1
-    templateSourceDir=src/main/jamon
-    templateOutputDir=target/generated-jamon
-    </content>
-            </file>
-          </additionalConfig>
-        </configuration>
-      </plugin>
-      <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>findbugs-maven-plugin</artifactId>
-          <version>${maven.findbugs.version}</version>
-          <configuration>
-            <findbugsXmlOutput>true</findbugsXmlOutput>
-            <xmlOutput>true</xmlOutput>
-            <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
-            <effort>Max</effort>
-          </configuration>
-       </plugin>
     </plugins>
   </build>
 
   <properties>
+    <tar.name>${project.build.finalName}.tar.gz</tar.name>
     <maven.build.timestamp.format>
       yyyy-MM-dd'T'HH:mm
     </maven.build.timestamp.format>
-    <buildDate>
-      ${maven.build.timestamp}
-    </buildDate>
+    <buildDate>${maven.build.timestamp}</buildDate>
     <compileSource>1.6</compileSource>
 
     <!-- Dependencies -->
@@ -1035,23 +714,32 @@
     <thrift.version>0.8.0</thrift.version>
     <zookeeper.version>3.4.3</zookeeper.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
-    <maven.site.version>3.0</maven.site.version>
-    <maven.javadoc.version>2.8.1</maven.javadoc.version>
-    <maven.findbugs.version>2.4.0</maven.findbugs.version>
     <clover.version>2.6.3</clover.version>
+    <jamon-runtime.version>2.3.1</jamon-runtime.version>
 
+    <!-- Plugin Dependencies -->
+    <maven.antrun.version>1.6</maven.antrun.version>
+    <jamon.plugin.version>2.3.4</jamon.plugin.version>
+    <maven.assembly.version>2.3</maven.assembly.version>
+    <findbugs.version>2.4.0</findbugs.version>
+    <maven.site.version>2.0.1</maven.site.version>
+    <javadoc.version>2.8.1</javadoc.version>
+    <maven.resources.plugin.version>2.5</maven.resources.plugin.version>
+    
+    <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
     <package.log.dir>/var/log/hbase</package.log.dir>
     <package.pid.dir>/var/run/hbase</package.pid.dir>
     <package.release>1</package.release>
-    <!-- also must update this when we bump version -->
-    <package.version>0.91.0</package.version>
     <final.name>${project.artifactId}-${project.version}</final.name>
-
-    <!-- Test inclusion patterns used by failsafe configuration -->
-    <unittest.include>**/Test*.java</unittest.include>
-    <integrationtest.include>**/IntegrationTest*.java</integrationtest.include>
+    <!-- Dependency on projects all being at hbase/{project} -->
+    <javadoc.output.dir>../hbase-documentation/target/site/apidocs</javadoc.output.dir>
+    
+    <!-- Intraproject jar naming properties -->
+    <!-- TODO this is pretty ugly, but works for the moment.
+      Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
+    <server.test.jar>hbase-server-${project.version}-tests.jar</server.test.jar>
 
     <surefire.version>2.12-TRUNK-HBASE-2</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
@@ -1071,7 +759,8 @@
   </properties>
 
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
-  <dependencies>
+  <dependencyManagement>
+    <dependencies>
     <!--
       Note: There are a few exclusions to prevent duplicate code in different jars to be included:
         * org.mortbay.jetty:servlet-api, javax.servlet:servlet-api: These are excluded because they are
@@ -1079,278 +768,305 @@
           implementation of the same, because Hadoop also uses this version
         * javax.servlet:jsp-api in favour of org.mortbay.jetty:jsp-api-2.1
         * javax.xml.stream:stax-api in favour of stax:stax-api
-    -->
+        -->
 
+      <!-- Intra-module dependencies -->
+      <dependency>
+        <artifactId>hbase-server</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-server</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
 
-    <!-- General dependencies -->
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>${guava.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-cli</groupId>
-      <artifactId>commons-cli</artifactId>
-      <version>${commons-cli.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-configuration</groupId>
-      <artifactId>commons-configuration</artifactId>
-      <version>${commons-configuration.version}</version>
-    </dependency>
-    <dependency>
-     <groupId>com.github.stephenc.high-scale-lib</groupId>
-     <artifactId>high-scale-lib</artifactId>
-     <version>1.1.1</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-      <version>${commons-codec.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-httpclient</groupId>
-      <artifactId>commons-httpclient</artifactId>
-      <version>${commons-httpclient.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>${commons-io.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
-      <version>${commons-lang.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-      <version>${commons-logging.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
-      <version>${log4j.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro</artifactId>
-      <version>${avro.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.thoughtworks.paranamer</groupId>
-          <artifactId>paranamer</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.thoughtworks.paranamer</groupId>
-          <artifactId>paranamer-ant</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro-ipc</artifactId>
-      <version>${avro.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.zookeeper</groupId>
-      <artifactId>zookeeper</artifactId>
-      <version>${zookeeper.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>jline</groupId>
-          <artifactId>jline</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.thrift</groupId>
-      <artifactId>libthrift</artifactId>
-      <version>${thrift.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-simple</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.jruby</groupId>
-      <artifactId>jruby-complete</artifactId>
-      <version>${jruby.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.mortbay.jetty</groupId>
-      <artifactId>jetty</artifactId>
-      <version>${jetty.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.mortbay.jetty</groupId>
-          <artifactId>servlet-api</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.mortbay.jetty</groupId>
-      <artifactId>jetty-util</artifactId>
-      <version>${jetty.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.mortbay.jetty</groupId>
-      <artifactId>jsp-2.1</artifactId>
-      <version>${jetty.jspapi.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>ant</groupId>
-          <artifactId>ant</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.mortbay.jetty</groupId>
-      <artifactId>jsp-api-2.1</artifactId>
-      <version>${jetty.jspapi.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.mortbay.jetty</groupId>
-      <artifactId>servlet-api-2.5</artifactId>
-      <version>${jetty.jspapi.version}</version>
-    </dependency>
-    <!-- While jackson is also a dependency of both jersey and avro, these
-         can bring in jars from different, incompatible versions. We force
-         the same version with these dependencies -->
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-core-asl</artifactId>
-      <version>${jackson.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-mapper-asl</artifactId>
-      <version>${jackson.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-jaxrs</artifactId>
-      <version>${jackson.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-xc</artifactId>
-      <version>${jackson.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>${slf4j.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>${slf4j.version}</version>
-    </dependency>
-    <dependency>
+      <!-- General dependencies -->
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-cli</groupId>
+        <artifactId>commons-cli</artifactId>
+        <version>${commons-cli.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-configuration</groupId>
+        <artifactId>commons-configuration</artifactId>
+        <version>${commons-configuration.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.stephenc.high-scale-lib</groupId>
+        <artifactId>high-scale-lib</artifactId>
+        <version>1.1.1</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-codec</groupId>
+        <artifactId>commons-codec</artifactId>
+        <version>${commons-codec.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-httpclient</groupId>
+        <artifactId>commons-httpclient</artifactId>
+        <version>${commons-httpclient.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>${commons-io.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-lang</groupId>
+        <artifactId>commons-lang</artifactId>
+        <version>${commons-lang.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>${commons-logging.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <version>${log4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro</artifactId>
+        <version>${avro.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.thoughtworks.paranamer</groupId>
+            <artifactId>paranamer</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.thoughtworks.paranamer</groupId>
+            <artifactId>paranamer-ant</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro-ipc</artifactId>
+        <version>${avro.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.zookeeper</groupId>
+        <artifactId>zookeeper</artifactId>
+        <version>${zookeeper.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>jline</groupId>
+            <artifactId>jline</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.thrift</groupId>
+        <artifactId>libthrift</artifactId>
+        <version>${thrift.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.jruby</groupId>
+        <artifactId>jruby-complete</artifactId>
+        <version>${jruby.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>jetty</artifactId>
+        <version>${jetty.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.mortbay.jetty</groupId>
+            <artifactId>servlet-api</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>jetty-util</artifactId>
+        <version>${jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>jsp-2.1</artifactId>
+        <version>${jetty.jspapi.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>ant</groupId>
+            <artifactId>ant</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>jsp-api-2.1</artifactId>
+        <version>${jetty.jspapi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>servlet-api-2.5</artifactId>
+        <version>${jetty.jspapi.version}</version>
+      </dependency>
+      <!-- While jackson is also a dependency of both jersey and avro, these
+           can bring in jars from different, incompatible versions. We force
+           the same version with these dependencies -->
+      <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-core-asl</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-mapper-asl</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-jaxrs</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-xc</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-log4j12</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+	  <dependency>
       <!--If this is not in the runtime lib, we get odd
       "2009-02-27 11:38:39.504::WARN:  failed jsp
        java.lang.NoSuchFieldError: IS_SECURITY_ENABLED"
        exceptions out of jetty deploying webapps.
        St.Ack Thu May 20 01:04:41 PDT 2010
       -->
-      <groupId>tomcat</groupId>
-      <artifactId>jasper-compiler</artifactId>
-      <version>${jasper.version}</version>
-      <scope>runtime</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>jsp-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>servlet-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>ant</groupId>
-          <artifactId>ant</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>tomcat</groupId>
-      <artifactId>jasper-runtime</artifactId>
-      <version>${jasper.version}</version>
-      <scope>runtime</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>servlet-api</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
+        <groupId>tomcat</groupId>
+        <artifactId>jasper-compiler</artifactId>
+        <version>${jasper.version}</version>
+        <scope>runtime</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>jsp-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>ant</groupId>
+            <artifactId>ant</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>tomcat</groupId>
+        <artifactId>jasper-runtime</artifactId>
+        <version>${jasper.version}</version>
+        <scope>runtime</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
 
-    <dependency>
-      <groupId>org.jamon</groupId>
-      <artifactId>jamon-runtime</artifactId>
-      <version>2.3.1</version>
-    </dependency>
+      <dependency>
+        <groupId>org.jamon</groupId>
+        <artifactId>jamon-runtime</artifactId>
+        <version>${jamon-runtime.version}</version>
+      </dependency>
 
-    <!-- REST dependencies -->
-    <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-      <version>${protobuf.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-core</artifactId>
-      <version>${jersey.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-json</artifactId>
-      <version>${jersey.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-server</artifactId>
-      <version>${jersey.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>javax.xml.bind</groupId>
-      <artifactId>jaxb-api</artifactId>
-      <version>${jaxb-api.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>javax.xml.stream</groupId>
-          <artifactId>stax-api</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>stax</groupId>
-      <artifactId>stax-api</artifactId>
-      <version>${stax-api.version}</version>
-    </dependency>
+      <!-- REST dependencies -->
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <version>${protobuf.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.jersey</groupId>
+        <artifactId>jersey-core</artifactId>
+        <version>${jersey.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.jersey</groupId>
+        <artifactId>jersey-json</artifactId>
+        <version>${jersey.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.jersey</groupId>
+        <artifactId>jersey-server</artifactId>
+        <version>${jersey.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.xml.bind</groupId>
+        <artifactId>jaxb-api</artifactId>
+        <version>${jaxb-api.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>javax.xml.stream</groupId>
+            <artifactId>stax-api</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>stax</groupId>
+        <artifactId>stax-api</artifactId>
+        <version>${stax-api.version}</version>
+      </dependency>
 
+      <!-- Test dependencies -->
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-all</artifactId>
+        <version>${mockito-all.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-math</artifactId>
+        <version>${commons-math.version}</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <!-- Dependencies needed by subprojects -->
+  <dependencies>
     <!-- Test dependencies -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>${junit.version}</version>
-      <scope>test,runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
-      <version>${mockito-all.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-math</artifactId>
-      <version>${commons-math.version}</version>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -1381,88 +1097,6 @@
   -->
   <profiles>
     <profile>
-      <id>rpm</id>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <version>1.6</version>
-            <executions>
-              <execution>
-                <id>build-rpm</id>
-                <phase>package</phase>
-                <configuration>
-                <target>
-                  <ant antfile="${basedir}/src/packages/build.xml">
-                    <target name="package-rpm"/>
-                    <target name="package-conf-pseudo-rpm"/>
-                  </ant>
-                  </target>
-                </configuration>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-	  <plugin>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <version>${maven.javadoc.version}</version>
-            <configuration>
-              <docfilessubdirs>true</docfilessubdirs>
-              <excludePackageNames>org.apache.hadoop.hbase.protobuf.generated.*:org.apache.hadoop.hbase.avro.generated.*:org.apache.hadoop.hbase.thrift.generated:org.apache.hadoop.hbase.rest.generated</excludePackageNames>
-              <maxmemory>2g</maxmemory>
-            </configuration>
-            <executions>
-              <execution>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>javadoc</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>deb</id>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <version>1.6</version>
-            <executions>
-              <execution>
-                <id>build-deb</id>
-                <phase>package</phase>
-                <configuration>
-                  <target>
-                    <property name="artifactId" value="${project.artifactId}" />
-                    <ant antfile="${basedir}/src/packages/build.xml">
-                      <target name="package-deb"/>
-                      <target name="package-conf-pseudo-deb"/>
-                    </ant>
-                  </target>
-                </configuration>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-              </execution>
-            </executions>
-            <dependencies>
-              <dependency>
-                <groupId>org.vafer</groupId>
-                <artifactId>jdeb</artifactId>
-                <version>0.8</version>
-              </dependency>
-            </dependencies>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <profile>
       <id>os.linux</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -1475,26 +1109,26 @@
       </properties>
     </profile>
     <profile>
-        <id>os.mac</id>
-        <activation>
-            <os>
-                <family>Mac</family>
-            </os>
-        </activation>
-        <properties>
-            <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
-        </properties>
+      <id>os.mac</id>
+      <activation>
+        <os>
+          <family>Mac</family>
+        </os>
+      </activation>
+      <properties>
+        <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
+      </properties>
     </profile>
 
     <!-- this profile should be activated for release builds -->
     <profile>
       <id>release</id>
       <build>
-	<plugins>
-	  <plugin>
-	    <groupId>org.apache.rat</groupId>
+    	<plugins>
+    	  <plugin>
+  	        <groupId>org.apache.rat</groupId>
             <artifactId>apache-rat-plugin</artifactId>
-	    <executions>
+  	        <executions>
               <execution>
                 <phase>package</phase>
                 <goals>
@@ -1507,55 +1141,13 @@
       </build>
     </profile>
 
-    <profile>
-      <id>hadoop-snappy</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <property>
-          <name>snappy</name>
-        </property>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-snappy</artifactId>
-          <version>${hadoop-snappy.version}</version>
-        </dependency>
-      </dependencies>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-dependency-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>get-hadoop-snappy-native</id>
-                <phase>generate-resources</phase>
-                <goals>
-                  <goal>copy</goal>
-                </goals>
-                <configuration>
-                  <artifactItems>
-                    <artifactItem>
-                      <groupId>org.apache.hadoop</groupId>
-                      <artifactId>hadoop-snappy</artifactId>
-                      <version>${hadoop-snappy.version}</version>
-                      <classifier>${build.platform}</classifier>
-                      <type>tar</type>
-                      <overWrite>false</overWrite>
-                      <outputDirectory>${project.build.directory}/nativelib</outputDirectory>
-                      <destFileName>hadoop-snappy-nativelibs.tar</destFileName>
-                    </artifactItem>
-                  </artifactItems>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
+    <!-- Dependency management profiles for submodules when building against specific hadoop branches.--> 
+    <!-- Submodules that need hadoop dependencies should declare
+    profiles with activation properties matching the profile here.
+    Generally, it should be sufficient to copy the first
+    few lines of the profile you want to match.  -->
 
-    <!-- profile for building against Hadoop 1.0.x: This is the default. -->
+    <!-- profile against Hadoop 1.0.x: This is the default. -->
     <profile>
       <id>hadoop-1.0</id>
       <activation>
@@ -1567,347 +1159,99 @@
         <hadoop.version>1.0.3</hadoop.version>
         <slf4j.version>1.4.3</slf4j.version>
       </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <exclusions>
-            <exclusion>
-              <groupId>hsqldb</groupId>
-              <artifactId>hsqldb</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.sf.kosmosfs</groupId>
-              <artifactId>kfs</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.eclipse.jdt</groupId>
-              <artifactId>core</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.java.dev.jets3t</groupId>
-              <artifactId>jets3t</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>oro</groupId>
-              <artifactId>oro</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-test</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <scope>test</scope>
-        </dependency>
-      </dependencies>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>build-helper-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>add-test-resource</id>
-                <goals>
-                  <goal>add-test-resource</goal>
-                </goals>
-                <configuration>
-                  <resources>
-                    <resource>
-                      <directory>src/test/resources</directory>
-                      <includes>
-                        <include>hbase-site.xml</include>
-                      </includes>
-                    </resource>
-                  </resources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
+      <dependencyManagement>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-core</artifactId>
+            <version>${hadoop.version}</version>
+            <optional>true</optional>
+            <exclusions>
+              <exclusion>
+                <groupId>hsqldb</groupId>
+                <artifactId>hsqldb</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>net.sf.kosmosfs</groupId>
+                <artifactId>kfs</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jdt</groupId>
+                <artifactId>core</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>net.java.dev.jets3t</groupId>
+                <artifactId>jets3t</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>oro</groupId>
+                <artifactId>oro</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-test</artifactId>
+            <version>${hadoop.version}</version>
+            <optional>true</optional>
+            <scope>test</scope>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
     </profile>
 
-    <!--
-      profile for building against Hadoop 0.22.0. Activate using:
-       mvn -Dhadoop.profile=22
-    -->
+    <!-- profile for building against Hadoop 2.0.x 
+    Activate using: mvn -Dhadoop.profile=2.0 -->
     <profile>
-      <id>hadoop-0.22</id>
+      <id>hadoop-2.0</id>
       <activation>
         <property>
           <name>hadoop.profile</name>
-          <value>22</value>
+          <value>2.0</value>
         </property>
       </activation>
       <properties>
-        <hadoop.version>0.22.0</hadoop.version>
         <slf4j.version>1.6.1</slf4j.version>
+        <hadoop.version>2.0.0-SNAPSHOT</hadoop.version>
       </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <exclusions>
-            <!--Needs more work, tightening-->
-            <exclusion>
-              <groupId>hsqldb</groupId>
-              <artifactId>hsqldb</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.sf.kosmosfs</groupId>
-              <artifactId>kfs</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.eclipse.jdt</groupId>
-              <artifactId>core</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.java.dev.jets3t</groupId>
-              <artifactId>jets3t</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>oro</groupId>
-              <artifactId>oro</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>jdiff</groupId>
-              <artifactId>jdiff</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.apache.lucene</groupId>
-              <artifactId>lucene-core</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdfs</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <exclusions>
-            <!--Needs more work, tightening-->
-            <exclusion>
-              <groupId>hsqldb</groupId>
-              <artifactId>hsqldb</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.sf.kosmosfs</groupId>
-              <artifactId>kfs</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.eclipse.jdt</groupId>
-              <artifactId>core</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.java.dev.jets3t</groupId>
-              <artifactId>jets3t</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>oro</groupId>
-              <artifactId>oro</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>jdiff</groupId>
-              <artifactId>jdiff</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.apache.lucene</groupId>
-              <artifactId>lucene-core</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapred</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <exclusions>
-            <!--Needs more work, tightening-->
-            <exclusion>
-              <groupId>hsqldb</groupId>
-              <artifactId>hsqldb</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.sf.kosmosfs</groupId>
-              <artifactId>kfs</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.eclipse.jdt</groupId>
-              <artifactId>core</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>net.java.dev.jets3t</groupId>
-              <artifactId>jets3t</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>oro</groupId>
-              <artifactId>oro</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>jdiff</groupId>
-              <artifactId>jdiff</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>org.apache.lucene</groupId>
-              <artifactId>lucene-core</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-        <!-- test deps for hadoop-0.22 profile -->
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common-test</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <scope>test</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdfs-test</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <scope>test</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapred-test</artifactId>
-          <version>${hadoop.version}</version>
-          <optional>true</optional>
-          <scope>test</scope>
-        </dependency>
-      </dependencies>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>build-helper-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>add-test-resource</id>
-                <goals>
-                  <goal>add-test-resource</goal>
-                </goals>
-                <configuration>
-                  <resources>
-                    <resource>
-                      <directory>src/test/resources</directory>
-                      <includes>
-                        <include>hbase-site.xml</include>
-                      </includes>
-                    </resource>
-                  </resources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
+      <dependencyManagement>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client</artifactId>
+            <version>${hadoop.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-annotations</artifactId>
+            <version>${hadoop.version}</version>
+          </dependency>
+          <!-- This was marked as test dep in earlier pom, but was scoped compile. 
+            Where do we actually need it? -->
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-minicluster</artifactId>
+            <version>${hadoop.version}</version>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
     </profile>
 
     <!--
-      profile for building against Hadoop 0.23.0. Activate using:
-       mvn -Dhadoop.profile=23
+      profile for building against Hadoop 3.0.0. Activate using:
+       mvn -Dhadoop.profile=3.0
     -->
     <profile>
-      <id>hadoop-0.23</id>
+      <id>hadoop-3.0</id>
       <activation>
         <property>
           <name>hadoop.profile</name>
-          <value>23</value>
+          <value>3.0</value>
         </property>
       </activation>
       <properties>
-        <hadoop.version>0.23.2-SNAPSHOT</hadoop.version>
         <slf4j.version>1.6.1</slf4j.version>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-client</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-annotations</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <!-- test deps for hadoop-0.23 profile -->
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-minicluster</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>compile</scope>
-        </dependency>
-      </dependencies>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>build-helper-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>add-test-resource</id>
-                <goals>
-                  <goal>add-test-resource</goal>
-                </goals>
-                <configuration>
-                  <resources>
-                    <resource>
-                      <directory>src/test/resources</directory>
-                      <includes>
-                        <include>hbase-site.xml</include>
-                      </includes>
-                    </resource>
-                  </resources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <artifactId>maven-dependency-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>create-mrapp-generated-classpath</id>
-                <phase>generate-test-resources</phase>
-                <goals>
-                  <goal>build-classpath</goal>
-                </goals>
-                <configuration>
-                  <!-- needed to run the unit test for DS to generate
-                  the required classpath that is required in the env
-                  of the launch container in the mini mr/yarn cluster
-                  -->
-                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <!--
-      profile for building against Hadoop 0.24.0. Activate using:
-       mvn -Dhadoop.profile=24
-    -->
-    <profile>
-      <id>hadoop-0.24</id>
-      <activation>
-        <property>
-          <name>hadoop.profile</name>
-          <value>24</value>
-        </property>
-      </activation>
-      <properties>
-        <hadoop.version>0.24.0-SNAPSHOT</hadoop.version>
-        <slf4j.version>1.6.1</slf4j.version>
+        <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
       </properties>
       <dependencies>
         <dependency>
@@ -1921,6 +1265,7 @@
           <version>${hadoop.version}</version>
         </dependency>
         <!-- test deps for hadoop-0.24 profile -->
+        <!-- Says test, but scoped for compile. Which is correct? -->
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minicluster</artifactId>
@@ -1928,104 +1273,6 @@
           <scope>compile</scope>
         </dependency>
       </dependencies>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>build-helper-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>add-test-resource</id>
-                <goals>
-                  <goal>add-test-resource</goal>
-                </goals>
-                <configuration>
-                  <resources>
-                    <resource>
-                      <directory>src/test/resources</directory>
-                      <includes>
-                        <include>hbase-site.xml</include>
-                      </includes>
-                    </resource>
-                  </resources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <artifactId>maven-dependency-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>create-mrapp-generated-classpath</id>
-                <phase>generate-test-resources</phase>
-                <goals>
-                  <goal>build-classpath</goal>
-                </goals>
-                <configuration>
-                  <!-- needed to run the unit test for DS to generate
-                  the required classpath that is required in the env
-                  of the launch container in the mini mr/yarn cluster
-                  -->
-                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <!-- Profile for running clover. You need to have a clover license under ~/.clover.license for ${clover.version}
-         or you can provide the license with -Dmaven.clover.licenseLocation=/path/to/license. Committers can find
-         the license under https://svn.apache.org/repos/private/committers/donated-licenses/clover/
-         Note that clover 2.6.3 does not run with maven 3, so you have to use maven2. The report will be generated
-         under target/site/clover/index.html when you run
-         MAVEN_OPTS=-Xmx2048m mvn clean test -Pclover site -->
-    <profile>
-      <id>clover</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <property>
-          <name>clover</name>
-        </property>
-      </activation>
-      <properties>
-         <maven.clover.licenseLocation>${user.home}/.clover.license</maven.clover.licenseLocation>
-      </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>com.atlassian.maven.plugins</groupId>
-            <artifactId>maven-clover2-plugin</artifactId>
-            <configuration>
-              <includesAllSourceRoots>true</includesAllSourceRoots>
-              <includesTestSourceRoots>true</includesTestSourceRoots>
-              <targetPercentage>50%</targetPercentage>
-              <generateHtml>true</generateHtml>
-              <generateXml>true</generateXml>
-              <excludes>
-                <exclude>**/generated/**</exclude>
-              </excludes>
-            </configuration>
-            <executions>
-              <execution>
-                <id>clover-setup</id>
-                <phase>process-sources</phase>
-                <goals>
-                  <goal>setup</goal>
-                </goals>
-              </execution>
-              <execution>
-                <id>clover</id>
-                <phase>site</phase>
-                <goals>
-                  <goal>clover</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
 
     <!-- profiles for the tests
@@ -2150,18 +1397,7 @@
         <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests,org.apache.hadoop.hbase.LargeTests</surefire.secondPartGroups>
       </properties>
     </profile>
-
-    <profile> <!-- Use it skip the surefire tests but no the failsafe tests -->
-      <id>skipSurefireTests</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <properties>
-        <surefire.skipFirstPart>true</surefire.skipFirstPart>
-        <surefire.skipSecondPart>true</surefire.skipSecondPart>
-      </properties>
-    </profile>
-
+    
     <profile> <!-- Use it to launch tests locally-->
       <id>localTests</id>
       <activation>
@@ -2177,6 +1413,61 @@
         <surefire.firstPartGroups></surefire.firstPartGroups>
       </properties>
     </profile>
+    
+    <!-- Profile for running clover. You need to have a clover license under ~/.clover.license for ${clover.version}
+         or you can provide the license with -Dmaven.clover.licenseLocation=/path/to/license. Committers can find
+         the license under https://svn.apache.org/repos/private/committers/donated-licenses/clover/
+         Note that clover 2.6.3 does not run with maven 3, so you have to use maven2. The report will be generated
+         under target/site/clover/index.html when you run
+         MAVEN_OPTS=-Xmx2048m mvn clean test -Pclover site -->
+    <profile>
+      <id>clover</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <property>
+          <name>clover</name>
+        </property>
+      </activation>
+      <properties>
+        <maven.clover.licenseLocation>${user.home}/.clover.license</maven.clover.licenseLocation>
+        <clover.version>2.6.3</clover.version>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>com.atlassian.maven.plugins</groupId>
+            <artifactId>maven-clover2-plugin</artifactId>
+            <version>${clover.version}</version>
+            <configuration>
+              <includesAllSourceRoots>true</includesAllSourceRoots>
+              <includesTestSourceRoots>true</includesTestSourceRoots>
+              <targetPercentage>50%</targetPercentage>
+              <generateHtml>true</generateHtml>
+              <generateXml>true</generateXml>
+              <excludes>
+                <exclude>**/generated/**</exclude>
+              </excludes>
+            </configuration>
+            <executions>
+              <execution>
+                <id>clover-setup</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>setup</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>clover</id>
+                <phase>site</phase>
+                <goals>
+                  <goal>clover</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>    
   </profiles>
 
   <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
@@ -2200,105 +1491,16 @@
         </reportSets>
       </plugin>
       <plugin>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>${maven.javadoc.version}</version>
-        <configuration>
-          <docfilessubdirs>true</docfilessubdirs>
-              <excludePackageNames>org.apache.hadoop.hbase.protobuf.generated.*:org.apache.hadoop.hbase.avro.generated.*:org.apache.hadoop.hbase.thrift.generated:org.apache.hadoop.hbase.rest.generated</excludePackageNames>
-              <debug>true</debug>
-              <maxmemory>2g</maxmemory>
-              <verbose>true</verbose>
-        </configuration>
-        <reportSets>
-          <reportSet>
-            <id>default</id>
-            <reports>
-              <report>javadoc</report>
-            </reports>
-          </reportSet>
-        </reportSets>
-      </plugin>
-      <!--Disabled for now.
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>cobertura-maven-plugin</artifactId>
-        <version>2.3</version>
-      </plugin>
-      -->
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
         <version>2.1</version>
-      </plugin>
-      <!-- Disabled for now
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>jdepend-maven-plugin</artifactId>
-        <version>2.0-beta-2</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-changes-plugin</artifactId>
-        <version>2.3</version>
-        <configuration>
-          <issueLinkTemplate>%URL%/browse/%ISSUE%</issueLinkTemplate>
-        </configuration>
-        <reportSets>
-          <reportSet>
-            <reports>
-              <report>changes-report</report>
-            </reports>
-          </reportSet>
-        </reportSets>
-      </plugin>
-      <plugin>
-        <groupId>com.atlassian.maven.plugins</groupId>
-        <artifactId>maven-clover2-plugin</artifactId>
-        <version>2.6.3</version>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>taglist-maven-plugin</artifactId>
-        <version>2.4</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-surefire-report-plugin</artifactId>
-        <version>2.5</version>
-      </plugin>
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>2.1</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-        <version>0.8</version>
-      </plugin>
-      -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-report-plugin</artifactId>
-        <version>2.7.2</version>
-        <reportSets>
-          <reportSet>
-            <id>integration-tests</id>
-            <reports>
-              <report>report-only</report>
-            </reports>
-            <configuration>
-              <outputName>failsafe-report</outputName>
-              <reportsDirectories>
-                <reportsDirectory>${project.build.directory}/failsafe-reports</reportsDirectory>
-              </reportsDirectories>
-            </configuration>
-          </reportSet>
-        </reportSets>
       </plugin>
     </plugins>
   </reporting>
   <distributionManagement>
     <!--Build and deploy the site with the below command
 
-      $ ~/bin/apache-maven-3.0.4/bin/mvn -X clean site:site site:deploy
+      $ ~/bin/apache-maven-3.0.4/bin/mvn -X clean package site:site site:deploy
 
       You may need a settings.xml file under you ~/.m2/ directory as
       described here: http://www.apache.org/dev/publishing-maven-artifacts.html

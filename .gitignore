@@ -1,12 +1,13 @@
 /.arc_jira_lib
-/.classpath
 /.externalToolBuilders
-/.project
-/.settings
+.project
+*.settings/
+.classpath
 /build
 /.idea/
 /logs
-/target
+*target/
 *.iml
 *.orig
 *~
+hbase-*/test
