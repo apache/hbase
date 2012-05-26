@@ -469,6 +469,7 @@ public class HLogSplitter {
           }
           n++;
           WriterAndPath wap = (WriterAndPath) o;
+          wap.writerClosed = true;
           wap.w.close();
           LOG.debug("Closed " + wap.p);
           Path dst = getCompletedRecoveredEditsFilePath(wap.p);
@@ -567,6 +568,13 @@ public class HLogSplitter {
         if (fs.exists(dst)) {
           fs.delete(dst, false);
         } else {
+          Path regionDir = dst.getParent().getParent();
+          if (!fs.exists(regionDir)) {
+            // See HBASE-6050.
+            LOG.warn("Could not move recovered edits from " + src
+                + " to destination " + regionDir + " as it doesn't exist.");
+            continue;
+          }
           Path dstdir = dst.getParent();
           if (!fs.exists(dstdir)) {
             if (!fs.mkdirs(dstdir)) LOG.warn("mkdir failed on " + dstdir);
