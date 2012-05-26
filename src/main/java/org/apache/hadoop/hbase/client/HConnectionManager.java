@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
@@ -736,7 +737,7 @@ public class HConnectionManager {
     public boolean isTableAvailable(final byte[] tableName) throws IOException {
       final AtomicBoolean available = new AtomicBoolean(true);
       final AtomicInteger regionCount = new AtomicInteger(0);
-      MetaScannerVisitor visitor = new MetaScannerVisitor() {
+      MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
         @Override
         public boolean processRow(Result row) throws IOException {
           byte[] value = row.getValue(HConstants.CATALOG_FAMILY,
@@ -847,7 +848,7 @@ public class HConnectionManager {
         final byte[] row) {
       // Implement a new visitor for MetaScanner, and use it to walk through
       // the .META.
-      MetaScannerVisitor visitor = new MetaScannerVisitor() {
+      MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
         public boolean processRow(Result result) throws IOException {
           try {
             byte[] value = result.getValue(HConstants.CATALOG_FAMILY,
