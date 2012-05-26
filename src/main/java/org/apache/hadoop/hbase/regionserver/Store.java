@@ -113,6 +113,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   final CacheConfig cacheConf;
   // ttl in milliseconds.
   protected long ttl;
+  private long timeToPurgeDeletes;
   private final int minFilesToCompact;
   private final int maxFilesToCompact;
   private final long minCompactSize;
@@ -203,6 +204,12 @@ public class Store extends SchemaConfigured implements HeapSize {
       // second -> ms adjust for user data
       this.ttl *= 1000;
     }
+    // used by ScanQueryMatcher
+    long timeToPurgeDeletes =
+        Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
+    LOG.info("time to purge deletes set to " + timeToPurgeDeletes +
+        "ms in store " + this);
+
     this.memstore = new MemStore(this.comparator);
     this.storeNameStr = getColumnFamilyName();
 
@@ -605,7 +612,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     scan.setMaxVersions(family.getMaxVersions());
     InternalScanner scanner = new StoreScanner(this, scan,
         MemStore.getSnapshotScanners(snapshot, this.comparator),
-        this.region.getSmallestReadPoint(), true);
+        this.region.getSmallestReadPoint(),
+        Long.MIN_VALUE); // include all deletes
 
     String fileName;
     try {
@@ -1360,8 +1368,11 @@ public class Store extends SchemaConfigured implements HeapSize {
         Scan scan = new Scan();
         scan.setMaxVersions(family.getMaxVersions());
         /* include deletes, unless we are doing a major compaction */
+        long retainDeletesUntil = (majorCompaction)?
+          (System.currentTimeMillis() - this.timeToPurgeDeletes)
+          : Long.MIN_VALUE;
         scanner = new StoreScanner(this, scan, scanners, smallestReadPoint,
-            !majorCompaction);
+            retainDeletesUntil);
         int bytesWritten = 0;
         // since scanner.next() can return 'false' but still be delivering data,
         // we have to use a do/while loop.

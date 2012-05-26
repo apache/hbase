@@ -47,7 +47,7 @@ public class ScanQueryMatcher {
 
   /** Keeps track of deletes */
   protected DeleteTracker deletes;
-  protected boolean retainDeletesInOutput;
+  protected long retainDeletesInOutputUntil;
 
   /** Keeps track of columns and versions */
   protected ColumnTracker columns;
@@ -85,7 +85,7 @@ public class ScanQueryMatcher {
   public ScanQueryMatcher(Scan scan, byte [] family,
       NavigableSet<byte[]> columnSet, KeyValue.KeyComparator rowComparator,
       int maxVersions, long readPointToUse,
-      boolean retainDeletesInOutput,
+      long retainDeletesInOutputUntil,
       long oldestUnexpiredTS) {
     this.tr = scan.getTimeRange();
     this.oldestStamp = oldestUnexpiredTS;
@@ -95,7 +95,7 @@ public class ScanQueryMatcher {
     this.startKey = KeyValue.createFirstDeleteFamilyOnRow(scan.getStartRow(),
         family);
     this.filter = scan.getFilter();
-    this.retainDeletesInOutput = retainDeletesInOutput;
+    this.retainDeletesInOutputUntil = retainDeletesInOutputUntil;
     this.maxReadPointToTrackVersions = readPointToUse;
 
     // Single branch to deal with two types of reads (columns vs all in family)
@@ -130,7 +130,8 @@ public class ScanQueryMatcher {
       // Deletes are included explicitly (for minor compaction).
       this(scan, family, columns, rowComparator, maxVersions,
           Long.MAX_VALUE, // max Readpoint to Track versions
-          false, oldestUnexpiredTS);
+          Long.MAX_VALUE, // do not include deletes
+          oldestUnexpiredTS);
   }
 
   /**
@@ -203,7 +204,7 @@ public class ScanQueryMatcher {
         this.deletes.add(bytes, offset, qualLength, timestamp, type);
         // Can't early out now, because DelFam come before any other keys
       }
-      if (retainDeletesInOutput) {
+      if (timestamp >= this.retainDeletesInOutputUntil) {
         return MatchCode.INCLUDE;
       }
       else {

@@ -104,7 +104,8 @@ class StoreScanner extends NonLazyKeyValueScanner
         new ScanQueryMatcher(scan, store.getFamily().getName(), columns,
             store.comparator.getRawComparator(),
             store.versionsToReturn(scan.getMaxVersions()), Long.MAX_VALUE,
-            false, oldestUnexpiredTS);
+            Long.MAX_VALUE, // do not include the deletes
+            oldestUnexpiredTS);
 
     // Pass columns to try to filter out unnecessary StoreFiles.
     List<KeyValueScanner> scanners = getScannersNoCompaction();
@@ -146,14 +147,14 @@ class StoreScanner extends NonLazyKeyValueScanner
    */
   StoreScanner(Store store, Scan scan,
       List<? extends KeyValueScanner> scanners, long smallestReadPoint,
-      boolean retainDeletesInOutput) throws IOException {
+      long retainDeletesInOutputUntil) throws IOException {
     this(store, false, scan, null, store.ttl);
 
     matcher =
         new ScanQueryMatcher(scan, store.getFamily().getName(), null,
             store.comparator.getRawComparator(),
             store.versionsToReturn(scan.getMaxVersions()), smallestReadPoint,
-            retainDeletesInOutput, oldestUnexpiredTS);
+            retainDeletesInOutputUntil, oldestUnexpiredTS);
 
     // Filter the list of scanners using Bloom filters, time range, TTL, etc.
     scanners = selectScannersFrom(scanners);
@@ -173,11 +174,23 @@ class StoreScanner extends NonLazyKeyValueScanner
       final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners)
         throws IOException {
+    this(scan, colFamily, ttl, comparator, columns, scanners, Long.MAX_VALUE);
+  }
+
+  /** Constructor for testing. */
+  StoreScanner(final Scan scan, final byte [] colFamily, final long ttl,
+      final KeyValue.KVComparator comparator,
+      final NavigableSet<byte[]> columns,
+      final List<KeyValueScanner> scanners,
+      final long retainDeletesInOutputUntil)
+        throws IOException {
     this(null, scan.getCacheBlocks(), scan, columns, ttl);
     this.matcher =
         new ScanQueryMatcher(scan, colFamily, columns,
             comparator.getRawComparator(), scan.getMaxVersions(),
-            Long.MAX_VALUE, false, oldestUnexpiredTS);
+            Long.MAX_VALUE,
+            retainDeletesInOutputUntil,
+            oldestUnexpiredTS);
 
     // Seek all scanners to the initial key
     for(KeyValueScanner scanner : scanners) {
