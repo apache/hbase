@@ -41,15 +41,31 @@
   </dependencies>
 
   <build>
-    <plugins>
-      <!-- Website/Reference Guide building -->
+      <plugins>
+      <!-- Assemble the javadocs from the dependent projects.
+         Relies on the use of javadoc:aggregate goal -->
       <plugin>
-        <artifactId>maven-site-plugin</artifactId>
-        <configuration>
-          <inputEncoding>UTF-8</inputEncoding>
-          <outputEncoding>UTF-8</outputEncoding>
-          <templateFile>src/site/site.vm</templateFile>
-        </configuration>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-javadocs</id>
+            <phase>pre-site</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>target/site/apidocs</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>../target/apidocs</directory>
+                  <includes>
+                    <include>**/**</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <!-- This has to come before the docbx plugin so hbase-default.xml gets transformed 
         properly -->
@@ -124,6 +140,15 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <!-- Website/Reference Guide building -->
+      <plugin>
+        <artifactId>maven-site-plugin</artifactId>
+        <configuration>
+          <inputEncoding>UTF-8</inputEncoding>
+          <outputEncoding>UTF-8</outputEncoding>
+          <templateFile>src/site/site.vm</templateFile>
+        </configuration>
       </plugin>
     </plugins>
   </build>

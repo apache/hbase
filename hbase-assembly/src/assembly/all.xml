@@ -73,14 +73,6 @@
       <directoryMode>0755</directoryMode>
     </fileSet>
 
-    <!-- Move the site to docs -->
-    <fileSet>
-      <directory>${parent.basedir}/hbase-server/target/site</directory>
-      <outputDirectory>docs</outputDirectory>
-      <fileMode>0644</fileMode>
-      <directoryMode>0644</directoryMode>
-    </fileSet>
-
     <!-- Move update script to sbin -->
     <fileSet>
       <directory>src/packages</directory>
