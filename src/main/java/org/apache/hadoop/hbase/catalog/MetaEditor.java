@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Writables;
 
 /**
@@ -132,7 +133,7 @@ public class MetaEditor {
       t.close();
     }
   }
-  
+
   /**
    * Adds a META row for the specified new region.
    * @param regionInfo region information
@@ -155,7 +156,7 @@ public class MetaEditor {
       List<HRegionInfo> regionInfos)
   throws IOException {
     List<Put> puts = new ArrayList<Put>();
-    for (HRegionInfo regionInfo : regionInfos) { 
+    for (HRegionInfo regionInfo : regionInfos) {
       puts.add(makePutFromRegionInfo(regionInfo));
     }
     putsToMetaTable(catalogTracker, puts);
@@ -302,6 +303,18 @@ public class MetaEditor {
     HRegionInfo info = Writables.getHRegionInfo(bytes);
     LOG.info("Current INFO from scan results = " + info);
     return info;
+  }
+
+  /**
+   * Returns the daughter regions by reading from the corresponding columns of the .META. table
+   * Result. If the region is not a split parent region, it returns PairOfSameType(null, null).
+   */
+  public static PairOfSameType<HRegionInfo> getDaughterRegions(Result data) throws IOException {
+    HRegionInfo splitA = Writables.getHRegionInfoOrNull(
+        data.getValue(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER));
+    HRegionInfo splitB = Writables.getHRegionInfoOrNull(
+        data.getValue(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER));
+    return new PairOfSameType<HRegionInfo>(splitA, splitB);
   }
 
   private static Put addRegionInfo(final Put p, final HRegionInfo hri)

@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -1210,7 +1211,7 @@ Server {
       new AtomicReference<Pair<HRegionInfo, ServerName>>(null);
 
     MetaScannerVisitor visitor =
-      new MetaScannerVisitor() {
+      new MetaScannerVisitorBase() {
         @Override
         public boolean processRow(Result data) throws IOException {
           if (data == null || data.size() <= 0) {

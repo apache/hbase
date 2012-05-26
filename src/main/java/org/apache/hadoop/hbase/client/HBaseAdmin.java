@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
@@ -369,7 +370,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       ++tries) {
       // Wait for new table to come on-line
       final AtomicInteger actualRegCount = new AtomicInteger(0);
-      MetaScannerVisitor visitor = new MetaScannerVisitor() {
+      MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
         @Override
         public boolean processRow(Result rowResult) throws IOException {
           HRegionInfo info = Writables.getHRegionInfoOrNull(
