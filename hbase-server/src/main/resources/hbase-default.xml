@@ -754,9 +754,9 @@
 
   <property skipInDoc="true">
     <name>hbase.defaults.for.version</name>
-    <value>@@@VERSION@@@</value>
+    <value>${hbase.version}</value>
     <description>
-    This defaults file was compiled for version @@@VERSION@@@. This variable is used
+    This defaults file was compiled for version ${hbase.version}. This variable is used
     to make sure that a user doesn't have an old version of hbase-default.xml on the
     classpath.
     </description>
@@ -770,7 +770,7 @@
     the other side of a maven generation; i.e. running in an
     ide.  You'll want to set this boolean to true to avoid
     seeing the RuntimException complaint: "hbase-default.xml file
-    seems to be for and old version of HBase (@@@VERSION@@@), this
+    seems to be for and old version of HBase (\${hbase.version}), this
     version is X.X.X-SNAPSHOT"
     </description>
   </property>

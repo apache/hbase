@@ -457,7 +457,11 @@
               </configuration>
             </execution>
           </executions>
-        </plugin>        
+        </plugin>
+        <plugin>
+          <artifactId>maven-surefire-report-plugin</artifactId>
+          <version>${surefire.version}</version>
+        </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
           <configuration>
@@ -469,10 +473,6 @@
               </fileset>
             </filesets>
           </configuration>
-        </plugin>
-        <plugin>
-          <artifactId>maven-surefire-report-plugin</artifactId>
-          <version>${surefire.version}</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -509,6 +509,9 @@
         <plugin>
           <artifactId>maven-resources-plugin</artifactId>
           <version>${maven.resources.plugin.version}</version><!--$NO-MVN-MAN-VER$ -->
+          <configuration>
+            <escapeString>\</escapeString>
+          </configuration>
         </plugin>
         <!-- Make a jar and put the sources in the jar.
         In the parent pom, so submodules will do the right thing. -->
@@ -618,24 +621,6 @@
       </plugins>
     </pluginManagement>
 
-    <resources>
-      <resource>
-        <directory>src/main/resources/</directory>
-        <includes>
-          <include>hbase-default.xml</include>
-        </includes>
-      </resource>
-    </resources>
-
-    <testResources>
-      <testResource>
-        <directory>src/test/resources</directory>
-        <excludes>
-          <exclude>hbase-site.xml</exclude>
-        </excludes>
-      </testResource>
-    </testResources>
-
     <!-- Plugins inherited by all modules -->
     <plugins>
       <!-- All submodules build their javadocs -->
@@ -661,6 +646,7 @@
     </maven.build.timestamp.format>
     <buildDate>${maven.build.timestamp}</buildDate>
     <compileSource>1.6</compileSource>
+    <hbase.version>${project.version}</hbase.version>
 
     <!-- Dependencies -->
     <avro.version>1.5.3</avro.version>

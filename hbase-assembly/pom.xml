@@ -31,6 +31,7 @@
   <artifactId>hbase-assembly</artifactId>
   <name>HBase - Assembly</name>
   <description>Assembly all HBase modules into deployable packages</description>
+  <packaging>pom</packaging>
 
   <properties>
     <!-- Have to hardcode the final here because the submodule can't seem to resolve parent in ant tasks -->

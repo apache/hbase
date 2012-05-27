@@ -156,8 +156,6 @@ add_maven_main_classes_to_classpath() {
   for module in `ls $HBASE_HOME | grep 'hbase-*'`
   do
     add_to_cp_if_exists "$HBASE_HOME/$module/target/classes"
-    # Add the root dir too.  We need to do this so we can find hbase-webapps
-    #add_to_cp_if_exists "$HBASE_HOME/$module/target/"
   done
 }
 
@@ -179,9 +177,10 @@ fi
 
 # For releases, add hbase & webapps to CLASSPATH
 # Webapps must come first else it messes up Jetty
-if [ -d "$HBASE_HOME/hbase-server/src/main/resources/hbase-webapps" ]; then
-  add_to_cp_if_exists "$HBASE_HOME/hbase-server/"
+if [ -d "$HBASE_HOME/hbase-webapps" ]; then
+  add_to_cp_if_exists "${HBASE_HOME}"
 fi
+#add if we are in a dev environment
 if [ -d "$HBASE_HOME/hbase-server/target/hbase-webapps" ]; then
   add_to_cp_if_exists "${HBASE_HOME}/hbase-server/target"
 fi
