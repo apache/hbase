@@ -22,11 +22,10 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <artifactId>hbase</artifactId>
-    <groupId>org.apache.hbase</groupId>
-    <version>0.95-SNAPSHOT</version>
-  </parent>
-
+        <artifactId>hbase</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>0.95-SNAPSHOT</version>
+    </parent>
   <artifactId>hbase-site</artifactId>
   <packaging>pom</packaging>
   

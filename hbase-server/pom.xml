@@ -33,32 +33,6 @@
   <description>Main functionality for HBase</description>
 
   <build>
-    <!-- Makes sure the resources get added before they are processed
-      by placing this first -->
-    <resources>
-      <!-- Add the build webabpps to the classpth -->
-      <resource>
-        <directory>${project.build.directory}</directory>
-        <includes>
-          <include>hbase-webapps/**</include>
-        </includes>
-      </resource>
-      <resource>
-        <directory>src/main/resources/</directory>
-        <includes>
-          <include>hbase-default.xml</include>
-        </includes>
-      </resource>
-    </resources>
-    <testResources>
-      <testResource>
-        <directory>src/test/resources</directory>
-        <excludes>
-          <exclude>hbase-site.xml</exclude>
-        </excludes>
-      </testResource>
-    </testResources>
-
     <plugins>
       <plugin>
         <groupId>org.apache.avro</groupId>
@@ -191,6 +165,23 @@
                 <source>${project.build.directory}/generated-jamon</source>
                 <source>${project.build.directory}/generated-sources/java</source>
               </sources>
+            </configuration>
+          </execution>
+          <!-- Add hbase-site to the test resources -->
+          <execution>
+            <id>add-test-resource</id>
+            <goals>
+              <goal>add-test-resource</goal>
+            </goals>
+            <configuration>
+              <resources>
+                <resource>
+                  <directory>src/test/resources</directory>
+                  <includes>
+                    <include>hbase-site.xml</include>
+                  </includes>
+                </resource>
+              </resources>
             </configuration>
           </execution>
         </executions>
