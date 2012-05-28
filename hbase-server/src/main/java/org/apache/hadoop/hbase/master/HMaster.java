@@ -597,11 +597,9 @@ Server {
     }
 
     this.assignmentManager.startTimeOutMonitor();
-    Set<ServerName> onlineServers = new HashSet<ServerName>(serverManager
-        .getOnlineServers().keySet());
     // TODO: Should do this in background rather than block master startup
     status.setStatus("Splitting logs after master startup");
-    splitLogAfterStartup(this.fileSystemManager, onlineServers);
+    splitLogAfterStartup(this.fileSystemManager);
 
     // Make sure root and meta assigned before proceeding.
     if (!assignRootAndMeta(status)) return;
@@ -618,7 +616,7 @@ Server {
     this.balancer.setMasterServices(this);
     // Fixup assignment manager status
     status.setStatus("Starting assignment manager");
-    this.assignmentManager.joinCluster(onlineServers);
+    this.assignmentManager.joinCluster();
 
     this.balancer.setClusterStatus(getClusterStatus());
 
@@ -638,7 +636,11 @@ Server {
     status.markComplete("Initialization successful");
     LOG.info("Master has completed initialization");
     initialized = true;
-
+    // clear the dead servers with same host name and port of online server because we are not
+    // removing dead server with same hostname and port of rs which is trying to check in before
+    // master initialization. See HBASE-5916.
+    this.serverManager.clearDeadServersWithSameHostNameAndPortOfOnlineServer();
+    
     if (this.cpHost != null) {
       // don't let cp initialization errors kill the master
       try {
@@ -662,9 +664,8 @@ Server {
    * @param mfs
    * @param onlineServers
    */
-  protected void splitLogAfterStartup(final MasterFileSystem mfs,
-      Set<ServerName> onlineServers) {
-    mfs.splitLogAfterStartup(onlineServers);
+  protected void splitLogAfterStartup(final MasterFileSystem mfs) {
+    mfs.splitLogAfterStartup();
   }
 
   /**

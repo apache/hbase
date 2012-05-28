@@ -49,6 +49,8 @@ import org.apache.hadoop.hbase.master.TestMasterFailover;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
@@ -98,9 +100,8 @@ public class TestRSKilledWhenMasterInitializing {
     }
 
     @Override
-    protected void splitLogAfterStartup(MasterFileSystem mfs,
-        Set<ServerName> onlineServers) {
-      super.splitLogAfterStartup(mfs, onlineServers);
+    protected void splitLogAfterStartup(MasterFileSystem mfs) {
+      super.splitLogAfterStartup(mfs);
       logSplit = true;
       // If "TestingMaster.sleep" is set, sleep after log split.
       if (getConfiguration().getBoolean("TestingMaster.sleep", false)) {
@@ -215,6 +216,10 @@ public class TestRSKilledWhenMasterInitializing {
     while (serverManager.areDeadServersInProgress()) {
       Thread.sleep(100);
     }
+    // Create a ZKW to use in the test
+    ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TESTUTIL);
+    ZKAssign.blockUntilNoRIT(zkw);
+    
     table = new HTable(TESTUTIL.getConfiguration(), TABLENAME);
     resultScanner = table.getScanner(new Scan());
     count = 0;
