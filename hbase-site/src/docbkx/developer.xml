@@ -32,6 +32,7 @@
     </para>
     <section xml:id="repos">
       <title>HBase Repositories</title>
+      <para>There are two different repositories for HBase: Subversion (SVN) and Git. The former is the system of record for committers, but the latter is easier to work with to build and contribute. SVN updates get automatically propagated to the Git repo.</para>
       <section xml:id="svn">
         <title>SVN</title>
         <programlisting>
@@ -55,6 +56,7 @@ git clone git://git.apache.org/hbase.git
             <para>See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3678">HBASE-3678 Add Eclipse-based Apache Formatter to HBase Wiki</link>
               for an Eclipse formatter to help ensure your code conforms to HBase'y coding convention.
             The issue includes instructions for loading the attached formatter.</para>
+            <para>In addition to the automatic formatting, make sure you follow the style guidelines explained in <xref linkend="common.patch.feedback"/></para>
             <para>Also, no @author tags - that's a rule.  Quality Javadoc comments are appreciated.  And include the Apache license.</para>
             </section>         
             <section xml:id="eclipse.svn">
@@ -62,6 +64,10 @@ git clone git://git.apache.org/hbase.git
             <para>Download and install the Subversive plugin.</para>
             <para>Set up an SVN Repository target from <xref linkend="svn"/>, then check out the code.</para>
             </section>         
+            <section xml:id="eclipse.git.plugin">
+            <title>Git Plugin</title>
+            <para>If you cloned the project via git, download and install the Git plugin (EGit). Attach to your local git repo (via the Git Repositories window) and you'll be able to see file revision history, generate patches, etc.</para>
+            </section>
             <section xml:id="eclipse.maven.setup">
             <title>HBase Project Setup</title>
             To set up your Eclipse environment for HBase, close Eclipse and execute...
@@ -69,12 +75,12 @@ git clone git://git.apache.org/hbase.git
 mvn eclipse:eclipse
             </programlisting>
             ... from your local HBase project directory in your workspace to generate some new <filename>.project</filename> 
-            and <filename>.classpath</filename>files.  Then reopen Eclipse.
-            </section>         
+            and <filename>.classpath</filename>files.  Then reopen Eclipse, and import the .project file in the HBase directory to a workspace.
+            </section>
             <section xml:id="eclipse.maven.plugin">
             <title>Maven Plugin</title>
             <para>Download and install the Maven plugin.  For example, Help -&gt; Install New Software -&gt; (search for Maven Plugin)</para>
-            </section>         
+            </section> 
             <section xml:id="eclipse.maven.class">
             <title>Maven Classpath Variable</title>
             <para>The <varname>M2_REPO</varname> classpath variable needs to be set up for the project.  This needs to be set to 
@@ -120,8 +126,19 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
     
         <section xml:id="build">
        <title>Building HBase</title>
-      <para>This section will be of interest only to those building HBase from source.
-      </para>
+      <section xml:id="build.basic">
+       <title>Basic Compile</title>
+       <para>Thanks to maven, building HBase is easy. You can read about the various maven commands in <xref linkend="maven.build.commands"/>, but the simplest command to compile HBase from its java source code is:
+       <programlisting>
+mvn compile
+       </programlisting>
+       Or, to clean up before compiling:
+       <programlisting>
+mvn clean compile
+       </programlisting>
+       With Eclipse set up as explained above in <xref linkend="eclipse"/>, you can also simply use the build command in Eclipse. To create the full installable HBase package takes a little bit more work, so read on. 
+       </para>
+      </section>
       <section xml:id="build.snappy">
         <title>Building in snappy compression support</title>
         <para>Pass <code>-Dsnappy</code> to trigger the snappy maven profile for building
@@ -132,7 +149,7 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
         <title>Building the HBase tarball</title>
         <para>Do the following to build the HBase tarball.
         Passing the -Drelease will generate javadoc and run the RAT plugin to verify licenses on source.
-        <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean site install assembly:single -Dmaven.test.skip -Prelease</programlisting>
+        <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean site install assembly:single -DskipTests -Prelease</programlisting>
 </para>
       </section>
 
@@ -236,17 +253,27 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.1
            </para>
       </section>
     </section> <!--  build -->
-    <section xml:id="hbase.site.publishing">
-    <title>Publishing a new version of hbase.apache.org</title>
-    <para>Set up your apache credentials and the target site location locally in a place and
-    form that maven can pick it up, in <filename>~/.m2/settings.xml</filename>.  See <xref linked="mvn.settings.file" /> for an example.
-    Next, run the following:
-    <programlisting>$ mvn -DskipTests -Papache-release site site:deploy</programlisting>
-    You will be asked for your password.  It can take a little time.
-    Remember that it can take a few hours for your site changes to show up.
-    </para>
+    <section xml:id="hbase.site">
+    <title>Updating hbase.apache.org</title>
+      <section xml:id="hbase.site.contributing">
+      <title>Contributing to hbase.apache.org</title>
+      <para>The HBase apache web site (including this reference guide) is maintained as part of the main HBase source tree, under <filename>/src/docbkx</filename> and <filename>/src/site</filename>. The former is this reference guide; the latter, in most cases, are legacy pages that are in the process of being merged into the docbkx tree.</para>
+      <para>To contribute to the reference guide, edit these files and submit them as a patch (see <xref linkend="submitting.patches"/>). Your Jira should contain a summary of the changes in each section (see <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6081">HBASE-6081</link> for an example).</para>
+      <para>To generate the site locally while you're working on it, run:
+      <programlisting>mvn site</programlisting>
+      Then you can load up the generated HTML files in your browser (file are under <filename>/target/site</filename>).</para>
+      </section>
+      <section xml:id="hbase.site.publishing">
+      <title>Publishing hbase.apache.org</title>
+      <para>If you're a committer with rights to publish the site artifacts: set up your apache credentials and the target site location locally in a place and
+      form that maven can pick it up, in <filename>~/.m2/settings.xml</filename>.  See <xref linked="mvn_repo" /> for an example.
+      Next, run the following:
+      <programlisting>$ mvn -DskipTests -Papache-release site site:deploy</programlisting>
+      You will be asked for your password.  It can take a little time.
+      Remember that it can take a few hours for your site changes to show up.
+      </para>
+      </section>
     </section>
-
     <section xml:id="hbase.tests">
     <title>Tests</title>
 
