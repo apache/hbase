@@ -1110,7 +1110,7 @@
       <id>hadoop-1.0</id>
       <activation>
         <property>
-          <name>!hadoop.version</name>
+          <name>!hadoop.profile</name>
         </property>
       </activation>
       <properties>
@@ -1164,12 +1164,13 @@
       <id>hadoop-2.0</id>
       <activation>
         <property>
-          <name>hadoop.version</name>
-          <value>2.0.0-alpha</value>
+          <name>hadoop.profile</name>
+          <value>2.0</value>
         </property>
       </activation>
       <properties>
         <slf4j.version>1.6.1</slf4j.version>
+        <hadoop.version>2.0.0-alpha</hadoop.version>
       </properties>
       <dependencyManagement>
         <dependencies>
@@ -1202,12 +1203,13 @@
       <id>hadoop-3.0</id>
       <activation>
         <property>
-          <name>hadoop.version</name>
-          <value>3.0.0-SNAPSHOT</value>
+          <name>hadoop.profile</name>
+          <value>3.0</value>
         </property>
       </activation>
       <properties>
         <slf4j.version>1.6.1</slf4j.version>
+        <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
       </properties>
       <dependencies>
         <dependency>

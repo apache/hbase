@@ -444,51 +444,6 @@ As most as possible, tests should use the default settings for the cluster. When
 </section>
 </section>
 </section>
-
-<section xml:id="integration.tests">
-<title>Integration Tests</title>
-<para>HBase integration Tests are tests that are beyond HBase unit tests.  They
-are generally long-lasting, sizeable (the test can be asked to 1M rows or 1B rows),
-targetable (they can take configuration that will point them at the ready-made cluster
-they are to run against; integration tests do not include cluster start/stop code),
-and verifying success, integration tests rely on public APIs only; they do not
-attempt to examine server internals asserring success/fail. Integration tests
-are what you would run when you need to more elaborate proofing of a release candidate
-beyond what unit tests can do. They are not generally run on the Apache Continuous Integration
-build server.
-</para>
-<para>
-Integration tests currently live under the <filename>src/test</filename> directory and
-will match the regex: <filename>**/IntegrationTest*.java</filename>. 
-</para>
-<para>HBase 0.92 added a <varname>verify</varname> maven target.
-Invoking it, for example by doing <code>mvn verify</code>, will
-run all the phases up to and including the verify phase via the
-maven <link xlink:href="http://maven.apache.org/plugins/maven-failsafe-plugin/">failsafe plugin</link>,
-running all the above mentioned HBase unit tests as well as tests that are in the HBase integration test group.
-If you just want to run the integration tests, you need to run two commands. First:
-          <programlisting>mvn failsafe:integration-test</programlisting>
-This actually runs ALL the integration tests.
-          <note><para>This command will always output <code>BUILD SUCCESS</code> even if there are test failures.
-          </para></note>
-          At this point, you could grep the output by hand looking for failed tests. However, maven will do this for us; just use:
-          <programlisting>mvn failsafe:verify</programlisting>
-          The above command basically looks at all the test results (so don't remove the 'target' directory) for test failures and reports the results.</para>
-
-      <section xml:id="maven.build.commanas.integration.tests2">
-          <title>Running a subset of Integration tests</title>
-          <para>This is very similar to how you specify running a subset of unit tests (see above).
-To just run <classname>IntegrationTestClassXYZ.java</classname>, use:
-          <programlisting>mvn failsafe:integration-test -Dtest=IntegrationTestClassXYZ</programlisting> 
-          Pretty similar, right?
-          The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX*.java:
-          <programlisting>mvn failsafe:integration-test -Dtest=*ClassX*</programlisting> 
-          This runs everything that is an integration test that matches *ClassX*. This means anything matching: "**/IntegrationTest*ClassX*".
-          You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups.This would look something like:
-          <programlisting>mvn failsafe:integration-test -Dtest=*ClassX*, *ClassY</programlisting>  
-          </para>
-      </section>
-    </section>
 </section> <!-- tests -->
     
     <section xml:id="maven.build.commands"> 
@@ -517,14 +472,21 @@ mvn compile
       </section>
 
        <section xml:id="maven.build.hadoop"> 
-          <title>To build against hadoop 0.22.x or 0.23.x</title>
-          <programlisting>
-mvn -Dhadoop.profile=22 ...
-          </programlisting>
-<para>That is, designate build with hadoop.profile 22.  Pass 23 for hadoop.profile to build against hadoop 0.23.
-Tests do not all pass as of this writing so you may need ot pass <code>-DskipTests</code> unless you are inclined
-to fix the failing tests.
-</para>
+          <title>Building against various hadoop versions.</title>
+          <para>As of 0.96, HBase supports building against hadoop versions: 1.0.3, 2.0.0-alpha and 3.0.0-SNAPSHOT. 
+          By default, we will build with Hadoop-1.0.3. To change the version to run with Hadoop-2.0.0-alpha, you would run:</para>
+         <programlisting>mvn -Dhadoop.profile=2.0 ...</programlisting>
+         <para>
+         That is, designate build with hadoop.profile 2.0.  Pass 2.0 for hadoop.profile to build against hadoop 2.0.
+         Tests may not all pass as of this writing so you may need to pass <code>-DskipTests</code> unless you are inclined
+          to fix the failing tests.</para>
+          <para>
+         Similarly, for 3.0, you would just replace the profile value. Note that Hadoop-3.0.0-SNAPSHOT does not currently have a deployed maven artificat - you will need to build and install your own in your local maven repository if you want to run against this profile.
+         </para>
+         <para>
+         In earilier verions of HBase, you can build against older versions of hadoop, notably, Hadoop 0.22.x and 0.23.x.
+         If you are running, for example HBase-0.94 and wanted to build against Hadoop 0.23.x, you would run with:</para>
+          <programlisting>mvn -Dhadoop.profile=22 ...</programlisting>
       </section>
     </section>
   

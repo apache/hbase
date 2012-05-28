@@ -472,7 +472,7 @@
       <id>hadoop-1.0</id>
       <activation>
         <property>
-          <name>!hadoop.version</name>
+          <name>!hadoop.profile</name>
         </property>
       </activation>
       <dependencies>
@@ -495,8 +495,8 @@
       <id>hadoop-2.0</id>
       <activation>
         <property>
-          <name>hadoop.version</name>
-          <value>2.0.0-alpha</value>
+          <name>hadoop.profile</name>
+          <value>2.0</value>
         </property>
       </activation>
       <dependencies>
@@ -546,8 +546,8 @@
       <id>hadoop-3.0</id>
       <activation>
         <property>
-          <name>hadoop.version</name>
-          <value>3.0.0-SNAPSHOT</value>
+          <name>hadoop.profile</name>
+          <value>3.0</value>
         </property>
       </activation>
       <properties>
