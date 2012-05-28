@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Strings;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -521,6 +523,91 @@ public class TestWALReplay {
         return null;
       }
     });
+  }
+
+  @Test
+  // the following test is for HBASE-6065
+  public void testSequentialEditLogSeqNum() throws IOException {
+    final String tableNameStr = "testSequentialEditLogSeqNum";
+    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableNameStr);
+    final Path basedir = new Path(this.hbaseRootDir, tableNameStr);
+    deleteDir(basedir);
+    final byte[] rowName = Bytes.toBytes(tableNameStr);
+    final int countPerFamily = 10;
+    final HTableDescriptor htd = createBasic1FamilyHTD(tableNameStr);
+
+    // Mock the HLog
+    MockHLog wal = createMockWAL(this.conf);
+    
+    HRegion region = new HRegion(basedir, wal, this.fs, this.conf, hri, htd, null);
+    long seqid = region.initialize();
+    // HRegionServer usually does this. It knows the largest seqid across all
+    // regions.
+    wal.setSequenceNumber(seqid);
+    for (HColumnDescriptor hcd : htd.getFamilies()) {
+      addRegionEdits(rowName, hcd.getName(), countPerFamily, this.ee, region, "x");
+    }
+    // get the seq no after first set of entries.
+    long sequenceNumber = wal.getSequenceNumber();
+
+    // Let us flush the region
+    // But this time completeflushcache is not yet done
+    region.flushcache();
+    for (HColumnDescriptor hcd : htd.getFamilies()) {
+      addRegionEdits(rowName, hcd.getName(), 5, this.ee, region, "x");
+    }
+    long lastestSeqNumber = wal.getSequenceNumber();
+    // get the current seq no
+    wal.doCompleteCacheFlush = true;
+    // allow complete cache flush with the previous seq number got after first
+    // set of edits.
+    wal.completeCacheFlush(hri.getEncodedNameAsBytes(), hri.getTableName(), sequenceNumber, false);
+    wal.close();
+    FileStatus[] listStatus = this.fs.listStatus(wal.getDir());
+    HLogSplitter.splitLogFileToTemp(hbaseRootDir, hbaseRootDir + "/temp", listStatus[0], this.fs,
+        this.conf, null);
+    FileStatus[] listStatus1 = this.fs.listStatus(new Path(hbaseRootDir + "/temp/" + tableNameStr
+        + "/" + hri.getEncodedName() + "/recovered.edits"));
+    int editCount = 0;
+    for (FileStatus fileStatus : listStatus1) {
+      editCount = Integer.parseInt(fileStatus.getPath().getName());
+    }
+    // The sequence number should be same 
+    assertEquals(
+        "The sequence number of the recoverd.edits and the current edit seq should be same",
+        lastestSeqNumber, editCount);
+  }
+  
+  static class MockHLog extends HLog {
+    boolean doCompleteCacheFlush = false;
+
+    public MockHLog(FileSystem fs, Path dir, Path oldLogDir, Configuration conf) throws IOException {
+      super(fs, dir, oldLogDir, conf);
+    }
+
+    @Override
+    public void completeCacheFlush(byte[] encodedRegionName, byte[] tableName, long logSeqId,
+        boolean isMetaRegion) throws IOException {
+      if (!doCompleteCacheFlush) {
+        return;
+      }
+      super.completeCacheFlush(encodedRegionName, tableName, logSeqId, isMetaRegion);
+    }
+  }
+
+  private HTableDescriptor createBasic1FamilyHTD(final String tableName) {
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HColumnDescriptor a = new HColumnDescriptor(Bytes.toBytes("a"));
+    htd.addFamily(a);
+    return htd;
+  }
+  
+  private MockHLog createMockWAL(Configuration conf) throws IOException {
+    MockHLog wal = new MockHLog(FileSystem.get(conf), logDir, oldLogDir, conf);
+    // Set down maximum recovery so we dfsclient doesn't linger retrying something
+    // long gone.
+    HBaseTestingUtility.setMaxRecoveryErrorCount(wal.getOutputStream(), 1);
+    return wal;
   }
 
   // Flusher used in this test.  Keep count of how often we are called and
