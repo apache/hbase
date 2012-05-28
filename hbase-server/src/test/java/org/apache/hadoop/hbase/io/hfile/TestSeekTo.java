@@ -98,6 +98,89 @@ public class TestSeekTo extends HBaseTestCase {
     reader.close();
   }
 
+  public void testSeekBeforeWithReSeekTo() throws Exception {
+    Path p = makeNewFile();
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf));
+    reader.loadFileInfo();
+    HFileScanner scanner = reader.getScanner(false, true);
+    assertEquals(false, scanner.seekBefore(toKV("a").getKey()));
+    assertEquals(false, scanner.seekBefore(toKV("b").getKey()));
+    assertEquals(false, scanner.seekBefore(toKV("c").getKey()));
+
+    // seekBefore d, so the scanner points to c
+    assertEquals(true, scanner.seekBefore(toKV("d").getKey()));
+    assertEquals("c", toRowStr(scanner.getKeyValue()));
+    // reseekTo e and g
+    assertEquals(0, scanner.reseekTo(toKV("c").getKey()));
+    assertEquals("c", toRowStr(scanner.getKeyValue()));
+    assertEquals(0, scanner.reseekTo(toKV("g").getKey()));
+    assertEquals("g", toRowStr(scanner.getKeyValue()));
+
+    // seekBefore e, so the scanner points to c
+    assertEquals(true, scanner.seekBefore(toKV("e").getKey()));
+    assertEquals("c", toRowStr(scanner.getKeyValue()));
+    // reseekTo e and g
+    assertEquals(0, scanner.reseekTo(toKV("e").getKey()));
+    assertEquals("e", toRowStr(scanner.getKeyValue()));
+    assertEquals(0, scanner.reseekTo(toKV("g").getKey()));
+    assertEquals("g", toRowStr(scanner.getKeyValue()));
+
+    // seekBefore f, so the scanner points to e
+    assertEquals(true, scanner.seekBefore(toKV("f").getKey()));
+    assertEquals("e", toRowStr(scanner.getKeyValue()));
+    // reseekTo e and g
+    assertEquals(0, scanner.reseekTo(toKV("e").getKey()));
+    assertEquals("e", toRowStr(scanner.getKeyValue()));
+    assertEquals(0, scanner.reseekTo(toKV("g").getKey()));
+    assertEquals("g", toRowStr(scanner.getKeyValue()));
+
+    // seekBefore g, so the scanner points to e
+    assertEquals(true, scanner.seekBefore(toKV("g").getKey()));
+    assertEquals("e", toRowStr(scanner.getKeyValue()));
+    // reseekTo e and g again
+    assertEquals(0, scanner.reseekTo(toKV("e").getKey()));
+    assertEquals("e", toRowStr(scanner.getKeyValue()));
+    assertEquals(0, scanner.reseekTo(toKV("g").getKey()));
+    assertEquals("g", toRowStr(scanner.getKeyValue()));
+
+    // seekBefore h, so the scanner points to g
+    assertEquals(true, scanner.seekBefore(toKV("h").getKey()));
+    assertEquals("g", toRowStr(scanner.getKeyValue()));
+    // reseekTo g
+    assertEquals(0, scanner.reseekTo(toKV("g").getKey()));
+    assertEquals("g", toRowStr(scanner.getKeyValue()));
+
+    // seekBefore i, so the scanner points to g
+    assertEquals(true, scanner.seekBefore(toKV("i").getKey()));
+    assertEquals("g", toRowStr(scanner.getKeyValue()));
+    // reseekTo g
+    assertEquals(0, scanner.reseekTo(toKV("g").getKey()));
+    assertEquals("g", toRowStr(scanner.getKeyValue()));
+
+    // seekBefore j, so the scanner points to i
+    assertEquals(true, scanner.seekBefore(toKV("j").getKey()));
+    assertEquals("i", toRowStr(scanner.getKeyValue()));
+    // reseekTo i
+    assertEquals(0, scanner.reseekTo(toKV("i").getKey()));
+    assertEquals("i", toRowStr(scanner.getKeyValue()));
+
+    // seekBefore k, so the scanner points to i
+    assertEquals(true, scanner.seekBefore(toKV("k").getKey()));
+    assertEquals("i", toRowStr(scanner.getKeyValue()));
+    // reseekTo i and k
+    assertEquals(0, scanner.reseekTo(toKV("i").getKey()));
+    assertEquals("i", toRowStr(scanner.getKeyValue()));
+    assertEquals(0, scanner.reseekTo(toKV("k").getKey()));
+    assertEquals("k", toRowStr(scanner.getKeyValue()));
+
+    // seekBefore l, so the scanner points to k
+    assertEquals(true, scanner.seekBefore(toKV("l").getKey()));
+    assertEquals("k", toRowStr(scanner.getKeyValue()));
+    // reseekTo k
+    assertEquals(0, scanner.reseekTo(toKV("k").getKey()));
+    assertEquals("k", toRowStr(scanner.getKeyValue()));
+  }
+
   public void testSeekTo() throws Exception {
     Path p = makeNewFile();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf));
