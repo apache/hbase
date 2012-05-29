@@ -560,7 +560,11 @@ public class TestHRegion extends HBaseTestCase {
     byte[] cf = Bytes.toBytes("cf");
     byte[] qual = Bytes.toBytes("qual");
     byte[] val = Bytes.toBytes("val");
-    this.region = initHRegion(b, getName(), cf);
+    Configuration conf = HBaseConfiguration.create();
+    // Set optionallogflushinterval to a high value so that it doesn't flush during this test
+    // and throw off the calculation of number of syncs.  See HBASE-6097.
+    conf.setLong("hbase.regionserver.optionallogflushinterval",Integer.MAX_VALUE);
+    this.region = initHRegion(b, getName(), conf, cf);
     try {
       HLog.getSyncOps(); // clear counter from prior tests
       assertEquals(0, HLog.getSyncOps());
