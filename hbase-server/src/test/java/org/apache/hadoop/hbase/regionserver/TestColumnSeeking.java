@@ -156,8 +156,7 @@ public class TestColumnSeeking {
       HRegion.closeHRegion(region);
     }
 
-    region.close();
-    region.getLog().closeAndDelete();
+    HRegion.closeHRegion(region);
   }
 
   @SuppressWarnings("unchecked")
@@ -265,8 +264,7 @@ public class TestColumnSeeking {
       assertTrue(results.containsAll(kvSet));
     }
 
-    region.close();
-    region.getLog().closeAndDelete();
+    HRegion.closeHRegion(region);
   }
 
   List<String> generateRandomWords(int numberOfWords, String suffix) {

@@ -147,8 +147,7 @@ public class TestScanner extends HBaseTestCase {
       assertTrue(count > 10);
       s.close();
     } finally {
-      this.r.close();
-      this.r.getLog().closeAndDelete();
+      HRegion.closeHRegion(this.r);
     }
   }
 
@@ -200,8 +199,7 @@ public class TestScanner extends HBaseTestCase {
       rowInclusiveStopFilter(scan, stopRow);
 
     } finally {
-      this.r.close();
-      this.r.getLog().closeAndDelete();
+      HRegion.closeHRegion(this.r);
     }
   }
 
@@ -227,8 +225,7 @@ public class TestScanner extends HBaseTestCase {
         return;
       }
     } finally {
-      this.r.close();
-      this.r.getLog().closeAndDelete();
+      HRegion.closeHRegion(this.r);
     }
   }
 
@@ -343,8 +340,7 @@ public class TestScanner extends HBaseTestCase {
 
     } finally {
       // clean up
-      r.close();
-      r.getLog().closeAndDelete();
+      HRegion.closeHRegion(r);
     }
   }
 
@@ -464,8 +460,7 @@ public class TestScanner extends HBaseTestCase {
       LOG.error("Failed", e);
       throw e;
     } finally {
-      this.r.close();
-      this.r.getLog().closeAndDelete();
+      HRegion.closeHRegion(this.r);
     }
   }
 
@@ -487,8 +482,7 @@ public class TestScanner extends HBaseTestCase {
       LOG.error("Failed", e);
       throw e;
     } finally {
-      this.r.close();
-      this.r.getLog().closeAndDelete();
+      HRegion.closeHRegion(this.r);
     }
   }
 
@@ -549,8 +543,7 @@ public class TestScanner extends HBaseTestCase {
       assertTrue(Bytes.BYTES_COMPARATOR.compare(fam2, results.get(1)
           .getFamily()) == 0);
     } finally {
-      this.r.close();
-      this.r.getLog().closeAndDelete();
+      HRegion.closeHRegion(this.r);
     }
   }
 

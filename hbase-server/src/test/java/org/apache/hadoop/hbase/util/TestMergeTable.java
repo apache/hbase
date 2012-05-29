@@ -150,8 +150,7 @@ public class TestMergeTable {
         region.flushcache();
       }
     }
-    region.close();
-    region.getLog().closeAndDelete();
+    HRegion.closeHRegion(region);
     return region;
   }
 
@@ -167,10 +166,8 @@ public class TestMergeTable {
     for (HRegion r: regions) {
       HRegion.addRegionToMETA(meta, r);
     }
-    meta.close();
-    meta.getLog().closeAndDelete();
-    root.close();
-    root.getLog().closeAndDelete();
+    HRegion.closeHRegion(meta);
+    HRegion.closeHRegion(root);
   }
 
   @org.junit.Rule

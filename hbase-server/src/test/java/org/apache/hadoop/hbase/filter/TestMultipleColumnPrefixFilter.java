@@ -100,8 +100,7 @@ public class TestMultipleColumnPrefixFilter {
     while(scanner.next(results));
     assertEquals(prefixMap.get("p").size() + prefixMap.get("q").size(), results.size());
 
-    region.close();
-    region.getLog().closeAndDelete();
+    HRegion.closeHRegion(region);
   }
 
   @Test
@@ -169,8 +168,7 @@ public class TestMultipleColumnPrefixFilter {
     while(scanner.next(results));
     assertEquals(prefixMap.get("p").size() + prefixMap.get("q").size(), results.size());
 
-    region.close();
-    region.getLog().closeAndDelete();
+    HRegion.closeHRegion(region);
   }
   
   @Test
@@ -225,8 +223,7 @@ public class TestMultipleColumnPrefixFilter {
     
     assertEquals(results1.size(), results2.size());
 
-    region.close();
-    region.getLog().closeAndDelete();
+    HRegion.closeHRegion(region);
   }
   
   List<String> generateRandomWords(int numberOfWords, String suffix) {

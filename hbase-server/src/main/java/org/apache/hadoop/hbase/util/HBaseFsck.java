@@ -705,8 +705,7 @@ public class HBaseFsck {
 
     // Add first region from the META table to the ROOT region.
     HRegion.addRegionToMETA(root, meta);
-    root.close();
-    root.getLog().closeAndDelete();
+    HRegion.closeHRegion(root);
     return meta;
   }
 
@@ -821,8 +820,7 @@ public class HBaseFsck {
       return false;
     }
     meta.put(puts.toArray(new Put[0]));
-    meta.close();
-    meta.getLog().closeAndDelete();
+    HRegion.closeHRegion(meta);
     LOG.info("Success! .META. table rebuilt.");
     return true;
   }

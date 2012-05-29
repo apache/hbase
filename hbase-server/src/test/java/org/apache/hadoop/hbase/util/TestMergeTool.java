@@ -172,8 +172,7 @@ public class TestMergeTool extends HBaseTestCase {
     for (int i = 0; i < sourceRegions.length; i++) {
       HRegion r = regions[i];
       if (r != null) {
-        r.close();
-        r.getLog().closeAndDelete();
+        HRegion.closeHRegion(r);
       }
     }
     TEST_UTIL.shutdownMiniCluster();
@@ -260,8 +259,7 @@ public class TestMergeTool extends HBaseTestCase {
         assertTrue(Bytes.equals(bytes, rows[i][j]));
       }
       // Close the region and delete the log
-      regions[i].close();
-      regions[i].getLog().closeAndDelete();
+      HRegion.closeHRegion(regions[i]);
     }
 
     // Create a log that we can reuse when we need to open regions

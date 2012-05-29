@@ -312,8 +312,7 @@ public class TestHRegion extends HBaseTestCase {
         }
       } finally {
         if (this.region != null) {
-          this.region.close();
-          this.region.getLog().closeAndDelete();
+          HRegion.closeHRegion(this.region);
         }
       }
       done.set(true);
@@ -1608,8 +1607,7 @@ public class TestHRegion extends HBaseTestCase {
       } finally {
         for (int i = 0; i < subregions.length; i++) {
           try {
-            subregions[i].close();
-            subregions[i].getLog().closeAndDelete();
+            HRegion.closeHRegion(subregions[i]);
           } catch (IOException e) {
             // Ignore.
           }

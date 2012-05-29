@@ -291,8 +291,7 @@ public class TestMultiColumnScanner {
         "pairs", lastDelTimeMap.size() > 0);
     LOG.info("Number of row/col pairs deleted at least once: " +
        lastDelTimeMap.size());
-    region.close();
-    region.getLog().closeAndDelete();
+    HRegion.closeHRegion(region);
   }
 
   private static String getRowQualStr(KeyValue kv) {

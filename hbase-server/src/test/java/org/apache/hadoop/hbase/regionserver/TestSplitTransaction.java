@@ -219,8 +219,7 @@ public class TestSplitTransaction {
         assertTrue(count > 0 && count != rowcount);
         daughtersRowCount += count;
       } finally {
-        openRegion.close();
-        openRegion.getLog().closeAndDelete();
+        HRegion.closeHRegion(openRegion);
       }
     }
     assertEquals(rowcount, daughtersRowCount);
@@ -275,8 +274,7 @@ public class TestSplitTransaction {
         assertTrue(count > 0 && count != rowcount);
         daughtersRowCount += count;
       } finally {
-        openRegion.close();
-        openRegion.getLog().closeAndDelete();
+        HRegion.closeHRegion(openRegion);
       }
     }
     assertEquals(rowcount, daughtersRowCount);
@@ -316,8 +314,7 @@ public class TestSplitTransaction {
     htd.addFamily(hcd);
     HRegionInfo hri = new HRegionInfo(htd.getName(), STARTROW, ENDROW);
     HRegion r = HRegion.createHRegion(hri, testdir, TEST_UTIL.getConfiguration(), htd);
-    r.close();
-    r.getLog().closeAndDelete();
+    HRegion.closeHRegion(r);
     return HRegion.openHRegion(testdir, hri, htd, wal,
       TEST_UTIL.getConfiguration());
   }

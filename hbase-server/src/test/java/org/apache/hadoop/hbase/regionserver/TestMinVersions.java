@@ -88,8 +88,7 @@ public class TestMinVersions extends HBaseTestCase {
       r = region.getClosestRowBefore(T2, c0);
       checkResult(r, c0, T4);
     } finally {
-      region.close();
-      region.getLog().closeAndDelete();
+      HRegion.closeHRegion(region);
     }
   }
 
@@ -144,8 +143,7 @@ public class TestMinVersions extends HBaseTestCase {
       r = region.get(g, null);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T3,T2,T1);
     } finally {
-      region.close();
-      region.getLog().closeAndDelete();
+      HRegion.closeHRegion(region);
     }
   }
 
@@ -202,8 +200,7 @@ public class TestMinVersions extends HBaseTestCase {
       r = region.get(g, null);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T3);
     } finally {
-      region.close();
-      region.getLog().closeAndDelete();
+      HRegion.closeHRegion(region);
     }
   }
 
@@ -276,8 +273,7 @@ public class TestMinVersions extends HBaseTestCase {
       r = region.get(g, null);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T5,T4);
     } finally {
-      region.close();
-      region.getLog().closeAndDelete();
+      HRegion.closeHRegion(region);
     }
   }
 
@@ -367,8 +363,7 @@ public class TestMinVersions extends HBaseTestCase {
       r = region.get(g, null);
       assertTrue(r.isEmpty());
     } finally {
-      region.close();
-      region.getLog().closeAndDelete();
+      HRegion.closeHRegion(region);
     }
   }
 
@@ -441,8 +436,7 @@ public class TestMinVersions extends HBaseTestCase {
       r = region.get(g, null);
       checkResult(r, c0, T2);
     } finally {
-      region.close();
-      region.getLog().closeAndDelete();
+      HRegion.closeHRegion(region);
     }
   }
 

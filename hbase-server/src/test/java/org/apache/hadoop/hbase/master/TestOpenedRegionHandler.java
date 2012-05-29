@@ -160,8 +160,7 @@ public class TestOpenedRegionHandler {
       assertEquals("The region should not be opened successfully.", regionName,
           region.getRegionInfo().getEncodedName());
     } finally {
-      region.close();
-      region.getLog().closeAndDelete();
+      HRegion.closeHRegion(region);
       TEST_UTIL.shutdownMiniZKCluster();
     }
   }

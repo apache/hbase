@@ -131,8 +131,7 @@ public class TestWideScanner extends HBaseTestCase {
 
       s.close();
     } finally {
-      this.r.close();
-      this.r.getLog().closeAndDelete();
+      HRegion.closeHRegion(this.r);
     }
   }
 

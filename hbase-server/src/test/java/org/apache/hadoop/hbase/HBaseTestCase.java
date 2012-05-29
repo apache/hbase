@@ -681,14 +681,8 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   protected void closeRootAndMeta() throws IOException {
-    if (meta != null) {
-      meta.close();
-      meta.getLog().closeAndDelete();
-    }
-    if (root != null) {
-      root.close();
-      root.getLog().closeAndDelete();
-    }
+    HRegion.closeHRegion(meta);
+    HRegion.closeHRegion(root);
   }
 
   public static void assertByteEquals(byte[] expected,

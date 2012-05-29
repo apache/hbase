@@ -405,10 +405,8 @@ public class MasterFileSystem {
       setInfoFamilyCachingForMeta(true);
       // Add first region from the META table to the ROOT region.
       HRegion.addRegionToMETA(root, meta);
-      root.close();
-      root.getLog().closeAndDelete();
-      meta.close();
-      meta.getLog().closeAndDelete();
+      HRegion.closeHRegion(root);
+      HRegion.closeHRegion(meta);
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.error("bootstrap", e);

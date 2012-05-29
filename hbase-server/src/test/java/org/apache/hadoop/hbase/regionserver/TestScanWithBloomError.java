@@ -113,8 +113,7 @@ public class TestScanWithBloomError {
     createStoreFile(new int[] {1, 9});
     scanColSet(new int[]{1, 4, 6, 7}, new int[]{1, 6, 7});
 
-    region.close();
-    region.getLog().closeAndDelete();
+    HRegion.closeHRegion(region);
   }
 
   private void scanColSet(int[] colSet, int[] expectedResultCols)

@@ -237,8 +237,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     for (int i = 0; i < regions.length; i++) {
       regions[i] = reopenRegion(regions[i], CoprocessorImpl.class);
     }
-    region.close();
-    region.getLog().closeAndDelete();
+    HRegion.closeHRegion(region);
     Coprocessor c = region.getCoprocessorHost().
       findCoprocessor(CoprocessorImpl.class.getName());
 
@@ -258,8 +257,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     assertTrue(((CoprocessorImpl)c).wasSplit());
 
     for (int i = 0; i < regions.length; i++) {
-      regions[i].close();
-      regions[i].getLog().closeAndDelete();
+      HRegion.closeHRegion(regions[i]);
       c = region.getCoprocessorHost()
             .findCoprocessor(CoprocessorImpl.class.getName());
       assertTrue("Coprocessor not started", ((CoprocessorImpl)c).wasStarted());

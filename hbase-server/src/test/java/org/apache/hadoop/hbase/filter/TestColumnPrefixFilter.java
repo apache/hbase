@@ -98,12 +98,10 @@ public class TestColumnPrefixFilter {
         assertEquals(prefixMap.get(s).size(), results.size());
       }
     } finally {
-      region.close();
-      region.getLog().closeAndDelete();
+      HRegion.closeHRegion(region);
     }
 
-    region.close();
-    region.getLog().closeAndDelete();
+    HRegion.closeHRegion(region);
   }
 
   @Test
@@ -165,12 +163,10 @@ public class TestColumnPrefixFilter {
         assertEquals(prefixMap.get(s).size(), results.size());
       }
     } finally {
-      region.close();
-      region.getLog().closeAndDelete();
+      HRegion.closeHRegion(region);
     }
 
-    region.close();
-    region.getLog().closeAndDelete();
+    HRegion.closeHRegion(region);
   }
 
   List<String> generateRandomWords(int numberOfWords, String suffix) {

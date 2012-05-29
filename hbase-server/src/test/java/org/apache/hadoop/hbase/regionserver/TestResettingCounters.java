@@ -97,8 +97,7 @@ public class TestResettingCounters {
     } finally {
       HRegion.closeHRegion(region);
     }
-    region.close();
-    region.getLog().closeAndDelete();
+    HRegion.closeHRegion(region);
   }
 
   @org.junit.Rule
