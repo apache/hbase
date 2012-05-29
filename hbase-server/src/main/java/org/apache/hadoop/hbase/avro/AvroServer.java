@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Start an Avro server
  */
+@Deprecated
 @InterfaceAudience.Private
 public class AvroServer {
 

@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 
+@Deprecated
 @InterfaceAudience.Private
 public class AvroUtil {
 
