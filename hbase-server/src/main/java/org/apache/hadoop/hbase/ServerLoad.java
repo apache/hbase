@@ -20,14 +20,16 @@
 
 package org.apache.hadoop.hbase;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.TreeSet;
 
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
+import org.apache.hadoop.hbase.util.Strings;
 
 /**
  * This class is used for exporting current state of load on a RegionServer.
@@ -35,8 +37,38 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ServerLoad {
+  private int stores = 0;
+  private int storefiles = 0;
+  private int storeUncompressedSizeMB = 0;
+  private int storefileSizeMB = 0;
+  private int memstoreSizeMB = 0;
+  private int storefileIndexSizeMB = 0;
+  private int readRequestsCount = 0;
+  private int writeRequestsCount = 0;
+  private int rootIndexSizeKB = 0;
+  private int totalStaticIndexSizeKB = 0;
+  private int totalStaticBloomSizeKB = 0;
+  private long totalCompactingKVs = 0;
+  private long currentCompactedKVs = 0;
+  
   public ServerLoad(HBaseProtos.ServerLoad serverLoad) {
     this.serverLoad = serverLoad;
+    for (HBaseProtos.RegionLoad rl: serverLoad.getRegionLoadsList()) {
+      stores += rl.getStores();
+      storefiles += rl.getStorefiles();
+      storeUncompressedSizeMB += rl.getStoreUncompressedSizeMB();
+      storefileSizeMB += rl.getStorefileSizeMB();
+      memstoreSizeMB += rl.getMemstoreSizeMB();
+      storefileIndexSizeMB += rl.getStorefileIndexSizeMB();
+      readRequestsCount += rl.getReadRequestsCount();
+      writeRequestsCount += rl.getWriteRequestsCount();
+      rootIndexSizeKB += rl.getRootIndexSizeKB();
+      totalStaticIndexSizeKB += rl.getTotalStaticIndexSizeKB();
+      totalStaticBloomSizeKB += rl.getTotalStaticBloomSizeKB();
+      totalCompactingKVs += rl.getTotalCompactingKVs();
+      currentCompactedKVs += rl.getCurrentCompactedKVs();
+    }
+    
   }
 
   /* @return the underlying ServerLoad protobuf object */
@@ -103,6 +135,58 @@ public class ServerLoad {
     return serverLoad.getCoprocessorsCount();
   }
 
+  public int getStores() {
+    return stores;
+  }
+
+  public int getStorefiles() {
+    return storefiles;
+  }
+
+  public int getStoreUncompressedSizeMB() {
+    return storeUncompressedSizeMB;
+  }
+
+  public int getStorefileSizeMB() {
+    return storefileSizeMB;
+  }
+
+  public int getMemstoreSizeMB() {
+    return memstoreSizeMB;
+  }
+
+  public int getStorefileIndexSizeMB() {
+    return storefileIndexSizeMB;
+  }
+
+  public int getReadRequestsCount() {
+    return readRequestsCount;
+  }
+
+  public int getWriteRequestsCount() {
+    return writeRequestsCount;
+  }
+
+  public int getRootIndexSizeKB() {
+    return rootIndexSizeKB;
+  }
+
+  public int getTotalStaticIndexSizeKB() {
+    return totalStaticIndexSizeKB;
+  }
+
+  public int getTotalStaticBloomSizeKB() {
+    return totalStaticBloomSizeKB;
+  }
+
+  public long getTotalCompactingKVs() {
+    return totalCompactingKVs;
+  }
+
+  public long getCurrentCompactedKVs() {
+    return currentCompactedKVs;
+  }
+
   /**
    * Return the RegionServer-level coprocessors from a ServerLoad pb.
    * @param sl - ServerLoad
@@ -148,6 +232,58 @@ public class ServerLoad {
     }
 
     return coprocessSet.toArray(new String[0]);
+  }
+
+
+  @Override
+  public String toString() {
+    StringBuilder sb =
+        Strings.appendKeyValue(new StringBuilder(), "requestsPerSecond",
+          Integer.valueOf(this.getRequestsPerSecond()));
+    Strings.appendKeyValue(sb, "numberOfOnlineRegions", Integer.valueOf(getRegionLoadsCount()));
+    sb = Strings.appendKeyValue(sb, "usedHeapMB", Integer.valueOf(this.getUsedHeapMB()));
+    sb = Strings.appendKeyValue(sb, "maxHeapMB", Integer.valueOf(getMaxHeapMB()));
+    sb = Strings.appendKeyValue(sb, "numberOfStores", Integer.valueOf(this.stores));
+    sb = Strings.appendKeyValue(sb, "numberOfStorefiles", Integer.valueOf(this.storefiles));
+    sb =
+        Strings.appendKeyValue(sb, "storefileUncompressedSizeMB",
+          Integer.valueOf(this.storeUncompressedSizeMB));
+    sb = Strings.appendKeyValue(sb, "storefileSizeMB", Integer.valueOf(this.storefileSizeMB));
+    if (this.storeUncompressedSizeMB != 0) {
+      sb =
+          Strings.appendKeyValue(
+            sb,
+            "compressionRatio",
+            String.format("%.4f", (float) this.storefileSizeMB
+                / (float) this.storeUncompressedSizeMB));
+    }
+    sb = Strings.appendKeyValue(sb, "memstoreSizeMB", Integer.valueOf(this.memstoreSizeMB));
+    sb =
+        Strings.appendKeyValue(sb, "storefileIndexSizeMB",
+          Integer.valueOf(this.storefileIndexSizeMB));
+    sb = Strings.appendKeyValue(sb, "readRequestsCount", Long.valueOf(this.readRequestsCount));
+    sb = Strings.appendKeyValue(sb, "writeRequestsCount", Long.valueOf(this.writeRequestsCount));
+    sb = Strings.appendKeyValue(sb, "rootIndexSizeKB", Integer.valueOf(this.rootIndexSizeKB));
+    sb =
+        Strings.appendKeyValue(sb, "totalStaticIndexSizeKB",
+          Integer.valueOf(this.totalStaticIndexSizeKB));
+    sb =
+        Strings.appendKeyValue(sb, "totalStaticBloomSizeKB",
+          Integer.valueOf(this.totalStaticBloomSizeKB));
+    sb = Strings.appendKeyValue(sb, "totalCompactingKVs", Long.valueOf(this.totalCompactingKVs));
+    sb = Strings.appendKeyValue(sb, "currentCompactedKVs", Long.valueOf(this.currentCompactedKVs));
+    float compactionProgressPct = Float.NaN;
+    if (this.totalCompactingKVs > 0) {
+      compactionProgressPct =
+          Float.valueOf((float) this.currentCompactedKVs / this.totalCompactingKVs);
+    }
+    sb = Strings.appendKeyValue(sb, "compactionProgressPct", compactionProgressPct);
+
+    String[] coprocessorStrings = getAllCoprocessors(this);
+    if (coprocessorStrings != null) {
+      sb = Strings.appendKeyValue(sb, "coprocessors", Arrays.toString(coprocessorStrings));
+    }
+    return sb.toString();
   }
 
   public static final ServerLoad EMPTY_SERVERLOAD =
