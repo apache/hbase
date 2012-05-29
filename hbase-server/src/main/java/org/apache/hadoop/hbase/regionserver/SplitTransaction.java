@@ -109,6 +109,10 @@ public class SplitTransaction {
    */
   enum JournalEntry {
     /**
+     * Before creating node in splitting state.
+     */
+    STARTED_SPLITTING,
+    /**
      * Set region as in transition, set it into SPLITTING state.
      */
     SET_SPLITTING_IN_ZK,
@@ -232,7 +236,8 @@ public class SplitTransaction {
     this.fileSplitTimeout = testing ? this.fileSplitTimeout :
         server.getConfiguration().getLong("hbase.regionserver.fileSplitTimeout",
           this.fileSplitTimeout);
-
+    
+    this.journal.add(JournalEntry.STARTED_SPLITTING);
     // Set ephemeral SPLITTING znode up in zk.  Mocked servers sometimes don't
     // have zookeeper so don't do zk stuff if server or zookeeper is null
     if (server != null && server.getZooKeeper() != null) {
@@ -733,9 +738,16 @@ public class SplitTransaction {
     while (iterator.hasPrevious()) {
       JournalEntry je = iterator.previous();
       switch(je) {
+      
+      case STARTED_SPLITTING:
+        if (server != null && server.getZooKeeper() != null) {
+          cleanZK(server, this.parent.getRegionInfo(), false);
+        }
+        break;
+      
       case SET_SPLITTING_IN_ZK:
         if (server != null && server.getZooKeeper() != null) {
-          cleanZK(server, this.parent.getRegionInfo());
+          cleanZK(server, this.parent.getRegionInfo(), true);
         }
         break;
 
@@ -828,11 +840,15 @@ public class SplitTransaction {
     LOG.info("Cleaned up old failed split transaction detritus: " + splitdir);
   }
 
-  private static void cleanZK(final Server server, final HRegionInfo hri) {
+  private static void cleanZK(final Server server, final HRegionInfo hri, boolean abort) {
     try {
       // Only delete if its in expected state; could have been hijacked.
       ZKAssign.deleteNode(server.getZooKeeper(), hri.getEncodedName(),
         EventType.RS_ZK_REGION_SPLITTING);
+    } catch (KeeperException.NoNodeException nn) {
+      if (abort) {
+        server.abort("Failed cleanup of " + hri.getRegionNameAsString(), nn);
+      }      
     } catch (KeeperException e) {
       server.abort("Failed cleanup of " + hri.getRegionNameAsString(), e);
     }
@@ -852,9 +868,8 @@ public class SplitTransaction {
    * @throws KeeperException 
    * @throws IOException 
    */
-  private static int createNodeSplitting(final ZooKeeperWatcher zkw,
-      final HRegionInfo region, final ServerName serverName)
-  throws KeeperException, IOException {
+  int createNodeSplitting(final ZooKeeperWatcher zkw, final HRegionInfo region,
+      final ServerName serverName) throws KeeperException, IOException {
     LOG.debug(zkw.prefix("Creating ephemeral node for " +
       region.getEncodedName() + " in SPLITTING state"));
     RegionTransition rt = RegionTransition.createRegionTransition(EventType.RS_ZK_REGION_SPLITTING,
@@ -911,10 +926,18 @@ public class SplitTransaction {
       znodeVersion, payload);
   }
 
-  private static int transitionNodeSplitting(final ZooKeeperWatcher zkw,
-      final HRegionInfo parent,
-      final ServerName serverName, final int version)
-  throws KeeperException, IOException {
+  /**
+   * 
+   * @param zkw zk reference
+   * @param parent region to be transitioned to splitting
+   * @param serverName server event originates from
+   * @param version znode version
+   * @return version of node after transition, -1 if unsuccessful transition
+   * @throws KeeperException
+   * @throws IOException
+   */
+  int transitionNodeSplitting(final ZooKeeperWatcher zkw, final HRegionInfo parent,
+      final ServerName serverName, final int version) throws KeeperException, IOException {
     return ZKAssign.transitionNode(zkw, parent, serverName,
       EventType.RS_ZK_REGION_SPLITTING, EventType.RS_ZK_REGION_SPLITTING, version);
   }
