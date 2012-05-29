@@ -349,13 +349,13 @@ applyPatch () {
 }
 
 ###############################################################################
-### Attempt to compile against the hadoop 0.23.x
-checkHadoop23Compile () {
+### Attempt to compile against the hadoop 2.0
+checkHadoop20Compile () {
   echo ""
   echo ""
   echo "======================================================================"
   echo "======================================================================"
-  echo "    Checking against hadoop 23 build"
+  echo "    Checking against hadoop 2.0 build"
   echo "======================================================================"
   echo "======================================================================"
   echo ""
@@ -363,16 +363,16 @@ checkHadoop23Compile () {
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
   # build core and tests
-  $MVN clean test -DskipTests -Dhadoop.profile=23 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunk23JavacWarnings.txt 2>&1
+  $MVN clean test help:active-profiles -X -DskipTests -Dhadoop.profile=2.0 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunk2.0JavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 hadoop23.  The patch failed to compile against the hadoop 0.23.x profile."
+    -1 hadoop2.0.  The patch failed to compile against the hadoop 2.0 profile."
     cleanupAndExit 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 hadoop23.  The patch compiles against the hadoop 0.23.x profile."
+    +1 hadoop2.0.  The patch compiles against the hadoop 2.0 profile."
   return 0
 }
 
@@ -751,7 +751,7 @@ if [[ $? != 0 ]] ; then
   cleanupAndExit 1
 fi
 
-checkHadoop23Compile
+checkHadoop20Compile
 (( RESULT = RESULT + $? ))
 checkJavadocWarnings
 (( RESULT = RESULT + $? ))
