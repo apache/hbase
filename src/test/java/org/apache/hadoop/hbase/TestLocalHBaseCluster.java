@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.zookeeper.KeeperException;
-
 import org.junit.Test;
 
 public class TestLocalHBaseCluster {
@@ -43,6 +42,7 @@ public class TestLocalHBaseCluster {
   @Test
   public void testLocalHBaseCluster() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
+    conf.set(HConstants.HBASE_DIR, TEST_UTIL.getDataTestDir("hbase.rootdir").toString());
     MiniZooKeeperCluster zkCluster = TEST_UTIL.startMiniZKCluster();
     conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, Integer.toString(zkCluster.getClientPort()));
     LocalHBaseCluster cluster = new LocalHBaseCluster(conf, 1, 1, MyHMaster.class,
