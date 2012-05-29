@@ -321,6 +321,23 @@ public class SplitLogManager extends ZooKeeperListener {
               + " scheduled=" + batch.installed
               + " done=" + batch.done
               + " error=" + batch.error);
+          int remaining = batch.installed - (batch.done + batch.error);
+          int actual = activeTasks(batch);
+          if (remaining != actual) {
+            LOG.warn("Expected " + remaining
+              + " active tasks, but actually there are " + actual);
+          }
+          int remainingInZK = remainingTasksInZK();
+          if (remainingInZK >= 0 && actual > remainingInZK) {
+            LOG.warn("Expected at least" + actual
+              + " tasks in ZK, but actually there are " + remainingInZK);
+          }
+          if (remainingInZK == 0 || actual == 0) {
+            LOG.warn("No more task remaining (ZK or task map), splitting "
+              + "should have completed. Remaining tasks in ZK " + remainingInZK
+              + ", active tasks in map " + actual);
+            return;
+          }
           batch.wait(100);
           if (stopper.isStopped()) {
             LOG.warn("Stopped while waiting for log splits to be completed");
@@ -333,6 +350,35 @@ public class SplitLogManager extends ZooKeeperListener {
         }
       }
     }
+  }
+
+  private int activeTasks(final TaskBatch batch) {
+    int count = 0;
+    for (Task t: tasks.values()) {
+      if (t.batch == batch && t.status == TerminationStatus.IN_PROGRESS) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private int remainingTasksInZK() {
+    int count = 0;
+    try {
+      List<String> tasks =
+        ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
+      if (tasks != null) {
+        for (String t: tasks) {
+          if (!ZKSplitLog.isRescanNode(watcher, t)) {
+            count++;
+          }
+        }
+      }
+    } catch (KeeperException ke) {
+      LOG.warn("Failed to check remaining tasks", ke);
+      count = -1;
+    }
+    return count;
   }
 
   private void setDone(String path, TerminationStatus status) {
