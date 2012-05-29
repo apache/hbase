@@ -325,12 +325,11 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Called on startup.
    * Figures whether a fresh cluster start of we are joining extant running cluster.
-   * @param onlineServers onlined servers when master started
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
    */
-  void joinCluster(final Set<ServerName> onlineServers) throws IOException,
+  void joinCluster() throws IOException,
       KeeperException, InterruptedException {
     // Concurrency note: In the below the accesses on regionsInTransition are
     // outside of a synchronization block where usually all accesses to RIT are
@@ -342,7 +341,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
     // Scan META to build list of existing regions, servers, and assignment
     // Returns servers who have not checked in (assumed dead) and their regions
-    Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers = rebuildUserRegions(onlineServers);
+    Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers = rebuildUserRegions();
 
     processDeadServersAndRegionsInTransition(deadServers);
 
@@ -350,16 +349,6 @@ public class AssignmentManager extends ZooKeeperListener {
     // These tables are in DISABLING state when the master restarted/switched.
     boolean isWatcherCreated = recoverTableInDisablingState(this.disablingTables);
     recoverTableInEnablingState(this.enablingTables, isWatcherCreated);
-  }
-
-  /**
-   * Only used for tests
-   * @throws IOException
-   * @throws KeeperException
-   * @throws InterruptedException
-   */
-  void joinCluster() throws IOException, KeeperException, InterruptedException {
-    joinCluster(serverManager.getOnlineServers().keySet());
   }
 
   /**
@@ -2354,17 +2343,16 @@ public class AssignmentManager extends ZooKeeperListener {
    * <p>
    * Returns a map of servers that are not found to be online and the regions
    * they were hosting.
-   * @param onlineServers if one region's location belongs to onlineServers, it
-   *          doesn't need to be assigned.
    * @return map of servers not online to their assigned regions, as stored
    *         in META
    * @throws IOException
    */
-  Map<ServerName, List<Pair<HRegionInfo, Result>>> rebuildUserRegions(
-      final Set<ServerName> onlineServers)
-  throws IOException, KeeperException {
+  Map<ServerName, List<Pair<HRegionInfo, Result>>> rebuildUserRegions() throws IOException,
+      KeeperException {
     // Region assignment from META
     List<Result> results = MetaReader.fullScan(this.catalogTracker);
+    // Get any new but slow to checkin region server that joined the cluster
+    Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();    
     // Map of offline servers and their regions to be returned
     Map<ServerName, List<Pair<HRegionInfo,Result>>> offlineServers =
       new TreeMap<ServerName, List<Pair<HRegionInfo, Result>>>();
@@ -2538,8 +2526,15 @@ public class AssignmentManager extends ZooKeeperListener {
       Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers,
       List<String> nodes) throws IOException, KeeperException {
     if (null != deadServers) {
+      Set<ServerName> actualDeadServers = this.serverManager.getDeadServers();
       for (Map.Entry<ServerName, List<Pair<HRegionInfo, Result>>> deadServer : 
         deadServers.entrySet()) {
+        // skip regions of dead servers because SSH will process regions during rs expiration.
+        // see HBASE-5916
+        if (actualDeadServers.contains(deadServer.getKey())) {
+          continue;
+        }
+        
         List<Pair<HRegionInfo, Result>> regions = deadServer.getValue();
         for (Pair<HRegionInfo, Result> region : regions) {
           HRegionInfo regionInfo = region.getFirst();

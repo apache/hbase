@@ -183,10 +183,8 @@ public class MasterFileSystem {
   /**
    * Inspect the log directory to recover any log file without
    * an active region server.
-   * @param onlineServers Set of online servers keyed by
-   * {@link ServerName}
    */
-  void splitLogAfterStartup(final Set<ServerName> onlineServers) {
+  void splitLogAfterStartup() {
     boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
         HLog.SPLIT_SKIP_ERRORS_DEFAULT);
     Path logsDirPath = new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
@@ -195,6 +193,10 @@ public class MasterFileSystem {
       try {
         if (!this.fs.exists(logsDirPath)) return;
         FileStatus[] logFolders = FSUtils.listStatus(this.fs, logsDirPath, null);
+        // Get online servers after getting log folders to avoid log folder deletion of newly
+        // checked in region servers . see HBASE-5916
+        Set<ServerName> onlineServers = ((HMaster) master).getServerManager().getOnlineServers()
+            .keySet();
 
         if (logFolders == null || logFolders.length == 0) {
           LOG.debug("No log files to split, proceeding...");

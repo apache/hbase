@@ -189,7 +189,10 @@ public class ServerManager {
           existingServer + " looks stale, new server:" + serverName);
         expireServer(existingServer);
       }
-      throw new PleaseHoldException(message);
+      if (services.isServerShutdownHandlerEnabled()) {
+        // master has completed the initialization
+        throw new PleaseHoldException(message);
+      }
     }
   }
 
@@ -232,7 +235,10 @@ public class ServerManager {
       throw new YouAreDeadException(message);
     }
 
-    if (this.deadservers.cleanPreviousInstance(serverName)) {
+    // remove dead server with same hostname and port of newly checking in rs after master
+    // initialization.See HBASE-5916 for more information.
+    if ((this.services == null || ((HMaster) this.services).isInitialized())
+        && this.deadservers.cleanPreviousInstance(serverName)) {
       // This server has now become alive after we marked it as dead.
       // We removed it's previous entry from the dead list to reflect it.
       LOG.debug(what + ":" + " Server " + serverName + " came back up," +
@@ -624,4 +630,18 @@ public class ServerManager {
       }
     }
   }
+  
+  /**
+   * To clear any dead server with same host name and port of any online server
+   */
+  void clearDeadServersWithSameHostNameAndPortOfOnlineServer() {
+    ServerName sn = null;
+    for (ServerName serverName : getOnlineServersList()) {
+      while ((sn = ServerName.
+          findServerWithSameHostnamePort(this.deadservers, serverName)) != null) {
+        this.deadservers.remove(sn);
+      }
+    }
+  }
+  
 }
