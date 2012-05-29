@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 import java.util.List;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
@@ -520,6 +522,84 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
+  /**
+   * While transitioning node from RS_ZK_REGION_SPLITTING to
+   * RS_ZK_REGION_SPLITTING during region split,if zookeper went down split always
+   * fails for the region. HBASE-6088 fixes this scenario. 
+   * This test case is to test the znode is deleted(if created) or not in roll back.
+   * 
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws KeeperException
+   */
+  @Test
+  public void testSplitBeforeSettingSplittingInZK() throws IOException,
+      InterruptedException, KeeperException {
+    testSplitBeforeSettingSplittingInZK(true);
+    testSplitBeforeSettingSplittingInZK(false);
+  }
+
+  private void testSplitBeforeSettingSplittingInZK(boolean nodeCreated) throws IOException,
+      KeeperException {
+    final byte[] tableName = Bytes.toBytes("testSplitBeforeSettingSplittingInZK");
+    HBaseAdmin admin = TESTING_UTIL.getHBaseAdmin();
+    try {
+      // Create table then get the single region for our new table.
+      HTableDescriptor htd = new HTableDescriptor(tableName);
+      htd.addFamily(new HColumnDescriptor("cf"));
+      admin.createTable(htd);
+
+      List<HRegion> regions = cluster.getRegions(tableName);
+      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
+      HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+      SplitTransaction st = null;
+      if (nodeCreated) {
+        st = new MockedSplitTransaction(regions.get(0), null) {
+          @Override
+          int transitionNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo parent,
+              ServerName serverName, int version) throws KeeperException, IOException {
+            throw new IOException();
+          }
+        };
+      } else {
+        st = new MockedSplitTransaction(regions.get(0), null) {
+          @Override
+          int createNodeSplitting(ZooKeeperWatcher zkw, HRegionInfo region, ServerName serverName)
+              throws KeeperException, IOException {
+            throw new IOException();
+          }
+        };
+      }
+      try {
+        st.execute(regionServer, regionServer);
+      } catch (IOException e) {
+        String node = ZKAssign.getNodeName(regionServer.getZooKeeper(), regions.get(0)
+            .getRegionInfo().getEncodedName());
+        if (nodeCreated) {
+          assertFalse(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
+        } else {
+          assertTrue(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
+        }
+        assertTrue(st.rollback(regionServer, regionServer));
+        assertTrue(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
+      }
+    } finally {
+      if (admin.isTableAvailable(tableName) && admin.isTableEnabled(tableName)) {
+        admin.disableTable(tableName);
+        admin.deleteTable(tableName);
+      }
+    }
+  }
+  
+  public static class MockedSplitTransaction extends SplitTransaction {
+
+    public MockedSplitTransaction(HRegion r, byte[] splitrow) {
+      super(r, splitrow);
+    }
+    
+  }
+
+  
   private MockMasterWithoutCatalogJanitor abortAndWaitForMaster() 
   throws IOException, InterruptedException {
     cluster.abortMaster(0);
