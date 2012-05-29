@@ -819,7 +819,7 @@ public class HConnectionManager {
       ensureZookeeperTrackers();
       if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
         try {
-          ServerName servername = this.rootRegionTracker.getRootRegionLocation();
+          ServerName servername = this.rootRegionTracker.waitRootRegionLocation(this.rpcTimeout);
           LOG.debug("Looked up root region location, connection=" + this +
             "; serverName=" + ((servername == null)? "": servername.toString()));
           if (servername == null) return null;
