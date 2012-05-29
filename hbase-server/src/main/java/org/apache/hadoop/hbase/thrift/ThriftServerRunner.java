@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -76,6 +77,7 @@ import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
+import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
@@ -118,6 +120,7 @@ public class ThriftServerRunner implements Runnable {
   static final String COMPACT_CONF_KEY = "hbase.regionserver.thrift.compact";
   static final String FRAMED_CONF_KEY = "hbase.regionserver.thrift.framed";
   static final String PORT_CONF_KEY = "hbase.regionserver.thrift.port";
+  static final String COALESCE_INC_KEY = "hbase.regionserver.thrift.coalesceIncrement";
 
   private static final String DEFAULT_BIND_ADDR = "0.0.0.0";
   public static final int DEFAULT_LISTEN_PORT = 9090;
@@ -411,6 +414,8 @@ public class ThriftServerRunner implements Runnable {
       }
     };
 
+    IncrementCoalescer coalescer = null;
+
     /**
      * Returns a list of all the column families for a given htable.
      *
@@ -437,7 +442,7 @@ public class ThriftServerRunner implements Runnable {
      * @throws IOException
      * @throws IOError
      */
-    protected HTable getTable(final byte[] tableName) throws
+    public HTable getTable(final byte[] tableName) throws
         IOException {
       String table = new String(tableName);
       Map<String, HTable> tables = threadLocalTables.get();
@@ -447,7 +452,7 @@ public class ThriftServerRunner implements Runnable {
       return tables.get(table);
     }
 
-    protected HTable getTable(final ByteBuffer tableName) throws IOException {
+    public HTable getTable(final ByteBuffer tableName) throws IOException {
       return getTable(getBytes(tableName));
     }
 
@@ -497,6 +502,7 @@ public class ThriftServerRunner implements Runnable {
     protected HBaseHandler(final Configuration c) throws IOException {
       this.conf = c;
       scannerMap = new HashMap<Integer, ResultScanner>();
+      this.coalescer = new IncrementCoalescer(this);
     }
 
     /**
@@ -1399,7 +1405,43 @@ public class ThriftServerRunner implements Runnable {
     private void initMetrics(ThriftMetrics metrics) {
       this.metrics = metrics;
     }
+
+    @Override
+    public void increment(TIncrement tincrement) throws IOError, TException {
+
+      if (tincrement.getRow().length == 0 || tincrement.getTable().length == 0) {
+        throw new TException("Must supply a table and a row key; can't increment");
+      }
+
+      if (conf.getBoolean(COALESCE_INC_KEY, false)) {
+        this.coalescer.queueIncrement(tincrement);
+        return;
+      }
+
+      try {
+        HTable table = getTable(tincrement.getTable());
+        Increment inc = ThriftUtilities.incrementFromThrift(tincrement);
+        table.increment(inc);
+      } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
+        throw new IOError(e.getMessage());
+      }
+    }
+
+    @Override
+    public void incrementRows(List<TIncrement> tincrements) throws IOError, TException {
+      if (conf.getBoolean(COALESCE_INC_KEY, false)) {
+        this.coalescer.queueIncrements(tincrements);
+        return;
+      }
+      for (TIncrement tinc : tincrements) {
+        increment(tinc);
+      }
+    }
   }
+
+
+
   /**
    * Adds all the attributes into the Operation object
    */

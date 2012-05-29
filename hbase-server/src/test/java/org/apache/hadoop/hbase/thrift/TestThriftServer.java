@@ -37,12 +37,14 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
+import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -70,11 +72,15 @@ public class TestThriftServer {
   private static ByteBuffer asByteBuffer(String i) {
     return ByteBuffer.wrap(Bytes.toBytes(i));
   }
+  private static ByteBuffer asByteBuffer(long l) {
+    return ByteBuffer.wrap(Bytes.toBytes(l));
+  }
 
   // Static names for tables, columns, rows, and values
   private static ByteBuffer tableAname = asByteBuffer("tableA");
   private static ByteBuffer tableBname = asByteBuffer("tableB");
   private static ByteBuffer columnAname = asByteBuffer("columnA:");
+  private static ByteBuffer columnAAname = asByteBuffer("columnA:A");
   private static ByteBuffer columnBname = asByteBuffer("columnB:");
   private static ByteBuffer rowAname = asByteBuffer("rowA");
   private static ByteBuffer rowBname = asByteBuffer("rowB");
@@ -82,9 +88,11 @@ public class TestThriftServer {
   private static ByteBuffer valueBname = asByteBuffer("valueB");
   private static ByteBuffer valueCname = asByteBuffer("valueC");
   private static ByteBuffer valueDname = asByteBuffer("valueD");
+  private static ByteBuffer valueEname = asByteBuffer(100l);
 
   @BeforeClass
   public static void beforeClass() throws Exception {
+    UTIL.getConfiguration().setBoolean(ThriftServerRunner.COALESCE_INC_KEY, true);
     UTIL.startMiniCluster();
   }
 
@@ -112,6 +120,7 @@ public class TestThriftServer {
     doTestGetTableRegions();
     doTestFilterRegistration();
     doTestGetRegionInfo();
+    doTestIncrements();
   }
 
   /**
@@ -235,6 +244,44 @@ public class TestThriftServer {
     OutputRecord record = context.getAllRecords().get(
         ThriftMetrics.CONTEXT_NAME).iterator().next();
     return record.getMetric(name).longValue();
+  }
+
+  public void doTestIncrements() throws Exception {
+    ThriftServerRunner.HBaseHandler handler =
+        new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
+    createTestTables(handler);
+    doTestIncrements(handler);
+    dropTestTables(handler);
+  }
+
+  public static void doTestIncrements(HBaseHandler handler) throws Exception {
+    List<Mutation> mutations = new ArrayList<Mutation>(1);
+    mutations.add(new Mutation(false, columnAAname, valueEname, true));
+    mutations.add(new Mutation(false, columnAname, valueEname, true));
+    handler.mutateRow(tableAname, rowAname, mutations, null);
+    handler.mutateRow(tableAname, rowBname, mutations, null);
+
+    List<TIncrement> increments = new ArrayList<TIncrement>();
+    increments.add(new TIncrement(tableAname, rowBname, columnAAname, 7));
+    increments.add(new TIncrement(tableAname, rowBname, columnAAname, 7));
+    increments.add(new TIncrement(tableAname, rowBname, columnAAname, 7));
+
+    int numIncrements = 60000;
+    for (int i = 0; i < numIncrements; i++) {
+      handler.increment(new TIncrement(tableAname, rowAname, columnAname, 2));
+      handler.incrementRows(increments);
+    }
+
+    Thread.sleep(1000);
+    long lv = handler.get(tableAname, rowAname, columnAname, null).get(0).value.getLong();
+    assertEquals((100 + (2 * numIncrements)), lv );
+
+
+    lv = handler.get(tableAname, rowBname, columnAAname, null).get(0).value.getLong();
+    assertEquals((100 + (3 * 7 * numIncrements)), lv);
+
+    assertTrue(handler.coalescer.getSuccessfulCoalescings() > 0);
+
   }
 
   /**

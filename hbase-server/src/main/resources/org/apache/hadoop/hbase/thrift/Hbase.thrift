@@ -110,6 +110,16 @@ struct BatchMutation {
   2:list<Mutation> mutations
 }
 
+/**
+ * For increments that are not incrementColumnValue
+ * equivalents.
+ */
+struct TIncrement {
+  1:Text table,
+  2:Text row,
+  3:Text column,
+  4:i64  ammount
+}
 
 /**
  * Holds row name and then a map of columns to cells. 
@@ -625,6 +635,23 @@ service Hbase {
 
     /** Delete attributes */
     3:map<Text, Text> attributes
+  ) throws (1:IOError io)
+
+  /**
+   * Increment a cell by the ammount.
+   * Increments can be applied async if hbase.regionserver.thrift.coalesceIncrement is set to true.
+   * False is the default.  Turn to true if you need the extra performance and can accept some
+   * data loss if a thrift server dies with increments still in the queue.
+   */
+  void increment(
+    /** The single increment to apply */
+    1:TIncrement increment
+  ) throws (1:IOError io)
+
+
+  void incrementRows(
+    /** The list of increments */
+    1:list<TIncrement> increments
   ) throws (1:IOError io)
 
   /**

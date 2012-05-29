@@ -301,7 +301,7 @@ public class Hbase {
      * 
      * @param mutations list of mutation commands
      * 
-     * @param attributes Put attributes
+     * @param attributes Mutation attributes
      */
     public void mutateRow(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, IllegalArgument, org.apache.thrift.TException;
 
@@ -319,7 +319,7 @@ public class Hbase {
      * 
      * @param timestamp timestamp
      * 
-     * @param attributes Put attributes
+     * @param attributes Mutation attributes
      */
     public void mutateRowTs(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, long timestamp, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, IllegalArgument, org.apache.thrift.TException;
 
@@ -333,7 +333,7 @@ public class Hbase {
      * 
      * @param rowBatches list of row batches
      * 
-     * @param attributes Put attributes
+     * @param attributes Mutation attributes
      */
     public void mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, IllegalArgument, org.apache.thrift.TException;
 
@@ -349,7 +349,7 @@ public class Hbase {
      * 
      * @param timestamp timestamp
      * 
-     * @param attributes Put attributes
+     * @param attributes Mutation attributes
      */
     public void mutateRowsTs(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, IllegalArgument, org.apache.thrift.TException;
 
@@ -405,6 +405,18 @@ public class Hbase {
      * @param attributes Delete attributes
      */
     public void deleteAllRow(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, org.apache.thrift.TException;
+
+    /**
+     * Increment a cell by the ammount.
+     * Increments can be applied async if hbase.regionserver.thrift.coalesceIncrement is set to true.
+     * False is the default.  Turn to true if you need the extra performance and can accept some
+     * data loss if a thrift server dies with increments still in the queue.
+     * 
+     * @param increment The single increment to apply
+     */
+    public void increment(TIncrement increment) throws IOError, org.apache.thrift.TException;
+
+    public void incrementRows(List<TIncrement> increments) throws IOError, org.apache.thrift.TException;
 
     /**
      * Completely delete the row's cells marked with a timestamp
@@ -665,6 +677,10 @@ public class Hbase {
     public void deleteAllTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.deleteAllTs_call> resultHandler) throws org.apache.thrift.TException;
 
     public void deleteAllRow(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.deleteAllRow_call> resultHandler) throws org.apache.thrift.TException;
+
+    public void increment(TIncrement increment, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.increment_call> resultHandler) throws org.apache.thrift.TException;
+
+    public void incrementRows(List<TIncrement> increments, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.incrementRows_call> resultHandler) throws org.apache.thrift.TException;
 
     public void deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.deleteAllRowTs_call> resultHandler) throws org.apache.thrift.TException;
 
@@ -1502,6 +1518,52 @@ public class Hbase {
     {
       deleteAllRow_result result = new deleteAllRow_result();
       receiveBase(result, "deleteAllRow");
+      if (result.io != null) {
+        throw result.io;
+      }
+      return;
+    }
+
+    public void increment(TIncrement increment) throws IOError, org.apache.thrift.TException
+    {
+      send_increment(increment);
+      recv_increment();
+    }
+
+    public void send_increment(TIncrement increment) throws org.apache.thrift.TException
+    {
+      increment_args args = new increment_args();
+      args.setIncrement(increment);
+      sendBase("increment", args);
+    }
+
+    public void recv_increment() throws IOError, org.apache.thrift.TException
+    {
+      increment_result result = new increment_result();
+      receiveBase(result, "increment");
+      if (result.io != null) {
+        throw result.io;
+      }
+      return;
+    }
+
+    public void incrementRows(List<TIncrement> increments) throws IOError, org.apache.thrift.TException
+    {
+      send_incrementRows(increments);
+      recv_incrementRows();
+    }
+
+    public void send_incrementRows(List<TIncrement> increments) throws org.apache.thrift.TException
+    {
+      incrementRows_args args = new incrementRows_args();
+      args.setIncrements(increments);
+      sendBase("incrementRows", args);
+    }
+
+    public void recv_incrementRows() throws IOError, org.apache.thrift.TException
+    {
+      incrementRows_result result = new incrementRows_result();
+      receiveBase(result, "incrementRows");
       if (result.io != null) {
         throw result.io;
       }
@@ -2976,6 +3038,70 @@ public class Hbase {
       }
     }
 
+    public void increment(TIncrement increment, org.apache.thrift.async.AsyncMethodCallback<increment_call> resultHandler) throws org.apache.thrift.TException {
+      checkReady();
+      increment_call method_call = new increment_call(increment, resultHandler, this, ___protocolFactory, ___transport);
+      this.___currentMethod = method_call;
+      ___manager.call(method_call);
+    }
+
+    public static class increment_call extends org.apache.thrift.async.TAsyncMethodCall {
+      private TIncrement increment;
+      public increment_call(TIncrement increment, org.apache.thrift.async.AsyncMethodCallback<increment_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+        super(client, protocolFactory, transport, resultHandler, false);
+        this.increment = increment;
+      }
+
+      public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
+        prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("increment", org.apache.thrift.protocol.TMessageType.CALL, 0));
+        increment_args args = new increment_args();
+        args.setIncrement(increment);
+        args.write(prot);
+        prot.writeMessageEnd();
+      }
+
+      public void getResult() throws IOError, org.apache.thrift.TException {
+        if (getState() != org.apache.thrift.async.TAsyncMethodCall.State.RESPONSE_READ) {
+          throw new IllegalStateException("Method call not finished!");
+        }
+        org.apache.thrift.transport.TMemoryInputTransport memoryTransport = new org.apache.thrift.transport.TMemoryInputTransport(getFrameBuffer().array());
+        org.apache.thrift.protocol.TProtocol prot = client.getProtocolFactory().getProtocol(memoryTransport);
+        (new Client(prot)).recv_increment();
+      }
+    }
+
+    public void incrementRows(List<TIncrement> increments, org.apache.thrift.async.AsyncMethodCallback<incrementRows_call> resultHandler) throws org.apache.thrift.TException {
+      checkReady();
+      incrementRows_call method_call = new incrementRows_call(increments, resultHandler, this, ___protocolFactory, ___transport);
+      this.___currentMethod = method_call;
+      ___manager.call(method_call);
+    }
+
+    public static class incrementRows_call extends org.apache.thrift.async.TAsyncMethodCall {
+      private List<TIncrement> increments;
+      public incrementRows_call(List<TIncrement> increments, org.apache.thrift.async.AsyncMethodCallback<incrementRows_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+        super(client, protocolFactory, transport, resultHandler, false);
+        this.increments = increments;
+      }
+
+      public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
+        prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("incrementRows", org.apache.thrift.protocol.TMessageType.CALL, 0));
+        incrementRows_args args = new incrementRows_args();
+        args.setIncrements(increments);
+        args.write(prot);
+        prot.writeMessageEnd();
+      }
+
+      public void getResult() throws IOError, org.apache.thrift.TException {
+        if (getState() != org.apache.thrift.async.TAsyncMethodCall.State.RESPONSE_READ) {
+          throw new IllegalStateException("Method call not finished!");
+        }
+        org.apache.thrift.transport.TMemoryInputTransport memoryTransport = new org.apache.thrift.transport.TMemoryInputTransport(getFrameBuffer().array());
+        org.apache.thrift.protocol.TProtocol prot = client.getProtocolFactory().getProtocol(memoryTransport);
+        (new Client(prot)).recv_incrementRows();
+      }
+    }
+
     public void deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<deleteAllRowTs_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
       deleteAllRowTs_call method_call = new deleteAllRowTs_call(tableName, row, timestamp, attributes, resultHandler, this, ___protocolFactory, ___transport);
@@ -3483,6 +3609,8 @@ public class Hbase {
       processMap.put("deleteAll", new deleteAll());
       processMap.put("deleteAllTs", new deleteAllTs());
       processMap.put("deleteAllRow", new deleteAllRow());
+      processMap.put("increment", new increment());
+      processMap.put("incrementRows", new incrementRows());
       processMap.put("deleteAllRowTs", new deleteAllRowTs());
       processMap.put("scannerOpenWithScan", new scannerOpenWithScan());
       processMap.put("scannerOpen", new scannerOpen());
@@ -4087,6 +4215,46 @@ public class Hbase {
         deleteAllRow_result result = new deleteAllRow_result();
         try {
           iface.deleteAllRow(args.tableName, args.row, args.attributes);
+        } catch (IOError io) {
+          result.io = io;
+        }
+        return result;
+      }
+    }
+
+    private static class increment<I extends Iface> extends org.apache.thrift.ProcessFunction<I, increment_args> {
+      public increment() {
+        super("increment");
+      }
+
+      protected increment_args getEmptyArgsInstance() {
+        return new increment_args();
+      }
+
+      protected increment_result getResult(I iface, increment_args args) throws org.apache.thrift.TException {
+        increment_result result = new increment_result();
+        try {
+          iface.increment(args.increment);
+        } catch (IOError io) {
+          result.io = io;
+        }
+        return result;
+      }
+    }
+
+    private static class incrementRows<I extends Iface> extends org.apache.thrift.ProcessFunction<I, incrementRows_args> {
+      public incrementRows() {
+        super("incrementRows");
+      }
+
+      protected incrementRows_args getEmptyArgsInstance() {
+        return new incrementRows_args();
+      }
+
+      protected incrementRows_result getResult(I iface, incrementRows_args args) throws org.apache.thrift.TException {
+        incrementRows_result result = new incrementRows_result();
+        try {
+          iface.incrementRows(args.increments);
         } catch (IOError io) {
           result.io = io;
         }
@@ -6520,6 +6688,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -9593,7 +9763,7 @@ public class Hbase {
                   for (int _i35 = 0; _i35 < _map34.size; ++_i35)
                   {
                     ByteBuffer _key36; // required
-                    ColumnDescriptor _val37; // required
+                    ColumnDescriptor _val37; // optional
                     _key36 = iprot.readBinary();
                     _val37 = new ColumnDescriptor();
                     _val37.read(iprot);
@@ -9699,7 +9869,7 @@ public class Hbase {
             for (int _i41 = 0; _i41 < _map40.size; ++_i41)
             {
               ByteBuffer _key42; // required
-              ColumnDescriptor _val43; // required
+              ColumnDescriptor _val43; // optional
               _key42 = iprot.readBinary();
               _val43 = new ColumnDescriptor();
               _val43.read(iprot);
@@ -13083,7 +13253,7 @@ public class Hbase {
                   for (int _i61 = 0; _i61 < _map60.size; ++_i61)
                   {
                     ByteBuffer _key62; // required
-                    ByteBuffer _val63; // required
+                    ByteBuffer _val63; // optional
                     _key62 = iprot.readBinary();
                     _val63 = iprot.readBinary();
                     struct.attributes.put(_key62, _val63);
@@ -13213,7 +13383,7 @@ public class Hbase {
             for (int _i67 = 0; _i67 < _map66.size; ++_i67)
             {
               ByteBuffer _key68; // required
-              ByteBuffer _val69; // required
+              ByteBuffer _val69; // optional
               _key68 = iprot.readBinary();
               _val69 = iprot.readBinary();
               struct.attributes.put(_key68, _val69);
@@ -14484,7 +14654,7 @@ public class Hbase {
                   for (int _i79 = 0; _i79 < _map78.size; ++_i79)
                   {
                     ByteBuffer _key80; // required
-                    ByteBuffer _val81; // required
+                    ByteBuffer _val81; // optional
                     _key80 = iprot.readBinary();
                     _val81 = iprot.readBinary();
                     struct.attributes.put(_key80, _val81);
@@ -14627,7 +14797,7 @@ public class Hbase {
             for (int _i85 = 0; _i85 < _map84.size; ++_i85)
             {
               ByteBuffer _key86; // required
-              ByteBuffer _val87; // required
+              ByteBuffer _val87; // optional
               _key86 = iprot.readBinary();
               _val87 = iprot.readBinary();
               struct.attributes.put(_key86, _val87);
@@ -15917,6 +16087,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -15989,7 +16161,7 @@ public class Hbase {
                   for (int _i97 = 0; _i97 < _map96.size; ++_i97)
                   {
                     ByteBuffer _key98; // required
-                    ByteBuffer _val99; // required
+                    ByteBuffer _val99; // optional
                     _key98 = iprot.readBinary();
                     _val99 = iprot.readBinary();
                     struct.attributes.put(_key98, _val99);
@@ -16145,7 +16317,7 @@ public class Hbase {
             for (int _i103 = 0; _i103 < _map102.size; ++_i103)
             {
               ByteBuffer _key104; // required
-              ByteBuffer _val105; // required
+              ByteBuffer _val105; // optional
               _key104 = iprot.readBinary();
               _val105 = iprot.readBinary();
               struct.attributes.put(_key104, _val105);
@@ -17211,7 +17383,7 @@ public class Hbase {
                   for (int _i115 = 0; _i115 < _map114.size; ++_i115)
                   {
                     ByteBuffer _key116; // required
-                    ByteBuffer _val117; // required
+                    ByteBuffer _val117; // optional
                     _key116 = iprot.readBinary();
                     _val117 = iprot.readBinary();
                     struct.attributes.put(_key116, _val117);
@@ -17326,7 +17498,7 @@ public class Hbase {
             for (int _i121 = 0; _i121 < _map120.size; ++_i121)
             {
               ByteBuffer _key122; // required
-              ByteBuffer _val123; // required
+              ByteBuffer _val123; // optional
               _key122 = iprot.readBinary();
               _val123 = iprot.readBinary();
               struct.attributes.put(_key122, _val123);
@@ -18519,7 +18691,7 @@ public class Hbase {
                   for (int _i136 = 0; _i136 < _map135.size; ++_i136)
                   {
                     ByteBuffer _key137; // required
-                    ByteBuffer _val138; // required
+                    ByteBuffer _val138; // optional
                     _key137 = iprot.readBinary();
                     _val138 = iprot.readBinary();
                     struct.attributes.put(_key137, _val138);
@@ -18671,7 +18843,7 @@ public class Hbase {
             for (int _i147 = 0; _i147 < _map146.size; ++_i147)
             {
               ByteBuffer _key148; // required
-              ByteBuffer _val149; // required
+              ByteBuffer _val149; // optional
               _key148 = iprot.readBinary();
               _val149 = iprot.readBinary();
               struct.attributes.put(_key148, _val149);
@@ -19835,7 +20007,7 @@ public class Hbase {
                   for (int _i159 = 0; _i159 < _map158.size; ++_i159)
                   {
                     ByteBuffer _key160; // required
-                    ByteBuffer _val161; // required
+                    ByteBuffer _val161; // optional
                     _key160 = iprot.readBinary();
                     _val161 = iprot.readBinary();
                     struct.attributes.put(_key160, _val161);
@@ -19963,7 +20135,7 @@ public class Hbase {
             for (int _i165 = 0; _i165 < _map164.size; ++_i165)
             {
               ByteBuffer _key166; // required
-              ByteBuffer _val167; // required
+              ByteBuffer _val167; // optional
               _key166 = iprot.readBinary();
               _val167 = iprot.readBinary();
               struct.attributes.put(_key166, _val167);
@@ -21242,7 +21414,7 @@ public class Hbase {
                   for (int _i180 = 0; _i180 < _map179.size; ++_i180)
                   {
                     ByteBuffer _key181; // required
-                    ByteBuffer _val182; // required
+                    ByteBuffer _val182; // optional
                     _key181 = iprot.readBinary();
                     _val182 = iprot.readBinary();
                     struct.attributes.put(_key181, _val182);
@@ -21407,7 +21579,7 @@ public class Hbase {
             for (int _i191 = 0; _i191 < _map190.size; ++_i191)
             {
               ByteBuffer _key192; // required
-              ByteBuffer _val193; // required
+              ByteBuffer _val193; // optional
               _key192 = iprot.readBinary();
               _val193 = iprot.readBinary();
               struct.attributes.put(_key192, _val193);
@@ -22493,7 +22665,7 @@ public class Hbase {
                   for (int _i206 = 0; _i206 < _map205.size; ++_i206)
                   {
                     ByteBuffer _key207; // required
-                    ByteBuffer _val208; // required
+                    ByteBuffer _val208; // optional
                     _key207 = iprot.readBinary();
                     _val208 = iprot.readBinary();
                     struct.attributes.put(_key207, _val208);
@@ -22630,7 +22802,7 @@ public class Hbase {
             for (int _i217 = 0; _i217 < _map216.size; ++_i217)
             {
               ByteBuffer _key218; // required
-              ByteBuffer _val219; // required
+              ByteBuffer _val219; // optional
               _key218 = iprot.readBinary();
               _val219 = iprot.readBinary();
               struct.attributes.put(_key218, _val219);
@@ -23843,7 +24015,7 @@ public class Hbase {
                   for (int _i235 = 0; _i235 < _map234.size; ++_i235)
                   {
                     ByteBuffer _key236; // required
-                    ByteBuffer _val237; // required
+                    ByteBuffer _val237; // optional
                     _key236 = iprot.readBinary();
                     _val237 = iprot.readBinary();
                     struct.attributes.put(_key236, _val237);
@@ -24017,7 +24189,7 @@ public class Hbase {
             for (int _i251 = 0; _i251 < _map250.size; ++_i251)
             {
               ByteBuffer _key252; // required
-              ByteBuffer _val253; // required
+              ByteBuffer _val253; // optional
               _key252 = iprot.readBinary();
               _val253 = iprot.readBinary();
               struct.attributes.put(_key252, _val253);
@@ -25201,7 +25373,7 @@ public class Hbase {
                   for (int _i266 = 0; _i266 < _map265.size; ++_i266)
                   {
                     ByteBuffer _key267; // required
-                    ByteBuffer _val268; // required
+                    ByteBuffer _val268; // optional
                     _key267 = iprot.readBinary();
                     _val268 = iprot.readBinary();
                     struct.attributes.put(_key267, _val268);
@@ -25351,7 +25523,7 @@ public class Hbase {
             for (int _i277 = 0; _i277 < _map276.size; ++_i277)
             {
               ByteBuffer _key278; // required
-              ByteBuffer _val279; // required
+              ByteBuffer _val279; // optional
               _key278 = iprot.readBinary();
               _val279 = iprot.readBinary();
               struct.attributes.put(_key278, _val279);
@@ -26650,7 +26822,7 @@ public class Hbase {
                   for (int _i295 = 0; _i295 < _map294.size; ++_i295)
                   {
                     ByteBuffer _key296; // required
-                    ByteBuffer _val297; // required
+                    ByteBuffer _val297; // optional
                     _key296 = iprot.readBinary();
                     _val297 = iprot.readBinary();
                     struct.attributes.put(_key296, _val297);
@@ -26837,7 +27009,7 @@ public class Hbase {
             for (int _i311 = 0; _i311 < _map310.size; ++_i311)
             {
               ByteBuffer _key312; // required
-              ByteBuffer _val313; // required
+              ByteBuffer _val313; // optional
               _key312 = iprot.readBinary();
               _val313 = iprot.readBinary();
               struct.attributes.put(_key312, _val313);
@@ -27386,7 +27558,7 @@ public class Hbase {
      */
     public List<Mutation> mutations; // required
     /**
-     * Put attributes
+     * Mutation attributes
      */
     public Map<ByteBuffer,ByteBuffer> attributes; // required
 
@@ -27405,7 +27577,7 @@ public class Hbase {
        */
       MUTATIONS((short)3, "mutations"),
       /**
-       * Put attributes
+       * Mutation attributes
        */
       ATTRIBUTES((short)4, "attributes");
 
@@ -27687,14 +27859,14 @@ public class Hbase {
     }
 
     /**
-     * Put attributes
+     * Mutation attributes
      */
     public Map<ByteBuffer,ByteBuffer> getAttributes() {
       return this.attributes;
     }
 
     /**
-     * Put attributes
+     * Mutation attributes
      */
     public mutateRow_args setAttributes(Map<ByteBuffer,ByteBuffer> attributes) {
       this.attributes = attributes;
@@ -28031,7 +28203,7 @@ public class Hbase {
                   for (int _i326 = 0; _i326 < _map325.size; ++_i326)
                   {
                     ByteBuffer _key327; // required
-                    ByteBuffer _val328; // required
+                    ByteBuffer _val328; // optional
                     _key327 = iprot.readBinary();
                     _val328 = iprot.readBinary();
                     struct.attributes.put(_key327, _val328);
@@ -28184,7 +28356,7 @@ public class Hbase {
             for (int _i337 = 0; _i337 < _map336.size; ++_i337)
             {
               ByteBuffer _key338; // required
-              ByteBuffer _val339; // required
+              ByteBuffer _val339; // optional
               _key338 = iprot.readBinary();
               _val339 = iprot.readBinary();
               struct.attributes.put(_key338, _val339);
@@ -28686,7 +28858,7 @@ public class Hbase {
      */
     public long timestamp; // required
     /**
-     * Put attributes
+     * Mutation attributes
      */
     public Map<ByteBuffer,ByteBuffer> attributes; // required
 
@@ -28709,7 +28881,7 @@ public class Hbase {
        */
       TIMESTAMP((short)4, "timestamp"),
       /**
-       * Put attributes
+       * Mutation attributes
        */
       ATTRIBUTES((short)5, "attributes");
 
@@ -29034,14 +29206,14 @@ public class Hbase {
     }
 
     /**
-     * Put attributes
+     * Mutation attributes
      */
     public Map<ByteBuffer,ByteBuffer> getAttributes() {
       return this.attributes;
     }
 
     /**
-     * Put attributes
+     * Mutation attributes
      */
     public mutateRowTs_args setAttributes(Map<ByteBuffer,ByteBuffer> attributes) {
       this.attributes = attributes;
@@ -29424,7 +29596,7 @@ public class Hbase {
                   for (int _i344 = 0; _i344 < _map343.size; ++_i344)
                   {
                     ByteBuffer _key345; // required
-                    ByteBuffer _val346; // required
+                    ByteBuffer _val346; // optional
                     _key345 = iprot.readBinary();
                     _val346 = iprot.readBinary();
                     struct.attributes.put(_key345, _val346);
@@ -29590,7 +29762,7 @@ public class Hbase {
             for (int _i355 = 0; _i355 < _map354.size; ++_i355)
             {
               ByteBuffer _key356; // required
-              ByteBuffer _val357; // required
+              ByteBuffer _val357; // optional
               _key356 = iprot.readBinary();
               _val357 = iprot.readBinary();
               struct.attributes.put(_key356, _val357);
@@ -30082,7 +30254,7 @@ public class Hbase {
      */
     public List<BatchMutation> rowBatches; // required
     /**
-     * Put attributes
+     * Mutation attributes
      */
     public Map<ByteBuffer,ByteBuffer> attributes; // required
 
@@ -30097,7 +30269,7 @@ public class Hbase {
        */
       ROW_BATCHES((short)2, "rowBatches"),
       /**
-       * Put attributes
+       * Mutation attributes
        */
       ATTRIBUTES((short)3, "attributes");
 
@@ -30329,14 +30501,14 @@ public class Hbase {
     }
 
     /**
-     * Put attributes
+     * Mutation attributes
      */
     public Map<ByteBuffer,ByteBuffer> getAttributes() {
       return this.attributes;
     }
 
     /**
-     * Put attributes
+     * Mutation attributes
      */
     public mutateRows_args setAttributes(Map<ByteBuffer,ByteBuffer> attributes) {
       this.attributes = attributes;
@@ -30625,7 +30797,7 @@ public class Hbase {
                   for (int _i362 = 0; _i362 < _map361.size; ++_i362)
                   {
                     ByteBuffer _key363; // required
-                    ByteBuffer _val364; // required
+                    ByteBuffer _val364; // optional
                     _key363 = iprot.readBinary();
                     _val364 = iprot.readBinary();
                     struct.attributes.put(_key363, _val364);
@@ -30763,7 +30935,7 @@ public class Hbase {
             for (int _i373 = 0; _i373 < _map372.size; ++_i373)
             {
               ByteBuffer _key374; // required
-              ByteBuffer _val375; // required
+              ByteBuffer _val375; // optional
               _key374 = iprot.readBinary();
               _val375 = iprot.readBinary();
               struct.attributes.put(_key374, _val375);
@@ -31260,7 +31432,7 @@ public class Hbase {
      */
     public long timestamp; // required
     /**
-     * Put attributes
+     * Mutation attributes
      */
     public Map<ByteBuffer,ByteBuffer> attributes; // required
 
@@ -31279,7 +31451,7 @@ public class Hbase {
        */
       TIMESTAMP((short)3, "timestamp"),
       /**
-       * Put attributes
+       * Mutation attributes
        */
       ATTRIBUTES((short)4, "attributes");
 
@@ -31554,14 +31726,14 @@ public class Hbase {
     }
 
     /**
-     * Put attributes
+     * Mutation attributes
      */
     public Map<ByteBuffer,ByteBuffer> getAttributes() {
       return this.attributes;
     }
 
     /**
-     * Put attributes
+     * Mutation attributes
      */
     public mutateRowsTs_args setAttributes(Map<ByteBuffer,ByteBuffer> attributes) {
       this.attributes = attributes;
@@ -31894,7 +32066,7 @@ public class Hbase {
                   for (int _i380 = 0; _i380 < _map379.size; ++_i380)
                   {
                     ByteBuffer _key381; // required
-                    ByteBuffer _val382; // required
+                    ByteBuffer _val382; // optional
                     _key381 = iprot.readBinary();
                     _val382 = iprot.readBinary();
                     struct.attributes.put(_key381, _val382);
@@ -32045,7 +32217,7 @@ public class Hbase {
             for (int _i391 = 0; _i391 < _map390.size; ++_i391)
             {
               ByteBuffer _key392; // required
-              ByteBuffer _val393; // required
+              ByteBuffer _val393; // optional
               _key392 = iprot.readBinary();
               _val393 = iprot.readBinary();
               struct.attributes.put(_key392, _val393);
@@ -33659,6 +33831,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -34450,7 +34624,7 @@ public class Hbase {
                   for (int _i395 = 0; _i395 < _map394.size; ++_i395)
                   {
                     ByteBuffer _key396; // required
-                    ByteBuffer _val397; // required
+                    ByteBuffer _val397; // optional
                     _key396 = iprot.readBinary();
                     _val397 = iprot.readBinary();
                     struct.attributes.put(_key396, _val397);
@@ -34580,7 +34754,7 @@ public class Hbase {
             for (int _i401 = 0; _i401 < _map400.size; ++_i401)
             {
               ByteBuffer _key402; // required
-              ByteBuffer _val403; // required
+              ByteBuffer _val403; // optional
               _key402 = iprot.readBinary();
               _val403 = iprot.readBinary();
               struct.attributes.put(_key402, _val403);
@@ -35697,7 +35871,7 @@ public class Hbase {
                   for (int _i405 = 0; _i405 < _map404.size; ++_i405)
                   {
                     ByteBuffer _key406; // required
-                    ByteBuffer _val407; // required
+                    ByteBuffer _val407; // optional
                     _key406 = iprot.readBinary();
                     _val407 = iprot.readBinary();
                     struct.attributes.put(_key406, _val407);
@@ -35840,7 +36014,7 @@ public class Hbase {
             for (int _i411 = 0; _i411 < _map410.size; ++_i411)
             {
               ByteBuffer _key412; // required
-              ByteBuffer _val413; // required
+              ByteBuffer _val413; // optional
               _key412 = iprot.readBinary();
               _val413 = iprot.readBinary();
               struct.attributes.put(_key412, _val413);
@@ -36752,7 +36926,7 @@ public class Hbase {
                   for (int _i415 = 0; _i415 < _map414.size; ++_i415)
                   {
                     ByteBuffer _key416; // required
-                    ByteBuffer _val417; // required
+                    ByteBuffer _val417; // optional
                     _key416 = iprot.readBinary();
                     _val417 = iprot.readBinary();
                     struct.attributes.put(_key416, _val417);
@@ -36867,7 +37041,7 @@ public class Hbase {
             for (int _i421 = 0; _i421 < _map420.size; ++_i421)
             {
               ByteBuffer _key422; // required
-              ByteBuffer _val423; // required
+              ByteBuffer _val423; // optional
               _key422 = iprot.readBinary();
               _val423 = iprot.readBinary();
               struct.attributes.put(_key422, _val423);
@@ -37223,6 +37397,1502 @@ public class Hbase {
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, deleteAllRow_result struct) throws org.apache.thrift.TException {
+        TTupleProtocol iprot = (TTupleProtocol) prot;
+        BitSet incoming = iprot.readBitSet(1);
+        if (incoming.get(0)) {
+          struct.io = new IOError();
+          struct.io.read(iprot);
+          struct.setIoIsSet(true);
+        }
+      }
+    }
+
+  }
+
+  public static class increment_args implements org.apache.thrift.TBase<increment_args, increment_args._Fields>, java.io.Serializable, Cloneable   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("increment_args");
+
+    private static final org.apache.thrift.protocol.TField INCREMENT_FIELD_DESC = new org.apache.thrift.protocol.TField("increment", org.apache.thrift.protocol.TType.STRUCT, (short)1);
+
+    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
+    static {
+      schemes.put(StandardScheme.class, new increment_argsStandardSchemeFactory());
+      schemes.put(TupleScheme.class, new increment_argsTupleSchemeFactory());
+    }
+
+    /**
+     * The single increment to apply
+     */
+    public TIncrement increment; // required
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+      /**
+       * The single increment to apply
+       */
+      INCREMENT((short)1, "increment");
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          case 1: // INCREMENT
+            return INCREMENT;
+          default:
+            return null;
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      tmpMap.put(_Fields.INCREMENT, new org.apache.thrift.meta_data.FieldMetaData("increment", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TIncrement.class)));
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(increment_args.class, metaDataMap);
+    }
+
+    public increment_args() {
+    }
+
+    public increment_args(
+      TIncrement increment)
+    {
+      this();
+      this.increment = increment;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public increment_args(increment_args other) {
+      if (other.isSetIncrement()) {
+        this.increment = new TIncrement(other.increment);
+      }
+    }
+
+    public increment_args deepCopy() {
+      return new increment_args(this);
+    }
+
+    @Override
+    public void clear() {
+      this.increment = null;
+    }
+
+    /**
+     * The single increment to apply
+     */
+    public TIncrement getIncrement() {
+      return this.increment;
+    }
+
+    /**
+     * The single increment to apply
+     */
+    public increment_args setIncrement(TIncrement increment) {
+      this.increment = increment;
+      return this;
+    }
+
+    public void unsetIncrement() {
+      this.increment = null;
+    }
+
+    /** Returns true if field increment is set (has been assigned a value) and false otherwise */
+    public boolean isSetIncrement() {
+      return this.increment != null;
+    }
+
+    public void setIncrementIsSet(boolean value) {
+      if (!value) {
+        this.increment = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case INCREMENT:
+        if (value == null) {
+          unsetIncrement();
+        } else {
+          setIncrement((TIncrement)value);
+        }
+        break;
+
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case INCREMENT:
+        return getIncrement();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      case INCREMENT:
+        return isSetIncrement();
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof increment_args)
+        return this.equals((increment_args)that);
+      return false;
+    }
+
+    public boolean equals(increment_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_increment = true && this.isSetIncrement();
+      boolean that_present_increment = true && that.isSetIncrement();
+      if (this_present_increment || that_present_increment) {
+        if (!(this_present_increment && that_present_increment))
+          return false;
+        if (!this.increment.equals(that.increment))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(increment_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      increment_args typedOther = (increment_args)other;
+
+      lastComparison = Boolean.valueOf(isSetIncrement()).compareTo(typedOther.isSetIncrement());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetIncrement()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.increment, typedOther.increment);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("increment_args(");
+      boolean first = true;
+
+      sb.append("increment:");
+      if (this.increment == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.increment);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private static class increment_argsStandardSchemeFactory implements SchemeFactory {
+      public increment_argsStandardScheme getScheme() {
+        return new increment_argsStandardScheme();
+      }
+    }
+
+    private static class increment_argsStandardScheme extends StandardScheme<increment_args> {
+
+      public void read(org.apache.thrift.protocol.TProtocol iprot, increment_args struct) throws org.apache.thrift.TException {
+        org.apache.thrift.protocol.TField schemeField;
+        iprot.readStructBegin();
+        while (true)
+        {
+          schemeField = iprot.readFieldBegin();
+          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
+            break;
+          }
+          switch (schemeField.id) {
+            case 1: // INCREMENT
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+                struct.increment = new TIncrement();
+                struct.increment.read(iprot);
+                struct.setIncrementIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            default:
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+          }
+          iprot.readFieldEnd();
+        }
+        iprot.readStructEnd();
+
+        // check for required fields of primitive type, which can't be checked in the validate method
+        struct.validate();
+      }
+
+      public void write(org.apache.thrift.protocol.TProtocol oprot, increment_args struct) throws org.apache.thrift.TException {
+        struct.validate();
+
+        oprot.writeStructBegin(STRUCT_DESC);
+        if (struct.increment != null) {
+          oprot.writeFieldBegin(INCREMENT_FIELD_DESC);
+          struct.increment.write(oprot);
+          oprot.writeFieldEnd();
+        }
+        oprot.writeFieldStop();
+        oprot.writeStructEnd();
+      }
+
+    }
+
+    private static class increment_argsTupleSchemeFactory implements SchemeFactory {
+      public increment_argsTupleScheme getScheme() {
+        return new increment_argsTupleScheme();
+      }
+    }
+
+    private static class increment_argsTupleScheme extends TupleScheme<increment_args> {
+
+      @Override
+      public void write(org.apache.thrift.protocol.TProtocol prot, increment_args struct) throws org.apache.thrift.TException {
+        TTupleProtocol oprot = (TTupleProtocol) prot;
+        BitSet optionals = new BitSet();
+        if (struct.isSetIncrement()) {
+          optionals.set(0);
+        }
+        oprot.writeBitSet(optionals, 1);
+        if (struct.isSetIncrement()) {
+          struct.increment.write(oprot);
+        }
+      }
+
+      @Override
+      public void read(org.apache.thrift.protocol.TProtocol prot, increment_args struct) throws org.apache.thrift.TException {
+        TTupleProtocol iprot = (TTupleProtocol) prot;
+        BitSet incoming = iprot.readBitSet(1);
+        if (incoming.get(0)) {
+          struct.increment = new TIncrement();
+          struct.increment.read(iprot);
+          struct.setIncrementIsSet(true);
+        }
+      }
+    }
+
+  }
+
+  public static class increment_result implements org.apache.thrift.TBase<increment_result, increment_result._Fields>, java.io.Serializable, Cloneable   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("increment_result");
+
+    private static final org.apache.thrift.protocol.TField IO_FIELD_DESC = new org.apache.thrift.protocol.TField("io", org.apache.thrift.protocol.TType.STRUCT, (short)1);
+
+    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
+    static {
+      schemes.put(StandardScheme.class, new increment_resultStandardSchemeFactory());
+      schemes.put(TupleScheme.class, new increment_resultTupleSchemeFactory());
+    }
+
+    public IOError io; // required
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+      IO((short)1, "io");
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          case 1: // IO
+            return IO;
+          default:
+            return null;
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      tmpMap.put(_Fields.IO, new org.apache.thrift.meta_data.FieldMetaData("io", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRUCT)));
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(increment_result.class, metaDataMap);
+    }
+
+    public increment_result() {
+    }
+
+    public increment_result(
+      IOError io)
+    {
+      this();
+      this.io = io;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public increment_result(increment_result other) {
+      if (other.isSetIo()) {
+        this.io = new IOError(other.io);
+      }
+    }
+
+    public increment_result deepCopy() {
+      return new increment_result(this);
+    }
+
+    @Override
+    public void clear() {
+      this.io = null;
+    }
+
+    public IOError getIo() {
+      return this.io;
+    }
+
+    public increment_result setIo(IOError io) {
+      this.io = io;
+      return this;
+    }
+
+    public void unsetIo() {
+      this.io = null;
+    }
+
+    /** Returns true if field io is set (has been assigned a value) and false otherwise */
+    public boolean isSetIo() {
+      return this.io != null;
+    }
+
+    public void setIoIsSet(boolean value) {
+      if (!value) {
+        this.io = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case IO:
+        if (value == null) {
+          unsetIo();
+        } else {
+          setIo((IOError)value);
+        }
+        break;
+
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case IO:
+        return getIo();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      case IO:
+        return isSetIo();
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof increment_result)
+        return this.equals((increment_result)that);
+      return false;
+    }
+
+    public boolean equals(increment_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && this.isSetIo();
+      boolean that_present_io = true && that.isSetIo();
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(increment_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      increment_result typedOther = (increment_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(typedOther.isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetIo()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.io, typedOther.io);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
+      }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("increment_result(");
+      boolean first = true;
+
+      sb.append("io:");
+      if (this.io == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.io);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private static class increment_resultStandardSchemeFactory implements SchemeFactory {
+      public increment_resultStandardScheme getScheme() {
+        return new increment_resultStandardScheme();
+      }
+    }
+
+    private static class increment_resultStandardScheme extends StandardScheme<increment_result> {
+
+      public void read(org.apache.thrift.protocol.TProtocol iprot, increment_result struct) throws org.apache.thrift.TException {
+        org.apache.thrift.protocol.TField schemeField;
+        iprot.readStructBegin();
+        while (true)
+        {
+          schemeField = iprot.readFieldBegin();
+          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
+            break;
+          }
+          switch (schemeField.id) {
+            case 1: // IO
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+                struct.io = new IOError();
+                struct.io.read(iprot);
+                struct.setIoIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            default:
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+          }
+          iprot.readFieldEnd();
+        }
+        iprot.readStructEnd();
+
+        // check for required fields of primitive type, which can't be checked in the validate method
+        struct.validate();
+      }
+
+      public void write(org.apache.thrift.protocol.TProtocol oprot, increment_result struct) throws org.apache.thrift.TException {
+        struct.validate();
+
+        oprot.writeStructBegin(STRUCT_DESC);
+        if (struct.io != null) {
+          oprot.writeFieldBegin(IO_FIELD_DESC);
+          struct.io.write(oprot);
+          oprot.writeFieldEnd();
+        }
+        oprot.writeFieldStop();
+        oprot.writeStructEnd();
+      }
+
+    }
+
+    private static class increment_resultTupleSchemeFactory implements SchemeFactory {
+      public increment_resultTupleScheme getScheme() {
+        return new increment_resultTupleScheme();
+      }
+    }
+
+    private static class increment_resultTupleScheme extends TupleScheme<increment_result> {
+
+      @Override
+      public void write(org.apache.thrift.protocol.TProtocol prot, increment_result struct) throws org.apache.thrift.TException {
+        TTupleProtocol oprot = (TTupleProtocol) prot;
+        BitSet optionals = new BitSet();
+        if (struct.isSetIo()) {
+          optionals.set(0);
+        }
+        oprot.writeBitSet(optionals, 1);
+        if (struct.isSetIo()) {
+          struct.io.write(oprot);
+        }
+      }
+
+      @Override
+      public void read(org.apache.thrift.protocol.TProtocol prot, increment_result struct) throws org.apache.thrift.TException {
+        TTupleProtocol iprot = (TTupleProtocol) prot;
+        BitSet incoming = iprot.readBitSet(1);
+        if (incoming.get(0)) {
+          struct.io = new IOError();
+          struct.io.read(iprot);
+          struct.setIoIsSet(true);
+        }
+      }
+    }
+
+  }
+
+  public static class incrementRows_args implements org.apache.thrift.TBase<incrementRows_args, incrementRows_args._Fields>, java.io.Serializable, Cloneable   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("incrementRows_args");
+
+    private static final org.apache.thrift.protocol.TField INCREMENTS_FIELD_DESC = new org.apache.thrift.protocol.TField("increments", org.apache.thrift.protocol.TType.LIST, (short)1);
+
+    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
+    static {
+      schemes.put(StandardScheme.class, new incrementRows_argsStandardSchemeFactory());
+      schemes.put(TupleScheme.class, new incrementRows_argsTupleSchemeFactory());
+    }
+
+    /**
+     * The list of increments
+     */
+    public List<TIncrement> increments; // required
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+      /**
+       * The list of increments
+       */
+      INCREMENTS((short)1, "increments");
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          case 1: // INCREMENTS
+            return INCREMENTS;
+          default:
+            return null;
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      tmpMap.put(_Fields.INCREMENTS, new org.apache.thrift.meta_data.FieldMetaData("increments", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
+              new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TIncrement.class))));
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(incrementRows_args.class, metaDataMap);
+    }
+
+    public incrementRows_args() {
+    }
+
+    public incrementRows_args(
+      List<TIncrement> increments)
+    {
+      this();
+      this.increments = increments;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public incrementRows_args(incrementRows_args other) {
+      if (other.isSetIncrements()) {
+        List<TIncrement> __this__increments = new ArrayList<TIncrement>();
+        for (TIncrement other_element : other.increments) {
+          __this__increments.add(new TIncrement(other_element));
+        }
+        this.increments = __this__increments;
+      }
+    }
+
+    public incrementRows_args deepCopy() {
+      return new incrementRows_args(this);
+    }
+
+    @Override
+    public void clear() {
+      this.increments = null;
+    }
+
+    public int getIncrementsSize() {
+      return (this.increments == null) ? 0 : this.increments.size();
+    }
+
+    public java.util.Iterator<TIncrement> getIncrementsIterator() {
+      return (this.increments == null) ? null : this.increments.iterator();
+    }
+
+    public void addToIncrements(TIncrement elem) {
+      if (this.increments == null) {
+        this.increments = new ArrayList<TIncrement>();
+      }
+      this.increments.add(elem);
+    }
+
+    /**
+     * The list of increments
+     */
+    public List<TIncrement> getIncrements() {
+      return this.increments;
+    }
+
+    /**
+     * The list of increments
+     */
+    public incrementRows_args setIncrements(List<TIncrement> increments) {
+      this.increments = increments;
+      return this;
+    }
+
+    public void unsetIncrements() {
+      this.increments = null;
+    }
+
+    /** Returns true if field increments is set (has been assigned a value) and false otherwise */
+    public boolean isSetIncrements() {
+      return this.increments != null;
+    }
+
+    public void setIncrementsIsSet(boolean value) {
+      if (!value) {
+        this.increments = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case INCREMENTS:
+        if (value == null) {
+          unsetIncrements();
+        } else {
+          setIncrements((List<TIncrement>)value);
+        }
+        break;
+
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case INCREMENTS:
+        return getIncrements();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      case INCREMENTS:
+        return isSetIncrements();
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof incrementRows_args)
+        return this.equals((incrementRows_args)that);
+      return false;
+    }
+
+    public boolean equals(incrementRows_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_increments = true && this.isSetIncrements();
+      boolean that_present_increments = true && that.isSetIncrements();
+      if (this_present_increments || that_present_increments) {
+        if (!(this_present_increments && that_present_increments))
+          return false;
+        if (!this.increments.equals(that.increments))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(incrementRows_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      incrementRows_args typedOther = (incrementRows_args)other;
+
+      lastComparison = Boolean.valueOf(isSetIncrements()).compareTo(typedOther.isSetIncrements());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetIncrements()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.increments, typedOther.increments);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("incrementRows_args(");
+      boolean first = true;
+
+      sb.append("increments:");
+      if (this.increments == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.increments);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private static class incrementRows_argsStandardSchemeFactory implements SchemeFactory {
+      public incrementRows_argsStandardScheme getScheme() {
+        return new incrementRows_argsStandardScheme();
+      }
+    }
+
+    private static class incrementRows_argsStandardScheme extends StandardScheme<incrementRows_args> {
+
+      public void read(org.apache.thrift.protocol.TProtocol iprot, incrementRows_args struct) throws org.apache.thrift.TException {
+        org.apache.thrift.protocol.TField schemeField;
+        iprot.readStructBegin();
+        while (true)
+        {
+          schemeField = iprot.readFieldBegin();
+          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
+            break;
+          }
+          switch (schemeField.id) {
+            case 1: // INCREMENTS
+              if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
+                {
+                  org.apache.thrift.protocol.TList _list424 = iprot.readListBegin();
+                  struct.increments = new ArrayList<TIncrement>(_list424.size);
+                  for (int _i425 = 0; _i425 < _list424.size; ++_i425)
+                  {
+                    TIncrement _elem426; // optional
+                    _elem426 = new TIncrement();
+                    _elem426.read(iprot);
+                    struct.increments.add(_elem426);
+                  }
+                  iprot.readListEnd();
+                }
+                struct.setIncrementsIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            default:
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+          }
+          iprot.readFieldEnd();
+        }
+        iprot.readStructEnd();
+
+        // check for required fields of primitive type, which can't be checked in the validate method
+        struct.validate();
+      }
+
+      public void write(org.apache.thrift.protocol.TProtocol oprot, incrementRows_args struct) throws org.apache.thrift.TException {
+        struct.validate();
+
+        oprot.writeStructBegin(STRUCT_DESC);
+        if (struct.increments != null) {
+          oprot.writeFieldBegin(INCREMENTS_FIELD_DESC);
+          {
+            oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.increments.size()));
+            for (TIncrement _iter427 : struct.increments)
+            {
+              _iter427.write(oprot);
+            }
+            oprot.writeListEnd();
+          }
+          oprot.writeFieldEnd();
+        }
+        oprot.writeFieldStop();
+        oprot.writeStructEnd();
+      }
+
+    }
+
+    private static class incrementRows_argsTupleSchemeFactory implements SchemeFactory {
+      public incrementRows_argsTupleScheme getScheme() {
+        return new incrementRows_argsTupleScheme();
+      }
+    }
+
+    private static class incrementRows_argsTupleScheme extends TupleScheme<incrementRows_args> {
+
+      @Override
+      public void write(org.apache.thrift.protocol.TProtocol prot, incrementRows_args struct) throws org.apache.thrift.TException {
+        TTupleProtocol oprot = (TTupleProtocol) prot;
+        BitSet optionals = new BitSet();
+        if (struct.isSetIncrements()) {
+          optionals.set(0);
+        }
+        oprot.writeBitSet(optionals, 1);
+        if (struct.isSetIncrements()) {
+          {
+            oprot.writeI32(struct.increments.size());
+            for (TIncrement _iter428 : struct.increments)
+            {
+              _iter428.write(oprot);
+            }
+          }
+        }
+      }
+
+      @Override
+      public void read(org.apache.thrift.protocol.TProtocol prot, incrementRows_args struct) throws org.apache.thrift.TException {
+        TTupleProtocol iprot = (TTupleProtocol) prot;
+        BitSet incoming = iprot.readBitSet(1);
+        if (incoming.get(0)) {
+          {
+            org.apache.thrift.protocol.TList _list429 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.increments = new ArrayList<TIncrement>(_list429.size);
+            for (int _i430 = 0; _i430 < _list429.size; ++_i430)
+            {
+              TIncrement _elem431; // optional
+              _elem431 = new TIncrement();
+              _elem431.read(iprot);
+              struct.increments.add(_elem431);
+            }
+          }
+          struct.setIncrementsIsSet(true);
+        }
+      }
+    }
+
+  }
+
+  public static class incrementRows_result implements org.apache.thrift.TBase<incrementRows_result, incrementRows_result._Fields>, java.io.Serializable, Cloneable   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("incrementRows_result");
+
+    private static final org.apache.thrift.protocol.TField IO_FIELD_DESC = new org.apache.thrift.protocol.TField("io", org.apache.thrift.protocol.TType.STRUCT, (short)1);
+
+    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
+    static {
+      schemes.put(StandardScheme.class, new incrementRows_resultStandardSchemeFactory());
+      schemes.put(TupleScheme.class, new incrementRows_resultTupleSchemeFactory());
+    }
+
+    public IOError io; // required
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+      IO((short)1, "io");
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          case 1: // IO
+            return IO;
+          default:
+            return null;
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      tmpMap.put(_Fields.IO, new org.apache.thrift.meta_data.FieldMetaData("io", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRUCT)));
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(incrementRows_result.class, metaDataMap);
+    }
+
+    public incrementRows_result() {
+    }
+
+    public incrementRows_result(
+      IOError io)
+    {
+      this();
+      this.io = io;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public incrementRows_result(incrementRows_result other) {
+      if (other.isSetIo()) {
+        this.io = new IOError(other.io);
+      }
+    }
+
+    public incrementRows_result deepCopy() {
+      return new incrementRows_result(this);
+    }
+
+    @Override
+    public void clear() {
+      this.io = null;
+    }
+
+    public IOError getIo() {
+      return this.io;
+    }
+
+    public incrementRows_result setIo(IOError io) {
+      this.io = io;
+      return this;
+    }
+
+    public void unsetIo() {
+      this.io = null;
+    }
+
+    /** Returns true if field io is set (has been assigned a value) and false otherwise */
+    public boolean isSetIo() {
+      return this.io != null;
+    }
+
+    public void setIoIsSet(boolean value) {
+      if (!value) {
+        this.io = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case IO:
+        if (value == null) {
+          unsetIo();
+        } else {
+          setIo((IOError)value);
+        }
+        break;
+
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case IO:
+        return getIo();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      case IO:
+        return isSetIo();
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof incrementRows_result)
+        return this.equals((incrementRows_result)that);
+      return false;
+    }
+
+    public boolean equals(incrementRows_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && this.isSetIo();
+      boolean that_present_io = true && that.isSetIo();
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(incrementRows_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      incrementRows_result typedOther = (incrementRows_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(typedOther.isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetIo()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.io, typedOther.io);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
+      }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("incrementRows_result(");
+      boolean first = true;
+
+      sb.append("io:");
+      if (this.io == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.io);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private static class incrementRows_resultStandardSchemeFactory implements SchemeFactory {
+      public incrementRows_resultStandardScheme getScheme() {
+        return new incrementRows_resultStandardScheme();
+      }
+    }
+
+    private static class incrementRows_resultStandardScheme extends StandardScheme<incrementRows_result> {
+
+      public void read(org.apache.thrift.protocol.TProtocol iprot, incrementRows_result struct) throws org.apache.thrift.TException {
+        org.apache.thrift.protocol.TField schemeField;
+        iprot.readStructBegin();
+        while (true)
+        {
+          schemeField = iprot.readFieldBegin();
+          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
+            break;
+          }
+          switch (schemeField.id) {
+            case 1: // IO
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+                struct.io = new IOError();
+                struct.io.read(iprot);
+                struct.setIoIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            default:
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+          }
+          iprot.readFieldEnd();
+        }
+        iprot.readStructEnd();
+
+        // check for required fields of primitive type, which can't be checked in the validate method
+        struct.validate();
+      }
+
+      public void write(org.apache.thrift.protocol.TProtocol oprot, incrementRows_result struct) throws org.apache.thrift.TException {
+        struct.validate();
+
+        oprot.writeStructBegin(STRUCT_DESC);
+        if (struct.io != null) {
+          oprot.writeFieldBegin(IO_FIELD_DESC);
+          struct.io.write(oprot);
+          oprot.writeFieldEnd();
+        }
+        oprot.writeFieldStop();
+        oprot.writeStructEnd();
+      }
+
+    }
+
+    private static class incrementRows_resultTupleSchemeFactory implements SchemeFactory {
+      public incrementRows_resultTupleScheme getScheme() {
+        return new incrementRows_resultTupleScheme();
+      }
+    }
+
+    private static class incrementRows_resultTupleScheme extends TupleScheme<incrementRows_result> {
+
+      @Override
+      public void write(org.apache.thrift.protocol.TProtocol prot, incrementRows_result struct) throws org.apache.thrift.TException {
+        TTupleProtocol oprot = (TTupleProtocol) prot;
+        BitSet optionals = new BitSet();
+        if (struct.isSetIo()) {
+          optionals.set(0);
+        }
+        oprot.writeBitSet(optionals, 1);
+        if (struct.isSetIo()) {
+          struct.io.write(oprot);
+        }
+      }
+
+      @Override
+      public void read(org.apache.thrift.protocol.TProtocol prot, incrementRows_result struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
         BitSet incoming = iprot.readBitSet(1);
         if (incoming.get(0)) {
@@ -37872,15 +39542,15 @@ public class Hbase {
             case 4: // ATTRIBUTES
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map424 = iprot.readMapBegin();
-                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map424.size);
-                  for (int _i425 = 0; _i425 < _map424.size; ++_i425)
+                  org.apache.thrift.protocol.TMap _map432 = iprot.readMapBegin();
+                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map432.size);
+                  for (int _i433 = 0; _i433 < _map432.size; ++_i433)
                   {
-                    ByteBuffer _key426; // required
-                    ByteBuffer _val427; // required
-                    _key426 = iprot.readBinary();
-                    _val427 = iprot.readBinary();
-                    struct.attributes.put(_key426, _val427);
+                    ByteBuffer _key434; // required
+                    ByteBuffer _val435; // optional
+                    _key434 = iprot.readBinary();
+                    _val435 = iprot.readBinary();
+                    struct.attributes.put(_key434, _val435);
                   }
                   iprot.readMapEnd();
                 }
@@ -37921,10 +39591,10 @@ public class Hbase {
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter428 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter436 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter428.getKey());
-              oprot.writeBinary(_iter428.getValue());
+              oprot.writeBinary(_iter436.getKey());
+              oprot.writeBinary(_iter436.getValue());
             }
             oprot.writeMapEnd();
           }
@@ -37973,10 +39643,10 @@ public class Hbase {
         if (struct.isSetAttributes()) {
           {
             oprot.writeI32(struct.attributes.size());
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter429 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter437 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter429.getKey());
-              oprot.writeBinary(_iter429.getValue());
+              oprot.writeBinary(_iter437.getKey());
+              oprot.writeBinary(_iter437.getValue());
             }
           }
         }
@@ -38000,15 +39670,15 @@ public class Hbase {
         }
         if (incoming.get(3)) {
           {
-            org.apache.thrift.protocol.TMap _map430 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map430.size);
-            for (int _i431 = 0; _i431 < _map430.size; ++_i431)
+            org.apache.thrift.protocol.TMap _map438 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map438.size);
+            for (int _i439 = 0; _i439 < _map438.size; ++_i439)
             {
-              ByteBuffer _key432; // required
-              ByteBuffer _val433; // required
-              _key432 = iprot.readBinary();
-              _val433 = iprot.readBinary();
-              struct.attributes.put(_key432, _val433);
+              ByteBuffer _key440; // required
+              ByteBuffer _val441; // optional
+              _key440 = iprot.readBinary();
+              _val441 = iprot.readBinary();
+              struct.attributes.put(_key440, _val441);
             }
           }
           struct.setAttributesIsSet(true);
@@ -38903,15 +40573,15 @@ public class Hbase {
             case 3: // ATTRIBUTES
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map434 = iprot.readMapBegin();
-                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map434.size);
-                  for (int _i435 = 0; _i435 < _map434.size; ++_i435)
+                  org.apache.thrift.protocol.TMap _map442 = iprot.readMapBegin();
+                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map442.size);
+                  for (int _i443 = 0; _i443 < _map442.size; ++_i443)
                   {
-                    ByteBuffer _key436; // required
-                    ByteBuffer _val437; // required
-                    _key436 = iprot.readBinary();
-                    _val437 = iprot.readBinary();
-                    struct.attributes.put(_key436, _val437);
+                    ByteBuffer _key444; // required
+                    ByteBuffer _val445; // optional
+                    _key444 = iprot.readBinary();
+                    _val445 = iprot.readBinary();
+                    struct.attributes.put(_key444, _val445);
                   }
                   iprot.readMapEnd();
                 }
@@ -38949,10 +40619,10 @@ public class Hbase {
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter438 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter446 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter438.getKey());
-              oprot.writeBinary(_iter438.getValue());
+              oprot.writeBinary(_iter446.getKey());
+              oprot.writeBinary(_iter446.getValue());
             }
             oprot.writeMapEnd();
           }
@@ -38995,10 +40665,10 @@ public class Hbase {
         if (struct.isSetAttributes()) {
           {
             oprot.writeI32(struct.attributes.size());
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter439 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter447 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter439.getKey());
-              oprot.writeBinary(_iter439.getValue());
+              oprot.writeBinary(_iter447.getKey());
+              oprot.writeBinary(_iter447.getValue());
             }
           }
         }
@@ -39019,15 +40689,15 @@ public class Hbase {
         }
         if (incoming.get(2)) {
           {
-            org.apache.thrift.protocol.TMap _map440 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map440.size);
-            for (int _i441 = 0; _i441 < _map440.size; ++_i441)
+            org.apache.thrift.protocol.TMap _map448 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map448.size);
+            for (int _i449 = 0; _i449 < _map448.size; ++_i449)
             {
-              ByteBuffer _key442; // required
-              ByteBuffer _val443; // required
-              _key442 = iprot.readBinary();
-              _val443 = iprot.readBinary();
-              struct.attributes.put(_key442, _val443);
+              ByteBuffer _key450; // required
+              ByteBuffer _val451; // optional
+              _key450 = iprot.readBinary();
+              _val451 = iprot.readBinary();
+              struct.attributes.put(_key450, _val451);
             }
           }
           struct.setAttributesIsSet(true);
@@ -39374,6 +41044,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -40149,13 +41821,13 @@ public class Hbase {
             case 3: // COLUMNS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list444 = iprot.readListBegin();
-                  struct.columns = new ArrayList<ByteBuffer>(_list444.size);
-                  for (int _i445 = 0; _i445 < _list444.size; ++_i445)
+                  org.apache.thrift.protocol.TList _list452 = iprot.readListBegin();
+                  struct.columns = new ArrayList<ByteBuffer>(_list452.size);
+                  for (int _i453 = 0; _i453 < _list452.size; ++_i453)
                   {
-                    ByteBuffer _elem446; // optional
-                    _elem446 = iprot.readBinary();
-                    struct.columns.add(_elem446);
+                    ByteBuffer _elem454; // optional
+                    _elem454 = iprot.readBinary();
+                    struct.columns.add(_elem454);
                   }
                   iprot.readListEnd();
                 }
@@ -40167,15 +41839,15 @@ public class Hbase {
             case 4: // ATTRIBUTES
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map447 = iprot.readMapBegin();
-                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map447.size);
-                  for (int _i448 = 0; _i448 < _map447.size; ++_i448)
+                  org.apache.thrift.protocol.TMap _map455 = iprot.readMapBegin();
+                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map455.size);
+                  for (int _i456 = 0; _i456 < _map455.size; ++_i456)
                   {
-                    ByteBuffer _key449; // required
-                    ByteBuffer _val450; // required
-                    _key449 = iprot.readBinary();
-                    _val450 = iprot.readBinary();
-                    struct.attributes.put(_key449, _val450);
+                    ByteBuffer _key457; // required
+                    ByteBuffer _val458; // optional
+                    _key457 = iprot.readBinary();
+                    _val458 = iprot.readBinary();
+                    struct.attributes.put(_key457, _val458);
                   }
                   iprot.readMapEnd();
                 }
@@ -40213,9 +41885,9 @@ public class Hbase {
           oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, struct.columns.size()));
-            for (ByteBuffer _iter451 : struct.columns)
+            for (ByteBuffer _iter459 : struct.columns)
             {
-              oprot.writeBinary(_iter451);
+              oprot.writeBinary(_iter459);
             }
             oprot.writeListEnd();
           }
@@ -40225,10 +41897,10 @@ public class Hbase {
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter452 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter460 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter452.getKey());
-              oprot.writeBinary(_iter452.getValue());
+              oprot.writeBinary(_iter460.getKey());
+              oprot.writeBinary(_iter460.getValue());
             }
             oprot.writeMapEnd();
           }
@@ -40274,19 +41946,19 @@ public class Hbase {
         if (struct.isSetColumns()) {
           {
             oprot.writeI32(struct.columns.size());
-            for (ByteBuffer _iter453 : struct.columns)
+            for (ByteBuffer _iter461 : struct.columns)
             {
-              oprot.writeBinary(_iter453);
+              oprot.writeBinary(_iter461);
             }
           }
         }
         if (struct.isSetAttributes()) {
           {
             oprot.writeI32(struct.attributes.size());
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter454 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter462 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter454.getKey());
-              oprot.writeBinary(_iter454.getValue());
+              oprot.writeBinary(_iter462.getKey());
+              oprot.writeBinary(_iter462.getValue());
             }
           }
         }
@@ -40306,28 +41978,28 @@ public class Hbase {
         }
         if (incoming.get(2)) {
           {
-            org.apache.thrift.protocol.TList _list455 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.columns = new ArrayList<ByteBuffer>(_list455.size);
-            for (int _i456 = 0; _i456 < _list455.size; ++_i456)
+            org.apache.thrift.protocol.TList _list463 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.columns = new ArrayList<ByteBuffer>(_list463.size);
+            for (int _i464 = 0; _i464 < _list463.size; ++_i464)
             {
-              ByteBuffer _elem457; // optional
-              _elem457 = iprot.readBinary();
-              struct.columns.add(_elem457);
+              ByteBuffer _elem465; // optional
+              _elem465 = iprot.readBinary();
+              struct.columns.add(_elem465);
             }
           }
           struct.setColumnsIsSet(true);
         }
         if (incoming.get(3)) {
           {
-            org.apache.thrift.protocol.TMap _map458 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map458.size);
-            for (int _i459 = 0; _i459 < _map458.size; ++_i459)
+            org.apache.thrift.protocol.TMap _map466 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map466.size);
+            for (int _i467 = 0; _i467 < _map466.size; ++_i467)
             {
-              ByteBuffer _key460; // required
-              ByteBuffer _val461; // required
-              _key460 = iprot.readBinary();
-              _val461 = iprot.readBinary();
-              struct.attributes.put(_key460, _val461);
+              ByteBuffer _key468; // required
+              ByteBuffer _val469; // optional
+              _key468 = iprot.readBinary();
+              _val469 = iprot.readBinary();
+              struct.attributes.put(_key468, _val469);
             }
           }
           struct.setAttributesIsSet(true);
@@ -40674,6 +42346,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -41560,13 +43234,13 @@ public class Hbase {
             case 4: // COLUMNS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list462 = iprot.readListBegin();
-                  struct.columns = new ArrayList<ByteBuffer>(_list462.size);
-                  for (int _i463 = 0; _i463 < _list462.size; ++_i463)
+                  org.apache.thrift.protocol.TList _list470 = iprot.readListBegin();
+                  struct.columns = new ArrayList<ByteBuffer>(_list470.size);
+                  for (int _i471 = 0; _i471 < _list470.size; ++_i471)
                   {
-                    ByteBuffer _elem464; // optional
-                    _elem464 = iprot.readBinary();
-                    struct.columns.add(_elem464);
+                    ByteBuffer _elem472; // optional
+                    _elem472 = iprot.readBinary();
+                    struct.columns.add(_elem472);
                   }
                   iprot.readListEnd();
                 }
@@ -41578,15 +43252,15 @@ public class Hbase {
             case 5: // ATTRIBUTES
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map465 = iprot.readMapBegin();
-                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map465.size);
-                  for (int _i466 = 0; _i466 < _map465.size; ++_i466)
+                  org.apache.thrift.protocol.TMap _map473 = iprot.readMapBegin();
+                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map473.size);
+                  for (int _i474 = 0; _i474 < _map473.size; ++_i474)
                   {
-                    ByteBuffer _key467; // required
-                    ByteBuffer _val468; // required
-                    _key467 = iprot.readBinary();
-                    _val468 = iprot.readBinary();
-                    struct.attributes.put(_key467, _val468);
+                    ByteBuffer _key475; // required
+                    ByteBuffer _val476; // optional
+                    _key475 = iprot.readBinary();
+                    _val476 = iprot.readBinary();
+                    struct.attributes.put(_key475, _val476);
                   }
                   iprot.readMapEnd();
                 }
@@ -41629,9 +43303,9 @@ public class Hbase {
           oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, struct.columns.size()));
-            for (ByteBuffer _iter469 : struct.columns)
+            for (ByteBuffer _iter477 : struct.columns)
             {
-              oprot.writeBinary(_iter469);
+              oprot.writeBinary(_iter477);
             }
             oprot.writeListEnd();
           }
@@ -41641,10 +43315,10 @@ public class Hbase {
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter470 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter478 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter470.getKey());
-              oprot.writeBinary(_iter470.getValue());
+              oprot.writeBinary(_iter478.getKey());
+              oprot.writeBinary(_iter478.getValue());
             }
             oprot.writeMapEnd();
           }
@@ -41696,19 +43370,19 @@ public class Hbase {
         if (struct.isSetColumns()) {
           {
             oprot.writeI32(struct.columns.size());
-            for (ByteBuffer _iter471 : struct.columns)
+            for (ByteBuffer _iter479 : struct.columns)
             {
-              oprot.writeBinary(_iter471);
+              oprot.writeBinary(_iter479);
             }
           }
         }
         if (struct.isSetAttributes()) {
           {
             oprot.writeI32(struct.attributes.size());
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter472 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter480 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter472.getKey());
-              oprot.writeBinary(_iter472.getValue());
+              oprot.writeBinary(_iter480.getKey());
+              oprot.writeBinary(_iter480.getValue());
             }
           }
         }
@@ -41732,28 +43406,28 @@ public class Hbase {
         }
         if (incoming.get(3)) {
           {
-            org.apache.thrift.protocol.TList _list473 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.columns = new ArrayList<ByteBuffer>(_list473.size);
-            for (int _i474 = 0; _i474 < _list473.size; ++_i474)
+            org.apache.thrift.protocol.TList _list481 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.columns = new ArrayList<ByteBuffer>(_list481.size);
+            for (int _i482 = 0; _i482 < _list481.size; ++_i482)
             {
-              ByteBuffer _elem475; // optional
-              _elem475 = iprot.readBinary();
-              struct.columns.add(_elem475);
+              ByteBuffer _elem483; // optional
+              _elem483 = iprot.readBinary();
+              struct.columns.add(_elem483);
             }
           }
           struct.setColumnsIsSet(true);
         }
         if (incoming.get(4)) {
           {
-            org.apache.thrift.protocol.TMap _map476 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map476.size);
-            for (int _i477 = 0; _i477 < _map476.size; ++_i477)
+            org.apache.thrift.protocol.TMap _map484 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map484.size);
+            for (int _i485 = 0; _i485 < _map484.size; ++_i485)
             {
-              ByteBuffer _key478; // required
-              ByteBuffer _val479; // required
-              _key478 = iprot.readBinary();
-              _val479 = iprot.readBinary();
-              struct.attributes.put(_key478, _val479);
+              ByteBuffer _key486; // required
+              ByteBuffer _val487; // optional
+              _key486 = iprot.readBinary();
+              _val487 = iprot.readBinary();
+              struct.attributes.put(_key486, _val487);
             }
           }
           struct.setAttributesIsSet(true);
@@ -42100,6 +43774,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -42863,13 +44539,13 @@ public class Hbase {
             case 3: // COLUMNS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list480 = iprot.readListBegin();
-                  struct.columns = new ArrayList<ByteBuffer>(_list480.size);
-                  for (int _i481 = 0; _i481 < _list480.size; ++_i481)
+                  org.apache.thrift.protocol.TList _list488 = iprot.readListBegin();
+                  struct.columns = new ArrayList<ByteBuffer>(_list488.size);
+                  for (int _i489 = 0; _i489 < _list488.size; ++_i489)
                   {
-                    ByteBuffer _elem482; // optional
-                    _elem482 = iprot.readBinary();
-                    struct.columns.add(_elem482);
+                    ByteBuffer _elem490; // optional
+                    _elem490 = iprot.readBinary();
+                    struct.columns.add(_elem490);
                   }
                   iprot.readListEnd();
                 }
@@ -42881,15 +44557,15 @@ public class Hbase {
             case 4: // ATTRIBUTES
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map483 = iprot.readMapBegin();
-                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map483.size);
-                  for (int _i484 = 0; _i484 < _map483.size; ++_i484)
+                  org.apache.thrift.protocol.TMap _map491 = iprot.readMapBegin();
+                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map491.size);
+                  for (int _i492 = 0; _i492 < _map491.size; ++_i492)
                   {
-                    ByteBuffer _key485; // required
-                    ByteBuffer _val486; // required
-                    _key485 = iprot.readBinary();
-                    _val486 = iprot.readBinary();
-                    struct.attributes.put(_key485, _val486);
+                    ByteBuffer _key493; // required
+                    ByteBuffer _val494; // optional
+                    _key493 = iprot.readBinary();
+                    _val494 = iprot.readBinary();
+                    struct.attributes.put(_key493, _val494);
                   }
                   iprot.readMapEnd();
                 }
@@ -42927,9 +44603,9 @@ public class Hbase {
           oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, struct.columns.size()));
-            for (ByteBuffer _iter487 : struct.columns)
+            for (ByteBuffer _iter495 : struct.columns)
             {
-              oprot.writeBinary(_iter487);
+              oprot.writeBinary(_iter495);
             }
             oprot.writeListEnd();
           }
@@ -42939,10 +44615,10 @@ public class Hbase {
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter488 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter496 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter488.getKey());
-              oprot.writeBinary(_iter488.getValue());
+              oprot.writeBinary(_iter496.getKey());
+              oprot.writeBinary(_iter496.getValue());
             }
             oprot.writeMapEnd();
           }
@@ -42988,19 +44664,19 @@ public class Hbase {
         if (struct.isSetColumns()) {
           {
             oprot.writeI32(struct.columns.size());
-            for (ByteBuffer _iter489 : struct.columns)
+            for (ByteBuffer _iter497 : struct.columns)
             {
-              oprot.writeBinary(_iter489);
+              oprot.writeBinary(_iter497);
             }
           }
         }
         if (struct.isSetAttributes()) {
           {
             oprot.writeI32(struct.attributes.size());
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter490 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter498 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter490.getKey());
-              oprot.writeBinary(_iter490.getValue());
+              oprot.writeBinary(_iter498.getKey());
+              oprot.writeBinary(_iter498.getValue());
             }
           }
         }
@@ -43020,28 +44696,28 @@ public class Hbase {
         }
         if (incoming.get(2)) {
           {
-            org.apache.thrift.protocol.TList _list491 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.columns = new ArrayList<ByteBuffer>(_list491.size);
-            for (int _i492 = 0; _i492 < _list491.size; ++_i492)
+            org.apache.thrift.protocol.TList _list499 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.columns = new ArrayList<ByteBuffer>(_list499.size);
+            for (int _i500 = 0; _i500 < _list499.size; ++_i500)
             {
-              ByteBuffer _elem493; // optional
-              _elem493 = iprot.readBinary();
-              struct.columns.add(_elem493);
+              ByteBuffer _elem501; // optional
+              _elem501 = iprot.readBinary();
+              struct.columns.add(_elem501);
             }
           }
           struct.setColumnsIsSet(true);
         }
         if (incoming.get(3)) {
           {
-            org.apache.thrift.protocol.TMap _map494 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map494.size);
-            for (int _i495 = 0; _i495 < _map494.size; ++_i495)
+            org.apache.thrift.protocol.TMap _map502 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map502.size);
+            for (int _i503 = 0; _i503 < _map502.size; ++_i503)
             {
-              ByteBuffer _key496; // required
-              ByteBuffer _val497; // required
-              _key496 = iprot.readBinary();
-              _val497 = iprot.readBinary();
-              struct.attributes.put(_key496, _val497);
+              ByteBuffer _key504; // required
+              ByteBuffer _val505; // optional
+              _key504 = iprot.readBinary();
+              _val505 = iprot.readBinary();
+              struct.attributes.put(_key504, _val505);
             }
           }
           struct.setAttributesIsSet(true);
@@ -43388,6 +45064,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -44208,6 +45886,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -44251,13 +45931,13 @@ public class Hbase {
             case 3: // COLUMNS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list498 = iprot.readListBegin();
-                  struct.columns = new ArrayList<ByteBuffer>(_list498.size);
-                  for (int _i499 = 0; _i499 < _list498.size; ++_i499)
+                  org.apache.thrift.protocol.TList _list506 = iprot.readListBegin();
+                  struct.columns = new ArrayList<ByteBuffer>(_list506.size);
+                  for (int _i507 = 0; _i507 < _list506.size; ++_i507)
                   {
-                    ByteBuffer _elem500; // optional
-                    _elem500 = iprot.readBinary();
-                    struct.columns.add(_elem500);
+                    ByteBuffer _elem508; // optional
+                    _elem508 = iprot.readBinary();
+                    struct.columns.add(_elem508);
                   }
                   iprot.readListEnd();
                 }
@@ -44277,15 +45957,15 @@ public class Hbase {
             case 5: // ATTRIBUTES
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map501 = iprot.readMapBegin();
-                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map501.size);
-                  for (int _i502 = 0; _i502 < _map501.size; ++_i502)
+                  org.apache.thrift.protocol.TMap _map509 = iprot.readMapBegin();
+                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map509.size);
+                  for (int _i510 = 0; _i510 < _map509.size; ++_i510)
                   {
-                    ByteBuffer _key503; // required
-                    ByteBuffer _val504; // required
-                    _key503 = iprot.readBinary();
-                    _val504 = iprot.readBinary();
-                    struct.attributes.put(_key503, _val504);
+                    ByteBuffer _key511; // required
+                    ByteBuffer _val512; // optional
+                    _key511 = iprot.readBinary();
+                    _val512 = iprot.readBinary();
+                    struct.attributes.put(_key511, _val512);
                   }
                   iprot.readMapEnd();
                 }
@@ -44323,9 +46003,9 @@ public class Hbase {
           oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, struct.columns.size()));
-            for (ByteBuffer _iter505 : struct.columns)
+            for (ByteBuffer _iter513 : struct.columns)
             {
-              oprot.writeBinary(_iter505);
+              oprot.writeBinary(_iter513);
             }
             oprot.writeListEnd();
           }
@@ -44338,10 +46018,10 @@ public class Hbase {
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter506 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter514 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter506.getKey());
-              oprot.writeBinary(_iter506.getValue());
+              oprot.writeBinary(_iter514.getKey());
+              oprot.writeBinary(_iter514.getValue());
             }
             oprot.writeMapEnd();
           }
@@ -44390,9 +46070,9 @@ public class Hbase {
         if (struct.isSetColumns()) {
           {
             oprot.writeI32(struct.columns.size());
-            for (ByteBuffer _iter507 : struct.columns)
+            for (ByteBuffer _iter515 : struct.columns)
             {
-              oprot.writeBinary(_iter507);
+              oprot.writeBinary(_iter515);
             }
           }
         }
@@ -44402,10 +46082,10 @@ public class Hbase {
         if (struct.isSetAttributes()) {
           {
             oprot.writeI32(struct.attributes.size());
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter508 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter516 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter508.getKey());
-              oprot.writeBinary(_iter508.getValue());
+              oprot.writeBinary(_iter516.getKey());
+              oprot.writeBinary(_iter516.getValue());
             }
           }
         }
@@ -44425,13 +46105,13 @@ public class Hbase {
         }
         if (incoming.get(2)) {
           {
-            org.apache.thrift.protocol.TList _list509 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.columns = new ArrayList<ByteBuffer>(_list509.size);
-            for (int _i510 = 0; _i510 < _list509.size; ++_i510)
+            org.apache.thrift.protocol.TList _list517 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.columns = new ArrayList<ByteBuffer>(_list517.size);
+            for (int _i518 = 0; _i518 < _list517.size; ++_i518)
             {
-              ByteBuffer _elem511; // optional
-              _elem511 = iprot.readBinary();
-              struct.columns.add(_elem511);
+              ByteBuffer _elem519; // optional
+              _elem519 = iprot.readBinary();
+              struct.columns.add(_elem519);
             }
           }
           struct.setColumnsIsSet(true);
@@ -44442,15 +46122,15 @@ public class Hbase {
         }
         if (incoming.get(4)) {
           {
-            org.apache.thrift.protocol.TMap _map512 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map512.size);
-            for (int _i513 = 0; _i513 < _map512.size; ++_i513)
+            org.apache.thrift.protocol.TMap _map520 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map520.size);
+            for (int _i521 = 0; _i521 < _map520.size; ++_i521)
             {
-              ByteBuffer _key514; // required
-              ByteBuffer _val515; // required
-              _key514 = iprot.readBinary();
-              _val515 = iprot.readBinary();
-              struct.attributes.put(_key514, _val515);
+              ByteBuffer _key522; // required
+              ByteBuffer _val523; // optional
+              _key522 = iprot.readBinary();
+              _val523 = iprot.readBinary();
+              struct.attributes.put(_key522, _val523);
             }
           }
           struct.setAttributesIsSet(true);
@@ -44797,6 +46477,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -45771,13 +47453,13 @@ public class Hbase {
             case 4: // COLUMNS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list516 = iprot.readListBegin();
-                  struct.columns = new ArrayList<ByteBuffer>(_list516.size);
-                  for (int _i517 = 0; _i517 < _list516.size; ++_i517)
+                  org.apache.thrift.protocol.TList _list524 = iprot.readListBegin();
+                  struct.columns = new ArrayList<ByteBuffer>(_list524.size);
+                  for (int _i525 = 0; _i525 < _list524.size; ++_i525)
                   {
-                    ByteBuffer _elem518; // optional
-                    _elem518 = iprot.readBinary();
-                    struct.columns.add(_elem518);
+                    ByteBuffer _elem526; // optional
+                    _elem526 = iprot.readBinary();
+                    struct.columns.add(_elem526);
                   }
                   iprot.readListEnd();
                 }
@@ -45797,15 +47479,15 @@ public class Hbase {
             case 6: // ATTRIBUTES
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map519 = iprot.readMapBegin();
-                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map519.size);
-                  for (int _i520 = 0; _i520 < _map519.size; ++_i520)
+                  org.apache.thrift.protocol.TMap _map527 = iprot.readMapBegin();
+                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map527.size);
+                  for (int _i528 = 0; _i528 < _map527.size; ++_i528)
                   {
-                    ByteBuffer _key521; // required
-                    ByteBuffer _val522; // required
-                    _key521 = iprot.readBinary();
-                    _val522 = iprot.readBinary();
-                    struct.attributes.put(_key521, _val522);
+                    ByteBuffer _key529; // required
+                    ByteBuffer _val530; // optional
+                    _key529 = iprot.readBinary();
+                    _val530 = iprot.readBinary();
+                    struct.attributes.put(_key529, _val530);
                   }
                   iprot.readMapEnd();
                 }
@@ -45848,9 +47530,9 @@ public class Hbase {
           oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, struct.columns.size()));
-            for (ByteBuffer _iter523 : struct.columns)
+            for (ByteBuffer _iter531 : struct.columns)
             {
-              oprot.writeBinary(_iter523);
+              oprot.writeBinary(_iter531);
             }
             oprot.writeListEnd();
           }
@@ -45863,10 +47545,10 @@ public class Hbase {
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter524 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter532 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter524.getKey());
-              oprot.writeBinary(_iter524.getValue());
+              oprot.writeBinary(_iter532.getKey());
+              oprot.writeBinary(_iter532.getValue());
             }
             oprot.writeMapEnd();
           }
@@ -45921,9 +47603,9 @@ public class Hbase {
         if (struct.isSetColumns()) {
           {
             oprot.writeI32(struct.columns.size());
-            for (ByteBuffer _iter525 : struct.columns)
+            for (ByteBuffer _iter533 : struct.columns)
             {
-              oprot.writeBinary(_iter525);
+              oprot.writeBinary(_iter533);
             }
           }
         }
@@ -45933,10 +47615,10 @@ public class Hbase {
         if (struct.isSetAttributes()) {
           {
             oprot.writeI32(struct.attributes.size());
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter526 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter534 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter526.getKey());
-              oprot.writeBinary(_iter526.getValue());
+              oprot.writeBinary(_iter534.getKey());
+              oprot.writeBinary(_iter534.getValue());
             }
           }
         }
@@ -45960,13 +47642,13 @@ public class Hbase {
         }
         if (incoming.get(3)) {
           {
-            org.apache.thrift.protocol.TList _list527 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.columns = new ArrayList<ByteBuffer>(_list527.size);
-            for (int _i528 = 0; _i528 < _list527.size; ++_i528)
+            org.apache.thrift.protocol.TList _list535 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.columns = new ArrayList<ByteBuffer>(_list535.size);
+            for (int _i536 = 0; _i536 < _list535.size; ++_i536)
             {
-              ByteBuffer _elem529; // optional
-              _elem529 = iprot.readBinary();
-              struct.columns.add(_elem529);
+              ByteBuffer _elem537; // optional
+              _elem537 = iprot.readBinary();
+              struct.columns.add(_elem537);
             }
           }
           struct.setColumnsIsSet(true);
@@ -45977,15 +47659,15 @@ public class Hbase {
         }
         if (incoming.get(5)) {
           {
-            org.apache.thrift.protocol.TMap _map530 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map530.size);
-            for (int _i531 = 0; _i531 < _map530.size; ++_i531)
+            org.apache.thrift.protocol.TMap _map538 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map538.size);
+            for (int _i539 = 0; _i539 < _map538.size; ++_i539)
             {
-              ByteBuffer _key532; // required
-              ByteBuffer _val533; // required
-              _key532 = iprot.readBinary();
-              _val533 = iprot.readBinary();
-              struct.attributes.put(_key532, _val533);
+              ByteBuffer _key540; // required
+              ByteBuffer _val541; // optional
+              _key540 = iprot.readBinary();
+              _val541 = iprot.readBinary();
+              struct.attributes.put(_key540, _val541);
             }
           }
           struct.setAttributesIsSet(true);
@@ -46332,6 +48014,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -47273,14 +48957,14 @@ public class Hbase {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list534 = iprot.readListBegin();
-                  struct.success = new ArrayList<TRowResult>(_list534.size);
-                  for (int _i535 = 0; _i535 < _list534.size; ++_i535)
+                  org.apache.thrift.protocol.TList _list542 = iprot.readListBegin();
+                  struct.success = new ArrayList<TRowResult>(_list542.size);
+                  for (int _i543 = 0; _i543 < _list542.size; ++_i543)
                   {
-                    TRowResult _elem536; // optional
-                    _elem536 = new TRowResult();
-                    _elem536.read(iprot);
-                    struct.success.add(_elem536);
+                    TRowResult _elem544; // optional
+                    _elem544 = new TRowResult();
+                    _elem544.read(iprot);
+                    struct.success.add(_elem544);
                   }
                   iprot.readListEnd();
                 }
@@ -47326,9 +49010,9 @@ public class Hbase {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (TRowResult _iter537 : struct.success)
+            for (TRowResult _iter545 : struct.success)
             {
-              _iter537.write(oprot);
+              _iter545.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -47375,9 +49059,9 @@ public class Hbase {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (TRowResult _iter538 : struct.success)
+            for (TRowResult _iter546 : struct.success)
             {
-              _iter538.write(oprot);
+              _iter546.write(oprot);
             }
           }
         }
@@ -47395,14 +49079,14 @@ public class Hbase {
         BitSet incoming = iprot.readBitSet(3);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TList _list539 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new ArrayList<TRowResult>(_list539.size);
-            for (int _i540 = 0; _i540 < _list539.size; ++_i540)
+            org.apache.thrift.protocol.TList _list547 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new ArrayList<TRowResult>(_list547.size);
+            for (int _i548 = 0; _i548 < _list547.size; ++_i548)
             {
-              TRowResult _elem541; // optional
-              _elem541 = new TRowResult();
-              _elem541.read(iprot);
-              struct.success.add(_elem541);
+              TRowResult _elem549; // optional
+              _elem549 = new TRowResult();
+              _elem549.read(iprot);
+              struct.success.add(_elem549);
             }
           }
           struct.setSuccessIsSet(true);
@@ -48352,14 +50036,14 @@ public class Hbase {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list542 = iprot.readListBegin();
-                  struct.success = new ArrayList<TRowResult>(_list542.size);
-                  for (int _i543 = 0; _i543 < _list542.size; ++_i543)
+                  org.apache.thrift.protocol.TList _list550 = iprot.readListBegin();
+                  struct.success = new ArrayList<TRowResult>(_list550.size);
+                  for (int _i551 = 0; _i551 < _list550.size; ++_i551)
                   {
-                    TRowResult _elem544; // optional
-                    _elem544 = new TRowResult();
-                    _elem544.read(iprot);
-                    struct.success.add(_elem544);
+                    TRowResult _elem552; // optional
+                    _elem552 = new TRowResult();
+                    _elem552.read(iprot);
+                    struct.success.add(_elem552);
                   }
                   iprot.readListEnd();
                 }
@@ -48405,9 +50089,9 @@ public class Hbase {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (TRowResult _iter545 : struct.success)
+            for (TRowResult _iter553 : struct.success)
             {
-              _iter545.write(oprot);
+              _iter553.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -48454,9 +50138,9 @@ public class Hbase {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (TRowResult _iter546 : struct.success)
+            for (TRowResult _iter554 : struct.success)
             {
-              _iter546.write(oprot);
+              _iter554.write(oprot);
             }
           }
         }
@@ -48474,14 +50158,14 @@ public class Hbase {
         BitSet incoming = iprot.readBitSet(3);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TList _list547 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new ArrayList<TRowResult>(_list547.size);
-            for (int _i548 = 0; _i548 < _list547.size; ++_i548)
+            org.apache.thrift.protocol.TList _list555 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new ArrayList<TRowResult>(_list555.size);
+            for (int _i556 = 0; _i556 < _list555.size; ++_i556)
             {
-              TRowResult _elem549; // optional
-              _elem549 = new TRowResult();
-              _elem549.read(iprot);
-              struct.success.add(_elem549);
+              TRowResult _elem557; // optional
+              _elem557 = new TRowResult();
+              _elem557.read(iprot);
+              struct.success.add(_elem557);
             }
           }
           struct.setSuccessIsSet(true);
@@ -50326,14 +52010,14 @@ public class Hbase {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list550 = iprot.readListBegin();
-                  struct.success = new ArrayList<TCell>(_list550.size);
-                  for (int _i551 = 0; _i551 < _list550.size; ++_i551)
+                  org.apache.thrift.protocol.TList _list558 = iprot.readListBegin();
+                  struct.success = new ArrayList<TCell>(_list558.size);
+                  for (int _i559 = 0; _i559 < _list558.size; ++_i559)
                   {
-                    TCell _elem552; // optional
-                    _elem552 = new TCell();
-                    _elem552.read(iprot);
-                    struct.success.add(_elem552);
+                    TCell _elem560; // optional
+                    _elem560 = new TCell();
+                    _elem560.read(iprot);
+                    struct.success.add(_elem560);
                   }
                   iprot.readListEnd();
                 }
@@ -50370,9 +52054,9 @@ public class Hbase {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (TCell _iter553 : struct.success)
+            for (TCell _iter561 : struct.success)
             {
-              _iter553.write(oprot);
+              _iter561.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -50411,9 +52095,9 @@ public class Hbase {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (TCell _iter554 : struct.success)
+            for (TCell _iter562 : struct.success)
             {
-              _iter554.write(oprot);
+              _iter562.write(oprot);
             }
           }
         }
@@ -50428,14 +52112,14 @@ public class Hbase {
         BitSet incoming = iprot.readBitSet(2);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TList _list555 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new ArrayList<TCell>(_list555.size);
-            for (int _i556 = 0; _i556 < _list555.size; ++_i556)
+            org.apache.thrift.protocol.TList _list563 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new ArrayList<TCell>(_list563.size);
+            for (int _i564 = 0; _i564 < _list563.size; ++_i564)
             {
-              TCell _elem557; // optional
-              _elem557 = new TCell();
-              _elem557.read(iprot);
-              struct.success.add(_elem557);
+              TCell _elem565; // optional
+              _elem565 = new TCell();
+              _elem565.read(iprot);
+              struct.success.add(_elem565);
             }
           }
           struct.setSuccessIsSet(true);
