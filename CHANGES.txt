@@ -95,6 +95,7 @@ Release 0.92.2 - Unreleased
    HBASE-6077  Document the most common secure RPC troubleshooting resolutions
    HBASE-6097  TestHRegion.testBatchPut is flaky on 0.92 (Gregory Chanan)
    HBASE-6107  Distributed log splitting hangs even there is no task under /hbase/splitlog
+   HBASE-6114  CacheControl flags should be tunable per table schema per CF
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems

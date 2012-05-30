@@ -625,7 +625,7 @@ public class Store implements HeapSize {
    * @param compression Compression algorithm to use
    * @return Writer for a new StoreFile in the tmp dir.
    */
-  private StoreFile.Writer createWriterInTmp(int maxKeyCount,
+  public StoreFile.Writer createWriterInTmp(int maxKeyCount,
     Compression.Algorithm compression)
   throws IOException {
     return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
