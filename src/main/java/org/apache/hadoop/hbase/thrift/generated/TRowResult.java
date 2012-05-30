@@ -443,7 +443,7 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
                 for (int _i9 = 0; _i9 < _map8.size; ++_i9)
                 {
                   ByteBuffer _key10; // required
-                  TCell _val11; // required
+                  TCell _val11; // optional
                   _key10 = iprot.readBinary();
                   _val11 = new TCell();
                   _val11.read(iprot);
