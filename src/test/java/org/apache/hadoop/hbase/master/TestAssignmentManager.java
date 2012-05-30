@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -56,11 +59,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKTable.TableState;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -658,6 +663,39 @@ public class TestAssignmentManager {
       am.shutdown();
     }
   }
+  
+  /**
+   * Tests the processDeadServersAndRegionsInTransition should not fail with NPE
+   * when it failed to get the children. Let's abort the system in this
+   * situation
+   * @throws ServiceException 
+   */
+  @Test(timeout = 5000)
+  public void testProcessDeadServersAndRegionsInTransitionShouldNotFailWithNPE()
+      throws IOException, KeeperException, InterruptedException, ServiceException {
+    final RecoverableZooKeeper recoverableZk = Mockito
+        .mock(RecoverableZooKeeper.class);
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
+        this.server, this.serverManager);
+    Watcher zkw = new ZooKeeperWatcher(HBaseConfiguration.create(), "unittest",
+        null) {
+      public RecoverableZooKeeper getRecoverableZooKeeper() {
+        return recoverableZk;
+      }
+    };
+    ((ZooKeeperWatcher) zkw).registerListener(am);
+    Mockito.doThrow(new InterruptedException()).when(recoverableZk)
+        .getChildren("/hbase/unassigned", zkw);
+    am.setWatcher((ZooKeeperWatcher) zkw);
+    try {
+      am.processDeadServersAndRegionsInTransition();
+      fail("Expected to abort");
+    } catch (NullPointerException e) {
+      fail("Should not throw NPE");
+    } catch (RuntimeException e) {
+      assertEquals("Aborted", e.getLocalizedMessage());
+    }
+  }
 
   /**
    * Creates a new ephemeral node in the SPLITTING state for the specified region.
@@ -871,6 +909,11 @@ public class TestAssignmentManager {
     @Override
     public ServerName getRegionServerOfRegion(HRegionInfo hri) {
       return SERVERNAME_A;
+    }
+    
+    /** reset the watcher */
+    void setWatcher(ZooKeeperWatcher watcher) {
+      this.watcher = watcher;
     }
 
     /**
