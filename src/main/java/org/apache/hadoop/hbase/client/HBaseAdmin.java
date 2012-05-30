@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest.CompactionState;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1629,5 +1630,92 @@ public class HBaseAdmin implements Abortable, Closeable {
       LOG.error("Could not getClusterStatus()",e);
       return null;
     }
+  }
+
+  /**
+   * Get the current compaction state of a table or region.
+   * It could be in a major compaction, a minor compaction, both, or none.
+   *
+   * @param tableNameOrRegionName table or region to major compact
+   * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException
+   * @return the current compaction state
+   */
+  public CompactionState getCompactionState(final String tableNameOrRegionName)
+      throws IOException, InterruptedException {
+    return getCompactionState(Bytes.toBytes(tableNameOrRegionName));
+  }
+
+  /**
+   * Get the current compaction state of a table or region.
+   * It could be in a major compaction, a minor compaction, both, or none.
+   *
+   * @param tableNameOrRegionName table or region to major compact
+   * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException
+   * @return the current compaction state
+   */
+  public CompactionState getCompactionState(final byte [] tableNameOrRegionName)
+      throws IOException, InterruptedException {
+    CompactionState state = CompactionState.NONE;
+    CatalogTracker ct = getCatalogTracker();
+    try {
+      if (isRegionName(tableNameOrRegionName, ct)) {
+        Pair<HRegionInfo, ServerName> pair =
+          MetaReader.getRegion(ct, tableNameOrRegionName);
+        if (pair == null || pair.getSecond() == null) {
+          LOG.info("No server in .META. for " +
+            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + pair);
+        } else {
+          ServerName sn = pair.getSecond();
+          HRegionInterface rs =
+            this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
+          return CompactionState.valueOf(
+            rs.getCompactionState(pair.getFirst().getRegionName()));
+        }
+      } else {
+        final String tableName = tableNameString(tableNameOrRegionName, ct);
+        List<Pair<HRegionInfo, ServerName>> pairs =
+          MetaReader.getTableRegionsAndLocations(ct, tableName);
+        for (Pair<HRegionInfo, ServerName> pair: pairs) {
+          if (pair.getFirst().isOffline()) continue;
+          if (pair.getSecond() == null) continue;
+          try {
+            ServerName sn = pair.getSecond();
+            HRegionInterface rs =
+              this.connection.getHRegionConnection(sn.getHostname(), sn.getPort());
+            switch (CompactionState.valueOf(
+              rs.getCompactionState(pair.getFirst().getRegionName()))) {
+            case MAJOR_AND_MINOR:
+              return CompactionState.MAJOR_AND_MINOR;
+            case MAJOR:
+              if (state == CompactionState.MINOR) {
+                return CompactionState.MAJOR_AND_MINOR;
+              }
+              state = CompactionState.MAJOR;
+              break;
+            case MINOR:
+              if (state == CompactionState.MAJOR) {
+                return CompactionState.MAJOR_AND_MINOR;
+              }
+              state = CompactionState.MINOR;
+              break;
+            case NONE:
+              default:
+                // nothing, continue
+            }
+          } catch (NotServingRegionException e) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Trying to get compaction state of " +
+                pair.getFirst() + ": " +
+                StringUtils.stringifyException(e));
+            }
+          }
+        }
+      }
+    } finally {
+      cleanupCatalogTracker(ct);
+    }
+    return state;
   }
 }

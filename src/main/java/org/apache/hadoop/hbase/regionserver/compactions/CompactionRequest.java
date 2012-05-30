@@ -21,8 +21,10 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,6 +57,14 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     private final Long timeInNanos;
     private HRegionServer server = null;
 
+    /**
+     * Map to track the number of compaction requested per region (id)
+     */
+    private static final ConcurrentHashMap<Long, AtomicInteger>
+      majorCompactions = new ConcurrentHashMap<Long, AtomicInteger>();
+    private static final ConcurrentHashMap<Long, AtomicInteger>
+      minorCompactions = new ConcurrentHashMap<Long, AtomicInteger>();
+
     public CompactionRequest(HRegion r, Store s,
         List<StoreFile> files, boolean isMajor, int p) {
       Preconditions.checkNotNull(r);
@@ -71,6 +81,58 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
       this.isMajor = isMajor;
       this.p = p;
       this.timeInNanos = System.nanoTime();
+    }
+
+    /**
+     * Find out if a given region in compaction now.
+     *
+     * @param regionId
+     * @return
+     */
+    public static CompactionState getCompactionState(
+        final long regionId) {
+      Long key = Long.valueOf(regionId);
+      AtomicInteger major = majorCompactions.get(key);
+      AtomicInteger minor = minorCompactions.get(key);
+      int state = 0;
+      if (minor != null && minor.get() > 0) {
+        state += 1;  // use 1 indication minor only here
+      }
+      if (major != null && major.get() > 0) {
+        state += 2;  // use 2 indication major only here
+      }
+      switch (state) {
+      case 3:  // 3 = 2 + 1, so both major and minor
+        return CompactionState.MAJOR_AND_MINOR;
+      case 2:
+        return CompactionState.MAJOR;
+      case 1:
+        return CompactionState.MINOR;
+        default:
+          return CompactionState.NONE;
+      }
+    }
+
+    public static void preRequest(final CompactionRequest cr){
+      Long key = Long.valueOf(cr.getHRegion().getRegionId());
+      ConcurrentHashMap<Long, AtomicInteger> compactions =
+        cr.isMajor() ? majorCompactions : minorCompactions;
+      AtomicInteger count = compactions.get(key);
+      if (count == null) {
+        compactions.putIfAbsent(key, new AtomicInteger(0));
+        count = compactions.get(key);
+      }
+      count.incrementAndGet();
+    }
+
+    public static void postRequest(final CompactionRequest cr){
+      Long key = Long.valueOf(cr.getHRegion().getRegionId());
+      ConcurrentHashMap<Long, AtomicInteger> compactions =
+        cr.isMajor() ? majorCompactions : minorCompactions;
+      AtomicInteger count = compactions.get(key);
+      if (count != null) {
+        count.decrementAndGet();
+      }
     }
 
     /**
@@ -200,6 +262,16 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
         s.finishRequest(this);
         LOG.debug("CompactSplitThread status: " + server.compactSplitThread);
       }
+    }
+
+    /**
+     * An enum for the region compaction state
+     */
+    public static enum CompactionState {
+      NONE,
+      MINOR,
+      MAJOR,
+      MAJOR_AND_MINOR;
     }
 
     /**

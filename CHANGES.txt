@@ -76,6 +76,7 @@ Release 0.92.2 - Unreleased
    HBASE-6095  ActiveMasterManager NullPointerException (Jimmy Xiang)
    HBASE-6126  Fix broke TestLocalHBaseCluster in 0.92/0.94
    HBASE-6133  TestRestartCluster failing in 0.92
+   HBASE-6124  Backport HBASE-6033 to 0.90, 0.92 and 0.94 (Jimmy Xiang)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
