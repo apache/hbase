@@ -198,6 +198,14 @@ public class TestHbaseObjectWritable extends TestCase {
     obj = doType(conf, list, List.class);
     assertTrue(obj instanceof List);
     Assert.assertArrayEquals(list.toArray(), ((List)obj).toArray() );
+    //List.class with null values
+    List<String> listWithNulls = new ArrayList<String>();
+    listWithNulls.add("hello");
+    listWithNulls.add("world");
+    listWithNulls.add(null);
+    obj = doType(conf, listWithNulls, List.class);
+    assertTrue(obj instanceof List);
+    Assert.assertArrayEquals(listWithNulls.toArray(), ((List)obj).toArray() );
     //ArrayList.class
     ArrayList<String> arr = new ArrayList<String>();
     arr.add("hello");

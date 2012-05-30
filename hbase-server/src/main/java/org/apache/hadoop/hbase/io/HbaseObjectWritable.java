@@ -477,8 +477,9 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       int length = list.size();
       out.writeInt(length);
       for (int i = 0; i < length; i++) {
-        writeObject(out, list.get(i),
-                  list.get(i).getClass(), conf);
+        Object elem = list.get(i);
+        writeObject(out, elem,
+                  elem == null ? Writable.class : elem.getClass(), conf);
       }
     } else if (declClass == String.class) {   // String
       Text.writeString(out, (String)instanceObj);
