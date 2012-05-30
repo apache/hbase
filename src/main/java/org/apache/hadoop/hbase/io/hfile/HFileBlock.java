@@ -287,7 +287,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
    * @return the on-disk size of the block with header size included. This
    * includes the header, the data and the checksum data.
    */
-  int getOnDiskSizeWithHeader() {
+  public int getOnDiskSizeWithHeader() {
     return onDiskSizeWithoutHeader + headerSize();
   }
 
