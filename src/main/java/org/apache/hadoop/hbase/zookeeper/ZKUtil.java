@@ -711,10 +711,15 @@ public class ZKUtil {
 
   private static ArrayList<ACL> createACL(ZooKeeperWatcher zkw, String node) {
     if (isSecureZooKeeper(zkw.getConfiguration())) {
-      // Certain znodes must be readable by non-authenticated clients
-      if ((node.equals(zkw.rootServerZNode) == true) ||
+      // Certain znodes are accessed directly by the client,
+      // so they must be readable by non-authenticated clients
+      if ((node.equals(zkw.baseZNode) == true) ||
+          (node.equals(zkw.rootServerZNode) == true) ||
           (node.equals(zkw.masterAddressZNode) == true) ||
-          (node.equals(zkw.clusterIdZNode) == true)) {
+          (node.equals(zkw.clusterIdZNode) == true) ||
+          (node.equals(zkw.rsZNode) == true) ||
+          (node.equals(zkw.backupMasterAddressesZNode) == true) ||
+          (node.startsWith(zkw.tableZNode) == true)) {
         return ZooKeeperWatcher.CREATOR_ALL_AND_WORLD_READABLE;
       }
       return Ids.CREATOR_ALL_ACL;
