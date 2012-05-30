@@ -595,10 +595,12 @@ public class ZKUtil {
     List<String> nodes =
       ZKUtil.listChildrenAndWatchForNewChildren(zkw, baseNode);
     List<NodeAndData> newNodes = new ArrayList<NodeAndData>();
-    for (String node: nodes) {
-      String nodePath = ZKUtil.joinZNode(baseNode, node);
-      byte [] data = ZKUtil.getDataAndWatch(zkw, nodePath);
-      newNodes.add(new NodeAndData(nodePath, data));
+    if (nodes != null) {
+      for (String node : nodes) {
+        String nodePath = ZKUtil.joinZNode(baseNode, node);
+        byte[] data = ZKUtil.getDataAndWatch(zkw, nodePath);
+        newNodes.add(new NodeAndData(nodePath, data));
+      }
     }
     return newNodes;
   }
