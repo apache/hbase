@@ -25,6 +25,7 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
+import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -153,5 +155,19 @@ public class ThriftUtilities {
   static public List<TRowResult> rowResultFromHBase(Result in) {
     Result [] result = { in };
     return rowResultFromHBase(result);
+  }
+
+  /**
+   * From a {@link TIncrement} create an {@link Increment}.
+   * @param tincrement the Thrift version of an increment
+   * @return an increment that the {@link TIncrement} represented.
+   */
+  public static Increment incrementFromThrift(TIncrement tincrement) {
+    Increment inc = new Increment(tincrement.getRow());
+    byte[][] famAndQf = KeyValue.parseColumn(tincrement.getColumn());
+    if (famAndQf.length <1 ) return null;
+    byte[] qual = famAndQf.length == 1 ? new byte[0]: famAndQf[1];
+    inc.addColumn(famAndQf[0], qual, tincrement.getAmmount());
+    return inc;
   }
 }
