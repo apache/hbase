@@ -301,6 +301,18 @@ public class TestZooKeeper {
 
     ZKUtil.createAndFailSilent(zk2, aclZnode);
  }
+  
+  /**
+   * Test should not fail with NPE when getChildDataAndWatchForNewChildren
+   * invoked with wrongNode
+   */
+  @Test
+  public void testGetChildDataAndWatchForNewChildrenShouldNotThrowNPE()
+      throws Exception {
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+        "testGetChildDataAndWatchForNewChildrenShouldNotThrowNPE", null);
+    ZKUtil.getChildDataAndWatchForNewChildren(zkw, "/wrongNode");
+  }
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
