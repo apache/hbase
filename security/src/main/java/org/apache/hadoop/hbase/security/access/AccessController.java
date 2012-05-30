@@ -793,8 +793,9 @@ public class AccessController extends BaseRegionObserver
       final CompareFilter.CompareOp compareOp,
       final WritableByteArrayComparable comparator, final Put put,
       final boolean result) throws IOException {
-    requirePermission(TablePermission.Action.READ, c.getEnvironment(),
-        Arrays.asList(new byte[][]{family}));
+    Collection<byte[]> familyMap = Arrays.asList(new byte[][]{family});
+    requirePermission(TablePermission.Action.READ, c.getEnvironment(), familyMap);
+    requirePermission(TablePermission.Action.WRITE, c.getEnvironment(), familyMap);
     return result;
   }
 
@@ -804,8 +805,9 @@ public class AccessController extends BaseRegionObserver
       final CompareFilter.CompareOp compareOp,
       final WritableByteArrayComparable comparator, final Delete delete,
       final boolean result) throws IOException {
-    requirePermission(TablePermission.Action.READ, c.getEnvironment(),
-        Arrays.asList( new byte[][] {family}));
+    Collection<byte[]> familyMap = Arrays.asList(new byte[][]{family});
+    requirePermission(TablePermission.Action.READ, c.getEnvironment(), familyMap);
+    requirePermission(TablePermission.Action.WRITE, c.getEnvironment(), familyMap);
     return result;
   }
 
