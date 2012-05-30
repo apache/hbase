@@ -1130,7 +1130,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @param cfs
    * @return An {@link HColumnDescriptor} made from the passed in <code>cfs</code>
    */
-  public static HColumnDescriptor convert(final ColumnFamilySchema cfs) {
+  static HColumnDescriptor convert(final ColumnFamilySchema cfs) {
     // Use the empty constructor so we preserve the initial values set on construction for things
     // like maxVersion.  Otherwise, we pick up wrong values on deserialization which makes for
     // unrelated-looking test failures that are hard to trace back to here.
@@ -1145,7 +1145,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return Convert this instance to a the pb column family type
    */
-  public ColumnFamilySchema convert() {
+  ColumnFamilySchema convert() {
     ColumnFamilySchema.Builder builder = ColumnFamilySchema.newBuilder();
     builder.setName(ByteString.copyFrom(getName()));
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: this.values.entrySet()) {

@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Action;
@@ -105,8 +104,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -290,36 +287,6 @@ public final class ProtobufUtil {
       startCode = proto.getStartCode();
     }
     return new ServerName(hostName, port, startCode);
-  }
-
-  /**
-   * Get HTableDescriptor[] from GetTableDescriptorsResponse protobuf
-   *
-   * @param proto the GetTableDescriptorsResponse
-   * @return HTableDescriptor[]
-   */
-  public static HTableDescriptor[] getHTableDescriptorArray(GetTableDescriptorsResponse proto) {
-    if (proto == null) return null;
-
-    HTableDescriptor[] ret = new HTableDescriptor[proto.getTableSchemaCount()];
-    for (int i = 0; i < proto.getTableSchemaCount(); ++i) {
-      ret[i] = HTableDescriptor.convert(proto.getTableSchema(i));
-    }
-    return ret;
-  }
-
-  /**
-   * get the split keys in form "byte [][]" from a CreateTableRequest proto
-   *
-   * @param proto the CreateTableRequest
-   * @return the split keys
-   */
-  public static byte [][] getSplitKeysArray(final CreateTableRequest proto) {
-    byte [][] splitKeys = new byte[proto.getSplitKeysCount()][];
-    for (int i = 0; i < proto.getSplitKeysCount(); ++i) {
-      splitKeys[i] = proto.getSplitKeys(i).toByteArray();
-    }
-    return splitKeys;
   }
 
   /**

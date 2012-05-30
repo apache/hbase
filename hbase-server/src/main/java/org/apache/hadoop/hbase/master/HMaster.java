@@ -123,28 +123,8 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Re
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import com.google.protobuf.RpcController;
 
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
@@ -1025,7 +1005,7 @@ Server {
       resp.addMapEntries(entry.build());
 
       return resp.build();
-    } catch (IOException ioe) {
+    } catch(IOException ioe) {
       throw new ServiceException(ioe);
     }
   }
@@ -1070,7 +1050,7 @@ Server {
         // Up our metrics.
         this.metrics.incrementRequests(sl.getTotalNumberOfRequests());
       }
-    } catch (IOException ioe) {
+    } catch(IOException ioe) {
       throw new ServiceException(ioe);
     }
 
@@ -1314,7 +1294,6 @@ Server {
     return mrr;
   }
 
-  @Override
   public void createTable(HTableDescriptor hTableDescriptor,
     byte [][] splitKeys)
   throws IOException {
@@ -1331,23 +1310,10 @@ Server {
     this.executorService.submit(new CreateTableHandler(this,
       this.fileSystemManager, this.serverManager, hTableDescriptor, conf,
       newRegions, catalogTracker, assignmentManager));
+
     if (cpHost != null) {
       cpHost.postCreateTable(hTableDescriptor, newRegions);
     }
-
-  }
-
-  @Override
-  public CreateTableResponse createTable(RpcController controller, CreateTableRequest req)
-  throws ServiceException {
-    HTableDescriptor hTableDescriptor = HTableDescriptor.convert(req.getTableSchema());
-    byte [][] splitKeys = ProtobufUtil.getSplitKeysArray(req);
-    try {
-      createTable(hTableDescriptor,splitKeys);
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
-    }
-    return CreateTableResponse.newBuilder().build();
   }
 
   private HRegionInfo[] getHRegionInfos(HTableDescriptor hTableDescriptor,
@@ -1377,23 +1343,15 @@ Server {
   }
 
   @Override
-  public DeleteTableResponse deleteTable(RpcController controller, DeleteTableRequest request)
-  throws ServiceException {
-    byte [] tableName = request.getTableName().toByteArray();
-    try {
-      checkInitialized();
-      if (cpHost != null) {
-        cpHost.preDeleteTable(tableName);
-      }
-      this.executorService.submit(new DeleteTableHandler(tableName, this, this));
-
-      if (cpHost != null) {
-        cpHost.postDeleteTable(tableName);
-      }
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
+  public void deleteTable(final byte [] tableName) throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      cpHost.preDeleteTable(tableName);
     }
-    return DeleteTableResponse.newBuilder().build();
+    this.executorService.submit(new DeleteTableHandler(tableName, this, this));
+    if (cpHost != null) {
+      cpHost.postDeleteTable(tableName);
+    }
   }
 
   /**
@@ -1404,132 +1362,81 @@ Server {
    *         of regions of the table
    * @throws IOException 
    */
-  @Override
-  public GetSchemaAlterStatusResponse getSchemaAlterStatus(
-      RpcController controller, GetSchemaAlterStatusRequest req) throws ServiceException {
+  public Pair<Integer, Integer> getAlterStatus(byte[] tableName)
+  throws IOException {
     // TODO: currently, we query using the table name on the client side. this
     // may overlap with other table operations or the table operation may
     // have completed before querying this API. We need to refactor to a
     // transaction system in the future to avoid these ambiguities.
-    byte [] tableName = req.getTableName().toByteArray();
+    return this.assignmentManager.getReopenStatus(tableName);
+  }
 
-    try {
-      Pair<Integer,Integer> pair = this.assignmentManager.getReopenStatus(tableName);
-      GetSchemaAlterStatusResponse.Builder ret = GetSchemaAlterStatusResponse.newBuilder();
-      ret.setYetToUpdateRegions(pair.getFirst());
-      ret.setTotalRegions(pair.getSecond());
-      return ret.build();
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
+  public void addColumn(byte [] tableName, HColumnDescriptor column)
+  throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      if (cpHost.preAddColumn(tableName, column)) {
+        return;
+      }
+    }
+    new TableAddFamilyHandler(tableName, column, this, this).process();
+    if (cpHost != null) {
+      cpHost.postAddColumn(tableName, column);
     }
   }
 
-  public AddColumnResponse addColumn(RpcController controller, AddColumnRequest req)
-  throws ServiceException {
-    byte [] tableName = req.getTableName().toByteArray();
-    HColumnDescriptor column = HColumnDescriptor.convert(req.getColumnFamilies());
-
-    try {
-      checkInitialized();
-      if (cpHost != null) {
-        if (cpHost.preAddColumn(tableName, column)) {
-          return AddColumnResponse.newBuilder().build();
-        }
+  public void modifyColumn(byte [] tableName, HColumnDescriptor descriptor)
+  throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      if (cpHost.preModifyColumn(tableName, descriptor)) {
+        return;
       }
-      new TableAddFamilyHandler(tableName, column, this, this).process();
-      if (cpHost != null) {
-        cpHost.postAddColumn(tableName, column);
-      }
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
     }
-    return AddColumnResponse.newBuilder().build();
+    new TableModifyFamilyHandler(tableName, descriptor, this, this).process();
+    if (cpHost != null) {
+      cpHost.postModifyColumn(tableName, descriptor);
+    }
   }
 
-  public ModifyColumnResponse modifyColumn(RpcController controller, ModifyColumnRequest req)
-  throws ServiceException {
-    byte [] tableName = req.getTableName().toByteArray();
-    HColumnDescriptor descriptor = HColumnDescriptor.convert(req.getColumnFamilies());
-
-    try {
-      checkInitialized();
-      if (cpHost != null) {
-        if (cpHost.preModifyColumn(tableName, descriptor)) {
-          return ModifyColumnResponse.newBuilder().build();
-        }
+  public void deleteColumn(final byte [] tableName, final byte [] c)
+  throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      if (cpHost.preDeleteColumn(tableName, c)) {
+        return;
       }
-      new TableModifyFamilyHandler(tableName, descriptor, this, this).process();
-      if (cpHost != null) {
-        cpHost.postModifyColumn(tableName, descriptor);
-      }
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
     }
-    return ModifyColumnResponse.newBuilder().build();
+    new TableDeleteFamilyHandler(tableName, c, this, this).process();
+    if (cpHost != null) {
+      cpHost.postDeleteColumn(tableName, c);
+    }
   }
 
-  @Override
-  public DeleteColumnResponse deleteColumn(RpcController controller, DeleteColumnRequest req)
-  throws ServiceException {
-    final byte [] tableName = req.getTableName().toByteArray();
-    final byte [] columnName = req.getColumnName().toByteArray();
-    try {
-      checkInitialized();
-      if (cpHost != null) {
-        if (cpHost.preDeleteColumn(tableName, columnName)) {
-          return DeleteColumnResponse.newBuilder().build();
-        }
-      }
-      new TableDeleteFamilyHandler(tableName, columnName, this, this).process();
-      if (cpHost != null) {
-        cpHost.postDeleteColumn(tableName, columnName);
-      }
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
+  public void enableTable(final byte [] tableName) throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      cpHost.preEnableTable(tableName);
     }
-    return DeleteColumnResponse.newBuilder().build();
+    this.executorService.submit(new EnableTableHandler(this, tableName,
+      catalogTracker, assignmentManager, false));
+
+    if (cpHost != null) {
+      cpHost.postEnableTable(tableName);
+    }
   }
 
-  @Override
-  public EnableTableResponse enableTable(RpcController controller, EnableTableRequest request)
-  throws ServiceException {
-    byte [] tableName = request.getTableName().toByteArray();
-    try {
-      checkInitialized();
-      if (cpHost != null) {
-        cpHost.preEnableTable(tableName);
-      }
-      this.executorService.submit(new EnableTableHandler(this, tableName,
-        catalogTracker, assignmentManager, false));
-
-      if (cpHost != null) {
-        cpHost.postEnableTable(tableName);
-     }
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
+  public void disableTable(final byte [] tableName) throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      cpHost.preDisableTable(tableName);
     }
-    return EnableTableResponse.newBuilder().build();
-  }
+    this.executorService.submit(new DisableTableHandler(this, tableName,
+      catalogTracker, assignmentManager, false));
 
-  @Override
-  public DisableTableResponse disableTable(RpcController controller, DisableTableRequest request)
-  throws ServiceException {
-    byte [] tableName = request.getTableName().toByteArray();
-    try {
-      checkInitialized();
-      if (cpHost != null) {
-        cpHost.preDisableTable(tableName);
-      }
-      this.executorService.submit(new DisableTableHandler(this, tableName,
-        catalogTracker, assignmentManager, false));
-
-      if (cpHost != null) {
-        cpHost.postDisableTable(tableName);
-      }
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
+    if (cpHost != null) {
+      cpHost.postDisableTable(tableName);
     }
-    return DisableTableResponse.newBuilder().build();
   }
 
   /**
@@ -1568,26 +1475,19 @@ Server {
   }
 
   @Override
-  public ModifyTableResponse modifyTable(RpcController controller, ModifyTableRequest req)
-  throws ServiceException {
-    final byte [] tableName = req.getTableName().toByteArray();
-    HTableDescriptor htd = HTableDescriptor.convert(req.getTableSchema());
-    try {
-      checkInitialized();
-      if (cpHost != null) {
-        cpHost.preModifyTable(tableName, htd);
-      }
-      TableEventHandler tblHandle = new ModifyTableHandler(tableName, htd, this, this);
-      this.executorService.submit(tblHandle);
-      tblHandle.waitForPersist();
-
-      if (cpHost != null) {
-        cpHost.postModifyTable(tableName, htd);
-      }
-    } catch (IOException ioe) {
-        throw new ServiceException(ioe);
+  public void modifyTable(final byte[] tableName, HTableDescriptor htd)
+      throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      cpHost.preModifyTable(tableName, htd);
     }
-    return ModifyTableResponse.newBuilder().build();
+    TableEventHandler tblHandle = new ModifyTableHandler(tableName, htd, this, this);
+    this.executorService.submit(tblHandle);
+    tblHandle.waitForPersist();
+
+    if (cpHost != null) {
+      cpHost.postModifyTable(tableName, htd);
+    }
   }
 
   @Override
@@ -2019,43 +1919,39 @@ Server {
   }
 
   /**
-   * Get list of TableDescriptors for requested tables.
-   * @param controller Unused (set to null).
-   * @param req GetTableDescriptorsRequest that contains:
-   * - tableNames: requested tables, or if empty, all are requested
-   * @return GetTableDescriptorsResponse
-   * @throws ServiceException
+   * Get HTD array for given tables 
+   * @param tableNames
+   * @return HTableDescriptor[]
    */
-  public GetTableDescriptorsResponse getTableDescriptors(
-	      RpcController controller, GetTableDescriptorsRequest req) throws ServiceException {
-    GetTableDescriptorsResponse.Builder builder = GetTableDescriptorsResponse.newBuilder();
-    if (req.getTableNamesCount() == 0) {
-      // request for all TableDescriptors
-      Map<String, HTableDescriptor> descriptors = null;
+  public HTableDescriptor[] getHTableDescriptors(List<String> tableNames) {
+    List<HTableDescriptor> list =
+      new ArrayList<HTableDescriptor>(tableNames.size());
+    for (String s: tableNames) {
+      HTableDescriptor htd = null;
       try {
-        descriptors = this.tableDescriptors.getAll();
+        htd = this.tableDescriptors.get(s);
       } catch (IOException e) {
-          LOG.warn("Failed getting all descriptors", e);
+        LOG.warn("Failed getting descriptor for " + s, e);
       }
-      if (descriptors != null) {
-        for (HTableDescriptor htd : descriptors.values()) {
-          builder.addTableSchema(htd.convert());
-        }
-      }
+      if (htd == null) continue;
+      list.add(htd);
     }
-    else {
-      for (String s: req.getTableNamesList()) {
-        HTableDescriptor htd = null;
-        try {
-          htd = this.tableDescriptors.get(s);
-        } catch (IOException e) {
-          LOG.warn("Failed getting descriptor for " + s, e);
-        }
-        if (htd == null) continue;
-        builder.addTableSchema(htd.convert());
-      }
+    return list.toArray(new HTableDescriptor [] {});
+  }
+
+  /**
+   * Get all table descriptors
+   * @return All descriptors or null if none.
+   */
+  public HTableDescriptor [] getHTableDescriptors() {
+    Map<String, HTableDescriptor> descriptors = null;
+    try {
+      descriptors = this.tableDescriptors.getAll();
+    } catch (IOException e) {
+      LOG.warn("Failed getting all descriptors", e);
     }
-    return builder.build();
+    return descriptors == null?
+      null: descriptors.values().toArray(new HTableDescriptor [] {});
   }
 
   /**

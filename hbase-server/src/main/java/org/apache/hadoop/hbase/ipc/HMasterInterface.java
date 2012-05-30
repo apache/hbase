@@ -27,28 +27,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
@@ -114,106 +94,85 @@ public interface HMasterInterface extends VersionedProtocol {
    * Creates a new table asynchronously.  If splitKeys are specified, then the
    * table will be created with an initial set of multiple regions.
    * If splitKeys is null, the table will be created with a single region.
-   * @param controller Unused (set to null).
-   * @param req CreateTableRequest that contains:<br>
-   * - tablesSchema: table descriptor<br>
-   * - splitKeys
-   * @throws ServiceException
+   * @param desc table descriptor
+   * @param splitKeys
+   * @throws IOException
    */
-  public CreateTableResponse createTable(RpcController controller, CreateTableRequest req)
-  throws ServiceException;
+  public void createTable(HTableDescriptor desc, byte [][] splitKeys)
+  throws IOException;
 
   /**
    * Deletes a table
-   * @param controller Unused (set to null).
-   * @param req DeleteTableRequest that contains:<br>
-   * - tableName: table to delete
-   * @throws ServiceException
+   * @param tableName table to delete
+   * @throws IOException e
    */
-  public DeleteTableResponse deleteTable(RpcController controller, DeleteTableRequest req)
-  throws ServiceException;
+  public void deleteTable(final byte [] tableName) throws IOException;
 
   /**
    * Used by the client to get the number of regions that have received the
    * updated schema
    *
-   * @param controller Unused (set to null).
-   * @param req GetSchemaAlterStatusRequest that contains:<br>
-   * - tableName
-   * @return GetSchemaAlterStatusResponse indicating the number of regions updated.
-   *         yetToUpdateRegions is the regions that are yet to be updated totalRegions
-   *         is the total number of regions of the table
-   * @throws ServiceException
+   * @param tableName
+   * @return Pair indicating the number of regions updated Pair.getFirst() is the
+   *         regions that are yet to be updated Pair.getSecond() is the total number
+   *         of regions of the table
+   * @throws IOException
    */
-  public GetSchemaAlterStatusResponse getSchemaAlterStatus(
-    RpcController controller, GetSchemaAlterStatusRequest req) throws ServiceException;
+  public Pair<Integer, Integer> getAlterStatus(byte[] tableName)
+  throws IOException;
 
   /**
    * Adds a column to the specified table
-   * @param controller Unused (set to null).
-   * @param req AddColumnRequest that contains:<br>
-   * - tableName: table to modify<br>
-   * - column: column descriptor
-   * @throws ServiceException
+   * @param tableName table to modify
+   * @param column column descriptor
+   * @throws IOException e
    */
-  public AddColumnResponse addColumn(RpcController controller, AddColumnRequest req)
-  throws ServiceException;
+  public void addColumn(final byte [] tableName, HColumnDescriptor column)
+  throws IOException;
 
   /**
    * Modifies an existing column on the specified table
-   * @param controller Unused (set to null).
-   * @param req ModifyColumnRequest that contains:<br>
-   * - tableName: table name<br>
-   * - descriptor: new column descriptor
+   * @param tableName table name
+   * @param descriptor new column descriptor
    * @throws IOException e
    */
-  public ModifyColumnResponse modifyColumn(RpcController controller, ModifyColumnRequest req)
-  throws ServiceException;
+  public void modifyColumn(final byte [] tableName, HColumnDescriptor descriptor)
+  throws IOException;
 
 
   /**
    * Deletes a column from the specified table. Table must be disabled.
-   * @param controller Unused (set to null).
-   * @param req DeleteColumnRequest that contains:<br>
-   * - tableName: table to alter<br>
-   * - columnName: column family to remove
-   * @throws ServiceException
+   * @param tableName table to alter
+   * @param columnName column family to remove
+   * @throws IOException e
    */
-  public DeleteColumnResponse deleteColumn(RpcController controller, DeleteColumnRequest req)
-  throws ServiceException;
+  public void deleteColumn(final byte [] tableName, final byte [] columnName)
+  throws IOException;
 
   /**
    * Puts the table on-line (only needed if table has been previously taken offline)
-   * @param controller Unused (set to null).
-   * @param req EnableTableRequest that contains:<br>
-   * - tableName: table to enable
-   * @throws ServiceException
+   * @param tableName table to enable
+   * @throws IOException e
    */
-  public EnableTableResponse enableTable(RpcController controller, EnableTableRequest req)
-  throws ServiceException;
+  public void enableTable(final byte [] tableName) throws IOException;
 
   /**
    * Take table offline
    *
-   * @param controller Unused (set to null).
-   * @param req DisableTableRequest that contains:<br>
-   * - tableName: table to take offline
-   * @throws ServiceException
+   * @param tableName table to take offline
+   * @throws IOException e
    */
-  public DisableTableResponse disableTable(RpcController controller, DisableTableRequest req)
-  throws ServiceException;
+  public void disableTable(final byte [] tableName) throws IOException;
 
   /**
    * Modify a table's metadata
    *
-   * @param controller Unused (set to null).
-   * @param req ModifyTableRequest that contains:<br>
-   * - tableName: table to modify<br>
-   * - tableSchema: new descriptor for table
-   * @throws ServiceException
+   * @param tableName table to modify
+   * @param htd new descriptor for table
+   * @throws IOException e
    */
-  public ModifyTableResponse modifyTable(RpcController controller, ModifyTableRequest req)
-  throws ServiceException;
+  public void modifyTable(byte[] tableName, HTableDescriptor htd)
+  throws IOException;
 
   /**
    * Shutdown an HBase cluster.
@@ -280,15 +239,17 @@ public interface HMasterInterface extends VersionedProtocol {
   throws ServiceException;
 
   /**
-   * Get list of TableDescriptors for requested tables.
-   * @param controller Unused (set to null).
-   * @param req GetTableDescriptorsRequest that contains:<br>
-   * - tableNames: requested tables, or if empty, all are requested
-   * @return GetTableDescriptorsResponse
-   * @throws ServiceException
+   * Get array of all HTDs.
+   * @return array of HTableDescriptor
    */
-  public GetTableDescriptorsResponse getTableDescriptors(
-      RpcController controller, GetTableDescriptorsRequest req) throws ServiceException;
+  public HTableDescriptor[] getHTableDescriptors();
+
+  /**
+   * Get array of HTDs for requested tables.
+   * @param tableNames
+   * @return array of HTableDescriptor
+   */
+  public HTableDescriptor[] getHTableDescriptors(List<String> tableNames);
 
   /**
    * Assign a region to a server chosen at random.
@@ -306,7 +267,7 @@ public interface HMasterInterface extends VersionedProtocol {
    * back to the same server.  Use {@link #moveRegion(RpcController,MoveRegionRequest}
    * if you want to control the region movement.
    * @param controller Unused (set to null).
-   * @param req The request that contains:<br>
+   * @param req The request which contains:<br>
    * - region: Region to unassign. Will clear any existing RegionPlan
    * if one found.<br>
    * - force: If true, force unassign (Will remove region from
@@ -320,7 +281,7 @@ public interface HMasterInterface extends VersionedProtocol {
   /**
    * Move a region to a specified destination server.
    * @param controller Unused (set to null).
-   * @param req The request that contains:<br>
+   * @param req The request which contains:<br>
    * - region: The encoded region name; i.e. the hash that makes
    * up the region name suffix: e.g. if regionname is
    * <code>TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.</code>,
@@ -333,5 +294,5 @@ public interface HMasterInterface extends VersionedProtocol {
    * region named <code>encodedRegionName</code>
    */
   public MoveRegionResponse moveRegion(RpcController controller, MoveRegionRequest req)
-  throws ServiceException;
+		  throws ServiceException;
 }
