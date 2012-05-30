@@ -433,4 +433,13 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Stoppable, Ab
   /* TODO: Move into place above master operations after deprecation cycle */
   public boolean bulkLoadHFiles(List<Pair<byte[], String>> familyPaths, byte[] regionName)
   throws IOException;
+
+  /**
+   * Get the current compaction state of the region.
+   *
+   * @param regionName the name of the region to check compaction statte.
+   * @return the compaction state name.
+   * @throws IOException exception
+   */
+  public String getCompactionState(final byte[] regionName) throws IOException;
 }

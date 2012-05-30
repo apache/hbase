@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -47,6 +48,53 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
    * The user gets top priority unless we have blocking compactions. (Pri <= 0)
    */
   public static final int PRIORITY_USER = 1;
+
+  /**
+   * Map to track the state of compactions requested per region (id)
+   */
+  private static final ConcurrentHashMap<Long, CompactionState>
+    compactionStates = new ConcurrentHashMap<Long, CompactionState>();
+
+  /**
+   * Find out if a given region is in compaction now.
+   * This information is not accurate in case one request is
+   * being processed while new request comes. So it is just
+   * an indication for normal scenario.
+   *
+   * @param regionId
+   * @return
+   */
+  public static CompactionState getCompactionState(
+      final long regionId) {
+    Long key = Long.valueOf(regionId);
+    CompactionState state = compactionStates.get(key);
+    if (state == null) {
+      state = CompactionState.NONE;
+    }
+    return state;
+  }
+
+  public static void preRequest(final HRegion region){
+    Long key = Long.valueOf(region.getRegionId());
+    CompactionState state = 
+      region.getForceMajorCompaction() ? CompactionState.MAJOR : CompactionState.MINOR;
+    compactionStates.put(key, state); 
+  }
+
+  public static void postRequest(final HRegion region){
+    Long key = Long.valueOf(region.getRegionId());
+    compactionStates.remove(key);
+  }
+
+  /**
+   * An enum for the region compaction state
+   */
+  public static enum CompactionState {
+    NONE,
+    MINOR,
+    MAJOR,
+    MAJOR_AND_MINOR;
+  }
 
   /**
    * Splitting should not take place if the total number of regions exceed this.
@@ -89,6 +137,7 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
             }
           } finally {
             lock.unlock();
+            CompactSplitThread.postRequest(r);
           }
         }
       } catch (InterruptedException ex) {

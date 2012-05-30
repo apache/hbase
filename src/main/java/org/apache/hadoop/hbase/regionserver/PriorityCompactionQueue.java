@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
@@ -44,7 +43,7 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
    * This class represents a compaction request and holds the region, priority,
    * and time submitted.
    */
-  private class CompactionRequest implements Comparable<CompactionRequest> {
+  static class CompactionRequest implements Comparable<CompactionRequest> {
     private final HRegion r;
     private final int p;
     private final Long timeInNanos;
@@ -144,6 +143,7 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
           newRequest.getPriority() < queuedRequest.getPriority()) {
         LOG.trace("Inserting region in queue. " + newRequest);
         regionsInQueue.put(r, newRequest);
+        CompactSplitThread.preRequest(r);
       } else {
         LOG.trace("Region already in queue, skipping. Queued: " + queuedRequest +
           ", requested: " + newRequest);
@@ -187,8 +187,7 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
   public boolean add(HRegion e, int p) {
     CompactionRequest request = this.addToRegionsInQueue(e, p);
     if (request != null) {
-      boolean result = queue.add(request);
-      return result;
+      return queue.add(request);
     } else {
       return false;
     }
