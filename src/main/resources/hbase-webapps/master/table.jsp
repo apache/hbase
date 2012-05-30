@@ -154,6 +154,11 @@
       <td><%= hbadmin.isTableEnabled(table.getTableName()) %></td>
       <td>Is the table enabled</td>
   </tr>
+  <tr>
+      <td>Compaction</td>
+      <td><%= hbadmin.getCompactionState(table.getTableName()) %></td>
+      <td>Is the table compacting</td>
+  </tr>
 <%  if (showFragmentation) { %>
   <tr>
       <td>Fragmentation</td>
