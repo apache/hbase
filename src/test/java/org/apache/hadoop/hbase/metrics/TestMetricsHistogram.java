@@ -22,7 +22,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
-import org.apache.hadoop.hbase.metrics.histogram.Snapshot;
+import com.yammer.metrics.stats.Snapshot;
 import org.junit.Assert;
 import org.junit.Test;
 
