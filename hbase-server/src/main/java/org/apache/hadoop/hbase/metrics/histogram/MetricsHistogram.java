@@ -25,6 +25,11 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 
+import com.yammer.metrics.stats.Sample;
+import com.yammer.metrics.stats.Snapshot;
+import com.yammer.metrics.stats.UniformSample;
+import com.yammer.metrics.stats.ExponentiallyDecayingSample;
+
 public class MetricsHistogram extends MetricsBase {
   
   // 1028 items implies 99.9% CI w/ 5% margin of error 

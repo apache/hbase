@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.metrics;
 
 import junit.framework.Assert;
 
-import org.apache.hadoop.hbase.metrics.histogram.ExponentiallyDecayingSample;
-import org.apache.hadoop.hbase.metrics.histogram.Snapshot;
+import com.yammer.metrics.stats.ExponentiallyDecayingSample;
+import com.yammer.metrics.stats.Snapshot;
 import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
