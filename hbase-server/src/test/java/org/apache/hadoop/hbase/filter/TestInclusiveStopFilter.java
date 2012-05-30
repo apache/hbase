@@ -27,23 +27,25 @@ import java.io.DataOutputStream;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import junit.framework.TestCase;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 /**
  * Tests the inclusive stop row filter
  */
 @Category(SmallTests.class)
-public class TestInclusiveStopFilter extends TestCase {
+public class TestInclusiveStopFilter {
   private final byte [] STOP_ROW = Bytes.toBytes("stop_row");
   private final byte [] GOOD_ROW = Bytes.toBytes("good_row");
   private final byte [] PAST_STOP_ROW = Bytes.toBytes("zzzzzz");
 
   Filter mainFilter;
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setUp() throws Exception {
     mainFilter = new InclusiveStopFilter(STOP_ROW);
   }
 
@@ -51,6 +53,7 @@ public class TestInclusiveStopFilter extends TestCase {
    * Tests identification of the stop row
    * @throws Exception
    */
+  @Test
   public void testStopRowIdentification() throws Exception {
     stopRowTests(mainFilter);
   }
@@ -59,6 +62,7 @@ public class TestInclusiveStopFilter extends TestCase {
    * Tests serialization
    * @throws Exception
    */
+  @Test
   public void testSerialization() throws Exception {
     // Decompose mainFilter to bytes.
     ByteArrayOutputStream stream = new ByteArrayOutputStream();

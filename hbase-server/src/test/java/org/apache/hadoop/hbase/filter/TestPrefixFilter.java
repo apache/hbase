@@ -20,10 +20,11 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import junit.framework.TestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.ByteArrayInputStream;
@@ -32,8 +33,10 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.UnsupportedEncodingException;
 
+import static org.junit.Assert.*;
+
 @Category(SmallTests.class)
-public class TestPrefixFilter extends TestCase {
+public class TestPrefixFilter {
   Filter mainFilter;
   static final char FIRST_CHAR = 'a';
   static final char LAST_CHAR = 'e';
@@ -48,19 +51,22 @@ public class TestPrefixFilter extends TestCase {
     }
   }
 
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setUp() throws Exception {
     this.mainFilter = new PrefixFilter(Bytes.toBytes(HOST_PREFIX));
   }
 
+  @Test
   public void testPrefixOnRow() throws Exception {
     prefixRowTests(mainFilter);
   }
 
+  @Test
   public void testPrefixOnRowInsideWhileMatchRow() throws Exception {
     prefixRowTests(new WhileMatchFilter(this.mainFilter), true);
   }
 
+  @Test
   public void testSerialization() throws Exception {
     // Decompose mainFilter to bytes.
     ByteArrayOutputStream stream = new ByteArrayOutputStream();

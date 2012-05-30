@@ -25,19 +25,20 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static org.junit.Assert.*;
+
 @Category(SmallTests.class)
-public class TestRandomRowFilter extends TestCase {
+public class TestRandomRowFilter {
   protected RandomRowFilter quarterChanceFilter;
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setUp() throws Exception {
     quarterChanceFilter = new RandomRowFilter(0.25f);
   }
 
@@ -46,6 +47,7 @@ public class TestRandomRowFilter extends TestCase {
    * 
    * @throws Exception
    */
+  @Test
   public void testBasics() throws Exception {
     int included = 0;
     int max = 1000000;
@@ -68,6 +70,7 @@ public class TestRandomRowFilter extends TestCase {
    * 
    * @throws Exception
    */
+  @Test
   public void testSerialization() throws Exception {
     RandomRowFilter newFilter = serializationTest(quarterChanceFilter);
     // use epsilon float comparison

@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
@@ -41,7 +40,13 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.google.common.base.Throwables;
 
@@ -49,9 +54,10 @@ import com.google.common.base.Throwables;
  * Test filters at the HRegion doorstep.
  */
 @Category(SmallTests.class)
-public class TestFilter extends HBaseTestCase {
+public class TestFilter {
   private final static Log LOG = LogFactory.getLog(TestFilter.class);
   private HRegion region;
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   //
   // Rows, Qualifiers, and Values are in two groups, One and Two.
@@ -116,10 +122,9 @@ public class TestFilter extends HBaseTestCase {
   private long numRows = ROWS_ONE.length + ROWS_TWO.length;
   private long colsPerRow = FAMILIES.length * QUALIFIERS_ONE.length;
 
-
-  protected void setUp() throws Exception {
-    super.setUp();
-    HTableDescriptor htd = new HTableDescriptor(getName());
+  @Before
+  public void setUp() throws Exception {
+    HTableDescriptor htd = new HTableDescriptor("TestFilter");
     htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
     htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
     htd.addFamily(new HColumnDescriptor(FAMILIES_1[0]));
@@ -128,7 +133,8 @@ public class TestFilter extends HBaseTestCase {
     htd.addFamily(new HColumnDescriptor(NEW_FAMILIES[1]));
     htd.addFamily(new HColumnDescriptor(FAMILIES_1[1]));
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
-    this.region = HRegion.createHRegion(info, this.testDir, this.conf, htd);
+    this.region = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
+            TEST_UTIL.getConfiguration(), htd);
 
     // Insert first half
     for(byte [] ROW : ROWS_ONE) {
@@ -200,14 +206,14 @@ public class TestFilter extends HBaseTestCase {
     numRows -= 2;
   }
 
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     HLog hlog = region.getLog();
     region.close();
     hlog.closeAndDelete();
-    super.tearDown();
   }
 
-
+  @Test
   public void testRegionScannerReseek() throws Exception {
     // create new rows and column family to show how reseek works..
     for (byte[] ROW : ROWS_THREE) {
@@ -274,6 +280,7 @@ public class TestFilter extends HBaseTestCase {
     }
   }
 
+  @Test
   public void testNoFilter() throws Exception {
     // No filter
     long expectedRows = this.numRows;
@@ -289,6 +296,7 @@ public class TestFilter extends HBaseTestCase {
     verifyScan(s, expectedRows, expectedKeys/2);
   }
 
+  @Test
   public void testPrefixFilter() throws Exception {
     // Grab rows from group one (half of total)
     long expectedRows = this.numRows / 2;
@@ -298,6 +306,7 @@ public class TestFilter extends HBaseTestCase {
     verifyScan(s, expectedRows, expectedKeys);
   }
 
+  @Test
   public void testPageFilter() throws Exception {
 
     // KVs in first 6 rows
@@ -393,6 +402,7 @@ public class TestFilter extends HBaseTestCase {
    *
    * @throws Exception
    */
+  @Test
   public void testWhileMatchFilterWithFilterRow() throws Exception {
     final int pageSize = 4;
 
@@ -407,13 +417,13 @@ public class TestFilter extends HBaseTestCase {
       scannerCounter++;
 
       if (scannerCounter >= pageSize) {
-        Assert.assertTrue("The WhileMatchFilter should now filter all remaining", filter.filterAllRemaining());
+        assertTrue("The WhileMatchFilter should now filter all remaining", filter.filterAllRemaining());
       }
       if (!isMoreResults) {
         break;
       }
     }
-    Assert.assertEquals("The page filter returned more rows than expected", pageSize, scannerCounter);
+    assertEquals("The page filter returned more rows than expected", pageSize, scannerCounter);
   }
 
   /**
@@ -425,6 +435,7 @@ public class TestFilter extends HBaseTestCase {
    *
    * @throws Exception
    */
+  @Test
   public void testWhileMatchFilterWithFilterRowKey() throws Exception {
     Scan s = new Scan();
     String prefix = "testRowOne";
@@ -436,7 +447,7 @@ public class TestFilter extends HBaseTestCase {
       ArrayList<KeyValue> values = new ArrayList<KeyValue>();
       boolean isMoreResults = scanner.next(values);
       if (!isMoreResults || !Bytes.toString(values.get(0).getRow()).startsWith(prefix)) {
-        Assert.assertTrue("The WhileMatchFilter should now filter all remaining", filter.filterAllRemaining());
+        assertTrue("The WhileMatchFilter should now filter all remaining", filter.filterAllRemaining());
       }
       if (!isMoreResults) {
         break;
@@ -453,6 +464,7 @@ public class TestFilter extends HBaseTestCase {
    *
    * @throws Exception
    */
+  @Test
   public void testWhileMatchFilterWithFilterKeyValue() throws Exception {
     Scan s = new Scan();
     WhileMatchFilter filter = new WhileMatchFilter(
@@ -464,13 +476,14 @@ public class TestFilter extends HBaseTestCase {
     while (true) {
       ArrayList<KeyValue> values = new ArrayList<KeyValue>();
       boolean isMoreResults = scanner.next(values);
-      Assert.assertTrue("The WhileMatchFilter should now filter all remaining", filter.filterAllRemaining());
+      assertTrue("The WhileMatchFilter should now filter all remaining", filter.filterAllRemaining());
       if (!isMoreResults) {
         break;
       }
     }
   }
 
+  @Test
   public void testInclusiveStopFilter() throws IOException {
 
     // Grab rows from group one
@@ -505,6 +518,7 @@ public class TestFilter extends HBaseTestCase {
 
   }
 
+  @Test
   public void testQualifierFilter() throws IOException {
 
     // Match two keys (one from each family) in half the rows
@@ -662,7 +676,8 @@ public class TestFilter extends HBaseTestCase {
 
   }
 
-    public void testFamilyFilter() throws IOException {
+  @Test
+  public void testFamilyFilter() throws IOException {
 
       // Match family, only half of columns returned.
       long expectedRows = this.numRows;
@@ -796,6 +811,7 @@ public class TestFilter extends HBaseTestCase {
     }
 
 
+  @Test
   public void testRowFilter() throws IOException {
 
     // Match a single row, all keys
@@ -942,6 +958,7 @@ public class TestFilter extends HBaseTestCase {
 
   }
 
+  @Test
   public void testValueFilter() throws IOException {
 
     // Match group one rows
@@ -1065,6 +1082,7 @@ public class TestFilter extends HBaseTestCase {
     verifyScanFull(s, kvs);
   }
 
+  @Test
   public void testSkipFilter() throws IOException {
 
     // Test for qualifier regex: "testQualifierOne-2"
@@ -1102,6 +1120,7 @@ public class TestFilter extends HBaseTestCase {
 
   // TODO: This is important... need many more tests for ordering, etc
   // There are limited tests elsewhere but we need HRegion level ones here
+  @Test
   public void testFilterList() throws IOException {
 
     // Test getting a single row, single key using Row, Qualifier, and Value
@@ -1134,6 +1153,7 @@ public class TestFilter extends HBaseTestCase {
 
   }
 
+  @Test
   public void testFirstKeyOnlyFilter() throws IOException {
     Scan s = new Scan();
     s.setFilter(new FirstKeyOnlyFilter());
@@ -1149,6 +1169,7 @@ public class TestFilter extends HBaseTestCase {
     verifyScanFull(s, kvs);
   }
 
+  @Test
   public void testFilterListWithSingleColumnValueFilter() throws IOException {
     // Test for HBASE-3191
 
@@ -1225,6 +1246,7 @@ public class TestFilter extends HBaseTestCase {
     verifyScanFull(s, kvs);
   }
 
+  @Test
   public void testSingleColumnValueFilter() throws IOException {
 
     // From HBASE-1821
@@ -1470,6 +1492,7 @@ public class TestFilter extends HBaseTestCase {
   }
 
 
+  @Test
   public void testColumnPaginationFilter() throws Exception {
 
      // Set of KVs (page: 1; pageSize: 1) - the first set of 1 column per row
@@ -1562,6 +1585,7 @@ public class TestFilter extends HBaseTestCase {
       this.verifyScanFull(s, expectedKVs4);
     }
 
+  @Test
   public void testKeyOnlyFilter() throws Exception {
 
     // KVs in first 6 rows

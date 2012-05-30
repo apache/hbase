@@ -36,11 +36,16 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestDependentColumnFilter extends TestCase {
+public class TestDependentColumnFilter {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private static final byte[][] ROWS = {
 	  Bytes.toBytes("test1"),Bytes.toBytes("test2")
@@ -57,31 +62,26 @@ public class TestDependentColumnFilter extends TestCase {
 	  Bytes.toBytes("bad1"), Bytes.toBytes("bad2"), Bytes.toBytes("bad3")
   };
   private static final byte[] MATCH_VAL = Bytes.toBytes("match");
-  private HBaseTestingUtility testUtil;
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   List<KeyValue> testVals;
   private HRegion region;
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-
-    testUtil = new HBaseTestingUtility();
-
+  @Before
+  public void setUp() throws Exception {
     testVals = makeTestVals();
 
-    HTableDescriptor htd = new HTableDescriptor(getName());
+    HTableDescriptor htd = new HTableDescriptor(this.getClass().getName());
     htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
     htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
-    this.region = HRegion.createHRegion(info, testUtil.getDataTestDir(),
-        testUtil.getConfiguration(), htd);
+    this.region = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
+      TEST_UTIL.getConfiguration(), htd);
     addData();
   }
 
-  @Override
-  protected void tearDown() throws Exception {
-    super.tearDown();
+  @After
+  public void tearDown() throws Exception {
     HRegion.closeHRegion(this.region);
   }
 
@@ -160,6 +160,7 @@ public class TestDependentColumnFilter extends TestCase {
   /**
    * Test scans using a DependentColumnFilter
    */
+  @Test
   public void testScans() throws Exception {
     Filter filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER);
 
@@ -215,6 +216,7 @@ public class TestDependentColumnFilter extends TestCase {
    *
    * @throws Exception
    */
+  @Test
   public void testFilterDropping() throws Exception {
     Filter filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER);
     List<KeyValue> accepted = new ArrayList<KeyValue>();

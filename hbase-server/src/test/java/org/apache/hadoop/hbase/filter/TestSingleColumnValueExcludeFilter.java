@@ -19,24 +19,23 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.*;
 
 /**
  * Tests for {@link SingleColumnValueExcludeFilter}. Because this filter
  * extends {@link SingleColumnValueFilter}, only the added functionality is
  * tested. That is, method filterKeyValue(KeyValue).
  *
- * @author ferdy
- *
  */
 @Category(SmallTests.class)
-public class TestSingleColumnValueExcludeFilter extends TestCase {
+public class TestSingleColumnValueExcludeFilter {
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
   private static final byte[] COLUMN_QUALIFIER = Bytes.toBytes("foo");
@@ -48,6 +47,7 @@ public class TestSingleColumnValueExcludeFilter extends TestCase {
    * Test the overridden functionality of filterKeyValue(KeyValue)
    * @throws Exception
    */
+  @Test
   public void testFilterKeyValue() throws Exception {
     Filter filter = new SingleColumnValueExcludeFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
         CompareOp.EQUAL, VAL_1);

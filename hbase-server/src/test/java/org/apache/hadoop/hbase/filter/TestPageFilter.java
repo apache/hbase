@@ -24,21 +24,24 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 
-import junit.framework.TestCase;
 import org.apache.hadoop.hbase.SmallTests;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.*;
 
 /**
  * Tests for the page filter
  */
 @Category(SmallTests.class)
-public class TestPageFilter extends TestCase {
+public class TestPageFilter {
   static final int ROW_LIMIT = 3;
 
   /**
    * test page size filter
    * @throws Exception
    */
+  @Test
   public void testPageSize() throws Exception {
     Filter f = new PageFilter(ROW_LIMIT);
     pageSizeTests(f);
@@ -48,6 +51,7 @@ public class TestPageFilter extends TestCase {
    * Test filter serialization
    * @throws Exception
    */
+  @Test
   public void testSerialization() throws Exception {
     Filter f = new PageFilter(ROW_LIMIT);
     // Decompose mainFilter to bytes.

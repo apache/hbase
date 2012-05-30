@@ -30,14 +30,17 @@ import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import junit.framework.TestCase;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.*;
 
 /**
  * Tests the value filter
  */
 @Category(SmallTests.class)
-public class TestSingleColumnValueFilter extends TestCase {
+public class TestSingleColumnValueFilter {
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
   private static final byte [] COLUMN_QUALIFIER = Bytes.toBytes("foo");
@@ -58,9 +61,8 @@ public class TestSingleColumnValueFilter extends TestCase {
   Filter regexFilter;
   Filter regexPatternFilter;
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setUp() throws Exception {
     basicFilter = basicFilterNew();
     substrFilter = substrFilterNew();
     regexFilter = regexFilterNew();
@@ -172,6 +174,7 @@ public class TestSingleColumnValueFilter extends TestCase {
    * Tests identification of the stop row
    * @throws Exception
    */
+  @Test
   public void testStop() throws Exception {
     basicFilterTests((SingleColumnValueFilter)basicFilter);
     substrFilterTests(substrFilter);
@@ -183,6 +186,7 @@ public class TestSingleColumnValueFilter extends TestCase {
    * Tests serialization
    * @throws Exception
    */
+  @Test
   public void testSerialization() throws Exception {
     Filter newFilter = serializationTest(basicFilter);
     basicFilterTests((SingleColumnValueFilter)newFilter);

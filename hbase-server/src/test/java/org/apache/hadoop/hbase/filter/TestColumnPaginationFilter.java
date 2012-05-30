@@ -28,15 +28,18 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import junit.framework.TestCase;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test for the ColumnPaginationFilter, used mainly to test the successful serialization of the filter.
  * More test functionality can be found within {@link org.apache.hadoop.hbase.filter.TestFilter#testColumnPaginationFilter()}
  */
 @Category(SmallTests.class)
-public class TestColumnPaginationFilter extends TestCase
+public class TestColumnPaginationFilter
 {
     private static final byte[] ROW = Bytes.toBytes("row_1_test");
     private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
@@ -45,9 +48,8 @@ public class TestColumnPaginationFilter extends TestCase
 
     private Filter columnPaginationFilter;
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    @Before
+    public void setUp() throws Exception {
         columnPaginationFilter = getColumnPaginationFilter();
 
     }
@@ -88,6 +90,7 @@ public class TestColumnPaginationFilter extends TestCase
      * Tests serialization
      * @throws Exception
      */
+    @Test
     public void testSerialization() throws Exception {
       Filter newFilter = serializationTest(columnPaginationFilter);
       basicFilterTests((ColumnPaginationFilter)newFilter);

@@ -30,12 +30,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -43,7 +47,7 @@ import org.junit.experimental.categories.Category;
  *
  */
 @Category(SmallTests.class)
-public class TestFilterList extends TestCase {
+public class TestFilterList {
   static final int MAX_PAGES = 2;
   static final char FIRST_CHAR = 'a';
   static final char LAST_CHAR = 'e';
@@ -54,6 +58,7 @@ public class TestFilterList extends TestCase {
    * Test "must pass one"
    * @throws Exception
    */
+  @Test
   public void testMPONE() throws Exception {
     List<Filter> filters = new ArrayList<Filter>();
     filters.add(new PageFilter(MAX_PAGES));
@@ -113,6 +118,7 @@ public class TestFilterList extends TestCase {
    * Test "must pass all"
    * @throws Exception
    */
+  @Test
   public void testMPALL() throws Exception {
     List<Filter> filters = new ArrayList<Filter>();
     filters.add(new PageFilter(MAX_PAGES));
@@ -155,6 +161,7 @@ public class TestFilterList extends TestCase {
    * Test list ordering
    * @throws Exception
    */
+  @Test
   public void testOrdering() throws Exception {
     List<Filter> filters = new ArrayList<Filter>();
     filters.add(new PrefixFilter(Bytes.toBytes("yyy")));
@@ -211,6 +218,7 @@ public class TestFilterList extends TestCase {
    * Test serialization
    * @throws Exception
    */
+  @Test
   public void testSerialization() throws Exception {
     List<Filter> filters = new ArrayList<Filter>();
     filters.add(new PageFilter(MAX_PAGES));
@@ -236,6 +244,7 @@ public class TestFilterList extends TestCase {
   /**
    * Test pass-thru of hints.
    */
+  @Test
   public void testHintPassThru() throws Exception {
 
     final KeyValue minKeyValue = new KeyValue(Bytes.toBytes(0L), null, null);

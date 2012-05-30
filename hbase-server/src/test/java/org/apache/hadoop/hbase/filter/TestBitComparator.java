@@ -16,15 +16,17 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import junit.framework.TestCase;
 import org.apache.hadoop.hbase.SmallTests;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Tests for the bit comparator
  */
 @Category(SmallTests.class)
-public class TestBitComparator extends TestCase {
+public class TestBitComparator {
 
   private static byte[] zeros = new byte[]{0, 0, 0, 0, 0, 0};
   private static byte[] ones = new byte[]{1, 1, 1, 1, 1, 1};
@@ -35,6 +37,7 @@ public class TestBitComparator extends TestCase {
   private final int Equal = 0;
   private final int NotEqual = 1;
 
+  @Test
   public void testANDOperation() {
     testOperation(zeros, ones, BitComparator.BitwiseOp.AND, NotEqual);
     testOperation(data1, ones, BitComparator.BitwiseOp.AND, Equal);
@@ -44,6 +47,7 @@ public class TestBitComparator extends TestCase {
     testOperation(ones, data3, BitComparator.BitwiseOp.AND, NotEqual);
   }
 
+  @Test
   public void testOROperation() {
     testOperation(ones, zeros, BitComparator.BitwiseOp.OR, Equal);
     testOperation(zeros, zeros, BitComparator.BitwiseOp.OR, NotEqual);
@@ -52,6 +56,7 @@ public class TestBitComparator extends TestCase {
     testOperation(ones, data3, BitComparator.BitwiseOp.OR, NotEqual);
   }
 
+  @Test
   public void testXOROperation() {
     testOperation(ones, zeros, BitComparator.BitwiseOp.XOR, Equal);
     testOperation(zeros, zeros, BitComparator.BitwiseOp.XOR, NotEqual);
