@@ -536,7 +536,8 @@ public class TestSplitTransactionOnCluster {
   private void testSplitBeforeSettingSplittingInZK(boolean nodeCreated) throws IOException,
       KeeperException {
     final byte[] tableName = Bytes.toBytes("testSplitBeforeSettingSplittingInZK");
-    HBaseAdmin admin = TESTING_UTIL.getHBaseAdmin();
+    
+    HBaseAdmin admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
     try {
       // Create table then get the single region for our new table.
       HTableDescriptor htd = new HTableDescriptor(tableName);
