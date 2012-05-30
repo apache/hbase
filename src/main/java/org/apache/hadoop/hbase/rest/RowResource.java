@@ -53,8 +53,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class RowResource extends ResourceBase {
   private static final Log LOG = LogFactory.getLog(RowResource.class);
 
+  static final String CHECK_PUT = "put";
+  static final String CHECK_DELETE = "delete";
+
   TableResource tableResource;
   RowSpec rowspec;
+  private String check = null;
 
   /**
    * Constructor
@@ -64,13 +68,14 @@ public class RowResource extends ResourceBase {
    * @throws IOException
    */
   public RowResource(TableResource tableResource, String rowspec,
-      String versions) throws IOException {
+      String versions, String check) throws IOException {
     super();
     this.tableResource = tableResource;
     this.rowspec = new RowSpec(rowspec);
     if (versions != null) {
       this.rowspec.setMaxVersions(Integer.valueOf(versions));
     }
+    this.check = check;
   }
 
   @GET
@@ -145,6 +150,15 @@ public class RowResource extends ResourceBase {
     if (servlet.isReadOnly()) {
       throw new WebApplicationException(Response.Status.FORBIDDEN);
     }
+
+    if (CHECK_PUT.equalsIgnoreCase(check)) {
+      return checkAndPut(model);
+    } else if (CHECK_DELETE.equalsIgnoreCase(check)) {
+      return checkAndDelete(model);
+    } else if (check != null && check.length() > 0) {
+      LOG.warn("Unknown check value: " + check + ", ignored");
+    }
+
     HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;
     try {
@@ -267,7 +281,8 @@ public class RowResource extends ResourceBase {
   public Response put(final CellSetModel model,
       final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("PUT " + uriInfo.getAbsolutePath());
+      LOG.debug("PUT " + uriInfo.getAbsolutePath()
+        + " " + uriInfo.getQueryParameters());
     }
     return update(model, true);
   }
@@ -287,7 +302,8 @@ public class RowResource extends ResourceBase {
   public Response post(final CellSetModel model,
       final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("POST " + uriInfo.getAbsolutePath());
+      LOG.debug("POST " + uriInfo.getAbsolutePath()
+        + " " + uriInfo.getQueryParameters());
     }
     return update(model, false);
   }
@@ -355,5 +371,147 @@ public class RowResource extends ResourceBase {
       }
     }
     return Response.ok().build();
+  }
+
+  /**
+   * Validates the input request parameters, parses columns from CellSetModel,
+   * and invokes checkAndPut on HTable.
+   *
+   * @param model instance of CellSetModel
+   * @return Response 200 OK, 304 Not modified, 400 Bad request
+   */
+  Response checkAndPut(final CellSetModel model) {
+    HTablePool pool = servlet.getTablePool();
+    HTableInterface table = null;
+    try {
+      if (model.getRows().size() != 1) {
+        throw new WebApplicationException(Response.Status.BAD_REQUEST);
+      }
+
+      RowModel rowModel = model.getRows().get(0);
+      byte[] key = rowModel.getKey();
+      if (key == null) {
+        key = rowspec.getRow();
+      }
+
+      List<CellModel> cellModels = rowModel.getCells();
+      int cellModelCount = cellModels.size();
+      if (key == null || cellModelCount <= 1) {
+        throw new WebApplicationException(Response.Status.BAD_REQUEST);
+      }
+
+      Put put = new Put(key);
+      CellModel valueToCheckCell = cellModels.get(cellModelCount - 1);
+      byte[] valueToCheckColumn = valueToCheckCell.getColumn();
+      byte[][] valueToPutParts = KeyValue.parseColumn(valueToCheckColumn);
+      if (valueToPutParts.length == 2 && valueToPutParts[1].length > 0) {
+        CellModel valueToPutCell = null;
+        for (int i = 0, n = cellModelCount - 1; i < n ; i++) {
+          if(Bytes.equals(cellModels.get(i).getColumn(),
+              valueToCheckCell.getColumn())) {
+            valueToPutCell = cellModels.get(i);
+            break;
+          }
+        }
+        if (valueToPutCell != null) {
+          put.add(valueToPutParts[0], valueToPutParts[1], valueToPutCell
+            .getTimestamp(), valueToPutCell.getValue());
+        } else {
+          throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+      } else {
+        throw new WebApplicationException(Response.Status.BAD_REQUEST);
+      }
+
+      table = pool.getTable(this.tableResource.getName());
+      boolean retValue = table.checkAndPut(key, valueToPutParts[0],
+        valueToPutParts[1], valueToCheckCell.getValue(), put);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("CHECK-AND-PUT " + put.toString() + ", returns " + retValue);
+      }
+      table.flushCommits();
+      ResponseBuilder response = Response.ok();
+      if (!retValue) {
+        response = Response.status(304);
+      }
+      return response.build();
+    } catch (IOException e) {
+      throw new WebApplicationException(e, Response.Status.SERVICE_UNAVAILABLE);
+    } finally {
+      try {
+        if(table != null){
+          pool.putTable(table);
+        }
+      } catch (Exception ioe) {
+        throw new WebApplicationException(ioe,
+          Response.Status.SERVICE_UNAVAILABLE);
+      }
+    }
+  }
+
+  /**
+   * Validates the input request parameters, parses columns from CellSetModel,
+   * and invokes checkAndDelete on HTable.
+   *
+   * @param model instance of CellSetModel
+   * @return Response 200 OK, 304 Not modified, 400 Bad request
+   */
+  Response checkAndDelete(final CellSetModel model) {
+    HTablePool pool = servlet.getTablePool();
+    HTableInterface table = null;
+    Delete delete = null;
+    try {
+      if (model.getRows().size() != 1) {
+        throw new WebApplicationException(Response.Status.BAD_REQUEST);
+      }
+      RowModel rowModel = model.getRows().get(0);
+      byte[] key = rowModel.getKey();
+      if (key == null) {
+        key = rowspec.getRow();
+      }
+      if (key == null) {
+        throw new WebApplicationException(Response.Status.BAD_REQUEST);
+      }
+
+      delete = new Delete(key);
+      CellModel valueToDeleteCell = rowModel.getCells().get(0);
+      byte[] valueToDeleteColumn = valueToDeleteCell.getColumn();
+      if (valueToDeleteColumn == null) {
+        try {
+          valueToDeleteColumn = rowspec.getColumns()[0];
+        } catch (final ArrayIndexOutOfBoundsException e) {
+          throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+      }
+      byte[][] parts = KeyValue.parseColumn(valueToDeleteColumn);
+      if (parts.length == 2 && parts[1].length > 0) {
+        delete.deleteColumns(parts[0], parts[1]);
+      } else {
+        throw new WebApplicationException(Response.Status.BAD_REQUEST);
+      }
+
+      table = pool.getTable(tableResource.getName());
+      boolean retValue = table.checkAndDelete(key, parts[0], parts[1],
+        valueToDeleteCell.getValue(), delete);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("CHECK-AND-DELETE " + delete.toString() + ", returns "
+          + retValue);
+      }
+      table.flushCommits();
+      ResponseBuilder response = Response.ok();
+      if (!retValue) {
+        response = Response.status(304);
+      }
+      return response.build();
+    } catch (IOException e) {
+      throw new WebApplicationException(e, Response.Status.SERVICE_UNAVAILABLE);
+    } finally {
+      try {
+        pool.putTable(table);
+      } catch (Exception ioe) {
+        throw new WebApplicationException(ioe,
+          Response.Status.SERVICE_UNAVAILABLE);
+      }
+    }
   }
 }

@@ -266,11 +266,120 @@ public class TestRowResource {
     assertEquals(Bytes.toString(cell.getValue()), value);
   }
 
+  private static Response checkAndPutValuePB(String url, String table,
+      String row, String column, String valueToCheck, String valueToPut)
+        throws IOException {
+    RowModel rowModel = new RowModel(row);
+    rowModel.addCell(new CellModel(Bytes.toBytes(column),
+      Bytes.toBytes(valueToPut)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(column),
+      Bytes.toBytes(valueToCheck)));
+    CellSetModel cellSetModel = new CellSetModel();
+    cellSetModel.addRow(rowModel);
+    Response response = client.put(url, Constants.MIMETYPE_PROTOBUF,
+      cellSetModel.createProtobufOutput());
+    Thread.yield();
+    return response;
+  }
+
+  private static Response checkAndPutValuePB(String table, String row,
+      String column, String valueToCheck, String valueToPut) throws IOException {
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(table);
+    path.append('/');
+    path.append(row);
+    path.append("?check=put");
+    return checkAndPutValuePB(path.toString(), table, row, column,
+      valueToCheck, valueToPut);
+  }
+
+  private static Response checkAndPutValueXML(String url, String table,
+      String row, String column, String valueToCheck, String valueToPut)
+        throws IOException, JAXBException {
+    RowModel rowModel = new RowModel(row);
+    rowModel.addCell(new CellModel(Bytes.toBytes(column),
+      Bytes.toBytes(valueToPut)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(column),
+      Bytes.toBytes(valueToCheck)));
+    CellSetModel cellSetModel = new CellSetModel();
+    cellSetModel.addRow(rowModel);
+    StringWriter writer = new StringWriter();
+    marshaller.marshal(cellSetModel, writer);
+    Response response = client.put(url, Constants.MIMETYPE_XML,
+      Bytes.toBytes(writer.toString()));
+    Thread.yield();
+    return response;
+  }
+
+  private static Response checkAndPutValueXML(String table, String row,
+      String column, String valueToCheck, String valueToPut)
+        throws IOException, JAXBException {
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(table);
+    path.append('/');
+    path.append(row);
+    path.append("?check=put");
+    return checkAndPutValueXML(path.toString(), table, row, column,
+      valueToCheck, valueToPut);
+  }
+
+  private static Response checkAndDeleteXML(String url, String table,
+      String row, String column, String valueToCheck)
+        throws IOException, JAXBException {
+    RowModel rowModel = new RowModel(row);
+    rowModel.addCell(new CellModel(Bytes.toBytes(column),
+      Bytes.toBytes(valueToCheck)));
+    CellSetModel cellSetModel = new CellSetModel();
+    cellSetModel.addRow(rowModel);
+    StringWriter writer = new StringWriter();
+    marshaller.marshal(cellSetModel, writer);
+    Response response = client.put(url, Constants.MIMETYPE_XML,
+      Bytes.toBytes(writer.toString()));
+    Thread.yield();
+    return response;
+  }
+
+  private static Response checkAndDeleteXML(String table, String row,
+      String column, String valueToCheck) throws IOException, JAXBException {
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(table);
+    path.append('/');
+    path.append(row);
+    path.append("?check=delete");
+    return checkAndDeleteXML(path.toString(), table, row, column, valueToCheck);
+  }
+
+  private static Response checkAndDeletePB(String table, String row,
+      String column, String value) throws IOException {
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(table);
+    path.append('/');
+    path.append(row);
+    path.append("?check=delete");
+    return checkAndDeleteValuePB(path.toString(), table, row, column, value);
+  }
+
+  private static Response checkAndDeleteValuePB(String url, String table,
+      String row, String column, String valueToCheck)
+      throws IOException {
+    RowModel rowModel = new RowModel(row);
+    rowModel.addCell(new CellModel(Bytes.toBytes(column), Bytes
+        .toBytes(valueToCheck)));
+    CellSetModel cellSetModel = new CellSetModel();
+    cellSetModel.addRow(rowModel);
+    Response response = client.put(url, Constants.MIMETYPE_PROTOBUF,
+        cellSetModel.createProtobufOutput());
+    Thread.yield();
+    return response;
+  }
+
   @Test
   public void testDelete() throws IOException, JAXBException {
-    Response response;
-    
-    response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    Response response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
     assertEquals(response.getCode(), 200);
     response = putValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
     assertEquals(response.getCode(), 200);
@@ -283,6 +392,13 @@ public class TestRowResource {
     assertEquals(response.getCode(), 404);
     checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
 
+    response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 200);
+    response = checkAndDeletePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 200);
+    response = getValueXML(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 404);
+
     response = deleteRow(TABLE, ROW_1);
     assertEquals(response.getCode(), 200);    
     response = getValueXML(TABLE, ROW_1, COLUMN_1);
@@ -293,15 +409,19 @@ public class TestRowResource {
 
   @Test
   public void testForbidden() throws IOException, JAXBException {
-    Response response;
-
     conf.set("hbase.rest.readonly", "true");
 
-    response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    Response response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
     assertEquals(response.getCode(), 403);
     response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
     assertEquals(response.getCode(), 403);
+    response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_2);
+    assertEquals(response.getCode(), 403);
+    response = checkAndPutValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_2);
+    assertEquals(response.getCode(), 403);
     response = deleteValue(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 403);
+    response = checkAndDeletePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
     assertEquals(response.getCode(), 403);
     response = deleteRow(TABLE, ROW_1);
     assertEquals(response.getCode(), 403);
@@ -311,6 +431,10 @@ public class TestRowResource {
     response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
     assertEquals(response.getCode(), 200);
     response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 200);
+    response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_2);
+    assertEquals(response.getCode(), 200);
+    response = checkAndPutValuePB(TABLE, ROW_1, COLUMN_1, VALUE_2, VALUE_3);
     assertEquals(response.getCode(), 200);
     response = deleteValue(TABLE, ROW_1, COLUMN_1);
     assertEquals(response.getCode(), 200);
@@ -329,6 +453,11 @@ public class TestRowResource {
     response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2);
     assertEquals(response.getCode(), 200);
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2);
+    response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2, VALUE_3);
+    assertEquals(response.getCode(), 200);
+    checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_3);
+    response = checkAndDeleteXML(TABLE, ROW_1, COLUMN_1, VALUE_3);
+    assertEquals(response.getCode(), 200);
 
     response = deleteRow(TABLE, ROW_1);
     assertEquals(response.getCode(), 200);
@@ -349,6 +478,13 @@ public class TestRowResource {
     response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2);
     assertEquals(response.getCode(), 200);
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_2);
+
+    response = checkAndPutValuePB(TABLE, ROW_1, COLUMN_1, VALUE_2, VALUE_3);
+    assertEquals(response.getCode(), 200);
+    checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_3);
+    response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_3, VALUE_4);
+    assertEquals(response.getCode(), 200);
+    checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_4);
 
     response = deleteRow(TABLE, ROW_1);
     assertEquals(response.getCode(), 200);

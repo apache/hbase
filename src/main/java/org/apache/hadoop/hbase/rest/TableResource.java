@@ -92,7 +92,8 @@ public class TableResource extends ResourceBase {
       // We need the @Encoded decorator so Jersey won't urldecode before
       // the RowSpec constructor has a chance to parse
       final @PathParam("rowspec") @Encoded String rowspec,
-      final @QueryParam("v") String versions) throws IOException {
-    return new RowResource(this, rowspec, versions);
+      final @QueryParam("v") String versions,
+      final @QueryParam("check") String check) throws IOException {
+    return new RowResource(this, rowspec, versions, check);
   }
 }
