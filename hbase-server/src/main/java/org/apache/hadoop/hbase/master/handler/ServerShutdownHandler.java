@@ -348,8 +348,8 @@ public class ServerShutdownHandler extends EventHandler {
   }
 
   /**
-   * Process a dead region from a dead RS.  Checks if the region is disabled
-   * or if the region has a partially completed split.
+   * Process a dead region from a dead RS. Checks if the region is disabled or
+   * disabling or if the region has a partially completed split.
    * @param hri
    * @param result
    * @param assignmentManager
@@ -382,6 +382,13 @@ public class ServerShutdownHandler extends EventHandler {
         return false;
       }
       fixupDaughters(result, assignmentManager, catalogTracker);
+      return false;
+    }
+    boolean disabling = assignmentManager.getZKTable().isDisablingTable(
+        hri.getTableNameAsString());
+    if (disabling) {
+      LOG.info("The table " + hri.getTableNameAsString()
+          + " is disabled.  Hence not assigning region" + hri.getEncodedName());
       return false;
     }
     return true;
