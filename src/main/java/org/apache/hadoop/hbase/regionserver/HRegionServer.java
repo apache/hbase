@@ -122,6 +122,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
@@ -3697,5 +3698,20 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     mxBean = MBeanUtil.registerMBean("RegionServer", "RegionServer",
         mxBeanInfo);
     LOG.info("Registered RegionServer MXBean");
+  }
+
+  /**
+   * Get the current compaction state of the region.
+   *
+   * @param regionName the name of the region to check compaction statte.
+   * @return the compaction state name.
+   * @throws IOException exception
+   */
+  public String getCompactionState(final byte[] regionName) throws IOException {
+      checkOpen();
+      requestCount.incrementAndGet();
+      HRegion region = getRegion(regionName);
+      HRegionInfo info = region.getRegionInfo();
+      return CompactionRequest.getCompactionState(info.getRegionId()).name();
   }
 }
