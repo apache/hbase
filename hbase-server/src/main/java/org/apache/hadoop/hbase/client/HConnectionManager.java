@@ -79,6 +79,9 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -2245,7 +2248,11 @@ public class HConnectionManager {
     public HTableDescriptor[] listTables() throws IOException {
       MasterKeepAliveConnection master = getKeepAliveMaster();
       try {
-        return master.getHTableDescriptors();
+        GetTableDescriptorsRequest req =
+          RequestConverter.buildGetTableDescriptorsRequest(null);
+        return ProtobufUtil.getHTableDescriptorArray(master.getTableDescriptors(null, req));
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
       } finally {
         master.close();
       }
@@ -2256,8 +2263,12 @@ public class HConnectionManager {
       if (tableNames == null || tableNames.isEmpty()) return new HTableDescriptor[0];
       MasterKeepAliveConnection master = getKeepAliveMaster();
       try {
-        return master.getHTableDescriptors(tableNames);
-      }finally {
+        GetTableDescriptorsRequest req =
+          RequestConverter.buildGetTableDescriptorsRequest(tableNames);
+        return ProtobufUtil.getHTableDescriptorArray(master.getTableDescriptors(null, req));
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      } finally {
         master.close();
       }
     }
@@ -2280,17 +2291,19 @@ public class HConnectionManager {
         return HTableDescriptor.META_TABLEDESC;
       }
       MasterKeepAliveConnection master = getKeepAliveMaster();
-      HTableDescriptor[] htds;
+      GetTableDescriptorsResponse htds;
       try {
-        htds = master.getHTableDescriptors();
-      }finally {
+        GetTableDescriptorsRequest req =
+          RequestConverter.buildGetTableDescriptorsRequest(null);
+        htds = master.getTableDescriptors(null, req);
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      } finally {
         master.close();
       }
-      if (htds != null && htds.length > 0) {
-        for (HTableDescriptor htd: htds) {
-          if (Bytes.equals(tableName, htd.getName())) {
-            return htd;
-          }
+      for (TableSchema ts : htds.getTableSchemaList()) {
+        if (Bytes.equals(tableName, ts.getName().toByteArray())) {
+          return HTableDescriptor.convert(ts);
         }
       }
       throw new TableNotFoundException(Bytes.toString(tableName));

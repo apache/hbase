@@ -1251,7 +1251,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * @return Convert the current {@link HTableDescriptor} into a pb TableSchema instance.
    */
-  TableSchema convert() {
+  public TableSchema convert() {
     TableSchema.Builder builder = TableSchema.newBuilder();
     builder.setName(ByteString.copyFrom(getName()));
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: this.values.entrySet()) {
@@ -1270,7 +1270,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @param ts A pb TableSchema instance.
    * @return An {@link HTableDescriptor} made from the passed in pb <code>ts</code>.
    */
-  static HTableDescriptor convert(final TableSchema ts) {
+  public static HTableDescriptor convert(final TableSchema ts) {
     List<ColumnFamilySchema> list = ts.getColumnFamiliesList();
     HColumnDescriptor [] hcds = new HColumnDescriptor[list.size()];
     int index = 0;
