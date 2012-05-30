@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -32,11 +31,11 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -91,6 +90,9 @@ public class TestRestartCluster {
   @Test (timeout=300000)
   public void testClusterRestart() throws Exception {
     UTIL.startMiniCluster(3);
+    while (!UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
+      Threads.sleep(1);
+    }
     LOG.info("\n\nCreating tables");
     for(byte [] TABLE : TABLES) {
       UTIL.createTable(TABLE, FAMILY);
