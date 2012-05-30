@@ -125,7 +125,7 @@ public class CreateTableHandler extends EventHandler {
   public void process() {
     String tableName = this.hTableDescriptor.getNameAsString();
     try {
-      LOG.info("Attemping to create the table " + tableName);
+      LOG.info("Attempting to create the table " + tableName);
       MasterCoprocessorHost cpHost = ((HMaster) this.server).getCoprocessorHost();
       if (cpHost != null) {
         cpHost.preCreateTableHandler(this.hTableDescriptor, this.newRegions);

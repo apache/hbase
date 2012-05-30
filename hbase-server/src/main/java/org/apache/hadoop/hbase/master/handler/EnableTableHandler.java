@@ -97,7 +97,7 @@ public class EnableTableHandler extends EventHandler {
   @Override
   public void process() {
     try {
-      LOG.info("Attemping to enable the table " + this.tableNameStr);
+      LOG.info("Attempting to enable the table " + this.tableNameStr);
       MasterCoprocessorHost cpHost = ((HMaster) this.server)
           .getCoprocessorHost();
       if (cpHost != null) {
@@ -131,8 +131,8 @@ public class EnableTableHandler extends EventHandler {
     if (regionsCount == 0) {
       done = true;
     }
-    LOG.info("Table has " + countOfRegionsInTable + " regions of which " +
-      regionsCount + " are offline.");
+    LOG.info("Table '" + this.tableNameStr + "' has " + countOfRegionsInTable
+      + " regions, of which " + regionsCount + " are offline.");
     BulkEnabler bd = new BulkEnabler(this.server, regions,
       countOfRegionsInTable);
     try {
@@ -140,14 +140,21 @@ public class EnableTableHandler extends EventHandler {
         done = true;
       }
     } catch (InterruptedException e) {
-      LOG.warn("Enable was interrupted");
+      LOG.warn("Enable operation was interrupted when enabling table '"
+        + this.tableNameStr + "'");
       // Preserve the interrupt.
       Thread.currentThread().interrupt();
     }
-    // Flip the table to enabled.
-    if (done) this.assignmentManager.getZKTable().setEnabledTable(
-      this.tableNameStr);
-    LOG.info("Enabled table is done=" + done);
+    if (done) {
+      // Flip the table to enabled.
+      this.assignmentManager.getZKTable().setEnabledTable(
+        this.tableNameStr);
+      LOG.info("Table '" + this.tableNameStr
+      + "' was successfully enabled. Status: done=" + done);
+    } else {
+      LOG.warn("Table '" + this.tableNameStr
+      + "' wasn't successfully enabled. Status: done=" + done);
+    }
   }
 
   /**

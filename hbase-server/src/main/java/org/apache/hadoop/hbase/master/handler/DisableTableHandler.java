@@ -98,7 +98,7 @@ public class DisableTableHandler extends EventHandler {
   @Override
   public void process() {
     try {
-      LOG.info("Attemping to disable table " + this.tableNameStr);
+      LOG.info("Attempting to disable table " + this.tableNameStr);
       MasterCoprocessorHost cpHost = ((HMaster) this.server)
           .getCoprocessorHost();
       if (cpHost != null) {
