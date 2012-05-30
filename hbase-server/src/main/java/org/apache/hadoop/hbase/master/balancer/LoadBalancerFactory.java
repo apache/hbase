@@ -1,6 +1,4 @@
 /**
- * Copyright 2011 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -39,9 +37,9 @@ public class LoadBalancerFactory {
   public static LoadBalancer getLoadBalancer(Configuration conf) {
 
     // Create the balancer
-    Class<? extends LoadBalancer> balancerKlass = conf.getClass(
-        HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-        DefaultLoadBalancer.class, LoadBalancer.class);
+    Class<? extends LoadBalancer> balancerKlass =
+        conf.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, DefaultLoadBalancer.class,
+          LoadBalancer.class);
     return ReflectionUtils.newInstance(balancerKlass, conf);
 
   }

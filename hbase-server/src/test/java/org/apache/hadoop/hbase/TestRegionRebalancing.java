@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -37,35 +38,52 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 /**
- * Test whether region rebalancing works. (HBASE-71)
+ * Test whether region re-balancing works. (HBASE-71)
  */
 @Category(LargeTests.class)
+@RunWith(value = Parameterized.class)
 public class TestRegionRebalancing {
-  final Log LOG = LogFactory.getLog(this.getClass().getName());
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  HTable table;
-  HTableDescriptor desc;
-  private static final byte [] FAMILY_NAME = Bytes.toBytes("col");
 
-  @BeforeClass
-  public static void beforeClass() throws Exception {
-    UTIL.startMiniCluster(1);
+  @Parameters
+  public static Collection<Object[]> data() {
+    Object[][] balancers =
+        new String[][] { { "org.apache.hadoop.hbase.master.balancer.DefaultLoadBalancer" },
+            { "org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer" } };
+    return Arrays.asList(balancers);
   }
 
-  @AfterClass
-  public static void afterClass() throws Exception {
+  private static final byte[] FAMILY_NAME = Bytes.toBytes("col");
+  public static final Log LOG = LogFactory.getLog(TestRegionRebalancing.class);
+  private final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private HTable table;
+  private HTableDescriptor desc;
+  private String balancerName;
+
+  public TestRegionRebalancing(String balancerName) {
+    this.balancerName = balancerName;
+
+  }
+
+  @After
+  public void after() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
   @Before
-  public void before() {
+  public void before() throws Exception {
+    UTIL.getConfiguration().set("hbase.master.loadbalancer.class", this.balancerName);
+    UTIL.startMiniCluster(1);
     this.desc = new HTableDescriptor("test");
     this.desc.addFamily(new HColumnDescriptor(FAMILY_NAME));
   }

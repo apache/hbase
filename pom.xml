@@ -795,6 +795,11 @@
         <version>${commons-logging.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-math</artifactId>
+        <version>${commons-math.version}</version>
+      </dependency>
+      <dependency>
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
         <version>${log4j.version}</version>
@@ -1010,12 +1015,6 @@
         <groupId>org.mockito</groupId>
         <artifactId>mockito-all</artifactId>
         <version>${mockito-all.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-math</artifactId>
-        <version>${commons-math.version}</version>
         <scope>test</scope>
       </dependency>
     </dependencies>

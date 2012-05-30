@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
@@ -1135,6 +1136,8 @@ Server {
         this.assignmentManager.getAssignmentsByTable();
 
       List<RegionPlan> plans = new ArrayList<RegionPlan>();
+      //Give the balancer the current cluster state.
+      this.balancer.setClusterStatus(getClusterStatus());
       for (Map<ServerName, List<HRegionInfo>> assignments : assignmentsByTable.values()) {
         List<RegionPlan> partialPlans = this.balancer.balanceCluster(assignments);
         if (partialPlans != null) plans.addAll(partialPlans);

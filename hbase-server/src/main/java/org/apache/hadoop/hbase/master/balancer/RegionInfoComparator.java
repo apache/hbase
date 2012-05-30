@@ -15,36 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.balancer;
 
+import java.util.Comparator;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
- * Data structure that holds servername and 'load'.
+ * The following comparator assumes that RegionId from HRegionInfo can represent
+ * the age of the region - larger RegionId means the region is younger. This
+ * comparator is used in balanceCluster() to account for the out-of-band regions
+ * which were assigned to the server after some other region server crashed.
  */
-@InterfaceAudience.Private
-class ServerAndLoad implements Comparable<ServerAndLoad> {
-  private final ServerName sn;
-  private final int load;
-
-  ServerAndLoad(final ServerName sn, final int load) {
-    this.sn = sn;
-    this.load = load;
-  }
-
-  ServerName getServerName() {
-    return this.sn;
-  }
-
-  int getLoad() {
-    return this.load;
-  }
-
+class RegionInfoComparator implements Comparator<HRegionInfo> {
   @Override
-  public int compareTo(ServerAndLoad other) {
-    int diff = this.load - other.load;
-    return diff != 0 ? diff : this.sn.compareTo(other.getServerName());
+  public int compare(HRegionInfo l, HRegionInfo r) {
+    long diff = r.getRegionId() - l.getRegionId();
+    if (diff < 0) return -1;
+    if (diff > 0) return 1;
+    return 0;
   }
 }

@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.Serializable;
+import java.util.Comparator;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
@@ -36,6 +39,19 @@ public class RegionPlan implements Comparable<RegionPlan> {
   private final HRegionInfo hri;
   private final ServerName source;
   private ServerName dest;
+
+  public static class RegionPlanComparator implements Comparator<RegionPlan>, Serializable {
+
+    private static final long serialVersionUID = 4213207330485734853L;
+
+    @Override
+    public int compare(RegionPlan l, RegionPlan r) {
+      long diff = r.getRegionInfo().getRegionId() - l.getRegionInfo().getRegionId();
+      if (diff < 0) return -1;
+      if (diff > 0) return 1;
+      return 0;
+    }
+  }
 
   /**
    * Instantiate a plan for a region move, moving the specified region from

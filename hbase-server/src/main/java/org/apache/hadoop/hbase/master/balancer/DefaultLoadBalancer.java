@@ -1,6 +1,4 @@
 /**
- * Copyright 2011 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,41 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.balancer;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
-import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.RegionPlan;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Sets;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -70,68 +54,44 @@ import com.google.common.collect.Sets;
  * <p>This classes produces plans for the {@link AssignmentManager} to execute.
  */
 @InterfaceAudience.Private
-public class DefaultLoadBalancer implements LoadBalancer {
-  private static final Log LOG = LogFactory.getLog(LoadBalancer.class);
+public class DefaultLoadBalancer extends BaseLoadBalancer {
+  private static final Log LOG = LogFactory.getLog(DefaultLoadBalancer.class);
   private static final Random RANDOM = new Random(System.currentTimeMillis());
-  // slop for regions
-  private float slop;
-  private Configuration config;
-  private ClusterStatus status;
-  private MasterServices services;
 
-  public void setClusterStatus(ClusterStatus st) {
-    this.status = st;
-  }
-
-  public void setMasterServices(MasterServices masterServices) {
-    this.services = masterServices;
-  }
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.slop = conf.getFloat("hbase.regions.slop", (float) 0.2);
-    if (slop < 0) slop = 0;
-    else if (slop > 1) slop = 1;
-    this.config = conf;
-  }
-
-  @Override
-  public Configuration getConf() {
-    return this.config;
-  }
-
-  /*
-  * The following comparator assumes that RegionId from HRegionInfo can
-  * represent the age of the region - larger RegionId means the region
-  * is younger.
-  * This comparator is used in balanceCluster() to account for the out-of-band
-  * regions which were assigned to the server after some other region server
-  * crashed.
-  */
-   private static class RegionInfoComparator implements Comparator<HRegionInfo> {
-       @Override
-       public int compare(HRegionInfo l, HRegionInfo r) {
-          long diff = r.getRegionId() - l.getRegionId();
-          if (diff < 0) return -1;
-          if (diff > 0) return 1;
-          return 0;
-       }
-   }
+  private RegionInfoComparator riComparator = new RegionInfoComparator();
+  private RegionPlan.RegionPlanComparator rpComparator = new RegionPlan.RegionPlanComparator();
 
 
-   RegionInfoComparator riComparator = new RegionInfoComparator();
-   
-   private static class RegionPlanComparator implements Comparator<RegionPlan> {
-    @Override
-    public int compare(RegionPlan l, RegionPlan r) {
-      long diff = r.getRegionInfo().getRegionId() - l.getRegionInfo().getRegionId();
-      if (diff < 0) return -1;
-      if (diff > 0) return 1;
-      return 0;
+  /**
+   * Stores additional per-server information about the regions added/removed
+   * during the run of the balancing algorithm.
+   *
+   * For servers that shed regions, we need to track which regions we have already
+   * shed. <b>nextRegionForUnload</b> contains the index in the list of regions on
+   * the server that is the next to be shed.
+   */
+  static class BalanceInfo {
+
+    private final int nextRegionForUnload;
+    private int numRegionsAdded;
+
+    public BalanceInfo(int nextRegionForUnload, int numRegionsAdded) {
+      this.nextRegionForUnload = nextRegionForUnload;
+      this.numRegionsAdded = numRegionsAdded;
+    }
+
+    int getNextRegionForUnload() {
+      return nextRegionForUnload;
+    }
+
+    int getNumRegionsAdded() {
+      return numRegionsAdded;
+    }
+
+    void setNumRegionsAdded(int numAdded) {
+      this.numRegionsAdded = numAdded;
     }
   }
-
-  RegionPlanComparator rpComparator = new RegionPlanComparator();
 
   /**
    * Generate a global load balancing plan according to the specified map of
@@ -219,34 +179,25 @@ public class DefaultLoadBalancer implements LoadBalancer {
    *         or null if cluster is already balanced
    */
   public List<RegionPlan> balanceCluster(
-      Map<ServerName, List<HRegionInfo>> clusterState) {
+      Map<ServerName, List<HRegionInfo>> clusterMap) {
     boolean emptyRegionServerPresent = false;
     long startTime = System.currentTimeMillis();
 
-    int numServers = clusterState.size();
+
+    ClusterLoadState cs = new ClusterLoadState(clusterMap);
+
+    int numServers = cs.getNumServers();
     if (numServers == 0) {
       LOG.debug("numServers=0 so skipping load balancing");
       return null;
     }
-    NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad =
-      new TreeMap<ServerAndLoad, List<HRegionInfo>>();
-    int numRegions = 0;
-    // Iterate so we can count regions as we build the map
-    for (Map.Entry<ServerName, List<HRegionInfo>> server: clusterState.entrySet()) {
-      List<HRegionInfo> regions = server.getValue();
-      int sz = regions.size();
-      if (sz == 0) emptyRegionServerPresent = true;
-      numRegions += sz;
-      serversByLoad.put(new ServerAndLoad(server.getKey(), sz), regions);
-    }
-    // Check if we even need to do any load balancing
-    float average = (float)numRegions / numServers; // for logging
-    // HBASE-3681 check sloppiness first
-    int floor = (int) Math.floor(average * (1 - slop));
-    int ceiling = (int) Math.ceil(average * (1 + slop));
-    if (serversByLoad.lastKey().getLoad() <= ceiling &&
-       serversByLoad.firstKey().getLoad() >= floor) {
+    NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad = cs.getServersByLoad();
+
+    int numRegions = cs.getNumRegions();
+
+    if (!this.needsBalance(cs)) {
       // Skipped because no server outside (min,max) range
+      float average = cs.getLoadAverage(); // for logging
       LOG.info("Skipping load balancing because balanced cluster; " +
         "servers=" + numServers + " " +
         "regions=" + numRegions + " average=" + average + " " +
@@ -254,6 +205,7 @@ public class DefaultLoadBalancer implements LoadBalancer {
         " leastloaded=" + serversByLoad.firstKey().getLoad());
       return null;
     }
+
     int min = numRegions / numServers;
     int max = numRegions % numServers == 0 ? min : min + 1;
 
@@ -452,7 +404,7 @@ public class DefaultLoadBalancer implements LoadBalancer {
         ", numServers=" + numServers + ", serversOverloaded=" + serversOverloaded +
         ", serversUnderloaded=" + serversUnderloaded);
       StringBuilder sb = new StringBuilder();
-      for (Map.Entry<ServerName, List<HRegionInfo>> e: clusterState.entrySet()) {
+      for (Map.Entry<ServerName, List<HRegionInfo>> e: clusterMap.entrySet()) {
         if (sb.length() > 0) sb.append(", ");
         sb.append(e.getKey().toString());
         sb.append(" ");
@@ -473,7 +425,7 @@ public class DefaultLoadBalancer implements LoadBalancer {
   /**
    * Add a region from the head or tail to the List of regions to return.
    */
-  void addRegionPlan(final MinMaxPriorityQueue<RegionPlan> regionsToMove,
+  private void addRegionPlan(final MinMaxPriorityQueue<RegionPlan> regionsToMove,
       final boolean fetchFromTail, final ServerName sn, List<RegionPlan> regionsToReturn) {
     RegionPlan rp = null;
     if (!fetchFromTail) rp = regionsToMove.remove();
@@ -481,291 +433,4 @@ public class DefaultLoadBalancer implements LoadBalancer {
     rp.setDestination(sn);
     regionsToReturn.add(rp);
   }
-
-  /**
-   * Stores additional per-server information about the regions added/removed
-   * during the run of the balancing algorithm.
-   *
-   * For servers that shed regions, we need to track which regions we have
-   * already shed.  <b>nextRegionForUnload</b> contains the index in the list
-   * of regions on the server that is the next to be shed.
-   */
-  private static class BalanceInfo {
-
-    private final int nextRegionForUnload;
-    private int numRegionsAdded;
-
-    public BalanceInfo(int nextRegionForUnload, int numRegionsAdded) {
-      this.nextRegionForUnload = nextRegionForUnload;
-      this.numRegionsAdded = numRegionsAdded;
-    }
-
-    public int getNextRegionForUnload() {
-      return nextRegionForUnload;
-    }
-
-    public int getNumRegionsAdded() {
-      return numRegionsAdded;
-    }
-
-    public void setNumRegionsAdded(int numAdded) {
-      this.numRegionsAdded = numAdded;
-    }
-  }
-
-  /**
-   * Generates a bulk assignment plan to be used on cluster startup using a
-   * simple round-robin assignment.
-   * <p>
-   * Takes a list of all the regions and all the servers in the cluster and
-   * returns a map of each server to the regions that it should be assigned.
-   * <p>
-   * Currently implemented as a round-robin assignment.  Same invariant as
-   * load balancing, all servers holding floor(avg) or ceiling(avg).
-   *
-   * TODO: Use block locations from HDFS to place regions with their blocks
-   *
-   * @param regions all regions
-   * @param servers all servers
-   * @return map of server to the regions it should take, or null if no
-   *         assignment is possible (ie. no regions or no servers)
-   */
-  public Map<ServerName, List<HRegionInfo>> roundRobinAssignment(
-      List<HRegionInfo> regions, List<ServerName> servers) {
-    if (regions.isEmpty() || servers.isEmpty()) {
-      return null;
-    }
-    Map<ServerName, List<HRegionInfo>> assignments =
-      new TreeMap<ServerName,List<HRegionInfo>>();
-    int numRegions = regions.size();
-    int numServers = servers.size();
-    int max = (int)Math.ceil((float)numRegions/numServers);
-    int serverIdx = 0;
-    if (numServers > 1) {
-      serverIdx = RANDOM.nextInt(numServers);
-    }
-    int regionIdx = 0;
-    for (int j = 0; j < numServers; j++) {
-      ServerName server = servers.get((j + serverIdx) % numServers);
-      List<HRegionInfo> serverRegions = new ArrayList<HRegionInfo>(max);
-      for (int i=regionIdx; i<numRegions; i += numServers) {
-        serverRegions.add(regions.get(i % numRegions));
-      }
-      assignments.put(server, serverRegions);
-      regionIdx++;
-    }
-    return assignments;
-  }
-
-  /**
-   * Generates a bulk assignment startup plan, attempting to reuse the existing
-   * assignment information from META, but adjusting for the specified list of
-   * available/online servers available for assignment.
-   * <p>
-   * Takes a map of all regions to their existing assignment from META.  Also
-   * takes a list of online servers for regions to be assigned to.  Attempts to
-   * retain all assignment, so in some instances initial assignment will not be
-   * completely balanced.
-   * <p>
-   * Any leftover regions without an existing server to be assigned to will be
-   * assigned randomly to available servers.
-   * @param regions regions and existing assignment from meta
-   * @param servers available servers
-   * @return map of servers and regions to be assigned to them
-   */
-  public Map<ServerName, List<HRegionInfo>> retainAssignment(
-      Map<HRegionInfo, ServerName> regions, List<ServerName> servers) {
-    // Group all of the old assignments by their hostname.
-    // We can't group directly by ServerName since the servers all have
-    // new start-codes.
-    
-    // Group the servers by their hostname. It's possible we have multiple
-    // servers on the same host on different ports.
-    ArrayListMultimap<String, ServerName> serversByHostname =
-        ArrayListMultimap.create();
-    for (ServerName server : servers) {
-      serversByHostname.put(server.getHostname(), server);
-    }
-    
-    // Now come up with new assignments
-    Map<ServerName, List<HRegionInfo>> assignments =
-      new TreeMap<ServerName, List<HRegionInfo>>();
-    
-    for (ServerName server : servers) {
-      assignments.put(server, new ArrayList<HRegionInfo>());
-    }
-    
-    // Collection of the hostnames that used to have regions
-    // assigned, but for which we no longer have any RS running
-    // after the cluster restart.
-    Set<String> oldHostsNoLongerPresent = Sets.newTreeSet();
-    
-    int numRandomAssignments = 0;
-    int numRetainedAssigments = 0;
-    for (Map.Entry<HRegionInfo, ServerName> entry : regions.entrySet()) {
-      HRegionInfo region = entry.getKey();
-      ServerName oldServerName = entry.getValue();
-      List<ServerName> localServers = new ArrayList<ServerName>();
-      if (oldServerName != null) {
-        localServers = serversByHostname.get(oldServerName.getHostname());
-      }
-      if (localServers.isEmpty()) {
-        // No servers on the new cluster match up with this hostname,
-        // assign randomly.
-        ServerName randomServer = servers.get(RANDOM.nextInt(servers.size()));
-        assignments.get(randomServer).add(region);
-        numRandomAssignments++;
-        if (oldServerName != null) oldHostsNoLongerPresent.add(oldServerName.getHostname());
-      } else if (localServers.size() == 1) {
-        // the usual case - one new server on same host
-        assignments.get(localServers.get(0)).add(region);
-        numRetainedAssigments++;
-      } else {
-        // multiple new servers in the cluster on this same host
-        int size = localServers.size();
-        ServerName target = localServers.get(RANDOM.nextInt(size));
-        assignments.get(target).add(region);
-        numRetainedAssigments++;
-      }
-    }
-    
-    String randomAssignMsg = "";
-    if (numRandomAssignments > 0) {
-      randomAssignMsg = numRandomAssignments + " regions were assigned " +
-      		"to random hosts, since the old hosts for these regions are no " +
-      		"longer present in the cluster. These hosts were:\n  " +
-          Joiner.on("\n  ").join(oldHostsNoLongerPresent);
-    }
-    
-    LOG.info("Reassigned " + regions.size() + " regions. " +
-        numRetainedAssigments + " retained the pre-restart assignment. " +
-        randomAssignMsg);
-    return assignments;
-  }
-
-  /**
-   * Returns an ordered list of hosts that are hosting the blocks for this
-   * region.  The weight of each host is the sum of the block lengths of all
-   * files on that host, so the first host in the list is the server which
-   * holds the most bytes of the given region's HFiles.
-   *
-   * @param fs the filesystem
-   * @param region region
-   * @return ordered list of hosts holding blocks of the specified region
-   */
-  @SuppressWarnings("unused")
-  private List<ServerName> getTopBlockLocations(FileSystem fs,
-    HRegionInfo region) {
-    List<ServerName> topServerNames = null;
-    try {
-      HTableDescriptor tableDescriptor = getTableDescriptor(
-        region.getTableName());
-      if (tableDescriptor != null) {
-        HDFSBlocksDistribution blocksDistribution =
-          HRegion.computeHDFSBlocksDistribution(config, tableDescriptor,
-          region.getEncodedName());
-        List<String> topHosts = blocksDistribution.getTopHosts();
-        topServerNames = mapHostNameToServerName(topHosts);
-      }
-    } catch (IOException ioe) {
-      LOG.debug("IOException during HDFSBlocksDistribution computation. for " +
-        "region = " + region.getEncodedName() , ioe);
-    }
-    
-    return topServerNames;
-  }
-
-  /**
-   * return HTableDescriptor for a given tableName
-   * @param tableName the table name
-   * @return HTableDescriptor
-   * @throws IOException
-   */
-  private HTableDescriptor getTableDescriptor(byte[] tableName)
-    throws IOException {
-    HTableDescriptor tableDescriptor = null;
-    try {
-      if ( this.services != null)
-      {
-        tableDescriptor = this.services.getTableDescriptors().
-          get(Bytes.toString(tableName));
-      }
-    } catch (FileNotFoundException fnfe) {
-      LOG.debug("FileNotFoundException during getTableDescriptors."
-          + " Current table name = " + Bytes.toStringBinary(tableName), fnfe);
-    }
-
-    return tableDescriptor;
-  }
-
-  /**
-   * Map hostname to ServerName, The output ServerName list will have the same
-   * order as input hosts.
-   * @param hosts the list of hosts
-   * @return ServerName list
-   */  
-  private List<ServerName> mapHostNameToServerName(List<String> hosts) {
-    if ( hosts == null || status == null) {
-      return null;
-    }
-
-    List<ServerName> topServerNames = new ArrayList<ServerName>();
-    Collection<ServerName> regionServers = status.getServers();
-
-    // create a mapping from hostname to ServerName for fast lookup
-    HashMap<String, ServerName> hostToServerName =
-      new HashMap<String, ServerName>();
-    for (ServerName sn : regionServers) {
-      hostToServerName.put(sn.getHostname(), sn);
-        }
-
-    for (String host : hosts ) {
-      ServerName sn = hostToServerName.get(host);
-      // it is possible that HDFS is up ( thus host is valid ),
-      // but RS is down ( thus sn is null )
-      if (sn != null) {
-        topServerNames.add(sn);
-      }
-    }
-    return topServerNames;
-  }
-
-
-  /**
-   * Generates an immediate assignment plan to be used by a new master for
-   * regions in transition that do not have an already known destination.
-   *
-   * Takes a list of regions that need immediate assignment and a list of
-   * all available servers.  Returns a map of regions to the server they
-   * should be assigned to.
-   *
-   * This method will return quickly and does not do any intelligent
-   * balancing.  The goal is to make a fast decision not the best decision
-   * possible.
-   *
-   * Currently this is random.
-   *
-   * @param regions
-   * @param servers
-   * @return map of regions to the server it should be assigned to
-   */
-  public Map<HRegionInfo, ServerName> immediateAssignment(
-      List<HRegionInfo> regions, List<ServerName> servers) {
-    Map<HRegionInfo,ServerName> assignments =
-      new TreeMap<HRegionInfo,ServerName>();
-    for(HRegionInfo region : regions) {
-      assignments.put(region, servers.get(RANDOM.nextInt(servers.size())));
-    }
-    return assignments;
-  }
-
-  public ServerName randomAssignment(HRegionInfo regionInfo,
-	List<ServerName> servers) {
-    if (servers == null || servers.isEmpty()) {
-      LOG.warn("Wanted to do random assignment but no servers to assign to");
-      return null;
-    }
-    return servers.get(RANDOM.nextInt(servers.size()));
-  }
-
 }
