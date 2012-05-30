@@ -77,7 +77,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String DATA_BLOCK_ENCODING =
       "DATA_BLOCK_ENCODING";
   public static final String BLOCKCACHE = "BLOCKCACHE";
-  
+  public static final String CACHE_DATA_ON_WRITE = "CACHE_DATA_ON_WRITE";
+  public static final String CACHE_INDEX_ON_WRITE = "CACHE_INDEX_ON_WRITE";
+  public static final String CACHE_BLOOMS_ON_WRITE = "CACHE_BLOOMS_ON_WRITE";
+  public static final String EVICT_BLOCKS_ON_CLOSE = "EVICT_BLOCKS_ON_CLOSE";
+
   /**
    * Size of storefile/hfile 'blocks'.  Default is {@link #DEFAULT_BLOCKSIZE}.
    * Use smaller block sizes for faster random-access at expense of larger
@@ -142,6 +146,18 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final boolean DEFAULT_BLOCKCACHE = true;
 
   /**
+   * Default setting for whether to cache data blocks on write if block caching
+   * is enabled.
+   */
+  public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = false;
+  
+  /**
+   * Default setting for whether to cache index blocks on write if block
+   * caching is enabled.
+   */
+  public static final boolean DEFAULT_CACHE_INDEX_ON_WRITE = false;
+
+  /**
    * Default size of blocks in files stored to the filesytem (hfiles).
    */
   public static final int DEFAULT_BLOCKSIZE = HFile.DEFAULT_BLOCKSIZE;
@@ -152,6 +168,12 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String DEFAULT_BLOOMFILTER = StoreFile.BloomType.NONE.toString();
 
   /**
+   * Default setting for whether to cache bloom filter blocks on write if block
+   * caching is enabled.
+   */
+  public static final boolean DEFAULT_CACHE_BLOOMS_ON_WRITE = false;
+
+  /**
    * Default time to live of cell contents.
    */
   public static final int DEFAULT_TTL = HConstants.FOREVER;
@@ -160,6 +182,12 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * Default scope.
    */
   public static final int DEFAULT_REPLICATION_SCOPE = HConstants.REPLICATION_SCOPE_LOCAL;
+
+  /**
+   * Default setting for whether to evict cached blocks from the blockcache on
+   * close.
+   */
+  public static final boolean DEFAULT_EVICT_BLOCKS_ON_CLOSE = false;
 
   private final static Map<String, String> DEFAULT_VALUES
     = new HashMap<String, String>();
@@ -178,6 +206,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       DEFAULT_VALUES.put(KEEP_DELETED_CELLS, String.valueOf(DEFAULT_KEEP_DELETED));
       DEFAULT_VALUES.put(ENCODE_ON_DISK, String.valueOf(DEFAULT_ENCODE_ON_DISK));
       DEFAULT_VALUES.put(DATA_BLOCK_ENCODING, String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
+      DEFAULT_VALUES.put(CACHE_DATA_ON_WRITE, String.valueOf(DEFAULT_CACHE_DATA_ON_WRITE));
+      DEFAULT_VALUES.put(CACHE_INDEX_ON_WRITE, String.valueOf(DEFAULT_CACHE_INDEX_ON_WRITE));
+      DEFAULT_VALUES.put(CACHE_BLOOMS_ON_WRITE, String.valueOf(DEFAULT_CACHE_BLOOMS_ON_WRITE));
+      DEFAULT_VALUES.put(EVICT_BLOCKS_ON_CLOSE, String.valueOf(DEFAULT_EVICT_BLOCKS_ON_CLOSE));
       for (String s : DEFAULT_VALUES.keySet()) {
         RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
       }
@@ -776,6 +808,84 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   */
   public HColumnDescriptor setScope(int scope) {
     return setValue(REPLICATION_SCOPE, Integer.toString(scope));
+  }
+
+  /**
+   * @return true if we should cache data blocks on write
+   */
+  public boolean shouldCacheDataOnWrite() {
+    String value = getValue(CACHE_DATA_ON_WRITE);
+    if (value != null) {
+      return Boolean.valueOf(value).booleanValue();
+    }
+    return DEFAULT_CACHE_DATA_ON_WRITE;
+  }
+
+  /**
+   * @param value true if we should cache data blocks on write
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setCacheDataOnWrite(boolean value) {
+    return setValue(CACHE_DATA_ON_WRITE, Boolean.toString(value));
+  }
+
+  /**
+   * @return true if we should cache index blocks on write
+   */
+  public boolean shouldCacheIndexesOnWrite() {
+    String value = getValue(CACHE_INDEX_ON_WRITE);
+    if (value != null) {
+      return Boolean.valueOf(value).booleanValue();
+    }
+    return DEFAULT_CACHE_INDEX_ON_WRITE;
+  }
+
+  /**
+   * @param value true if we should cache index blocks on write
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setCacheIndexesOnWrite(boolean value) {
+    return setValue(CACHE_INDEX_ON_WRITE, Boolean.toString(value));
+  }
+
+  /**
+   * @return true if we should cache bloomfilter blocks on write
+   */
+  public boolean shouldCacheBloomsOnWrite() {
+    String value = getValue(CACHE_BLOOMS_ON_WRITE);
+    if (value != null) {
+      return Boolean.valueOf(value).booleanValue();
+    }
+    return DEFAULT_CACHE_BLOOMS_ON_WRITE;
+  }
+
+  /**
+   * @param value true if we should cache bloomfilter blocks on write
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setCacheBloomsOnWrite(boolean value) {
+    return setValue(CACHE_BLOOMS_ON_WRITE, Boolean.toString(value));
+  }
+
+  /**
+   * @return true if we should evict cached blocks from the blockcache on
+   * close
+   */
+  public boolean shouldEvictBlocksOnClose() {
+    String value = getValue(EVICT_BLOCKS_ON_CLOSE);
+    if (value != null) {
+      return Boolean.valueOf(value).booleanValue();
+    }
+    return DEFAULT_EVICT_BLOCKS_ON_CLOSE;
+  }
+
+  /**
+   * @param value true if we should evict cached blocks from the blockcache on
+   * close
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setEvictBlocksOnClose(boolean value) {
+    return setValue(EVICT_BLOCKS_ON_CLOSE, Boolean.toString(value));
   }
 
   /**
