@@ -210,7 +210,8 @@ class ActiveMasterManager extends ZooKeeperListener {
         return cleanSetOfActiveMaster;
       }
       // Try to become active master again now that there is no active master
-      blockUntilBecomingActiveMaster(startupStatus,clusterStatusTracker);
+      cleanSetOfActiveMaster = blockUntilBecomingActiveMaster(startupStatus,
+          clusterStatusTracker);
     }
     return cleanSetOfActiveMaster;
   }
