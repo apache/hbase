@@ -1810,6 +1810,7 @@ public class  HRegionServer implements ClientProtocol,
             RegionServerStatusProtocol.class, RegionServerStatusProtocol.VERSION,
             isa, this.conf, -1,
             this.rpcTimeout, this.rpcTimeout);
+        LOG.info("Connected to master at " + isa);
       } catch (IOException e) {
         e = e instanceof RemoteException ?
             ((RemoteException)e).unwrapRemoteException() : e;
@@ -1830,7 +1831,6 @@ public class  HRegionServer implements ClientProtocol,
         }
       }
     }
-    LOG.info("Connected to master at " + isa);
     this.hbaseMaster = master;
     return masterServerName;
   }
