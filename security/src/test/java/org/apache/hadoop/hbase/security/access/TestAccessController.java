@@ -539,6 +539,18 @@ public class TestAccessController {
     verifyAllowed(USER_RO, action);
   }
 
+  private void verifyReadWrite(PrivilegedExceptionAction action) throws Exception {
+    // should be denied
+    verifyDenied(USER_NONE, action);
+    verifyDenied(USER_RO, action);
+
+    // should be allowed
+    verifyAllowed(SUPERUSER, action);
+    verifyAllowed(USER_ADMIN, action);
+    verifyAllowed(USER_OWNER, action);
+    verifyAllowed(USER_RW, action);
+  }
+
   @Test
   public void testRead() throws Exception {
     // get action
@@ -613,6 +625,39 @@ public class TestAccessController {
       }
     };
     verifyWrite(incrementAction);
+  }
+
+  @Test
+  public void testReadWrite() throws Exception {
+    // action for checkAndDelete
+    PrivilegedExceptionAction checkAndDeleteAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        Delete d = new Delete(Bytes.toBytes("random_row"));
+        d.deleteFamily(TEST_FAMILY);
+
+        HTable t = new HTable(conf, TEST_TABLE);
+        t.checkAndDelete(Bytes.toBytes("random_row"), 
+                         TEST_FAMILY, Bytes.toBytes("q"),
+                         Bytes.toBytes("test_value"), d);
+        return null;
+      }
+    };
+    verifyReadWrite(checkAndDeleteAction);
+
+    // action for checkAndPut()
+    PrivilegedExceptionAction checkAndPut = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        Put p = new Put(Bytes.toBytes("random_row"));
+        p.add(TEST_FAMILY, Bytes.toBytes("Qualifier"), Bytes.toBytes(1));
+
+        HTable t = new HTable(conf, TEST_TABLE);
+        t.checkAndPut(Bytes.toBytes("random_row"), 
+                      TEST_FAMILY, Bytes.toBytes("q"),
+                      Bytes.toBytes("test_value"), p);
+        return null;
+      }
+    };
+    verifyReadWrite(checkAndPut);
   }
 
   @Test
