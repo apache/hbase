@@ -219,7 +219,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
-import org.apache.hadoop.hbase.ipc.RegionServerStatusProtocol;
+import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 
 import com.google.common.base.Function;
 import com.google.protobuf.ByteString;
