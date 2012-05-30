@@ -161,6 +161,7 @@
             <excludes>
               <!-- Add new modules here -->
               <exclude>hbase-server-${project.version}.jar</exclude>
+              <exclude>hbase-common-${project.version>.jar</exclude>
               <exclude>target/</exclude>
               <exclude>test/</exclude>
               <exclude>.classpath</exclude>

@@ -105,6 +105,9 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private static final Log LOG = LogFactory.getLog(AssignmentManager.class);
 
+  public static final ServerName HBCK_CODE_SERVERNAME = new ServerName(HConstants.HBCK_CODE_NAME,
+      -1, -1L);
+
   protected Server master;
 
   private ServerManager serverManager;
@@ -709,7 +712,7 @@ public class AssignmentManager extends ZooKeeperListener {
         return;
       }
       // Check if this is a special HBCK transition
-      if (sn.equals(HConstants.HBCK_CODE_SERVERNAME)) {
+      if (sn.equals(HBCK_CODE_SERVERNAME)) {
         handleHBCK(rt);
         return;
       }

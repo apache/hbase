@@ -69,18 +69,27 @@ git clone git://git.apache.org/hbase.git
             <para>If you cloned the project via git, download and install the Git plugin (EGit). Attach to your local git repo (via the Git Repositories window) and you'll be able to see file revision history, generate patches, etc.</para>
             </section>
             <section xml:id="eclipse.maven.setup">
-            <title>HBase Project Setup</title>
-            To set up your Eclipse environment for HBase, close Eclipse and execute...
-            <programlisting>
-mvn eclipse:eclipse
-            </programlisting>
+            <title>HBase Project Setup in Eclipse</title>
+            <para>The easiest way is to use the m2eclipse plugin for Eclipse. Eclipse Indigo or newer has m2eclipse built-in, or it can be found here:http://www.eclipse.org/m2e/. M2Eclipse provides Maven integration for Eclipse - it even lets you use the direct Maven commands from within Eclipse to compile and test your project.</para>
+            <para>To import the project, you merely need to go to File->Import...Maven->Existing Maven Projects and then point Eclipse at the HBase root directory; m2eclipse will automatically find all the hbase modules for you.</para>
+            <para>If you install m2eclipse and import HBase in your workspace, you will have to fix your eclipse Build Path.
+            Remove <filename>target</filename> folder, add <filename>target/generated-jamon</filename>
+            and <filename>target/generated-sources/java</filename> folders. You may also remove from your Build Path
+            the exclusions on the <filename>src/main/resources</filename> and <filename>src/test/resources</filename>
+            to avoid error message in the console 'Failed to execute goal org.apache.maven.plugins:maven-antrun-plugin:1.6:run (default) on project hbase: 
+            'An Ant BuildException has occured: Replace: source file .../target/classes/hbase-default.xml doesn't exist'. This will also
+            reduce the eclipse build cycles and make your life easier when developing.</para>
+            </section>
+            <section xml:id="eclipse.commandline">
+            <title>Import into eclipse with the command line</title>
+            <para>For those not inclined to use m2eclipse, you can generate the Eclipse files from the command line. First, run (you should only have to do this once): 
+            <programlisting>mvn clean install -DskipTests</programlisting>
+            and then close Eclipse and execute...
+            <programlisting>mvn eclipse:eclipse</programlisting>
             ... from your local HBase project directory in your workspace to generate some new <filename>.project</filename> 
             and <filename>.classpath</filename>files.  Then reopen Eclipse, and import the .project file in the HBase directory to a workspace.
+            </para>
             </section>
-            <section xml:id="eclipse.maven.plugin">
-            <title>Maven Plugin</title>
-            <para>Download and install the Maven plugin.  For example, Help -&gt; Install New Software -&gt; (search for Maven Plugin)</para>
-            </section> 
             <section xml:id="eclipse.maven.class">
             <title>Maven Classpath Variable</title>
             <para>The <varname>M2_REPO</varname> classpath variable needs to be set up for the project.  This needs to be set to 
@@ -95,16 +104,6 @@ Unbound classpath variable: 'M2_REPO/com/google/guava/guava/r09/guava-r09.jar' i
 Unbound classpath variable: 'M2_REPO/com/google/protobuf/protobuf-java/2.3.0/protobuf-java-2.3.0.jar' in project 'hbase'	hbase		Build path	Build Path Problem Unbound classpath variable:
             </programlisting>            
             </section>
-            <section xml:id="eclipse.m2eclipse">
-            <title>Import via m2eclipse</title>
-            <para>If you install the m2eclipse and import the HBase pom.xml in your workspace, you will have to fix your eclipse Build Path.
-            Remove <filename>target</filename> folder, add <filename>target/generated-jamon</filename>
-            and <filename>target/generated-sources/java</filename> folders. You may also remove from your Build Path
-            the exclusions on the <filename>src/main/resources</filename> and <filename>src/test/resources</filename>
-            to avoid error message in the console 'Failed to execute goal org.apache.maven.plugins:maven-antrun-plugin:1.6:run (default) on project hbase: 
-            'An Ant BuildException has occured: Replace: source file .../target/classes/hbase-default.xml doesn't exist'. This will also
-            reduce the eclipse build cycles and make your life easier when developing.</para>
-            </section>     
             <section xml:id="eclipse.issues">
             <title>Eclipse Known Issues</title>
             <para>Eclipse will currently complain about <filename>Bytes.java</filename>.  It is not possible to turn these errors off.</para>
@@ -616,6 +615,21 @@ mvn compile
            </para>
            <para>This convention comes from our parent project Hadoop.</para>
            </section> <!-- code.standards -->
+
+          <section xml:id="run.insitu">
+           <title>Running In-Situ</title>
+           <para>If you are developing HBase, frequently it is useful to test your changes against a more-real cluster than what you find in unit tests. In this case, HBase can be run directly from the source in local-mode.
+           All you need to do is run:
+           </para>
+           <programlisting>${HBASE_HOME}/bin/start-hbase.sh</programlisting>
+           <para>
+           This will spin up a full local-cluster, just as if you had packaged up HBase and installed it on your machine.
+           </para>
+           <para>Keep in mind that you will need to have installed HBase into your local maven repository for the in-situ cluster to work properly. That is, you will need to run:</para>
+           <programlisting>mvn clean install -DskipTests</programlisting>
+           <para>to ensure that maven can find the correct classpath and dependencies. Generally, the above command
+           is just a good thing to try running first, if maven is acting oddly.</para>
+           </section> <!-- run.insitu -->
 
       </section>  <!--  developing -->
 

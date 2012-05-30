@@ -1,6 +1,4 @@
 /**
- * Copyright 2010 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -570,9 +568,6 @@ public final class HConstants {
 
   /** HBCK special code name used as server name when manipulating ZK nodes */
   public static final String HBCK_CODE_NAME = "HBCKServerName";
-
-  public static final ServerName HBCK_CODE_SERVERNAME =
-    new ServerName(HBCK_CODE_NAME, -1, -1L);
 
   public static final String KEY_FOR_HOSTNAME_SEEN_BY_MASTER =
     "hbase.regionserver.hostname.seen.by.master";

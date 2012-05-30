@@ -185,6 +185,10 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-common</artifactId>
+    </dependency>
+    <dependency>
       <artifactId>hbase-server</artifactId>
       <groupId>org.apache.hbase</groupId>
       <scope>compile</scope>

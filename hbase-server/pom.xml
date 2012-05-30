@@ -291,11 +291,25 @@
             </lifecycleMappingMetadata>
           </configuration>
         </plugin>
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${surefire.version}</version>
+          <configuration>
+            <!-- Have to set the groups here because we only do
+            split tests in this package, so groups on live in this module -->
+            <groups>${surefire.firstPartGroups}</groups>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>
 
   <dependencies>
+    <!-- Intra-project dependencies -->
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-common</artifactId>
+    </dependency>
     <!-- General dependencies -->
     <dependency>
       <groupId>com.yammer.metrics</groupId>
@@ -496,8 +510,8 @@
     </profile>  
 
     <!--
-      profile for building against Hadoop 0.23.0. Activate using:
-       mvn -Dhadoop.profile=23
+      profile for building against Hadoop 2.0.0-alpha. Activate using:
+       mvn -Dhadoop.profile=2.0
     -->
     <profile>
       <id>hadoop-2.0</id>

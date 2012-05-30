@@ -1,6 +1,4 @@
 /**
- * Copyright 2007 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,8 +47,8 @@ public class HBaseConfiguration extends Configuration {
     //TODO:replace with private constructor, HBaseConfiguration should not extend Configuration
     super();
     addHbaseResources(this);
-    LOG.warn("instantiating HBaseConfiguration() is deprecated. Please use" +
-    		" HBaseConfiguration#create() to construct a plain Configuration");
+    LOG.warn("instantiating HBaseConfiguration() is deprecated. Please use"
+        + " HBaseConfiguration#create() to construct a plain Configuration");
   }
 
   /**
@@ -83,7 +81,7 @@ public class HBaseConfiguration extends Configuration {
           HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
       int bcul = (int)(blockCacheUpperLimit * CONVERT_TO_PERCENTAGE);
       if (CONVERT_TO_PERCENTAGE - (gml + bcul)
-              < (int)(CONVERT_TO_PERCENTAGE * 
+              < (int)(CONVERT_TO_PERCENTAGE *
                       HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD)) {
           throw new RuntimeException(
             "Current heap configuration for MemStore and BlockCache exceeds " +
@@ -91,7 +89,7 @@ public class HBaseConfiguration extends Configuration {
             "The combined value cannot exceed 0.8. Please check " +
             "the settings for hbase.regionserver.global.memstore.upperLimit and " +
             "hfile.block.cache.size in your configuration. " +
-            "hbase.regionserver.global.memstore.upperLimit is " + 
+            "hbase.regionserver.global.memstore.upperLimit is " +
             globalMemstoreLimit +
             " hfile.block.cache.size is " + blockCacheUpperLimit);
       }
@@ -135,19 +133,17 @@ public class HBaseConfiguration extends Configuration {
       destConf.set(e.getKey(), e.getValue());
     }
   }
-  
+
   /**
-   * 
    * @return whether to show HBase Configuration in servlet
    */
   public static boolean isShowConfInServlet() {
     boolean isShowConf = false;
     try {
       if (Class.forName("org.apache.hadoop.conf.ConfServlet") != null) {
-        isShowConf = true;  
+        isShowConf = true;
       }
     } catch (Exception e) {
-      
     }
     return isShowConf;
   }

@@ -137,6 +137,16 @@ add_to_cp_if_exists() {
   fi
 }
 
+# For releases, add hbase & webapps to CLASSPATH
+# Webapps must come first else it messes up Jetty
+if [ -d "$HBASE_HOME/hbase-webapps" ]; then
+  add_to_cp_if_exists "${HBASE_HOME}"
+fi
+#add if we are in a dev environment
+if [ -d "$HBASE_HOME/hbase-server/target/hbase-webapps" ]; then
+  add_to_cp_if_exists "${HBASE_HOME}/hbase-server/target"
+fi
+
 add_maven_deps_to_classpath() {
   # Need to generate classpath from maven pom. This is costly so generate it
   # and cache it. Save the file into our target dir so a mvn clean will get
@@ -168,21 +178,11 @@ add_maven_test_classes_to_classpath(){
   done
 }
 
-# Add maven target directory
+#Add the development env class path stuff
 if $in_dev_env; then
   add_maven_deps_to_classpath
   add_maven_main_classes_to_classpath
   add_maven_test_classes_to_classpath
-fi
-
-# For releases, add hbase & webapps to CLASSPATH
-# Webapps must come first else it messes up Jetty
-if [ -d "$HBASE_HOME/hbase-webapps" ]; then
-  add_to_cp_if_exists "${HBASE_HOME}"
-fi
-#add if we are in a dev environment
-if [ -d "$HBASE_HOME/hbase-server/target/hbase-webapps" ]; then
-  add_to_cp_if_exists "${HBASE_HOME}/hbase-server/target"
 fi
 
 #add the hbase jars for each module

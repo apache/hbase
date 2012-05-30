@@ -56,6 +56,7 @@
     <module>hbase-assembly</module>
     <module>hbase-server</module>
     <module>hbase-site</module>
+    <module>hbase-common</module>
   </modules>
 
   <scm>
@@ -423,15 +424,15 @@
               <version>${surefire.version}</version>
             </dependency>
           </dependencies>
+          <!-- Generic testing configuration for all packages -->
           <configuration>
             <skip>${surefire.skipFirstPart}</skip>
             <forkMode>${surefire.firstPartForkMode}</forkMode>
             <parallel>${surefire.firstPartParallel}</parallel>
             <perCoreThreadCount>false</perCoreThreadCount>
             <threadCount>${surefire.firstPartThreadCount}</threadCount>
-            <parallel>classes</parallel><!-- surefire hack, if not we're using method parallelisation 
-              class ! -->
-            <groups>${surefire.firstPartGroups}</groups>
+            <parallel>classes</parallel><!-- surefire hack, if not we're
+              using method parallelization class ! -->
             <testFailureIgnore>false</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
             <argLine>-enableassertions -Xmx1900m
@@ -731,6 +732,11 @@
 
       <!-- Intra-module dependencies -->
       <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-common</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
         <artifactId>hbase-server</artifactId>
         <groupId>org.apache.hbase</groupId>
         <version>${project.version}</version>
@@ -745,9 +751,9 @@
 
       <!-- General dependencies -->
       <dependency>
-	<groupId>com.yammer.metrics</groupId>
-	<artifactId>metrics-core</artifactId>
-	<version>${metrics-core.version}</version>
+        <groupId>com.yammer.metrics</groupId>
+        <artifactId>metrics-core</artifactId>
+        <version>${metrics-core.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>

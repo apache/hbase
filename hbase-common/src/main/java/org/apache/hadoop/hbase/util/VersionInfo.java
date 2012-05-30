@@ -1,6 +1,4 @@
 /**
- * Copyright 2010 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +24,6 @@ import java.io.PrintWriter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.VersionAnnotation;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.commons.logging.Log;
 
 /**
@@ -92,7 +89,7 @@ public class VersionInfo {
   public static String getUrl() {
     return version != null ? version.url() : "Unknown";
   }
-  
+
   static String[] versionReport() {
     return new String[] {
       "HBase " + getVersion(),
