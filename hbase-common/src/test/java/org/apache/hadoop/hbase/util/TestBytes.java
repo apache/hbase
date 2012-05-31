@@ -1,6 +1,4 @@
 /**
- * Copyright 2009 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,14 +23,10 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.Arrays;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.hbase.SmallTests;
-import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
 public class TestBytes extends TestCase {
   public void testNullHashCode() {
     byte [] b = null;
@@ -289,10 +283,5 @@ public class TestBytes extends TestCase {
     assertEquals("World", Bytes.readStringFixedSize(dis, 18));
     assertEquals("", Bytes.readStringFixedSize(dis, 9));
   }
-
-
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 
