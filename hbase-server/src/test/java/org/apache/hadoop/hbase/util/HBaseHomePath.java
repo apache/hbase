@@ -18,7 +18,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.net.URL;
 
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.master.HMaster;
 
 /** Determines HBase home path from either class or jar directory */
 public class HBaseHomePath {
@@ -31,7 +31,7 @@ public class HBaseHomePath {
   }
 
   public static String getHomePath() {
-    String className = HConstants.class.getName();  // This could have been any HBase class.
+    String className = HMaster.class.getName();  // This could have been any HBase class.
     String relPathForClass = className.replace(".", "/") + ".class";
     URL url = ClassLoader.getSystemResource(relPathForClass);
     relPathForClass = "/" + relPathForClass;

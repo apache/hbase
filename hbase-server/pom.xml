@@ -465,6 +465,20 @@
 
   <profiles>
 
+    <!-- Skip the tests in this module -->
+    <profile>
+      <id>skip-server-tests</id>
+      <activation>
+        <property>
+          <name>skip-server-tests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>true</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+      </properties>
+    </profile>
+
     <!-- Special builds -->
      <profile>
       <id>hadoop-snappy</id>

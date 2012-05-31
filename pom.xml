@@ -426,6 +426,7 @@
           </dependencies>
           <!-- Generic testing configuration for all packages -->
           <configuration>
+            <failIfNoTests>false</failIfNoTests>
             <skip>${surefire.skipFirstPart}</skip>
             <forkMode>${surefire.firstPartForkMode}</forkMode>
             <parallel>${surefire.firstPartParallel}</parallel>

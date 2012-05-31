@@ -276,17 +276,36 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.1
     <section xml:id="hbase.tests">
     <title>Tests</title>
 
-<para>HBase tests are divided into two groups: <xref linkend="hbase.unittests"/> and
-<xref linkend="integration.tests" /> (As of this writing, Integration tests are little
-developed).
-Unit tests are run by the Apache Continuous Integration server, Jenkins at
-builds.apache.org, and by developers when they are verifying a fix does not cause breakage elsewhere in the code base.
-Integration tests are generally long-running tests that are invoked out-of-bound of
-the CI server when you want to do more intensive testing beyond the unit test set.
-Integration tests, for example, are run proving a release candidate or a production
-deploy. Below we go into more detail on each of these test types.  Developers at a
-minimum should familiarize themselves with the unit test detail; unit tests in
+<para> Developers, at a minimum, should familiarize themselves with the unit test detail; unit tests in
 HBase have a character not usually seen in other projects.</para> 
+
+<section xml:id="hbase.moduletests">
+<title>HBase Modules</title>
+<para>As of 0.96, HBase is split into multiple modules which creates "interesting" rules for
+how and where tests are written. If you are writting code for <classname>hbase-server</classname>, see
+<xref linkend="hbase.unittests"/> for how to write your tests; these tests can spin
+up a minicluster and will need to be categorized. For any other module, for example
+<classname>hbase-common</classname>, the tests must be strict unit tests and just test the class
+under test - no use of the HBaseTestingUtility or minicluster is allowed (or even possible
+given the dependency tree).</para>
+  <section xml:id="hbase.moduletest.run">
+  <title>Running Tests in other Modules</title>
+  If the module you are developing in has no other dependencies on other HBase modules, then
+  you can cd into that module and just run:
+  <programlisting>mvn test</programlisting>
+  which will just run the tests IN THAT MODULE. If there are other dependencies on other modules,
+  then you will have run the command from the ROOT HBASE DIRECTORY. This will run the tests in the other
+  modules, unless you specify to skip the tests in that module. For instance, to skip the tests in the hbase-server module,
+  you would run:
+  <programlisting>mvn clean test -Dskip-server-tests</programlisting>
+  from the top level directory to run all the tests in modules other than hbase-server. Note that you
+  can specify to skip tests in multiple modules as well as just for a single module. For example, to skip
+  the tests in <classname>hbase-server</classname> and <classname>hbase-common</classname>, you would run:
+  <programlisting>mvn clean test -Dskip-server-tests -Dskip-common-tests</programlisting>
+  <para>Also, keep in mind that if you are running tests in the <classname>hbase-server</classname> module you will need to 
+  apply the maven profiles discussed in <xref linkend="hbase.unittests.cmds"/> to get the tests to run properly.</para>
+  </section>
+</section>
 
 <section xml:id="hbase.unittests">
 <title>Unit Tests</title>
@@ -333,8 +352,7 @@ individually. They can use a cluster, and each of them is executed in a separate
 <section xml:id="hbase.unittests.large">
 <title><indexterm><primary>LargeTests</primary></indexterm></title>
 <para><emphasis>Large</emphasis> tests are everything else. They are typically integration-like
-tests (yes, some large tests should be moved out to be HBase <xref linkend="integration.tests" />),
-regression tests for specific bugs, timeout tests, performance tests.
+tests, regression tests for specific bugs, timeout tests, performance tests.
 They are executed before a commit on the pre-integration machines. They can be run on
 the developer machine as well.
 </para>
@@ -490,12 +508,6 @@ mvn compile
           <para>See the <xref linkend="hbase.unittests.cmds" /> section
           above in <xref linkend="hbase.unittests" /></para>
        </section>       
-
-       <section xml:id="maven.build.commanas.integration.tests"> 
-          <title>Running all or individual Integration Tests</title>
-          <para>See <xref linkend="integration.tests" />
-          </para>
-      </section>
 
        <section xml:id="maven.build.hadoop"> 
           <title>Building against various hadoop versions.</title>

@@ -67,7 +67,20 @@
   </dependencies>
 
   <profiles>
-  <!-- profile against Hadoop 1.0.x: This is the default. It has to have the same
+    <!-- Skip the tests in this module -->
+    <profile>
+      <id>skip-common-tests</id>
+      <activation>
+        <property>
+          <name>skip-common-tests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>true</surefire.skipFirstPart>
+      </properties>
+    </profile>
+
+    <!-- profile against Hadoop 1.0.x: This is the default. It has to have the same
     activation property as the parent Hadoop 1.0.x profile to make sure it gets run at
     the same time. -->
     <profile>
