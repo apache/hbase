@@ -60,8 +60,8 @@ public class TestMasterZKSessionRecovery {
    * Negative test of master recovery from zk session expiry.
    * <p>
    * Starts with one master. Fakes the master zk session expired.
-   * Ensures the master cannot recover the expired zk session since
-   * the master zk node is still there.
+   * The master should be able to come up if he is able to create
+   * the node as active master.
    * @throws Exception
    */
   @Test(timeout=10000)
@@ -70,7 +70,7 @@ public class TestMasterZKSessionRecovery {
     HMaster m = cluster.getMaster();
     m.abort("Test recovery from zk session expired",
       new KeeperException.SessionExpiredException());
-    assertTrue(m.isStopped());
+    assertFalse(m.isStopped());
   }
 
   /**
