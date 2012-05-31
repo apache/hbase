@@ -358,7 +358,6 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Called on startup.
    * Figures whether a fresh cluster start of we are joining extant running cluster.
-   * @param onlineServers onlined servers when master started
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
@@ -426,17 +425,19 @@ public class AssignmentManager extends ZooKeeperListener {
     
     // Run through all regions.  If they are not assigned and not in RIT, then
     // its a clean cluster startup, else its a failover.
-    for (Map.Entry<HRegionInfo, ServerName> e: this.regions.entrySet()) {
-      if (!e.getKey().isMetaTable() && e.getValue() != null) {
-        LOG.debug("Found " + e + " out on cluster");
-        this.failover = true;
-        break;
-      }
-      if (nodes.contains(e.getKey().getEncodedName())) {
-        LOG.debug("Found " + e.getKey().getRegionNameAsString() + " in RITs");
-        // Could be a meta region.
-        this.failover = true;
-        break;
+    synchronized (this.regions) {    
+      for (Map.Entry<HRegionInfo, ServerName> e: this.regions.entrySet()) {
+        if (!e.getKey().isMetaTable() && e.getValue() != null) {
+          LOG.debug("Found " + e + " out on cluster");
+          this.failover = true;
+          break;
+        }
+        if (nodes.contains(e.getKey().getEncodedName())) {
+          LOG.debug("Found " + e.getKey().getRegionNameAsString() + " in RITs");
+          // Could be a meta region.
+          this.failover = true;
+          break;
+        }
       }
     }
 
@@ -2547,8 +2548,6 @@ public class AssignmentManager extends ZooKeeperListener {
    * <p>
    * Returns a map of servers that are not found to be online and the regions
    * they were hosting.
-   * @param onlineServers if one region's location belongs to onlineServers, it
-   *          doesn't need to be assigned.
    * @return map of servers not online to their assigned regions, as stored
    *         in META
    * @throws IOException
@@ -2624,8 +2623,10 @@ public class AssignmentManager extends ZooKeeperListener {
         // add only if region not in disabled and enabling table
         if (false == checkIfRegionBelongsToDisabled(regionInfo)
             && false == checkIfRegionsBelongsToEnabling(regionInfo)) {
-          regions.put(regionInfo, regionLocation);
-          addToServers(regionLocation, regionInfo);
+          synchronized (this.regions) {            
+            regions.put(regionInfo, regionLocation);
+            addToServers(regionLocation, regionInfo);
+          }
         }
         disablingOrEnabling = addTheTablesInPartialState(this.disablingTables,
             this.enablingTables, regionInfo, tableName);
@@ -3366,7 +3367,6 @@ public class AssignmentManager extends ZooKeeperListener {
    * Run through remaining regionservers and unassign all catalog regions.
    */
   void unassignCatalogRegions() {
-    this.servers.entrySet();
     synchronized (this.regions) {
       for (Map.Entry<ServerName, Set<HRegionInfo>> e: this.servers.entrySet()) {
         Set<HRegionInfo> regions = e.getValue();

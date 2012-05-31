@@ -663,7 +663,6 @@ Server {
   /**
    * Override to change master's splitLogAfterStartup. Used testing
    * @param mfs
-   * @param onlineServers
    */
   protected void splitLogAfterStartup(final MasterFileSystem mfs) {
     mfs.splitLogAfterStartup();
