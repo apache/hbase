@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -34,7 +33,6 @@ import org.apache.hadoop.hbase.util.Pair;
  * numbers. These numbers are exposed to Hadoop metrics through
  * RegionServerDynamicMetrics.
  */
-@InterfaceAudience.Private
 public class RegionMetricsStorage {
 
   // for simple numeric metrics (# of blocks read from block cache)

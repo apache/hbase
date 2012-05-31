@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.util.HashMap;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
@@ -33,7 +32,6 @@ import com.google.common.base.Preconditions;
  * <code>(2 ^ 15) * 5 (Regionname, Row key, CF, Column qual, table) * 100 bytes (these are some big names) = ~16MB</code>.
  * If you want to get silly, even at 1kb entries, it maxes out at 160 megabytes.
  */
-@InterfaceAudience.Private
 public class LRUDictionary implements Dictionary {
   private final BidirectionalLRUMap backingStore = new BidirectionalLRUMap();
 

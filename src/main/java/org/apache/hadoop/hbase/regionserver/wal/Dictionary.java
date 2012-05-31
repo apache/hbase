@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Dictionary interface
@@ -26,7 +25,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * Dictionary indexes should be either bytes or shorts, only positive. (The
  * first bit is reserved for detecting whether something is compressed or not).
  */
-@InterfaceAudience.Private
 interface Dictionary {
   static final byte NOT_IN_DICTIONARY = -1;
 

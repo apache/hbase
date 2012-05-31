@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver.metrics;
 
 import java.util.Set;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Append;
@@ -37,7 +36,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * metrics are stored in {@link RegionMetricsStorage} and exposed to hadoop
  * metrics through {@link RegionServerDynamicMetrics}.
  */
-@InterfaceAudience.Private
 public class OperationMetrics {
 
   private static final String DELETE_KEY = "delete_";
