@@ -1728,6 +1728,10 @@ public class Store extends SchemaConfigured implements HeapSize {
       LOG.warn("StoreFile " + f + " has a null Reader");
       return;
     }
+    if (r.getEntries() == 0) {
+      LOG.warn("StoreFile " + f + " is a empty store file");
+      return;
+    }
     // TODO: Cache these keys rather than make each time?
     byte [] fk = r.getFirstKey();
     KeyValue firstKV = KeyValue.createKeyValueFromKey(fk, 0, fk.length);
