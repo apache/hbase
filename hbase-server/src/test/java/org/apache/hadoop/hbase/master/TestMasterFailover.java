@@ -808,7 +808,7 @@ public class TestMasterFailover {
     final long maxTime = 120000;
     boolean done = master.assignmentManager.waitUntilNoRegionsInTransition(maxTime);
     if (!done) {
-      LOG.info("rit=" + master.assignmentManager.getRegionsInTransition());
+      LOG.info("rit=" + master.assignmentManager.copyRegionsInTransition());
     }
     long elapsed = System.currentTimeMillis() - now;
     assertTrue("Elapsed=" + elapsed + ", maxTime=" + maxTime + ", done=" + done,

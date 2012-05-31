@@ -37,11 +37,12 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -77,6 +78,7 @@ import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
@@ -102,7 +104,6 @@ import org.apache.zookeeper.data.Stat;
  */
 @InterfaceAudience.Private
 public class AssignmentManager extends ZooKeeperListener {
-
   private static final Log LOG = LogFactory.getLog(AssignmentManager.class);
 
   public static final ServerName HBCK_CODE_SERVERNAME = new ServerName(HConstants.HBCK_CODE_NAME,
@@ -120,6 +121,8 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private LoadBalancer balancer;
 
+  final private KeyLocker<String> locker = new KeyLocker<String>();
+
   /**
    * Map of regions to reopen after the schema of a table is changed. Key -
    * encoded region name, value - HRegionInfo
@@ -135,8 +138,8 @@ public class AssignmentManager extends ZooKeeperListener {
    * Regions currently in transition.  Map of encoded region names to the master
    * in-memory state for that region.
    */
-  final ConcurrentSkipListMap<String, RegionState> regionsInTransition =
-    new ConcurrentSkipListMap<String, RegionState>();
+  final NotifiableConcurrentSkipListMap<String, RegionState> regionsInTransition =
+    new NotifiableConcurrentSkipListMap<String, RegionState>();
 
   /** Plans for region movement. Key is the encoded version of a region name*/
   // TODO: When do plans get cleaned out?  Ever? In server open and in server
@@ -148,9 +151,9 @@ public class AssignmentManager extends ZooKeeperListener {
   private final ZKTable zkTable;
 
   // store all the table names in disabling state
-  Set<String> disablingTables = new HashSet<String>(1);
+  Set<String> disablingTables = new HashSet<String>();
   // store all the enabling state tablenames.
-  Set<String> enablingTables = new HashSet<String>(1);
+  Set<String> enablingTables = new HashSet<String>();
 
   /**
    * Server to regions assignment map.
@@ -332,6 +335,7 @@ public class AssignmentManager extends ZooKeeperListener {
     Integer pending = 0;
     for (HRegionInfo hri : hris) {
       String name = hri.getEncodedName();
+      // no lock concurrent access ok: sequential consistency respected.
       if (regionsToReopen.containsKey(name) || regionsInTransition.containsKey(name)) {
         pending++;
       }
@@ -438,9 +442,8 @@ public class AssignmentManager extends ZooKeeperListener {
 
     // Remove regions in RIT, they are possibly being processed by
     // ServerShutdownHandler.
-    synchronized (regionsInTransition) {
-      nodes.removeAll(regionsInTransition.keySet());
-    }
+    // no lock concurrent access ok: some threads may be adding/removing items but its java-valid
+    nodes.removeAll(regionsInTransition.keySet());
 
     // If we found user regions out on cluster, its a failover.
     if (this.failover) {
@@ -475,12 +478,12 @@ public class AssignmentManager extends ZooKeeperListener {
       processRegionInTransition(hri.getEncodedName(), hri, null);
     if (!intransistion) return intransistion;
     LOG.debug("Waiting on " + HRegionInfo.prettyPrint(hri.getEncodedName()));
-    synchronized(this.regionsInTransition) {
-      while (!this.master.isStopped() &&
-          this.regionsInTransition.containsKey(hri.getEncodedName())) {
-        // We expect a notify, but by security we set a timout
-        this.regionsInTransition.wait(100);
-      }
+    while (!this.master.isStopped() &&
+      // no lock concurrent access ok: sequentially consistent
+      this.regionsInTransition.containsKey(hri.getEncodedName())) {
+      // We put a timeout because we may have the region getting in just between the test
+      //  and the waitForUpdate
+      this.regionsInTransition.waitForUpdate(100);
     }
     return intransistion;
   }
@@ -524,10 +527,15 @@ public class AssignmentManager extends ZooKeeperListener {
     ServerName sn = rt.getServerName();
     String encodedRegionName = regionInfo.getEncodedName();
     LOG.info("Processing region " + regionInfo.getRegionNameAsString() + " in state " + et);
-    synchronized (regionsInTransition) {
+
+    // We need a lock here to ensure that we will not put the same region twice
+    // It has no reason to be a lock shared with the other operations.
+    // We can do the lock on the region only, instead of a global lock: what we want to ensure
+    // is that we don't have two threads working on the same region.
+    Lock lock = locker.acquireLock(encodedRegionName);
+    try {
       RegionState regionState = regionsInTransition.get(encodedRegionName);
-      if (regionState != null ||
-          failoverProcessedRegions.containsKey(encodedRegionName)) {
+      if (regionState != null || failoverProcessedRegions.containsKey(encodedRegionName)) {
         // Just return
         return;
       }
@@ -575,7 +583,6 @@ public class AssignmentManager extends ZooKeeperListener {
       case RS_ZK_REGION_OPENING:
         // TODO: Could check if it was on deadServers.  If it was, then we could
         // do what happens in TimeoutMonitor when it sees this condition.
-
         // Just insert region into RIT
         // If this never updates the timeout will trigger new assignment
         if (regionInfo.isMetaTable()) {
@@ -628,11 +635,17 @@ public class AssignmentManager extends ZooKeeperListener {
       default:
         throw new IllegalStateException("Received region in state :" + et + " is not valid");
       }
+    } finally {
+      lock.unlock();
     }
   }
   
+
   /**
    * Put the region <code>hri</code> into an offline state up in zk.
+   *
+   * You need to have lock on the region before calling this method.
+   *
    * @param hri
    * @param oldRt
    * @throws KeeperException
@@ -656,7 +669,10 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param oldData
    */
   private void addToRITandCallClose(final HRegionInfo hri,
-      final RegionState.State state, final RegionTransition oldData) {
+                                    final RegionState.State state, final RegionTransition oldData) {
+    // No lock concurrency: adding a synchronized here would not prevent to have two
+    //  entries as we don't check if the region is already there. This must be ensured by the
+    //  method callers.
     this.regionsInTransition.put(hri.getEncodedName(), getRegionState(hri, state, oldData));
     new ClosedRegionHandler(this.master, this, hri).process();
   }
@@ -677,10 +693,8 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param hri HRegionInfo of the region which was closed
    */
   public void removeClosedRegion(HRegionInfo hri) {
-    if (!regionsToReopen.isEmpty()) {
-      if (regionsToReopen.remove(hri.getEncodedName()) != null) {
-          LOG.debug("Removed region from reopening regions because it was closed");
-      }
+    if (regionsToReopen.remove(hri.getEncodedName()) != null) {
+      LOG.debug("Removed region from reopening regions because it was closed");
     }
   }
 
@@ -713,41 +727,45 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param expectedVersion
    */
   private void handleRegion(final RegionTransition rt, int expectedVersion) {
-    synchronized(regionsInTransition) {
-      HRegionInfo hri = null;
-      if (rt == null) {
-        LOG.warn("Unexpected NULL input " + rt);
-        return;
-      }
-      final ServerName sn = rt.getServerName();
-      if (sn == null) {
-        LOG.warn("Null servername: " + rt);
-        return;
-      }
-      // Check if this is a special HBCK transition
-      if (sn.equals(HBCK_CODE_SERVERNAME)) {
-        handleHBCK(rt);
-        return;
-      }
-      final long createTime = rt.getCreateTime();
-      final byte [] regionName = rt.getRegionName();
-      String encodedName = HRegionInfo.encodeRegionName(regionName);
-      String prettyPrintedRegionName = HRegionInfo.prettyPrint(encodedName);
-      // Verify this is a known server
-      if (!serverManager.isServerOnline(sn) &&
-          !this.master.getServerName().equals(sn)
-          && !ignoreStatesRSOffline.contains(rt.getEventType())) {
-        LOG.warn("Attempted to handle region transition for server but " +
-          "server is not online: " + prettyPrintedRegionName);
-        return;
-      }
+    HRegionInfo hri = null;
+    if (rt == null) {
+      LOG.warn("Unexpected NULL input " + rt);
+      return;
+    }
+    final ServerName sn = rt.getServerName();
+    if (sn == null) {
+      LOG.warn("Null servername: " + rt);
+      return;
+    }
+    // Check if this is a special HBCK transition
+    if (sn.equals(HBCK_CODE_SERVERNAME)) {
+      handleHBCK(rt);
+      return;
+    }
+    final long createTime = rt.getCreateTime();
+    final byte[] regionName = rt.getRegionName();
+    String encodedName = HRegionInfo.encodeRegionName(regionName);
+    String prettyPrintedRegionName = HRegionInfo.prettyPrint(encodedName);
+    // Verify this is a known server
+    if (!serverManager.isServerOnline(sn) &&
+      !this.master.getServerName().equals(sn)
+      && !ignoreStatesRSOffline.contains(rt.getEventType())) {
+      LOG.warn("Attempted to handle region transition for server but " +
+        "server is not online: " + prettyPrintedRegionName);
+      return;
+    }
+
+    // We need a lock on the region as we could update it
+    Lock lock = locker.acquireLock(encodedName);
+    try {
       // Printing if the event was created a long time ago helps debugging
       boolean lateEvent = createTime < (System.currentTimeMillis() - 15000);
+      RegionState regionState = regionsInTransition.get(encodedName);
       LOG.debug("Handling transition=" + rt.getEventType() +
         ", server=" + sn + ", region=" +
-          (prettyPrintedRegionName == null? "null": prettyPrintedRegionName)  +
-          (lateEvent? ", which is more than 15 seconds late" : ""));
-      RegionState regionState = regionsInTransition.get(encodedName);
+        (prettyPrintedRegionName == null ? "null" : prettyPrintedRegionName) +
+        (lateEvent ? ", which is more than 15 seconds late" : "") +
+        ", current state from RIT=" + regionState);
       switch (rt.getEventType()) {
         case M_ZK_REGION_OFFLINE:
           // Nothing to do.
@@ -924,6 +942,8 @@ public class AssignmentManager extends ZooKeeperListener {
         default:
           throw new IllegalStateException("Received event is not valid.");
       }
+    } finally {
+      lock.unlock();
     }
   }
 
@@ -1091,6 +1111,7 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.warn("Received unexpected region state from HBCK: " + rt.toString());
         break;
     }
+
   }
 
   // ZooKeeper events
@@ -1148,7 +1169,9 @@ public class AssignmentManager extends ZooKeeperListener {
   public void nodeDeleted(final String path) {
     if (path.startsWith(this.watcher.assignmentZNode)) {
       String regionName = ZKAssign.getRegionName(this.master.getZooKeeper(), path);
-      RegionState rs = this.regionsInTransition.get(regionName);
+      // no lock concurrency ok: sequentially consistent if someone adds/removes the region in
+      //  the same time
+        RegionState rs = this.regionsInTransition.get(regionName);
       if (rs != null) {
         HRegionInfo regionInfo = rs.getRegion();
         if (rs.isSplit()) {
@@ -1164,6 +1187,7 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
     }
+
   }
 
   private void makeRegionOnline(RegionState rs, HRegionInfo regionInfo) {
@@ -1214,13 +1238,9 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param sn
    */
   void regionOnline(HRegionInfo regionInfo, ServerName sn) {
-    synchronized (this.regionsInTransition) {
-      RegionState rs =
-        this.regionsInTransition.remove(regionInfo.getEncodedName());
-      if (rs != null) {
-        this.regionsInTransition.notifyAll();
-      }
-    }
+    // no lock concurrency ok.
+    this.regionsInTransition.remove(regionInfo.getEncodedName());
+
     synchronized (this.regions) {
       // Add check
       ServerName oldSn = this.regions.get(regionInfo);
@@ -1265,23 +1285,26 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param sn
    */
   private void updateTimers(final ServerName sn) {
+    if (sn == null) return;
+
     // This loop could be expensive.
     // First make a copy of current regionPlan rather than hold sync while
     // looping because holding sync can cause deadlock.  Its ok in this loop
     // if the Map we're going against is a little stale
-    Map<String, RegionPlan> copy = new HashMap<String, RegionPlan>();
+    List<Map.Entry<String, RegionPlan>> rps;
     synchronized(this.regionPlans) {
-      copy.putAll(this.regionPlans);
+      rps = new ArrayList<Map.Entry<String, RegionPlan>>(regionPlans.entrySet());
     }
-    for (Map.Entry<String, RegionPlan> e: copy.entrySet()) {
-      if (e.getValue() == null || e.getValue().getDestination() == null) continue;
-      if (!e.getValue().getDestination().equals(sn)) continue;
-      RegionState rs = null;
-      synchronized (this.regionsInTransition) {
-        rs = this.regionsInTransition.get(e.getKey());
+
+    for (Map.Entry<String, RegionPlan> e : rps) {
+      if (e.getValue() != null && e.getKey() != null && sn.equals(e.getValue().getDestination())) {
+        RegionState rs = this.regionsInTransition.get(e.getKey());
+        if (rs != null) {
+          // no lock concurrency ok: there is a write when we update the timestamp but it's ok
+          //  as it's an AtomicLong
+          rs.updateTimestampToNow();
+        }
       }
-      if (rs == null) continue;
-      rs.updateTimestampToNow();
     }
   }
 
@@ -1293,11 +1316,9 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param regionInfo
    */
   public void regionOffline(final HRegionInfo regionInfo) {
-    synchronized(this.regionsInTransition) {
-      if (this.regionsInTransition.remove(regionInfo.getEncodedName()) != null) {
-        this.regionsInTransition.notifyAll();
-      }
-    }
+    // no lock concurrency ok
+    this.regionsInTransition.remove(regionInfo.getEncodedName());
+
     // remove the region plan as well just in case.
     clearRegionPlan(regionInfo);
     setOffline(regionInfo);
@@ -1409,14 +1430,12 @@ public class AssignmentManager extends ZooKeeperListener {
       destination.toString());
 
     List<RegionState> states = new ArrayList<RegionState>(regions.size());
-    synchronized (this.regionsInTransition) {
-      for (HRegionInfo region: regions) {
-        states.add(forceRegionStateToOffline(region));
-      }
+    for (HRegionInfo region : regions) {
+      states.add(forceRegionStateToOffline(region));
     }
     // Add region plans, so we can updateTimers when one region is opened so
     // that unnecessary timeout on RIT is reduced.
-    Map<String, RegionPlan> plans=new HashMap<String, RegionPlan>();
+    Map<String, RegionPlan> plans = new HashMap<String, RegionPlan>(regions.size());
     for (HRegionInfo region : regions) {
       plans.put(region.getEncodedName(), new RegionPlan(region, null,
           destination));
@@ -1610,13 +1629,10 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   private RegionState addToRegionsInTransition(final HRegionInfo region,
       boolean hijack) {
-    synchronized (regionsInTransition) {
-      return forceRegionStateToOffline(region, hijack);
-    }
+    return forceRegionStateToOffline(region, hijack);
   }
   /**
    * Sets regions {@link RegionState} to {@link RegionState.State#OFFLINE}.
-   * Caller must hold lock on this.regionsInTransition.
    * @param region
    * @return Amended RegionState.
    */
@@ -1626,7 +1642,6 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * Sets regions {@link RegionState} to {@link RegionState.State#OFFLINE}.
-   * Caller must hold lock on this.regionsInTransition.
    * @param region
    * @param hijack
    * @return Amended RegionState.
@@ -1634,23 +1649,29 @@ public class AssignmentManager extends ZooKeeperListener {
   private RegionState forceRegionStateToOffline(final HRegionInfo region,
       boolean hijack) {
     String encodedName = region.getEncodedName();
-    RegionState state = this.regionsInTransition.get(encodedName);
-    if (state == null) {
-      state = new RegionState(region, RegionState.State.OFFLINE);
-      this.regionsInTransition.put(encodedName, state);
-    } else {
-      // If we are reassigning the node do not force in-memory state to OFFLINE.
-      // Based on the znode state we will decide if to change in-memory state to
-      // OFFLINE or not. It will be done before setting znode to OFFLINE state.
 
-      // We often get here with state == CLOSED because ClosedRegionHandler will
-      // assign on its tail as part of the handling of a region close.
-      if (!hijack) {
-        LOG.debug("Forcing OFFLINE; was=" + state);
-        state.update(RegionState.State.OFFLINE);
+    Lock lock = locker.acquireLock(encodedName);
+    try {
+      RegionState state = this.regionsInTransition.get(encodedName);
+      if (state == null) {
+        state = new RegionState(region, RegionState.State.OFFLINE);
+        this.regionsInTransition.put(encodedName, state);
+      } else {
+        // If we are reassigning the node do not force in-memory state to OFFLINE.
+        // Based on the znode state we will decide if to change in-memory state to
+        // OFFLINE or not. It will be done before setting znode to OFFLINE state.
+
+        // We often get here with state == CLOSED because ClosedRegionHandler will
+        // assign on its tail as part of the handling of a region close.
+        if (!hijack) {
+          LOG.debug("Forcing OFFLINE; was=" + state);
+          state.update(RegionState.State.OFFLINE);
+        }
       }
+      return state;
+    } finally {
+      lock.unlock();
     }
-    return state;
   }
 
   /**
@@ -1718,10 +1739,9 @@ public class AssignmentManager extends ZooKeeperListener {
                 "Error deleting OFFLINED node in ZK for transition ZK node ("
                     + encodedRegionName + ")", e);
           }
-          synchronized (this.regionsInTransition) {
-            this.regionsInTransition.remove(plan.getRegionInfo()
-                .getEncodedName());
-          }
+          // no lock concurrent ok -> sequentially consistent
+          this.regionsInTransition.remove(plan.getRegionInfo().getEncodedName());
+
           synchronized (this.regions) {
             this.regions.put(plan.getRegionInfo(), plan.getDestination());
             addToServers(plan.getDestination(), plan.getRegionInfo());
@@ -1979,6 +1999,7 @@ public class AssignmentManager extends ZooKeeperListener {
     unassign(region, false);
   }
 
+
   /**
    * Unassigns the specified region.
    * <p>
@@ -2011,10 +2032,13 @@ public class AssignmentManager extends ZooKeeperListener {
     // Grab the state of this region and synchronize on it
     RegionState state;
     int versionOfClosingNode = -1;
-    synchronized (regionsInTransition) {
+    // We need a lock here as we're going to do a put later and we don't want multiple states
+    //  creation
+    ReentrantLock lock = locker.acquireLock(encodedName);
+    try {
       state = regionsInTransition.get(encodedName);
       if (state == null) {
-         // Create the znode in CLOSING state
+        // Create the znode in CLOSING state
         try {
           versionOfClosingNode = ZKAssign.createNodeClosing(
             master.getZooKeeper(), region, master.getServerName());
@@ -2067,7 +2091,10 @@ public class AssignmentManager extends ZooKeeperListener {
           "already in transition (" + state.getState() + ", force=" + force + ")");
         return;
       }
-    } 
+    } finally {
+      lock.unlock();
+    }
+
     // Send CLOSE RPC
     ServerName server = null;
     synchronized (this.regions) {
@@ -2076,21 +2103,25 @@ public class AssignmentManager extends ZooKeeperListener {
     // ClosedRegionhandler can remove the server from this.regions
     if (server == null) {
       // Possibility of disable flow removing from RIT.
-      synchronized (regionsInTransition) {
+      lock = locker.acquireLock(encodedName);
+      try {
         state = regionsInTransition.get(encodedName);
         if (state != null) {
           // remove only if the state is PENDING_CLOSE or CLOSING
-          State presentState = state.getState();
-          if (presentState == State.PENDING_CLOSE
-              || presentState == State.CLOSING) {
+          RegionState.State presentState = state.getState();
+          if (presentState == RegionState.State.PENDING_CLOSE
+              || presentState == RegionState.State.CLOSING) {
             this.regionsInTransition.remove(encodedName);
           }
         }
+      } finally {
+        lock.unlock();
       }
       // delete the node. if no node exists need not bother.
       deleteClosingOrClosedNode(region);
       return;
     }
+
     try {
       // TODO: We should consider making this look more like it does for the
       // region open where we catch all throwables and never abort
@@ -2117,9 +2148,8 @@ public class AssignmentManager extends ZooKeeperListener {
               + region.getTableNameAsString()
               + " to DISABLED state the region " + region
               + " was offlined but the table was in DISABLING state");
-          synchronized (this.regionsInTransition) {
             this.regionsInTransition.remove(region.getEncodedName());
-          }
+
           // Remove from the regionsMap
           synchronized (this.regions) {
             this.regions.remove(region);
@@ -2388,6 +2418,12 @@ public class AssignmentManager extends ZooKeeperListener {
       }
     }
 
+    /**
+     *
+     * @param timeout How long to wait.
+     * @return true if done.
+     */
+    @Override
     protected boolean waitUntilDone(final long timeout)
     throws InterruptedException {
       Set<HRegionInfo> regionSet = new HashSet<HRegionInfo>();
@@ -2467,50 +2503,43 @@ public class AssignmentManager extends ZooKeeperListener {
     // that if it returns without an exception that there was a period of time
     // with no regions in transition from the point-of-view of the in-memory
     // state of the Master.
-    long startTime = System.currentTimeMillis();
-    long remaining = timeout;
-    synchronized (regionsInTransition) {
-      while (regionsInTransition.size() > 0 && !this.master.isStopped()
-          && remaining > 0) {
-        regionsInTransition.wait(remaining);
-        remaining = timeout - (System.currentTimeMillis() - startTime);
-      }
+    final long endTime = System.currentTimeMillis() + timeout;
+
+    while (!this.master.isStopped() && !regionsInTransition.isEmpty() &&
+      endTime > System.currentTimeMillis()) {
+      regionsInTransition.waitForUpdate(100);
     }
+
     return regionsInTransition.isEmpty();
   }
 
   /**
    * Wait until no regions from set regions are in transition.
    * @param timeout How long to wait.
-   * @param regions set of regions to wait for
-   * @return True if nothing in regions in transition.
+   * @param regions set of regions to wait for. It will be modified by this method.
+   * @return True if none of the regions in the set is in transition
    * @throws InterruptedException
    */
   boolean waitUntilNoRegionsInTransition(final long timeout, Set<HRegionInfo> regions)
-  throws InterruptedException {
-    // Blocks until there are no regions in transition.
-    long startTime = System.currentTimeMillis();
-    long remaining = timeout;
-    boolean stillInTransition = true;
-    synchronized (regionsInTransition) {
-      while (regionsInTransition.size() > 0 && !this.master.isStopped() &&
-          remaining > 0 && stillInTransition) {
-        int count = 0;
-        for (RegionState rs : regionsInTransition.values()) {
-          if (regions.contains(rs.getRegion())) {
-            count++;
-            break;
-          }
+    throws InterruptedException {
+    final long endTime = System.currentTimeMillis() + timeout;
+
+    // We're not synchronizing on regionsInTransition now because we don't use any iterator.
+    while (!regions.isEmpty() && !this.master.isStopped() && endTime > System.currentTimeMillis()) {
+      Iterator<HRegionInfo> regionInfoIterator = regions.iterator();
+      while (regionInfoIterator.hasNext()) {
+        HRegionInfo hri = regionInfoIterator.next();
+        if (!regionsInTransition.containsKey(hri.getEncodedName())) {
+          regionInfoIterator.remove();
         }
-        if (count == 0) {
-          stillInTransition = false;
-          break;
-        }
-        regionsInTransition.wait(remaining);
-        remaining = timeout - (System.currentTimeMillis() - startTime);
+      }
+
+      if (!regions.isEmpty()) {
+        regionsInTransition.waitForUpdate(100);
       }
     }
-    return stillInTransition;
+
+    return regions.isEmpty();
   }
 
   /**
@@ -2810,10 +2839,13 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * @return A copy of the Map of regions currently in transition.
    */
-  public NavigableMap<String, RegionState> getRegionsInTransition() {
-    synchronized (this.regionsInTransition) {
-      return new TreeMap<String, RegionState>(this.regionsInTransition);
-    }
+  public NavigableMap<String, RegionState> copyRegionsInTransition() {
+    // no lock concurrent access ok
+    return regionsInTransition.copyMap();
+  }
+
+  NotifiableConcurrentSkipListMap<String, RegionState> getRegionsInTransition() {
+    return regionsInTransition;
   }
 
   /**
@@ -2830,8 +2862,7 @@ public class AssignmentManager extends ZooKeeperListener {
     long oldestRITTime = 0;
     int ritThreshold = this.master.getConfiguration().
       getInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 60000);
-    for (Map.Entry<String, RegionState> e : this.regionsInTransition.
-        entrySet()) {
+    for (Map.Entry<String, RegionState> e : this.regionsInTransition.copyEntrySet()) {
       totalRITs++;
       long ritTime = currentTime - e.getValue().getStamp();
       if (ritTime > ritThreshold) { // more than the threshold
@@ -2852,9 +2883,9 @@ public class AssignmentManager extends ZooKeeperListener {
    * @return True if regions in transition.
    */
   public boolean isRegionsInTransition() {
-    synchronized (this.regionsInTransition) {
-      return !this.regionsInTransition.isEmpty();
-    }
+    // no lock concurrent access ok: we could imagine that someone is currently going to remove
+    //  it or add a region, but it's sequentially consistent.
+    return !(this.regionsInTransition.isEmpty());
   }
 
   /**
@@ -2863,9 +2894,9 @@ public class AssignmentManager extends ZooKeeperListener {
    * RegionState
    */
   public RegionState isRegionInTransition(final HRegionInfo hri) {
-    synchronized (this.regionsInTransition) {
-      return this.regionsInTransition.get(hri.getEncodedName());
-    }
+    // no lock concurrent access ok: we could imagine that someone is currently going to remove
+    //  it or add it, but it's sequentially consistent.
+    return this.regionsInTransition.get(hri.getEncodedName());
   }
 
   /**
@@ -3004,18 +3035,16 @@ public class AssignmentManager extends ZooKeeperListener {
       if (this.bulkAssign) return;
       boolean noRSAvailable = this.serverManager.createDestinationServersList().isEmpty();
 
-      synchronized (regionsInTransition) {
-        // Iterate all regions in transition checking for time outs
-        long now = System.currentTimeMillis();
-        for (RegionState regionState : regionsInTransition.values()) {
-          if (regionState.getStamp() + timeout <= now) {
-           //decide on action upon timeout
-            actOnTimeOut(regionState);
-          } else if (this.allRegionServersOffline && !noRSAvailable) {
-            // if some RSs just came back online, we can start the
-            // the assignment right away
-            actOnTimeOut(regionState);
-          }
+      // Iterate all regions in transition checking for time outs
+      long now = System.currentTimeMillis();
+      // no lock concurrent access ok: we will be working on a copy, and it's java-valid to do
+      //  a copy while another thread is adding/removing items
+      for (RegionState regionState : regionsInTransition.copyValues()) {
+        if (regionState.getStamp() + timeout <= now ||
+          (this.allRegionServersOffline && !noRSAvailable)) {
+          //decide on action upon timeout or, if some RSs just came back online, we can start the
+          // the assignment
+          actOnTimeOut(regionState);
         }
       }
       setAllRegionServersOffline(noRSAvailable);
@@ -3203,11 +3232,11 @@ public class AssignmentManager extends ZooKeeperListener {
     // See if any of the regions that were online on this server were in RIT
     // If they are, normal timeouts will deal with them appropriately so
     // let's skip a manual re-assignment.
-    synchronized (regionsInTransition) {
-      for (RegionState region : this.regionsInTransition.values()) {
-        if (deadRegions.remove(region.getRegion())) {
-          rits.add(region);
-        }
+    // no lock concurrent access ok: we will be working on a copy, and it's java-valid to do
+    //  a copy while another thread is adding/removing items
+    for (RegionState region : this.regionsInTransition.copyValues()) {
+      if (deadRegions.remove(region.getRegion())) {
+        rits.add(region);
       }
     }
     return rits;

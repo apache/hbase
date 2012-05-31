@@ -100,7 +100,7 @@ public class MXBeanImpl implements MXBean {
     List<RegionsInTransitionInfo> info =
         new ArrayList<RegionsInTransitionInfo>();
     for (final Entry<String, RegionState> entry :
-      master.getAssignmentManager().getRegionsInTransition().entrySet()) {
+      master.getAssignmentManager().copyRegionsInTransition().entrySet()) {
       RegionsInTransitionInfo innerinfo = new RegionsInTransitionInfo() {
 
         @Override

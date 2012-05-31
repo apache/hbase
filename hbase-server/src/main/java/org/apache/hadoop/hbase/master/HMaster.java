@@ -1560,7 +1560,7 @@ Server {
       this.serverManager.getDeadServers(),
       this.serverName,
       backupMasters,
-      this.assignmentManager.getRegionsInTransition(),
+      this.assignmentManager.copyRegionsInTransition(),
       this.getCoprocessors());
   }
 

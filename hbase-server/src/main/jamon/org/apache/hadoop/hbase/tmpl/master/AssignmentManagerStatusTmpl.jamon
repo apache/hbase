@@ -32,7 +32,7 @@ AssignmentManager assignmentManager;
 int limit = 100;
 </%args>
 <%java>
-Map<String, RegionState> rit = assignmentManager.getRegionsInTransition();
+Map<String, RegionState> rit = assignmentManager.copyRegionsInTransition();
 // process the map to find region in transition details
 Configuration conf = HBaseConfiguration.create();
 int ritThreshold = conf.getInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 60000);

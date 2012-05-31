@@ -974,7 +974,7 @@ public class TestMasterObserver {
     // wait for assignments to finish
     AssignmentManager mgr = master.getAssignmentManager();
     Collection<AssignmentManager.RegionState> transRegions =
-        mgr.getRegionsInTransition().values();
+        mgr.copyRegionsInTransition().values();
     for (AssignmentManager.RegionState state : transRegions) {
       mgr.waitOnRegionToClearRegionsInTransition(state.getRegion());
     }

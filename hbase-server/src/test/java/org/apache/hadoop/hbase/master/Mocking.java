@@ -67,21 +67,41 @@ public class Mocking {
       Bytes.toBytes(sn.getStartcode())));
     return new Result(kvs);
   }
-  
-    
+
+
   /**
-   * @param sn
-   *          ServerName to use making startcode and server in meta
-   * @param hri
-   *          Region to serialize into HRegionInfo
+   * @param sn  ServerName to use making startcode and server in meta
+   * @param hri Region to serialize into HRegionInfo
    * @return A mocked up Result that fakes a Get on a row in the <code>.META.</code> table.
    * @throws IOException
    */
   static Result getMetaTableRowResultAsSplitRegion(final HRegionInfo hri, final ServerName sn)
-      throws IOException {
+    throws IOException {
     hri.setOffline(true);
     hri.setSplit(true);
     return getMetaTableRowResult(hri, sn);
+  }
+
+
+  static void waitForRegionPendingOpenInRIT(AssignmentManager am, String encodedName)
+    throws InterruptedException {
+    // We used to do a check like this:
+    //!Mocking.verifyRegionState(this.watcher, REGIONINFO, EventType.M_ZK_REGION_OFFLINE)) {
+    // There is a race condition with this: because we may do the transition to
+    // RS_ZK_REGION_OPENING before the RIT is internally updated. We need to wait for the
+    // RIT to be as we need it to be instead. This cannot happen in a real cluster as we
+    // update the RIT before sending the openRegion request.
+
+    boolean wait = true;
+    while (wait) {
+      AssignmentManager.RegionState state = am.getRegionsInTransition().get(encodedName);
+      if (state != null && state.isPendingOpen()){
+        wait = false;
+      } else {
+        Thread.sleep(1);
+      }
+    }
+
   }
 
   /**
@@ -92,13 +112,12 @@ public class Mocking {
    * @throws KeeperException
    * @throws DeserializationException 
    */
-  static void fakeRegionServerRegionOpenInZK(final ZooKeeperWatcher w,
+  static void fakeRegionServerRegionOpenInZK(HMaster master,  final ZooKeeperWatcher w,
       final ServerName sn, final HRegionInfo hri)
-  throws KeeperException, DeserializationException {
-    // Wait till we see the OFFLINE zk node before we proceed.
-    while (!verifyRegionState(w, hri, EventType.M_ZK_REGION_OFFLINE)) {
-      Threads.sleep(1);
-    }
+    throws KeeperException, DeserializationException, InterruptedException {
+    // Wait till the we region is ready to be open in RIT.
+    waitForRegionPendingOpenInRIT(master.getAssignmentManager(), hri.getEncodedName());
+
     // Get current versionid else will fail on transition from OFFLINE to OPENING below
     int versionid = ZKAssign.getVersion(w, hri);
     assertNotSame(-1, versionid);

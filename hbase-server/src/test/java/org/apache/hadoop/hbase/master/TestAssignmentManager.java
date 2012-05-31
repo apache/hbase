@@ -191,10 +191,8 @@ public class TestAssignmentManager {
       int versionid =
         ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
       assertNotSame(versionid, -1);
-      while (!Mocking.verifyRegionState(this.watcher, REGIONINFO,
-          EventType.M_ZK_REGION_OFFLINE)) {
-        Threads.sleep(1);
-      }
+      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
+
       // Get current versionid else will fail on transition from OFFLINE to
       // OPENING below
       versionid = ZKAssign.getVersion(this.watcher, REGIONINFO);
@@ -235,10 +233,8 @@ public class TestAssignmentManager {
         ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
       assertNotSame(versionid, -1);
       am.gate.set(false);
-      while (!Mocking.verifyRegionState(this.watcher, REGIONINFO,
-          EventType.M_ZK_REGION_OFFLINE)) {
-        Threads.sleep(1);
-      }
+      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
+
       // Get current versionid else will fail on transition from OFFLINE to
       // OPENING below
       versionid = ZKAssign.getVersion(this.watcher, REGIONINFO);
@@ -278,10 +274,8 @@ public class TestAssignmentManager {
       int versionid =
         ZKAssign.transitionNodeClosed(this.watcher, REGIONINFO, SERVERNAME_A, -1);
       assertNotSame(versionid, -1);
-      while (!Mocking.verifyRegionState(this.watcher, REGIONINFO,
-          EventType.M_ZK_REGION_OFFLINE)) {
-        Threads.sleep(1);
-      }
+      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
+
       am.gate.set(false);
       // Get current versionid else will fail on transition from OFFLINE to
       // OPENING below
@@ -324,7 +318,7 @@ public class TestAssignmentManager {
    */
   @Test
   public void testBalance()
-  throws IOException, KeeperException, DeserializationException {
+    throws IOException, KeeperException, DeserializationException, InterruptedException {
     // Create and startup an executor.  This is used by AssignmentManager
     // handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("testBalanceExecutor");
@@ -360,9 +354,8 @@ public class TestAssignmentManager {
       // balancer.  The zk node will be OFFLINE waiting for regionserver to
       // transition it through OPENING, OPENED.  Wait till we see the OFFLINE
       // zk node before we proceed.
-      while (!Mocking.verifyRegionState(this.watcher, REGIONINFO, EventType.M_ZK_REGION_OFFLINE)) {
-        Threads.sleep(1);
-      }
+      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
+
       // Get current versionid else will fail on transition from OFFLINE to OPENING below
       versionid = ZKAssign.getVersion(this.watcher, REGIONINFO);
       assertNotSame(-1, versionid);
@@ -686,12 +679,12 @@ public class TestAssignmentManager {
   @Test
   public void testRegionPlanIsUpdatedWhenRegionFailsToOpen() throws IOException, KeeperException,
       ServiceException, InterruptedException {
+    this.server.getConfiguration().setClass(
+      HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockedLoadBalancer.class,
+      LoadBalancer.class);
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
+      this.server, this.serverManager);
     try {
-      this.server.getConfiguration().setClass(
-          HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockedLoadBalancer.class,
-          LoadBalancer.class);
-      AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
-          this.server, this.serverManager);
       // Boolean variable used for waiting until randomAssignment is called and
       // new
       // plan is generated.
@@ -738,12 +731,16 @@ public class TestAssignmentManager {
       // be new plan.
       assertNotSame("Same region plan should not come", regionPlan,
           newRegionPlan);
-      assertTrue("Destnation servers should be different.", !(regionPlan
+      assertTrue("Destination servers should be different.", !(regionPlan
           .getDestination().equals(newRegionPlan.getDestination())));
+
+      Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
     } finally {
       this.server.getConfiguration().setClass(
           HConstants.HBASE_MASTER_LOADBALANCER_CLASS, DefaultLoadBalancer.class,
           LoadBalancer.class);
+      am.getExecutorService().shutdown();
+      am.shutdown();
     }
   }
   

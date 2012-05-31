@@ -60,6 +60,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Standup the master and fake it to test various aspects of master function.
@@ -71,6 +73,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestMasterNoCluster {
+  private static Logger LOG = LoggerFactory.getLogger(TestMasterNoCluster.class);
   private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
 
   @BeforeClass
@@ -244,6 +247,9 @@ public class TestMasterNoCluster {
   public void testCatalogDeploys()
   throws IOException, KeeperException, InterruptedException, DeserializationException, ServiceException {
     final Configuration conf = TESTUTIL.getConfiguration();
+    conf.setInt("hbase.master.wait.on.regionservers.mintostart", 1);
+    conf.setInt("hbase.master.wait.on.regionservers.maxtostart", 1);
+
     final long now = System.currentTimeMillis();
     // Name for our single mocked up regionserver.
     final ServerName sn = new ServerName("0.example.org", 0, now);
@@ -291,10 +297,13 @@ public class TestMasterNoCluster {
       }
     };
     master.start();
+    LOG.info("Master has started");
 
     try {
       // Wait till master is up ready for RPCs.
       while (!master.isRpcServerOpen()) Threads.sleep(10);
+      LOG.info("RpcServerOpen has started");
+
       // Fake master that there is a regionserver out there.  Report in.
       RegionServerStartupRequest.Builder request = RegionServerStartupRequest.newBuilder();
       request.setPort(rs0.getServerName().getPort());
@@ -317,8 +326,11 @@ public class TestMasterNoCluster {
       // region open, master will have set an unassigned znode for the region up
       // into zk for the regionserver to transition.  Lets do that now to
       // complete fake of a successful open.
-      Mocking.fakeRegionServerRegionOpenInZK(rs0.getZooKeeper(),
+      Mocking.fakeRegionServerRegionOpenInZK(master, rs0.getZooKeeper(),
         rs0.getServerName(), HRegionInfo.ROOT_REGIONINFO);
+      LOG.info("fakeRegionServerRegionOpenInZK has started");
+
+
       // Need to set root location as r1.  Usually the regionserver does this
       // when its figured it just opened the root region by setting the root
       // location up into zk.  Since we're mocking regionserver, need to do this
@@ -326,7 +338,7 @@ public class TestMasterNoCluster {
       RootRegionTracker.setRootLocation(rs0.getZooKeeper(), rs0.getServerName());
       // Do same transitions for .META. (presuming master has by now assigned
       // .META. to rs1).
-      Mocking.fakeRegionServerRegionOpenInZK(rs0.getZooKeeper(),
+      Mocking.fakeRegionServerRegionOpenInZK(master, rs0.getZooKeeper(),
         rs0.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
       // Now trigger our mock regionserver to start returning a row when we
       // go to get .META. entry in -ROOT-.  We do it by setting into

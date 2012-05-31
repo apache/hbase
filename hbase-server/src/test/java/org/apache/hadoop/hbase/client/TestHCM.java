@@ -158,8 +158,8 @@ public class TestHCM {
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
 
     // We can wait for all regions to be onlines, that makes log reading easier when debugging
-    while (!TEST_UTIL.getMiniHBaseCluster().getMaster().
-      getAssignmentManager().getRegionsInTransition().isEmpty()) {
+    while (TEST_UTIL.getMiniHBaseCluster().getMaster().
+      getAssignmentManager().isRegionsInTransition()) {
     }
 
     // Now moving the region to the second server

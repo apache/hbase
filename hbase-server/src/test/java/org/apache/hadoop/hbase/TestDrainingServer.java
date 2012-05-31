@@ -185,6 +185,7 @@ public class TestDrainingServer {
    */
   @Test  (timeout=30000)
   public void testDrainingServerWithAbort() throws KeeperException, Exception {
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
 
     // Ensure a stable env
     TEST_UTIL.getHBaseAdmin().balanceSwitch(false);
@@ -204,7 +205,7 @@ public class TestDrainingServer {
     final int regionsOnDrainingServer = drainingServer.getNumberOfOnlineRegions();
     Assert.assertTrue(regionsOnDrainingServer > 0);
 
-    ServerManager sm = TEST_UTIL.getHBaseCluster().getMaster().getServerManager();
+    ServerManager sm = master.getServerManager();
 
     Collection<HRegion> regionsBefore = drainingServer.
       getCopyOfOnlineRegionsSortedBySize().values();
@@ -221,9 +222,9 @@ public class TestDrainingServer {
 
       Assert.assertEquals("Nothing should have happened here.", regionsOnDrainingServer,
         drainingServer.getNumberOfOnlineRegions());
-      Assert.assertTrue("We should not have regions in transition here.",
-        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
-          getRegionsInTransition().isEmpty() );
+      Assert.assertFalse("We should not have regions in transition here. List is: "+
+        master.getAssignmentManager().copyRegionsInTransition(),
+        master.getAssignmentManager().isRegionsInTransition() );
 
       // Kill a few regionservers.
       for (int aborted = 0; aborted <= 2; aborted++) {

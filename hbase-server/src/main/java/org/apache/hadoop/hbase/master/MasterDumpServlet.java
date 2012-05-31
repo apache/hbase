@@ -105,7 +105,7 @@ public class MasterDumpServlet extends StateDumpServlet {
 
   private void dumpRIT(HMaster master, PrintWriter out) {
     NavigableMap<String, RegionState> regionsInTransition =
-      master.getAssignmentManager().getRegionsInTransition();
+      master.getAssignmentManager().copyRegionsInTransition();
     for (Map.Entry<String, RegionState> e : regionsInTransition.entrySet()) {
       String rid = e.getKey();
       RegionState rs = e.getValue();
