@@ -20,12 +20,10 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Context that holds the various dictionaries for compression in HLog.
  */
-@InterfaceAudience.Private
 class CompressionContext {
   final Dictionary regionDict;
   final Dictionary tableDict;
