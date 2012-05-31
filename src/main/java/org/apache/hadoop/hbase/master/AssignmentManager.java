@@ -387,18 +387,19 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     // Run through all regions.  If they are not assigned and not in RIT, then
     // its a clean cluster startup, else its a failover.
-    for (Map.Entry<HRegionInfo, ServerName> e: this.regions.entrySet()) {
-      if (!e.getKey().isMetaTable()
-          && e.getValue() != null) {
-        LOG.debug("Found " + e + " out on cluster");
-        this.failover = true;
-        break;
-      }
-      if (nodes.contains(e.getKey().getEncodedName())) {
-        LOG.debug("Found " + e.getKey().getRegionNameAsString() + " in RITs");
-        // Could be a meta region.
-        this.failover = true;
-        break;
+    synchronized (this.regions) {
+      for (Map.Entry<HRegionInfo, ServerName> e : this.regions.entrySet()) {
+        if (!e.getKey().isMetaTable() && e.getValue() != null) {
+          LOG.debug("Found " + e + " out on cluster");
+          this.failover = true;
+          break;
+        }
+        if (nodes.contains(e.getKey().getEncodedName())) {
+          LOG.debug("Found " + e.getKey().getRegionNameAsString() + " in RITs");
+          // Could be a meta region.
+          this.failover = true;
+          break;
+        }
       }
     }
 
@@ -2416,8 +2417,10 @@ public class AssignmentManager extends ZooKeeperListener {
         // add only if region not in disabled and enabling table
         if (false == checkIfRegionBelongsToDisabled(regionInfo)
             && false == checkIfRegionsBelongsToEnabling(regionInfo)) {
-          regions.put(regionInfo, regionLocation);
-          addToServers(regionLocation, regionInfo);
+          synchronized (this.regions) {
+            regions.put(regionInfo, regionLocation);
+            addToServers(regionLocation, regionInfo);            
+          }
         }
         addTheTablesInPartialState(this.disablingTables, this.enablingTables, regionInfo,
             tableName);
@@ -3032,7 +3035,6 @@ public class AssignmentManager extends ZooKeeperListener {
    * Run through remaining regionservers and unassign all catalog regions.
    */
   void unassignCatalogRegions() {
-    this.servers.entrySet();
     synchronized (this.regions) {
       for (Map.Entry<ServerName, Set<HRegionInfo>> e: this.servers.entrySet()) {
         Set<HRegionInfo> regions = e.getValue();
