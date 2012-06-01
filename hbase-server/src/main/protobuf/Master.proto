@@ -26,6 +26,32 @@ option optimize_for = SPEED;
 
 import "hbase.proto";
 
+/* Column-level protobufs */
+
+message AddColumnRequest {
+  required bytes tableName = 1;
+  required ColumnFamilySchema columnFamilies = 2;
+}
+
+message AddColumnResponse {
+}
+
+message DeleteColumnRequest {
+  required bytes tableName = 1;
+  required bytes columnName = 2;
+}
+
+message DeleteColumnResponse {
+}
+
+message ModifyColumnRequest {
+  required bytes tableName = 1;
+  required ColumnFamilySchema columnFamilies = 2;
+}
+
+message ModifyColumnResponse {
+}
+
 /* Region-level Protos */
 
 message MoveRegionRequest {
@@ -49,6 +75,52 @@ message UnassignRegionRequest {
 }
 
 message UnassignRegionResponse {
+}
+
+message OfflineRegionRequest {
+  required RegionSpecifier region = 1;
+}
+
+message OfflineRegionResponse {
+}
+
+/* Table-level protobufs */
+
+message CreateTableRequest {
+  required TableSchema tableSchema = 1;
+  repeated bytes splitKeys = 2;
+}
+
+message CreateTableResponse {
+}
+
+message DeleteTableRequest {
+  required bytes tableName = 1;
+}
+
+message DeleteTableResponse {
+}
+
+message EnableTableRequest {
+  required bytes tableName = 1;
+}
+
+message EnableTableResponse {
+}
+
+message DisableTableRequest {
+  required bytes tableName = 1;
+}
+
+message DisableTableResponse {
+}
+
+message ModifyTableRequest {
+  required bytes tableName = 1;
+  required TableSchema tableSchema = 2;
+}
+
+message ModifyTableResponse {
 }
 
 /* Cluster-level protobufs */
@@ -88,7 +160,36 @@ message SetBalancerRunningResponse {
   optional bool prevBalanceValue = 1;
 }
 
+message GetSchemaAlterStatusRequest {
+  required bytes tableName = 1;
+}
+
+message GetSchemaAlterStatusResponse {
+  optional uint32 yetToUpdateRegions = 1;
+  optional uint32 totalRegions = 2;
+}
+
+message GetTableDescriptorsRequest {
+  repeated string tableNames = 1;
+}
+
+message GetTableDescriptorsResponse {
+  repeated TableSchema tableSchema = 1;
+}
+
 service MasterService {
+   /** Adds a column to the specified table. */
+  rpc addColumn(AddColumnRequest)
+    returns(AddColumnResponse);
+
+  /** Deletes a column from the specified table. Table must be disabled. */
+  rpc deleteColumn(DeleteColumnRequest)
+    returns(DeleteColumnResponse);
+
+  /** Modifies an existing column on the specified table. */
+  rpc modifyColumn(ModifyColumnRequest)
+    returns(ModifyColumnResponse);
+
   /** Move the region region to the destination server. */
   rpc moveRegion(MoveRegionRequest)
     returns(MoveRegionResponse);
@@ -105,6 +206,35 @@ service MasterService {
    */
   rpc unassignRegion(UnassignRegionRequest)
     returns(UnassignRegionResponse);
+
+  /**
+   * Offline a region from the assignment manager's in-memory state.  The
+   * region should be in a closed state and there will be no attempt to
+   * automatically reassign the region as in unassign.   This is a special
+   * method, and should only be used by experts or hbck.
+   */
+  rpc offlineRegion(OfflineRegionRequest)
+    returns(OfflineRegionResponse);
+
+  /** Deletes a table */
+  rpc deleteTable(DeleteTableRequest)
+    returns(DeleteTableResponse);
+
+  /** Puts the table on-line (only needed if table has been previously taken offline) */
+  rpc enableTable(EnableTableRequest)
+    returns(EnableTableResponse);
+
+  /** Take table offline */
+  rpc disableTable(DisableTableRequest)
+    returns(DisableTableResponse);
+
+  /** Modify a table's metadata */
+  rpc modifyTable(ModifyTableRequest)
+    returns(ModifyTableResponse);
+
+  /** Creates a new table asynchronously */
+  rpc createTable(CreateTableRequest)
+    returns(CreateTableResponse);
 
   /** return true if master is available */
   rpc isMasterRunning(IsMasterRunningRequest)
@@ -132,4 +262,12 @@ service MasterService {
    */
   rpc setBalancerRunning(SetBalancerRunningRequest)
     returns(SetBalancerRunningResponse);
+
+  /** Used by the client to get the number of regions that have received the updated schema */
+  rpc getSchemaAlterStatus(GetSchemaAlterStatusRequest)
+    returns(GetSchemaAlterStatusResponse);
+
+  /** Get list of TableDescriptors for requested tables. */
+  rpc getTableDescriptors(GetTableDescriptorsRequest)
+    returns(GetTableDescriptorsResponse);
 }

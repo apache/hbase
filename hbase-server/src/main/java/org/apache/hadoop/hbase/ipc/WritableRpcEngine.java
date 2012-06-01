@@ -69,15 +69,6 @@ class WritableRpcEngine implements RpcEngine {
   // DEBUG log level does NOT emit RPC-level logging.
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.ipc.RPCEngine");
 
-  // For protobuf protocols, which use ServiceException, instead of IOException
-  protected static final Set<Class<?>>
-    PROTOBUF_PROTOCOLS = new HashSet<Class<?>>();
-
-  static {
-    PROTOBUF_PROTOCOLS.add(ClientProtocol.class);
-    PROTOBUF_PROTOCOLS.add(AdminProtocol.class);
-  }
-
   /* Cache a client using its socket factory as the hash key */
   static private class ClientCache {
     private Map<SocketFactory, HBaseClient> clients =

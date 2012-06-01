@@ -196,7 +196,7 @@ public class TestHBaseFsck {
       HRegionInfo hri) throws IOException, InterruptedException {
     try {
       HBaseFsckRepair.closeRegionSilentlyAndWait(admin, sn, hri);
-      admin.getMaster().offline(hri.getRegionName());
+      admin.offline(hri.getRegionName());
     } catch (IOException ioe) {
       LOG.warn("Got exception when attempting to offline region "
           + Bytes.toString(hri.getRegionName()), ioe);

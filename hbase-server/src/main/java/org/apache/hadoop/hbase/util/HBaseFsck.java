@@ -1198,7 +1198,7 @@ public class HBaseFsck {
     // first time we assume the rs's supports #offline.
     try {
       LOG.info("Offlining region " + regionString);
-      admin.getMaster().offline(regionName);
+      admin.offline(regionName);
     } catch (IOException ioe) {
       String notFoundMsg = "java.lang.NoSuchMethodException: " +
         "org.apache.hadoop.hbase.master.HMaster.offline([B)";

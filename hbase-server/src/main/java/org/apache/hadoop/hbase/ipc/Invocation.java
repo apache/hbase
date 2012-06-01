@@ -75,6 +75,7 @@ public class Invocation extends VersionedWritable implements Configurable {
     PROTOBUF_PROTOCOLS.add(ClientProtocol.class);
     PROTOBUF_PROTOCOLS.add(AdminProtocol.class);
     PROTOBUF_PROTOCOLS.add(RegionServerStatusProtocol.class);
+    PROTOBUF_PROTOCOLS.add(HMasterInterface.class);
   }
 
   private static byte RPC_VERSION = 1;

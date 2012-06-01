@@ -74,6 +74,19 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
@@ -493,8 +506,9 @@ public class HBaseAdmin implements Abortable, Closeable {
 
     execute(new MasterCallable<Void>() {
       @Override
-      public Void call() throws IOException {
-        master.createTable(desc, splitKeys);
+      public Void call() throws ServiceException {
+        CreateTableRequest request = RequestConverter.buildCreateTableRequest(desc, splitKeys);
+        master.createTable(null, request);
         return null;
       }
     });
@@ -525,8 +539,9 @@ public class HBaseAdmin implements Abortable, Closeable {
 
     execute(new MasterCallable<Void>() {
       @Override
-      public Void call() throws IOException {
-        master.deleteTable(tableName);
+      public Void call() throws ServiceException {
+        DeleteTableRequest req = RequestConverter.buildDeleteTableRequest(tableName);
+        master.deleteTable(null,req);
         return null;
       }
     });
@@ -554,19 +569,21 @@ public class HBaseAdmin implements Abortable, Closeable {
         // HMaster removes the table from its HTableDescriptors
         if (values == null || values.length == 0) {
           tableExists = false;
-          HTableDescriptor[] htds;
+          GetTableDescriptorsResponse htds;
           MasterKeepAliveConnection master = connection.getKeepAliveMaster();
           try {
-            htds = master.getHTableDescriptors();
+            GetTableDescriptorsRequest req =
+              RequestConverter.buildGetTableDescriptorsRequest(null);
+            htds = master.getTableDescriptors(null, req);
+          } catch (ServiceException se) {
+            throw ProtobufUtil.getRemoteException(se);
           } finally {
             master.close();
           }
-          if (htds != null && htds.length > 0) {
-            for (HTableDescriptor htd: htds) {
-              if (Bytes.equals(tableName, htd.getName())) {
-                tableExists = true;
-                break;
-              }
+          for (TableSchema ts : htds.getTableSchemaList()) {
+            if (Bytes.equals(tableName, ts.getName().toByteArray())) {
+              tableExists = true;
+              break;
             }
           }
           if (!tableExists) {
@@ -709,9 +726,10 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException {
     execute(new MasterCallable<Void>() {
       @Override
-      public Void call() throws IOException {
+      public Void call() throws ServiceException {
         LOG.info("Started enable of " + Bytes.toString(tableName));
-        master.enableTable(tableName);
+        EnableTableRequest req = RequestConverter.buildEnableTableRequest(tableName);
+        master.enableTable(null,req);
         return null;
       }
     });
@@ -778,9 +796,10 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void disableTableAsync(final byte [] tableName) throws IOException {
     execute(new MasterCallable<Void>() {
       @Override
-      public Void call() throws IOException {
+      public Void call() throws ServiceException {
         LOG.info("Started disable of " + Bytes.toString(tableName));
-        master.disableTable(tableName);
+        DisableTableRequest req = RequestConverter.buildDisableTableRequest(tableName);
+        master.disableTable(null,req);
         return null;
       }
     });
@@ -948,8 +967,14 @@ public class HBaseAdmin implements Abortable, Closeable {
     HTableDescriptor.isLegalTableName(tableName);
     return execute(new MasterCallable<Pair<Integer, Integer>>() {
       @Override
-      public Pair<Integer, Integer> call() throws IOException {
-        return master.getAlterStatus(tableName);
+      public Pair<Integer, Integer> call() throws ServiceException {
+        GetSchemaAlterStatusRequest req =
+          RequestConverter.buildGetSchemaAlterStatusRequest(tableName);
+        GetSchemaAlterStatusResponse ret = master.getSchemaAlterStatus(null,req);
+        Pair<Integer,Integer> pair =
+          new Pair<Integer,Integer>(
+            new Integer(ret.getYetToUpdateRegions()),new Integer(ret.getTotalRegions()));
+        return pair;
       }
     });
   }
@@ -979,8 +1004,9 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException {
     execute(new MasterCallable<Void>() {
       @Override
-      public Void call() throws IOException {
-        master.addColumn(tableName, column);
+      public Void call() throws ServiceException {
+        AddColumnRequest req = RequestConverter.buildAddColumnRequest(tableName, column);
+        master.addColumn(null,req);
         return null;
       }
     });
@@ -1011,8 +1037,9 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException {
     execute(new MasterCallable<Void>() {
       @Override
-      public Void call() throws IOException {
-        master.deleteColumn(tableName, columnName);
+      public Void call() throws ServiceException {
+        DeleteColumnRequest req = RequestConverter.buildDeleteColumnRequest(tableName, columnName);
+        master.deleteColumn(null,req);
         return null;
       }
     });
@@ -1045,8 +1072,9 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException {
     execute(new MasterCallable<Void>() {
       @Override
-      public Void call() throws IOException {
-        master.modifyColumn(tableName, descriptor);
+      public Void call() throws ServiceException {
+        ModifyColumnRequest req = RequestConverter.buildModifyColumnRequest(tableName, descriptor);
+        master.modifyColumn(null,req);
         return null;
       }
     });
@@ -1426,6 +1454,21 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
+   * Special method, only used by hbck.
+   */
+  public void offline(final byte [] regionName)
+  throws IOException {
+    MasterKeepAliveConnection master = connection.getKeepAliveMaster();
+    try {
+      master.offlineRegion(null,RequestConverter.buildOfflineRegionRequest(regionName));
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    } finally {
+      master.close();
+    }
+  }
+
+  /**
    * Turn the load balancer on or off.
    * @param b If true, enable balancer. If false, disable balancer.
    * @return Previous balancer value
@@ -1565,8 +1608,9 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException {
     execute(new MasterCallable<Void>() {
       @Override
-      public Void call() throws IOException {
-        master.modifyTable(tableName, htd);
+      public Void call() throws ServiceException {
+        ModifyTableRequest request = RequestConverter.buildModifyTableRequest(tableName, htd);
+        master.modifyTable(null, request);
         return null;
       }
     });

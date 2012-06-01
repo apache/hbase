@@ -26,7 +26,9 @@ import java.util.UUID;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Action;
@@ -78,8 +80,19 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.UnlockRowRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
@@ -857,6 +870,51 @@ public final class RequestConverter {
   }
 
   /**
+   * Create a protocol buffer AddColumnRequest
+   *
+   * @param tableName
+   * @param column
+   * @return an AddColumnRequest
+   */
+  public static AddColumnRequest buildAddColumnRequest(
+      final byte [] tableName, final HColumnDescriptor column) {
+    AddColumnRequest.Builder builder = AddColumnRequest.newBuilder();
+    builder.setTableName(ByteString.copyFrom(tableName));
+    builder.setColumnFamilies(column.convert());
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer DeleteColumnRequest
+   *
+   * @param tableName
+   * @param columnName
+   * @return a DeleteColumnRequest
+   */
+  public static DeleteColumnRequest buildDeleteColumnRequest(
+      final byte [] tableName, final byte [] columnName) {
+    DeleteColumnRequest.Builder builder = DeleteColumnRequest.newBuilder();
+    builder.setTableName(ByteString.copyFrom(tableName));
+    builder.setColumnName(ByteString.copyFrom(columnName));
+    return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer ModifyColumnRequest
+   *
+   * @param tableName
+   * @param column
+   * @return an ModifyColumnRequest
+   */
+  public static ModifyColumnRequest buildModifyColumnRequest(
+      final byte [] tableName, final HColumnDescriptor column) {
+    ModifyColumnRequest.Builder builder = ModifyColumnRequest.newBuilder();
+    builder.setTableName(ByteString.copyFrom(tableName));
+    builder.setColumnFamilies(column.convert());
+    return builder.build();
+  }
+
+  /**
    * Create a protocol buffer MoveRegionRequest
    *
    * @param encodedRegionName
@@ -880,7 +938,7 @@ public final class RequestConverter {
    * Create a protocol buffer AssignRegionRequest
    *
    * @param regionName
-   * @return An AssignRegionRequest
+   * @return an AssignRegionRequest
    */
   public static AssignRegionRequest buildAssignRegionRequest(final byte [] regionName) {
     AssignRegionRequest.Builder builder = AssignRegionRequest.newBuilder();
@@ -893,13 +951,125 @@ public final class RequestConverter {
    *
    * @param regionName
    * @param force
-   * @return An UnassignRegionRequest
+   * @return an UnassignRegionRequest
    */
   public static UnassignRegionRequest buildUnassignRegionRequest(
       final byte [] regionName, final boolean force) {
     UnassignRegionRequest.Builder builder = UnassignRegionRequest.newBuilder();
     builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME,regionName));
     builder.setForce(force);
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer OfflineRegionRequest
+   *
+   * @param regionName
+   * @return an OfflineRegionRequest
+   */
+  public static OfflineRegionRequest buildOfflineRegionRequest(final byte [] regionName) {
+    OfflineRegionRequest.Builder builder = OfflineRegionRequest.newBuilder();
+    builder.setRegion(buildRegionSpecifier(RegionSpecifierType.REGION_NAME,regionName));
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer DeleteTableRequest
+   *
+   * @param tableName
+   * @return a DeleteTableRequest
+   */
+  public static DeleteTableRequest buildDeleteTableRequest(final byte [] tableName) {
+    DeleteTableRequest.Builder builder = DeleteTableRequest.newBuilder();
+    builder.setTableName(ByteString.copyFrom(tableName));
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer EnableTableRequest
+   *
+   * @param tableName
+   * @return an EnableTableRequest
+   */
+  public static EnableTableRequest buildEnableTableRequest(final byte [] tableName) {
+    EnableTableRequest.Builder builder = EnableTableRequest.newBuilder();
+    builder.setTableName(ByteString.copyFrom(tableName));
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer DisableTableRequest
+   *
+   * @param tableName
+   * @return a DisableTableRequest
+   */
+  public static DisableTableRequest buildDisableTableRequest(final byte [] tableName) {
+    DisableTableRequest.Builder builder = DisableTableRequest.newBuilder();
+    builder.setTableName(ByteString.copyFrom(tableName));
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer CreateTableRequest
+   *
+   * @param hTableDesc
+   * @param splitKeys
+   * @return a CreateTableRequest
+   */
+  public static CreateTableRequest buildCreateTableRequest(
+      final HTableDescriptor hTableDesc, final byte [][] splitKeys) {
+    CreateTableRequest.Builder builder = CreateTableRequest.newBuilder();
+    builder.setTableSchema(hTableDesc.convert());
+    if (splitKeys != null) {
+      for (byte [] splitKey : splitKeys) {
+        builder.addSplitKeys(ByteString.copyFrom(splitKey));
+      }
+    }
+    return builder.build();
+  }
+
+
+  /**
+   * Creates a protocol buffer ModifyTableRequest
+   *
+   * @param table
+   * @param hTableDesc
+   * @return a ModifyTableRequest
+   */
+  public static ModifyTableRequest buildModifyTableRequest(
+      final byte [] table, final HTableDescriptor hTableDesc) {
+    ModifyTableRequest.Builder builder = ModifyTableRequest.newBuilder();
+    builder.setTableName(ByteString.copyFrom(table));
+    builder.setTableSchema(hTableDesc.convert());
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer GetSchemaAlterStatusRequest
+   *
+   * @param tableName
+   * @return a GetSchemaAlterStatusRequest
+   */
+  public static GetSchemaAlterStatusRequest buildGetSchemaAlterStatusRequest(final byte [] table) {
+    GetSchemaAlterStatusRequest.Builder builder = GetSchemaAlterStatusRequest.newBuilder();
+    builder.setTableName(ByteString.copyFrom(table));
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer GetTableDescriptorsRequest
+   *
+   * @param tableNames
+   * @return a GetTableDescriptorsRequest
+   */
+  public static GetTableDescriptorsRequest buildGetTableDescriptorsRequest(
+      final List<String> tableNames) {
+    GetTableDescriptorsRequest.Builder builder = GetTableDescriptorsRequest.newBuilder();
+    if (tableNames != null) {
+      for (String str : tableNames) {
+        builder.addTableNames(str);
+      }
+    }
     return builder.build();
   }
 
