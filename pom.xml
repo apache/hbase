@@ -483,7 +483,7 @@
           <configuration>
             <findbugsXmlOutput>true</findbugsXmlOutput>
             <xmlOutput>true</xmlOutput>
-            <excludeFilterFile>${parent.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+            <excludeFilterFile>${parent.basedir}/../dev-support/findbugs-exclude.xml</excludeFilterFile>
             <effort>Max</effort>
           </configuration>
         </plugin>
