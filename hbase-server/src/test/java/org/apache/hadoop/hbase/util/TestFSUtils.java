@@ -216,14 +216,15 @@ public class TestFSUtils {
   
   @Test
   public void testDeleteAndExists() throws Exception {
-    Configuration conf = HBaseConfiguration.create();
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    Configuration conf = htu.getConfiguration();
     conf.setBoolean(HConstants.ENABLE_DATA_FILE_UMASK, true);
     FileSystem fs = FileSystem.get(conf);
     FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // then that the correct file is created
     String file = UUID.randomUUID().toString();
-    Path p = new Path("temptarget" + File.separator + file);
-    Path p1 = new Path("temppath" + File.separator + file);
+    Path p = new Path(htu.getDataTestDir(), "temptarget" + File.separator + file);
+    Path p1 = new Path(htu.getDataTestDir(), "temppath" + File.separator + file);
     try {
       FSDataOutputStream out = FSUtils.create(fs, p, perms);
       out.close();
@@ -247,4 +248,3 @@ public class TestFSUtils {
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
-
