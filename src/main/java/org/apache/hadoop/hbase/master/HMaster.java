@@ -445,7 +445,7 @@ public class HMaster extends Thread implements HMasterInterface,
         HConstants.ZOOKEEPER_SESSION_EXPIRED_ABORT_PROCESS, true);
     // Set this property to set zk session timeout for master which is different
     // from what region servers use. The master's zk session timeout can be
-    // much shorter than region server's. It is easier to recycle master becuase
+    // much shorter than region server's. It is easier to recycle master because
     // it doesn't handle data. The region server can have an inflated zk session
     // timeout because they also rely on master to kill them if they miss any
     // heartbeat
@@ -1364,7 +1364,7 @@ public class HMaster extends Thread implements HMasterInterface,
       throw e;
     } catch (IOException e) {
       LOG.error("Cannot create table " + desc.getNameAsString() + 
-				" because of " + e.toString());
+        " because of " + e.toString());
       throw RemoteExceptionHandler.checkIOException(e);
     }
   }
@@ -1603,12 +1603,12 @@ public class HMaster extends Thread implements HMasterInterface,
     }
     else {
       List<MetaRegion> metaRegions = regionManager.getListOfOnlineMetaRegions();
-	for (MetaRegion mRegion: metaRegions) {
-		if (Bytes.equals(mRegion.getRegionInfo().getTableDesc().getName(), tableName)) {
-			result.add(new Pair<HRegionInfo, HServerAddress>
+      for (MetaRegion mRegion: metaRegions) {
+        if (Bytes.equals(mRegion.getRegionInfo().getTableDesc().getName(), tableName)) {
+          result.add(new Pair<HRegionInfo, HServerAddress>
               (mRegion.getRegionInfo(), mRegion.getServer()));
-		}
-	}
+        }
+      }
     }
     return result;
   }

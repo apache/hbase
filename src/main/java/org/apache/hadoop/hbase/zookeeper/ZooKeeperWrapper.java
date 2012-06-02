@@ -1413,6 +1413,7 @@ public class ZooKeeperWrapper implements Watcher {
           oldData = readZNode(znode, stat);
         } catch (IOException e) {
           LOG.error("Error reading data for " + znode);
+          abort("Error reading data for " + znode, e);
         }
         if(oldData == null) {
           LOG.debug("While creating UNASSIGNED region " + regionName + " exists with no data" );
@@ -1458,6 +1459,7 @@ public class ZooKeeperWrapper implements Watcher {
       oldData = readZNode(znode, stat);
     } catch (IOException e) {
       LOG.error("Error reading data for " + znode);
+      abort("Error reading data for " + znode, e);
     }
     // If there is no data in the ZNode, then update it
     if(oldData == null) {
@@ -1488,6 +1490,7 @@ public class ZooKeeperWrapper implements Watcher {
         writeZNode(znode, data, -1, true);
       } catch (IOException e) {
         LOG.error("Error writing data for " + znode + ", could not update state to " + (HBaseEventType.fromByte(data[0])));
+        abort("Error writing data for " + znode, e);
       }
     }
   }
@@ -1878,7 +1881,7 @@ public class ZooKeeperWrapper implements Watcher {
    */
   private void abort(String why, Throwable e) {
     LOG.error("<" + instanceName + "> is going to abort " +
-		"because " + why);
+      "because " + why);
     this.abortable.abort(why, e);
   }
 
