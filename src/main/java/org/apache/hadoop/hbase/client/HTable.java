@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 
@@ -85,7 +86,7 @@ public class HTable implements HTableInterface {
     new ThreadPoolExecutor(1, Integer.MAX_VALUE,
       60, TimeUnit.SECONDS,
       new SynchronousQueue<Runnable>(),
-      new DaemonThreadFactory());
+      new DaemonThreadFactory("htable-thread-"));
   static {
     ((ThreadPoolExecutor)multiPutThreadPool).allowCoreThreadTimeOut(true);
   }
@@ -1156,30 +1157,6 @@ public class HTable implements HTableInterface {
         }
       };
     }
-  }
-
-  static class DaemonThreadFactory implements ThreadFactory {
-        final ThreadGroup group;
-        int threadNumber = 1;
-        final String namePrefix;
-
-        DaemonThreadFactory() {
-            SecurityManager s = System.getSecurityManager();
-            group = (s != null)? s.getThreadGroup() :
-                                 Thread.currentThread().getThreadGroup();
-            namePrefix = "hbase-table-thread-";
-        }
-
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(group, r,
-                                  namePrefix + (threadNumber++),
-                                  0);
-            if (!t.isDaemon())
-                t.setDaemon(true);
-            if (t.getPriority() != Thread.NORM_PRIORITY)
-                t.setPriority(Thread.NORM_PRIORITY);
-            return t;
-        }
   }
 
   /**

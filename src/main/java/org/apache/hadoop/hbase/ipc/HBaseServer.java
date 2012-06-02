@@ -43,26 +43,29 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
 import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
@@ -282,6 +285,9 @@ public abstract class HBaseServer {
     private long cleanupInterval = 10000; //the minimum interval between
                                           //two cleanup runs
     private int backlogLength = conf.getInt("ipc.server.listen.queue.size", 128);
+    
+    /** The ipc deserialization thread pool */
+    protected ThreadPoolExecutor deserializationThreadPool;
 
     public Listener() throws IOException {
       address = new InetSocketAddress(bindAddress, port);
@@ -299,7 +305,34 @@ public abstract class HBaseServer {
       acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
       this.setName("IPC Server listener on " + port);
       this.setDaemon(true);
+      
+      // initialize the ipc deserializationThreadPool thread pool
+      int deserializationPoolMaxSize = conf.getInt("ipc.server.deserialization.threadPool.maxSize", 
+          Runtime.getRuntime().availableProcessors() + 1);
+      deserializationThreadPool = new ThreadPoolExecutor(
+          1, // the core pool size
+          deserializationPoolMaxSize, // the max pool size
+          60L, TimeUnit.SECONDS, // keep-alive time for each worker thread
+          new SynchronousQueue<Runnable>(), // direct handoffs
+          new DaemonThreadFactory("IPC-Deserialization"),
+          new RejectedExecutionHandler() {
+            @Override
+            public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+              try {
+                // The submission (listener) thread will be blocked until the thread pool frees up.
+                executor.getQueue().put(r);
+              } catch (InterruptedException e) {
+                throw new RejectedExecutionException(
+                    "Failed to requeue the rejected request because of ", e);
+              }
+            }
+          });
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Initialize the deserializationThreadPool with maxium " + 
+            deserializationPoolMaxSize + " threads");
+      }
     }
+
     /** cleanup connections from connectionList. Choose a random range
      * to scan and also have a limit on the number of the connections
      * that will be cleanedup per run. The criteria for cleanup is the time
@@ -365,10 +398,11 @@ public abstract class HBaseServer {
             iter.remove();
             try {
               if (key.isValid()) {
-                if (key.isAcceptable())
+                if (key.isAcceptable()) {
                   doAccept(key);
-                else if (key.isReadable())
-                  doRead(key);
+                } else if (key.isReadable()) {
+                  doAsyncRead(key);
+                }
               }
             } catch (IOException ignored) {
             }
@@ -390,11 +424,6 @@ public abstract class HBaseServer {
             closeCurrentConnection(key);
             cleanupConnections(true);
             try { Thread.sleep(60000); } catch (Exception ignored) {}
-      }
-        } catch (InterruptedException e) {
-          if (running) {                          // unexpected -- log it
-            LOG.info(getName() + " caught: " +
-                     StringUtils.stringifyException(e));
           }
         } catch (Exception e) {
           closeCurrentConnection(key);
@@ -419,6 +448,37 @@ public abstract class HBaseServer {
       }
     }
 
+    private void doAsyncRead(final SelectionKey readSelectionKey) {
+      unsetReadInterest(readSelectionKey);
+      
+      // submit the doRead request to the thread pool in order to deserialize the data in parallel
+      try {
+        deserializationThreadPool.submit(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              doRead(readSelectionKey);
+            } catch (InterruptedException e) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Caught: " + StringUtils.stringifyException(e) +
+                    " when processing " + readSelectionKey.attachment());
+              }
+            } finally {
+              setReadInterest(readSelectionKey);
+              // wake up the selector from the blocking function select()
+              selector.wakeup();
+            }
+          }
+        });
+      } catch (Throwable e) {
+        setReadInterest(readSelectionKey);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Caught " + e.getMessage() + " when processing the remote connection " +
+              readSelectionKey.attachment().toString());
+        }
+      }
+    }
+
     private void closeCurrentConnection(SelectionKey key) {
       if (key != null) {
         Connection c = (Connection)key.attachment();
@@ -438,7 +498,7 @@ public abstract class HBaseServer {
       Connection c;
       ServerSocketChannel server = (ServerSocketChannel) key.channel();
       // accept up to 10 connections
-      for (int i=0; i<10; i++) {
+      for (int i = 0; i < 10; i++) {
         SocketChannel channel = server.accept();
         if (channel==null) return;
 
@@ -1318,5 +1378,25 @@ public abstract class HBaseServer {
 
     int nBytes = initialRemaining - buf.remaining();
     return (nBytes > 0) ? nBytes : ret;
+  }
+  
+  /**
+   * Set the OP_READ interest for the selection key
+   * @param selectionKey
+   */
+  private static void setReadInterest(final SelectionKey selectionKey) {
+    synchronized (selectionKey) {
+      selectionKey.interestOps(selectionKey.interestOps() | SelectionKey.OP_READ);
+    }
+  }
+  
+  /**
+   * Unset the OP_READ interest for the selection key
+   * @param selectionKey
+   */
+  private static void unsetReadInterest(final SelectionKey selectionKey) {
+    synchronized (selectionKey) {
+      selectionKey.interestOps(selectionKey.interestOps() & (~SelectionKey.OP_READ));
+    }
   }
 }
