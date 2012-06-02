@@ -146,6 +146,7 @@ public class HRegionServer implements HRegionInterface,
   private static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg [] {};
   private static final String UNABLE_TO_READ_MASTER_ADDRESS_ERR_MSG =
       "Unable to read master address from ZooKeeper";
+  private static final ArrayList<Put> emptyPutArray = new ArrayList<Put>();
 
   // Set when a report to the master comes back with a message asking us to
   // shutdown.  Also set by call to stop when debugging or running unit tests
@@ -2923,14 +2924,20 @@ public class HRegionServer implements HRegionInterface,
 
       index++;
       if (index < size) {
-        // clear each regions list of Puts to save RAM except for the
-        // last one. We will lose the reference to the last one pretty
+        // remove the reference to the region list of Puts to save RAM except
+        // for the last one. We will lose the reference to the last one pretty
         // soon anyway; keep it for a little more, until we get back
         // to HBaseServer level, where we might need to pretty print
         // the MultiPut request for debugging slow/large puts.
         // Note: A single row "put" from client also end up in server
         // as a multiPut().
-        e.getValue().clear(); // clear some RAM
+        // We set the value to an empty array so taskmonitor can either get
+        //  the old value or an empty array. If we call clear() on the array,
+        //  then we might have a race condition where we're iterating over the
+        //  array at the same time we clear it (which throws an exception)
+        // This relies on the fact that Map.Entry.setValue() boils down to a
+        //   simple reference assignment, which is atomic
+        e.setValue(emptyPutArray); // clear some RAM
       }
     }
 
