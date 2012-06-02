@@ -242,7 +242,8 @@ public class Bytes {
   }
 
   /**
-   * Returns a new byte array, copied from the passed ByteBuffer.
+   * Returns a new byte array, copied from the passed ByteBuffer. Starts from the array offset
+   * of the buffer and copies bytes to the limit of the buffer.
    * @param bb A ByteBuffer
    * @return the byte array
    */
@@ -250,6 +251,19 @@ public class Bytes {
     int length = bb.limit();
     byte [] result = new byte[length];
     System.arraycopy(bb.array(), bb.arrayOffset(), result, 0, length);
+    return result;
+  }
+
+  /**
+   * Returns a new byte array, copied from the passed ByteBuffer. Starts from the current position
+   * in the buffer and copies all the remaining bytes to the limit of the buffer.
+   * @param bb A ByteBuffer
+   * @return the byte array
+   */
+  public static byte[] toBytesRemaining(ByteBuffer bb) {
+    int length = bb.remaining();
+    byte [] result = new byte[length];
+    System.arraycopy(bb.array(), bb.arrayOffset() + bb.position(), result, 0, length);
     return result;
   }
 
@@ -941,6 +955,15 @@ public class Bytes {
     }
     return (left == null || right == null || (left.length != right.length)
             ? false : compareTo(left, right) == 0);
+  }
+
+  public static boolean equals(final byte[] left, int leftOffset, int leftLength,
+      final byte[] right, int rightOffset, int rightLength) {
+    if (left == null && right == null) {
+      return true;
+    }
+    return (left == null || right == null || (leftLength != rightLength) ? false : compareTo(left,
+        leftOffset, leftLength, right, rightOffset, rightLength) == 0);
   }
 
   /**

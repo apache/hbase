@@ -2140,7 +2140,7 @@ public class HRegion implements HeapSize {
 
     splitsAndClosesLock.readLock().lock();
     try {
-      RowLock lock = isPut ? ((Put)w).getRowLock() : ((Delete)w).getRowLock();
+      RowLock lock = ((Mutation) w).getRowLock();
       Get get = new Get(row, lock);
       checkFamily(family);
       get.addColumn(family, qualifier);
@@ -2156,9 +2156,13 @@ public class HRegion implements HeapSize {
             && (expectedValue == null || expectedValue.length == 0)) {
           matches = true;
         } else if (result.size() == 1) {
-          //Compare the expected value with the actual value
-          byte [] actualValue = result.get(0).getValue();
-          matches = Bytes.equals(expectedValue, actualValue);
+          // Compare the expected value with the actual value without copying anything
+          KeyValue kv = result.get(0);
+          matches = Bytes.equals(
+              expectedValue, 0, expectedValue.length,
+              kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
+        } else {
+          throw new IOException("Internal error: more than one result returned for row/column");
         }
         //If matches put the new put or delete the new delete
         if (matches) {

@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
@@ -189,7 +190,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
     // Try null mutation
     List<Mutation> mutations = new ArrayList<Mutation>();
-    mutations.add(new Mutation(false, columnAname, null, true));
+    mutations.add(new Mutation(false, columnAname, null, true, HConstants.LATEST_TIMESTAMP));
     handler.mutateRow(tableAname, rowAname, mutations);
     TRowResult rowResult3 = handler.getRow(tableAname, rowAname).get(0);
     assertEquals(rowAname, rowResult3.row);
@@ -457,8 +458,8 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
    */
   private List<Mutation> getMutations2() {
     List<Mutation> mutations = new ArrayList<Mutation>();
-    mutations.add(new Mutation(false, columnAname, valueCname, true));
-    mutations.add(new Mutation(false, columnBname, valueDname, true));
+    mutations.add(new Mutation(false, columnAname, valueCname, true, HConstants.LATEST_TIMESTAMP));
+    mutations.add(new Mutation(false, columnBname, valueDname, true, HConstants.LATEST_TIMESTAMP));
     return mutations;
   }
 

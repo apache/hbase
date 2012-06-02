@@ -50,6 +50,8 @@ typedef binary Text
 typedef binary Bytes
 typedef i32    ScannerID
 
+const i64 LATEST_TIMESTAMP = 0x7fffffffffffffff;
+
 /**
  * TCell - Used to transport a cell value (byte[]) and the timestamp it was
  * stored with together as a result for get and getRow methods. This promotes
@@ -99,6 +101,7 @@ struct Mutation {
   2:Text column,
   3:Text value,
   4:bool writeToWAL = 1
+  5:i64 timestamp = LATEST_TIMESTAMP
 }
 
 /**

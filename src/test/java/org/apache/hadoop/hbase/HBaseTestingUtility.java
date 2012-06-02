@@ -1542,4 +1542,12 @@ REGION_LOOP:
   public void setFileSystemURI(String fsURI) {
     this.fsURI = fsURI;
   }
+
+  /**
+   * Sets the current thread name to the caller's method name. 
+   */
+  public static void setThreadNameFromMethod() {
+    String methodName = new Throwable().getStackTrace()[1].getMethodName();
+    Thread.currentThread().setName(methodName);
+  }
 }

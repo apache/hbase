@@ -37,6 +37,7 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
   private static final org.apache.thrift.protocol.TField COLUMN_FIELD_DESC = new org.apache.thrift.protocol.TField("column", org.apache.thrift.protocol.TType.STRING, (short)2);
   private static final org.apache.thrift.protocol.TField VALUE_FIELD_DESC = new org.apache.thrift.protocol.TField("value", org.apache.thrift.protocol.TType.STRING, (short)3);
   private static final org.apache.thrift.protocol.TField WRITE_TO_WAL_FIELD_DESC = new org.apache.thrift.protocol.TField("writeToWAL", org.apache.thrift.protocol.TType.BOOL, (short)4);
+  private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)5);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -48,13 +49,15 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
   public ByteBuffer column; // required
   public ByteBuffer value; // required
   public boolean writeToWAL; // required
+  public long timestamp; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     IS_DELETE((short)1, "isDelete"),
     COLUMN((short)2, "column"),
     VALUE((short)3, "value"),
-    WRITE_TO_WAL((short)4, "writeToWAL");
+    WRITE_TO_WAL((short)4, "writeToWAL"),
+    TIMESTAMP((short)5, "timestamp");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -77,6 +80,8 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
           return VALUE;
         case 4: // WRITE_TO_WAL
           return WRITE_TO_WAL;
+        case 5: // TIMESTAMP
+          return TIMESTAMP;
         default:
           return null;
       }
@@ -119,7 +124,8 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
   // isset id assignments
   private static final int __ISDELETE_ISSET_ID = 0;
   private static final int __WRITETOWAL_ISSET_ID = 1;
-  private BitSet __isset_bit_vector = new BitSet(2);
+  private static final int __TIMESTAMP_ISSET_ID = 2;
+  private BitSet __isset_bit_vector = new BitSet(3);
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -131,6 +137,8 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , "Text")));
     tmpMap.put(_Fields.WRITE_TO_WAL, new org.apache.thrift.meta_data.FieldMetaData("writeToWAL", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
+    tmpMap.put(_Fields.TIMESTAMP, new org.apache.thrift.meta_data.FieldMetaData("timestamp", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(Mutation.class, metaDataMap);
   }
@@ -140,13 +148,16 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
 
     this.writeToWAL = true;
 
+    this.timestamp = 9223372036854775807L;
+
   }
 
   public Mutation(
     boolean isDelete,
     ByteBuffer column,
     ByteBuffer value,
-    boolean writeToWAL)
+    boolean writeToWAL,
+    long timestamp)
   {
     this();
     this.isDelete = isDelete;
@@ -155,6 +166,8 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
     this.value = value;
     this.writeToWAL = writeToWAL;
     setWriteToWALIsSet(true);
+    this.timestamp = timestamp;
+    setTimestampIsSet(true);
   }
 
   /**
@@ -171,6 +184,7 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
       this.value = other.value;
     }
     this.writeToWAL = other.writeToWAL;
+    this.timestamp = other.timestamp;
   }
 
   public Mutation deepCopy() {
@@ -184,6 +198,8 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
     this.column = null;
     this.value = null;
     this.writeToWAL = true;
+
+    this.timestamp = 9223372036854775807L;
 
   }
 
@@ -301,6 +317,29 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
     __isset_bit_vector.set(__WRITETOWAL_ISSET_ID, value);
   }
 
+  public long getTimestamp() {
+    return this.timestamp;
+  }
+
+  public Mutation setTimestamp(long timestamp) {
+    this.timestamp = timestamp;
+    setTimestampIsSet(true);
+    return this;
+  }
+
+  public void unsetTimestamp() {
+    __isset_bit_vector.clear(__TIMESTAMP_ISSET_ID);
+  }
+
+  /** Returns true if field timestamp is set (has been assigned a value) and false otherwise */
+  public boolean isSetTimestamp() {
+    return __isset_bit_vector.get(__TIMESTAMP_ISSET_ID);
+  }
+
+  public void setTimestampIsSet(boolean value) {
+    __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case IS_DELETE:
@@ -335,6 +374,14 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
       }
       break;
 
+    case TIMESTAMP:
+      if (value == null) {
+        unsetTimestamp();
+      } else {
+        setTimestamp((Long)value);
+      }
+      break;
+
     }
   }
 
@@ -351,6 +398,9 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
 
     case WRITE_TO_WAL:
       return Boolean.valueOf(isWriteToWAL());
+
+    case TIMESTAMP:
+      return Long.valueOf(getTimestamp());
 
     }
     throw new IllegalStateException();
@@ -371,6 +421,8 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
       return isSetValue();
     case WRITE_TO_WAL:
       return isSetWriteToWAL();
+    case TIMESTAMP:
+      return isSetTimestamp();
     }
     throw new IllegalStateException();
   }
@@ -421,6 +473,15 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
       if (!(this_present_writeToWAL && that_present_writeToWAL))
         return false;
       if (this.writeToWAL != that.writeToWAL)
+        return false;
+    }
+
+    boolean this_present_timestamp = true;
+    boolean that_present_timestamp = true;
+    if (this_present_timestamp || that_present_timestamp) {
+      if (!(this_present_timestamp && that_present_timestamp))
+        return false;
+      if (this.timestamp != that.timestamp)
         return false;
     }
 
@@ -480,6 +541,16 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(typedOther.isSetTimestamp());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetTimestamp()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -522,6 +593,10 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
     if (!first) sb.append(", ");
     sb.append("writeToWAL:");
     sb.append(this.writeToWAL);
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("timestamp:");
+    sb.append(this.timestamp);
     first = false;
     sb.append(")");
     return sb.toString();
@@ -599,6 +674,14 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
+          case 5: // TIMESTAMP
+            if (schemeField.type == org.apache.thrift.protocol.TType.I64) {
+              struct.timestamp = iprot.readI64();
+              struct.setTimestampIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
           default:
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
         }
@@ -630,6 +713,9 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
       oprot.writeFieldBegin(WRITE_TO_WAL_FIELD_DESC);
       oprot.writeBool(struct.writeToWAL);
       oprot.writeFieldEnd();
+      oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
+      oprot.writeI64(struct.timestamp);
+      oprot.writeFieldEnd();
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
@@ -660,7 +746,10 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
       if (struct.isSetWriteToWAL()) {
         optionals.set(3);
       }
-      oprot.writeBitSet(optionals, 4);
+      if (struct.isSetTimestamp()) {
+        optionals.set(4);
+      }
+      oprot.writeBitSet(optionals, 5);
       if (struct.isSetIsDelete()) {
         oprot.writeBool(struct.isDelete);
       }
@@ -673,12 +762,15 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
       if (struct.isSetWriteToWAL()) {
         oprot.writeBool(struct.writeToWAL);
       }
+      if (struct.isSetTimestamp()) {
+        oprot.writeI64(struct.timestamp);
+      }
     }
 
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, Mutation struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(4);
+      BitSet incoming = iprot.readBitSet(5);
       if (incoming.get(0)) {
         struct.isDelete = iprot.readBool();
         struct.setIsDeleteIsSet(true);
@@ -694,6 +786,10 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
       if (incoming.get(3)) {
         struct.writeToWAL = iprot.readBool();
         struct.setWriteToWALIsSet(true);
+      }
+      if (incoming.get(4)) {
+        struct.timestamp = iprot.readI64();
+        struct.setTimestampIsSet(true);
       }
     }
   }

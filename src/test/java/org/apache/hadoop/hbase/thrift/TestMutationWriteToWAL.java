@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.thrift;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,50 +43,15 @@ import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.TFramedTransport;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransport;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 /** Tests switching writing to WAL on and off in the Thrift Mutation API */
-public class TestMutationWriteToWAL {
+public class TestMutationWriteToWAL extends ThriftServerTestBase {
 
   private static Log LOG = LogFactory.getLog(TestMutationWriteToWAL.class);
 
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static ThriftServerRunner serverRunner;
-  private static Thread thriftServerThread;
-  private static int thriftServerPort;
-
   private static final int NUM_ROWS = 10;
   private static final int NUM_COLS_PER_ROW = 25;
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    Thread.currentThread().setName(TestMutationWriteToWAL.class.getSimpleName() + ".setUp");
-    Configuration conf = TEST_UTIL.getConfiguration();
-    thriftServerPort = HBaseTestingUtility.randomFreePort();
-    conf.setInt(HConstants.THRIFT_PROXY_PREFIX + HConstants.THRIFT_PORT_SUFFIX,
-        thriftServerPort);
-    TEST_UTIL.startMiniCluster();
-    serverRunner = new ThriftServerRunner(conf, HConstants.THRIFT_PROXY_PREFIX);
-
-    thriftServerThread = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        Thread.currentThread().setName("thriftServerThread");
-        serverRunner.run();
-      }
-    });
-    thriftServerThread.start();
-    LOG.info("Waiting for Thrift server to come online");
-    HBaseTestingUtility.waitForHostPort(HConstants.LOCALHOST, thriftServerPort);
-    LOG.info("Thrift server is online");
-  }
 
   private static final String getRow(int i) {
     return String.format("row%05d", i);
@@ -107,20 +71,13 @@ public class TestMutationWriteToWAL {
 
   @Test
   public void testMutationWriteToWAL() throws Exception{
-    Thread.currentThread().setName(TestMutationWriteToWAL.class.getSimpleName() + " test");
+    HBaseTestingUtility.setThreadNameFromMethod();
     final Configuration conf = TEST_UTIL.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
     List<String> expectedLogEntries = new ArrayList<String>();
 
-    LOG.info("Connecting Thrift server on port " + thriftServerPort);
-    TSocket sock = new TSocket(InetAddress.getLocalHost().getHostName(),
-        thriftServerPort);
-    TTransport transport = new TFramedTransport(sock);
-    sock.open();
-
     try {
-      TProtocol prot = new TBinaryProtocol(transport);
-      Hbase.Client client = new Hbase.Client(prot);
+      Hbase.Client client = createClient();
       client.createTable(HTestConst.DEFAULT_TABLE_BYTE_BUF, HTestConst.DEFAULT_COLUMN_DESC_LIST);
       int expectedEntriesForRow[] = new int[NUM_ROWS];
       for (int i = NUM_ROWS - 1; i >= 0; --i) {
@@ -142,7 +99,7 @@ public class TestMutationWriteToWAL {
 
           Mutation m = new Mutation(false, ByteBuffer.wrap(Bytes.toBytes(
               HTestConst.DEFAULT_CF_STR + ":" + qual)),
-              ByteBuffer.wrap(Bytes.toBytes(value)), writeToWAL);
+              ByteBuffer.wrap(Bytes.toBytes(value)), writeToWAL, HConstants.LATEST_TIMESTAMP);
           m.isDelete = isDelete;
 
           mutations.add(m);
@@ -185,7 +142,7 @@ public class TestMutationWriteToWAL {
         }
       }
     } finally {
-      sock.close();
+      closeClientSockets();
     }
 
     TEST_UTIL.shutdownMiniHBaseCluster();
@@ -223,15 +180,6 @@ public class TestMutationWriteToWAL {
     LOG.info("Expected log entries: " + expectedLogEntries.size() + ", actual log entries: " +
         actualLogEntries.size());
     assertEquals(expectedLogEntries.toString(), actualLogEntries.toString());
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    Thread.currentThread().setName(TestMutationWriteToWAL.class.getSimpleName() + ".tearDown");
-    LOG.info("Shutting down Thrift server");
-    serverRunner.shutdown();
-    thriftServerThread.join();
-    TEST_UTIL.shutdownMiniCluster();
   }
 
 }

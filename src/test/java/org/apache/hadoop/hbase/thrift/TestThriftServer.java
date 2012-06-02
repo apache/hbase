@@ -36,8 +36,11 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
+import org.apache.hadoop.hbase.thrift.generated.Constants;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
@@ -54,6 +57,8 @@ import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Unit testing for ThriftServerRunner.HBaseHandler, a part of the
@@ -76,9 +81,12 @@ public class TestThriftServer {
   static final ByteBuffer rowAname = asByteBuffer("rowA");
   static final ByteBuffer rowBname = asByteBuffer("rowB");
   static final ByteBuffer valueAname = asByteBuffer("valueA");
+  static final ByteBuffer valueAModified = asByteBuffer("valueAModified");
   static final ByteBuffer valueBname = asByteBuffer("valueB");
   static final ByteBuffer valueCname = asByteBuffer("valueC");
   static final ByteBuffer valueDname = asByteBuffer("valueD");
+
+  private static final int MAX_VERSIONS = 2;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -98,7 +106,6 @@ public class TestThriftServer {
    *
    * @throws Exception
    */
-  @Test
   public void testAll() throws Exception {
     // Run all tests
     doTestTableCreateDrop();
@@ -118,6 +125,7 @@ public class TestThriftServer {
    *
    * @throws Exception
    */
+  @Test
   public void doTestTableCreateDrop() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
@@ -147,6 +155,7 @@ public class TestThriftServer {
   /**
    * Tests if the metrics for thrift handler work correctly
    */
+  @Test
   public void doTestThriftMetrics() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     ThriftMetrics metrics = getMetrics(conf);
@@ -242,6 +251,7 @@ public class TestThriftServer {
    *
    * @throws Exception
    */
+  @Test
   public void doTestTableMutations() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
@@ -251,65 +261,102 @@ public class TestThriftServer {
   public static void doTestTableMutations(Hbase.Iface handler) throws Exception {
     // Setup
     handler.createTable(tableAname, getColumnDescriptors());
+    try {
+      // Apply a few Mutations to rowA
+      handler.mutateRow(tableAname, rowAname, getMutations());
+  
+      // Assert that the changes were made
+      assertBufferEquals(valueAname,
+        handler.get(tableAname, rowAname, columnAname).get(0).value);
+      TRowResult rowResult1 = handler.getRow(tableAname, rowAname).get(0);
+      assertBufferEquals(rowAname, rowResult1.row);
+      assertBufferEquals(valueBname,
+        rowResult1.columns.get(columnBname).value);
+  
+      // Apply a few BatchMutations for rowA and rowB
+      handler.mutateRows(tableAname, getBatchMutations());
+  
+      // Assert that changes were made to rowA
+      List<TCell> cells = handler.get(tableAname, rowAname, columnAname);
+      assertFalse(cells.size() > 0);
+      assertBufferEquals(valueCname, handler.get(tableAname, rowAname, columnBname).get(0).value);
+      List<TCell> versions = handler.getVer(tableAname, rowAname, columnBname, MAXVERSIONS);
+      assertBufferEquals(valueCname, versions.get(0).value);
+      assertBufferEquals(valueBname, versions.get(1).value);
+  
+      // Assert that changes were made to rowB
+      TRowResult rowResult2 = handler.getRow(tableAname, rowBname).get(0);
+      assertBufferEquals(rowBname, rowResult2.row);
+      assertBufferEquals(valueCname, rowResult2.columns.get(columnAname).value);
+      assertBufferEquals(valueDname, rowResult2.columns.get(columnBname).value);
+  
+      // Apply some deletes
+      handler.deleteAll(tableAname, rowAname, columnBname);
+      handler.deleteAllRow(tableAname, rowBname);
+  
+      // Assert that the deletes were applied
+      int size = handler.get(tableAname, rowAname, columnBname).size();
+      assertEquals(0, size);
+      size = handler.getRow(tableAname, rowBname).size();
+      assertEquals(0, size);
+  
+      // Try null mutation
+      List<Mutation> mutations = new ArrayList<Mutation>();
+      mutations.add(new Mutation(false, columnAname, null, true, HConstants.LATEST_TIMESTAMP));
+      handler.mutateRow(tableAname, rowAname, mutations);
+      TRowResult rowResult3 = handler.getRow(tableAname, rowAname).get(0);
+      assertEquals(rowAname, rowResult3.row);
+      assertEquals(0, rowResult3.columns.get(columnAname).value.remaining());
+  
+      // Try specifying timestamps with mutations
+      mutations.clear();
+      handler.deleteAllRow(tableAname, rowAname);
+      assertEquals(0, handler.getRow(tableAname, rowAname).size());
 
-    // Apply a few Mutations to rowA
-    //     mutations.add(new Mutation(false, columnAname, valueAname));
-    //     mutations.add(new Mutation(false, columnBname, valueBname));
-    handler.mutateRow(tableAname, rowAname, getMutations());
+      // Use a high timestamp to make sure our insertions come later than the above delete-all with
+      // an auto-generated timestamp.
+      // Testing mutateRow.
+      long highTS = HConstants.LATEST_TIMESTAMP / 2;
+      assertEquals(0, handler.getRow(tableAname, rowAname).size());
+      mutations.add(new Mutation(false, columnAname, valueAModified, true, highTS + 257));
+      mutations.add(new Mutation(false, columnAname, valueAname, true, highTS + 135));
+      handler.mutateRow(tableAname, rowAname, mutations);
+      List<TRowResult> results = handler.getRow(tableAname, rowAname);
+      assertEquals(1, results.size());
+      assertBufferEquals(valueAModified, results.get(0).getColumns().get(columnAname).value);
 
-    // Assert that the changes were made
-    assertBufferEquals(valueAname,
-      handler.get(tableAname, rowAname, columnAname).get(0).value);
-    TRowResult rowResult1 = handler.getRow(tableAname, rowAname).get(0);
-    assertBufferEquals(rowAname, rowResult1.row);
-    assertBufferEquals(valueBname,
-      rowResult1.columns.get(columnBname).value);
+      handler.deleteAllTs(tableAname, rowAname, columnAname, highTS + 999);
+      assertEquals(0, handler.getRow(tableAname, rowAname).size());
 
-    // Apply a few BatchMutations for rowA and rowB
-    // rowAmutations.add(new Mutation(true, columnAname));
-    // rowAmutations.add(new Mutation(false, columnBname, valueCname));
-    // batchMutations.add(new BatchMutation(rowAname, rowAmutations));
-    // Mutations to rowB
-    // rowBmutations.add(new Mutation(false, columnAname, valueCname));
-    // rowBmutations.add(new Mutation(false, columnBname, valueDname));
-    // batchMutations.add(new BatchMutation(rowBname, rowBmutations));
-    handler.mutateRows(tableAname, getBatchMutations());
+      // Testing mutateRowTs.
+      for (boolean firstIsDeletion : HConstants.BOOLEAN_VALUES) {
+        for (boolean secondIsDeletion : HConstants.BOOLEAN_VALUES) {
+          mutations.clear();
+          // This mutation has a default timestamp specified, so it will be executed with the
+          // timestamp given to the mutateRowTs method.
+          mutations.add(new Mutation(firstIsDeletion, columnAname, valueAModified, true,
+              HConstants.LATEST_TIMESTAMP)); 
+          mutations.add(new Mutation(secondIsDeletion, columnAname, valueAname, true,
+              highTS + 1200));
+          handler.mutateRowTs(tableAname, rowAname, mutations, highTS + 1100);
+          results = handler.getRow(tableAname, rowAname);
+          if (secondIsDeletion) {
+            assertEquals(0, results.size());
+          } else {
+            assertEquals(1, results.size());
+            assertBufferEquals(valueAname, results.get(0).getColumns().get(columnAname).value);
+          }
+          handler.deleteAllRowTs(tableAname, rowAname, highTS + 10000);
+          assertEquals(0, handler.getRow(tableAname, rowAname).size());
+          highTS += 20000;
+        }
+      }
 
-    // Assert that changes were made to rowA
-    List<TCell> cells = handler.get(tableAname, rowAname, columnAname);
-    assertFalse(cells.size() > 0);
-    assertBufferEquals(valueCname, handler.get(tableAname, rowAname, columnBname).get(0).value);
-    List<TCell> versions = handler.getVer(tableAname, rowAname, columnBname, MAXVERSIONS);
-    assertBufferEquals(valueCname, versions.get(0).value);
-    assertBufferEquals(valueBname, versions.get(1).value);
-
-    // Assert that changes were made to rowB
-    TRowResult rowResult2 = handler.getRow(tableAname, rowBname).get(0);
-    assertBufferEquals(rowBname, rowResult2.row);
-    assertBufferEquals(valueCname, rowResult2.columns.get(columnAname).value);
-    assertBufferEquals(valueDname, rowResult2.columns.get(columnBname).value);
-
-    // Apply some deletes
-    handler.deleteAll(tableAname, rowAname, columnBname);
-    handler.deleteAllRow(tableAname, rowBname);
-
-    // Assert that the deletes were applied
-    int size = handler.get(tableAname, rowAname, columnBname).size();
-    assertEquals(0, size);
-    size = handler.getRow(tableAname, rowBname).size();
-    assertEquals(0, size);
-
-    // Try null mutation
-    List<Mutation> mutations = new ArrayList<Mutation>();
-    mutations.add(new Mutation(false, columnAname, null, true));
-    handler.mutateRow(tableAname, rowAname, mutations);
-    TRowResult rowResult3 = handler.getRow(tableAname, rowAname).get(0);
-    assertEquals(rowAname, rowResult3.row);
-    assertEquals(0, rowResult3.columns.get(columnAname).value.remaining());
-
-    // Teardown
-    handler.disableTable(tableAname);
-    handler.deleteTable(tableAname);
+    } finally {
+      // Teardown
+      handler.disableTable(tableAname);
+      handler.deleteTable(tableAname);
+    }
   }
 
   /**
@@ -319,77 +366,80 @@ public class TestThriftServer {
    *
    * @throws Exception
    */
+  @Test
   public void doTestTableTimestampsAndColumns() throws Exception {
     // Setup
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
     handler.createTable(tableAname, getColumnDescriptors());
 
-    // Apply timestamped Mutations to rowA
-    long time1 = System.currentTimeMillis();
-    handler.mutateRowTs(tableAname, rowAname, getMutations(), time1);
-
-    Thread.sleep(1000);
-
-    // Apply timestamped BatchMutations for rowA and rowB
-    long time2 = System.currentTimeMillis();
-    handler.mutateRowsTs(tableAname, getBatchMutations(), time2);
-
-    // Apply an overlapping timestamped mutation to rowB
-    handler.mutateRowTs(tableAname, rowBname, getMutations(), time2);
-
-    // the getVerTs is [inf, ts) so you need to increment one.
-    time1 += 1;
-    time2 += 2;
-
-    // Assert that the timestamp-related methods retrieve the correct data
-    assertEquals(2, handler.getVerTs(tableAname, rowAname, columnBname, time2,
-      MAXVERSIONS).size());
-    assertEquals(1, handler.getVerTs(tableAname, rowAname, columnBname, time1,
-      MAXVERSIONS).size());
-
-    TRowResult rowResult1 = handler.getRowTs(tableAname, rowAname, time1).get(0);
-    TRowResult rowResult2 = handler.getRowTs(tableAname, rowAname, time2).get(0);
-    // columnA was completely deleted
-    //assertTrue(Bytes.equals(rowResult1.columns.get(columnAname).value, valueAname));
-    assertBufferEquals(rowResult1.columns.get(columnBname).value, valueBname);
-    assertBufferEquals(rowResult2.columns.get(columnBname).value, valueCname);
-
-    // ColumnAname has been deleted, and will never be visible even with a getRowTs()
-    assertFalse(rowResult2.columns.containsKey(columnAname));
-
-    List<ByteBuffer> columns = new ArrayList<ByteBuffer>();
-    columns.add(columnBname);
-
-    rowResult1 = handler.getRowWithColumns(tableAname, rowAname, columns).get(0);
-    assertBufferEquals(rowResult1.columns.get(columnBname).value, valueCname);
-    assertFalse(rowResult1.columns.containsKey(columnAname));
-
-    rowResult1 = handler.getRowWithColumnsTs(tableAname, rowAname, columns, time1).get(0);
-    assertBufferEquals(rowResult1.columns.get(columnBname).value, valueBname);
-    assertFalse(rowResult1.columns.containsKey(columnAname));
-
-    // Apply some timestamped deletes
-    // this actually deletes _everything_.
-    // nukes everything in columnB: forever.
-    handler.deleteAllTs(tableAname, rowAname, columnBname, time1);
-    handler.deleteAllRowTs(tableAname, rowBname, time2);
-
-    // Assert that the timestamp-related methods retrieve the correct data
-    int size = handler.getVerTs(tableAname, rowAname, columnBname, time1, MAXVERSIONS).size();
-    assertEquals(0, size);
-
-    size = handler.getVerTs(tableAname, rowAname, columnBname, time2, MAXVERSIONS).size();
-    assertEquals(1, size);
-
-    // should be available....
-    assertBufferEquals(handler.get(tableAname, rowAname, columnBname).get(0).value, valueCname);
-
-    assertEquals(0, handler.getRow(tableAname, rowBname).size());
-
-    // Teardown
-    handler.disableTable(tableAname);
-    handler.deleteTable(tableAname);
+    try {
+      // Apply timestamped Mutations to rowA
+      long time1 = System.currentTimeMillis();
+      handler.mutateRowTs(tableAname, rowAname, getMutations(), time1);
+  
+      Thread.sleep(1000);
+  
+      // Apply timestamped BatchMutations for rowA and rowB
+      long time2 = System.currentTimeMillis();
+      handler.mutateRowsTs(tableAname, getBatchMutations(), time2);
+  
+      // Apply an overlapping timestamped mutation to rowB
+      handler.mutateRowTs(tableAname, rowBname, getMutations(), time2);
+  
+      // the getVerTs is [inf, ts) so you need to increment one.
+      time1 += 1;
+      time2 += 2;
+  
+      // Assert that the timestamp-related methods retrieve the correct data
+      assertEquals(2, handler.getVerTs(tableAname, rowAname, columnBname, time2,
+        MAXVERSIONS).size());
+      assertEquals(1, handler.getVerTs(tableAname, rowAname, columnBname, time1,
+        MAXVERSIONS).size());
+  
+      TRowResult rowResult1 = handler.getRowTs(tableAname, rowAname, time1).get(0);
+      TRowResult rowResult2 = handler.getRowTs(tableAname, rowAname, time2).get(0);
+      // columnA was completely deleted
+      //assertTrue(Bytes.equals(rowResult1.columns.get(columnAname).value, valueAname));
+      assertBufferEquals(rowResult1.columns.get(columnBname).value, valueBname);
+      assertBufferEquals(rowResult2.columns.get(columnBname).value, valueCname);
+  
+      // ColumnAname has been deleted, and will never be visible even with a getRowTs()
+      assertFalse(rowResult2.columns.containsKey(columnAname));
+  
+      List<ByteBuffer> columns = new ArrayList<ByteBuffer>();
+      columns.add(columnBname);
+  
+      rowResult1 = handler.getRowWithColumns(tableAname, rowAname, columns).get(0);
+      assertBufferEquals(rowResult1.columns.get(columnBname).value, valueCname);
+      assertFalse(rowResult1.columns.containsKey(columnAname));
+  
+      rowResult1 = handler.getRowWithColumnsTs(tableAname, rowAname, columns, time1).get(0);
+      assertBufferEquals(rowResult1.columns.get(columnBname).value, valueBname);
+      assertFalse(rowResult1.columns.containsKey(columnAname));
+  
+      // Apply some timestamped deletes
+      // this actually deletes _everything_.
+      // nukes everything in columnB: forever.
+      handler.deleteAllTs(tableAname, rowAname, columnBname, time1);
+      handler.deleteAllRowTs(tableAname, rowBname, time2);
+  
+      // Assert that the timestamp-related methods retrieve the correct data
+      int size = handler.getVerTs(tableAname, rowAname, columnBname, time1, MAXVERSIONS).size();
+      assertEquals(0, size);
+  
+      size = handler.getVerTs(tableAname, rowAname, columnBname, time2, MAXVERSIONS).size();
+      assertEquals(1, size);
+  
+      // should be available....
+      assertBufferEquals(handler.get(tableAname, rowAname, columnBname).get(0).value, valueCname);
+  
+      assertEquals(0, handler.getRow(tableAname, rowBname).size());
+    } finally {
+      // Teardown
+      handler.disableTable(tableAname);
+      handler.deleteTable(tableAname);
+    }
   }
 
   /**
@@ -398,67 +448,70 @@ public class TestThriftServer {
    *
    * @throws Exception
    */
+  @Test
   public void doTestTableScanners() throws Exception {
     // Setup
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
     handler.createTable(tableAname, getColumnDescriptors());
-
-    // Apply timestamped Mutations to rowA
-    long time1 = System.currentTimeMillis();
-    handler.mutateRowTs(tableAname, rowAname, getMutations(), time1);
-
-    // Sleep to assure that 'time1' and 'time2' will be different even with a
-    // coarse grained system timer.
-    Thread.sleep(1000);
-
-    // Apply timestamped BatchMutations for rowA and rowB
-    long time2 = System.currentTimeMillis();
-    handler.mutateRowsTs(tableAname, getBatchMutations(), time2);
-
-    time1 += 1;
-
-    // Test a scanner on all rows and all columns, no timestamp
-    int scanner1 = handler.scannerOpen(tableAname, rowAname, getColumnList(true, true));
-    TRowResult rowResult1a = handler.scannerGet(scanner1).get(0);
-    assertBufferEquals(rowResult1a.row, rowAname);
-    // This used to be '1'.  I don't know why when we are asking for two columns
-    // and when the mutations above would seem to add two columns to the row.
-    // -- St.Ack 05/12/2009
-    assertEquals(rowResult1a.columns.size(), 1);
-    assertBufferEquals(rowResult1a.columns.get(columnBname).value, valueCname);
-
-    TRowResult rowResult1b = handler.scannerGet(scanner1).get(0);
-    assertBufferEquals(rowResult1b.row, rowBname);
-    assertEquals(rowResult1b.columns.size(), 2);
-    assertBufferEquals(rowResult1b.columns.get(columnAname).value, valueCname);
-    assertBufferEquals(rowResult1b.columns.get(columnBname).value, valueDname);
-    closeScanner(scanner1, handler);
-
-    // Test a scanner on all rows and all columns, with timestamp
-    int scanner2 = handler.scannerOpenTs(tableAname, rowAname, getColumnList(true, true), time1);
-    TRowResult rowResult2a = handler.scannerGet(scanner2).get(0);
-    assertEquals(rowResult2a.columns.size(), 1);
-    // column A deleted, does not exist.
-    //assertTrue(Bytes.equals(rowResult2a.columns.get(columnAname).value, valueAname));
-    assertBufferEquals(rowResult2a.columns.get(columnBname).value, valueBname);
-    closeScanner(scanner2, handler);
-
-    // Test a scanner on the first row and first column only, no timestamp
-    int scanner3 = handler.scannerOpenWithStop(tableAname, rowAname, rowBname,
-        getColumnList(true, false));
-    closeScanner(scanner3, handler);
-
-    // Test a scanner on the first row and second column only, with timestamp
-    int scanner4 = handler.scannerOpenWithStopTs(tableAname, rowAname, rowBname,
-        getColumnList(false, true), time1);
-    TRowResult rowResult4a = handler.scannerGet(scanner4).get(0);
-    assertEquals(rowResult4a.columns.size(), 1);
-    assertBufferEquals(rowResult4a.columns.get(columnBname).value, valueBname);
-
-    // Teardown
-    handler.disableTable(tableAname);
-    handler.deleteTable(tableAname);
+    
+    try {
+      // Apply timestamped Mutations to rowA
+      long time1 = System.currentTimeMillis();
+      handler.mutateRowTs(tableAname, rowAname, getMutations(), time1);
+  
+      // Sleep to assure that 'time1' and 'time2' will be different even with a
+      // coarse grained system timer.
+      Thread.sleep(1000);
+  
+      // Apply timestamped BatchMutations for rowA and rowB
+      long time2 = System.currentTimeMillis();
+      handler.mutateRowsTs(tableAname, getBatchMutations(), time2);
+  
+      time1 += 1;
+  
+      // Test a scanner on all rows and all columns, no timestamp
+      int scanner1 = handler.scannerOpen(tableAname, rowAname, getColumnList(true, true));
+      TRowResult rowResult1a = handler.scannerGet(scanner1).get(0);
+      assertBufferEquals(rowResult1a.row, rowAname);
+      // This used to be '1'.  I don't know why when we are asking for two columns
+      // and when the mutations above would seem to add two columns to the row.
+      // -- St.Ack 05/12/2009
+      assertEquals(rowResult1a.columns.size(), 1);
+      assertBufferEquals(rowResult1a.columns.get(columnBname).value, valueCname);
+  
+      TRowResult rowResult1b = handler.scannerGet(scanner1).get(0);
+      assertBufferEquals(rowResult1b.row, rowBname);
+      assertEquals(rowResult1b.columns.size(), 2);
+      assertBufferEquals(rowResult1b.columns.get(columnAname).value, valueCname);
+      assertBufferEquals(rowResult1b.columns.get(columnBname).value, valueDname);
+      closeScanner(scanner1, handler);
+  
+      // Test a scanner on all rows and all columns, with timestamp
+      int scanner2 = handler.scannerOpenTs(tableAname, rowAname, getColumnList(true, true), time1);
+      TRowResult rowResult2a = handler.scannerGet(scanner2).get(0);
+      assertEquals(rowResult2a.columns.size(), 1);
+      // column A deleted, does not exist.
+      //assertTrue(Bytes.equals(rowResult2a.columns.get(columnAname).value, valueAname));
+      assertBufferEquals(rowResult2a.columns.get(columnBname).value, valueBname);
+      closeScanner(scanner2, handler);
+  
+      // Test a scanner on the first row and first column only, no timestamp
+      int scanner3 = handler.scannerOpenWithStop(tableAname, rowAname, rowBname,
+          getColumnList(true, false));
+      closeScanner(scanner3, handler);
+  
+      // Test a scanner on the first row and second column only, with timestamp
+      int scanner4 = handler.scannerOpenWithStopTs(tableAname, rowAname, rowBname,
+          getColumnList(false, true), time1);
+      TRowResult rowResult4a = handler.scannerGet(scanner4).get(0);
+      assertEquals(rowResult4a.columns.size(), 1);
+      assertBufferEquals(rowResult4a.columns.get(columnBname).value, valueBname);
+    } finally {
+      // Teardown
+      handler.disableTable(tableAname);
+      handler.deleteTable(tableAname);
+    }
   }
 
   /**
@@ -467,6 +520,7 @@ public class TestThriftServer {
    *
    * @throws Exception
    */
+  @Test
   public void doTestGetTableRegions() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
@@ -490,6 +544,7 @@ public class TestThriftServer {
             "but found " + regionCount, regionCount, 0);
   }
 
+  @Test
   public void doTestFilterRegistration() throws Exception {
     Configuration conf = UTIL.getConfiguration();
 
@@ -502,6 +557,7 @@ public class TestThriftServer {
     assertEquals("filterclass", registeredFilters.get("MyFilter"));
   }
 
+  @Test
   public void doTestGetRegionInfo() throws Exception {
     ThriftServerRunner.HBaseHandler handler =
       new ThriftServerRunner.HBaseHandler(UTIL.getConfiguration());
@@ -538,8 +594,9 @@ public class TestThriftServer {
     cDescriptors.add(cDescA);
 
     // A slightly customized ColumnDescriptor (only 2 versions)
-    ColumnDescriptor cDescB = new ColumnDescriptor(columnBname, 2, "NONE",
-        false, "NONE", 0, 0, false, -1);
+    ColumnDescriptor cDescB =
+        new ColumnDescriptor(columnBname, MAX_VERSIONS, Compression.Algorithm.NONE.toString(),
+            false, StoreFile.BloomType.NONE.toString(), 0, 0, false, -1);
     cDescriptors.add(cDescB);
 
     return cDescriptors;
@@ -565,8 +622,8 @@ public class TestThriftServer {
    */
   static List<Mutation> getMutations() {
     List<Mutation> mutations = new ArrayList<Mutation>();
-    mutations.add(new Mutation(false, columnAname, valueAname, true));
-    mutations.add(new Mutation(false, columnBname, valueBname, true));
+    mutations.add(new Mutation(false, columnAname, valueAname, true, HConstants.LATEST_TIMESTAMP));
+    mutations.add(new Mutation(false, columnBname, valueBname, true, HConstants.LATEST_TIMESTAMP));
     return mutations;
   }
 
@@ -582,19 +639,20 @@ public class TestThriftServer {
     List<BatchMutation> batchMutations = new ArrayList<BatchMutation>();
 
     // Mutations to rowA.  You can't mix delete and put anymore.
-    List<Mutation> rowAmutations = new ArrayList<Mutation>();
-    rowAmutations.add(new Mutation(true, columnAname, null, true));
-    batchMutations.add(new BatchMutation(rowAname, rowAmutations));
+    batchMutations.add(new BatchMutation(rowAname,
+        ImmutableList.of(
+            new Mutation(true, columnAname, null, true, HConstants.LATEST_TIMESTAMP)
+        )));
 
-    rowAmutations = new ArrayList<Mutation>();
-    rowAmutations.add(new Mutation(false, columnBname, valueCname, true));
-    batchMutations.add(new BatchMutation(rowAname, rowAmutations));
+    batchMutations.add(new BatchMutation(rowAname,
+        ImmutableList.of(new Mutation(false, columnBname, valueCname, true,
+            HConstants.LATEST_TIMESTAMP))));
 
     // Mutations to rowB
-    List<Mutation> rowBmutations = new ArrayList<Mutation>();
-    rowBmutations.add(new Mutation(false, columnAname, valueCname, true));
-    rowBmutations.add(new Mutation(false, columnBname, valueDname, true));
-    batchMutations.add(new BatchMutation(rowBname, rowBmutations));
+    batchMutations.add(new BatchMutation(rowBname, ImmutableList.of(
+        new Mutation(false, columnAname, valueCname, true, HConstants.LATEST_TIMESTAMP),
+        new Mutation(false, columnBname, valueDname, true, HConstants.LATEST_TIMESTAMP)
+    )));
 
     return batchMutations;
   }
@@ -620,4 +678,8 @@ public class TestThriftServer {
     }
   }
 
+  @Test
+  public void testMaxTimestamp() {
+    assertEquals(HConstants.LATEST_TIMESTAMP, Constants.LATEST_TIMESTAMP);
+  }
 }

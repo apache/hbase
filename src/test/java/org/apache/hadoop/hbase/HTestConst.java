@@ -46,6 +46,18 @@ public class HTestConst {
 
   public static final List<ColumnDescriptor> DEFAULT_COLUMN_DESC_LIST;
 
+  public static byte[] getRowBytes(int i) {
+    return Bytes.toBytes("row" + i);
+  }
+
+  public static String getQualStr(int i) {
+    return "column" + i;
+  }
+
+  public static byte[] getCFQualBytes(int i) {
+    return Bytes.toBytes(DEFAULT_CF_STR + KeyValue.COLUMN_FAMILY_DELIMITER + getQualStr(i));
+  }
+
   static {
     List<ColumnDescriptor> cdList = new ArrayList<ColumnDescriptor>();
     ColumnDescriptor cd = new ColumnDescriptor();

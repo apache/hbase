@@ -393,6 +393,24 @@ public class ThriftServerRunner implements Runnable {
   }
 
   /**
+   * Retrieve timestamp from the given mutation Thrift object. If the mutation timestamp is not set
+   * or is set to {@link HConstants#LATEST_TIMESTAMP}, the default timestamp is used.
+   * @param m mutation a mutation object optionally specifying a timestamp
+   * @param defaultTimestamp default timestamp to use if the mutation does not specify timestamp
+   * @return the effective mutation timestamp
+   */
+  public static long getMutationTimestamp(Mutation m, long defaultTimestamp) {
+    if (!m.isSetTimestamp()) {
+      return defaultTimestamp;
+    }
+    long ts = m.getTimestamp();
+    if (ts == HConstants.LATEST_TIMESTAMP) {
+      return defaultTimestamp;
+    }
+    return ts;
+  }
+
+  /**
    * The HBaseHandler is a glue object that connects Thrift RPC calls to the
    * HBase client API primarily defined in the HBaseAdmin and HTable objects.
    */
@@ -919,23 +937,25 @@ public class ThriftServerRunner implements Runnable {
         boolean writeToWAL = false;
         for (Mutation m : mutations) {
           byte[][] famAndQf = KeyValue.parseColumn(getBytes(m.column));
+          long effectiveTimestamp = getMutationTimestamp(m, timestamp);
           if (m.isDelete) {
             if (delete == null) {
               delete = new Delete(rowBytes);
             }
             if (famAndQf.length == 1) {
-              delete.deleteFamily(famAndQf[0], timestamp);
+              delete.deleteFamily(famAndQf[0], effectiveTimestamp);
             } else {
-              delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
+              delete.deleteColumns(famAndQf[0], famAndQf[1], effectiveTimestamp);
             }
           } else {
             if (put == null) {
               put = new Put(rowBytes, timestamp, null);
             }
             if (famAndQf.length == 1) {
-              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, getBytes(m.value));
+              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, effectiveTimestamp,
+                  getBytes(m.value));
             } else {
-              put.add(famAndQf[0], famAndQf[1], getBytes(m.value));
+              put.add(famAndQf[0], famAndQf[1], effectiveTimestamp, getBytes(m.value));
             }
           }
 
@@ -990,24 +1010,30 @@ public class ThriftServerRunner implements Runnable {
         boolean writeToWAL = false;
         for (Mutation m : mutations) {
           byte[][] famAndQf = KeyValue.parseColumn(getBytes(m.column));
+
+          // If this mutation has timestamp set, it takes precedence, otherwise we use the
+          // timestamp provided in the argument.
+          long effectiveTimestamp = getMutationTimestamp(m, timestamp);
+
           if (m.isDelete) {
             if (delete == null) {
               delete = new Delete(row);
             }
             // no qualifier, family only.
             if (famAndQf.length == 1) {
-              delete.deleteFamily(famAndQf[0], timestamp);
+              delete.deleteFamily(famAndQf[0], effectiveTimestamp);
             } else {
-              delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
+              delete.deleteColumns(famAndQf[0], famAndQf[1], effectiveTimestamp);
             }
           } else {
             if (put == null) {
               put = new Put(row, timestamp, null);
             }
             if(famAndQf.length == 1) {
-              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, getBytes(m.value));
+              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, effectiveTimestamp,
+                  getBytes(m.value));
             } else {
-              put.add(famAndQf[0], famAndQf[1], getBytes(m.value));
+              put.add(famAndQf[0], famAndQf[1], effectiveTimestamp, getBytes(m.value));
             }
           }
           if (firstMutation) {
@@ -1086,19 +1112,24 @@ public class ThriftServerRunner implements Runnable {
         Delete delete = new Delete(rowBytes);
 
         for (Mutation m : mutations) {
-          byte[][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(m.column));
+
+          // If this mutation has timestamp set, it takes precedence, otherwise we use the
+          // timestamp provided in the argument.
+          long effectiveTimestamp = getMutationTimestamp(m, timestamp);
+
+          byte[][] famAndQf = KeyValue.parseColumn(Bytes.toBytesRemaining(m.column));
           if (m.isDelete) {
             if (famAndQf.length == 1) {
-              delete.deleteFamily(famAndQf[0], timestamp);
+              delete.deleteFamily(famAndQf[0], effectiveTimestamp);
             } else {
-              delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
+              delete.deleteColumns(famAndQf[0], famAndQf[1], effectiveTimestamp);
             }
           } else {
             byte[] valueBytes = getBytes(m.value);
             if (famAndQf.length == 1) {
-              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, valueBytes);
+              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, effectiveTimestamp, valueBytes);
             } else {
-              put.add(famAndQf[0], famAndQf[1], valueBytes);
+              put.add(famAndQf[0], famAndQf[1], effectiveTimestamp, valueBytes);
             }
           }
         }
@@ -1107,7 +1138,7 @@ public class ThriftServerRunner implements Runnable {
 
         if (!delete.isEmpty() && !put.isEmpty()) {
           // can't do both, not atomic, not good idea!
-          throw new IllegalArgumentException(
+          throw new IllegalArgument(
               "Single Thrift CheckAndMutate call cannot do both puts and deletes.");
         }
         if (!delete.isEmpty()) {
@@ -1120,7 +1151,7 @@ public class ThriftServerRunner implements Runnable {
                   famAndQfCheck.length != 1 ? famAndQfCheck[1]
                       : HConstants.EMPTY_BYTE_ARRAY, valueCheckBytes, put);
         }
-        throw new IllegalArgumentException(
+        throw new IllegalArgument(
             "Thrift CheckAndMutate call must do either put or delete.");
       } catch (IOException e) {
         throw new IOError(e.getMessage());
