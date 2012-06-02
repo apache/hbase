@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -51,9 +52,8 @@ public class TestHMasterRPCException {
     try {
       HMasterInterface inf = (HMasterInterface) HBaseRPC.getProxy(
         HMasterInterface.class,  HMasterInterface.VERSION, isa, conf, 100);
-      inf.isMasterRunning(null,RequestConverter.buildIsMasterRunningRequest());
       fail();
-    } catch (RemoteException ex) {
+    } catch (ServerNotRunningYetException ex) {
       assertTrue(ex.getMessage().startsWith(
           "org.apache.hadoop.hbase.ipc.ServerNotRunningYetException: Server is not running yet"));
     } catch (Throwable t) {
