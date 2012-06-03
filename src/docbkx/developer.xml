@@ -148,7 +148,7 @@ mvn clean compile
         <title>Building the HBase tarball</title>
         <para>Do the following to build the HBase tarball.
         Passing the -Drelease will generate javadoc and run the RAT plugin to verify licenses on source.
-        <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean site install assembly:single -DskipTests -Prelease</programlisting>
+        <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean site install assembly:assembly -DskipTests -Prelease</programlisting>
 </para>
       </section>
 
