@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-<!--
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,24 +20,13 @@
  */
 -->
   <modelVersion>4.0.0</modelVersion>
-  <!--To build a release I do this:
-
-    $ MAVEN_OPTS="-Xmx2g" mvn clean site install assembly:single -Prelease
-
-     To build the site:
-
-    $  MAVEN_OPTS="-Xmx2g" ~/bin/apache-maven-3.0.4/bin/mvn  clean  -DskipTests site
-
-     Use mvn3.
-   -->
-
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
     <version>8</version>
-    <relativePath></relativePath><!-- no parent resolution -->
+    <relativePath/>
+    <!-- no parent resolution -->
   </parent>
-
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
@@ -51,30 +39,23 @@
     of commodity hardware.
   </description>
   <url>http://hbase.apache.org</url>
-
   <modules>
-    <module>hbase-assembly</module>
     <module>hbase-server</module>
-    <module>hbase-site</module>
     <module>hbase-common</module>
   </modules>
-
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
     <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/trunk</developerConnection>
     <url>http://svn.apache.org/viewvc/hbase/trunk</url>
   </scm>
-
   <issueManagement>
     <system>JIRA</system>
     <url>http://issues.apache.org/jira/browse/HBASE</url>
   </issueManagement>
-
   <ciManagement>
     <system>hudson</system>
     <url>http://hudson.zones.apache.org/hudson/view/HBase/job/HBase-TRUNK/</url>
   </ciManagement>
-
   <mailingLists>
     <mailingList>
       <name>User List</name>
@@ -106,7 +87,7 @@
       <unsubscribe>commits-unsubscribe@hbase.apache.org</unsubscribe>
       <archive>http://mail-archives.apache.org/mod_mbox/hbase-commits/</archive>
       <otherArchives>
-          <otherArchive>http://hbase.apache.org/mail/commits/</otherArchive>
+        <otherArchive>http://hbase.apache.org/mail/commits/</otherArchive>
       </otherArchives>
     </mailingList>
     <mailingList>
@@ -115,11 +96,10 @@
       <unsubscribe>issues-unsubscribe@hbase.apache.org</unsubscribe>
       <archive>http://mail-archives.apache.org/mod_mbox/hbase-issues/</archive>
       <otherArchives>
-          <otherArchive>http://hbase.apache.org/mail/issues/</otherArchive>
+        <otherArchive>http://hbase.apache.org/mail/issues/</otherArchive>
       </otherArchives>
     </mailingList>
   </mailingLists>
-
   <developers>
     <developer>
       <id>apurtell</id>
@@ -266,7 +246,6 @@
       <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
   </developers>
-
   <repositories>
     <repository>
       <id>apache release</id>
@@ -324,7 +303,6 @@
       </releases>
     </repository>
   </repositories>
-
   <pluginRepositories>
     <pluginRepository>
       <id>ghelmling.testing</id>
@@ -338,7 +316,6 @@
       </releases>
     </pluginRepository>
   </pluginRepositories>
-
   <build>
     <pluginManagement>
       <plugins>
@@ -356,25 +333,15 @@
             </execution>
           </executions>
           <configuration>
+            <!--Pass -DskipJavadoc=true or -DskipJavadoc on command-line to skip javadoc building-->
+            <skip>${skipJavadoc}</skip>
             <docfilessubdirs>true</docfilessubdirs>
             <excludePackageNames>org.apache.hadoop.hbase.protobuf.generated.*:org.apache.hadoop.hbase.avro.generated.*:org.apache.hadoop.hbase.thrift.generated:org.apache.hadoop.hbase.rest.generated</excludePackageNames>
             <debug>true</debug>
             <maxmemory>2g</maxmemory>
             <verbose>true</verbose>
-            <reportOutputDirectory>target</reportOutputDirectory>
+            <reportOutputDirectory>target/apidocs</reportOutputDirectory>
           </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-site-plugin</artifactId>
-          <version>${maven.site.version}</version>
-          <dependencies>
-            <dependency><!-- add support for ssh/scp -->
-              <groupId>org.apache.maven.wagon</groupId>
-              <artifactId>wagon-ssh</artifactId>
-              <version>2.2</version>
-            </dependency>
-          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -409,7 +376,6 @@
             <showDeprecation>false</showDeprecation>
           </configuration>
         </plugin>
-      
         <!-- Test oriented plugins -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
@@ -432,7 +398,8 @@
             <parallel>${surefire.firstPartParallel}</parallel>
             <perCoreThreadCount>false</perCoreThreadCount>
             <threadCount>${surefire.firstPartThreadCount}</threadCount>
-            <parallel>classes</parallel><!-- surefire hack, if not we're
+            <parallel>classes</parallel>
+            <!-- surefire hack, if not we're
               using method parallelization class ! -->
             <testFailureIgnore>false</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
@@ -453,7 +420,8 @@
                 <forkMode>perThread</forkMode>
                 <perCoreThreadCount>false</perCoreThreadCount>
                 <threadCount>${surefire.secondPartThreadCount}</threadCount>
-                <parallel>classes</parallel><!-- surefire hack, if not we're using method 
+                <parallel>classes</parallel>
+                <!-- surefire hack, if not we're using method 
                   parallelisation class ! -->
                 <groups>${surefire.secondPartGroups}</groups>
               </configuration>
@@ -487,7 +455,6 @@
             <effort>Max</effort>
           </configuration>
         </plugin>
-        
         <!-- Build plugins -->
         <plugin>
           <groupId>org.apache.avro</groupId>
@@ -507,13 +474,6 @@
           <groupId>org.jamon</groupId>
           <artifactId>jamon-maven-plugin</artifactId>
           <version>${jamon.plugin.version}</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-resources-plugin</artifactId>
-          <version>${maven.resources.plugin.version}</version><!--$NO-MVN-MAN-VER$ -->
-          <configuration>
-            <escapeString>\</escapeString>
-          </configuration>
         </plugin>
         <!-- Make a jar and put the sources in the jar.
         In the parent pom, so submodules will do the right thing. -->
@@ -549,19 +509,12 @@
             </excludes>
           </configuration>
         </plugin>
-
-        <plugin>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>${maven.assembly.version}</version>
-        </plugin>
-
         <!-- General config for eclipse classpath/settings -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-eclipse-plugin</artifactId>
           <version>2.8</version>
         </plugin>
-        
         <!--This plugin's configuration is used to store Eclipse m2e settings only. It 
           has no influence on the Maven build itself. m2e does not provide any safeguards against 
           rogue maven plugins that leak classloaders, modify random files inside workspace 
@@ -573,10 +526,10 @@
           <artifactId>lifecycle-mapping</artifactId>
           <version>1.0.0</version>
         </plugin>
-
-    	<plugin> <!-- excludes are inherited -->
-    	  <groupId>org.apache.rat</groupId>
-          <artifactId>apache-rat-plugin</artifactId>	  
+        <plugin>
+          <!-- excludes are inherited -->
+          <groupId>org.apache.rat</groupId>
+          <artifactId>apache-rat-plugin</artifactId>
           <version>0.8</version>
           <configuration>
             <excludes>
@@ -591,16 +544,19 @@
               <exclude>**/generated/**</exclude>
               <exclude>**/conf/*</exclude>
               <exclude>**/*.avpr</exclude>
-              <exclude>**/*.svg</exclude> <!-- vector graphics --> 
-              <exclude>**/*.vm</exclude> <!-- apache doxia generated -->
+              <exclude>**/*.svg</exclude>
+              <!-- vector graphics -->
+              <exclude>**/*.vm</exclude>
+              <!-- apache doxia generated -->
               <exclude>**/control</exclude>
               <exclude>**/conffile</exclude>
-	          <exclude>docs/*</exclude> <!-- auto-gen docs -->
+              <exclude>docs/*</exclude>
+              <!-- auto-gen docs -->
               <!--It don't like freebsd license-->
               <exclude>**/src/site/resources/css/freebsd_docbook.css</exclude>
             </excludes>
           </configuration>
-	   </plugin>
+        </plugin>
         <!-- Website/Reference Guide building -->
         <plugin>
           <groupId>com.agilejava.docbkx</groupId>
@@ -622,13 +578,173 @@
         </plugin>
       </plugins>
     </pluginManagement>
-
     <!-- Plugins inherited by all modules -->
     <plugins>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>${maven.assembly.version}</version>
+        <inherited>false</inherited>
+        <configuration>
+          <skipAssembly>false</skipAssembly>
+          <attach>false</attach>
+          <tarLongFileMode>gnu</tarLongFileMode>
+          <appendAssemblyId>false</appendAssemblyId>
+          <descriptors>
+            <descriptor>src/assembly/all.xml</descriptor>
+          </descriptors>
+        </configuration>
+      </plugin>
       <!-- All submodules build their javadocs -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+      <!--The below plugins are about site generation.
+            They are all marked as not to be in herited by child
+            modules.  The plugins are meant to run here in the
+            parent project only.
+        -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>xml-maven-plugin</artifactId>
+        <version>1.0-beta-3</version>
+        <inherited>false</inherited>
+        <executions>
+          <execution>
+            <goals>
+              <goal>transform</goal>
+            </goals>
+            <phase>pre-site</phase>
+          </execution>
+        </executions>
+        <configuration>
+          <transformationSets>
+            <transformationSet>
+              <!--Reaching down into sub-module for docs-->
+              <dir>${basedir}/hbase-server/src/main/resources/</dir>
+              <includes>
+                <include>hbase-default.xml</include>
+              </includes>
+              <stylesheet>${basedir}/src/xslt/configuration_to_docbook_section.xsl</stylesheet>
+              <outputDir>${basedir}/target/site</outputDir>
+            </transformationSet>
+          </transformationSets>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>com.agilejava.docbkx</groupId>
+        <artifactId>docbkx-maven-plugin</artifactId>
+        <version>2.0.14</version>
+        <inherited>false</inherited>
+        <dependencies>
+          <dependency>
+            <groupId>org.docbook</groupId>
+            <artifactId>docbook-xml</artifactId>
+            <version>4.4</version>
+            <scope>runtime</scope>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <useIdAsFilename>true</useIdAsFilename>
+          <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
+          <sectionAutolabel>true</sectionAutolabel>
+          <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
+          <targetDirectory>target/docbkx</targetDirectory>
+          <htmlStylesheet>${basedir}/src/resources/css/freebsd_docbook.css</htmlStylesheet>
+          <htmlCustomization>${basedir}/src/docbkx/customization.xsl</htmlCustomization>
+          <tocMaxDepth>2</tocMaxDepth>
+          <insertXrefPageNumber>yes</insertXrefPageNumber>
+        </configuration>
+        <executions>
+          <execution>
+            <id>multipage</id>
+            <goals>
+              <goal>generate-html</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <navigShowtitles>true</navigShowtitles>
+              <chunkedOutput>true</chunkedOutput>
+              <imgSrcPath>../images/</imgSrcPath>
+            </configuration>
+          </execution>
+          <execution>
+            <id>onepage</id>
+            <goals>
+              <goal>generate-html</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <imgSrcPath>images/</imgSrcPath>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>${maven.resources.plugin.version}</version>
+        <!--$NO-MVN-MAN-VER$ -->
+        <inherited>false</inherited>
+        <executions>
+          <execution>
+            <id>copy-javadocs</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <outputDirectory>target/site/apidocs</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${basedir}/target/apidocs</directory>
+                  <includes>
+                    <include>**/**</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>copy-docbkx</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>pre-site</phase>
+            <configuration>
+              <outputDirectory>target/site</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${basedir}/target/docbkx</directory>
+                  <includes>
+                    <include>**/**</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+        <configuration>
+          <escapeString>\</escapeString>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>${maven.site.version}</version>
+        <inherited>false</inherited>
+        <dependencies>
+          <dependency>
+            <!-- add support for ssh/scp -->
+            <groupId>org.apache.maven.wagon</groupId>
+            <artifactId>wagon-ssh</artifactId>
+            <version>2.2</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <inputEncoding>UTF-8</inputEncoding>
+          <outputEncoding>UTF-8</outputEncoding>
+          <templateFile>${basedir}/src/site/site.vm</templateFile>
+        </configuration>
       </plugin>
       <!-- Special configuration for findbugs just in the parent so
       the filter file location can be more general (see definition in pluginManagement) -->
@@ -637,27 +753,18 @@
         <artifactId>findbugs-maven-plugin</artifactId>
         <executions>
           <execution>
-          <inherited>false</inherited>
-          <goals>
-            <goal>findbugs</goal>
-          </goals>
-          <configuration>
-            <excludeFilterFile>${project.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
-          </configuration>
+            <inherited>false</inherited>
+            <goals>
+              <goal>findbugs</goal>
+            </goals>
+            <configuration>
+              <excludeFilterFile>${project.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+            </configuration>
           </execution>
         </executions>
       </plugin>
-      <!-- Ignore running the assembly in the top-level.
-       That's all handled by hbase-assembly -->
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <skipAssembly>true</skipAssembly>
-        </configuration>
-      </plugin>
     </plugins>
   </build>
-
   <properties>
     <tar.name>${project.build.finalName}.tar.gz</tar.name>
     <maven.build.timestamp.format>
@@ -666,12 +773,12 @@
     <buildDate>${maven.build.timestamp}</buildDate>
     <compileSource>1.6</compileSource>
     <hbase.version>${project.version}</hbase.version>
-
     <!-- Dependencies -->
     <avro.version>1.5.3</avro.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.4</commons-codec.version>
-    <commons-httpclient.version>3.1</commons-httpclient.version><!-- pretty outdated -->
+    <commons-httpclient.version>3.1</commons-httpclient.version>
+    <!-- pretty outdated -->
     <commons-io.version>2.1</commons-io.version>
     <commons-lang.version>2.5</commons-lang.version>
     <commons-logging.version>1.1.1</commons-logging.version>
@@ -696,16 +803,14 @@
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
     <clover.version>2.6.3</clover.version>
     <jamon-runtime.version>2.3.1</jamon-runtime.version>
-
     <!-- Plugin Dependencies -->
+    <maven.assembly.version>2.3</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
     <jamon.plugin.version>2.3.4</jamon.plugin.version>
-    <maven.assembly.version>2.3</maven.assembly.version>
     <findbugs.version>2.4.0</findbugs.version>
-    <maven.site.version>2.0.1</maven.site.version>
+    <maven.site.version>3.1</maven.site.version>
     <javadoc.version>2.8.1</javadoc.version>
     <maven.resources.plugin.version>2.5</maven.resources.plugin.version>
-    
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
@@ -713,33 +818,27 @@
     <package.pid.dir>/var/run/hbase</package.pid.dir>
     <package.release>1</package.release>
     <final.name>${project.artifactId}-${project.version}</final.name>
-    
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
     <server.test.jar>hbase-server-${project.version}-tests.jar</server.test.jar>
-
     <surefire.version>2.12-TRUNK-HBASE-2</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
-
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
-
     <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
     <surefire.firstPartParallel>classes</surefire.firstPartParallel>
     <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
     <surefire.secondPartThreadCount>2</surefire.secondPartThreadCount>
-
     <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
     <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
     <test.output.tofile>true</test.output.tofile>
   </properties>
-
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
     <dependencies>
-    <!--
+      <!--
       Note: There are a few exclusions to prevent duplicate code in different jars to be included:
         * org.mortbay.jetty:servlet-api, javax.servlet:servlet-api: These are excluded because they are
           the same implementations. I chose org.mortbay.jetty:servlet-api-2.5 instead, which is a third
@@ -747,7 +846,6 @@
         * javax.servlet:jsp-api in favour of org.mortbay.jetty:jsp-api-2.1
         * javax.xml.stream:stax-api in favour of stax:stax-api
         -->
-
       <!-- Intra-module dependencies -->
       <dependency>
         <groupId>org.apache.hbase</groupId>
@@ -766,7 +864,6 @@
         <type>test-jar</type>
         <scope>test</scope>
       </dependency>
-
       <!-- General dependencies -->
       <dependency>
         <groupId>com.yammer.metrics</groupId>
@@ -827,26 +924,6 @@
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
         <version>${log4j.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.avro</groupId>
-        <artifactId>avro</artifactId>
-        <version>${avro.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>com.thoughtworks.paranamer</groupId>
-            <artifactId>paranamer</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.thoughtworks.paranamer</groupId>
-            <artifactId>paranamer-ant</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.avro</groupId>
-        <artifactId>avro-ipc</artifactId>
-        <version>${avro.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
@@ -945,8 +1022,8 @@
         <artifactId>slf4j-log4j12</artifactId>
         <version>${slf4j.version}</version>
       </dependency>
-	  <dependency>
-      <!--If this is not in the runtime lib, we get odd
+      <dependency>
+        <!--If this is not in the runtime lib, we get odd
       "2009-02-27 11:38:39.504::WARN:  failed jsp
        java.lang.NoSuchFieldError: IS_SECURITY_ENABLED"
        exceptions out of jetty deploying webapps.
@@ -983,13 +1060,11 @@
           </exclusion>
         </exclusions>
       </dependency>
-
       <dependency>
         <groupId>org.jamon</groupId>
         <artifactId>jamon-runtime</artifactId>
         <version>${jamon-runtime.version}</version>
       </dependency>
-
       <!-- REST dependencies -->
       <dependency>
         <groupId>com.google.protobuf</groupId>
@@ -1027,7 +1102,6 @@
         <artifactId>stax-api</artifactId>
         <version>${stax-api.version}</version>
       </dependency>
-
       <!-- Test dependencies -->
       <dependency>
         <groupId>junit</groupId>
@@ -1043,7 +1117,6 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
-
   <!-- Dependencies needed by subprojects -->
   <dependencies>
     <!-- Test dependencies -->
@@ -1056,7 +1129,6 @@
       <artifactId>mockito-all</artifactId>
     </dependency>
   </dependencies>
-
   <!--
   To publish, use the following settings.xml file ( placed in ~/.m2/settings.xml )
 
@@ -1106,16 +1178,15 @@
         <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
       </properties>
     </profile>
-
     <!-- this profile should be activated for release builds -->
     <profile>
       <id>release</id>
       <build>
-    	<plugins>
-    	  <plugin>
-  	        <groupId>org.apache.rat</groupId>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.rat</groupId>
             <artifactId>apache-rat-plugin</artifactId>
-  	        <executions>
+            <executions>
               <execution>
                 <phase>package</phase>
                 <goals>
@@ -1127,13 +1198,11 @@
         </plugins>
       </build>
     </profile>
-
-    <!-- Dependency management profiles for submodules when building against specific hadoop branches.--> 
+    <!-- Dependency management profiles for submodules when building against specific hadoop branches.-->
     <!-- Submodules that need hadoop dependencies should declare
     profiles with activation properties matching the profile here.
     Generally, it should be sufficient to copy the first
     few lines of the profile you want to match.  -->
-
     <!-- profile against Hadoop 1.0.x: This is the default. -->
     <profile>
       <id>hadoop-1.0</id>
@@ -1186,7 +1255,6 @@
         </dependencies>
       </dependencyManagement>
     </profile>
-
     <!-- profile for building against Hadoop 2.0.x 
     Activate using: mvn -Dhadoop.profile=2.0 -->
     <profile>
@@ -1223,7 +1291,6 @@
         </dependencies>
       </dependencyManagement>
     </profile>
-
     <!--
       profile for building against Hadoop 3.0.0. Activate using:
        mvn -Dhadoop.profile=3.0
@@ -1261,14 +1328,14 @@
         </dependency>
       </dependencies>
     </profile>
-
     <!-- profiles for the tests
          See as well the properties of the project for the values
          when no profile is active.     -->
-    <profile> <!-- Use it to launch the tests without parallelisation -->
+    <profile>
+      <!-- Use it to launch the tests without parallelisation -->
       <id>nonParallelTests</id>
       <activation>
-          <activeByDefault>false</activeByDefault>
+        <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
         <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
@@ -1276,10 +1343,10 @@
         <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
       </properties>
     </profile>
-
-    <profile> <!-- Use it to launch the tests in parallel in the same JVM  -->
+    <profile>
+      <!-- Use it to launch the tests in parallel in the same JVM  -->
       <id>parallelTests</id>
-        <activation>
+      <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
@@ -1288,8 +1355,8 @@
         <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
       </properties>
     </profile>
-
-    <profile> <!-- Use it to launch the tests in the same JVM  -->
+    <profile>
+      <!-- Use it to launch the tests in the same JVM  -->
       <id>singleJVMTests</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -1298,14 +1365,13 @@
         <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
         <surefire.firstPartParallel>none</surefire.firstPartParallel>
         <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
-
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
-        <surefire.firstPartGroups></surefire.firstPartGroups>
+        <surefire.firstPartGroups/>
       </properties>
     </profile>
-
-    <profile> <!-- Use it to launch small tests only -->
+    <profile>
+      <!-- Use it to launch small tests only -->
       <id>runSmallTests</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -1314,15 +1380,14 @@
         <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
         <surefire.firstPartParallel>none</surefire.firstPartParallel>
         <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
-
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups></surefire.secondPartGroups>
+        <surefire.secondPartGroups/>
       </properties>
     </profile>
-
-    <profile> <!-- Use it to launch medium tests only -->
+    <profile>
+      <!-- Use it to launch medium tests only -->
       <id>runMediumTests</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -1332,11 +1397,11 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups></surefire.secondPartGroups>
+        <surefire.secondPartGroups/>
       </properties>
     </profile>
-
-    <profile> <!-- Use it to launch large tests only -->
+    <profile>
+      <!-- Use it to launch large tests only -->
       <id>runLargeTests</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -1346,11 +1411,11 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.LargeTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups></surefire.secondPartGroups>
+        <surefire.secondPartGroups/>
       </properties>
     </profile>
-
-    <profile> <!-- Use it to launch small & medium tests -->
+    <profile>
+      <!-- Use it to launch small & medium tests -->
       <id>runDevTests</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -1359,15 +1424,14 @@
         <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
         <surefire.firstPartParallel>none</surefire.firstPartParallel>
         <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
-
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
         <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
       </properties>
     </profile>
-
-    <profile> <!-- Use it to launch all tests -->
+    <profile>
+      <!-- Use it to launch all tests -->
       <id>runAllTests</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -1377,15 +1441,14 @@
         <surefire.firstPartParallel>none</surefire.firstPartParallel>
         <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
         <surefire.secondPartThreadCount>4</surefire.secondPartThreadCount>
-
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
         <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests,org.apache.hadoop.hbase.LargeTests</surefire.secondPartGroups>
       </properties>
     </profile>
-    
-    <profile> <!-- Use it to launch tests locally-->
+    <profile>
+      <!-- Use it to launch tests locally-->
       <id>localTests</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -1393,14 +1456,12 @@
       <properties>
         <surefire.provider>surefire-junit4</surefire.provider>
         <surefire.version>2.10</surefire.version>
-
         <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
-        <surefire.firstPartGroups></surefire.firstPartGroups>
+        <surefire.firstPartGroups/>
       </properties>
     </profile>
-    
     <!-- Profile for running clover. You need to have a clover license under ~/.clover.license for ${clover.version}
          or you can provide the license with -Dmaven.clover.licenseLocation=/path/to/license. Committers can find
          the license under https://svn.apache.org/repos/private/committers/donated-licenses/clover/
@@ -1454,9 +1515,8 @@
           </plugin>
         </plugins>
       </build>
-    </profile>    
+    </profile>
   </profiles>
-
   <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
   <reporting>
     <plugins>
@@ -1480,20 +1540,14 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
-        <version>2.1</version>
+        <version>2.3</version>
+        <configuration>
+          <aggregate>true</aggregate>
+        </configuration>
       </plugin>
     </plugins>
   </reporting>
   <distributionManagement>
-    <!--Build and deploy the site with the below command
-
-      $ ~/bin/apache-maven-3.0.4/bin/mvn -X clean package site:site site:deploy
-
-      You may need a settings.xml file under you ~/.m2/ directory as
-      described here: http://www.apache.org/dev/publishing-maven-artifacts.html
-      We should use the below going forward because it ensures permissions up
-      in apache making it so other members of hbase group can deploy w/o issue.
-     -->
     <site>
       <id>apache.website</id>
       <url>scp://people.apache.org/www/hbase.apache.org/</url>

@@ -1,6 +1,6 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-<!--
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,20 +18,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
--->  
+-->
   <modelVersion>4.0.0</modelVersion>
-
   <parent>
     <artifactId>hbase</artifactId>
     <groupId>org.apache.hbase</groupId>
     <version>0.95-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
-  
   <artifactId>hbase-server</artifactId>
   <name>HBase - Server</name>
   <description>Main functionality for HBase</description>
-
   <build>
     <!-- Makes sure the resources get added before they are processed
       by placing this first -->
@@ -59,11 +56,11 @@
         </includes>
       </testResource>
     </testResources>
-
     <plugins>
       <plugin>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro-maven-plugin</artifactId>
+        <version>${avro.version}</version>
         <executions>
           <execution>
             <id>generate-avro-sources</id>
@@ -78,7 +75,6 @@
           <outputDirectory>${project.build.directory}/generated-sources/java</outputDirectory>
         </configuration>
       </plugin>
-
       <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running 
         tests (this is needed for upstream projects whose tests need this jar simply for 
         compilation) -->
@@ -109,7 +105,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
       </plugin>
-      
       <!-- General ant tasks, bound to different build phases -->
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
@@ -120,39 +115,25 @@
             <phase>generate-sources</phase>
             <configuration>
               <target>
-                <property name="build.webapps"
-                  location="${project.build.directory}/hbase-webapps" />
-                <property name="src.webapps"
-                  location="${basedir}/src/main/resources/hbase-webapps" />
-                <property name="generated.sources"
-                  location="${project.build.directory}/generated-sources" />
-
-                <mkdir dir="${build.webapps}" />
+                <property name="build.webapps" location="${project.build.directory}/hbase-webapps"/>
+                <property name="src.webapps" location="${basedir}/src/main/resources/hbase-webapps"/>
+                <property name="generated.sources" location="${project.build.directory}/generated-sources"/>
+                <mkdir dir="${build.webapps}"/>
                 <copy todir="${build.webapps}">
                   <fileset dir="${src.webapps}">
-                    <exclude name="**/*.jsp" />
-                    <exclude name="**/.*" />
-                    <exclude name="**/*~" />
+                    <exclude name="**/*.jsp"/>
+                    <exclude name="**/.*"/>
+                    <exclude name="**/*~"/>
                   </fileset>
                 </copy>
-
                 <!--The compile.classpath is passed in by maven -->
-                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler"
-                  classpathref="maven.compile.classpath" />
-
-                <mkdir dir="${build.webapps}/master/WEB-INF" />
-                <jspcompiler uriroot="${src.webapps}/master"
-                  outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master"
-                  webxml="${build.webapps}/master/WEB-INF/web.xml" />
-
-                <mkdir dir="${build.webapps}/regionserver/WEB-INF" />
-                <jspcompiler uriroot="${src.webapps}/regionserver"
-                  outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver"
-                  webxml="${build.webapps}/regionserver/WEB-INF/web.xml" />
-
+                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" classpathref="maven.compile.classpath"/>
+                <mkdir dir="${build.webapps}/master/WEB-INF"/>
+                <jspcompiler uriroot="${src.webapps}/master" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" webxml="${build.webapps}/master/WEB-INF/web.xml"/>
+                <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
+                <jspcompiler uriroot="${src.webapps}/regionserver" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
                 <exec executable="sh">
-                  <arg
-                    line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}/java" />
+                  <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}/java"/>
                 </exec>
               </target>
             </configuration>
@@ -166,7 +147,7 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
         <executions>
-        <!-- Add the generated sources -->
+          <!-- Add the generated sources -->
           <execution>
             <id>jspcSource-packageInfo-Avro-source</id>
             <phase>generate-sources</phase>
@@ -186,16 +167,16 @@
         <groupId>org.jamon</groupId>
         <artifactId>jamon-maven-plugin</artifactId>
         <executions>
-        <execution>
-          <phase>generate-sources</phase>
-          <goals>
-            <goal>translate</goal>
-          </goals>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>translate</goal>
+            </goals>
             <configuration>
               <templateSourceDir>src/main/jamon</templateSourceDir>
               <templateOutputDir>target/generated-jamon</templateOutputDir>
             </configuration>
-        </execution>
+          </execution>
         </executions>
       </plugin>
       <!-- General plugins -->
@@ -223,19 +204,17 @@
           </additionalConfig>
         </configuration>
       </plugin>
-      <!-- Run findbugs -->      
+      <!-- Run findbugs -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
       </plugin>
-      
       <!-- Testing plugins -->
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
       </plugin>
-   </plugins>
-   
-   <!-- General Resources -->
+    </plugins>
+    <!-- General Resources -->
     <pluginManagement>
       <plugins>
         <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on 
@@ -257,7 +236,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore></ignore>
+                    <ignore/>
                   </action>
                 </pluginExecution>
                 <pluginExecution>
@@ -270,7 +249,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore></ignore>
+                    <ignore/>
                   </action>
                 </pluginExecution>
                 <pluginExecution>
@@ -284,7 +263,7 @@
                     </goals>
                   </pluginExecutionFilter>
                   <action>
-                    <ignore></ignore>
+                    <ignore/>
                   </action>
                 </pluginExecution>
               </pluginExecutions>
@@ -303,7 +282,6 @@
       </plugins>
     </pluginManagement>
   </build>
-
   <dependencies>
     <!-- Intra-project dependencies -->
     <dependency>
@@ -362,10 +340,22 @@
     <dependency>
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
+      <version>${avro.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.thoughtworks.paranamer</groupId>
+          <artifactId>paranamer</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.thoughtworks.paranamer</groupId>
+          <artifactId>paranamer-ant</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.avro</groupId>
       <artifactId>avro-ipc</artifactId>
+      <version>${avro.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
@@ -435,7 +425,6 @@
       <groupId>org.jamon</groupId>
       <artifactId>jamon-runtime</artifactId>
     </dependency>
-  
     <!-- REST dependencies -->
     <dependency>
       <groupId>com.google.protobuf</groupId>
@@ -462,9 +451,7 @@
       <artifactId>stax-api</artifactId>
     </dependency>
   </dependencies>
-
   <profiles>
-
     <!-- Skip the tests in this module -->
     <profile>
       <id>skip-server-tests</id>
@@ -478,9 +465,8 @@
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
       </properties>
     </profile>
-
     <!-- Special builds -->
-     <profile>
+    <profile>
       <id>hadoop-snappy</id>
       <activation>
         <activeByDefault>false</activeByDefault>
@@ -496,11 +482,9 @@
         </dependency>
       </dependencies>
     </profile>
-
-    <!-- Profiles for building against different hadoop versions -->    
+    <!-- Profiles for building against different hadoop versions -->
     <!-- There are a lot of common dependencies used here, should investigate
     if we can combine these profiles somehow -->
-
     <!-- profile against Hadoop 1.0.x: This is the default. It has to have the same 
     activation property as the parent Hadoop 1.0.x profile to make sure it gets run at 
     the same time. -->
@@ -521,8 +505,7 @@
           <artifactId>hadoop-test</artifactId>
         </dependency>
       </dependencies>
-    </profile>  
-
+    </profile>
     <!--
       profile for building against Hadoop 2.0.0-alpha. Activate using:
        mvn -Dhadoop.profile=2.0
@@ -573,7 +556,6 @@
         </plugins>
       </build>
     </profile>
-
     <!--
       profile for building against Hadoop 3.0.x. Activate using:
        mvn -Dhadoop.profile=3.0
