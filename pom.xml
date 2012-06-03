@@ -481,9 +481,9 @@
           <artifactId>findbugs-maven-plugin</artifactId>
           <version>${findbugs.version}</version>
           <configuration>
+            <excludeFilterFile>${project.basedir}/../dev-support/findbugs-exclude.xml</excludeFilterFile>
             <findbugsXmlOutput>true</findbugsXmlOutput>
             <xmlOutput>true</xmlOutput>
-            <excludeFilterFile>${parent.basedir}/../dev-support/findbugs-exclude.xml</excludeFilterFile>
             <effort>Max</effort>
           </configuration>
         </plugin>
@@ -629,6 +629,23 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+      <!-- Special configuration for findbugs just in the parent so
+      the filter file location can be more general (see definition in pluginManagement) -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>findbugs-maven-plugin</artifactId>
+        <executions>
+          <execution>
+          <inherited>false</inherited>
+          <goals>
+            <goal>findbugs</goal>
+          </goals>
+          <configuration>
+            <excludeFilterFile>${project.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+          </configuration>
+          </execution>
+        </executions>
       </plugin>
       <!-- Ignore running the assembly in the top-level.
        That's all handled by hbase-assembly -->
