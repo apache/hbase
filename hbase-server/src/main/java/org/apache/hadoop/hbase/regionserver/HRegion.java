@@ -180,7 +180,7 @@ import com.google.common.collect.MutableClassToInstanceMap;
 @InterfaceAudience.Private
 public class HRegion implements HeapSize { // , Writable{
   public static final Log LOG = LogFactory.getLog(HRegion.class);
-  static final String MERGEDIR = "merges";
+  private static final String MERGEDIR = ".merges";
 
   final AtomicBoolean closed = new AtomicBoolean(false);
   /* Closing can take some time; use the closing flag if there is stuff we don't

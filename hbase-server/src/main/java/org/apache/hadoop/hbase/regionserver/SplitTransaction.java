@@ -85,7 +85,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @InterfaceAudience.Private
 public class SplitTransaction {
   private static final Log LOG = LogFactory.getLog(SplitTransaction.class);
-  private static final String SPLITDIR = "splits";
+  private static final String SPLITDIR = ".splits";
 
   /*
    * Region to split
