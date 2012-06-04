@@ -364,7 +364,7 @@ public class HLog implements Syncable {
   public HLog(final FileSystem fs, final Path dir, final Path oldLogDir,
       final Configuration conf, final List<WALActionsListener> listeners,
       final boolean failIfLogDirExists, final String prefix)
- throws IOException {
+  throws IOException {
     super();
     this.fs = fs;
     this.dir = dir;
@@ -375,7 +375,7 @@ public class HLog implements Syncable {
       }
     }
     this.blocksize = conf.getLong("hbase.regionserver.hlog.blocksize",
-      this.fs.getDefaultBlockSize());
+        getDefaultBlockSize());
     // Roll at 95% of block size.
     float multi = conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f);
     this.logrollsize = (long)(this.blocksize * multi);
@@ -421,6 +421,33 @@ public class HLog implements Syncable {
     Threads.setDaemonThreadRunning(logSyncerThread.getThread(),
         Thread.currentThread().getName() + ".logSyncer");
     coprocessorHost = new WALCoprocessorHost(this, conf);
+  }
+  
+  // use reflection to search for getDefaultBlockSize(Path f)
+  // if the method doesn't exist, fall back to using getDefaultBlockSize()
+  private long getDefaultBlockSize() throws IOException {
+    Method m = null;
+    Class<? extends FileSystem> cls = this.fs.getClass();
+    try {
+      m = cls.getMethod("getDefaultBlockSize",
+          new Class<?>[] { Path.class });
+    } catch (NoSuchMethodException e) {
+      LOG.info("FileSystem doesn't support getDefaultBlockSize");
+    } catch (SecurityException e) {
+      LOG.info("Doesn't have access to getDefaultBlockSize on "
+          + "FileSystems", e);
+      m = null; // could happen on setAccessible()
+    }
+    if (null == m) {
+      return this.fs.getDefaultBlockSize();
+    } else {
+      try {
+        Object ret = m.invoke(this.fs, this.dir);
+        return ((Long)ret).longValue();
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+    }
   }
 
   /**
