@@ -78,6 +78,7 @@ Release 0.92.2 - Unreleased
    HBASE-6133  TestRestartCluster failing in 0.92
    HBASE-6124  Backport HBASE-6033 to 0.90, 0.92 and 0.94 (Jimmy Xiang)
    HBASE-6068  Secure HBase cluster : Client not able to call some admin APIs (Matteo Bertozzi)
+   HBASE-5874  When 'fs.default.name' not configured, the hbck tool and Merge tool throws IllegalArgumentException (fulin wang)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
