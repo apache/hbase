@@ -100,6 +100,7 @@ Release 0.92.2 - Unreleased
    HBASE-6114  CacheControl flags should be tunable per table schema per CF
    HBASE-4720  Implement atomic update operations (checkAndPut, checkAndDelete) for REST client/server
                (Mubarak Seyed and Jimmy Xiang)
+   HBASE-5892  [hbck] Refactor parallel WorkItem* to Futures (Andrew Wang)
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems
