@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -2992,7 +2993,10 @@ public class HBaseFsck {
 
     // create a fsck object
     Configuration conf = HBaseConfiguration.create();
-    conf.set("fs.defaultFS", conf.get(HConstants.HBASE_DIR));
+    Path hbasedir = new Path(conf.get(HConstants.HBASE_DIR));
+    URI defaultFs = hbasedir.getFileSystem(conf).getUri();
+    conf.set("fs.defaultFS", defaultFs.toString());     // for hadoop 0.21+
+    conf.set("fs.default.name", defaultFs.toString());  // for hadoop 0.20
     HBaseFsck fsck = new HBaseFsck(conf);
     long sleepBeforeRerun = DEFAULT_SLEEP_BEFORE_RERUN;
 
