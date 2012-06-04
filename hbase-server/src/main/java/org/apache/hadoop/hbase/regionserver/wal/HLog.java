@@ -450,9 +450,8 @@ public class HLog implements Syncable {
     Method m = null;
     Class<? extends FileSystem> cls = this.fs.getClass();
     try {
-      m = cls.getDeclaredMethod("getDefaultBlockSize",
+      m = cls.getMethod("getDefaultBlockSize",
           new Class<?>[] { Path.class });
-      m.setAccessible(true);
     } catch (NoSuchMethodException e) {
       LOG.info("FileSystem doesn't support getDefaultBlockSize");
     } catch (SecurityException e) {
