@@ -33,6 +33,7 @@ Release 0.90.7 - Unreleased
    HBASE-5757  TableInputFormat should handle as many errors as possible (Jan Lukavsky)
    HBASE-6041  NullPointerException prevents the master from starting up (Jimmy Xiang)
    HBASE-6124  https://issues.apache.org/jira/secure/attachment/12530072/patch-0.90.txt (Jimmy Xiang)
+   HBASE-5874  When 'fs.default.name' not configured, the hbck tool and Merge tool throws IllegalArgumentException (fulin wang)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
