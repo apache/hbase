@@ -650,7 +650,7 @@
           <sectionAutolabel>true</sectionAutolabel>
           <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
           <targetDirectory>target/docbkx</targetDirectory>
-          <htmlStylesheet>${basedir}/src/resources/css/freebsd_docbook.css</htmlStylesheet>
+          <htmlStylesheet>${basedir}/src/site/resources/css/freebsd_docbook.css</htmlStylesheet>
           <htmlCustomization>${basedir}/src/docbkx/customization.xsl</htmlCustomization>
           <tocMaxDepth>2</tocMaxDepth>
           <insertXrefPageNumber>yes</insertXrefPageNumber>
