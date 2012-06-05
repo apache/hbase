@@ -23,6 +23,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -53,9 +56,11 @@ import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
@@ -466,6 +471,96 @@ public class TestCatalogJanitor {
 
     services.stop("test finished");
     janitor.join();
+  }
+
+  /**
+   * CatalogJanitor.scan() should not clean parent regions if their own
+   * parents are still referencing them. This ensures that grandfather regions
+   * do not point to deleted parent regions.
+   */
+  @Test
+  public void testScanDoesNotCleanRegionsWithExistingParents() throws Exception {
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    setRootDirAndCleanIt(htu, "testScanDoesNotCleanRegionsWithExistingParents");
+    Server server = new MockServer(htu);
+    MasterServices services = new MockMasterServices(server);
+
+    final HTableDescriptor htd = createHTableDescriptor();
+
+    // Create regions: aaa->{lastEndKey}, aaa->ccc, aaa->bbb, bbb->ccc, etc.
+
+    // Parent
+    HRegionInfo parent = new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
+      new byte[0], true);
+    // Sleep a second else the encoded name on these regions comes out
+    // same for all with same start key and made in same second.
+    Thread.sleep(1001);
+
+    // Daughter a
+    HRegionInfo splita = new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
+      Bytes.toBytes("ccc"), true);
+    Thread.sleep(1001);
+    // Make daughters of daughter a; splitaa and splitab.
+    HRegionInfo splitaa = new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
+      Bytes.toBytes("bbb"), false);
+    HRegionInfo splitab = new HRegionInfo(htd.getName(), Bytes.toBytes("bbb"),
+      Bytes.toBytes("ccc"), false);
+
+    // Daughter b
+    HRegionInfo splitb = new HRegionInfo(htd.getName(), Bytes.toBytes("ccc"),
+        new byte[0]);
+    Thread.sleep(1001);
+
+    final Map<HRegionInfo, Result> splitParents =
+        new TreeMap<HRegionInfo, Result>(new SplitParentFirstComparator());
+    splitParents.put(parent, makeResultFromHRegionInfo(parent, splita, splitb));
+    splitParents.put(splita, makeResultFromHRegionInfo(splita, splitaa, splitab));
+
+    CatalogJanitor janitor = spy(new CatalogJanitor(server, services));
+    doReturn(new Pair<Integer, Map<HRegionInfo, Result>>(
+        10, splitParents)).when(janitor).getSplitParents();
+
+    //create ref from splita to parent
+    Path splitaRef =
+        createReferences(services, htd, parent, splita, Bytes.toBytes("ccc"), false);
+
+    //parent and A should not be removed
+    assertEquals(0, janitor.scan());
+
+    //now delete the ref
+    FileSystem fs = FileSystem.get(htu.getConfiguration());
+    assertTrue(fs.delete(splitaRef, true));
+
+    //now, both parent, and splita can be deleted
+    assertEquals(2, janitor.scan());
+
+    services.stop("test finished");
+    janitor.join();
+  }
+
+  private Result makeResultFromHRegionInfo(HRegionInfo region, HRegionInfo splita,
+      HRegionInfo splitb) throws IOException {
+    List<KeyValue> kvs = new ArrayList<KeyValue>();
+    kvs.add(new KeyValue(
+        region.getRegionName(),
+        HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+        Writables.getBytes(region)));
+
+    if (splita != null) {
+      kvs.add(new KeyValue(
+          region.getRegionName(),
+          HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
+          Writables.getBytes(splita)));
+    }
+
+    if (splitb != null) {
+      kvs.add(new KeyValue(
+          region.getRegionName(),
+          HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER,
+          Writables.getBytes(splitb)));
+    }
+
+    return new Result(kvs);
   }
 
   private String setRootDirAndCleanIt(final HBaseTestingUtility htu,

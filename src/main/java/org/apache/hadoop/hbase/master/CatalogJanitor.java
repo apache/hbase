@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -97,11 +98,10 @@ class CatalogJanitor extends Chore {
   }
 
   /**
-   * Run janitorial scan of catalog <code>.META.</code> table looking for
-   * garbage to collect.
-   * @throws IOException
+   * Scans META and returns a number of scanned rows, and
+   * an ordered map of split parents.
    */
-  void scan() throws IOException {
+  Pair<Integer, Map<HRegionInfo, Result>> getSplitParents() throws IOException {
     // TODO: Only works with single .META. region currently.  Fix.
     final AtomicInteger count = new AtomicInteger(0);
     // Keep Map of found split parents.  There are candidates for cleanup.
@@ -123,18 +123,40 @@ class CatalogJanitor extends Chore {
     };
     // Run full scan of .META. catalog table passing in our custom visitor
     MetaReader.fullScan(this.server.getCatalogTracker(), visitor);
+
+    return new Pair<Integer, Map<HRegionInfo, Result>>(count.get(), splitParents);
+  }
+
+  /**
+   * Run janitorial scan of catalog <code>.META.</code> table looking for
+   * garbage to collect.
+   * @throws IOException
+   */
+  int scan() throws IOException {
+    Pair<Integer, Map<HRegionInfo, Result>> pair = getSplitParents();
+    int count = pair.getFirst();
+    Map<HRegionInfo, Result> splitParents = pair.getSecond();
+
     // Now work on our list of found parents. See if any we can clean up.
     int cleaned = 0;
+    HashSet<HRegionInfo> parentNotCleaned = new HashSet<HRegionInfo>(); //regions whose parents are still around
     for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
-      if (cleanParent(e.getKey(), e.getValue())) cleaned++;
+      if (!parentNotCleaned.contains(e.getKey()) && cleanParent(e.getKey(), e.getValue())) {
+        cleaned++;
+      } else {
+        // We could not clean the parent, so it's daughters should not be cleaned either (HBASE-6160)
+        parentNotCleaned.add(getDaughterRegionInfo(e.getValue(), HConstants.SPLITA_QUALIFIER));
+        parentNotCleaned.add(getDaughterRegionInfo(e.getValue(), HConstants.SPLITB_QUALIFIER));
+      }
     }
     if (cleaned != 0) {
-      LOG.info("Scanned " + count.get() + " catalog row(s) and gc'd " + cleaned +
+      LOG.info("Scanned " + count + " catalog row(s) and gc'd " + cleaned +
         " unreferenced parent region(s)");
     } else if (LOG.isDebugEnabled()) {
-      LOG.debug("Scanned " + count.get() + " catalog row(s) and gc'd " + cleaned +
+      LOG.debug("Scanned " + count + " catalog row(s) and gc'd " + cleaned +
       " unreferenced parent region(s)");
     }
+    return cleaned;
   }
 
   /**
