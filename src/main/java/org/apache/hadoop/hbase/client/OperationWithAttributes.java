@@ -35,6 +35,9 @@ public abstract class OperationWithAttributes extends Operation implements Attri
   // a opaque blob of attributes
   private Map<String, byte[]> attributes;
 
+  // used for uniquely identifying an operation
+  static public String ID_ATRIBUTE = "_operation.attributes.id";
+
   public void setAttribute(String name, byte[] value) {
     if (attributes == null && value == null) {
       return;
@@ -103,5 +106,28 @@ public abstract class OperationWithAttributes extends Operation implements Attri
         this.attributes.put(name, value);
       }
     }
+  }
+
+  /**
+   * This method allows you to set an identifier on an operation. The original
+   * motivation for this was to allow the identifier to be used in slow query
+   * logging, but this could obviously be useful in other places. One use of
+   * this could be to put a class.method identifier in here to see where the
+   * slow query is coming from.
+   * @param id
+   *          id to set for the scan
+   */
+  public void setId(String id) {
+    setAttribute(ID_ATRIBUTE, Bytes.toBytes(id));
+  }
+
+  /**
+   * This method allows you to retrieve the identifier for the operation if one
+   * was set.
+   * @return the id or null if not set
+   */
+  public String getId() {
+    byte[] attr = getAttribute(ID_ATRIBUTE);
+    return attr == null? null: Bytes.toString(attr);
   }
 }

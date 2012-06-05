@@ -154,6 +154,46 @@ public class TestAttributes {
     Assert.assertNull(del.getAttributesMap().get("attribute1"));
   }
 
+  @Test
+  public void testGetId() {
+    Get get = new Get();
+    Assert.assertNull("Make sure id is null if unset", get.toMap().get("id"));
+    get.setId("myId");
+    Assert.assertEquals("myId", get.toMap().get("id"));
+  }
+
+  @Test
+  public void testAppendId() {
+    Append append = new Append();
+    Assert.assertNull("Make sure id is null if unset", append.toMap().get("id"));
+    append.setId("myId");
+    Assert.assertEquals("myId", append.toMap().get("id"));
+  }
+
+  @Test
+  public void testDeleteId() {
+    Delete delete = new Delete();
+    Assert.assertNull("Make sure id is null if unset", delete.toMap().get("id"));
+    delete.setId("myId");
+    Assert.assertEquals("myId", delete.toMap().get("id"));
+  }
+
+  @Test
+  public void testPutId() {
+    Put put = new Put();
+    Assert.assertNull("Make sure id is null if unset", put.toMap().get("id"));
+    put.setId("myId");
+    Assert.assertEquals("myId", put.toMap().get("id"));
+  }
+
+  @Test
+  public void testScanId() {
+    Scan scan = new Scan();
+    Assert.assertNull("Make sure id is null if unset", scan.toMap().get("id"));
+    scan.setId("myId");
+    Assert.assertEquals("myId", scan.toMap().get("id"));
+  }
+
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
