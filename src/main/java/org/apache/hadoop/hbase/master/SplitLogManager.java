@@ -181,9 +181,11 @@ public class SplitLogManager extends ZooKeeperListener {
         stopper);
   }
 
-  public void finishInitialization() {
-    Threads.setDaemonThreadRunning(timeoutMonitor.getThread(), serverName +
-      ".splitLogManagerTimeoutMonitor");
+  public void finishInitialization(boolean masterRecovery) {
+    if (!masterRecovery) {
+      Threads.setDaemonThreadRunning(timeoutMonitor.getThread(), serverName
+          + ".splitLogManagerTimeoutMonitor");
+    }
     // Watcher can be null during tests with Mock'd servers.
     if (this.watcher != null) {
       this.watcher.registerListener(this);
@@ -1173,5 +1175,12 @@ public class SplitLogManager extends ZooKeeperListener {
     public String toString() {
       return statusMsg;
     }
+  }
+  
+  /**
+   * Completes the initialization
+   */
+  public void finishInitialization() {
+    finishInitialization(false);
   }
 }

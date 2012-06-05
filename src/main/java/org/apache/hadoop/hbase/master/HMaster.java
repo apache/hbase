@@ -340,7 +340,7 @@ Server {
 
       // We are either the active master or we were asked to shutdown
       if (!this.stopped) {
-        finishInitialization(startupStatus);
+        finishInitialization(startupStatus, false);
         loop();
       }
     } catch (Throwable t) {
@@ -458,12 +458,13 @@ Server {
    * <li>Ensure assignment of root and meta regions<li>
    * <li>Handle either fresh cluster start or master failover</li>
    * </ol>
+   * @param masterRecovery 
    *
    * @throws IOException
    * @throws InterruptedException
    * @throws KeeperException
    */
-  private void finishInitialization(MonitoredTask status)
+  private void finishInitialization(MonitoredTask status, boolean masterRecovery)
   throws IOException, InterruptedException, KeeperException {
 
     isActiveMaster = true;
@@ -477,7 +478,7 @@ Server {
     status.setStatus("Initializing Master file system");
     this.masterActiveTime = System.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
-    this.fileSystemManager = new MasterFileSystem(this, this, metrics);
+    this.fileSystemManager = new MasterFileSystem(this, this, metrics, masterRecovery);
 
     this.tableDescriptors =
       new FSTableDescriptors(this.fileSystemManager.getFileSystem(),
@@ -487,20 +488,23 @@ Server {
     status.setStatus("Publishing Cluster ID in ZooKeeper");
     ClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
 
-    this.executorService = new ExecutorService(getServerName().toString());
-
-    this.serverManager = new ServerManager(this, this);
+    if (!masterRecovery) {
+      this.executorService = new ExecutorService(getServerName().toString());
+      this.serverManager = new ServerManager(this, this);
+    }
 
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
 
     // initialize master side coprocessors before we start handling requests
-    status.setStatus("Initializing master coprocessors");
-    this.cpHost = new MasterCoprocessorHost(this, this.conf);
+    if (!masterRecovery) {
+      status.setStatus("Initializing master coprocessors");
+      this.cpHost = new MasterCoprocessorHost(this, this.conf);
 
-    // start up all service threads.
-    status.setStatus("Initializing master service threads");
-    startServiceThreads();
+      // start up all service threads.
+      status.setStatus("Initializing master service threads");
+      startServiceThreads();
+    }
 
     // Wait for region servers to report in.
     this.serverManager.waitForRegionServers(status);
@@ -514,7 +518,9 @@ Server {
       }
     }
 
-    this.assignmentManager.startTimeOutMonitor();
+    if (!masterRecovery) {
+      this.assignmentManager.startTimeOutMonitor();
+    }
     // TODO: Should do this in background rather than block master startup
     status.setStatus("Splitting logs after master startup");
     splitLogAfterStartup(this.fileSystemManager);
@@ -542,14 +548,16 @@ Server {
     status.setStatus("Fixing up missing daughters");
     fixupDaughters(status);
 
-    // Start balancer and meta catalog janitor after meta and regions have
-    // been assigned.
-    status.setStatus("Starting balancer and catalog janitor");
-    this.balancerChore = getAndStartBalancerChore(this);
-    this.catalogJanitorChore = new CatalogJanitor(this, this);
-    startCatalogJanitorChore();
+    if (!masterRecovery) {
+      // Start balancer and meta catalog janitor after meta and regions have
+      // been assigned.
+      status.setStatus("Starting balancer and catalog janitor");
+      this.balancerChore = getAndStartBalancerChore(this);
+      this.catalogJanitorChore = new CatalogJanitor(this, this);
+      startCatalogJanitorChore();
+      registerMBean();
+    }
 
-    registerMBean();
 
     status.markComplete("Initialization successful");
     LOG.info("Master has completed initialization");
@@ -559,13 +567,14 @@ Server {
     // removing dead server with same hostname and port of rs which is trying to check in before
     // master initialization. See HBASE-5916.
     this.serverManager.clearDeadServersWithSameHostNameAndPortOfOnlineServer();
-    
-    if (this.cpHost != null) {
-      // don't let cp initialization errors kill the master
-      try {
-        this.cpHost.postStartMaster();
-      } catch (IOException ioe) {
-        LOG.error("Coprocessor postStartMaster() hook failed", ioe);
+    if (!masterRecovery) {
+      if (this.cpHost != null) {
+        // don't let cp initialization errors kill the master
+        try {
+          this.cpHost.postStartMaster();
+        } catch (IOException ioe) {
+          LOG.error("Coprocessor postStartMaster() hook failed", ioe);
+        }
       }
     }
   }
@@ -1399,13 +1408,9 @@ Server {
           if (!becomeActiveMaster(status)) {
             return Boolean.FALSE;
           }
-          initializeZKBasedSystemTrackers();
-          // Update in-memory structures to reflect our earlier Root/Meta assignment.
-          assignRootAndMeta(status);
-          // process RIT if any
-          // TODO: Why does this not call AssignmentManager.joinCluster?  Otherwise
-          // we are not processing dead servers if any.
-          assignmentManager.processDeadServersAndRegionsInTransition();
+          serverShutdownHandlerEnabled = false;
+          initialized = false;
+          finishInitialization(status, true);
           return Boolean.TRUE;
         } finally {
           status.cleanup();
