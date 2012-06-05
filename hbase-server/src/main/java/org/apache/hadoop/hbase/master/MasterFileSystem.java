@@ -85,7 +85,7 @@ public class MasterFileSystem {
   private final MasterServices services;
 
   public MasterFileSystem(Server master, MasterServices services,
-      MasterMetrics metrics)
+      MasterMetrics metrics, boolean masterRecovery)
   throws IOException {
     this.conf = master.getConfiguration();
     this.master = master;
@@ -107,7 +107,7 @@ public class MasterFileSystem {
     if (this.distributedLogSplitting) {
       this.splitLogManager = new SplitLogManager(master.getZooKeeper(),
           master.getConfiguration(), master, master.getServerName());
-      this.splitLogManager.finishInitialization();
+      this.splitLogManager.finishInitialization(masterRecovery);
     } else {
       this.splitLogManager = null;
     }

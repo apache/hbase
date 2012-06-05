@@ -28,6 +28,9 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.List;
+
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,9 +41,15 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.hadoop.hbase.master.balancer.DefaultLoadBalancer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -55,6 +64,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+
 
 @Category(LargeTests.class)
 public class TestZooKeeper {
@@ -73,6 +84,8 @@ public class TestZooKeeper {
     TEST_UTIL.startMiniZKCluster();
     conf.setBoolean("dfs.support.append", true);
     conf.setInt(HConstants.ZOOKEEPER_SESSION_TIMEOUT, 1000);
+    conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockLoadBalancer.class,
+        LoadBalancer.class);
     TEST_UTIL.startMiniCluster(2);
   }
 
@@ -360,6 +373,94 @@ public class TestZooKeeper {
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
         "testGetChildDataAndWatchForNewChildrenShouldNotThrowNPE", null);
     ZKUtil.getChildDataAndWatchForNewChildren(zkw, "/wrongNode");
+  }
+
+  /**
+   * Tests that the master does not call retainAssignment after recovery from expired zookeeper
+   * session. Without the HBASE-6046 fix master always tries to assign all the user regions by
+   * calling retainAssignment.
+   */
+  @Test
+  public void testRegionAssignmentAfterMasterRecoveryDueToZKExpiry() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    cluster.startRegionServer();
+    HMaster m = cluster.getMaster();
+    // now the cluster is up. So assign some regions.
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
+        Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
+        Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j") };
+
+    String tableName = "testRegionAssignmentAfterMasterRecoveryDueToZKExpiry";
+    admin.createTable(new HTableDescriptor(tableName), SPLIT_KEYS);
+    ZooKeeperWatcher zooKeeperWatcher = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
+    ZKAssign.blockUntilNoRIT(zooKeeperWatcher);
+    m.getZooKeeperWatcher().close();
+    MockLoadBalancer.retainAssignCalled = false;
+    m.abort("Test recovery from zk session expired", new KeeperException.SessionExpiredException());
+    assertFalse(m.isStopped());
+    // The recovered master should not call retainAssignment, as it is not a
+    // clean startup.
+    assertFalse("Retain assignment should not be called", MockLoadBalancer.retainAssignCalled);
+  }
+
+  /**
+   * Tests whether the logs are split when master recovers from a expired zookeeper session and an
+   * RS goes down.
+   */
+  @Test(timeout = 60000)
+  public void testLogSplittingAfterMasterRecoveryDueToZKExpiry() throws IOException,
+      KeeperException, InterruptedException {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    cluster.startRegionServer();
+    HMaster m = cluster.getMaster();
+    // now the cluster is up. So assign some regions.
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("1"), Bytes.toBytes("2"),
+        Bytes.toBytes("3"), Bytes.toBytes("4"), Bytes.toBytes("5") };
+
+    String tableName = "testLogSplittingAfterMasterRecoveryDueToZKExpiry";
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HColumnDescriptor hcd = new HColumnDescriptor("col");
+    htd.addFamily(hcd);
+    admin.createTable(htd, SPLIT_KEYS);
+    ZooKeeperWatcher zooKeeperWatcher = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
+    ZKAssign.blockUntilNoRIT(zooKeeperWatcher);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+
+    Put p = null;
+    int numberOfPuts = 0;
+    for (numberOfPuts = 0; numberOfPuts < 6; numberOfPuts++) {
+      p = new Put(Bytes.toBytes(numberOfPuts));
+      p.add(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes("value" + numberOfPuts));
+      table.put(p);
+    }
+    m.getZooKeeperWatcher().close();
+    m.abort("Test recovery from zk session expired", new KeeperException.SessionExpiredException());
+    assertFalse(m.isStopped());
+    cluster.getRegionServer(0).abort("Aborting");
+    // Without patch for HBASE-6046 this test case will always timeout
+    // with patch the test case should pass.
+    Scan scan = new Scan();
+    int numberOfRows = 0;
+    ResultScanner scanner = table.getScanner(scan);
+    Result[] result = scanner.next(1);
+    while (result != null && result.length > 0) {
+      numberOfRows++;
+      result = scanner.next(1);
+    }
+    assertEquals("Number of rows should be equal to number of puts.", numberOfPuts, numberOfRows);
+  }
+  
+  static class MockLoadBalancer extends DefaultLoadBalancer {
+    static boolean retainAssignCalled = false;
+
+    @Override
+    public Map<ServerName, List<HRegionInfo>> retainAssignment(
+        Map<HRegionInfo, ServerName> regions, List<ServerName> servers) {
+      retainAssignCalled = true;
+      return super.retainAssignment(regions, servers);
+    }
   }
 
   @org.junit.Rule
