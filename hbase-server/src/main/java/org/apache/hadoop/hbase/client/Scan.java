@@ -560,6 +560,10 @@ public class Scan extends OperationWithAttributes implements Writable {
     if (this.filter != null) {
       map.put("filter", this.filter.toString());
     }
+    // add the id if set
+    if (getId() != null) {
+      map.put("id", getId());
+    }
     return map;
   }
 
