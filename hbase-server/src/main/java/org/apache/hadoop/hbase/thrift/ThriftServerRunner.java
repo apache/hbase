@@ -247,7 +247,7 @@ public class ThriftServerRunner implements Runnable {
       setupServer();
       tserver.serve();
     } catch (Exception e) {
-      LOG.fatal("Cannot run ThriftServer");
+      LOG.fatal("Cannot run ThriftServer", e);
       // Crash the process if the ThriftServer is not running
       System.exit(-1);
     }
