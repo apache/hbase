@@ -105,8 +105,7 @@ public abstract class HBaseServer {
    */
   private static final int MAX_QUEUE_SIZE_PER_HANDLER = 100;
 
-  public static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.ipc.HBaseServer");
+  public static final Log LOG = LogFactory.getLog(HBaseServer.class.getName());
 
   protected static final ThreadLocal<HBaseServer> SERVER =
     new ThreadLocal<HBaseServer>();
@@ -368,8 +367,8 @@ public abstract class HBaseServer {
             } catch (Exception e) {return;}
           }
           if (c.timedOut(currentTime)) {
-            if (LOG.isDebugEnabled())
-              LOG.debug(getName() + ": disconnecting client " + c.getHostAddress());
+            if (LOG.isTraceEnabled())
+              LOG.trace(getName() + ": disconnecting client " + c.getHostAddress());
             closeConnection(c);
             numNuked++;
             end--;
@@ -459,8 +458,8 @@ public abstract class HBaseServer {
             try {
               doRead(readSelectionKey);
             } catch (InterruptedException e) {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Caught: " + StringUtils.stringifyException(e) +
+              if (LOG.isTraceEnabled()) {
+                LOG.trace("Caught: " + StringUtils.stringifyException(e) +
                     " when processing " + readSelectionKey.attachment());
               }
             } finally {
@@ -472,8 +471,8 @@ public abstract class HBaseServer {
         });
       } catch (Throwable e) {
         setReadInterest(readSelectionKey);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Caught " + e.getMessage() + " when processing the remote connection " +
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Caught " + e.getMessage() + " when processing the remote connection " +
               readSelectionKey.attachment().toString());
         }
       }
@@ -483,8 +482,8 @@ public abstract class HBaseServer {
       if (key != null) {
         Connection c = (Connection)key.attachment();
         if (c != null) {
-          if (LOG.isDebugEnabled())
-            LOG.debug(getName() + ": disconnecting client " + c.getHostAddress());
+          if (LOG.isTraceEnabled())
+            LOG.trace(getName() + ": disconnecting client " + c.getHostAddress());
           closeConnection(c);
         }
       }
@@ -512,8 +511,8 @@ public abstract class HBaseServer {
           connectionList.add(numConnections, c);
           numConnections++;
         }
-        if (LOG.isDebugEnabled())
-          LOG.debug("Server connection from " + c.toString() +
+        if (LOG.isTraceEnabled())
+          LOG.trace("Server connection from " + c.toString() +
               "; # active connections: " + numConnections +
               "; # queued calls: " + callQueue.size());
       }
@@ -532,12 +531,13 @@ public abstract class HBaseServer {
       } catch (InterruptedException ieo) {
         throw ieo;
       } catch (Exception e) {
-        LOG.debug(getName() + ": readAndProcess threw exception " + e + ". Count of bytes read: " + count, e);
+        LOG.warn(getName() + ": readAndProcess threw exception " + e +
+            ". Count of bytes read: " + count, e);
         count = -1; //so that the (count < 0) block is executed
       }
       if (count < 0) {
-        if (LOG.isDebugEnabled())
-          LOG.debug(getName() + ": disconnecting client " +
+        if (LOG.isTraceEnabled())
+          LOG.trace(getName() + ": disconnecting client " +
                     c.getHostAddress() + ". Number of active connections: "+
                     numConnections);
         closeConnection(c);
@@ -557,7 +557,7 @@ public abstract class HBaseServer {
         try {
           acceptChannel.socket().close();
         } catch (IOException e) {
-          LOG.info(getName() + ":Exception in closing listener socket. " + e);
+          LOG.warn(getName() + ":Exception in closing listener socket. " + e);
         }
       }
     }
@@ -596,7 +596,7 @@ public abstract class HBaseServer {
                   doAsyncWrite(key);
               }
             } catch (IOException e) {
-              LOG.info(getName() + ": doAsyncWrite threw exception " + e);
+              LOG.warn(getName() + ": doAsyncWrite threw exception " + e);
             }
           }
           long now = System.currentTimeMillis();
@@ -608,7 +608,9 @@ public abstract class HBaseServer {
           // If there were some calls that have not been sent out for a
           // long time, discard them.
           //
-          LOG.debug("Checking for old call responses.");
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Checking for old call responses.");
+          }
           ArrayList<Call> calls;
 
           // get the list of channels from list of keys.
@@ -718,8 +720,8 @@ public abstract class HBaseServer {
           //
           call = responseQueue.removeFirst();
           SocketChannel channel = call.connection.channel;
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(getName() + ": responding to #" + call.id + " from " +
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(getName() + ": responding to #" + call.id + " from " +
                       call.connection);
           }
           //
@@ -737,8 +739,8 @@ public abstract class HBaseServer {
             } else {
               done = false;            // more calls pending to be sent.
             }
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(getName() + ": responding to #" + call.id + " from " +
+            if (LOG.isTraceEnabled()) {
+              LOG.trace(getName() + ": responding to #" + call.id + " from " +
                         call.connection + " Wrote " + numBytes + " bytes.");
             }
           } else {
@@ -765,8 +767,8 @@ public abstract class HBaseServer {
                 decPending();
               }
             }
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(getName() + ": responding to #" + call.id + " from " +
+            if (LOG.isTraceEnabled()) {
+              LOG.trace(getName() + ": responding to #" + call.id + " from " +
                         call.connection + " Wrote partial " + numBytes +
                         " bytes.");
             }
@@ -984,8 +986,8 @@ public abstract class HBaseServer {
 
       // 1. read the call id uncompressed
       int id = uncompressedIs.readInt();
-      if (LOG.isDebugEnabled())
-        LOG.debug(" got #" + id);
+      if (LOG.isTraceEnabled())
+        LOG.trace(" got #" + id);
 
       if (version >= VERSION_COMPRESSED_RPC) {
 
@@ -1057,9 +1059,8 @@ public abstract class HBaseServer {
           status.setConnection(call.connection.getHostAddress(),
               call.connection.getRemotePort());
 
-          if (LOG.isDebugEnabled())
-            LOG.debug(getName() + ": has #" + call.id + " from " +
-                      call.connection);
+          if (LOG.isTraceEnabled())
+            LOG.trace(getName() + ": has #" + call.id + " from " + call.connection);
 
           String errorClass = null;
           String error = null;
@@ -1071,7 +1072,7 @@ public abstract class HBaseServer {
             // make the call
             value = call(call.param, call.timestamp, status);
           } catch (Throwable e) {
-            LOG.info(getName()+", call "+call+": error: " + e, e);
+            LOG.warn(getName()+", call "+call+": error: " + e, e);
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           }
@@ -1133,13 +1134,13 @@ public abstract class HBaseServer {
           responder.doRespond(call);
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it
-            LOG.info(getName() + " caught: " +
+            LOG.warn(getName() + " caught: " +
                      StringUtils.stringifyException(e));
           }
         } catch (OutOfMemoryError e) {
           if (errorHandler != null) {
             if (errorHandler.checkOOME(e)) {
-              LOG.info(getName() + ": exiting on OOME");
+              LOG.error(getName() + ": exiting on OOME");
               return;
             }
           } else {
@@ -1147,13 +1148,12 @@ public abstract class HBaseServer {
             throw e;
           }
         } catch (Exception e) {
-          LOG.info(getName() + " caught: " +
+          LOG.warn(getName() + " caught: " +
                    StringUtils.stringifyException(e));
         }
       }
       LOG.info(getName() + ": exiting");
     }
-
   }
 
   protected HBaseServer(String bindAddress, int port,

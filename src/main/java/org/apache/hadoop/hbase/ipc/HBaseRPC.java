@@ -84,11 +84,7 @@ import java.util.Map;
  * the protocol instance is transmitted.
  */
 public class HBaseRPC {
-  // Leave this out in the hadoop ipc package but keep class name.  Do this
-  // so that we dont' get the logging of this class's invocations by doing our
-  // blanket enabling DEBUG on the o.a.h.h. package.
-  protected static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.ipc.HbaseRPC");
+  protected static final Log LOG = LogFactory.getLog(HBaseRPC.class.getName());
 
   private HBaseRPC() {
     super();
@@ -129,7 +125,15 @@ public class HBaseRPC {
 
     public void readFields(DataInput in) throws IOException {
       methodName = in.readUTF();
-      parameters = new Object[in.readInt()];
+      
+      int parameterLength = in.readInt();
+      if (parameterLength < 0 || parameterLength > HConstants.IPC_CALL_PARAMETER_LENGTH_MAX) {
+        String error = "Invalid parameter length: " +  parameterLength +
+        " for the method " + methodName;
+        LOG.error(error);
+        throw new IllegalArgumentException(error);
+      }
+      parameters = new Object[parameterLength];
       parameterClasses = new Class[parameters.length];
       HbaseObjectWritable objectWritable = new HbaseObjectWritable();
       for (int i = 0; i < parameters.length; i++) {
@@ -265,17 +269,17 @@ public class HBaseRPC {
 
     public Object invoke(Object proxy, Method method, Object[] args)
         throws Throwable {
-      final boolean logDebug = LOG.isDebugEnabled();
+      final boolean isTraceEnabled = LOG.isTraceEnabled();
       long startTime = 0;
-      if (logDebug) {
+      if (isTraceEnabled) {
         startTime = System.currentTimeMillis();
       }
       HbaseObjectWritable value = (HbaseObjectWritable)
         client.call(new Invocation(method, args), address, ticket,
             rpcTimeout, rpcCompression);
-      if (logDebug) {
+      if (isTraceEnabled) {
         long callTime = System.currentTimeMillis() - startTime;
-        LOG.debug("Call: " + method.getName() + " " + callTime);
+        LOG.trace("Call: " + method.getName() + " " + callTime);
       }
       return value.get();
     }
@@ -367,13 +371,13 @@ public class HBaseRPC {
       } catch(ConnectException se) {  // namenode has not been started
         ioe = se;
         if (maxAttempts >= 0 && ++reconnectAttempts >= maxAttempts) {
-          LOG.info("Server at " + addr + " could not be reached after " +
+          LOG.warn("Server at " + addr + " could not be reached after " +
             reconnectAttempts + " tries, giving up.");
           throw new RetriesExhaustedException("Failed setting up proxy to " +
             addr.toString() + " after attempts=" + reconnectAttempts);
       }
       } catch(SocketTimeoutException te) {  // namenode is busy
-        LOG.info("Problem connecting to server: " + addr);
+        LOG.warn("Problem connecting to server: " + addr);
         ioe = te;
       }
       // check if timed out
@@ -642,7 +646,7 @@ public class HBaseRPC {
           throw new IOException("Could not find requested method, the usual " +
               "cause is a version mismatch between client and server.");
         }
-        if (verbose) log("Call: " + call);
+        if (verbose) trace("Call: " + call);
         Method method = implementation.getMethod(call.getMethodName(),
                 call.getParameterClasses());
         status.setRPC(call.getMethodName(), call.getParameters(), receivedTime, method);
@@ -653,15 +657,15 @@ public class HBaseRPC {
         Object value = method.invoke(instance, call.getParameters());
         int processingTime = (int) (System.currentTimeMillis() - startTime);
         int qTime = (int) (startTime - receivedTime);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Served: " + call.getMethodName() +
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Served: " + call.getMethodName() +
             " queueTime= " + qTime +
             " procesingTime= " + processingTime);
         }
         rpcMetrics.rpcQueueTime.inc(qTime);
         rpcMetrics.rpcProcessingTime.inc(processingTime);
         rpcMetrics.inc(call.getMethodName(), processingTime);
-        if (verbose) log("Return: " + value);
+        if (verbose) trace("Return: " + value);
 
         HbaseObjectWritable retVal =
           new HbaseObjectWritable(method.getReturnType(), value);
@@ -764,10 +768,10 @@ public class HBaseRPC {
     }
   }
 
-  protected static void log(String value) {
+  protected static void trace(String value) {
     String v = value;
     if (v != null && v.length() > 55)
       v = v.substring(0, 55)+"...";
-    LOG.info(v);
+    LOG.trace(v);
   }
 }

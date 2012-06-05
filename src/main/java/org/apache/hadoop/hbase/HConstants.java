@@ -552,6 +552,8 @@ public final class HConstants {
 
   public static final boolean[] BOOLEAN_VALUES = { false, true };
 
+  public static final int IPC_CALL_PARAMETER_LENGTH_MAX = 1000;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
