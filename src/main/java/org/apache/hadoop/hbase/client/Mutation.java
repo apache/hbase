@@ -102,6 +102,10 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
       }
     }
     map.put("totalColumns", colCount);
+    // add the id if set
+    if (getId() != null) {
+      map.put("id", getId());
+    }
     return map;
   }
 
