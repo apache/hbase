@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescripto
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
@@ -1710,8 +1711,9 @@ public class HBaseAdmin implements Abortable, Closeable {
   public ClusterStatus getClusterStatus() throws IOException {
     return execute(new MasterCallable<ClusterStatus>() {
       @Override
-      public ClusterStatus call() {
-        return master.getClusterStatus();
+      public ClusterStatus call() throws ServiceException {
+        GetClusterStatusRequest req = RequestConverter.buildGetClusterStatusRequest();
+        return ClusterStatus.convert(master.getClusterStatus(null,req).getClusterStatus());
       }
     });
   }

@@ -65,6 +65,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.security.TokenInfo;
 import org.apache.hadoop.hbase.security.KerberosInfo;
@@ -240,9 +242,13 @@ public interface HMasterInterface extends VersionedProtocol {
 
   /**
    * Return cluster status.
+   * @param controller Unused (set to null).
+   * @param req GetClusterStatusRequest
    * @return status object
+   * @throws ServiceException
    */
-  public ClusterStatus getClusterStatus();
+  public GetClusterStatusResponse getClusterStatus(RpcController controller, GetClusterStatusRequest req)
+  throws ServiceException;
 
   /**
    * Offline a region from the assignment manager's in-memory state.  The

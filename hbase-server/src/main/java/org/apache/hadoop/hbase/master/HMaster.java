@@ -168,6 +168,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -1627,6 +1629,13 @@ Server {
     }
   }
 
+  @Override
+  public GetClusterStatusResponse getClusterStatus(RpcController controller, GetClusterStatusRequest req)
+  throws ServiceException {
+    GetClusterStatusResponse.Builder response = GetClusterStatusResponse.newBuilder();
+    response.setClusterStatus(getClusterStatus().convert());
+    return response.build();
+  }
   /**
    * @return cluster status
    */

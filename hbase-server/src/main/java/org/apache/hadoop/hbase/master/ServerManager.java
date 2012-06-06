@@ -274,7 +274,7 @@ public class ServerManager {
 
   /**
    * @param serverName
-   * @return HServerLoad if serverName is known else null
+   * @return ServerLoad if serverName is known else null
    */
   public ServerLoad getLoad(final ServerName serverName) {
     return this.onlineServers.get(serverName);
@@ -282,7 +282,7 @@ public class ServerManager {
 
   /**
    * @param address
-   * @return HServerLoad if serverName is known else null
+   * @return ServerLoad if serverName is known else null
    * @deprecated Use {@link #getLoad(HServerAddress)}
    */
   public ServerLoad getLoad(final HServerAddress address) {

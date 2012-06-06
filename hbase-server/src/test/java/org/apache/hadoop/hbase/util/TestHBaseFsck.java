@@ -424,7 +424,7 @@ public class TestHBaseFsck {
    */
   Map<ServerName, List<String>> getDeployedHRIs(
       final HBaseAdmin admin) throws IOException {
-    ClusterStatus status = admin.getMaster().getClusterStatus();
+    ClusterStatus status = admin.getClusterStatus();
     Collection<ServerName> regionServers = status.getServers();
     Map<ServerName, List<String>> mm =
         new HashMap<ServerName, List<String>>();

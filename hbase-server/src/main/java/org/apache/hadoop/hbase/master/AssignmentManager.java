@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
@@ -3511,6 +3512,97 @@ public class AssignmentManager extends ZooKeeperListener {
         + ", server=" + serverName;
     }
 
+    /**
+     * Convert a RegionState to an HBaseProtos.RegionState
+     *
+     * @return the converted HBaseProtos.RegionState
+     */
+    public ClusterStatusProtos.RegionState convert() {
+      ClusterStatusProtos.RegionState.Builder regionState = ClusterStatusProtos.RegionState.newBuilder();
+      ClusterStatusProtos.RegionState.State rs;
+      switch (regionState.getState()) {
+      case OFFLINE:
+        rs = ClusterStatusProtos.RegionState.State.OFFLINE;
+        break;
+      case PENDING_OPEN:
+        rs = ClusterStatusProtos.RegionState.State.PENDING_OPEN;
+        break;
+      case OPENING:
+        rs = ClusterStatusProtos.RegionState.State.OPENING;
+        break;
+      case OPEN:
+        rs = ClusterStatusProtos.RegionState.State.OPEN;
+        break;
+      case PENDING_CLOSE:
+        rs = ClusterStatusProtos.RegionState.State.PENDING_CLOSE;
+    	break;
+      case CLOSING:
+        rs = ClusterStatusProtos.RegionState.State.CLOSING;
+        break;
+      case CLOSED:
+        rs = ClusterStatusProtos.RegionState.State.CLOSED;
+        break;
+      case SPLITTING:
+        rs = ClusterStatusProtos.RegionState.State.SPLITTING;
+        break;
+      case SPLIT:
+        rs = ClusterStatusProtos.RegionState.State.SPLIT;
+        break;
+      default:
+        throw new IllegalStateException("");
+      }
+      regionState.setRegionInfo(HRegionInfo.convert(region));
+      regionState.setState(rs);
+      regionState.setStamp(getStamp());
+      return regionState.build();
+    }
+
+    /**
+     * Convert a protobuf HBaseProtos.RegionState to a RegionState
+     *
+     * @return the RegionState
+     */
+    public static RegionState convert(ClusterStatusProtos.RegionState proto) {
+      RegionState.State state;
+      switch (proto.getState()) {
+      case OFFLINE:
+        state = State.OFFLINE;
+        break;
+      case PENDING_OPEN:
+        state = State.PENDING_OPEN;
+        break;
+      case OPENING:
+        state = State.OPENING;
+        break;
+      case OPEN:
+        state = State.OPEN;
+        break;
+      case PENDING_CLOSE:
+        state = State.PENDING_CLOSE;
+    	break;
+      case CLOSING:
+        state = State.CLOSING;
+        break;
+      case CLOSED:
+        state = State.CLOSED;
+        break;
+      case SPLITTING:
+        state = State.SPLITTING;
+        break;
+      case SPLIT:
+        state = State.SPLIT;
+        break;
+      default:
+        throw new IllegalStateException("");
+      }
+
+      return new RegionState(HRegionInfo.convert(proto.getRegionInfo()),state,proto.getStamp(),null);
+    }
+
+    /**
+     * @deprecated Writables are going away
+     */
+    @Deprecated
     @Override
     public void readFields(DataInput in) throws IOException {
       region = new HRegionInfo();
@@ -3519,6 +3611,10 @@ public class AssignmentManager extends ZooKeeperListener {
       stamp.set(in.readLong());
     }
 
+    /**
+     * @deprecated Writables are going away
+     */
+    @Deprecated
     @Override
     public void write(DataOutput out) throws IOException {
       region.write(out);

@@ -24,6 +24,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -31,6 +33,7 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.VersionedWritable;
@@ -709,8 +712,44 @@ implements WritableComparable<HServerLoad> {
     return count;
   }
 
+  public static HServerLoad convert(ServerLoad sl) {
+  // TODO: This conversion of ServerLoad to HServerLoad is temporary,
+  // will be cleaned up in HBASE-5445.  Using the ClusterStatus proto brings
+  // in a lot of other changes, so it makes sense to break this up.
+    Map<byte[],RegionLoad> regionLoad = new HashMap<byte[],RegionLoad>();
+    for (HBaseProtos.RegionLoad rl : sl.getRegionLoadsList()) {
+      Set<String> regionCoprocessors = new HashSet<String>();
+      for (HBaseProtos.Coprocessor coprocessor
+          : rl.getCoprocessorsList()) {
+        regionCoprocessors.add(coprocessor.getName());
+      }
+
+      byte [] regionName = rl.getRegionSpecifier().getValue().toByteArray();
+      RegionLoad converted = new RegionLoad(regionName,
+        rl.getStores(),rl.getStorefiles(),rl.getStoreUncompressedSizeMB(),
+        rl.getStorefileSizeMB(),rl.getMemstoreSizeMB(),
+        rl.getStorefileIndexSizeMB(),rl.getRootIndexSizeKB(),
+        rl.getTotalStaticIndexSizeKB(),rl.getTotalStaticBloomSizeKB(),
+        rl.getReadRequestsCount(),rl.getWriteRequestsCount(),
+        rl.getTotalCompactingKVs(),rl.getCurrentCompactedKVs(),
+        regionCoprocessors);
+      regionLoad.put(regionName, converted);
+    }
+
+    Set<String> coprocessors =
+      new HashSet<String>(Arrays.asList(ServerLoad.getRegionServerCoprocessors(sl)));
+    HServerLoad hsl = new HServerLoad(sl.getTotalNumberOfRequests(),
+      sl.getRequestsPerSecond(),sl.getUsedHeapMB(),sl.getMaxHeapMB(),
+      regionLoad,coprocessors);
+
+    return hsl;
+  }
   // Writable
 
+  /**
+   * @deprecated Writables are going away.
+   */
+  @Deprecated
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
     int version = in.readByte();
@@ -731,6 +770,10 @@ implements WritableComparable<HServerLoad> {
     }
   }
 
+  /**
+   * @deprecated Writables are going away.
+   */
+  @Deprecated
   public void write(DataOutput out) throws IOException {
     super.write(out);
     out.writeByte(VERSION);

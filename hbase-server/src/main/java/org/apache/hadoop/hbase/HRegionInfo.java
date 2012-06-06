@@ -835,7 +835,6 @@ implements WritableComparable<HRegionInfo> {
   /**
    * Convert a HRegionInfo to a RegionInfo
    *
-   * @param info the HRegionInfo to convert
    * @return the converted RegionInfo
    */
   RegionInfo convert() {

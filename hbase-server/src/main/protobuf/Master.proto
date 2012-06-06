@@ -25,6 +25,7 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "hbase.proto";
+import "ClusterStatus.proto";
 
 /* Column-level protobufs */
 
@@ -177,6 +178,13 @@ message GetTableDescriptorsResponse {
   repeated TableSchema tableSchema = 1;
 }
 
+message GetClusterStatusRequest {
+}
+
+message GetClusterStatusResponse {
+  required ClusterStatus clusterStatus = 1;
+}
+
 service MasterService {
    /** Adds a column to the specified table. */
   rpc addColumn(AddColumnRequest)
@@ -270,4 +278,8 @@ service MasterService {
   /** Get list of TableDescriptors for requested tables. */
   rpc getTableDescriptors(GetTableDescriptorsRequest)
     returns(GetTableDescriptorsResponse);
+
+  /** Return cluster status. */
+  rpc getClusterStatus(GetClusterStatusRequest)
+    returns(GetClusterStatusResponse);
 }

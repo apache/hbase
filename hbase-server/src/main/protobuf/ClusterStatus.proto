@@ -1,0 +1,66 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// This file contains protocol buffers that are used for ClustStatus
+
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "ClusterStatusProtos";
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
+
+import "hbase.proto";
+import "ClusterId.proto";
+import "FS.proto";
+
+message RegionState {
+  required RegionInfo regionInfo = 1;
+  required State state = 2;
+  optional uint64 stamp = 3;
+  enum State {
+    OFFLINE = 0;       // region is in an offline state
+    PENDING_OPEN = 1;  // sent rpc to server to open but has not begun
+    OPENING = 2;       // server has begun to open but not yet done
+    OPEN = 3;          // server opened region and updated meta
+    PENDING_CLOSE = 4; // sent rpc to server to close but has not begun
+    CLOSING = 5;       // server has begun to close but not yet done
+    CLOSED = 6;        // server closed region and updated meta
+    SPLITTING = 7;     // server started split of a region
+    SPLIT = 8;         // server completed split of a region
+  }
+}
+
+message RegionInTransition {
+  required RegionSpecifier spec = 1;
+  required RegionState regionState = 2;
+}
+
+message LiveServerInfo {
+  required ServerName server = 1;
+  required ServerLoad serverLoad = 2;
+}
+
+message ClusterStatus {
+  optional HBaseVersionFileContent hbaseVersion = 1;
+  repeated LiveServerInfo liveServers = 2;
+  repeated ServerName deadServers = 3;
+  repeated RegionInTransition regionsInTransition = 4;
+  optional ClusterId clusterId = 5;
+  repeated Coprocessor masterCoprocessors = 6;
+  optional ServerName master = 7;
+  repeated ServerName backupMasters = 8;
+}

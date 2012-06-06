@@ -235,7 +235,7 @@ public class HBaseFsck {
   public void connect() throws IOException {
     admin = new HBaseAdmin(conf);
     meta = new HTable(conf, HConstants.META_TABLE_NAME);
-    status = admin.getMaster().getClusterStatus();
+    status = admin.getClusterStatus();
     connection = admin.getConnection();
   }
 

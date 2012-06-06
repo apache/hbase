@@ -97,6 +97,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionReq
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -1100,5 +1101,14 @@ public final class RequestConverter {
    */
   public static SetBalancerRunningRequest buildLoadBalancerIsRequest(boolean on, boolean synchronous) {
     return SetBalancerRunningRequest.newBuilder().setOn(on).setSynchronous(synchronous).build();
+  }
+
+  /**
+   * Creates a protocol buffer GetClusterStatusRequest
+   *
+   * @return A GetClusterStatusRequest
+   */
+  public static GetClusterStatusRequest buildGetClusterStatusRequest() {
+    return GetClusterStatusRequest.newBuilder().build();
   }
 }
