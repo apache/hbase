@@ -205,7 +205,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       this.ttl *= 1000;
     }
     // used by ScanQueryMatcher
-    long timeToPurgeDeletes =
+    timeToPurgeDeletes =
         Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
     LOG.info("time to purge deletes set to " + timeToPurgeDeletes +
         "ms in store " + this);
@@ -1369,7 +1369,7 @@ public class Store extends SchemaConfigured implements HeapSize {
         scan.setMaxVersions(family.getMaxVersions());
         /* include deletes, unless we are doing a major compaction */
         long retainDeletesUntil = (majorCompaction)?
-          (System.currentTimeMillis() - this.timeToPurgeDeletes)
+          (this.timeToPurgeDeletes <= 0 ? Long.MAX_VALUE: (System.currentTimeMillis() - this.timeToPurgeDeletes))
           : Long.MIN_VALUE;
         scanner = new StoreScanner(this, scan, scanners, smallestReadPoint,
             retainDeletesUntil);
@@ -2035,7 +2035,7 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   public static final long FIXED_OVERHEAD =
       ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-          + (16 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
+          + (16 * ClassSize.REFERENCE) + (7 * Bytes.SIZEOF_LONG)
           + (6 * Bytes.SIZEOF_INT) + 2 * Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +

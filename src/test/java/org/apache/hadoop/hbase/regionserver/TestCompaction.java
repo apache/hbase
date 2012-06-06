@@ -127,6 +127,7 @@ public class TestCompaction extends HBaseTestCase {
     for (int i = 0; i < compactionThreshold; i++) {
       createStoreFile(r);
     }
+
     // Now delete everything.
     InternalScanner s = r.getScanner(new Scan());
     do {
@@ -273,6 +274,27 @@ public class TestCompaction extends HBaseTestCase {
     r.compactStores(true);
     int count = count();
     assertTrue("Should not see anything after TTL has expired", count == 0);
+  }
+
+  public void testDeleteRetentionDuringMajorCompaction() throws Exception {
+    // add a delete with a large TS
+    Delete delete = new Delete(secondRowBytes);
+    byte [][] famAndQf = {COLUMN_FAMILY, null};
+    delete.deleteColumns(famAndQf[0], col1, Long.MAX_VALUE - 100);
+    r.delete(delete, null, true);
+
+    r.flushcache();
+
+    // after minor compaction, delete should be there
+    r.compactStores(false);
+    int count = count();
+    assertTrue("Delete should not be removed in a minor compaction", count != 0);
+
+    // after major compaction, the delete should disappear
+    r.compactStores(true);
+
+    count = count();
+    assertTrue("Deletes should be removed after a minor compaction", count == 0);
   }
 
   public void testTimeBasedMajorCompaction() throws Exception {
