@@ -238,7 +238,7 @@ row10	c1	c2
 	   in conjunction with output from <xref linkend="importtsv"/>.  
 	   </para>
 	   <para>There are two ways to invoke this utility, with explicit classname and via the driver: 
-<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFile &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;
 </programlisting>
 .. and via the Driver..
 <programlisting>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar completebulkload &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;

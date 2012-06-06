@@ -889,7 +889,7 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
   </section>
   <section xml:id="schema.smackdown"><title>Schema Design Smackdown</title>
     <para>This section will describe common schema design questions that appear on the dist-list.  These are 
-    general guidelines and not laws - each application must consider it's own needs.  
+    general guidelines and not laws - each application must consider its own needs.  
     </para>
     <section xml:id="schema.smackdown.rowsversions"><title>Rows vs. Versions</title>
       <para>A common question is whether one should prefer rows or HBase's built-in-versioning.  The context is typically where there are
@@ -1267,7 +1267,7 @@ if (!b) {
 	  <section xml:id="arch.overview.nosql">
 	  <title>NoSQL?</title>
 	  <para>HBase is a type of "NoSQL" database.  "NoSQL" is a general term meaning that the database isn't an RDBMS which
-	  supports SQL as it's primary access language, but there are many types of NoSQL databases:  BerkeleyDB is an 
+	  supports SQL as its primary access language, but there are many types of NoSQL databases:  BerkeleyDB is an 
 	  example of a local NoSQL database, whereas HBase is very much a distributed database.  Technically speaking,
 	  HBase is really more a "Data Store" than "Data Base" because it lacks many of the features you find in an RDBMS,
 	  such as typed columns, secondary indexes, triggers, and advanced query languages, etc.
@@ -1283,7 +1283,7 @@ if (!b) {
               <listitem>Automatic sharding:  HBase tables are distributed on the cluster via regions, and regions are
               automatically split and re-distributed as your data grows.</listitem>
               <listitem>Automatic RegionServer failover</listitem>
-              <listitem>Hadoop/HDFS Integration:  HBase supports HDFS out of the box as it's distributed file system.</listitem>
+              <listitem>Hadoop/HDFS Integration:  HBase supports HDFS out of the box as its distributed file system.</listitem>
               <listitem>MapReduce:  HBase supports massively parallelized processing via MapReduce for using HBase as both 
               source and sink.</listitem>
               <listitem>Java Client API:  HBase supports an easy to use Java API for programmatic access.</listitem>
@@ -1685,7 +1685,7 @@ rs.close();
        </para>
        <section xml:id="master.startup"><title>Startup Behavior</title>
          <para>If run in a multi-Master environment, all Masters compete to run the cluster.  If the active
-         Master loses it's lease in ZooKeeper (or the Master shuts down), then then the remaining Masters jostle to 
+         Master loses its lease in ZooKeeper (or the Master shuts down), then then the remaining Masters jostle to 
          take over the Master role.
          </para>
        </section>
