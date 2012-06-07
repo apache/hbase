@@ -20,8 +20,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-This stylesheet is used making an html version of hbase-default.xml.
 -->
   <xsl:import href="urn:docbkx:stylesheet"/>
 
@@ -32,8 +30,8 @@ This stylesheet is used making an html version of hbase-default.xml.
 <div id="disqus_thread"></div>
 <script type="text/javascript">
     var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
-    var disqus_url = 'http://hbase.apache.org/';
-    var disqus_identifier = 'book';
+    var disqus_url = 'http://hbase.apache.org/book';
+    var disqus_identifier = '<xsl:value-of select="@xml:id" />';
 
     /* * * DON'T EDIT BELOW THIS LINE * * */
     (function() {
