@@ -82,6 +82,7 @@ Release 0.92.2 - Unreleased
    HBASE-6158  Data loss if the words 'merges' or 'splits' are used as Column Family name
    HBASE-6160  META entries from daughters can be deleted before parent entries
                (Enis Soztutar)
+   HBASE-6182  TestStoreFile fails with jdk1.7 (Jimmy Xiang)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
