@@ -166,9 +166,9 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
 
   private byte [] extractRowFromMetaRow(final byte [] b) {
     int firstDelimiter = KeyValue.getDelimiter(b, 0, b.length,
-        HConstants.REGIONINFO_DELIMITER);
+      HRegionInfo.DELIMITER);
     int lastDelimiter = KeyValue.getDelimiterInReverse(b, 0, b.length,
-        HConstants.REGIONINFO_DELIMITER);
+      HRegionInfo.DELIMITER);
     int length = lastDelimiter - firstDelimiter - 1;
     byte [] row = new byte[length];
     System.arraycopy(b, firstDelimiter + 1, row, 0, length);

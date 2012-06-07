@@ -454,8 +454,8 @@ public class MetaReader {
   static byte [] getTableStartRowForMeta(final byte [] tableName) {
     byte [] startRow = new byte[tableName.length + 2];
     System.arraycopy(tableName, 0, startRow, 0, tableName.length);
-    startRow[startRow.length - 2] = HConstants.REGIONINFO_DELIMITER;
-    startRow[startRow.length - 1] = HConstants.REGIONINFO_DELIMITER;
+    startRow[startRow.length - 2] = HRegionInfo.DELIMITER;
+    startRow[startRow.length - 1] = HRegionInfo.DELIMITER;
     return startRow;
   }
 
