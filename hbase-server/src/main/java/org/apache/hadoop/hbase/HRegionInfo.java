@@ -147,9 +147,6 @@ implements WritableComparable<HRegionInfo> {
     return encodedRegionName;
   }
 
-  /** delimiter used between portions of a region name */
-  public static final int DELIMITER = ',';
-
   /** HRegionInfo for root region */
   public static final HRegionInfo ROOT_REGIONINFO =
     new HRegionInfo(0L, Bytes.toBytes("-ROOT-"));
@@ -363,12 +360,12 @@ implements WritableComparable<HRegionInfo> {
 
     int offset = tableName.length;
     System.arraycopy(tableName, 0, b, 0, offset);
-    b[offset++] = DELIMITER;
+    b[offset++] = HConstants.REGIONINFO_DELIMITER;
     if (startKey != null && startKey.length > 0) {
       System.arraycopy(startKey, 0, b, offset, startKey.length);
       offset += startKey.length;
     }
-    b[offset++] = DELIMITER;
+    b[offset++] = HConstants.REGIONINFO_DELIMITER;
     System.arraycopy(id, 0, b, offset, id.length);
     offset += id.length;
 
@@ -406,7 +403,7 @@ implements WritableComparable<HRegionInfo> {
   public static byte [] getTableName(byte [] regionName) {
     int offset = -1;
     for (int i = 0; i < regionName.length; i++) {
-      if (regionName[i] == DELIMITER) {
+      if (regionName[i] == HConstants.REGIONINFO_DELIMITER) {
         offset = i;
         break;
       }
@@ -426,7 +423,7 @@ implements WritableComparable<HRegionInfo> {
   throws IOException {
     int offset = -1;
     for (int i = 0; i < regionName.length; i++) {
-      if (regionName[i] == DELIMITER) {
+      if (regionName[i] == HConstants.REGIONINFO_DELIMITER) {
         offset = i;
         break;
       }
@@ -436,7 +433,7 @@ implements WritableComparable<HRegionInfo> {
     System.arraycopy(regionName, 0, tableName, 0, offset);
     offset = -1;
     for (int i = regionName.length - 1; i > 0; i--) {
-      if(regionName[i] == DELIMITER) {
+      if(regionName[i] == HConstants.REGIONINFO_DELIMITER) {
         offset = i;
         break;
       }
