@@ -1588,6 +1588,21 @@ public class TestAdmin {
       " HBase was not available");
   }
 
+  @Test
+  public void testDisableCatalogTable() throws Exception {
+    try {
+      this.admin.disableTable(".META.");
+      fail("Expected to throw IllegalArgumentException");
+    } catch (IllegalArgumentException e) {
+    }
+    // Before the fix for HBASE-6146, the below table creation was failing as the META table
+    // actually getting disabled by the disableTable() call.
+    HTableDescriptor htd = new HTableDescriptor("testDisableCatalogTable".getBytes());
+    HColumnDescriptor hcd = new HColumnDescriptor("cf1".getBytes());
+    htd.addFamily(hcd);
+    TEST_UTIL.getHBaseAdmin().createTable(htd);
+  }
+  
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();

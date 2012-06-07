@@ -725,6 +725,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void enableTableAsync(final byte [] tableName)
   throws IOException {
+    HTableDescriptor.isLegalTableName(tableName);
     execute(new MasterCallable<Void>() {
       @Override
       public Void call() throws ServiceException {
@@ -795,6 +796,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @since 0.90.0
    */
   public void disableTableAsync(final byte [] tableName) throws IOException {
+    HTableDescriptor.isLegalTableName(tableName);
     execute(new MasterCallable<Void>() {
       @Override
       public Void call() throws ServiceException {
