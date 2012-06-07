@@ -163,6 +163,157 @@
         This section describes in depth how each of replication's internal
         features operate.
       </p>
+      <section name="Replication Zookeeper State">
+        <p>
+            HBase replication maintains all of its state in Zookeeper. By default, this state is 
+            contained in the base znode:
+        </p>
+        <pre>
+                /hbase/replication
+        </pre>
+        <p>
+            There are three major child znodes in the base replication znode:
+            <ul>
+            <li><b>State znode:</b> /hbase/replication/state</li>
+            <li><b>Peers znode:</b> /hbase/replication/peers</li>
+            <li><b>RS znode:</b> /hbase/replication/rs</li>
+            </ul>
+        </p>
+        <section name="The State znode">
+            <p>
+                The <b>state znode</b> indicates whether or not replication is enabled on the cluster 
+                corresponding to this zookeeper quorum. It does not have any child znodes and simply 
+                contains a boolean value. This value is initialized on startup based on the 
+                <i>hbase.replication</i> config parameter in the <i>hbase-site.xml</i> file. The status 
+                value is read/maintained by the <i>ReplicationZookeeper.ReplicationStatusTracker</i> 
+                class. It is also cached locally using an AtomicBoolean in the <i>ReplicationZookeeper</i> 
+                class. This value can be changed on a live cluster using the <i>stop_replication</i> 
+                command available through the hbase shell.
+            </p>
+            <pre>
+                /hbase/replication/state [VALUE: true]
+            </pre>
+        </section>
+        <section name="The Peers znode">
+            <p>
+                The <b>peers znode</b> contains a list of all peer replication clusters and the 
+                current replication state of those clusters. It has one child <i>peer znode</i> 
+                for each peer cluster. The <i>peer znode</i> is named with the cluster id provided 
+                by the user in the HBase shell. The value of the <i>peer znode</i> contains 
+                the peers cluster key provided by the user in the HBase Shell. The cluster key 
+                contains a list of zookeeper nodes in the clusters quorum, the client port for the 
+                zookeeper quorum, and the base znode for HBase 
+                (i.e. “zk1.host.com,zk2.host.com,zk3.host.com:2181:/hbase”).
+            </p>
+            <pre>
+                /hbase/replication/peers
+                    /1 [Value: zk1.host.com,zk2.host.com,zk3.host.com:2181:/hbase]
+                    /2 [Value: zk5.host.com,zk6.host.com,zk7.host.com:2181:/hbase]
+            </pre>
+            <p>
+                Each of these <i>peer znodes</i> has a child znode that indicates whether or not 
+                replication is enabled on that peer cluster. These <i>peer-state znodes</i> do not 
+                have child znodes and simply contain a boolean value (i.e. ENABLED or DISABLED). 
+                This value is read/maintained by the <i>ReplicationPeer.PeerStateTracker</i> class. 
+                It is also cached locally using an AtomicBoolean in the <i>ReplicationPeer</i> class.
+            </p>
+            <pre>
+                /hbase/replication/peers
+                    /1/peer-state [Value: ENABLED]
+                    /2/peer-state [Value: DISABLED]
+            </pre>
+        </section>
+        <section name="The RS znode">
+            <p>
+                The <b>rs znode</b> contains a list of all outstanding HLog files in the cluster 
+                that need to be replicated. The list is divided into a set of queues organized by 
+                region server and the peer cluster the region server is shipping the HLogs to. The 
+                <b>rs znode</b> has one child znode for each region server in the cluster. The child 
+                znode name is simply the regionserver name (a concatenation of the region server’s 
+                hostname, client port and start code). These region servers could either be dead or alive.
+            </p>
+            <pre>
+                /hbase/replication/rs
+                    /hostname.example.org,6020,1234
+                    /hostname2.example.org,6020,2856
+            </pre>
+            <p>
+                Within each region server znode, the region server maintains a set of HLog replication 
+                queues. Each region server has one queue for every peer cluster it replicates to. 
+                These queues are represented by child znodes named using the cluster id of the peer 
+                cluster they represent (see the peer znode section).
+            </p>
+            <pre>
+                /hbase/replication/rs
+                    /hostname.example.org,6020,1234
+                        /1
+                        /2
+            </pre>
+            <p>
+                Each queue has one child znode for every HLog that still needs to be replicated. 
+                The value of these HLog child znodes is the latest position that has been replicated. 
+                This position is updated every time a HLog entry is replicated.
+            </p>
+            <pre>
+                /hbase/replication/rs
+                    /hostname.example.org,6020,1234
+                        /1
+                            23522342.23422 [VALUE: 254]
+                            12340993.22342 [VALUE: 0]
+            </pre>
+        </section>
+      </section>
+      <section name="Configuration Parameters">
+        <section name="Zookeeper znode paths">
+            <p>
+                All of the base znode names are configurable through parameters:
+            </p>
+            <table border="1">
+                <tr>
+                    <td><b>Parameter</b></td>
+                    <td><b>Default Value</b></td>
+                </tr>
+                                <tr>
+                    <td>zookeeper.znode.parent</td>
+                    <td>/hbase</td>
+                </tr>
+                <tr>
+                    <td>zookeeper.znode.replication</td>
+                    <td>replication</td>
+                </tr>
+                <tr>
+                    <td>zookeeper.znode.replication.peers</td>
+                    <td>peers</td>
+                </tr>
+                <tr>
+                    <td>zookeeper.znode.replication.peers.state</td>
+                    <td>peer-state</td>
+                </tr>
+                <tr>
+                    <td>zookeeper.znode.replication.rs</td>
+                    <td>rs</td>
+                </tr>
+            </table>
+            <p>
+                The default replication znode structure looks like the following:
+            </p>
+            <pre>
+                /hbase/replication/state
+                /hbase/replication/peers/{peerId}/peer-state
+                /hbase/replication/rs
+            </pre>
+        </section>
+        <section name="Other parameters">
+            <ul>
+                <li><b>hbase.replication</b> (Default: false) - Controls whether replication is enabled 
+                or disabled for the cluster.</li>
+                <li><b>replication.sleep.before.failover</b> (Default: 2000) - The amount of time a failover 
+                worker waits before attempting to replicate a dead region server’s HLog queues.</li>
+                <li><b>replication.executor.workers</b> (Default: 1) - The number of dead region servers 
+                one region server should attempt to failover simultaneously.</li>
+            </ul>
+        </section>
+      </section>
       <section name="Choosing region servers to replicate to">
         <p>
           When a master cluster RS initiates a replication source to a slave cluster,
