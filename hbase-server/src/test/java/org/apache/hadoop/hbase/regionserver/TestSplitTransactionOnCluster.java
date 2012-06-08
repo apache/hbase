@@ -320,7 +320,10 @@ public class TestSplitTransactionOnCluster {
       // Now split.
       split(hri, server, regionCount);
       // Get daughters
-      List<HRegion> daughters = cluster.getRegions(tableName);
+      List<HRegion> daughters;
+      do {
+        daughters = cluster.getRegions(tableName);
+      } while (daughters.size() < 2);
       assertTrue(daughters.size() >= 2);
       // Now split one of the daughters.
       regionCount = ProtobufUtil.getOnlineRegions(server).size();
