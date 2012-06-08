@@ -145,7 +145,6 @@ public class HBaseFsck {
   public static final long DEFAULT_TIME_LAG = 60000; // default value of 1 minute
   public static final long DEFAULT_SLEEP_BEFORE_RERUN = 10000;
   private static final int MAX_NUM_THREADS = 50; // #threads to contact regions
-  private static final long THREADS_KEEP_ALIVE_SECONDS = 60;
   private static boolean rsSupportsOffline = true;
   private static final int DEFAULT_OVERLAPS_TO_SIDELINE = 2;
   private static final int DEFAULT_MAX_MERGE = 5;
@@ -174,8 +173,9 @@ public class HBaseFsck {
   private boolean fixHdfsOrphans = false; // fix fs holes (missing .regioninfo)
   private boolean fixVersionFile = false; // fix missing hbase.version file in hdfs
 
-  // limit fixes to listed tables, if empty atttempt to fix all
-  private List<byte[]> tablesToFix = new ArrayList<byte[]>();
+  // limit checking/fixes to listed tables, if empty attempt to check/fix all
+  // -ROOT- and .META. are always checked
+  private Set<String> tablesIncluded = new HashSet<String>();
   private int maxMerge = DEFAULT_MAX_MERGE; // maximum number of overlapping regions to merge
   private int maxOverlapsToSideline = DEFAULT_OVERLAPS_TO_SIDELINE; // maximum number of overlapping regions to sideline
   private boolean sidelineBigOverlaps = false; // sideline overlaps with >maxMerge regions
@@ -205,6 +205,11 @@ public class HBaseFsck {
    * This map from Tablename -> TableInfo contains the structures necessary to
    * detect table consistency problems (holes, dupes, overlaps).  It is sorted
    * to prevent dupes.
+   *
+   * If tablesIncluded is empty, this map contains all tables.
+   * Otherwise, it contains only meta tables and tables in tablesIncluded,
+   * unless checkMetaOnly is specified, in which case, it contains only
+   * the meta tables (.META. and -ROOT-).
    */
   private SortedMap<String, TableInfo> tablesInfo = new ConcurrentSkipListMap<String,TableInfo>();
 
@@ -670,6 +675,7 @@ public class HBaseFsck {
         // only executed once per table.
         modTInfo = new TableInfo(tableName);
         Path hbaseRoot = new Path(conf.get(HConstants.HBASE_DIR));
+        tablesInfo.put(tableName, modTInfo);
         try {
           HTableDescriptor htd =
               FSTableDescriptors.getTableDescriptor(hbaseRoot.getFileSystem(conf),
@@ -679,10 +685,8 @@ public class HBaseFsck {
           LOG.error("Unable to read .tableinfo from " + hbaseRoot, ioe);
           throw ioe;
         }
-
       }
       modTInfo.addRegionInfo(hbi);
-      tablesInfo.put(tableName, modTInfo);
     }
 
     return tablesInfo;
@@ -835,14 +839,8 @@ public class HBaseFsck {
     for (TableInfo tInfo : tablesInfo.values()) {
       TableIntegrityErrorHandler handler;
       if (fixHoles || fixOverlaps) {
-        if (shouldFixTable(Bytes.toBytes(tInfo.getName()))) {
-          handler = tInfo.new HDFSIntegrityFixer(tInfo, errors, conf,
-              fixHoles, fixOverlaps);
-        } else {
-          LOG.info("Table " + tInfo.getName() + " is not in the include table " +
-            "list.  Just suggesting fixes.");
-          handler = tInfo.new IntegrityFixSuggester(tInfo, errors);
-        }
+        handler = tInfo.new HDFSIntegrityFixer(tInfo, errors, conf,
+          fixHoles, fixOverlaps);
       } else {
         handler = tInfo.new IntegrityFixSuggester(tInfo, errors);
       }
@@ -1032,7 +1030,7 @@ public class HBaseFsck {
       if (dirName.equals(HConstants.VERSION_FILE_NAME)) {
         foundVersionFile = true;
       } else {
-        if (!checkMetaOnly ||
+        if ((!checkMetaOnly && isTableIncluded(dirName)) ||
             dirName.equals("-ROOT-") ||
             dirName.equals(".META.")) {
           tableDirs.add(file);
@@ -2215,9 +2213,14 @@ public class HBaseFsck {
           if (pair.getSecond() != null) {
             sn = pair.getSecond();
           }
-          MetaEntry m = new MetaEntry(pair.getFirst(), sn, ts);
+          HRegionInfo hri = pair.getFirst();
+          if (!(isTableIncluded(hri.getTableNameAsString())
+              || hri.isMetaRegion() || hri.isRootRegion())) {
+            return true;
+          }
+          MetaEntry m = new MetaEntry(hri, sn, ts);
           HbckInfo hbInfo = new HbckInfo(m);
-          HbckInfo previous = regionInfoMap.put(pair.getFirst().getEncodedName(), hbInfo);
+          HbckInfo previous = regionInfoMap.put(hri.getEncodedName(), hbInfo);
           if (previous != null) {
             throw new IOException("Two entries in META are same " + previous);
           }
@@ -2243,7 +2246,7 @@ public class HBaseFsck {
       // Scan .META. to pick up user regions
       MetaScanner.metaScan(conf, visitor);
     }
-    
+
     errors.print("");
     return true;
   }
@@ -2649,9 +2652,8 @@ public class HBaseFsck {
 
         // list all online regions from this region server
         List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(server);
-        if (hbck.checkMetaOnly) {
-          regions = filterOnlyMetaRegions(regions);
-        }
+        regions = filterRegions(regions);
+
         if (details) {
           errors.detail("RegionServer: " + rsinfo.getServerName() +
                            " number of regions: " + regions.size());
@@ -2677,10 +2679,11 @@ public class HBaseFsck {
       return null;
     }
 
-    private List<HRegionInfo> filterOnlyMetaRegions(List<HRegionInfo> regions) {
+    private List<HRegionInfo> filterRegions(List<HRegionInfo> regions) {
       List<HRegionInfo> ret = Lists.newArrayList();
       for (HRegionInfo hri : regions) {
-        if (hri.isMetaTable()) {
+        if (hri.isMetaTable() || (!hbck.checkMetaOnly
+            && hbck.isTableIncluded(hri.getTableNameAsString()))) {
           ret.add(hri);
         }
       }
@@ -2925,22 +2928,15 @@ public class HBaseFsck {
   }
 
   /**
-   * Only fix tables specified by the list
+   * Only check/fix tables specified by the list,
+   * Empty list means all tables are included.
    */
-  boolean shouldFixTable(byte[] table) {
-    if (tablesToFix.size() == 0) {
-      return true;
-    }
-
-    // doing this naively since byte[] equals may not do what we want.
-    for (byte[] t : tablesToFix) {
-      if (Bytes.equals(t, table)) return true;
-    }
-    return false;
+  boolean isTableIncluded(String table) {
+    return (tablesIncluded.size() == 0) || tablesIncluded.contains(table);
   }
 
-  void includeTable(byte[] table) {
-    tablesToFix.add(table);
+  public void includeTable(String table) {
+    tablesIncluded.add(table);
   }
 
   /**
@@ -3102,9 +3098,8 @@ public class HBaseFsck {
         System.err.println("Unrecognized option:" + cmd);
         printUsageAndExit();
       } else {
-        byte[] table = Bytes.toBytes(cmd);
-        fsck.includeTable(table);
-        System.out.println("Allow fixes for table: " + cmd);
+        fsck.includeTable(cmd);
+        System.out.println("Allow checking/fixes for table: " + cmd);
       }
     }
     // do the real work of fsck

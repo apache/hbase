@@ -968,6 +968,51 @@ public class TestHBaseFsck {
     }
   }
 
+  /**
+   * This creates two tables and mess both of them and fix them one by one
+   */
+  @Test
+  public void testFixByTable() throws Exception {
+    String table1 = "testFixByTable1";
+    String table2 = "testFixByTable2";
+    try {
+      setupTable(table1);
+      // make sure data in regions, if in hlog only there is no data loss
+      TEST_UTIL.getHBaseAdmin().flush(table1);
+      // Mess them up by leaving a hole in the hdfs data
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"),
+        Bytes.toBytes("C"), false, false, true); // don't rm meta
+
+      setupTable(table2);
+      // make sure data in regions, if in hlog only there is no data loss
+      TEST_UTIL.getHBaseAdmin().flush(table2);
+      // Mess them up by leaving a hole in the hdfs data
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"),
+        Bytes.toBytes("C"), false, false, true); // don't rm meta
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] {
+        ERROR_CODE.NOT_IN_HDFS, ERROR_CODE.NOT_IN_HDFS});
+
+      // fix hole in table 1
+      doFsck(conf, true, table1);
+      // check that hole in table 1 fixed
+      assertNoErrors(doFsck(conf, false, table1));
+      // check that hole in table 2 still there
+      assertErrors(doFsck(conf, false, table2),
+        new ERROR_CODE[] {ERROR_CODE.NOT_IN_HDFS});
+
+      // fix hole in table 2
+      doFsck(conf, true, table2);
+      // check that hole in both tables fixed
+      assertNoErrors(doFsck(conf, false));
+      assertEquals(ROWKEYS.length - 2, countRows());
+    } finally {
+      deleteTable(table1);
+      deleteTable(table2);
+    }
+  }
+
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
