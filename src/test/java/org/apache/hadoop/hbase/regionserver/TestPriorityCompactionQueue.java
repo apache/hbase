@@ -19,8 +19,19 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -41,12 +52,25 @@ public class TestPriorityCompactionQueue {
 
   }
 
-  class DummyHRegion extends HRegion {
+  static class DummyHRegion extends HRegion {
     String name;
 
-    DummyHRegion(String name) {
-      super();
+    DummyHRegion(Configuration conf, String name,
+        Path tableDir, FileSystem fs, HRegionInfo regionInfo) {
+      super(tableDir, null, fs, conf, regionInfo, null);
       this.name = name;
+    }
+
+    static DummyHRegion createRegion(
+        Configuration conf, String name) throws IOException {
+      byte[] startKey = Bytes.toBytes(name + "-A-startKey");
+      byte[] endKey = Bytes.toBytes(name + "-B-endKey");
+      HTableDescriptor htd = new HTableDescriptor(name);
+      HRegionInfo regionInfo = new HRegionInfo(htd, startKey, endKey);
+      Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
+      FileSystem fs = rootDir.getFileSystem(conf);
+      Path p = new Path(rootDir, htd.getNameAsString());
+      return new DummyHRegion(conf, name, p, fs, regionInfo);
     }
 
     public int hashCode() {
@@ -93,14 +117,16 @@ public class TestPriorityCompactionQueue {
   // ////////////////////////////////////////////////////////////////////////////
 
   /** tests general functionality of the compaction queue */
-  @Test public void testPriorityQueue() throws InterruptedException {
+  @Test public void testPriorityQueue()
+      throws IOException, InterruptedException {
     PriorityCompactionQueue pq = new PriorityCompactionQueue();
 
-    HRegion r1 = new DummyHRegion("r1");
-    HRegion r2 = new DummyHRegion("r2");
-    HRegion r3 = new DummyHRegion("r3");
-    HRegion r4 = new DummyHRegion("r4");
-    HRegion r5 = new DummyHRegion("r5");
+    Configuration conf = HBaseConfiguration.create();
+    HRegion r1 = DummyHRegion.createRegion(conf, "r1");
+    HRegion r2 = DummyHRegion.createRegion(conf, "r2");
+    HRegion r3 = DummyHRegion.createRegion(conf, "r3");
+    HRegion r4 = DummyHRegion.createRegion(conf, "r4");
+    HRegion r5 = DummyHRegion.createRegion(conf, "r5");
 
     // test 1
     // check fifo w/priority
