@@ -714,6 +714,9 @@ public class RegionManager {
 
     synchronized (this.regionsInTransition) {
       for (RegionState s : regionsInTransition.values()) {
+        if (! s.isUnassigned()) {
+          continue;
+        }
         String regionName = s.getRegionInfo().getEncodedName();
         String tableName = s.getRegionInfo().getTableDesc().getNameAsString();
         String name = tableName + ":" + regionName;
@@ -750,9 +753,7 @@ public class RegionManager {
               LOG.debug("Doing Preferred Region Assignment for : " + name +
                   " to the " + hostName);
               // add the region to its preferred region server.
-              if (s.isUnassigned()) {
-                regionsToAssign.add(s);
-              }
+              regionsToAssign.add(s);
               continue;
             } else if (holdRegionForBestRegionserver ||
                 quickStartRegionServerSet.contains(preferredHost)) {
@@ -762,8 +763,7 @@ public class RegionManager {
         }
         // Only assign a configured number unassigned region at one time in the
         // non preferred assignment case.
-        if (s.isUnassigned() &&
-            (nonPreferredAssignmentCount++) < this.maxAssignInOneGo) {
+        if ((nonPreferredAssignmentCount++) < this.maxAssignInOneGo) {
           regionsToAssign.add(s);
         }
       }
