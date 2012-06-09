@@ -372,12 +372,33 @@ public class AccessController extends BaseRegionObserver
    * @throws IOException if obtaining the current user fails
    * @throws AccessDeniedException if authorization is denied
    */
-  private void requireTableAdminPermission(MasterCoprocessorEnvironment e,
-      byte[] tableName) throws IOException {
-    if (isActiveUserTableOwner(e, tableName)) {
-      requirePermission(Permission.Action.CREATE);
+  private void requireTableAdminPermission(MasterCoprocessorEnvironment e, byte[] tableName)
+      throws IOException {
+    User user = getActiveUser();
+    AuthResult result = null;
+
+    // Table admins are allowed to perform DDL
+    if (authManager.authorize(user, tableName, (byte[]) null, TablePermission.Action.ADMIN)) {
+      result = AuthResult.allow("Table permission granted", user, TablePermission.Action.ADMIN,
+          tableName);
+    } else if (isActiveUserTableOwner(e, tableName)) {
+      // Table owners with Create permission are allowed to perform DDL
+      if (authManager.authorize(user, tableName, (byte[]) null, TablePermission.Action.CREATE)) {
+        result = AuthResult.allow("Owner has table permission", user,
+            TablePermission.Action.CREATE, tableName);
+      } else {
+        // Table owners without Create permission cannot perform DDL
+        result = AuthResult.deny("Insufficient permissions", user, TablePermission.Action.CREATE,
+            tableName);
+      }
     } else {
-      requirePermission(Permission.Action.ADMIN);
+      // rest of the world
+      result = AuthResult.deny("Insufficient permissions", user, TablePermission.Action.ADMIN,
+          tableName);
+    }
+    logResult(result);
+    if (!result.isAllowed()) {
+      throw new AccessDeniedException("Insufficient permissions " + result.toContextString());
     }
   }
 
