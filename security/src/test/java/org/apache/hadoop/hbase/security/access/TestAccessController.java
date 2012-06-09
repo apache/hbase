@@ -145,13 +145,14 @@ public class TestAccessController {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  public void verifyAllowed(User user, PrivilegedExceptionAction action)
+  public void verifyAllowed(User user, PrivilegedExceptionAction... actions)
     throws Exception {
-    try {
-      user.runAs(action);
-    } catch (AccessDeniedException ade) {
-      fail("Expected action to pass for user '" + user.getShortName() +
-          "' but was denied");
+    for (PrivilegedExceptionAction action : actions) {
+      try {
+        user.runAs(action);
+      } catch (AccessDeniedException ade) {
+        fail("Expected action to pass for user '" + user.getShortName() + "' but was denied");
+      }
     }
   }
 
@@ -162,28 +163,29 @@ public class TestAccessController {
     }
   }
 
-  public void verifyDenied(User user, PrivilegedExceptionAction action)
+  public void verifyDenied(User user, PrivilegedExceptionAction... actions)
     throws Exception {
-    try {
-      user.runAs(action);
-      fail("Expected AccessDeniedException for user '" + user.getShortName() + "'");
-    } catch (RetriesExhaustedWithDetailsException e) {
-      // in case of batch operations, and put, the client assembles a
-      // RetriesExhaustedWithDetailsException instead of throwing an
-      // AccessDeniedException
-      boolean isAccessDeniedException = false;
-      for ( Throwable ex : e.getCauses()) {
-        if (ex instanceof AccessDeniedException) {
-          isAccessDeniedException = true;
-          break;
+    for (PrivilegedExceptionAction action : actions) {
+      try {
+        user.runAs(action);
+        fail("Expected AccessDeniedException for user '" + user.getShortName() + "'");
+      } catch (RetriesExhaustedWithDetailsException e) {
+        // in case of batch operations, and put, the client assembles a
+        // RetriesExhaustedWithDetailsException instead of throwing an
+        // AccessDeniedException
+        boolean isAccessDeniedException = false;
+        for (Throwable ex : e.getCauses()) {
+          if (ex instanceof AccessDeniedException) {
+            isAccessDeniedException = true;
+            break;
+          }
         }
+        if (!isAccessDeniedException) {
+          fail("Not receiving AccessDeniedException for user '" + user.getShortName() + "'");
+        }
+      } catch (AccessDeniedException ade) {
+        // expected result
       }
-      if (!isAccessDeniedException ) {
-        fail("Not receiving AccessDeniedException for user '" +
-            user.getShortName() + "'");
-      }
-    } catch (AccessDeniedException ade) {
-      // expected result
     }
   }
 
@@ -693,8 +695,8 @@ public class TestAccessController {
     admin.createTable(htd);
 
     // create temp users
-    User user = User.createUserForTesting(TEST_UTIL.getConfiguration(),
-        "user", new String[0]);
+    User tblUser = User.createUserForTesting(TEST_UTIL.getConfiguration(), "tbluser", new String[0]);
+    User gblUser = User.createUserForTesting(TEST_UTIL.getConfiguration(), "gbluser", new String[0]);
 
     // perms only stored against the first region
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
@@ -789,120 +791,110 @@ public class TestAccessController {
     };
 
     // initial check:
-    verifyDenied(user, getActionAll);
-    verifyDenied(user, getAction1);
-    verifyDenied(user, getAction2);
+    verifyDenied(tblUser, getActionAll, getAction1, getAction2);
+    verifyDenied(tblUser, putActionAll, putAction1, putAction2);
+    verifyDenied(tblUser, deleteActionAll, deleteAction1, deleteAction2);
 
-    verifyDenied(user, putActionAll);
-    verifyDenied(user, putAction1);
-    verifyDenied(user, putAction2);
-
-    verifyDenied(user, deleteActionAll);
-    verifyDenied(user, deleteAction1);
-    verifyDenied(user, deleteAction2);
+    verifyDenied(gblUser, getActionAll, getAction1, getAction2);
+    verifyDenied(gblUser, putActionAll, putAction1, putAction2);
+    verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // grant table read permission
-    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()),
-                   tableName, null, Permission.Action.READ));
+    protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, null,
+        Permission.Action.READ));
+    protocol.grant(new UserPermission(Bytes.toBytes(gblUser.getShortName()), Permission.Action.READ));
+
     Thread.sleep(100);
     // check
-    verifyAllowed(user, getActionAll);
-    verifyAllowed(user, getAction1);
-    verifyAllowed(user, getAction2);
+    verifyAllowed(tblUser, getActionAll, getAction1, getAction2);
+    verifyDenied(tblUser, putActionAll, putAction1, putAction2);
+    verifyDenied(tblUser, deleteActionAll, deleteAction1, deleteAction2);
 
-    verifyDenied(user, putActionAll);
-    verifyDenied(user, putAction1);
-    verifyDenied(user, putAction2);
-
-    verifyDenied(user, deleteActionAll);
-    verifyDenied(user, deleteAction1);
-    verifyDenied(user, deleteAction2);
+    verifyAllowed(gblUser, getActionAll, getAction1, getAction2);
+    verifyDenied(gblUser, putActionAll, putAction1, putAction2);
+    verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // grant table write permission
-    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()),
-                   tableName, null, Permission.Action.WRITE));
+    protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, null,
+        Permission.Action.WRITE));
+    protocol.grant(new UserPermission(Bytes.toBytes(gblUser.getShortName()),
+        Permission.Action.WRITE));
     Thread.sleep(100);
-    verifyDenied(user, getActionAll);
-    verifyDenied(user, getAction1);
-    verifyDenied(user, getAction2);
 
-    verifyAllowed(user, putActionAll);
-    verifyAllowed(user, putAction1);
-    verifyAllowed(user, putAction2);
+    verifyDenied(tblUser, getActionAll, getAction1, getAction2);
+    verifyAllowed(tblUser, putActionAll, putAction1, putAction2);
+    verifyAllowed(tblUser, deleteActionAll, deleteAction1, deleteAction2);
 
-    verifyAllowed(user, deleteActionAll);
-    verifyAllowed(user, deleteAction1);
-    verifyAllowed(user, deleteAction2);
+    verifyDenied(gblUser, getActionAll, getAction1, getAction2);
+    verifyAllowed(gblUser, putActionAll, putAction1, putAction2);
+    verifyAllowed(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // revoke table permission
-    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()),
-                   tableName, null, Permission.Action.READ, Permission.Action.WRITE));
-
-    protocol.revoke(new UserPermission(Bytes.toBytes(user.getShortName()),
-                    tableName, null));
+    protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, null,
+        Permission.Action.READ, Permission.Action.WRITE));
+    protocol.revoke(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, null));
+    protocol.revoke(new UserPermission(Bytes.toBytes(gblUser.getShortName())));
     Thread.sleep(100);
-    verifyDenied(user, getActionAll);
-    verifyDenied(user, getAction1);
-    verifyDenied(user, getAction2);
 
-    verifyDenied(user, putActionAll);
-    verifyDenied(user, putAction1);
-    verifyDenied(user, putAction2);
+    verifyDenied(tblUser, getActionAll, getAction1, getAction2);
+    verifyDenied(tblUser, putActionAll, putAction1, putAction2);
+    verifyDenied(tblUser, deleteActionAll, deleteAction1, deleteAction2);
 
-    verifyDenied(user, deleteActionAll);
-    verifyDenied(user, deleteAction1);
-    verifyDenied(user, deleteAction2);
+    verifyDenied(gblUser, getActionAll, getAction1, getAction2);
+    verifyDenied(gblUser, putActionAll, putAction1, putAction2);
+    verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // grant column family read permission
-    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()),
-                   tableName, family1, Permission.Action.READ));
+    protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, family1,
+        Permission.Action.READ));
+    protocol.grant(new UserPermission(Bytes.toBytes(gblUser.getShortName()), Permission.Action.READ));
+
     Thread.sleep(100);
 
-    verifyAllowed(user, getActionAll);
-    verifyAllowed(user, getAction1);
-    verifyDenied(user, getAction2);
+    // Access should be denied for family2
+    verifyAllowed(tblUser, getActionAll, getAction1);
+    verifyDenied(tblUser, getAction2);
+    verifyDenied(tblUser, putActionAll, putAction1, putAction2);
+    verifyDenied(tblUser, deleteActionAll, deleteAction1, deleteAction2);
 
-    verifyDenied(user, putActionAll);
-    verifyDenied(user, putAction1);
-    verifyDenied(user, putAction2);
-
-    verifyDenied(user, deleteActionAll);
-    verifyDenied(user, deleteAction1);
-    verifyDenied(user, deleteAction2);
+    verifyAllowed(gblUser, getActionAll, getAction1, getAction2);
+    verifyDenied(gblUser, putActionAll, putAction1, putAction2);
+    verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // grant column family write permission
-    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()),
-                   tableName, family2, Permission.Action.WRITE));
+    protocol.grant(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, family2,
+        Permission.Action.WRITE));
+    protocol.grant(new UserPermission(Bytes.toBytes(gblUser.getShortName()),
+        Permission.Action.WRITE));
     Thread.sleep(100);
 
-    verifyAllowed(user, getActionAll);
-    verifyAllowed(user, getAction1);
-    verifyDenied(user, getAction2);
+    // READ from family1, WRITE to family2 are allowed
+    verifyAllowed(tblUser, getActionAll, getAction1);
+    verifyAllowed(tblUser, putAction2, deleteAction2);
+    verifyDenied(tblUser, getAction2);
+    verifyDenied(tblUser, putActionAll, putAction1);
+    verifyDenied(tblUser, deleteActionAll, deleteAction1);
 
-    verifyDenied(user, putActionAll);
-    verifyDenied(user, putAction1);
-    verifyAllowed(user, putAction2);
-
-    verifyDenied(user, deleteActionAll);
-    verifyDenied(user, deleteAction1);
-    verifyAllowed(user, deleteAction2);
+    verifyDenied(gblUser, getActionAll, getAction1, getAction2);
+    verifyAllowed(gblUser, putActionAll, putAction1, putAction2);
+    verifyAllowed(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // revoke column family permission
-    protocol.revoke(new UserPermission(Bytes.toBytes(user.getShortName()),
-                    tableName, family2));
+    protocol.revoke(new UserPermission(Bytes.toBytes(tblUser.getShortName()), tableName, family2));
+    protocol.revoke(new UserPermission(Bytes.toBytes(gblUser.getShortName())));
+
     Thread.sleep(100);
 
-    verifyAllowed(user, getActionAll);
-    verifyAllowed(user, getAction1);
-    verifyDenied(user, getAction2);
+    // Revoke on family2 should not have impact on family1 permissions
+    verifyAllowed(tblUser, getActionAll, getAction1);
+    verifyDenied(tblUser, getAction2);
+    verifyDenied(tblUser, putActionAll, putAction1, putAction2);
+    verifyDenied(tblUser, deleteActionAll, deleteAction1, deleteAction2);
 
-    verifyDenied(user, putActionAll);
-    verifyDenied(user, putAction1);
-    verifyDenied(user, putAction2);
-
-    verifyDenied(user, deleteActionAll);
-    verifyDenied(user, deleteAction1);
-    verifyDenied(user, deleteAction2);
+    // Should not have access as global permissions are completely revoked
+    verifyDenied(gblUser, getActionAll, getAction1, getAction2);
+    verifyDenied(gblUser, putActionAll, putAction1, putAction2);
+    verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // delete table
     admin.disableTable(tableName);
