@@ -2,7 +2,6 @@ HBase Change Log
 
 Release 0.90.7 - Unreleased
   BUG FIXES
-   HBASE-6190  TestPriorityCompactionQueue throws NPE 
    HBASE-5568  Multi concurrent flushcache() for one region could cause data loss (Chunhui)
    HBASE-5482  In 0.90, balancer algo leading to same region balanced twice and picking 
                same region with Src and Destination as same RS. (Ram)
@@ -35,6 +34,7 @@ Release 0.90.7 - Unreleased
    HBASE-6041  NullPointerException prevents the master from starting up (Jimmy Xiang)
    HBASE-6124  https://issues.apache.org/jira/secure/attachment/12530072/patch-0.90.txt (Jimmy Xiang)
    HBASE-5874  When 'fs.default.name' not configured, the hbck tool and Merge tool throws IllegalArgumentException (fulin wang)
+   HBASE-6190  TestPriorityCompactionQueue throws NPE 
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
