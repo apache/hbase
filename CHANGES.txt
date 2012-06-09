@@ -107,6 +107,7 @@ Release 0.92.2 - Unreleased
                (Mubarak Seyed and Jimmy Xiang)
    HBASE-5892  [hbck] Refactor parallel WorkItem* to Futures (Andrew Wang)
    HBASE-6067  HBase won't start when hbase.rootdir uses ViewFileSystem
+   HBASE-6173  hbck check specified tables only
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems
