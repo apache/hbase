@@ -374,6 +374,7 @@ Improvement
     [HBASE-5823] - Hbck should be able to print help
     [HBASE-5862] - After Region Close remove the Operation Metrics.
     [HBASE-5863] - Improve the graceful_stop.sh CLI help (especially about reloads)
+    [HBASE-6173] - hbck check specified tables only
 
 New Feature
 
