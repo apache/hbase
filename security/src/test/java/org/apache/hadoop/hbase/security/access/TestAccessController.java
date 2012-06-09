@@ -80,6 +80,8 @@ public class TestAccessController {
   private static User USER_RW;
   // user with read-only permissions
   private static User USER_RO;
+  // user with table admin permissions
+  private static User USER_TBLADM;
   // user with no permissions
   private static User USER_NONE;
 
@@ -110,6 +112,7 @@ public class TestAccessController {
     USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
     USER_RW = User.createUserForTesting(conf, "rwuser", new String[0]);
     USER_RO = User.createUserForTesting(conf, "rouser", new String[0]);
+    USER_TBLADM = User.createUserForTesting(conf, "tbladm", new String[0]);
     USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
 
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
@@ -132,6 +135,9 @@ public class TestAccessController {
 
     protocol.grant(new UserPermission(Bytes.toBytes(USER_RO.getShortName()),
                    TEST_TABLE, TEST_FAMILY, Permission.Action.READ));
+
+    protocol.grant(new UserPermission(Bytes.toBytes(USER_TBLADM.getShortName()),
+      TEST_TABLE, null, Permission.Action.ADMIN));    
   }
 
   @AfterClass
@@ -232,6 +238,7 @@ public class TestAccessController {
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, modifyTable);
     verifyAllowed(USER_ADMIN, modifyTable);
+    verifyAllowed(USER_TBLADM, modifyTable);
   }
 
   @Test
@@ -252,6 +259,7 @@ public class TestAccessController {
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, deleteTable);
     verifyAllowed(USER_ADMIN, deleteTable);
+    verifyAllowed(USER_TBLADM, deleteTable);
   }
 
   @Test
@@ -273,6 +281,7 @@ public class TestAccessController {
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, action);
     verifyAllowed(USER_ADMIN, action);
+    verifyAllowed(USER_TBLADM, action);
   }
 
   @Test
@@ -295,6 +304,7 @@ public class TestAccessController {
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, action);
     verifyAllowed(USER_ADMIN, action);
+    verifyAllowed(USER_TBLADM, action);
   }
 
   @Test
@@ -315,6 +325,7 @@ public class TestAccessController {
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, action);
     verifyAllowed(USER_ADMIN, action);
+    verifyAllowed(USER_TBLADM, action);
   }
 
   @Test
@@ -335,6 +346,7 @@ public class TestAccessController {
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, disableTable);
     verifyAllowed(USER_ADMIN, disableTable);
+    verifyAllowed(USER_TBLADM, disableTable);
   }
 
   @Test
@@ -355,6 +367,7 @@ public class TestAccessController {
     // verify that superuser can create tables
     verifyAllowed(SUPERUSER, enableTable);
     verifyAllowed(USER_ADMIN, enableTable);
+    verifyAllowed(USER_TBLADM, enableTable);
   }
 
   @Test
