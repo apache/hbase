@@ -46,6 +46,7 @@ Release 0.90.7 - Unreleased
    HBASE-5973  Add ability for potentially long-running IPC calls to abort if client disconnects (backport by David S. Wang)
    HBASE-6013  Polish sharp edges from CopyTable
    HBASE-5892  [hbck] Refactor parallel WorkItem* to Futures (Andrew Wang)
+   HBASE-6173  hbck check specified tables only
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems

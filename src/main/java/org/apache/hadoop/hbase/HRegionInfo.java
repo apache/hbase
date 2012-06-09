@@ -71,6 +71,9 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   private static final int ENC_SEPARATOR = '.';
   public  static final int MD5_HEX_LENGTH   = 32;
 
+  // Current TableName
+  private byte[] tableName = null;
+
   /**
    * Does region name contain its encoded name?
    * @param regionName region name
@@ -367,7 +370,18 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * @return Table name.
    */
   public byte[] getTableName() {
-    return getTableName(regionName);
+    if (tableName == null || tableName.length == 0) {
+      tableName = getTableName(getRegionName());
+    }
+    return tableName;
+  }
+
+  /**
+   * Get current table name as string
+   * @return string representation of current table
+   */
+  public String getTableNameAsString() {
+    return Bytes.toString(getTableName());
   }
 
   /**
