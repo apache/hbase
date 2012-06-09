@@ -121,6 +121,14 @@ public class TableAuthManager {
    * @param userPerms
    */
   private void updateGlobalCache(ListMultimap<String,TablePermission> userPerms) {
+    USER_CACHE.clear();
+    GROUP_CACHE.clear();
+    try {
+      initGlobal(conf);
+    } catch (IOException e) {
+      // Never happens
+      LOG.error("Error occured while updating the user cache", e);
+    }
     for (Map.Entry<String,TablePermission> entry : userPerms.entries()) {
       if (AccessControlLists.isGroupPrincipal(entry.getKey())) {
         GROUP_CACHE.put(AccessControlLists.getGroupName(entry.getKey()),
