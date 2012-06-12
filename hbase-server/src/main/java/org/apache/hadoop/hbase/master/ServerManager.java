@@ -511,16 +511,20 @@ public class ServerManager {
    * <p>
    * @param server server to open a region
    * @param regions regions to open
+   * @return a list of region opening states
    */
-  public void sendRegionOpen(ServerName server, List<HRegionInfo> regions)
+  public List<RegionOpeningState> sendRegionOpen(ServerName server,
+      List<HRegionInfo> regions)
   throws IOException {
     AdminProtocol admin = getServerConnection(server);
     if (admin == null) {
       LOG.warn("Attempting to send OPEN RPC to server " + server.toString() +
         " failed because no RPC connection found to this server");
-      return;
+      return null;
     }
-    ProtobufUtil.openRegion(admin, regions);
+
+    OpenRegionResponse response = ProtobufUtil.openRegion(admin, regions);
+    return ResponseConverter.getRegionOpeningStateList(response);
   }
 
   /**

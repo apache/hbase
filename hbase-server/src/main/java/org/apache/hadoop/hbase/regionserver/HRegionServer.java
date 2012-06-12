@@ -3363,56 +3363,74 @@ public class  HRegionServer implements ClientProtocol,
     }
     try {
       checkOpen();
-      requestCount.incrementAndGet();
-      OpenRegionResponse.Builder builder = OpenRegionResponse.newBuilder();
-      Map<String, HTableDescriptor> htds =
-        new HashMap<String, HTableDescriptor>(request.getRegionList().size());
-      for (RegionInfo regionInfo: request.getRegionList()) {
-        HRegionInfo region = HRegionInfo.convert(regionInfo);
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+    requestCount.incrementAndGet();
+    OpenRegionResponse.Builder builder = OpenRegionResponse.newBuilder();
+    Map<String, HTableDescriptor> htds = new HashMap<String, HTableDescriptor>(
+        request.getRegionList().size());
+    boolean isBulkAssign = request.getRegionList().size() > 1;
+    for (RegionInfo regionInfo : request.getRegionList()) {
+      HRegionInfo region = HRegionInfo.convert(regionInfo);
+      try {
         checkIfRegionInTransition(region, OPEN);
-
         HRegion onlineRegion = getFromOnlineRegions(region.getEncodedName());
         if (null != onlineRegion) {
-          // See HBASE-5094. Cross check with META if still this RS is owning the
-          // region.
+          // See HBASE-5094. Cross check with META if still this RS is owning
+          // the region.
           Pair<HRegionInfo, ServerName> p = MetaReader.getRegion(
-            this.catalogTracker, region.getRegionName());
+              this.catalogTracker, region.getRegionName());
           if (this.getServerName().equals(p.getSecond())) {
             LOG.warn("Attempted open of " + region.getEncodedName()
-              + " but already online on this server");
+                + " but already online on this server");
             builder.addOpeningState(RegionOpeningState.ALREADY_OPENED);
             continue;
           } else {
             LOG.warn("The region " + region.getEncodedName()
-              + " is online on this server but META does not have this server.");
+                + " is online on this server but META does not have this server.");
             removeFromOnlineRegions(region.getEncodedName(), null);
           }
         }
-        LOG.info("Received request to open region: "
-          + region.getRegionNameAsString() + " on "+this.serverNameFromMasterPOV);
+        LOG.info("Received request to open region: " + region.getRegionNameAsString() + " on "
+            + this.serverNameFromMasterPOV);
         HTableDescriptor htd = htds.get(region.getTableNameAsString());
         if (htd == null) {
           htd = this.tableDescriptors.get(region.getTableName());
           htds.put(region.getTableNameAsString(), htd);
         }
-        this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(), true);
+        this.regionsInTransitionInRS.putIfAbsent(
+            region.getEncodedNameAsBytes(), true);
         // Need to pass the expected version in the constructor.
         if (region.isRootRegion()) {
           this.service.submit(new OpenRootHandler(this, this, region, htd,
-            versionOfOfflineNode));
+              versionOfOfflineNode));
         } else if (region.isMetaRegion()) {
           this.service.submit(new OpenMetaHandler(this, this, region, htd,
-            versionOfOfflineNode));
+              versionOfOfflineNode));
         } else {
           this.service.submit(new OpenRegionHandler(this, this, region, htd,
-            versionOfOfflineNode));
+              versionOfOfflineNode));
         }
         builder.addOpeningState(RegionOpeningState.OPENED);
+      } catch (RegionAlreadyInTransitionException rie) {
+        LOG.warn("Region is already in transition", rie);
+        if (isBulkAssign) {
+          builder.addOpeningState(RegionOpeningState.OPENED);
+        } else {
+          throw new ServiceException(rie);
+        }
+      } catch (IOException ie) {
+        LOG.warn("Failed opening region " + region.getRegionNameAsString(), ie);
+        if (isBulkAssign) {
+          builder.addOpeningState(RegionOpeningState.FAILED_OPENING);
+        } else {
+          throw new ServiceException(ie);
+        }
       }
-      return builder.build();
-    } catch (IOException ie) {
-      throw new ServiceException(ie);
     }
+    return builder.build();
+
   }
 
   /**

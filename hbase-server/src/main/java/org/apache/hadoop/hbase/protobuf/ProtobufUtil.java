@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
@@ -1286,7 +1287,6 @@ public final class ProtobufUtil {
 
   /**
    * A helper to open a region using admin protocol.
-   *
    * @param admin
    * @param region
    * @throws IOException
@@ -1304,17 +1304,18 @@ public final class ProtobufUtil {
 
   /**
    * A helper to open a list of regions using admin protocol.
-   *
+   * 
    * @param admin
    * @param regions
+   * @return OpenRegionResponse
    * @throws IOException
    */
-  public static void openRegion(final AdminProtocol admin,
+  public static OpenRegionResponse openRegion(final AdminProtocol admin,
       final List<HRegionInfo> regions) throws IOException {
     OpenRegionRequest request =
       RequestConverter.buildOpenRegionRequest(regions);
     try {
-      admin.openRegion(null, request);
+      return admin.openRegion(null, request);
     } catch (ServiceException se) {
       throw getRemoteException(se);
     }

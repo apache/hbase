@@ -157,6 +157,23 @@ public final class ResponseConverter {
   }
 
   /**
+   * Get a list of region opening state from a OpenRegionResponse
+   * 
+   * @param proto the OpenRegionResponse
+   * @return the list of region opening state
+   */
+  public static List<RegionOpeningState> getRegionOpeningStateList(
+      final OpenRegionResponse proto) {
+    if (proto == null) return null;
+    List<RegionOpeningState> regionOpeningStates = new ArrayList<RegionOpeningState>();
+    for (int i = 0; i < proto.getOpeningStateCount(); i++) {
+      regionOpeningStates.add(RegionOpeningState.valueOf(
+          proto.getOpeningState(i).name()));
+    }
+    return regionOpeningStates;
+  }
+
+  /**
    * Check if the region is closed from a CloseRegionResponse
    *
    * @param proto the CloseRegionResponse

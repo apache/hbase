@@ -580,6 +580,7 @@ public class TestAssignmentManager {
     MasterServices services = Mockito.mock(MasterServices.class);
     Mockito.when(services.getAssignmentManager()).thenReturn(am);
     Mockito.when(services.getServerManager()).thenReturn(this.serverManager);
+    Mockito.when(services.getZooKeeper()).thenReturn(this.watcher);
     ServerShutdownHandler handler = new ServerShutdownHandler(this.server,
       services, deadServers, SERVERNAME_A, false);
     handler.process();

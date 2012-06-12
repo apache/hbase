@@ -1475,7 +1475,20 @@ public class AssignmentManager extends ZooKeeperListener {
           getLong("hbase.regionserver.rpc.startup.waittime", 60000);
       while (!this.master.isStopped()) {
         try {
-          this.serverManager.sendRegionOpen(destination, regions);
+          List<RegionOpeningState> regionOpeningStateList = this.serverManager
+              .sendRegionOpen(destination, regions);
+          if (regionOpeningStateList == null) {
+            // Failed getting RPC connection to this server
+            return false;
+          }
+          for (int i = 0; i < regionOpeningStateList.size(); i++) {
+            if (regionOpeningStateList.get(i) == RegionOpeningState.ALREADY_OPENED) {
+              processAlreadyOpenedRegion(regions.get(i), destination);
+            } else if (regionOpeningStateList.get(i) == RegionOpeningState.FAILED_OPENING) {
+              // Failed opening this region, reassign it
+              assign(regions.get(i), true, true);
+            }
+          }
           break;
         } catch (RemoteException e) {
           IOException decodedException = e.unwrapRemoteException();
@@ -1534,6 +1547,9 @@ public class AssignmentManager extends ZooKeeperListener {
           failedPlans.put(e.getKey(), e.getValue());
         }
       } catch (Throwable t) {
+        LOG.warn("Failed bulking assigning " + e.getValue().size()
+            + " region(s) to " + e.getKey().getServerName()
+            + ", and continue to bulk assign others", t);
         failedPlans.put(e.getKey(), e.getValue());
       }
     }
@@ -1545,7 +1561,9 @@ public class AssignmentManager extends ZooKeeperListener {
             + " regions to server " + e.getKey() + ", reassigning them");
         reassigningRegions.addAll(e.getValue());
       }
-      assign(reassigningRegions, servers);
+      for (HRegionInfo region : reassigningRegions) {
+        assign(region, true, true);
+      }
     }
   }
 
@@ -1723,31 +1741,10 @@ public class AssignmentManager extends ZooKeeperListener {
         RegionOpeningState regionOpenState = serverManager.sendRegionOpen(plan
             .getDestination(), state.getRegion(), versionOfOfflineNode);
         if (regionOpenState == RegionOpeningState.ALREADY_OPENED) {
-          // Remove region from in-memory transition and unassigned node from ZK
-          // While trying to enable the table the regions of the table were
-          // already enabled.
-          LOG.debug("ALREADY_OPENED region " + state.getRegion().getRegionNameAsString() +
-              " to " + plan.getDestination().toString());
-          String encodedRegionName = state.getRegion()
-              .getEncodedName();
-          try {
-            ZKAssign.deleteOfflineNode(master.getZooKeeper(), encodedRegionName);
-          } catch (KeeperException.NoNodeException e) {
-            if(LOG.isDebugEnabled()){
-              LOG.debug("The unassigned node "+encodedRegionName+" doesnot exist.");
-            }
-          } catch (KeeperException e) {
-            master.abort(
-                "Error deleting OFFLINED node in ZK for transition ZK node ("
-                    + encodedRegionName + ")", e);
-          }
-          // no lock concurrent ok -> sequentially consistent
-          this.regionsInTransition.remove(plan.getRegionInfo().getEncodedName());
-
-          synchronized (this.regions) {
-            this.regions.put(plan.getRegionInfo(), plan.getDestination());
-            addToServers(plan.getDestination(), plan.getRegionInfo());
-          }
+          processAlreadyOpenedRegion(state.getRegion(), plan.getDestination());
+        } else if (regionOpenState == RegionOpeningState.FAILED_OPENING) {
+          // Failed opening this region
+          throw new Exception("Get regionOpeningState=" + regionOpenState);
         }
         break;
       } catch (Throwable t) {
@@ -1777,6 +1774,36 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
     }
+  }
+
+  private void processAlreadyOpenedRegion(HRegionInfo region, ServerName sn) {
+
+    // Remove region from in-memory transition and unassigned node from ZK
+    // While trying to enable the table the regions of the table were
+    // already enabled.
+    LOG.debug("ALREADY_OPENED region " + region.getRegionNameAsString()
+        + " to " + sn);
+    String encodedRegionName = region.getEncodedName();
+    try {
+      ZKAssign.deleteOfflineNode(master.getZooKeeper(), encodedRegionName);
+    } catch (KeeperException.NoNodeException e) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("The unassigned node " + encodedRegionName
+            + " doesnot exist.");
+      }
+    } catch (KeeperException e) {
+      master.abort(
+          "Error deleting OFFLINED node in ZK for transition ZK node ("
+              + encodedRegionName + ")", e);
+    }
+    // no lock concurrent ok -> sequentially consistent
+    this.regionsInTransition.remove(region.getEncodedName());
+
+    synchronized (this.regions) {
+      this.regions.put(region, sn);
+      addToServers(sn, region);
+    }
+
   }
 
   private boolean isDisabledorDisablingRegionInRIT(final HRegionInfo region) {

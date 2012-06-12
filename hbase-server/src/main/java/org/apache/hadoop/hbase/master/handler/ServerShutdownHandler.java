@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -305,6 +306,16 @@ public class ServerShutdownHandler extends EventHandler {
                     + " because it has been opened in "
                     + addressFromAM.getServerName());
               } else {
+                if (rit != null) {
+                  //clean zk node
+                  try{
+                    LOG.info("Reassigning region with rs =" + rit + " and deleting zk node if exists");
+                    ZKAssign.deleteNodeFailSilent(services.getZooKeeper(), e.getKey());
+                  }catch (KeeperException ke) {
+                    this.server.abort("Unexpected ZK exception deleting unassigned node " + e.getKey(), ke);
+                    return;
+                  }
+                }
                 toAssignRegions.add(e.getKey());
               }
           } else if (rit != null && (rit.isSplitting() || rit.isSplit())) {
