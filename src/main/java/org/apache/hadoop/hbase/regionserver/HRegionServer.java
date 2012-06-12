@@ -45,6 +45,9 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.Date;
+import java.util.Calendar;
+import java.text.SimpleDateFormat;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -131,6 +134,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
@@ -147,6 +151,8 @@ public class HRegionServer implements HRegionInterface,
   private static final String UNABLE_TO_READ_MASTER_ADDRESS_ERR_MSG =
       "Unable to read master address from ZooKeeper";
   private static final ArrayList<Put> emptyPutArray = new ArrayList<Put>();
+  private static final int DEFAULT_NUM_TRACKED_CLOSED_REGION = 3;
+  private static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   // Set when a report to the master comes back with a message asking us to
   // shutdown.  Also set by call to stop when debugging or running unit tests
@@ -182,6 +188,10 @@ public class HRegionServer implements HRegionInterface,
   // below maps.
   protected final Map<Integer, HRegion> onlineRegions =
     new ConcurrentHashMap<Integer, HRegion>();
+
+  // this is a list of region info that we recently closed
+  protected final List<ClosedRegionInfo> recentlyClosedRegions =
+    new ArrayList<ClosedRegionInfo>(DEFAULT_NUM_TRACKED_CLOSED_REGION + 1);
 
   // This a list of regions that we need to re-try closing.
   protected final Map<Integer, HRegion> retryCloseRegions = Collections
@@ -1045,7 +1055,49 @@ public class HRegionServer implements HRegionInterface,
     return;
   }
 
-  /*
+  /**
+   * Inner class that stores information for recently closed regions.
+   * including region name, closeDate, startKey, endKey.
+   */
+  public static class ClosedRegionInfo {
+    private final String regionName;
+    private final long closeDate;
+    private final String startKey;
+    private final String endKey;
+
+    ClosedRegionInfo(String name, long date, byte[] startKey, byte[] endKey) {
+      this.regionName = name;
+      this.closeDate = date;
+      this.startKey = (startKey == null) ? "" : Bytes.toStringBinary(startKey);
+      this.endKey = (endKey == null) ? "" : Bytes.toStringBinary(endKey);
+    }
+
+    public String getRegionName() {
+      return regionName;
+    }
+
+    public long getCloseDate() {
+      return closeDate;
+    }
+
+    /**
+     * the date is represented as a string in format "yyyy-MM-dd HH:mm:ss"
+     */
+    public String getCloseDateAsString() {
+      Date date = new Date(closeDate);
+      return formatter.format(date);
+    }
+
+    public String getStartKey() {
+      return startKey;
+    }
+
+    public String getEndKey() {
+      return endKey;
+    }
+  }
+
+  /**
    * Inner class that runs on a long period checking if regions need major
    * compaction.
    */
@@ -1655,6 +1707,7 @@ public class HRegionServer implements HRegionInterface,
 
             case MSG_REGION_CLOSE_WITHOUT_REPORT:
               // Close a region, don't reply
+
               closeRegion(e.msg.getRegionInfo(), false);
               break;
 
@@ -1783,6 +1836,7 @@ public class HRegionServer implements HRegionInterface,
       try {
         this.onlineRegions.put(mapKey, region);
         region.setRegionServer(this);
+        region.setOpenDate(EnvironmentEdgeManager.currentTimeMillis());
       } finally {
         this.lock.writeLock().unlock();
       }
@@ -1850,6 +1904,12 @@ public class HRegionServer implements HRegionInterface,
     getOutboundMsgs().add(new HMsg(HMsg.Type.MSG_REPORT_PROCESS_OPEN, hri));
   }
 
+  private void addToRecentlyClosedRegions(ClosedRegionInfo info) {
+      recentlyClosedRegions.add(0, info);
+      if (recentlyClosedRegions.size() > DEFAULT_NUM_TRACKED_CLOSED_REGION)
+        recentlyClosedRegions.remove(DEFAULT_NUM_TRACKED_CLOSED_REGION);
+  }
+
   @Override
   public void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
   throws IOException {
@@ -1871,6 +1931,10 @@ public class HRegionServer implements HRegionInterface,
         this.addToRetryCloseRegions(region);
         throw e;
       }
+      ClosedRegionInfo info =
+        new ClosedRegionInfo(hri.getRegionNameAsString(), EnvironmentEdgeManager.currentTimeMillis() ,
+                             hri.getStartKey(), hri.getEndKey());
+      addToRecentlyClosedRegions(info);
       if(reportWhenCompleted) {
         if(zkUpdater != null) {
           HMsg hmsg = new HMsg(HMsg.Type.MSG_REPORT_CLOSE, hri, null);
@@ -2071,7 +2135,7 @@ public class HRegionServer implements HRegionInterface,
   @Override
   public void mutateRow(byte[] regionName, RowMutations arm)
       throws IOException {
-	  mutateRow(regionName, Collections.singletonList(arm));
+          mutateRow(regionName, Collections.singletonList(arm));
   }
 
   @Override
@@ -2546,6 +2610,11 @@ public class HRegionServer implements HRegionInterface,
     return lock.writeLock();
   }
 
+  /** @return recent closed regions info*/
+  public List<ClosedRegionInfo> getRecentlyClosedRegionInfo() {
+    return recentlyClosedRegions;
+  }
+
   /**
    * @return Immutable list of this servers regions.
    */
@@ -2627,19 +2696,15 @@ public class HRegionServer implements HRegionInterface,
     return region.getLastFlushTime();
   }
 
-  /**
-   * @return The HRegionInfos from online regions sorted
-   */
-  public SortedSet<HRegionInfo> getSortedOnlineRegionInfos() {
-    SortedSet<HRegionInfo> result = new TreeSet<HRegionInfo>();
+  public Map<HRegionInfo, String> getSortedOnlineRegionInfosAndOpenDate() {
+    TreeMap<HRegionInfo, String> result = new TreeMap<HRegionInfo, String>();
     synchronized(this.onlineRegions) {
       for (HRegion r: this.onlineRegions.values()) {
-        result.add(r.getRegionInfo());
+        result.put(r.getRegionInfo(), r.getOpenDateAsString());
       }
     }
     return result;
   }
-
   /**
    * This method removes HRegion corresponding to hri from the Map of onlineRegions.
    *

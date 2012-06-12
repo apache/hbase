@@ -53,6 +53,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.Date;
+import java.util.Calendar;
+import java.text.SimpleDateFormat;
 
 import org.apache.avro.ipc.Server;
 import org.apache.commons.logging.Log;
@@ -153,6 +156,7 @@ public class HRegion implements HeapSize {
   static final String SPLITDIR = "splits";
   static final String MERGEDIR = "merges";
 
+  static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
   final AtomicBoolean closed = new AtomicBoolean(false);
   /* Closing can take some time; use the closing flag if there is stuff we don't
    * want to do while in closing state; e.g. like offer this region up to the
@@ -186,6 +190,10 @@ public class HRegion implements HeapSize {
   private RequestMetrics writeRequests = null;
 
   private HRegionServer regionServer = null;
+  /**
+   * The open date of the region is stored as a long obtained by currentTimeMillis()
+   */
+  private long openDate = 0;
 
   /**
    * The directory for the table this region is part of.
@@ -376,6 +384,19 @@ public class HRegion implements HeapSize {
     return m.get();
   }
 
+  public String getOpenDateAsString() {
+    Date date = new Date(openDate);
+    return formatter.format(date);
+  }
+
+  public long getopenDate() {
+    return openDate;
+  }
+
+  public void setOpenDate(long dt) {
+    openDate = dt;
+  }
+
   public static final long getWriteOps() {
     return writeOps.getAndSet(0);
   }
@@ -416,6 +437,7 @@ public class HRegion implements HeapSize {
     this.regionInfo = null;
     this.threadWakeFrequency = 0L;
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
+    this.openDate = 0;
   }
 
   /**
@@ -2343,16 +2365,16 @@ public class HRegion implements HeapSize {
    * new entries.
    */
   private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap) {
-	  return applyFamilyMapToMemstore(familyMap, null);
+    return applyFamilyMapToMemstore(familyMap, null);
   }
   
   private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap,
-		  MultiVersionConsistencyControl.WriteEntry writeEntryToUse) {
+                 MultiVersionConsistencyControl.WriteEntry writeEntryToUse) {
     long start = EnvironmentEdgeManager.currentTimeMillis();
     MultiVersionConsistencyControl.WriteEntry w = null;
     long size = 0;
     try {
-	  w = (writeEntryToUse == null)? mvcc.beginMemstoreInsert(): writeEntryToUse;
+      w = (writeEntryToUse == null)? mvcc.beginMemstoreInsert(): writeEntryToUse;
 
       for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
         byte[] family = e.getKey();
@@ -2366,12 +2388,12 @@ public class HRegion implements HeapSize {
       }
     } finally {
       if (writeEntryToUse == null) {
-	      long now = EnvironmentEdgeManager.currentTimeMillis();
-	      HRegion.memstoreInsertTime.addAndGet(now - start);
-	      start = now;
-	      mvcc.completeMemstoreInsert(w);
-	      now = EnvironmentEdgeManager.currentTimeMillis();
-	      HRegion.mvccWaitTime.addAndGet(now - start);
+        long now = EnvironmentEdgeManager.currentTimeMillis();
+        HRegion.memstoreInsertTime.addAndGet(now - start);
+        start = now;
+        mvcc.completeMemstoreInsert(w);
+        now = EnvironmentEdgeManager.currentTimeMillis();
+        HRegion.mvccWaitTime.addAndGet(now - start);
       }
       // else the calling function will take care of the mvcc completion and metrics.
     }
@@ -3755,13 +3777,13 @@ public class HRegion implements HeapSize {
         flush = isFlushSize(this.incMemoryUsage(addedSize));
       } finally {
         // 8. roll mvcc forward
-	      long start = now;
-	      now = EnvironmentEdgeManager.currentTimeMillis();
-	      HRegion.memstoreInsertTime.addAndGet(now - start);
-	
-	      mvcc.completeMemstoreInsert(w);
-	      now = EnvironmentEdgeManager.currentTimeMillis();
-	      HRegion.mvccWaitTime.addAndGet(now - start);
+        long start = now;
+        now = EnvironmentEdgeManager.currentTimeMillis();
+        HRegion.memstoreInsertTime.addAndGet(now - start);
+
+        mvcc.completeMemstoreInsert(w);
+        now = EnvironmentEdgeManager.currentTimeMillis();
+        HRegion.mvccWaitTime.addAndGet(now - start);
 
         // 9. release region lock
         this.updatesLock.readLock().unlock();
@@ -3851,7 +3873,7 @@ public class HRegion implements HeapSize {
     long after = EnvironmentEdgeManager.currentTimeMillis();
     String signature = SchemaMetrics.generateSchemaMetricsPrefix(
         this.getTableDesc().getNameAsString(), Bytes.toString(family));
-		HRegion.incrTimeVaryingMetric(signature + "increment_", after - before);
+    HRegion.incrTimeVaryingMetric(signature + "increment_", after - before);
 
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
@@ -3876,7 +3898,7 @@ public class HRegion implements HeapSize {
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
-      (5 * Bytes.SIZEOF_LONG) + 2 * ClassSize.ARRAY +
+      (6 * Bytes.SIZEOF_LONG) + 2 * ClassSize.ARRAY +
       (28 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +

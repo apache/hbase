@@ -3,6 +3,7 @@
   import="java.io.IOException"
   import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
+  import="org.apache.hadoop.hbase.regionserver.HRegionServer.ClosedRegionInfo"
   import="org.apache.hadoop.hbase.regionserver.HRegion"
   import="org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics"
   import="org.apache.hadoop.hbase.util.Bytes"
@@ -18,7 +19,10 @@
     e.printStackTrace();
   }
   RegionServerMetrics metrics = regionServer.getMetrics();
-  Collection<HRegionInfo> onlineRegions = regionServer.getSortedOnlineRegionInfos();
+  Map<HRegionInfo, String> onlineRegionInfoAndOpenDate = 
+        regionServer.getSortedOnlineRegionInfosAndOpenDate();
+  List<HRegionServer.ClosedRegionInfo> recentlyClosedRegionInfo = 
+        regionServer.getRecentlyClosedRegionInfo();
   int interval = regionServer.getConfiguration().getInt("hbase.regionserver.msginterval", 3000)/1000;
 
 %><?xml version="1.0" encoding="UTF-8" ?>
@@ -46,27 +50,56 @@
 </table>
 
 <h2>Online Regions</h2>
-<% if (onlineRegions != null && onlineRegions.size() > 0) { %>
+<% if (onlineRegionInfoAndOpenDate != null && onlineRegionInfoAndOpenDate.size() > 0) { %>
 <table>
 <tr><th>Region Name</th>
 	<th>Read Requests/sec</th>
 	<th>Write Requests/sec</th>
 	<th>Start Key</th>
-	<th>End Key</th><th>Metrics</th></tr>
-<%   for (HRegionInfo r: onlineRegions) {
+	<th>End Key</th>
+  <th>Metrics</th>
+  <th>Open Time</th>
+</tr>
+<%   for (HRegionInfo r : onlineRegionInfoAndOpenDate.keySet()) {
         HServerLoad.RegionLoad load = regionServer.createRegionLoad(r.getRegionName());
  %>
+
 <tr><td><%= r.getRegionNameAsString() %></td>
 	<td><%= load.getReadRequestPerSec() %></td>
 	<td><%= load.getWriteRequestPerSec() %></td>
     <td><%= Bytes.toStringBinary(r.getStartKey()) %></td>
 	<td><%= Bytes.toStringBinary(r.getEndKey()) %></td>
     <td><%= load.toString() %></td>
+  <td><%= onlineRegionInfoAndOpenDate.get(r) %></td>
 </tr>
 <%
      }
 %>
 </table>
+<h2>Recently Closed Regions</h2>
+<% if (recentlyClosedRegionInfo != null && recentlyClosedRegionInfo.size() > 0) 
+   { %>
+<table>
+<tr><th>Region Name</th>
+  <th>Start Key</th>
+  <th>End Key</th>
+  <th>Closed Time</th>
+</tr>
+<%
+  for (HRegionServer.ClosedRegionInfo info: recentlyClosedRegionInfo) {
+%>
+<tr><td><%= info.getRegionName() %></td>
+  <td><%= info.getStartKey() %></td>
+  <td><%= info.getEndKey() %></td>
+  <td><%= info.getCloseDateAsString() %></td>
+</tr>
+<%
+  }
+%>
+</table>
+<%
+  }
+%>
 <p>Region names are made of the containing table's name, a comma,
 the start key, a comma, and a randomly generated region id.  To illustrate,
 the region named
