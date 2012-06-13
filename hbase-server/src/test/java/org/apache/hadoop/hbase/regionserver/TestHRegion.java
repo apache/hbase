@@ -3560,7 +3560,7 @@ public class TestHRegion extends HBaseTestCase {
   @Test
   public void testParallelIncrementWithMemStoreFlush() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    String method = "testParallelismIncrementWithMemStoreFlush";
+    String method = "testParallelIncrementWithMemStoreFlush";
     byte[] tableName = Bytes.toBytes(method);
     byte[] family = Incrementer.family;
     this.region = initHRegion(tableName, method, conf, family);
