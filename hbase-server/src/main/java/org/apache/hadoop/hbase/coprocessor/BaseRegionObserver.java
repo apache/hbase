@@ -74,17 +74,21 @@ public abstract class BaseRegionObserver implements RegionObserver {
       boolean abortRequested) { }
 
   @Override
-  public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e) { }
+  public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
+  }
 
   @Override
-  public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e) { }
+  public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
+  }
 
   @Override
-  public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e) { }
+  public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
+  }
 
   @Override
-  public void postSplit(ObserverContext<RegionCoprocessorEnvironment> e,
-      HRegion l, HRegion r) { }
+  public void postSplit(ObserverContext<RegionCoprocessorEnvironment> e, HRegion l, HRegion r)
+      throws IOException {
+  }
 
   @Override
   public void preCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
@@ -96,13 +100,14 @@ public abstract class BaseRegionObserver implements RegionObserver {
 
   @Override
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-      final Store store, final InternalScanner scanner) {
+      final Store store, final InternalScanner scanner) throws IOException {
     return scanner;
   }
 
   @Override
-  public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-      final Store store, final StoreFile resultFile) { }
+  public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e, final Store store,
+      final StoreFile resultFile) throws IOException {
+  }
 
   @Override
   public void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> e,

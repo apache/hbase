@@ -15,7 +15,6 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.*;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -54,11 +53,14 @@ import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
@@ -367,12 +369,12 @@ public class AccessController extends BaseRegionObserver
    * that means he/she can edit/modify/delete the table.
    * If current user is the table owner, and has CREATE permission,
    * then he/she has table admin permission. otherwise ADMIN rights are checked.
-   * @param e Master coprocessor environment
+   * @param e Coprocessor environment
    * @param tableName Table requested
    * @throws IOException if obtaining the current user fails
    * @throws AccessDeniedException if authorization is denied
    */
-  private void requireTableAdminPermission(MasterCoprocessorEnvironment e, byte[] tableName)
+  private void requireTableAdminPermission(CoprocessorEnvironment e, byte[] tableName)
       throws IOException {
     User user = getActiveUser();
     AuthResult result = null;
@@ -770,6 +772,23 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
+  public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
+    requireTableAdminPermission(e.getEnvironment(), getTableName(e.getEnvironment()));
+  }
+
+  @Override
+  public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
+    requireTableAdminPermission(e.getEnvironment(), getTableName(e.getEnvironment()));
+  }
+
+  @Override
+  public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
+      final Store store, final InternalScanner scanner) throws IOException {
+    requireTableAdminPermission(e.getEnvironment(), getTableName(e.getEnvironment()));
+    return scanner;
+  }
+
+  @Override
   public void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final Result result)
       throws IOException {
@@ -1137,14 +1156,13 @@ public class AccessController extends BaseRegionObserver
     return tableName;
   }
 
-  private String getTableOwner(MasterCoprocessorEnvironment e,
-      byte[] tableName) throws IOException {
+  private String getTableOwner(CoprocessorEnvironment e, byte[] tableName) throws IOException {
     HTableDescriptor htd = e.getTable(tableName).getTableDescriptor();
     return htd.getOwnerString();
   }
 
-  private boolean isActiveUserTableOwner(MasterCoprocessorEnvironment e,
-      byte[] tableName) throws IOException {
+  private boolean isActiveUserTableOwner(CoprocessorEnvironment e, byte[] tableName)
+      throws IOException {
     String activeUser = getActiveUser().getShortName();
     return activeUser.equals(getTableOwner(e, tableName));
   }

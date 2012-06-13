@@ -66,14 +66,16 @@ public interface RegionObserver extends Coprocessor {
   /**
    * Called before the memstore is flushed to disk.
    * @param c the environment provided by the region server
+   * @throws IOException if an error occurred on the coprocessor
    */
-  void preFlush(final ObserverContext<RegionCoprocessorEnvironment> c);
+  void preFlush(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
 
   /**
    * Called after the memstore is flushed to disk.
    * @param c the environment provided by the region server
+   * @throws IOException if an error occurred on the coprocessor
    */
-  void postFlush(final ObserverContext<RegionCoprocessorEnvironment> c);
+  void postFlush(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
 
   /**
    * Called prior to selecting the {@link StoreFile}s to compact from the list
@@ -118,9 +120,10 @@ public interface RegionObserver extends Coprocessor {
    * rewriting
    * @return the scanner to use during compaction.  Should not be {@code null}
    * unless the implementation is writing new store files on its own.
+   * @throws IOException if an error occurred on the coprocessor
    */
   InternalScanner preCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
-    final Store store, final InternalScanner scanner);
+      final Store store, final InternalScanner scanner) throws IOException;
 
   /**
    * Called after compaction has completed and the new store file has been
@@ -128,16 +131,18 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param store the store being compacted
    * @param resultFile the new store file written out during compaction
+   * @throws IOException if an error occurred on the coprocessor
    */
-  void postCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
-    final Store store, StoreFile resultFile);
+  void postCompact(final ObserverContext<RegionCoprocessorEnvironment> c, final Store store,
+      StoreFile resultFile) throws IOException;
 
   /**
    * Called before the region is split.
    * @param c the environment provided by the region server
    * (e.getRegion() returns the parent region)
+   * @throws IOException if an error occurred on the coprocessor
    */
-  void preSplit(final ObserverContext<RegionCoprocessorEnvironment> c);
+  void preSplit(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
 
   /**
    * Called after the region is split.
@@ -145,9 +150,10 @@ public interface RegionObserver extends Coprocessor {
    * (e.getRegion() returns the parent region)
    * @param l the left daughter region
    * @param r the right daughter region
+   * @throws IOException if an error occurred on the coprocessor
    */
   void postSplit(final ObserverContext<RegionCoprocessorEnvironment> c, final HRegion l,
-    final HRegion r);
+      final HRegion r) throws IOException;
 
   /**
    * Called before the region is reported as closed to the master.
