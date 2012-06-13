@@ -355,8 +355,9 @@ public class RegionCoprocessorHost
    * Called prior to rewriting the store files selected for compaction
    * @param store the store being compacted
    * @param scanner the scanner used to read store data during compaction
+   * @throws IOException 
    */
-  public InternalScanner preCompact(Store store, InternalScanner scanner) {
+  public InternalScanner preCompact(Store store, InternalScanner scanner) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
     for (RegionEnvironment env: coprocessors) {
@@ -366,7 +367,7 @@ public class RegionCoprocessorHost
           scanner = ((RegionObserver)env.getInstance()).preCompact(
               ctx, store, scanner);
         } catch (Throwable e) {
-          handleCoprocessorThrowableNoRethrow(env,e);
+          handleCoprocessorThrowable(env,e);
         }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
@@ -381,8 +382,9 @@ public class RegionCoprocessorHost
    * Called after the store compaction has completed.
    * @param store the store being compacted
    * @param resultFile the new store file written during compaction
+   * @throws IOException 
    */
-  public void postCompact(Store store, StoreFile resultFile) {
+  public void postCompact(Store store, StoreFile resultFile) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -390,7 +392,7 @@ public class RegionCoprocessorHost
         try {
           ((RegionObserver)env.getInstance()).postCompact(ctx, store, resultFile);
         } catch (Throwable e) {
-          handleCoprocessorThrowableNoRethrow(env, e);
+          handleCoprocessorThrowable(env, e);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -401,8 +403,9 @@ public class RegionCoprocessorHost
 
   /**
    * Invoked before a memstore flush
+   * @throws IOException 
    */
-  public void preFlush() {
+  public void preFlush() throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -410,7 +413,7 @@ public class RegionCoprocessorHost
         try {
           ((RegionObserver)env.getInstance()).preFlush(ctx);
         } catch (Throwable e) {
-          handleCoprocessorThrowableNoRethrow(env, e);
+          handleCoprocessorThrowable(env, e);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -421,8 +424,9 @@ public class RegionCoprocessorHost
 
   /**
    * Invoked after a memstore flush
+   * @throws IOException 
    */
-  public void postFlush() {
+  public void postFlush() throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -430,7 +434,7 @@ public class RegionCoprocessorHost
         try {
           ((RegionObserver)env.getInstance()).postFlush(ctx);
         } catch (Throwable e) {
-          handleCoprocessorThrowableNoRethrow(env, e);
+          handleCoprocessorThrowable(env, e);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -441,8 +445,9 @@ public class RegionCoprocessorHost
 
   /**
    * Invoked just before a split
+   * @throws IOException 
    */
-  public void preSplit() {
+  public void preSplit() throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -450,7 +455,7 @@ public class RegionCoprocessorHost
         try {
           ((RegionObserver)env.getInstance()).preSplit(ctx);
         } catch (Throwable e) {
-          handleCoprocessorThrowableNoRethrow(env, e);
+          handleCoprocessorThrowable(env, e);
         }
         if (ctx.shouldComplete()) {
           break;
@@ -463,8 +468,9 @@ public class RegionCoprocessorHost
    * Invoked just after a split
    * @param l the new left-hand daughter region
    * @param r the new right-hand daughter region
+   * @throws IOException 
    */
-  public void postSplit(HRegion l, HRegion r) {
+  public void postSplit(HRegion l, HRegion r) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -472,7 +478,7 @@ public class RegionCoprocessorHost
         try {
           ((RegionObserver)env.getInstance()).postSplit(ctx, l, r);
         } catch (Throwable e) {
-          handleCoprocessorThrowableNoRethrow(env, e);
+          handleCoprocessorThrowable(env, e);
         }
         if (ctx.shouldComplete()) {
           break;
