@@ -472,6 +472,12 @@ public final class HConstants {
   public static int DEFAULT_HBASE_RPC_TIMEOUT = 60000;
 
   /**
+   * pause between rpc or connect retries
+   */
+  public static String HBASE_CLIENT_PAUSE = "hbase.client.pause";
+  public static int DEFAULT_HBASE_CLIENT_PAUSE = 1000; 
+
+  /**
    * compression for each RPC and its default value
    */
   public static String HBASE_RPC_COMPRESSION_KEY = "hbase.rpc.compression";

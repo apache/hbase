@@ -1551,10 +1551,9 @@ public class HRegionServer implements HRegionInterface,
       try {
         // Do initial RPC setup.  The final argument indicates that the RPC
         // should retry indefinitely.
-        master = (HMasterRegionInterface)HBaseRPC.waitForProxy(
+        master = (HMasterRegionInterface)HBaseRPC.getProxy(
           HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
-          masterAddress.getInetSocketAddress(), this.conf, -1,
-          this.rpcTimeout, this.rpcTimeout);
+          masterAddress.getInetSocketAddress(), this.conf, this.rpcTimeout);
       } catch (IOException e) {
         LOG.warn("Unable to connect to master. Retrying. Error was:", e);
         sleeper.sleep();

@@ -51,14 +51,21 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     this.scan = scan;
   }
 
+  @Override
+  public void instantiateRegionLocation(boolean reload) throws IOException {
+    if (!instantiated || reload) {
+      super.instantiateRegionLocation(reload);
+      instantiated = false;
+    }
+  }
   /**
    * @param reload force reload of server location
    * @throws IOException
    */
   @Override
-  public void instantiateServer(boolean reload) throws IOException {
-    if (!instantiated || reload) {
-      super.instantiateServer(reload);
+  public void instantiateServer() throws IOException {
+    if (!instantiated) {
+      super.instantiateServer();
       instantiated = true;
     }
   }

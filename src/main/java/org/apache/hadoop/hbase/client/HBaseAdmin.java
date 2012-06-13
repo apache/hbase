@@ -83,7 +83,9 @@ public class HBaseAdmin {
   public HBaseAdmin(Configuration conf) throws MasterNotRunningException {
     this.connection = HConnectionManager.getConnection(conf);
     this.conf = conf;
-    this.pause = conf.getLong("hbase.client.pause", 30 * 1000);
+    // use 30s pause time between retries instead of the small default
+    // pause time. Shouldn't the RPC read timeout be also increased?
+    this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE, 30 * 1000);
     this.numRetries = conf.getInt("hbase.client.retries.number", 5);
     this.master = connection.getMaster();
   }

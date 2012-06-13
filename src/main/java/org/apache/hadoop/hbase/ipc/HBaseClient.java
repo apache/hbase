@@ -28,7 +28,11 @@ import java.io.DataOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.io.SyncFailedException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -45,6 +49,7 @@ import javax.net.SocketFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
@@ -80,7 +85,7 @@ public class HBaseClient {
   final protected Configuration conf;
   final protected int maxIdleTime; // connections will be culled if it was idle for
                            // maxIdleTime microsecs
-  final protected int maxRetries; //the max. no. of retries for socket connections
+  final protected int maxConnectRetries; //the max. no. of retries for socket connections
   final protected long failureSleep; // Time to sleep before retry on failure.
   protected final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
   protected final boolean tcpKeepAlive; // if T then use keepalives
@@ -334,11 +339,15 @@ public class HBaseClient {
               pingInterval = remoteId.rpcTimeout; // overwrite pingInterval
             }
             this.socket.setSoTimeout(pingInterval);
+            // discard all the pending send data in the socket buffer and close
+            // the connection immediately. The connection is reset instead of
+            // being gracefully closed.
+            this.socket.setSoLinger(true, 0);
             break;
           } catch (SocketTimeoutException toe) {
-            handleConnectionFailure(timeoutFailures++, maxRetries, toe);
+            handleConnectionFailure(timeoutFailures++, maxConnectRetries, toe);
           } catch (IOException ie) {
-            handleConnectionFailure(ioFailures++, maxRetries, ie);
+            handleConnectionFailure(ioFailures++, maxConnectRetries, ie);
           }
         }
         this.in = new DataInputStream(new BufferedInputStream
@@ -390,13 +399,24 @@ public class HBaseClient {
 
       // throw the exception if the maximum number of retries is reached
       if (curRetries >= maxRetries) {
-        throw ioe;
+        IOException rewrittenException;
+        // The NetUtils layer throw a SocketTimeoutException. That behavior is
+        // incorrect but too late to change that. Instead rewrite the exception
+        // here to ConnectException. The higher layers can use the information
+        // that the exception occurred before even sending anything to the
+        // peer.
+        rewrittenException = new ConnectException();
+        rewrittenException.initCause(ioe);
+        throw rewrittenException;
       }
 
       // otherwise back off and retry
       try {
         Thread.sleep(failureSleep);
-      } catch (InterruptedException ignored) {}
+      } catch (InterruptedException ignored) {
+        Thread.currentThread().interrupt();
+        throw new InterruptedIOException();
+      }
 
       LOG.info("Retrying connect to server: " + remoteId.getAddress() +
         " after sleeping " + failureSleep + "ms. Already tried " + curRetries +
@@ -511,38 +531,51 @@ public class HBaseClient {
           ByteArrayOutputStream baos = new ByteArrayOutputStream();
           uncompressedOS = new DataOutputStream(baos);
           outOS = uncompressedOS;
+          try {
+            // 1. write the call id uncompressed
+            uncompressedOS.writeInt(call.id);
 
-          // 1. write the call id uncompressed
-          uncompressedOS.writeInt(call.id);
+            // preserve backwards compatibility
+            if (call.getRPCCompression() != Compression.Algorithm.NONE) {
+              // 2. write the compression algo used to compress the request being sent
+              uncompressedOS.writeUTF(call.getRPCCompression().getName());
+              
+              // 3. write the compression algo to use for the response
+              uncompressedOS.writeUTF(call.getRPCCompression().getName());
+              
+              // 4. setup the compressor
+              Compressor compressor = call.getRPCCompression().getCompressor();
+              OutputStream compressedOutputStream =
+                  call.getRPCCompression().createCompressionStream(
+                      uncompressedOS, compressor, 0);
+              outOS = new DataOutputStream(compressedOutputStream);
+            }
 
-          // preserve backwards compatibility
-          if (call.getRPCCompression() != Compression.Algorithm.NONE) {
-            // 2. write the compression algo used to compress the request being sent
-            uncompressedOS.writeUTF(call.getRPCCompression().getName());
-
-            // 3. write the compression algo to use for the response
-            uncompressedOS.writeUTF(call.getRPCCompression().getName());
-
-            // 4. setup the compressor
-            Compressor compressor = call.getRPCCompression().getCompressor();
-            OutputStream compressedOutputStream =
-              call.getRPCCompression().createCompressionStream(
-                uncompressedOS, compressor, 0);
-            outOS = new DataOutputStream(compressedOutputStream);
+            // 5. write the output params with the correct compression type
+            call.param.write(outOS);
+            outOS.flush();
+            baos.flush();
+          } catch (IOException e) {
+            LOG.error("Failed to prepare request in in-mem buffers!", e);
+            markClosed(e);
           }
-
-          // 5. write the output params with the correct compression type
-          call.param.write(outOS);
-          outOS.flush();
-          baos.flush();
           byte[] data = baos.toByteArray();
           int dataLength = data.length;
-          out.writeInt(dataLength);      //first put the data length
-          out.write(data, 0, dataLength);//write the data
-          out.flush();
+          try {
+            out.writeInt(dataLength);      //first put the data length
+            out.write(data, 0, dataLength);//write the data
+            out.flush();
+          } catch (IOException e) {
+            // It is not easy to get an exception here.
+            // The read is what always fails. Write gets accepted into
+            // the socket buffer. If the connection is already dead, even
+            // then read gets called first and fails first.
+            IOException rewrittenException =
+                new SyncFailedException("Failed to write to peer");
+            rewrittenException.initCause(e);
+            markClosed(rewrittenException);
+          }
         }
-      } catch(IOException e) {
-        markClosed(e);
       } finally {
         //the buffer is just an in-memory buffer, but it is still polite to
         // close early
@@ -722,8 +755,10 @@ public class HBaseClient {
     this.valueClass = valueClass;
     this.maxIdleTime =
       conf.getInt("hbase.ipc.client.connection.maxidletime", 10000); //10s
-    this.maxRetries = conf.getInt("hbase.ipc.client.connect.max.retries", 0);
-    this.failureSleep = conf.getInt("hbase.client.pause", 2000);
+    this.maxConnectRetries =
+        conf.getInt("hbase.ipc.client.connect.max.retries", 0);
+    this.failureSleep = conf.getInt(HConstants.HBASE_CLIENT_PAUSE,
+        HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     this.tcpNoDelay = conf.getBoolean("hbase.ipc.client.tcpnodelay", false);
     this.tcpKeepAlive = conf.getBoolean("hbase.ipc.client.tcpkeepalive", true);
     this.pingInterval = getPingInterval(conf);
@@ -833,33 +868,32 @@ public class HBaseClient {
   /**
    * Take an IOException and the address we were trying to connect to
    * and return an IOException with the input exception as the cause.
-   * The new exception provides the stack trace of the place where
+   * The new exception provides the stack trace of the place where 
    * the exception is thrown and some extra diagnostics information.
-   * If the exception is ConnectException or SocketTimeoutException,
-   * return a new one of the same type; Otherwise return an IOException.
-   *
+   * 
    * @param addr target address
    * @param exception the relevant exception
    * @return an exception to throw
    */
-  @SuppressWarnings({"ThrowableInstanceNeverThrown"})
   private IOException wrapException(InetSocketAddress addr,
                                          IOException exception) {
-    if (exception instanceof ConnectException) {
-      //connection refused; include the host:port in the error
-      return (ConnectException)new ConnectException(
-           "Call to " + addr + " failed on connection exception: " + exception)
-                    .initCause(exception);
-    } else if (exception instanceof SocketTimeoutException) {
-      return (SocketTimeoutException)new SocketTimeoutException(
-           "Call to " + addr + " failed on socket timeout exception: "
-                      + exception).initCause(exception);
-    } else {
-      return (IOException)new IOException(
-           "Call to " + addr + " failed on local exception: " + exception)
-                                 .initCause(exception);
-
+    try {
+      Class<? extends IOException> c = exception.getClass();
+      Constructor<? extends IOException> ctor = c.getConstructor(String.class);
+      IOException ioe = ctor.newInstance("RPC call to " + addr +
+          " failed on connection exception: " + exception);
+      ioe.initCause(exception);
+      return ioe;
+    } catch (SecurityException e) {
+    } catch (NoSuchMethodException e) {
+    } catch (IllegalArgumentException e) {
+    } catch (InstantiationException e) {
+    } catch (IllegalAccessException e) {
+    } catch (InvocationTargetException e) {
     }
+    LOG.warn("Failed to create ioexception instance. RPC call to " + addr +
+          " failed on connection exception: " + exception);
+    return exception;
   }
 
   /** Makes a set of calls in parallel.  Each parameter is sent to the

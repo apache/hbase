@@ -19,10 +19,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.io.SyncFailedException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -53,6 +57,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
@@ -343,8 +348,8 @@ public class HConnectionManager {
     private final Class<? extends HRegionInterface> serverInterfaceClass;
     private final long pause;
     private final int numRetries;
-    private final int maxRPCAttempts;
     private final int rpcTimeout;
+    private final long rpcRetryTimeout;
     private final int prefetchRegionLimit;
 
     private final Object masterLock = new Object();
@@ -405,12 +410,14 @@ public class HConnectionManager {
             "Unable to find region server interface " + serverClassName, e);
       }
 
-      this.pause = conf.getLong("hbase.client.pause", 1000);
+      this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
+          HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
       this.numRetries = conf.getInt("hbase.client.retries.number", 10);
-      this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
       this.rpcTimeout = conf.getInt(
           HConstants.HBASE_RPC_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+      this.rpcRetryTimeout = conf.getLong("hbase.client.rpc.retry.timeout",
+          Long.MAX_VALUE);
 
       this.prefetchRegionLimit = conf.getInt("hbase.client.prefetch.limit",
           10);
@@ -1151,10 +1158,12 @@ public class HConnectionManager {
           if (server == null) {
             try {
               // definitely a cache miss. establish an RPC for this RS
-              server = (HRegionInterface) HBaseRPC.waitForProxy(
+              // set hbase.ipc.client.connect.max.retries to retry connection
+              // attempts
+              server = (HRegionInterface) HBaseRPC.getProxy(
                   serverInterfaceClass, HBaseRPCProtocolVersion.versionID,
                   regionServer.getInetSocketAddress(), this.conf,
-                  this.maxRPCAttempts, this.rpcTimeout, this.rpcTimeout);
+                  this.rpcTimeout);
               this.servers.put(rsName, server);
             } catch (RemoteException e) {
               throw RemoteExceptionHandler.decodeRemoteException(e);
@@ -1265,45 +1274,81 @@ public class HConnectionManager {
         HRegionInfo.ROOT_REGIONINFO, rootRegionAddress);
     }
 
+    @Override
     public <T> T getRegionServerWithRetries(ServerCallable<T> callable)
-    throws IOException, RuntimeException {
+        throws IOException {
       List<Throwable> exceptions = new ArrayList<Throwable>();
-      for(int tries = 0; tries < numRetries; tries++) {
+
+      long callStartTime;
+      
+      callStartTime = System.currentTimeMillis();
+      // do not retry if region cannot be located. There are enough retries
+      // within instantiateRegionLocation.
+      callable.instantiateRegionLocation(false /* reload cache? */);
+      for(int tries = 0; ; tries++) {
         try {
-          callable.instantiateServer(tries != 0);
+          callable.instantiateServer();
           return callable.call();
         } catch (Throwable t) {
+          boolean isLocalException = !(t instanceof RemoteException);
+          // translateException throws DoNotRetryException or any
+          // non-IOException.
           t = translateException(t);
-          if (t instanceof SocketTimeoutException ||
+          if (isLocalException && (t instanceof SocketTimeoutException ||
               t instanceof ConnectException ||
-              t instanceof RetriesExhaustedException) {
+              t instanceof ClosedChannelException ||
+              t instanceof SyncFailedException ||
+              t instanceof EOFException)) {
+            // XXX this list covers most connectivity exceptions but not all. 
+            // For example, in SocketOutputStream a plain IOException is thrown
+            // at times when the channel is closed.
+
             // if thrown these exceptions, we clear all the cache entries that
             // map to that slow/dead server; otherwise, let cache miss and ask
             // .META. again to find the new location
             HRegionLocation hrl = callable.location;
-            if (hrl != null) {
-              clearCachedLocationForServer(hrl.getServerAddress().toString());
-            }
+            clearCachedLocationForServer(hrl.getServerAddress().toString());
           }
+
           exceptions.add(t);
           if (tries == numRetries - 1) {
             throw new RetriesExhaustedException(callable.getServerName(),
                 callable.getRegionName(), callable.getRow(), tries, exceptions);
           }
-        }
-        try {
-          Thread.sleep(getPauseTime(tries));
-        } catch (InterruptedException e) {
-          // continue
+
+          HRegionLocation prevLoc = callable.location;
+          // do not retry if getting the location throws exception
+          callable.instantiateRegionLocation(true /* reload cache ? */);
+          if (prevLoc.getServerAddress().
+              equals(callable.location.getServerAddress())) {
+            long pauseTime = getPauseTime(tries);
+            if ((System.currentTimeMillis() - callStartTime + pauseTime) >
+                rpcRetryTimeout) {
+              throw new RetriesExhaustedException(callable.getServerName(),
+                  callable.getRegionName(), callable.getRow(), tries,
+                  exceptions);
+            }
+            try {
+              Thread.sleep(pauseTime);
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              throw new InterruptedIOException();
+            }
+            // do not reload cache. While we were sleeping hopefully the cache
+            // has been re-populated. We had anyway invalidated it earlier
+            // before going to sleep.
+            callable.instantiateRegionLocation(false);
+          }
         }
       }
-      return null;
     }
 
+    @Override
     public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
         throws IOException, RuntimeException {
       try {
-        callable.instantiateServer(false);
+        callable.instantiateRegionLocation(false);
+        callable.instantiateServer();
         return callable.call();
       } catch (Throwable t) {
         Throwable t2 = translateException(t);
@@ -1601,6 +1646,7 @@ public class HConnectionManager {
      */
     private Throwable processSinglePut(Put put,
         List<Put> failed, final byte[] tableName) throws IOException {
+      // XXX error handling should mirror getRegionServerWithRetries()
       // Get server address
       byte [] row = put.getRow();
       HRegionLocation loc = locateRegion(tableName, row, true);
@@ -1650,6 +1696,7 @@ public class HConnectionManager {
      */
     private void processBatchOfMultiPut(List<Put> list,
         List<Put> failed, final byte[] tableName) throws IOException {
+      // XXX error handling should mirror getRegionServerWithRetries()
       Collections.sort(list);
       Map<HServerAddress, MultiPut> regionPuts =
           new HashMap<HServerAddress, MultiPut>();
@@ -1839,7 +1886,12 @@ public class HConnectionManager {
                   return resp;
                 }
                 @Override
-                public void instantiateServer(boolean reload) throws IOException {
+                public void instantiateRegionLocation(boolean reload)
+                    throws IOException {
+                  // location is already cached
+                }
+                @Override
+                public void instantiateServer() throws IOException {
                   server = connection.getHRegionConnection(address);
                 }
               }

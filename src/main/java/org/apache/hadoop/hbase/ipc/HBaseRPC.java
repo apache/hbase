@@ -342,59 +342,6 @@ public class HBaseRPC {
   }
 
   /**
-   * @param protocol protocol interface
-   * @param clientVersion which client version we expect
-   * @param addr address of remote service
-   * @param conf configuration
-   * @param maxAttempts max attempts
-   * @param rpcTimeout timeout for each RPC
-   * @param timeout timeout in milliseconds
-   * @return proxy
-   * @throws IOException e
-   */
-  @SuppressWarnings("unchecked")
-  public static VersionedProtocol waitForProxy(Class protocol,
-                                               long clientVersion,
-                                               InetSocketAddress addr,
-                                               Configuration conf,
-                                               int maxAttempts,
-                                               int rpcTimeout,
-                                               long timeout
-                                               ) throws IOException {
-    // HBase does limited number of reconnects which is different from hadoop.
-    long startTime = System.currentTimeMillis();
-    IOException ioe;
-    int reconnectAttempts = 0;
-    while (true) {
-      try {
-        return getProxy(protocol, clientVersion, addr, conf, rpcTimeout);
-      } catch(ConnectException se) {  // namenode has not been started
-        ioe = se;
-        if (maxAttempts >= 0 && ++reconnectAttempts >= maxAttempts) {
-          LOG.warn("Server at " + addr + " could not be reached after " +
-            reconnectAttempts + " tries, giving up.");
-          throw new RetriesExhaustedException("Failed setting up proxy to " +
-            addr.toString() + " after attempts=" + reconnectAttempts);
-      }
-      } catch(SocketTimeoutException te) {  // namenode is busy
-        LOG.warn("Problem connecting to server: " + addr);
-        ioe = te;
-      }
-      // check if timed out
-      if (System.currentTimeMillis()-timeout >= startTime) {
-        throw ioe;
-      }
-
-      // wait for retry
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException ie) {
-        // IGNORE
-      }
-    }
-  }
-
-  /**
    * Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address.
    *

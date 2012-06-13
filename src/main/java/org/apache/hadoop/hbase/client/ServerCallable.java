@@ -48,13 +48,21 @@ public abstract class ServerCallable<T> implements Callable<T> {
     this.row = row;
   }
 
+
   /**
-   *
+   * 
    * @param reload set this to true if connection should re-find the region
+   * @throws IOException
+   */
+  public void instantiateRegionLocation(boolean reload) throws IOException {
+    this.location = connection.getRegionLocation(tableName, row, reload);
+  }
+
+  /**
+   * Must be called after a successful call to instantiateRegionLocation() 
    * @throws IOException e
    */
-  public void instantiateServer(boolean reload) throws IOException {
-    this.location = connection.getRegionLocation(tableName, row, reload);
+  public void instantiateServer() throws IOException {
     this.server = connection.getHRegionConnection(location.getServerAddress());
   }
 
