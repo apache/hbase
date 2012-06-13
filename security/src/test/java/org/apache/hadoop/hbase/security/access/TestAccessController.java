@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -51,7 +52,10 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -89,6 +93,7 @@ public class TestAccessController {
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
 
   private static MasterCoprocessorEnvironment CP_ENV;
+  private static RegionCoprocessorEnvironment RCP_ENV;
   private static AccessController ACCESS_CONTROLLER;
 
   @BeforeClass
@@ -125,6 +130,11 @@ public class TestAccessController {
     HTable meta = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     AccessControllerProtocol protocol =
         meta.coprocessorProxy(AccessControllerProtocol.class, TEST_TABLE);
+
+    HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
+    RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
+    RCP_ENV = rcpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
+        Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     protocol.grant(new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
                       Permission.Action.ADMIN, Permission.Action.CREATE,
@@ -540,6 +550,54 @@ public class TestAccessController {
     verifyAllowed(USER_ADMIN, action);
     verifyAllowed(USER_OWNER, action);
     verifyAllowed(USER_RW, action);
+  }
+
+  @Test
+  public void testSplit() throws Exception {
+    PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preSplit(ObserverContext.createAndPrepare(RCP_ENV, null));
+        return null;
+      }
+    };
+
+    // verify that superuser and admin only can split
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_TBLADM);
+
+    // all others should be denied
+    verifyDenied(action, USER_OWNER, USER_RW, USER_RO, USER_NONE);
+  }
+
+  @Test
+  public void testFlush() throws Exception {
+    PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preFlush(ObserverContext.createAndPrepare(RCP_ENV, null));
+        return null;
+      }
+    };
+
+    // verify that superuser and admin only can flush
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_TBLADM);
+
+    // all others should be denied
+    verifyDenied(action, USER_OWNER, USER_RW, USER_RO, USER_NONE);
+  }
+
+  @Test
+  public void testCompact() throws Exception {
+    PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preCompact(ObserverContext.createAndPrepare(RCP_ENV, null), null, null);
+        return null;
+      }
+    };
+
+    // verify that superuser and admin only can compact
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_TBLADM);
+
+    // all others should be denied
+    verifyDenied(action, USER_OWNER, USER_RW, USER_RO, USER_NONE);
   }
 
   private void verifyRead(PrivilegedExceptionAction action) throws Exception {
