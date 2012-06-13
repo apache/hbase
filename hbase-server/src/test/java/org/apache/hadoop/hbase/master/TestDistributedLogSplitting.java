@@ -397,6 +397,9 @@ public class TestDistributedLogSplitting {
       List<HRegionInfo> hris, String tname,
       int num_edits, int edit_size) throws IOException {
 
+    // remove root and meta region
+    hris.remove(HRegionInfo.ROOT_REGIONINFO);
+    hris.remove(HRegionInfo.FIRST_META_REGIONINFO);
     byte[] table = Bytes.toBytes(tname);
     HTableDescriptor htd = new HTableDescriptor(tname);
     byte[] value = new byte[edit_size];
