@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -33,7 +33,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
@@ -127,10 +126,10 @@ public class KeyValue implements Writable, HeapSize {
    * @return The comparator.
    */
   public static KeyComparator getRowComparator(byte [] tableName) {
-    if(Bytes.equals(HTableDescriptor.ROOT_TABLEDESC.getName(),tableName)) {
+    if(Bytes.equals(HConstants.ROOT_TABLE_NAME,tableName)) {
       return ROOT_COMPARATOR.getRawComparator();
     }
-    if(Bytes.equals(HTableDescriptor.META_TABLEDESC.getName(), tableName)) {
+    if(Bytes.equals(HConstants.META_TABLE_NAME, tableName)) {
       return META_COMPARATOR.getRawComparator();
     }
     return COMPARATOR.getRawComparator();
@@ -2232,11 +2231,11 @@ public class KeyValue implements Writable, HeapSize {
       int lmetaOffsetPlusDelimiter = loffset + metalength;
       int leftFarDelimiter = getDelimiterInReverse(left,
           lmetaOffsetPlusDelimiter,
-          llength - metalength, HRegionInfo.DELIMITER);
+          llength - metalength, HConstants.DELIMITER);
       int rmetaOffsetPlusDelimiter = roffset + metalength;
       int rightFarDelimiter = getDelimiterInReverse(right,
           rmetaOffsetPlusDelimiter, rlength - metalength,
-          HRegionInfo.DELIMITER);
+          HConstants.DELIMITER);
       if (leftFarDelimiter < 0 && rightFarDelimiter >= 0) {
         // Nothing between .META. and regionid.  Its first key.
         return -1;
@@ -2287,9 +2286,9 @@ public class KeyValue implements Writable, HeapSize {
       //        LOG.info("META " + Bytes.toString(left, loffset, llength) +
       //          "---" + Bytes.toString(right, roffset, rlength));
       int leftDelimiter = getDelimiter(left, loffset, llength,
-          HRegionInfo.DELIMITER);
+          HConstants.DELIMITER);
       int rightDelimiter = getDelimiter(right, roffset, rlength,
-          HRegionInfo.DELIMITER);
+          HConstants.DELIMITER);
       if (leftDelimiter < 0 && rightDelimiter >= 0) {
         // Nothing between .META. and regionid.  Its first key.
         return -1;
@@ -2309,10 +2308,10 @@ public class KeyValue implements Writable, HeapSize {
       leftDelimiter++;
       rightDelimiter++;
       int leftFarDelimiter = getRequiredDelimiterInReverse(left, leftDelimiter,
-          llength - (leftDelimiter - loffset), HRegionInfo.DELIMITER);
+          llength - (leftDelimiter - loffset), HConstants.DELIMITER);
       int rightFarDelimiter = getRequiredDelimiterInReverse(right,
           rightDelimiter, rlength - (rightDelimiter - roffset),
-          HRegionInfo.DELIMITER);
+          HConstants.DELIMITER);
       // Now compare middlesection of row.
       result = super.compareRows(left, leftDelimiter,
           leftFarDelimiter - leftDelimiter, right, rightDelimiter,

@@ -25,7 +25,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -70,7 +70,7 @@ class GetClosestRowBeforeTracker {
     int l = -1;
     if (metaregion) {
       l = KeyValue.getDelimiter(kv.getBuffer(), rowoffset, kv.getRowLength(),
-        HRegionInfo.DELIMITER) - this.rowoffset;
+        HConstants.DELIMITER) - this.rowoffset;
     }
     this.tablenamePlusDelimiterLength = metaregion? l + 1: -1;
     this.oldestts = System.currentTimeMillis() - ttl;

@@ -667,6 +667,8 @@ public final class HConstants {
    * The actual value is irrelevant because this is always compared by reference.
    */
   public static final byte [] NO_NEXT_INDEXED_KEY = Bytes.toBytes("NO_NEXT_INDEXED_KEY");
+  /** delimiter used between portions of a region name */
+  public static final int DELIMITER = ',';
 
   private HConstants() {
     // Can't be instantiated with this ctor.
