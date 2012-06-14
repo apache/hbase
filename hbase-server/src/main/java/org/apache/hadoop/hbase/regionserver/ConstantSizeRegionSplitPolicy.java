@@ -24,7 +24,10 @@ import org.apache.hadoop.hbase.HConstants;
  * A {@link RegionSplitPolicy} implementation which splits a region
  * as soon as any of its store files exceeds a maximum configurable
  * size.
- * <p>This is the default split policy.</p>
+ * <p>
+ * This is the default split policy. From 0.94.0 on the default split policy has
+ * changed to {@link IncreasingToUpperBoundRegionSplitPolicy}
+ * </p>
  */
 @InterfaceAudience.Private
 public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
