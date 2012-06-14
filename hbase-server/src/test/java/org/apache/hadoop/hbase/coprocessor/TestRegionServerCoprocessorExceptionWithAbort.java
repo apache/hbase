@@ -21,7 +21,9 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 
+import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -49,47 +51,16 @@ import static org.junit.Assert.*;
  */
 @Category(MediumTests.class)
 public class TestRegionServerCoprocessorExceptionWithAbort {
-  static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
-
-  private class zkwAbortable implements Abortable {
-    @Override
-    public void abort(String why, Throwable e) {
-      throw new RuntimeException("Fatal ZK rs tracker error, why=", e);
-    }
-    @Override
-    public boolean isAborted() {
-      return false;
-    }
-  };
-
-  private class RSTracker extends ZooKeeperNodeTracker {
-    public boolean regionZKNodeWasDeleted = false;
-    public String rsNode;
-    private Thread mainThread;
-
-    public RSTracker(ZooKeeperWatcher zkw, String rsNode, Thread mainThread) {
-      super(zkw, rsNode, new zkwAbortable());
-      this.rsNode = rsNode;
-      this.mainThread = mainThread;
-    }
-
-    @Override
-    public synchronized void nodeDeleted(String path) {
-      if (path.equals(rsNode)) {
-        regionZKNodeWasDeleted = true;
-        mainThread.interrupt();
-      }
-    }
-  }
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  static final int timeout = 30000;
+  static final Log LOG = LogFactory.getLog(TestRegionServerCoprocessorExceptionWithAbort.class);
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final String TABLE_NAME = "observed_table";
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        BuggyRegionObserver.class.getName());
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);  // Let's fail fast.
+    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, BuggyRegionObserver.class.getName());
     conf.set("hbase.coprocessor.abortonerror", "true");
     TEST_UTIL.startMiniCluster(2);
   }
@@ -101,59 +72,31 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
 
   @Test
   public void testExceptionFromCoprocessorDuringPut()
-      throws IOException {
+    throws IOException {
     // When we try to write to TEST_TABLE, the buggy coprocessor will
     // cause a NullPointerException, which will cause the regionserver (which
     // hosts the region we attempted to write to) to abort.
-    byte[] TEST_TABLE = Bytes.toBytes("observed_table");
+    byte[] TEST_TABLE = Bytes.toBytes(TABLE_NAME);
     byte[] TEST_FAMILY = Bytes.toBytes("aaa");
 
     HTable table = TEST_UTIL.createTable(TEST_TABLE, TEST_FAMILY);
-    TEST_UTIL.waitUntilAllRegionsAssigned(
-        TEST_UTIL.createMultiRegions(table, TEST_FAMILY));
+    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_UTIL.createMultiRegions(table, TEST_FAMILY));
 
     // Note which regionServer will abort (after put is attempted).
-    final HRegionServer regionServer =
-        TEST_UTIL.getRSForFirstRegionInTable(TEST_TABLE);
+    final HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(TEST_TABLE);
 
-    // add watch so we can know when this regionserver aborted.
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-        "unittest", new zkwAbortable());
+    final byte[] ROW = Bytes.toBytes("aaa");
+    Put put = new Put(ROW);
+    put.add(TEST_FAMILY, ROW, ROW);
 
-    RSTracker rsTracker = new RSTracker(zkw,
-        "/hbase/rs/"+regionServer.getServerName(), Thread.currentThread());
-    rsTracker.start();
-    zkw.registerListener(rsTracker);
-
-    boolean caughtInterruption = false;
+    Assert.assertFalse("The region server should be available", regionServer.isAborted());
     try {
-      final byte[] ROW = Bytes.toBytes("aaa");
-      Put put = new Put(ROW);
-      put.add(TEST_FAMILY, ROW, ROW);
       table.put(put);
-    } catch (IOException e) {
-      // Depending on exact timing of the threads involved, zkw's interruption
-      // might be caught here ...
-      if (e.getCause().getClass().equals(InterruptedException.class)) {
-	LOG.debug("caught interruption here (during put()).");
-        caughtInterruption = true;
-      } else {
-        fail("put() failed: " + e);
-      }
+      fail("The put should have failed, as the coprocessor is buggy");
+    } catch (IOException ignored) {
+      // Expected.
     }
-    if (caughtInterruption == false) {
-      try {
-        Thread.sleep(timeout);
-        fail("RegionServer did not abort within 30 seconds.");
-      } catch (InterruptedException e) {
-        // .. or it might be caught here.
-	LOG.debug("caught interruption here (during sleep()).");
-        caughtInterruption = true;
-      }
-    }
-    assertTrue("Main thread caught interruption.",caughtInterruption);
-    assertTrue("RegionServer aborted on coprocessor exception, as expected.",
-        rsTracker.regionZKNodeWasDeleted);
+    Assert.assertTrue("The region server should have aborted", regionServer.isAborted());
     table.close();
   }
 
@@ -162,11 +105,9 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c,
                        final Put put, final WALEdit edit,
                        final boolean writeToWAL) {
-      String tableName =
-          c.getEnvironment().getRegion().getRegionInfo().getTableNameAsString();
-      if (tableName.equals("observed_table")) {
-        Integer i = null;
-        i = i + 1;
+      String tableName = c.getEnvironment().getRegion().getRegionInfo().getTableNameAsString();
+      if (TABLE_NAME.equals(tableName)) {
+        throw new NullPointerException("Buggy coprocessor");
       }
     }
   }
@@ -175,4 +116,3 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
-

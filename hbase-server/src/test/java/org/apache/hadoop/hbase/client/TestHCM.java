@@ -27,6 +27,7 @@ import static org.junit.Assert.assertFalse;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.SynchronousQueue;
@@ -39,7 +40,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable.DaemonThreadFactory;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -222,7 +222,12 @@ public class TestHCM {
       table.put(put3);
       Assert.assertFalse("Unreachable point", true);
     }catch (Throwable e){
-      LOG.info("Put done, expected exception caught: "+e.getClass());
+      LOG.info("Put done, exception caught: "+e.getClass());
+      // Now check that we have the exception we wanted
+      Assert.assertTrue(e instanceof RetriesExhaustedWithDetailsException);
+      RetriesExhaustedWithDetailsException re = (RetriesExhaustedWithDetailsException)e;
+      Assert.assertTrue(re.getNumExceptions() == 1);
+      Assert.assertTrue(Arrays.equals(re.getRow(0).getRow(), ROW));
     }
     Assert.assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
     Assert.assertEquals(
@@ -451,6 +456,7 @@ public class TestHCM {
     assertTrue( conn.isMasterRunning() );
     conn.close();
   }
+
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =

@@ -290,7 +290,9 @@ public interface HConnection extends Abortable, Closeable {
    * processed successfully.
    * @throws IOException if there are problems talking to META. Per-item
    * exceptions are stored in the results array.
+   * @deprecated since 0.96 - Use {@link HTableInterface#batch} instead
    */
+  @Deprecated
   public void processBatch(List<? extends Row> actions, final byte[] tableName,
       ExecutorService pool, Object[] results)
       throws IOException, InterruptedException;
@@ -298,7 +300,9 @@ public interface HConnection extends Abortable, Closeable {
   /**
    * Parameterized batch processing, allowing varying return types for different
    * {@link Row} implementations.
+   * @deprecated since 0.96 - Use {@link HTableInterface#batchCallback} instead
    */
+  @Deprecated
   public <R> void processBatchCallback(List<? extends Row> list,
       byte[] tableName,
       ExecutorService pool,

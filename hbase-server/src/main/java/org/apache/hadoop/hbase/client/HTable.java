@@ -23,6 +23,7 @@ import java.io.Closeable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -707,22 +708,33 @@ public class HTable implements HTableInterface {
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public synchronized void batch(final List<?extends Row> actions, final Object[] results)
+  public void batch(final List<?extends Row> actions, final Object[] results)
       throws InterruptedException, IOException {
-    connection.processBatch(actions, tableName, pool, results);
+    connection.processBatchCallback(actions, tableName, pool, results, null);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public synchronized Object[] batch(final List<? extends Row> actions) throws InterruptedException, IOException {
+  public Object[] batch(final List<? extends Row> actions)
+     throws InterruptedException, IOException {
     Object[] results = new Object[actions.size()];
-    connection.processBatch(actions, tableName, pool, results);
+    connection.processBatchCallback(actions, tableName, pool, results, null);
+    return results;
+  }
+
+  @Override
+  public <R> void batchCallback(
+    final List<? extends Row> actions, final Object[] results, final Batch.Callback<R> callback)
+    throws IOException, InterruptedException {
+    connection.processBatchCallback(actions, tableName, pool, results, callback);
+  }
+
+  @Override
+  public <R> Object[] batchCallback(
+    final List<? extends Row> actions, final Batch.Callback<R> callback) throws IOException,
+      InterruptedException {
+    Object[] results = new Object[actions.size()];
+    connection.processBatchCallback(actions, tableName, pool, results, callback);
     return results;
   }
 
@@ -985,41 +997,63 @@ public class HTable implements HTableInterface {
    */
   @Override
   public void flushCommits() throws IOException {
+    Object[] results = new Object[writeBuffer.size()];
+    boolean success = false;
     try {
-      Object[] results = new Object[writeBuffer.size()];
-      try {
-        this.connection.processBatch(writeBuffer, tableName, pool, results);
-      } catch (InterruptedException e) {
-        throw new IOException(e);
-      } finally {
-        // mutate list so that it is empty for complete success, or contains
-        // only failed records results are returned in the same order as the
-        // requests in list walk the list backwards, so we can remove from list
-        // without impacting the indexes of earlier members
-        for (int i = results.length - 1; i>=0; i--) {
-          if (results[i] instanceof Result) {
-            // successful Puts are removed from the list here.
-            writeBuffer.remove(i);
-          }
-        }
-      }
+      this.connection.processBatch(writeBuffer, tableName, pool, results);
+      success = true;
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException(e.getMessage());
     } finally {
-      if (clearBufferOnFail) {
+      // mutate list so that it is empty for complete success, or contains
+      // only failed records. Results are returned in the same order as the
+      // requests in list. Walk the list backwards, so we can remove from list
+      // without impacting the indexes of earlier members
+      currentWriteBufferSize = 0;
+      if (success || clearBufferOnFail) {
         writeBuffer.clear();
-        currentWriteBufferSize = 0;
       } else {
-        // the write buffer was adjusted by processBatchOfPuts
-        currentWriteBufferSize = 0;
-        for (Put aPut : writeBuffer) {
-          currentWriteBufferSize += aPut.heapSize();
+        for (int i = results.length - 1; i >= 0; i--) {
+          if (results[i] instanceof Result) {
+            writeBuffer.remove(i);
+          } else {
+            currentWriteBufferSize += writeBuffer.get(i).heapSize();
+          }
         }
       }
     }
   }
 
   /**
-   * {@inheritDoc}
+   * Process a mixed batch of Get, Put and Delete actions. All actions for a
+   * RegionServer are forwarded in one RPC call. Queries are executed in parallel.
+   *
+   *
+   * @param actions The collection of actions.
+   * @param results An empty array, same size as list. If an exception is thrown,
+   * you can test here for partial results, and to determine which actions
+   * processed successfully.
+   * @throws IOException if there are problems talking to META. Per-item
+   * exceptions are stored in the results array.
    */
+  public <R> void processBatchCallback(
+    final List<? extends Row> list, final Object[] results, final Batch.Callback<R> callback)
+    throws IOException, InterruptedException {
+    connection.processBatchCallback(list, tableName, pool, results, callback);
+  }
+
+
+  /**
+   * Parameterized batch processing, allowing varying return types for different
+   * {@link Row} implementations.
+   */
+  public void processBatch(final List<? extends Row> list, final Object[] results)
+    throws IOException, InterruptedException {
+
+    this.processBatchCallback(list, results, null);
+  }
+
+
   @Override
   public void close() throws IOException {
     if (this.closed) {

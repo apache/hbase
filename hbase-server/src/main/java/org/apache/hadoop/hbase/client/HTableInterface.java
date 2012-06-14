@@ -107,6 +107,23 @@ public interface HTableInterface extends Closeable {
   Object[] batch(final List<? extends Row> actions) throws IOException, InterruptedException;
 
   /**
+   * Same as {@link #batch(List, Object[])}, but with a callback.
+   * @since 0.96.0
+   */
+  public <R> void batchCallback(
+    final List<? extends Row> actions, final Object[] results, final Batch.Callback<R> callback)
+    throws IOException, InterruptedException;
+
+
+  /**
+   * Same as {@link #batch(List)}, but with a callback.
+   * @since 0.96.0
+   */
+  public <R> Object[] batchCallback(
+    List<? extends Row> actions, Batch.Callback<R> callback) throws IOException,
+    InterruptedException;
+
+  /**
    * Extracts certain cells from a given row.
    * @param get The object that specifies what data to fetch and from which row.
    * @return The data coming from the specified row, if it exists.  If the row

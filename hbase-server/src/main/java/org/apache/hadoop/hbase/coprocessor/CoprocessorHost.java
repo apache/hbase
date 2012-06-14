@@ -501,6 +501,18 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
 
       @Override
+      public <R> void batchCallback(List<? extends Row> actions, Object[] results,
+          Batch.Callback<R> callback) throws IOException, InterruptedException {
+        table.batchCallback(actions, results, callback);
+      }
+
+      @Override
+      public <R> Object[] batchCallback(List<? extends Row> actions,
+          Batch.Callback<R> callback) throws IOException, InterruptedException {
+        return table.batchCallback(actions, callback);
+      }
+
+      @Override
       public Result[] get(List<Get> gets) throws IOException {
         return table.get(gets);
       }

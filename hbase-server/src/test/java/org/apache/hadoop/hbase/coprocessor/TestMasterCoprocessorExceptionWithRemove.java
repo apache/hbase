@@ -204,6 +204,8 @@ public class TestMasterCoprocessorExceptionWithRemove {
     String loadedCoprocessors = master.getLoadedCoprocessors();
     assertTrue(loadedCoprocessors.equals("[" + coprocessorName + "]"));
 
+
+
     // Verify that BuggyMasterObserver has been removed due to its misbehavior
     // by creating another table: should not have a problem this time.
     HTableDescriptor htd2 = new HTableDescriptor(TEST_TABLE2);
