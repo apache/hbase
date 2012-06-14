@@ -1,0 +1,310 @@
+<%doc>
+Copyright The Apache Software Foundation
+
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+ </%doc>
+
+<%args>
+List<ServerName> servers = null;
+HMaster master;
+</%args>
+
+<%import>
+        java.util.*;
+        org.apache.hadoop.util.StringUtils;
+        org.apache.hadoop.hbase.util.Bytes;
+        org.apache.hadoop.hbase.util.JvmVersion;
+        org.apache.hadoop.hbase.util.FSUtils;
+        org.apache.hadoop.hbase.master.HMaster;
+        org.apache.hadoop.hbase.HConstants;
+        org.apache.hadoop.hbase.ServerLoad;
+        org.apache.hadoop.hbase.ServerName;
+        org.apache.hadoop.hbase.client.HBaseAdmin;
+        org.apache.hadoop.hbase.client.HConnectionManager;
+        org.apache.hadoop.hbase.HTableDescriptor;
+        org.apache.hadoop.hbase.HBaseConfiguration;
+</%import>
+
+
+<%if (servers != null && servers.size() > 0)%>
+
+<%java>
+ServerName [] serverNames = servers.toArray(new ServerName[servers.size()]);
+Arrays.sort(serverNames);
+</%java>
+
+<div class="tabbable">
+    <ul class="nav nav-tabs">
+        <li class="active"><a href="#baseStats" data-toggle="tab">Base Stats</a></li>
+        <li class=""><a href="#memoryStats" data-toggle="tab">Memory</a></li>
+        <li class=""><a href="#requestStats" data-toggle="tab">Requests</a></li>
+        <li class=""><a href="#storeStats" data-toggle="tab">Storefiles</a></li>
+        <li class=""><a href="#compactStas" data-toggle="tab">Compactions</a></li>
+    </ul>
+    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
+        <div class="tab-pane active" id="baseStats">
+            <& baseStats; serverNames = serverNames; &>
+        </div>
+        <div class="tab-pane" id="memoryStats">
+            <& memoryStats; serverNames = serverNames; &>
+        </div>
+        <div class="tab-pane" id="requestStats">
+            <& requestStats; serverNames = serverNames; &>
+        </div>
+        <div class="tab-pane" id="storeStats">
+            <& storeStats; serverNames = serverNames; &>
+        </div>
+        <div class="tab-pane" id="compactStas">
+            <& compactionStats; serverNames = serverNames; &>
+        </div>
+    </div>
+</div>
+
+</%if>
+
+<%def baseStats>
+<%args>
+        ServerName [] serverNames;
+</%args>
+<table class="table table-striped">
+<tr>
+    <th>ServerName</th>
+    <th>Start time</th>
+    <th>Requests Per Second</th>
+    <th>Num. Regions</th>
+</tr>
+<%java>
+    int totalRegions = 0;
+    int totalRequests = 0;
+    for (ServerName serverName: serverNames) {
+
+    ServerLoad sl = master.getServerManager().getLoad(serverName);
+    int requestsPerSecond = 0,
+    numRegionsOnline = 0;
+
+    if (sl != null) {
+        requestsPerSecond = sl.getRequestsPerSecond();
+        numRegionsOnline = sl.getRegionLoadsCount();
+        totalRegions += sl.getRegionLoadsCount();
+        // Is this correct?  Adding a rate to a measure.
+        totalRequests += sl.getRequestsPerSecond();
+    }
+    long startcode = serverName.getStartcode();
+</%java>
+<tr>
+    <td><& serverNameLink; serverName=serverName; &></td>
+    <td><% new Date(startcode) %></td>
+    <td><% requestsPerSecond %></td>
+    <td><% numRegionsOnline %></td>
+</tr>
+<%java>
+}
+</%java>
+<tr><td>Total:<% servers.size() %></td>
+<td></td>
+<td><% totalRequests %></td>
+<td><% totalRegions %></td>
+</tr>
+</table>
+</%def>
+
+<%def memoryStats>
+<%args>
+    ServerName [] serverNames;
+</%args>
+<table class="table table-striped">
+<tr>
+    <th>ServerName</th>
+    <th>Used Heap</th>
+    <th>Max Heap</th>
+    <th>Memstore Size</th>
+
+</tr>
+<%java>
+for (ServerName serverName: serverNames) {
+
+    ServerLoad sl = master.getServerManager().getLoad(serverName);
+    if (sl != null) {
+</%java>
+<tr>
+    <td><& serverNameLink; serverName=serverName; &></td>
+    <td><% sl.getUsedHeapMB() %>MB</td>
+    <td><% sl.getMaxHeapMB() %>MB</td>
+    <td><% sl.getMemstoreSizeMB() %>MB</td>
+
+</tr>
+<%java>
+        }  else {
+</%java>
+<& emptyStat; serverName=serverName; &>
+<%java>
+        }
+}
+</%java>
+</table>
+</%def>
+
+
+<%def requestStats>
+<%args>
+        ServerName [] serverNames;
+        </%args>
+<table class="table table-striped">
+<tr>
+    <th>ServerName</th>
+    <th>Request Per Second</th>
+    <th>Read Request Count</th>
+    <th>Write Request Count</th>
+</tr>
+<%java>
+for (ServerName serverName: serverNames) {
+
+ServerLoad sl = master.getServerManager().getLoad(serverName);
+if (sl != null) {
+</%java>
+<tr>
+<td><& serverNameLink; serverName=serverName; &></td>
+<td><% sl.getRequestsPerSecond() %></td>
+<td><% sl.getReadRequestsCount() %></td>
+<td><% sl.getWriteRequestsCount() %></td>
+</tr>
+<%java>
+        }  else {
+        </%java>
+<& emptyStat; serverName=serverName; &>
+<%java>
+        }
+}
+</%java>
+</table>
+</%def>
+
+
+<%def storeStats>
+<%args>
+        ServerName [] serverNames;
+        </%args>
+<table class="table table-striped">
+<tr>
+    <th>ServerName</th>
+    <th>Num. Stores</th>
+    <th>Num. Storefiles</th>
+    <th>Storefile Size Uncompressed</th>
+    <th>Storefile Size</th>
+    <th>Index Size</th>
+    <th>Bloom Size</th>
+</tr>
+<%java>
+for (ServerName serverName: serverNames) {
+
+ServerLoad sl = master.getServerManager().getLoad(serverName);
+if (sl != null) {
+</%java>
+<tr>
+<td><& serverNameLink; serverName=serverName; &></td>
+<td><% sl.getStores() %></td>
+<td><% sl.getStorefiles() %></td>
+<td><% sl.getStoreUncompressedSizeMB() %>MB</td>
+<td><% sl.getStorefileSizeMB() %>MB</td>
+<td><% sl.getTotalStaticIndexSizeKB() %>KB</td>
+<td><% sl.getTotalStaticBloomSizeKB() %>KB</td>
+</tr>
+<%java>
+        }  else {
+        </%java>
+<& emptyStat; serverName=serverName; &>
+<%java>
+    }
+}
+</%java>
+</table>
+</%def>
+
+<%def compactionStats>
+<%args>
+        ServerName [] serverNames;
+        </%args>
+<table class="table table-striped">
+<tr>
+    <th>ServerName</th>
+    <th>Num. Compacting KVs</th>
+    <th>Num. Compacted KVs</th>
+    <th>Compaction Progress</th>
+</tr>
+<%java>
+for (ServerName serverName: serverNames) {
+
+ServerLoad sl = master.getServerManager().getLoad(serverName);
+if (sl != null) {
+String percentDone = "";
+if  (sl.getTotalCompactingKVs() > 0) {
+     percentDone = String.format("%.2f", 100 *
+        ((float) sl.getCurrentCompactedKVs() / sl.getTotalCompactingKVs())) + "%";
+}
+</%java>
+<tr>
+<td><& serverNameLink; serverName=serverName; &></td>
+<td><% sl.getTotalCompactingKVs() %></td>
+<td><% sl.getCurrentCompactedKVs() %></td>
+<td><% percentDone %></td>
+</tr>
+<%java>
+        }  else {
+        </%java>
+<& emptyStat; serverName=serverName; &>
+<%java>
+    }
+}
+</%java>
+</table>
+</%def>
+
+
+<%def serverNameLink>
+        <%args>
+        ServerName serverName;
+        </%args>
+        <%java>
+        // TODO: this is incorrect since this conf might differ from RS to RS
+        // or be set to 0 to get ephemeral ports
+        int infoPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
+        String url = "http://" + serverName.getHostname() + ":" + infoPort + "/";
+        </%java>
+        <a href="<% url %>"><% serverName.getHostname() %></a>
+</%def>
+
+<%def emptyStat>
+        <%args>
+        ServerName serverName;
+        </%args>
+    <tr>
+    <td><& serverNameLink; serverName=serverName; &></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    </tr>
+</%def>
+
+
+
+
+
+
+

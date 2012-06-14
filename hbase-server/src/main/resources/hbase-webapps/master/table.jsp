@@ -39,7 +39,7 @@
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
   String tableName = request.getParameter("name");
   HTable table = new HTable(conf, tableName);
-  String tableHeader = "<h2>Table Regions</h2><table><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Requests</th></tr>";
+  String tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Requests</th></tr>";
   ServerName rl = master.getCatalogTracker().getRootLocation();
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   Map<String, Integer> frags = null;
@@ -54,8 +54,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- Commenting out DOCTYPE so our blue outline shows on hadoop 0.20.205.0, etc.
      See tail of HBASE-2110 for explaination.
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 -->
 <html xmlns="http://www.w3.org/1999/xhtml">
 
@@ -64,13 +64,60 @@
   String key = request.getParameter("key");
   if ( action != null ) {
 %>
-<head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-<link rel="stylesheet" type="text/css" href="/static/hbase.css" />
+  <head>
+    <meta charset="utf-8">
+    <title>HBase Master: <%= master.getServerName() %></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <style>
+      body {
+        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+      }
+    </style>
+    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
 <meta http-equiv="refresh" content="5,javascript:history.back()" />
 </head>
 <body>
-<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo.png" alt="HBase Logo" title="HBase Logo" /></a>
-<h1 id="page_title">Table action request accepted</h1>
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class="brand" href="/master-status">HBase Master</a>
+          <div class="nav-collapse">
+            <ul class="nav">
+                <li><a href="/">Home</a></li>
+                <li><a href="/tablesDetailed.jsp">Table Details</a></li>
+                <li><a href="/logs/">Local logs</a></li>
+                <li><a href="/stacks">Thread Dump</a></li>
+                <li><a href="/logLevel">Log Level</a></li>
+                <li><a href="/dump">Debug dump</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+<div class="container">
+
+
+    <div class="row">
+        <div class="span8">
+            <h1>Table action request accepted</h1>
+        </div>
+        <div class="span4">
+            <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
+        </div>
+    </div>
 <p><hr><p>
 <%
   if (action.equals("split")) {
@@ -91,20 +138,64 @@
   }
 %>
 <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
-
+</div>
 </body>
 <%
 } else {
 %>
-<head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-<title>Table: <%= tableName %></title>
-<link rel="stylesheet" type="text/css" href="/static/hbase.css" />
-</head>
+  <head>
+    <meta charset="utf-8">
+    <title>Table: <%= tableName %></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <style>
+      body {
+        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+      }
+    </style>
+    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
 <body>
-<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo.png" alt="HBase Logo" title="HBase Logo" /></a>
-<h1 id="page_title">Table: <%= tableName %></h1>
-<p id="links_menu"><a href="/master.jsp">Master</a>, <a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
-<hr id="head_rule" />
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class="brand" href="/master-status">HBase Master</a>
+          <div class="nav-collapse">
+            <ul class="nav">
+                <li><a href="/">Home</a></li>
+                <li><a href="/tablesDetailed.jsp">Table Details</a></li>
+                <li><a href="/logs/">Local logs</a></li>
+                <li><a href="/stacks">Thread Dump</a></li>
+                <li><a href="/logLevel">Log Level</a></li>
+                <li><a href="/dump">Debug dump</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+<div class="container">
+
+
+    <div class="row">
+        <div class="span8">
+            <h1>Table: <%= tableName %></h1>
+        </div>
+        <div class="span4">
+            <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
+        </div>
+    </div>
 <%
   if(tableName.equals(Bytes.toString(HConstants.ROOT_TABLE_NAME))) {
 %>
@@ -134,7 +225,9 @@
 <tr>
   <td><%= meta.getRegionNameAsString() %></td>
     <td><a href="<%= url %>"><%= metaLocation.getHostname().toString() + ":" + infoPort %></a></td>
-    <td>-</td><td><%= Bytes.toString(meta.getStartKey()) %></td><td><%= Bytes.toString(meta.getEndKey()) %></td>
+    <td>-</td>
+    <td><%= Bytes.toString(meta.getStartKey()) %></td>
+    <td><%= Bytes.toString(meta.getEndKey()) %></td>
 </tr>
 <%  } %>
 </table>
@@ -242,13 +335,13 @@ HConnectionManager.deleteConnection(hbadmin.getConfiguration(), false);
 Actions:
 <p>
 <center>
-<table style="border-style: none" width="90%">
+<table class="table" width="90%" >
 <tr>
   <form method="get">
   <input type="hidden" name="action" value="compact">
   <input type="hidden" name="name" value="<%= tableName %>">
   <td style="border-style: none; text-align: center">
-      <input style="font-size: 12pt; width: 10em" type="submit" value="Compact"></td>
+      <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn"></td>
   <td style="border-style: none" width="5%">&nbsp;</td>
   <td style="border-style: none">Region Key (optional):<input type="text" name="key" size="40"></td>
   <td style="border-style: none">This action will force a compaction of all
@@ -262,7 +355,7 @@ Actions:
   <input type="hidden" name="action" value="split">
   <input type="hidden" name="name" value="<%= tableName %>">
   <td style="border-style: none; text-align: center">
-      <input style="font-size: 12pt; width: 10em" type="submit" value="Split"></td>
+      <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn"></td>
   <td style="border-style: none" width="5%">&nbsp;</td>
   <td style="border-style: none">Region Key (optional):<input type="text" name="key" size="40"></td>
   <td style="border-style: none">This action will force a split of all eligible
@@ -274,7 +367,7 @@ Actions:
 </table>
 </center>
 <p>
-
+</div>
 <%
 }
 %>

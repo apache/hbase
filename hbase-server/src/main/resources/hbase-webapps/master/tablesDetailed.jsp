@@ -28,22 +28,65 @@
   Configuration conf = master.getConfiguration();
 %>
 <?xml version="1.0" encoding="UTF-8" ?>
-<!-- Commenting out DOCTYPE so our blue outline shows on hadoop 0.20.205.0, etc.
-     See tail of HBASE-2110 for explaination.
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
--->
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-<title>HBase Master: <%= master.getServerName()%>%></title>
-<link rel="stylesheet" type="text/css" href="/static/hbase.css" />
-</head>
-<body>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>HBase Master: <%= master.getServerName() %></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
 
-<h2>User Tables</h2>
+
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <style>
+      body {
+        padding-top: 60px;
+      }
+    </style>
+    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class="brand" href="/master-status">HBase Master</a>
+          <div class="nav-collapse">
+            <ul class="nav">
+                <li><a href="/master-status">Home</a></li>
+                <li class="active"><a href="/tablesDetailed.jsp">Table Details</a></li>
+                <li><a href="/logs/">Local logs</a></li>
+                <li><a href="/stacks">Thread Dump</a></li>
+                <li><a href="/logLevel">Log Level</a></li>
+                <li><a href="/dump">Debug dump</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+    <div class="row">
+        <div class="span8">
+            <h1>User Tables</h1>
+        </div>
+        <div class="span4">
+            <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
+        </div>
+    </div>
+
 <% HTableDescriptor[] tables = new HBaseAdmin(conf).listTables();
    if(tables != null && tables.length > 0) { %>
-<table>
+<table class="table table-striped">
 <tr>
     <th>Table</th>
     <th>Description</th>
@@ -58,5 +101,6 @@
 <p> <%= tables.length %> table(s) in set.</p>
 </table>
 <% } %>
+</div>
 </body>
 </html>

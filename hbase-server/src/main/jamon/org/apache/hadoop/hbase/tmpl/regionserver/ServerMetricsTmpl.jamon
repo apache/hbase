@@ -1,0 +1,250 @@
+<%doc>
+Copyright 2011 The Apache Software Foundation
+
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+</%doc>
+<%args>
+    RegionServerMetrics metrics;
+</%args>
+<%import>
+java.util.*;
+org.apache.hadoop.hbase.regionserver.HRegionServer;
+org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
+org.apache.hadoop.hbase.util.Bytes;
+org.apache.hadoop.hbase.HRegionInfo;
+org.apache.hadoop.hbase.ServerName;
+org.apache.hadoop.hbase.HBaseConfiguration;
+org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
+org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
+org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
+com.yammer.metrics.stats.Snapshot;
+java.lang.management.ManagementFactory;
+</%import>
+<div class="tabbable">
+    <ul class="nav nav-tabs">
+        <li class="active"><a href="#baseStats" data-toggle="tab">Base Stats</a></li>
+        <li class=""><a href="#memoryStats" data-toggle="tab">Memory</a></li>
+        <li class=""><a href="#requestStats" data-toggle="tab">Requests</a></li>
+        <li class=""><a href="#storeStats" data-toggle="tab">Storefiles</a></li>
+        <li class=""><a href="#queueStats" data-toggle="tab">Queues</a></li>
+        <li class=""><a href="#blockCacheStats" data-toggle="tab">Block Cache</a></li>
+        <li class=""><a href="#latencyStats" data-toggle="tab">Latency</a></li>
+    </ul>
+    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
+        <div class="tab-pane active" id="baseStats">
+            <& baseStats; metrics = metrics; &>
+        </div>
+        <div class="tab-pane" id="memoryStats">
+            <& memoryStats; metrics = metrics; &>
+        </div>
+        <div class="tab-pane" id="requestStats">
+            <& requestStats; metrics = metrics; &>
+        </div>
+        <div class="tab-pane" id="storeStats">
+            <& storeStats; metrics = metrics; &>
+        </div>
+        <div class="tab-pane" id="queueStats">
+            <& queueStats; metrics = metrics; &>
+        </div>
+        <div class="tab-pane" id="blockCacheStats">
+            <& blockCacheStats; metrics = metrics; &>
+        </div>
+        <div class="tab-pane" id="latencyStats">
+            <& latencyStats; metrics = metrics; &>
+        </div>
+    </div>
+</div>
+
+<%def baseStats>
+<%args>
+    RegionServerMetrics metrics;
+</%args>
+<table class="table table-striped">
+    <tr>
+
+        <th>Requests Per Second</th>
+        <th>Num. Regions</th>
+        <th>Block locality</th>
+        <th>Slow HLog Append Count</th>
+    </tr>
+    <tr>
+        <td><% metrics.requests.getPreviousIntervalValue() %></td>
+        <td><% metrics.regions.get() %></td>
+        <td><% metrics.hdfsBlocksLocalityIndex.get() %></td>
+        <td><% metrics.slowHLogAppendCount.get() %></td>
+    </tr>
+</table>
+</%def>
+
+<%def memoryStats>
+<%args>
+        RegionServerMetrics metrics;
+</%args>
+<table class="table table-striped">
+<tr>
+    <tr>
+        <th>Used Heap</th>
+        <th>Max Heap</th>
+        <th>Memstore Size</th>
+    </tr>
+</tr>
+<tr>
+    <td>
+        <% ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() / (1024*1024) %>MB
+    </td>
+    <td>
+        <% ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax() / (1024*1024) %>MB
+    </td>
+    <td><% metrics.memstoreSizeMB.get()%>MB</td>
+</tr>
+</table>
+</%def>
+
+<%def storeStats>
+<%args>
+    RegionServerMetrics metrics;
+</%args>
+<table class="table table-striped">
+<tr>
+
+    <th>Num. Stores</th>
+    <th>Num. Storefiles</th>
+    <th>Root Index Size</th>
+    <th>Index Size</th>
+    <th>Bloom Size</th>
+</tr>
+<tr>
+    <td><% metrics.stores.get() %></td>
+    <td><% metrics.storefiles.get() %></td>
+    <td><% metrics.rootIndexSizeKB.get() %>KB</td>
+    <td><% metrics.totalStaticIndexSizeKB.get() %>KB</td>
+    <td><% metrics.totalStaticBloomSizeKB.get() %>KB</td>
+</tr>
+</table>
+</%def>
+
+
+<%def requestStats>
+<%args>
+        RegionServerMetrics metrics;
+        </%args>
+<table class="table table-striped">
+<tr>
+    <th>Request Per Second</th>
+    <th>Read Request Count</th>
+    <th>Write Request Count</th>
+</tr>
+<tr>
+    <td><% metrics.requests.getPreviousIntervalValue() %></td>
+    <td><% metrics.readRequestsCount.get() %></td>
+    <td><% metrics.writeRequestsCount.get() %>KB</td>
+</tr>
+</table>
+</%def>
+
+<%def queueStats>
+<%args>
+        RegionServerMetrics metrics;
+        </%args>
+<table class="table table-striped">
+<tr>
+    <th>Compaction queue size</th>
+    <th>Flush queue size</th>
+
+</tr>
+<tr>
+    <td><% metrics.compactionQueueSize.get() %></td>
+    <td><% metrics.flushQueueSize.get() %>KB</td>
+</tr>
+</table>
+</%def>
+
+
+<%def blockCacheStats>
+<%args>
+        RegionServerMetrics metrics;
+        </%args>
+<table class="table table-striped">
+<tr>
+    <th>Cache Size</th>
+    <th>Cache Free</th>
+    <th>Cache Count</th>
+    <th>Cache Hits</th>
+    <th>Cache Misses</th>
+    <th>Cache Hit Ratio</th>
+    <th>Cache Eviction Count</th>
+
+</tr>
+<tr>
+    <td><% metrics.blockCacheSize.get() / (1024*1024) %>MB</td>
+    <td><% metrics.blockCacheFree.get() / (1024 * 1024) %>MB</td>
+    <td><% metrics.blockCacheCount.get()%></td>
+    <td><% metrics.blockCacheHitCount.get()%></td>
+    <td><% metrics.blockCacheMissCount.get()%></td>
+    <td><% metrics.blockCacheHitRatio.get()%>%</td>
+    <td><% metrics.blockCacheEvictedCount.get()%></td>
+</tr>
+</table>
+</%def>
+
+<%def latencyStats>
+<%args>
+        RegionServerMetrics metrics;
+        </%args>
+<table class="table table-striped">
+<tr>
+    <th>Operation</th>
+    <th>Count</th>
+    <th>Mean</th>
+    <th>Median</th>
+    <th>75th</th>
+    <th>95th</th>
+    <th>99th</th>
+    <th>99.9th</th>
+
+</tr>
+
+    <& histogramRow; op ="Get"; histo = metrics.getLatencies &>
+    <& histogramRow; op ="Put"; histo = metrics.putLatencies &>
+    <& histogramRow; op ="Delete"; histo = metrics.deleteLatencies &>
+    <& histogramRow; op ="FS Read"; histo = metrics.fsReadLatencyHistogram &>
+    <& histogramRow; op ="FS PRead"; histo = metrics.fsPreadLatencyHistogram &>
+    <& histogramRow; op ="FS Write"; histo = metrics.fsWriteLatencyHistogram &>
+
+</table>
+</%def>
+
+<%def histogramRow>
+<%args>
+        String op;
+        MetricsHistogram histo;
+</%args>
+<%java>
+    Snapshot s = histo.getSnapshot();
+</%java>
+<tr>
+    <td><% op %></td>
+    <td><% histo.getCount()%></td>
+    <td><% histo.getMean()%></td>
+    <td><% s.getMedian()%></td>
+    <td><% s.get75thPercentile()%></td>
+    <td><% s.get95thPercentile()%></td>
+    <td><% s.get99thPercentile()%></td>
+    <td><% s.get999thPercentile()%></td>
+</tr>
+</%def>

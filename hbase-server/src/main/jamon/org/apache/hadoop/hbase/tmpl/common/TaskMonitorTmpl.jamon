@@ -66,9 +66,9 @@ boolean first = true;
     <a href="?format=json&filter=<% filter %>">View as JSON</a>
   </div>
   <%if tasks.isEmpty()%>
-    No tasks currently running on this node.
+    <p>No tasks currently running on this node.</p>
   <%else>
-    <table>
+    <table class="table table-striped">
     <tr>
       <th>Start Time</th>
       <th>Description</th>

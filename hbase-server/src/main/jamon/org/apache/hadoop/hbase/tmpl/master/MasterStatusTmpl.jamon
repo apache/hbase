@@ -49,98 +49,202 @@ org.apache.hadoop.hbase.HBaseConfiguration;
   <%java return; %>
 </%if>
 <?xml version="1.0" encoding="UTF-8" ?>
-<!-- Commenting out DOCTYPE so our blue outline shows on hadoop 0.20.205.0, etc.
-     See tail of HBASE-2110 for explaination.
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
--->
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-<title>HBase Master: <% master.getServerName() %></title>
-<link rel="stylesheet" type="text/css" href="/static/hbase.css" />
-</head>
-<body>
-<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo.png" alt="HBase Logo" title="HBase Logo" /></a>
-<h1 id="page_title">Master: <% master.getServerName().getHostname() %>:<% master.getServerName().getPort() %></h1>
-<p id="links_menu">
-  <a href="/logs/">Local logs</a>,
-  <a href="/stacks">Thread Dump</a>,
-  <a href="/logLevel">Log Level</a>,
-  <a href="/dump">Debug dump</a>,
-<%if HBaseConfiguration.isShowConfInServlet()%>
-  <a href="/conf">HBase Configuration</a>
-</%if>
-</p>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Master: <% master.getServerName().getHostname() %></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <style  type="text/css">
+      body {
+        padding-top: 60px;
+      }
+    </style>
+    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
 
-<!-- Various warnings that cluster admins should be aware of -->
-<%if JvmVersion.isBadJvmVersion() %>
-  <div class="warning">
-  Your current JVM version <% System.getProperty("java.version") %> is known to be
-  unstable with HBase. Please see the
-  <a href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A18">HBase wiki</a>
-  for details.
-  </div>
-</%if>
-<%if showAppendWarning %> 
-  <div class="warning">
-  You are currently running the HMaster without HDFS append support enabled.
-  This may result in data loss.
-  Please see the <a href="http://wiki.apache.org/hadoop/Hbase/HdfsSyncSupport">HBase wiki</a>
-  for details.
-  </div>
-</%if>
+  <body>
 
-<hr id="head_rule" />
-<h2>Attributes</h2>
-<table id="attributes_table">
-<tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
-<tr><td>HBase Version</td><td><% org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and revision</td></tr>
-<tr><td>HBase Compiled</td><td><% org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <% org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
-<tr><td>Hadoop Version</td><td><% org.apache.hadoop.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.util.VersionInfo.getRevision() %></td><td>Hadoop version and revision</td></tr>
-<tr><td>Hadoop Compiled</td><td><% org.apache.hadoop.util.VersionInfo.getDate() %>, <% org.apache.hadoop.util.VersionInfo.getUser() %></td><td>When Hadoop version was compiled and by whom</td></tr>
-<tr><td>HBase Root Directory</td><td><% FSUtils.getRootDir(master.getConfiguration()).toString() %></td><td>Location of HBase home directory</td></tr>
-<tr><td>HBase Cluster ID</td><td><% master.getClusterId() != null ? master.getClusterId() : "Not set" %><td>Unique identifier generated for each HBase cluster</td></tr>
-<tr><td>Load average</td><td><% StringUtils.limitDecimalTo2(master.getServerManager().getAverageLoad()) %></td><td>Average number of regions per regionserver. Naive computation.</td></tr>
-<%if frags != null %>
-        <tr><td>Fragmentation</td><td><% frags.get("-TOTAL-") != null ? frags.get("-TOTAL-").intValue() + "%" : "n/a" %></td><td>Overall fragmentation of all tables, including .META. and -ROOT-.</td></tr>
-</%if>
-<tr><td>Zookeeper Quorum</td><td><% master.getZooKeeperWatcher().getQuorum() %></td><td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td></tr>
-<tr>
-  <td>
-   Coprocessors</td><td><% java.util.Arrays.toString(master.getCoprocessors()) %>
-  </td>
-  <td>Coprocessors currently loaded loaded by the master</td>
-</tr>
-<tr><td>HMaster Start Time</td><td><% new Date(master.getMasterStartTime()) %></td><td>Date stamp of when this HMaster was started</td></tr>
-<tr><td>HMaster Active Time</td><td><% new Date(master.getMasterActiveTime()) %></td><td>Date stamp of when this HMaster became active</td></tr>
-</table>
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class="brand" href="/master-status">HBase Master</a>
+          <div class="nav-collapse">
+            <ul class="nav">
+                <li class="active"><a href="/">Home</a></li>
+                <li><a href="/tablesDetailed.jsp">Table Details</a></li>
+                <li><a href="/logs/">Local logs</a></li>
+                <li><a href="/stacks">Thread Dump</a></li>
+                <li><a href="/logLevel">Log Level</a></li>
+                <li><a href="/dump">Debug dump</a></li>
+                <%if HBaseConfiguration.isShowConfInServlet()%>
+                <li><a href="/conf">HBase Configuration</a></li>
+                </%if>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
 
-<& ../common/TaskMonitorTmpl; filter = filter &>
+    <div class="container">
+        <div class="row">
+            <div class="span8">
+                <h1>Master: <% master.getServerName().getHostname() %> </h1>
+            </div>
+            <div class="span4">
+                <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
+            </div>
+        </div>
 
-<%if (rootLocation != null) %>
-<& catalogTables &>
-</%if>
-<%if (metaLocation != null) %>
-<& userTables &>
-</%if>
-<%if (servers != null) %>
-<& regionServers &>
-</%if>
-<%if (deadServers != null) %>
-<& deadRegionServers &>
-</%if>
 
-<& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
+        <!-- Various warnings that cluster admins should be aware of -->
+        <%if JvmVersion.isBadJvmVersion() %>
+          <div class="alert alert-error">
+          Your current JVM version <% System.getProperty("java.version") %> is known to be
+          unstable with HBase. Please see the
+          <a href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A18">HBase wiki</a>
+          for details.
+          </div>
+        </%if>
+        <%if showAppendWarning %>
+          <div class="alert alert-error">
+          You are currently running the HMaster without HDFS append support enabled.
+          This may result in data loss.
+          Please see the <a href="http://wiki.apache.org/hadoop/Hbase/HdfsSyncSupport">HBase wiki</a>
+          for details.
+          </div>
+        </%if>
 
-</body>
+
+        <h2>Region Servers</h2>
+        <& RegionServerListTmpl; master= master; servers = servers &>
+
+        <%if (deadServers != null) %>
+            <& deadRegionServers &>
+        </%if>
+
+
+        <h2>Tables</h2>
+        <div class="tabbable">
+            <ul class="nav nav-tabs">
+                <li class="active">
+                    <a href="#userTables" data-toggle="tab">User Tables</a>
+                </li>
+                <li class="">
+                    <a href="#catalogTables" data-toggle="tab">Catalog Tables</a>
+                </li>
+            </ul>
+            <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
+                <div class="tab-pane active" id="userTables">
+                    <%if (metaLocation != null) %>
+                        <& userTables &>
+                    </%if>
+                </div>
+                <div class="tab-pane" id="catalogTables">
+                    <%if (rootLocation != null) %>
+                        <& catalogTables &>
+                    </%if>
+                </div>
+            </div>
+        </div>
+
+
+        <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
+
+        <& ../common/TaskMonitorTmpl; filter = filter &>
+
+        <h2>Software Attributes</h2>
+        <table id="attributes_table" class="table table-striped">
+            <tr>
+                <th>Attribute Name</th>
+                <th>Value</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>HBase Version</td>
+                <td><% org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and revision</td>
+            </tr>
+            <tr>
+                <td>HBase Compiled</td>
+                <td><% org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <% org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td>
+                <td>When HBase version was compiled and by whom</td>
+            </tr>
+            <tr>
+                <td>Hadoop Version</td>
+                <td><% org.apache.hadoop.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.util.VersionInfo.getRevision() %></td>
+                <td>Hadoop version and revision</td>
+            </tr>
+            <tr>
+                <td>Hadoop Compiled</td>
+                <td><% org.apache.hadoop.util.VersionInfo.getDate() %>, <% org.apache.hadoop.util.VersionInfo.getUser() %></td>
+                <td>When Hadoop version was compiled and by whom</td>
+            </tr>
+            <tr>
+                <td>HBase Root Directory</td>
+                <td><% FSUtils.getRootDir(master.getConfiguration()).toString() %></td>
+                <td>Location of HBase home directory</td>
+            </tr>
+            <tr>
+                <td>HBase Cluster ID</td>
+                <td><% master.getClusterId() != null ? master.getClusterId() : "Not set" %></td>
+                <td>Unique identifier generated for each HBase cluster</td>
+            </tr>
+            <tr>
+                <td>Load average</td>
+                <td><% StringUtils.limitDecimalTo2(master.getServerManager().getAverageLoad()) %></td>
+                <td>Average number of regions per regionserver. Naive computation.</td>
+            </tr>
+            <%if frags != null %>
+            <tr>
+                <td>Fragmentation</td>
+                <td><% frags.get("-TOTAL-") != null ? frags.get("-TOTAL-").intValue() + "%" : "n/a" %></td>
+                <td>Overall fragmentation of all tables, including .META. and -ROOT-.</td>
+            </tr>
+            </%if>
+            <tr>
+                <td>Zookeeper Quorum</td>
+                <td><% master.getZooKeeperWatcher().getQuorum() %></td>
+                <td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td>
+            </tr>
+            <tr>
+                <td>Coprocessors</td>
+                <td><% java.util.Arrays.toString(master.getCoprocessors()) %></td>
+                <td>Coprocessors currently loaded loaded by the master</td>
+            </tr>
+            <tr>
+                <td>HMaster Start Time</td>
+                <td><% new Date(master.getMasterStartTime()) %></td>
+                <td>Date stamp of when this HMaster was started</td>
+            </tr>
+            <tr>
+                <td>HMaster Active Time</td>
+                <td><% new Date(master.getMasterActiveTime()) %></td>
+                <td>Date stamp of when this HMaster became active</td>
+            </tr>
+        </table>
+    </div> <!-- /container -->
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript"></script>
+    <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
+
+  </body>
 </html>
 
 
 <%def catalogTables>
-<h2>Tables</h2>
-<table>
+
+<table class="table table-striped">
 <tr>
-    <th>Catalog Table</th>
+    <th>Table Name</th>
     <%if (frags != null) %>
         <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
     </%if>
@@ -161,7 +265,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
     </%if>
     <td>The .META. table holds references to all User Table regions</td>
 </tr>
-  
+
   </%if>
 </table>
 </%def>
@@ -172,84 +276,55 @@ org.apache.hadoop.hbase.HBaseConfiguration;
    HConnectionManager.deleteConnection(admin.getConfiguration(), false);
 </%java>
 <%if (tables != null && tables.length > 0)%>
-<table>
-<tr>
-    <th>User Table</th>
-<%if (frags != null) %>
-        <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
-</%if>
-    <th>Description</th>
-</tr>
-<%for HTableDescriptor htDesc : tables%>
-<tr>
-    <td><a href=table.jsp?name=<% htDesc.getNameAsString() %>><% htDesc.getNameAsString() %></a> </td>
-    <%if (frags != null) %>
-        <td align="center"><% frags.get(htDesc.getNameAsString()) != null ? frags.get(htDesc.getNameAsString()).intValue() + "%" : "n/a" %></td>
-    </%if>
-    <td><% htDesc.toStringCustomizedValues() %></td>
-</tr>
-</%for>
-
-<p> <% tables.length %> table(s) in set. [<a href=tablesDetailed.jsp>Details</a>]</p>
+<table class="table table-striped">
+    <tr>
+        <th>Table Name</th>
+        <%if (frags != null) %>
+            <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
+        </%if>
+        <th>Description</th>
+    </tr>
+    <%for HTableDescriptor htDesc : tables%>
+    <tr>
+        <td><a href=table.jsp?name=<% htDesc.getNameAsString() %>><% htDesc.getNameAsString() %></a> </td>
+        <%if (frags != null) %>
+            <td align="center"><% frags.get(htDesc.getNameAsString()) != null ? frags.get(htDesc.getNameAsString()).intValue() + "%" : "n/a" %></td>
+        </%if>
+        <td><% htDesc.toStringCustomizedValues() %></td>
+    </tr>
+    </%for>
+    <p><% tables.length %> table(s) in set. [<a href=tablesDetailed.jsp>Details</a>]</p>
 </table>
 </%if>
 </%def>
 
-<%def regionServers>
-<h2>Region Servers</h2>
-<%if (servers != null && servers.size() > 0)%>
-<%java>
-     int totalRegions = 0;
-     int totalRequests = 0; 
-</%java>
 
-<table>
-<tr><th rowspan="<% servers.size() + 1%>"></th><th>ServerName</th><th>Start time</th><th>Load</th></tr>
-<%java>
-   ServerName [] serverNames = servers.toArray(new ServerName[servers.size()]);
-     Arrays.sort(serverNames);
-     for (ServerName serverName: serverNames) {
-       // TODO: this is incorrect since this conf might differ from RS to RS
-       // or be set to 0 to get ephemeral ports
-       int infoPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
-       String url = "http://" + serverName.getHostname() + ":" + infoPort + "/";
-       ServerLoad sl = master.getServerManager().getLoad(serverName);
-       String loadStr = sl == null? "-": sl.toString();
-       if (sl != null) {
-         totalRegions += sl.getRegionLoadsCount();
-         // Is this correct?  Adding a rate to a measure.
-         totalRequests += sl.getRequestsPerSecond();
-       }
-       long startcode = serverName.getStartcode();
-</%java>
-<tr><td><a href="<% url %>"><% serverName %></a></td><td><% new Date(startcode) %></td><td><% loadStr %></td></tr>
-<%java>
-    }
-</%java>
-<tr><th>Total: </th><td>servers: <% servers.size() %></td><td></td><td>requestsPerSecond=<% totalRequests %>, numberOfOnlineRegions=<% totalRegions %></td></tr>
-</table>
-
-<p>Load is requests per second and count of regions loaded</p>
-</%if>
-</%def>
 
 <%def deadRegionServers>
-<h3>Dead Region Servers</h3>
-<%if (deadServers != null && deadServers.size() > 0)%>
 
-<table>
-<tr><th rowspan="<% deadServers.size() + 1%>"></th><th>ServerName</th></tr>
-<%java>
-   ServerName [] deadServerNames = deadServers.toArray(new ServerName[deadServers.size()]);
-     Arrays.sort(deadServerNames);
-     for (ServerName deadServerName: deadServerNames) {
-       int infoPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
-</%java>
-<tr><td><% deadServerName %></td></tr>
-<%java>
-    }
-</%java>
-<tr><th>Total: </th><td>servers: <% deadServers.size() %></td></tr>
+<%if (deadServers != null && deadServers.size() > 0)%>
+<h2>Dead Region Servers</h2>
+<table class="table table-striped">
+    <tr>
+        <th rowspan="<% deadServers.size() + 1%>"></th>
+        <th>ServerName</th>
+    </tr>
+    <%java>
+       ServerName [] deadServerNames = deadServers.toArray(new ServerName[deadServers.size()]);
+         Arrays.sort(deadServerNames);
+         for (ServerName deadServerName: deadServerNames) {
+           int infoPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
+    </%java>
+    <tr>
+        <td><% deadServerName %></td>
+    </tr>
+    <%java>
+        }
+    </%java>
+    <tr>
+        <th>Total: </th>
+        <td>servers: <% deadServers.size() %></td>
+    </tr>
 </table>
 </%if>
 </%def>

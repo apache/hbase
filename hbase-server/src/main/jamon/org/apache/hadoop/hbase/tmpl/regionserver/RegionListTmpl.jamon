@@ -1,0 +1,191 @@
+<%doc>
+    Copyright 2011 The Apache Software Foundation
+
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+</%doc>
+<%args>
+        HRegionServer regionServer;
+        List<HRegionInfo> onlineRegions;
+</%args>
+<%import>
+        java.util.*;
+        org.apache.hadoop.hbase.regionserver.HRegionServer;
+        org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
+        org.apache.hadoop.hbase.util.Bytes;
+        org.apache.hadoop.hbase.HRegionInfo;
+        org.apache.hadoop.hbase.ServerName;
+        org.apache.hadoop.hbase.HBaseConfiguration;
+        org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+        org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
+</%import>
+<%if (onlineRegions != null && onlineRegions.size() > 0) %>
+
+    <%java>
+        Collections.sort(onlineRegions);
+    </%java>
+
+    <div class="tabbable">
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#regionBaseInfo" data-toggle="tab">Base Info</a> </li>
+            <li><a href="#regionRequestStats" data-toggle="tab">Request metrics</a></li>
+            <li class=""><a href="#regionStoreStats" data-toggle="tab">Storefile Metrics</a></li>
+            <li class=""><a href="#regionCompactStas" data-toggle="tab">Compaction Metrics</a></li>
+        </ul>
+        <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
+            <div class="tab-pane active" id="regionBaseInfo">
+                <& baseInfo; onlineRegions = onlineRegions; &>
+            </div>
+            <div class="tab-pane" id="regionRequestStats">
+                <& requestStats; onlineRegions = onlineRegions; &>
+            </div>
+            <div class="tab-pane" id="regionStoreStats">
+                <& storeStats; onlineRegions = onlineRegions; &>
+            </div>
+            <div class="tab-pane" id="regionCompactStas">
+                <& compactStats; onlineRegions = onlineRegions; &>
+            </div>
+        </div>
+    </div>
+    <p>Region names are made of the containing table's name, a comma,
+    the start key, a comma, and a randomly generated region id.  To illustrate,
+    the region named
+    <em>domains,apache.org,5464829424211263407</em> is party to the table
+    <em>domains</em>, has an id of <em>5464829424211263407</em> and the first key
+    in the region is <em>apache.org</em>.  The <em>-ROOT-</em>
+    and <em>.META.</em> 'tables' are internal sytem tables (or 'catalog' tables in db-speak).
+    The -ROOT- keeps a list of all regions in the .META. table.  The .META. table
+    keeps a list of all regions in the system. The empty key is used to denote
+    table start and table end.  A region with an empty start key is the first region in a table.
+    If region has both an empty start and an empty end key, its the only region in the table.  See
+    <a href="http://hbase.org">HBase Home</a> for further explication.<p>
+<%else>
+    <p>Not serving regions</p>
+</%if>
+
+<%def baseInfo>
+<%args>
+    List<HRegionInfo> onlineRegions;
+</%args>
+    <table class="table table-striped">
+        <tr>
+            <th>Region Name</th>
+            <th>Start Key</th>
+            <th>End Key</th>
+        </tr>
+
+        <%for HRegionInfo r: onlineRegions %>
+        <tr>
+            <td><% r.getRegionNameAsString() %></td>
+            <td><% Bytes.toStringBinary(r.getStartKey()) %></td>
+            <td><% Bytes.toStringBinary(r.getEndKey()) %></td>
+        </tr>
+        </%for>
+    </table>
+</%def>
+
+<%def requestStats>
+<%args>
+    List<HRegionInfo> onlineRegions;
+</%args>
+    <table class="table table-striped">
+        <tr>
+            <th>Region Name</th>
+            <th>Read Request Count</th>
+            <th>Write Request Count</th>
+        </tr>
+
+        <%for HRegionInfo r: onlineRegions %>
+
+        <tr>
+            <%java>
+            RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
+        </%java>
+            <td><% r.getRegionNameAsString() %></td>
+            <td><% load.getReadRequestsCount() %></td>
+            <td><% load.getWriteRequestsCount() %></td>
+        </tr>
+        </%for>
+    </table>
+</%def>
+
+
+<%def storeStats>
+<%args>
+    List<HRegionInfo> onlineRegions;
+</%args>
+    <table class="table table-striped">
+        <tr>
+            <th>Region Name</th>
+            <th>Num. Stores</th>
+            <th>Num. Storefiles</th>
+            <th>Storefile Size Uncompressed</th>
+            <th>Storefile Size</th>
+            <th>Index Size</th>
+            <th>Bloom Size</th>
+        </tr>
+
+        <%for HRegionInfo r: onlineRegions %>
+
+        <tr>
+        <%java>
+            RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
+        </%java>
+            <td><% r.getRegionNameAsString() %></td>
+            <td><% load.getStores() %></td>
+            <td><% load.getStorefiles() %></td>
+            <td><% load.getStoreUncompressedSizeMB() %>MB</td>
+            <td><% load.getStorefileSizeMB() %>MB</td>
+            <td><% load.getTotalStaticIndexSizeKB() %>KB</td>
+            <td><% load.getTotalStaticBloomSizeKB() %>KB</td>
+        </tr>
+        </%for>
+    </table>
+</%def>
+
+
+<%def compactStats>
+<%args>
+    List<HRegionInfo> onlineRegions;
+</%args>
+    <table class="table table-striped">
+        <tr>
+            <th>Region Name</th>
+            <th>Num. Compacting KVs</th>
+            <th>Num. Compacted KVs</th>
+            <th>Compaction Progress</th>
+        </tr>
+
+        <%for HRegionInfo r: onlineRegions %>
+
+        <tr>
+        <%java>
+            RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
+            String percentDone = "";
+            if  (load.getTotalCompactingKVs() > 0) {
+            percentDone = String.format("%.2f", 100 *
+            ((float) load.getCurrentCompactedKVs() / load.getTotalCompactingKVs())) + "%";
+            }
+        </%java>
+            <td><% r.getRegionNameAsString() %></td>
+            <td><% load.getTotalCompactingKVs() %></td>
+            <td><% load.getCurrentCompactedKVs() %></td>
+            <td><% percentDone %></td>
+        </tr>
+        </%for>
+    </table>
+</%def>

@@ -74,27 +74,26 @@ if (toRemove > 0) {
 
 </%java>
 
-<h2>Regions in Transition</h2>
-<%if rit.isEmpty() %>
-No regions in transition.
-<%else>
-        <table>
-                <tr><th>Region</th><th>State</th><th>RIT time (ms)</th></tr>
-                <%for Map.Entry<String, RegionState> entry : rit.entrySet() %>
-                <%if regionIDForOldestRIT.equals(entry.getKey()) %>
-                        <tr BGCOLOR="#FE2E2E" >
-                <%else>
-                        <tr>
-                </%if>
-                <td><% entry.getKey() %></td><td><% entry.getValue().toDescriptiveString() %></td>
-		<td><% (currentTime - entry.getValue().getStamp()) %> </td></tr>
-                </%for>
-                <tr BGCOLOR="#D7DF01"> <td>Total number of Regions in Transition for more than <% ritThreshold %> milliseconds</td><td> <% numOfRITOverThreshold %></td><td></td>
-                </tr>
-		<tr> <td> Total number of Regions in Transition</td><td><% rit.size() %> </td><td></td>
-        </table>
-        <%if removed > 0 %>
-        (<% removed %> more regions in transition not shown)
-        </%if>
+
+<%if !rit.isEmpty() %>
+    <h2>Regions in Transition</h2>
+    <table class="table table-striped">
+            <tr><th>Region</th><th>State</th><th>RIT time (ms)</th></tr>
+            <%for Map.Entry<String, RegionState> entry : rit.entrySet() %>
+            <%if regionIDForOldestRIT.equals(entry.getKey()) %>
+                    <tr BGCOLOR="#FE2E2E" >
+            <%else>
+                    <tr>
+            </%if>
+            <td><% entry.getKey() %></td><td><% entry.getValue().toDescriptiveString() %></td>
+    <td><% (currentTime - entry.getValue().getStamp()) %> </td></tr>
+            </%for>
+            <tr BGCOLOR="#D7DF01"> <td>Total number of Regions in Transition for more than <% ritThreshold %> milliseconds</td><td> <% numOfRITOverThreshold %></td><td></td>
+            </tr>
+    <tr> <td> Total number of Regions in Transition</td><td><% rit.size() %> </td><td></td>
+    </table>
+    <%if removed > 0 %>
+    (<% removed %> more regions in transition not shown)
+    </%if>
 </%if>
 
