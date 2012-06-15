@@ -112,12 +112,14 @@
         <%for HRegionInfo r: onlineRegions %>
 
         <tr>
-            <%java>
+        <%java>
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
         </%java>
             <td><% r.getRegionNameAsString() %></td>
+            <%if load != null %>
             <td><% load.getReadRequestsCount() %></td>
             <td><% load.getWriteRequestsCount() %></td>
+            </%if>
         </tr>
         </%for>
     </table>
@@ -146,12 +148,14 @@
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
         </%java>
             <td><% r.getRegionNameAsString() %></td>
+            <%if load != null %>
             <td><% load.getStores() %></td>
             <td><% load.getStorefiles() %></td>
             <td><% load.getStoreUncompressedSizeMB() %>MB</td>
             <td><% load.getStorefileSizeMB() %>MB</td>
             <td><% load.getTotalStaticIndexSizeKB() %>KB</td>
             <td><% load.getTotalStaticBloomSizeKB() %>KB</td>
+            </%if>
         </tr>
         </%for>
     </table>
@@ -176,15 +180,17 @@
         <%java>
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
             String percentDone = "";
-            if  (load.getTotalCompactingKVs() > 0) {
+            if  (load != null && load.getTotalCompactingKVs() > 0) {
             percentDone = String.format("%.2f", 100 *
             ((float) load.getCurrentCompactedKVs() / load.getTotalCompactingKVs())) + "%";
             }
         </%java>
             <td><% r.getRegionNameAsString() %></td>
+            <%if load != null %>
             <td><% load.getTotalCompactingKVs() %></td>
             <td><% load.getCurrentCompactedKVs() %></td>
             <td><% percentDone %></td>
+            </%if>
         </tr>
         </%for>
     </table>
