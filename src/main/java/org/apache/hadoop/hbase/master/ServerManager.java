@@ -363,11 +363,9 @@ public class ServerManager {
         LOG.debug("region server race condition detected: " +
             info.getServerName());
       }
-
-      synchronized (this.serversToServerInfo) {
-        processServerInfoOnShutdown(info.getServerName(), true);
-        notifyServers();
-      }
+      
+      processServerInfoOnShutdown(info.getServerName(), true);
+      notifyServers();
 
       return new HMsg[] {HMsg.REGIONSERVER_STOP};
     } else {
@@ -420,48 +418,46 @@ public class ServerManager {
    * @param msgs
    */
   private void processRegionServerExit(HServerInfo serverInfo, HMsg[] msgs) {
-    synchronized (this.serversToServerInfo) {
-      // This method removes ROOT/META from the list and marks them to be
-      // reassigned in addition to other housework.
-      if (processServerInfoOnShutdown(serverInfo.getServerName(), false)) {
-        // Only process the exit message if the server still has registered info.
-        // Otherwise we could end up processing the server exit twice.
-        LOG.info("Region server " + serverInfo.getServerName() +
+    // This method removes ROOT/META from the list and marks them to be
+    // reassigned in addition to other housework.
+    if (processServerInfoOnShutdown(serverInfo.getServerName(), false)) {
+      // Only process the exit message if the server still has registered info.
+      // Otherwise we could end up processing the server exit twice.
+      LOG.info("Region server " + serverInfo.getServerName() +
           ": MSG_REPORT_EXITING");
-        // Get all the regions the server was serving reassigned
-        // (if we are not shutting down).
-        if (!master.isClosed()) {
-          for (int i = 1; i < msgs.length; i++) {
-            LOG.info("Processing " + msgs[i] + " from " +
+      // Get all the regions the server was serving reassigned
+      // (if we are not shutting down).
+      if (!master.isClosed()) {
+        for (int i = 1; i < msgs.length; i++) {
+          LOG.info("Processing " + msgs[i] + " from " +
               serverInfo.getServerName());
-            assert msgs[i].getType() == HMsg.Type.MSG_REGION_CLOSE;
-            HRegionInfo info = msgs[i].getRegionInfo();
-            // Meta/root region offlining is handed in removeServerInfo above.
-            if (!info.isMetaRegion()) {
-              synchronized (master.getRegionManager()) {
-                if (!master.getRegionManager().isOfflined(info.getRegionNameAsString())) {
-                  master.getRegionManager().setUnassigned(info, true);
-                } else {
-                  master.getRegionManager().removeRegion(info);
-                }
+          assert msgs[i].getType() == HMsg.Type.MSG_REGION_CLOSE;
+          HRegionInfo info = msgs[i].getRegionInfo();
+          // Meta/root region offlining is handed in removeServerInfo above.
+          if (!info.isMetaRegion()) {
+            synchronized (master.getRegionManager()) {
+              if (!master.getRegionManager().isOfflined(info.getRegionNameAsString())) {
+                master.getRegionManager().setUnassigned(info, true);
+              } else {
+                master.getRegionManager().removeRegion(info);
               }
             }
           }
         }
-        // There should not be any regions in transition for this server - the
-        // server should finish transitions itself before closing
-        Map<String, RegionState> inTransition = master.getRegionManager()
-            .getRegionsInTransitionOnServer(serverInfo.getServerName());
-        for (Map.Entry<String, RegionState> entry : inTransition.entrySet()) {
-          LOG.warn("Region server " + serverInfo.getServerName()
-              + " shut down with region " + entry.getKey() + " in transition "
-              + "state " + entry.getValue());
-          master.getRegionManager().setUnassigned(entry.getValue().getRegionInfo(),
-              true);
-        }
-        LOG.info("Removing server's info " + serverInfo.getServerName());
-        this.serversToServerInfo.remove(serverInfo.getServerName());
       }
+      // There should not be any regions in transition for this server - the
+      // server should finish transitions itself before closing
+      Map<String, RegionState> inTransition = master.getRegionManager()
+          .getRegionsInTransitionOnServer(serverInfo.getServerName());
+      for (Map.Entry<String, RegionState> entry : inTransition.entrySet()) {
+        LOG.warn("Region server " + serverInfo.getServerName()
+            + " shut down with region " + entry.getKey() + " in transition "
+            + "state " + entry.getValue());
+        master.getRegionManager().setUnassigned(entry.getValue().getRegionInfo(),
+            true);
+      }
+      LOG.info("Removing server's info " + serverInfo.getServerName());
+      this.serversToServerInfo.remove(serverInfo.getServerName());
     }
   }
 
@@ -921,9 +917,7 @@ public class ServerManager {
    * @return Read-only map of servers to serverinfo.
    */
   public Map<String, HServerInfo> getServersToServerInfo() {
-    synchronized (this.serversToServerInfo) {
-      return Collections.unmodifiableMap(this.serversToServerInfo);
-    }
+    return Collections.unmodifiableMap(this.serversToServerInfo);
   }
 
   /**
@@ -932,11 +926,9 @@ public class ServerManager {
    * if nothing found.
    */
   public HServerInfo getHServerInfo(final HServerAddress hsa) {
-    synchronized(this.serversToServerInfo) {
-      // TODO: This is primitive.  Do a better search.
-      for (Map.Entry<String, HServerInfo> e: this.serversToServerInfo.entrySet()) {
-        if (e.getValue().getServerAddress().equals(hsa)) return e.getValue();
-      }
+    // TODO: This is primitive.  Do a better search.
+    for (Map.Entry<String, HServerInfo> e: this.serversToServerInfo.entrySet()) {
+      if (e.getValue().getServerAddress().equals(hsa)) return e.getValue();
     }
     return null;
   }
@@ -945,9 +937,7 @@ public class ServerManager {
    * @return Read-only map of servers to load.
    */
   public Map<String, HServerLoad> getServersToLoad() {
-    synchronized (this.serversToLoad) {
-      return Collections.unmodifiableMap(serversToLoad);
-    }
+    return Collections.unmodifiableMap(serversToLoad);
   }
 
   /**
@@ -960,16 +950,16 @@ public class ServerManager {
   }
 
   /**
+   * There is no way to guarantee that the returned servers are really online
+   *
    * @return the list of the HServerAddress for all the online region servers.
    */
   public List<HServerAddress> getOnlineRegionServerList() {
-    synchronized(this.serversToServerInfo) {
-      List<HServerAddress> serverList = new ArrayList<HServerAddress>();
-      for (HServerInfo serverInfo: this.serversToServerInfo.values()) {
-        serverList.add(serverInfo.getServerAddress());
-      }
-      return serverList;
+    List<HServerAddress> serverList = new ArrayList<HServerAddress>();
+    for (HServerInfo serverInfo: this.serversToServerInfo.values()) {
+      serverList.add(serverInfo.getServerAddress());
     }
+    return serverList;
   }
 
   /**
