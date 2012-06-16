@@ -198,6 +198,10 @@ public class CacheConfig {
     return this.blockCache;
   }
 
+  public static BlockCache getGlobalBlockCache() {
+    return globalBlockCache;
+  }
+  
   /**
    * Returns whether the blocks of this HFile should be cached on read or not.
    * @return true if blocks should be cached on read, false if not

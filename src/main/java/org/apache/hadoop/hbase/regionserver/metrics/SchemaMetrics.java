@@ -38,7 +38,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -89,6 +92,12 @@ import org.apache.hadoop.hbase.util.Pair;
  */
 public class SchemaMetrics {
 
+  /**
+   * Used in place of the compaction vs. non-compaction flag for metrics that do not distinguish
+   * between these two cases.
+   */
+  private static final boolean DEFAULT_COMPACTION_FLAG = false;
+
   public interface SchemaAware {
     public String getTableName();
     public String getColumnFamilyName();
@@ -105,6 +114,7 @@ public class SchemaMetrics {
     CACHE_MISS("BlockReadCacheMissCnt", true, false),
 
     CACHE_SIZE("blockCacheSize",        false, false),
+    CACHE_NUM_BLOCKS("cacheNumBlocks",  false, false), 
     CACHED("blockCacheNumCached",       false, false),
     EVICTED("blockCacheNumEvicted",     false, false);
 
@@ -461,26 +471,33 @@ public class SchemaMetrics {
    * metric is "persistent", i.e. it does not get reset when metrics are
    * collected.
    */
-  public void addToCacheSize(BlockCategory category, long cacheSizeDelta) {
+  private void addToCacheSize(BlockCategory category, long cacheSizeDelta) {
     if (category == null) {
       category = BlockCategory.ALL_CATEGORIES;
     }
-    HRegion.incrNumericPersistentMetric(getBlockMetricName(category, false,
+    HRegion.incrNumericPersistentMetric(getBlockMetricName(category, DEFAULT_COMPACTION_FLAG,
         BlockMetricType.CACHE_SIZE), cacheSizeDelta);
+    HRegion.incrNumericPersistentMetric(getBlockMetricName(category, DEFAULT_COMPACTION_FLAG,
+        BlockMetricType.CACHE_NUM_BLOCKS), cacheSizeDelta > 0 ? 1 : -1);
 
     if (category != BlockCategory.ALL_CATEGORIES) {
       addToCacheSize(BlockCategory.ALL_CATEGORIES, cacheSizeDelta);
     }
   }
 
-  public void updateOnCachePutOrEvict(BlockCategory blockCategory,
-      long cacheSizeDelta, boolean isEviction) {
+  /**
+   * Updates the number and the total size of blocks in cache for both the configured table/CF
+   * and all table/CFs (by calling the same method on {@link #ALL_SCHEMA_METRICS}), both the given
+   * block category and all block categories aggregated, and the given block size.
+   * @param blockCategory block category, e.g. index or data
+   * @param cacheSizeDelta the size of the block being cached (positive) or evicted (negative) 
+   */
+  public void updateOnCachePutOrEvict(BlockCategory blockCategory, long cacheSizeDelta) {
     addToCacheSize(blockCategory, cacheSizeDelta);
-    incrNumericMetric(blockCategory, false,
-        isEviction ? BlockMetricType.EVICTED : BlockMetricType.CACHED);
+    incrNumericMetric(blockCategory, DEFAULT_COMPACTION_FLAG,
+        cacheSizeDelta > 0 ? BlockMetricType.CACHED : BlockMetricType.EVICTED);
     if (this != ALL_SCHEMA_METRICS) {
-      ALL_SCHEMA_METRICS.updateOnCachePutOrEvict(blockCategory, cacheSizeDelta,
-          isEviction);
+      ALL_SCHEMA_METRICS.updateOnCachePutOrEvict(blockCategory, cacheSizeDelta);
     }
   }
 
@@ -824,6 +841,8 @@ public class SchemaMetrics {
       }
     }
 
+    checkNumBlocksInCache();
+
     if (errors.length() > 0) {
       throw new AssertionError(errors.toString());
     }
@@ -855,6 +874,41 @@ public class SchemaMetrics {
       sb.append(entry.getKey() + " : " + entry.getValue());
     }
     return sb.toString();
+  }
+
+  /** Validates metrics that keep track of the number of cached blocks for each category */ 
+  private static void checkNumBlocksInCache() {
+    final LruBlockCache cache = (LruBlockCache) CacheConfig.getGlobalBlockCache();
+    if (cache == null) {
+      // There is no global block cache instantiated. Most likely there is no mini-cluster running.
+      return;
+    }
+    final Map<BlockType, Integer> blockTypeCounts = cache.getBlockTypeCountsForTest();
+    long[] blockCategoryCounts = new long[BlockCategory.values().length];
+    for (Map.Entry<BlockType, Integer> entry : blockTypeCounts.entrySet()) {
+      blockCategoryCounts[entry.getKey().getCategory().ordinal()] += entry.getValue();
+      blockCategoryCounts[BlockCategory.ALL_CATEGORIES.ordinal()] += entry.getValue();
+    }
+    for (BlockCategory blockCategory : BlockCategory.values()) {
+      String metricName = ALL_SCHEMA_METRICS.getBlockMetricName(blockCategory,
+          DEFAULT_COMPACTION_FLAG, BlockMetricType.CACHE_NUM_BLOCKS);
+      long metricValue = HRegion.getNumericPersistentMetric(metricName);
+      long expectedValue = blockCategoryCounts[blockCategory.ordinal()];
+      if (metricValue != expectedValue) {
+        throw new AssertionError("Expected " + expectedValue + " blocks of category " + 
+            blockCategory + " in cache, but found " + metricName + "=" + metricValue);
+      }
+    }
+  }
+
+  public static void clearBlockCacheMetrics() {
+    for (SchemaMetrics metrics : tableAndFamilyToMetrics.values()) { 
+      for (BlockCategory blockCategory : BlockCategory.values()) {
+        String key = metrics.getBlockMetricName(blockCategory, DEFAULT_COMPACTION_FLAG,
+            BlockMetricType.CACHE_NUM_BLOCKS);
+        HRegion.clearNumericPersistentMetric(key);
+      }
+    }
   }
 
 }

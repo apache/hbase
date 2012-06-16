@@ -44,6 +44,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -334,7 +336,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     SchemaMetrics schemaMetrics = cachedBlock.getSchemaMetrics();
     if (schemaMetrics != null) {
       schemaMetrics.updateOnCachePutOrEvict(
-          cachedBlock.getBlockType().getCategory(), heapsize, evict);
+          cachedBlock.getBlockType().getCategory(), heapsize);
     }
     return size.addAndGet(heapsize);
   }
@@ -878,9 +880,10 @@ public class LruBlockCache implements BlockCache, HeapSize {
     this.scheduleThreadPool.shutdown();
   }
 
-  /** Clears the cache. Used in tests. */
+  /** Clears the cache. Updates per-block-category counts accordingly. Used in tests. */
   public void clearCache() {
     map.clear();
+    SchemaMetrics.clearBlockCacheMetrics();
   }
 
   /**
@@ -895,7 +898,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     return fileNames;
   }
 
-  Map<BlockType, Integer> getBlockTypeCountsForTest() {
+  public Map<BlockType, Integer> getBlockTypeCountsForTest() {
     Map<BlockType, Integer> counts =
         new EnumMap<BlockType, Integer>(BlockType.class);
     for (CachedBlock cb : map.values()) {

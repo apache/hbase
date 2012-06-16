@@ -146,6 +146,10 @@ public class TestSchemaMetrics {
         schemaMetrics.getBlockMetricName(BlockCategory.ALL_CATEGORIES, false,
             BlockMetricType.CACHE_SIZE));
 
+    assertEquals(metricPrefix + "cacheNumBlocks",
+        schemaMetrics.getBlockMetricName(BlockCategory.ALL_CATEGORIES, false,
+            BlockMetricType.CACHE_NUM_BLOCKS));
+
     assertEquals(metricPrefix + "bt.Index.blockCacheNumEvicted",
         schemaMetrics.getBlockMetricName(BlockCategory.INDEX, false,
             BlockMetricType.EVICTED));
@@ -156,7 +160,7 @@ public class TestSchemaMetrics {
 
     assertEquals("blockCacheNumCached", ALL_CF_METRICS.getBlockMetricName(
         BlockCategory.ALL_CATEGORIES, false, BlockMetricType.CACHED));
-
+    
     // "Non-compaction aware" metrics
     try {
       ALL_CF_METRICS.getBlockMetricName(BlockCategory.ALL_CATEGORIES, true,
@@ -204,7 +208,7 @@ public class TestSchemaMetrics {
 
           for (boolean isEviction : BOOL_VALUES) {
             sm.updateOnCachePutOrEvict(blockCat, (isEviction ? -1 : 1)
-                * rand.nextInt(1024 * 1024), isEviction);
+                * rand.nextInt(1024 * 1024));
           }
         }
       }

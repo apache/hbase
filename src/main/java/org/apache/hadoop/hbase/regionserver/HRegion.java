@@ -347,6 +347,10 @@ public class HRegion implements HeapSize {
     }
     oldVal.addAndGet(amount);
   }
+  
+  public static void clearNumericPersistentMetric(String key) {
+    numericPersistentMetrics.remove(key);
+  }
 
   public static void incrTimeVaryingMetric(String key, long amount) {
     Pair<AtomicLong, AtomicInteger> oldVal = timeVaryingMetrics.get(key);
@@ -378,7 +382,7 @@ public class HRegion implements HeapSize {
         pair.getSecond().get());
   }
 
-  static long getNumericPersistentMetric(String key) {
+  public static long getNumericPersistentMetric(String key) {
     AtomicLong m = numericPersistentMetrics.get(key);
     if (m == null)
       return 0;
