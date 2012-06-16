@@ -281,12 +281,14 @@ public class TestHFile extends HBaseTestCase {
   }
 
   /**
-   * Make sure the orginals for our compression libs doesn't change on us.
+   * Make sure the ordinals for our compression algorithms do not change on us.
    */
   public void testCompressionOrdinance() {
     assertTrue(Compression.Algorithm.LZO.ordinal() == 0);
     assertTrue(Compression.Algorithm.GZ.ordinal() == 1);
     assertTrue(Compression.Algorithm.NONE.ordinal() == 2);
+    assertTrue(Compression.Algorithm.SNAPPY.ordinal() == 3);
+    assertTrue(Compression.Algorithm.LZ4.ordinal() == 4);
   }
 
   public void testComparator() throws IOException {

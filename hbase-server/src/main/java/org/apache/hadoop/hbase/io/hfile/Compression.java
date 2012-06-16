@@ -180,7 +180,26 @@ public final class Compression {
           }
           return snappyCodec;
         }
-    };
+    },
+    LZ4("lz4") {
+      // Use base type to avoid compile-time dependencies.
+      private transient CompressionCodec lz4Codec;
+
+      @Override
+      CompressionCodec getCodec(Configuration conf) {
+        if (lz4Codec == null) {
+          try {
+            Class<?> externalCodec =
+                getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.Lz4Codec");
+            lz4Codec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, 
+                conf);
+          } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        return lz4Codec;
+      }
+  };
 
     private final Configuration conf;
     private final String compressName;
