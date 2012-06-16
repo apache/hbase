@@ -272,8 +272,17 @@ public class HLogSplitter {
         }
         n++;
         WriterAndPath wap = (WriterAndPath)o;
-        wap.w.close();
+        try {
+          wap.w.close();
+        } catch (IOException ioe) {
+          LOG.warn("Failed to close recovered edits writer " + wap.p, ioe);
+        }
         LOG.debug("Closed " + wap.p);
+      }
+      try {
+        in.close();
+      } catch (IOException ioe) {
+        LOG.warn("Failed to close log reader " + logfile.getPath(), ioe);
       }
       String msg = "processed " + editsCount + " edits across " + n +
           " regions" + " threw away edits for " + (logWriters.size() - n) +
