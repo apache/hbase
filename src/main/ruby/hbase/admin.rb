@@ -180,6 +180,7 @@ module Hbase
             htd.setReadOnly(JBoolean.valueOf(arg[READONLY])) if arg[READONLY]
             htd.setMemStoreFlushSize(JLong.valueOf(arg[MEMSTORE_FLUSHSIZE])) if arg[MEMSTORE_FLUSHSIZE]
             htd.setDeferredLogFlush(JBoolean.valueOf(arg[DEFERRED_LOG_FLUSH])) if arg[DEFERRED_LOG_FLUSH]
+            htd.setWALDisabled(JBoolean.valueOf(arg[DISABLE_WAL])) if arg[DISABLE_WAL]
             if arg[NUMREGIONS]
               raise(ArgumentError, "Number of regions must be greater than 1") unless arg[NUMREGIONS] > 1
               num_regions = arg[NUMREGIONS]

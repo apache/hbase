@@ -297,6 +297,7 @@ public class HRegion implements HeapSize {
 
   private final MultiVersionConsistencyControl mvcc =
       new MultiVersionConsistencyControl();
+  private boolean disableWAL;
 
   public static volatile AtomicLong writeOps = new AtomicLong(0);
   public static volatile AtomicLong rowLockTime = new AtomicLong(0);
@@ -517,6 +518,7 @@ public class HRegion implements HeapSize {
       flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
          HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
     }
+    this.disableWAL = regionInfo.getTableDesc().isWALDisabled();
     this.memstoreFlushSize = flushSize;
     this.blockingMemStoreSize = this.memstoreFlushSize *
       conf.getLong("hbase.hregion.memstore.block.multiplier", 2);
@@ -1811,7 +1813,7 @@ public class HRegion implements HeapSize {
     try {
       prepareDeleteTimestamps(familyMap, byteNow);
 
-      if (writeToWAL) {
+      if (!this.disableWAL && writeToWAL) {
         // write/sync to WAL should happen before we touch memstore.
         //
         // If order is reversed, i.e. we write to memstore first, and
@@ -2080,19 +2082,21 @@ public class HRegion implements HeapSize {
       // ------------------------------------
       // STEP 3. Write to WAL
       // ----------------------------------
-      WALEdit walEdit = new WALEdit();
-      for (int i = firstIndex; i < lastIndexExclusive; i++) {
-        // Skip puts that were determined to be invalid during preprocessing
-        if (batchOp.retCodes[i] != OperationStatusCode.NOT_RUN) continue;
+      if (!this.disableWAL) {
+        WALEdit walEdit = new WALEdit();
+        for (int i = firstIndex; i < lastIndexExclusive; i++) {
+          // Skip puts that were determined to be invalid during preprocessing
+          if (batchOp.retCodes[i] != OperationStatusCode.NOT_RUN) continue;
 
-        Mutation op = batchOp.operations[i].getFirst();
-        if (!op.getWriteToWAL()) continue;
-        addFamilyMapToWALEdit(op.getFamilyMap(), walEdit);
+          Mutation op = batchOp.operations[i].getFirst();
+          if (!op.getWriteToWAL()) continue;
+          addFamilyMapToWALEdit(op.getFamilyMap(), walEdit);
+        }
+
+        // Append the edit to WAL
+        this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
+            walEdit, now);
       }
-
-      // Append the edit to WAL
-      this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
-          walEdit, now);
 
       // ------------------------------------
       // STEP 4. Write back to memstore
@@ -2330,7 +2334,7 @@ public class HRegion implements HeapSize {
       // If order is reversed, i.e. we write to memstore first, and
       // for some reason fail to write/sync to commit log, the memstore
       // will contain uncommitted transactions.
-      if (writeToWAL) {
+      if (!this.disableWAL && writeToWAL) {
         WALEdit walEdit = new WALEdit();
         addFamilyMapToWALEdit(familyMap, walEdit);
         this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
@@ -3898,6 +3902,7 @@ public class HRegion implements HeapSize {
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
+      (2 * Bytes.SIZEOF_BOOLEAN) +
       (6 * Bytes.SIZEOF_LONG) + 2 * ClassSize.ARRAY +
       (28 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
@@ -3914,7 +3919,7 @@ public class HRegion implements HeapSize {
       ClassSize.CONCURRENT_SKIPLISTMAP + ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY +
       ClassSize.CONCURRENT_HASHMAP +
       ClassSize.align(ClassSize.OBJECT +
-        (5 * Bytes.SIZEOF_BOOLEAN)) +
+        (4 * Bytes.SIZEOF_BOOLEAN)) +
         (3 * ClassSize.REENTRANT_LOCK));
 
   @Override

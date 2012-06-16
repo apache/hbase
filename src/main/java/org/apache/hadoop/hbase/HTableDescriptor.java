@@ -82,6 +82,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final ImmutableBytesWritable DEFERRED_LOG_FLUSH_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(DEFERRED_LOG_FLUSH));
 
+  public static final String DISABLE_WAL = "DISABLE_WAL";
+  public static final ImmutableBytesWritable DISABLE_WAL_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(DISABLE_WAL));
+
 
   // The below are ugly but better than creating them each time till we
   // replace booleans being saved as Strings with plain booleans.  Need a
@@ -615,7 +619,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   // Writable
 
   public void readFields(DataInput in) throws IOException {
-	int version = in.readInt();
+    int version = in.readInt();
     if (version < 3)
       throw new IOException("versions < 3 are not supported (and never existed!?)");
     // version 3+
@@ -645,7 +649,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   public void write(DataOutput out) throws IOException {
-	out.writeInt(TABLE_DESCRIPTOR_VERSION);
+    out.writeInt(TABLE_DESCRIPTOR_VERSION);
     Bytes.writeByteArray(out, name);
     out.writeBoolean(isRootRegion());
     out.writeBoolean(isMetaRegion());
@@ -767,5 +771,20 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
               .setTimeToLive(HConstants.WEEK_IN_SECONDS)
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
       });
+
+  /**
+   * @return true if all columns in the table should be read only
+   */
+  public boolean isWALDisabled() {
+    return isSomething(DISABLE_WAL_KEY, false);
+  }
+
+  /**
+   * @param readOnly True if all of the columns in the table should be read
+   * only.
+   */
+  public void setWALDisabled(final boolean disable) {
+    setValue(DISABLE_WAL_KEY, disable? TRUE: FALSE);
+  }
 
 }
