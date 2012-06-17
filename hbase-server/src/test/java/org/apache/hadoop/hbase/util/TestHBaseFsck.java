@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
@@ -1010,6 +1012,85 @@ public class TestHBaseFsck {
     } finally {
       deleteTable(table1);
       deleteTable(table2);
+    }
+  }
+  /**
+   * A split parent in meta, in hdfs, and not deployed
+   */
+  @Test
+  public void testLingeringSplitParent() throws Exception {
+    String table = "testLingeringSplitParent";
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // make sure data in regions, if in hlog only there is no data loss
+      TEST_UTIL.getHBaseAdmin().flush(table);
+      HRegionLocation location = tbl.getRegionLocation("B");
+
+      // Delete one region from meta, but not hdfs, unassign it.
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"),
+        Bytes.toBytes("C"), true, true, false);
+
+      // Create a new meta entry to fake it as a split parent.
+      HTable meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getName());
+      HRegionInfo hri = location.getRegionInfo();
+
+      HRegionInfo a = new HRegionInfo(tbl.getTableName(),
+        Bytes.toBytes("B"), Bytes.toBytes("BM"));
+      HRegionInfo b = new HRegionInfo(tbl.getTableName(),
+        Bytes.toBytes("BM"), Bytes.toBytes("C"));
+      Put p = new Put(hri.getRegionName());
+      hri.setOffline(true);
+      hri.setSplit(true);
+      p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+        Writables.getBytes(hri));
+      p.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
+        Writables.getBytes(a));
+      p.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
+        Writables.getBytes(b));
+      meta.put(p);
+      meta.flushCommits();
+      TEST_UTIL.getHBaseAdmin().flush(HConstants.META_TABLE_NAME);
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] {
+        ERROR_CODE.LINGERING_SPLIT_PARENT, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // regular repair cannot fix lingering split parent
+      hbck = doFsck(conf, true);
+      assertErrors(hbck, new ERROR_CODE[] {
+        ERROR_CODE.LINGERING_SPLIT_PARENT, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+      assertFalse(hbck.shouldRerun());
+      hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] {
+        ERROR_CODE.LINGERING_SPLIT_PARENT, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // fix lingering split parent
+      hbck = new HBaseFsck(conf);
+      hbck.connect();
+      hbck.setDisplayFullReport(); // i.e. -details
+      hbck.setTimeLag(0);
+      hbck.setFixSplitParents(true);
+      hbck.onlineHbck();
+      assertTrue(hbck.shouldRerun());
+
+      Get get = new Get(hri.getRegionName());
+      Result result = meta.get(get);
+      assertTrue(result.getColumn(HConstants.CATALOG_FAMILY,
+        HConstants.SPLITA_QUALIFIER).isEmpty());
+      assertTrue(result.getColumn(HConstants.CATALOG_FAMILY,
+        HConstants.SPLITB_QUALIFIER).isEmpty());
+      TEST_UTIL.getHBaseAdmin().flush(HConstants.META_TABLE_NAME);
+
+      // fix other issues
+      doFsck(conf, true);
+
+      // check that all are fixed
+      assertNoErrors(doFsck(conf, false));
+      assertEquals(ROWKEYS.length, countRows());
+    } finally {
+      deleteTable(table);
     }
   }
 
