@@ -2697,10 +2697,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   throws IOException {
     return openRegion(region, -1);
   }
+
   @Override
   @QosPriority(priority = HIGH_QOS)
   public RegionOpeningState openRegion(HRegionInfo region, int versionOfOfflineNode)
       throws IOException {
+    return openRegion(region, versionOfOfflineNode, null);
+  }
+
+  private RegionOpeningState openRegion(HRegionInfo region, int versionOfOfflineNode,
+      Map<String, HTableDescriptor> htds) throws IOException {
     checkOpen();
     checkIfRegionInTransition(region, OPEN);
     HRegion onlineRegion = this.getFromOnlineRegions(region.getEncodedName());
@@ -2721,7 +2727,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
-    HTableDescriptor htd = this.tableDescriptors.get(region.getTableName());
+    HTableDescriptor htd = null;
+    if (htds == null) {
+      htd = this.tableDescriptors.get(region.getTableName());
+    } else {
+      htd = htds.get(region.getTableNameAsString());
+      if (htd == null) {
+        htd = this.tableDescriptors.get(region.getTableName());
+        htds.put(region.getRegionNameAsString(), htd);
+      }
+    }
     this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(),
         true);
     // Need to pass the expected version in the constructor.
@@ -2757,7 +2772,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   throws IOException {
     checkOpen();
     LOG.info("Received request to open " + regions.size() + " region(s)");
-    for (HRegionInfo region: regions) openRegion(region);
+    Map<String, HTableDescriptor> htds = new HashMap<String, HTableDescriptor>(regions.size());
+    for (HRegionInfo region : regions) openRegion(region, -1, htds);
   }
 
   @Override
