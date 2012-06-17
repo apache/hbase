@@ -375,6 +375,7 @@ Improvement
     [HBASE-5862] - After Region Close remove the Operation Metrics.
     [HBASE-5863] - Improve the graceful_stop.sh CLI help (especially about reloads)
     [HBASE-6173] - hbck check specified tables only
+    [HBASE-5360] - [uberhbck] Add options for how to handle offline split parents. 
 
 New Feature
 
