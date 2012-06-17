@@ -167,6 +167,7 @@ public class HBaseFsck {
   private boolean fixHdfsOverlaps = false; // fix fs overlaps (risky)
   private boolean fixHdfsOrphans = false; // fix fs holes (missing .regioninfo)
   private boolean fixVersionFile = false; // fix missing hbase.version file in hdfs
+  private boolean fixSplitParents = false; // fix lingering split parents
 
   // limit checking/fixes to listed tables, if empty attempt to check/fix all
   // -ROOT- and .META. are always checked
@@ -1179,6 +1180,27 @@ public class HBaseFsck {
   }
 
   /**
+   * Reset the split parent region info in meta table
+   */
+  private void resetSplitParent(HbckInfo hi) throws IOException {
+    Delete d = new Delete(hi.metaEntry.getRegionName());
+    d.deleteColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER);
+    d.deleteColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER);
+    meta.delete(d);
+
+    Put p = new Put(hi.metaEntry.getRegionName());
+    HRegionInfo hri = new HRegionInfo(hi.metaEntry);
+    hri.setOffline(false);
+    hri.setSplit(false);
+    p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+      Writables.getBytes(hri));
+    meta.put(p);
+
+    meta.flushCommits();
+    LOG.info("Reset split parent " + hi.metaEntry.getRegionNameAsString() + " in META" );
+  }
+
+  /**
    * This backwards-compatibility wrapper for permanently offlining a region
    * that should not be alive.  If the region server does not support the
    * "offline" method, it will use the closest unassign method instead.  This
@@ -1317,9 +1339,6 @@ public class HBaseFsck {
     }
     if (inMeta && inHdfs && isDeployed && deploymentMatchesMeta && shouldBeDeployed) {
       return;
-    } else if (inMeta && inHdfs && !isDeployed && splitParent) {
-      LOG.warn("Region " + descriptiveName + " is a split parent in META and in HDFS");
-      return;
     } else if (inMeta && inHdfs && !shouldBeDeployed && !isDeployed) {
       LOG.info("Region " + descriptiveName + " is in META, and in a disabled " +
         "tabled that is not deployed");
@@ -1376,6 +1395,14 @@ public class HBaseFsck {
       }
 
     // ========== Cases where the region is in META =============
+    } else if (inMeta && inHdfs && !isDeployed && splitParent) {
+      errors.reportError(ERROR_CODE.LINGERING_SPLIT_PARENT, "Region "
+          + descriptiveName + " is a split parent in META, in HDFS, "
+          + "and not deployed on any region server. This could be transient.");
+      if (shouldFixSplitParents()) {
+        setShouldRerun();
+        resetSplitParent(hbi);
+      }
     } else if (inMeta && !inHdfs && !isDeployed) {
       errors.reportError(ERROR_CODE.NOT_IN_HDFS_OR_DEPLOYED, "Region "
           + descriptiveName + " found in META, but not in HDFS "
@@ -2502,7 +2529,7 @@ public class HBaseFsck {
       MULTI_DEPLOYED, SHOULD_NOT_BE_DEPLOYED, MULTI_META_REGION, RS_CONNECT_FAILURE,
       FIRST_REGION_STARTKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
-      ORPHAN_HDFS_REGION
+      ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT
     }
     public void clear();
     public void report(String message);
@@ -2904,6 +2931,14 @@ public class HBaseFsck {
     return sidelineBigOverlaps;
   }
 
+  public void setFixSplitParents(boolean shouldFix) {
+    fixSplitParents = shouldFix;
+  }
+
+  boolean shouldFixSplitParents() {
+    return fixSplitParents;
+  }
+
   /**
    * @param mm maximum number of regions to merge into a single region.
    */
@@ -2968,6 +3003,7 @@ public class HBaseFsck {
     System.err.println("   -maxMerge <n>     When fixing region overlaps, allow at most <n> regions to merge. (n=" + DEFAULT_MAX_MERGE +" by default)");
     System.err.println("   -sidelineBigOverlaps  When fixing region overlaps, allow to sideline big overlaps");
     System.err.println("   -maxOverlapsToSideline <n>  When fixing region overlaps, allow at most <n> regions to sideline per group. (n=" + DEFAULT_OVERLAPS_TO_SIDELINE +" by default)");
+    System.err.println("   -fixSplitParents  Try to force offline split parents to be online.");
     System.err.println("");
     System.err.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles -fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps");
     System.err.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles -fixHdfsOrphans");
@@ -3041,6 +3077,8 @@ public class HBaseFsck {
         fsck.setFixVersionFile(true);
       } else if (cmd.equals("-sidelineBigOverlaps")) {
         fsck.setSidelineBigOverlaps(true);
+      } else if (cmd.equals("-fixSplitParents")) {
+        fsck.setFixSplitParents(true);
       } else if (cmd.equals("-repair")) {
         // this attempts to merge overlapping hdfs regions, needs testing
         // under load
@@ -3051,6 +3089,7 @@ public class HBaseFsck {
         fsck.setFixHdfsOverlaps(true);
         fsck.setFixVersionFile(true);
         fsck.setSidelineBigOverlaps(true);
+        fsck.setFixSplitParents(false);
       } else if (cmd.equals("-repairHoles")) {
         // this will make all missing hdfs regions available but may lose data
         fsck.setFixHdfsHoles(true);
@@ -3059,6 +3098,7 @@ public class HBaseFsck {
         fsck.setFixAssignments(true);
         fsck.setFixHdfsOverlaps(false);
         fsck.setSidelineBigOverlaps(false);
+        fsck.setFixSplitParents(false);
       } else if (cmd.equals("-maxOverlapsToSideline")) {
         if (i == args.length - 1) {
           System.err.println("-maxOverlapsToSideline needs a numeric value argument.");
