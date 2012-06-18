@@ -235,7 +235,9 @@ public class TestClassLoading {
       "|" + Coprocessor.PRIORITY_USER + "|k1=v1,k2=v2,k3=v3");
     HBaseAdmin admin = new HBaseAdmin(this.conf);
     if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
+      if (admin.isTableEnabled(tableName)) {
+        admin.disableTable(tableName);
+      }
       admin.deleteTable(tableName);
     }
     admin.createTable(htd);
@@ -337,7 +339,9 @@ public class TestClassLoading {
 
     HBaseAdmin admin = new HBaseAdmin(this.conf);
     if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
+      if (admin.isTableEnabled(tableName)) {
+        admin.disableTable(tableName);
+      }
       admin.deleteTable(tableName);
     }
     admin.createTable(htd);
@@ -439,7 +443,9 @@ public class TestClassLoading {
       "|" + Coprocessor.PRIORITY_USER + "|k1=v1,k2=v2,k3=v3");
     HBaseAdmin admin = new HBaseAdmin(this.conf);
     if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
+      if (admin.isTableEnabled(tableName)) {
+        admin.disableTable(tableName);
+      }
       admin.deleteTable(tableName);
     }
     admin.createTable(htd);

@@ -37,6 +37,7 @@ public class TestEnvironmentEdgeManager {
 
   @Test
   public void testManageSingleton() {
+    EnvironmentEdgeManager.reset();
     EnvironmentEdge edge = EnvironmentEdgeManager.getDelegate();
     assertNotNull(edge);
     assertTrue(edge instanceof DefaultEnvironmentEdge);

@@ -83,8 +83,7 @@ public class TestSplitLogManager {
   private SplitLogManager slm;
   private Configuration conf;
 
-  private final static HBaseTestingUtility TEST_UTIL =
-    new HBaseTestingUtility();
+  private static HBaseTestingUtility TEST_UTIL;
 
   /**
    * Additional amount of time we wait for events to happen. Added where unit
@@ -115,6 +114,7 @@ public class TestSplitLogManager {
 
   @Before
   public void setup() throws Exception {
+    TEST_UTIL = new HBaseTestingUtility();
     TEST_UTIL.startMiniZKCluster();
     conf = TEST_UTIL.getConfiguration();
     // Use a different ZK wrapper instance for each tests.
@@ -221,7 +221,6 @@ public class TestSplitLogManager {
     conf.setInt("hbase.splitlog.manager.timeout", to);
     conf.setInt("hbase.splitlog.manager.timeoutmonitor.period", 100);
     to = to + 2 * 100;
-
 
     slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
@@ -504,7 +503,12 @@ public class TestSplitLogManager {
   @Test(timeout=45000)
   public void testVanishingTaskZNode() throws Exception {
     LOG.info("testVanishingTaskZNode");
+
+    int to = 1000;
+    conf.setInt("hbase.splitlog.manager.timeout", to);
+    conf.setInt("hbase.splitlog.manager.timeoutmonitor.period", 100);
     conf.setInt("hbase.splitlog.manager.unassigned.timeout", 0);
+
     slm = new SplitLogManager(zkw, conf, stopper, DUMMY_MASTER, null);
     slm.finishInitialization();
     FileSystem fs = TEST_UTIL.getTestFileSystem();

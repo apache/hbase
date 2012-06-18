@@ -916,75 +916,87 @@ public class TestMasterObserver {
     cp.resetStates();
 
     HTable table = UTIL.createTable(TEST_TABLE, TEST_FAMILY);
-    int countOfRegions = UTIL.createMultiRegions(table, TEST_FAMILY);
-    UTIL.waitUntilAllRegionsAssigned(countOfRegions);
 
-    NavigableMap<HRegionInfo, ServerName> regions = table.getRegionLocations();
-    Map.Entry<HRegionInfo, ServerName> firstGoodPair = null;
-    for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {
-      if (e.getValue() != null) {
-        firstGoodPair = e;
-        break;
+    try {
+      int countOfRegions = UTIL.createMultiRegions(table, TEST_FAMILY);
+      UTIL.waitUntilAllRegionsAssigned(countOfRegions);
+  
+      NavigableMap<HRegionInfo, ServerName> regions = table.getRegionLocations();
+      Map.Entry<HRegionInfo, ServerName> firstGoodPair = null;
+      for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {
+        if (e.getValue() != null) {
+          firstGoodPair = e;
+          break;
+        }
       }
-    }
-    assertNotNull("Found a non-null entry", firstGoodPair);
-    LOG.info("Found " + firstGoodPair.toString());
-    // Try to force a move
-    Collection<ServerName> servers = master.getClusterStatus().getServers();
-    String destName = null;
-    String serverNameForFirstRegion = firstGoodPair.getValue().toString();
-    LOG.info("serverNameForFirstRegion=" + serverNameForFirstRegion);
-    boolean found = false;
-    // Find server that is NOT carrying the first region
-    for (ServerName info : servers) {
-      LOG.info("ServerName=" + info);
-      if (!serverNameForFirstRegion.equals(info.getServerName())) {
-        destName = info.toString();
-        found = true;
-        break;
+      assertNotNull("Found a non-null entry", firstGoodPair);
+      LOG.info("Found " + firstGoodPair.toString());
+      // Try to force a move
+      Collection<ServerName> servers = master.getClusterStatus().getServers();
+      String destName = null;
+      String serverNameForFirstRegion = firstGoodPair.getValue().toString();
+      LOG.info("serverNameForFirstRegion=" + serverNameForFirstRegion);
+      boolean found = false;
+      // Find server that is NOT carrying the first region
+      for (ServerName info : servers) {
+        LOG.info("ServerName=" + info);
+        if (!serverNameForFirstRegion.equals(info.getServerName())) {
+          destName = info.toString();
+          found = true;
+          break;
+        }
       }
-    }
-    assertTrue("Found server", found);
-    LOG.info("Found " + destName);
-    master.moveRegion(null,RequestConverter.buildMoveRegionRequest(
-      firstGoodPair.getKey().getEncodedNameAsBytes(),Bytes.toBytes(destName)));
-    assertTrue("Coprocessor should have been called on region move",
-      cp.wasMoveCalled());
-
-    // make sure balancer is on
-    master.balanceSwitch(true);
-    assertTrue("Coprocessor should have been called on balance switch",
-        cp.wasBalanceSwitchCalled());
-
-    // force region rebalancing
-    master.balanceSwitch(false);
-    // move half the open regions from RS 0 to RS 1
-    HRegionServer rs = cluster.getRegionServer(0);
-    byte[] destRS = Bytes.toBytes(cluster.getRegionServer(1).getServerName().toString());
-    List<HRegionInfo> openRegions = ProtobufUtil.getOnlineRegions(rs);
-    int moveCnt = openRegions.size()/2;
-    for (int i=0; i<moveCnt; i++) {
-      HRegionInfo info = openRegions.get(i);
-      if (!info.isMetaTable()) {
-        master.moveRegion(null,RequestConverter.buildMoveRegionRequest(
-          openRegions.get(i).getEncodedNameAsBytes(), destRS));
+      assertTrue("Found server", found);
+      LOG.info("Found " + destName);
+      master.moveRegion(null,RequestConverter.buildMoveRegionRequest(
+        firstGoodPair.getKey().getEncodedNameAsBytes(),Bytes.toBytes(destName)));
+      assertTrue("Coprocessor should have been called on region move",
+        cp.wasMoveCalled());
+  
+      // make sure balancer is on
+      master.balanceSwitch(true);
+      assertTrue("Coprocessor should have been called on balance switch",
+          cp.wasBalanceSwitchCalled());
+  
+      // turn balancer off
+      master.balanceSwitch(false);
+  
+      // wait for assignments to finish, if any
+      AssignmentManager mgr = master.getAssignmentManager();
+      Collection<AssignmentManager.RegionState> transRegions =
+          mgr.copyRegionsInTransition().values();
+      for (AssignmentManager.RegionState state : transRegions) {
+        mgr.waitOnRegionToClearRegionsInTransition(state.getRegion());
       }
+  
+      // move half the open regions from RS 0 to RS 1
+      HRegionServer rs = cluster.getRegionServer(0);
+      byte[] destRS = Bytes.toBytes(cluster.getRegionServer(1).getServerName().toString());
+      List<HRegionInfo> openRegions = ProtobufUtil.getOnlineRegions(rs);
+      int moveCnt = openRegions.size()/2;
+      for (int i=0; i<moveCnt; i++) {
+        HRegionInfo info = openRegions.get(i);
+        if (!info.isMetaTable()) {
+          master.moveRegion(null,RequestConverter.buildMoveRegionRequest(
+            openRegions.get(i).getEncodedNameAsBytes(), destRS));
+        }
+      }
+  
+      // wait for assignments to finish
+      transRegions = mgr.copyRegionsInTransition().values();
+      for (AssignmentManager.RegionState state : transRegions) {
+        mgr.waitOnRegionToClearRegionsInTransition(state.getRegion());
+      }
+  
+      // now trigger a balance
+      master.balanceSwitch(true);
+      boolean balanceRun = master.balance();
+      assertTrue("Coprocessor should be called on region rebalancing",
+          cp.wasBalanceCalled());
+      table.close();
+    } finally {
+      UTIL.deleteTable(TEST_TABLE);
     }
-
-    // wait for assignments to finish
-    AssignmentManager mgr = master.getAssignmentManager();
-    Collection<AssignmentManager.RegionState> transRegions =
-        mgr.copyRegionsInTransition().values();
-    for (AssignmentManager.RegionState state : transRegions) {
-      mgr.waitOnRegionToClearRegionsInTransition(state.getRegion());
-    }
-
-    // now trigger a balance
-    master.balanceSwitch(true);
-    boolean balanceRun = master.balance();
-    assertTrue("Coprocessor should be called on region rebalancing",
-        cp.wasBalanceCalled());
-    table.close();
   }
 
   @org.junit.Rule

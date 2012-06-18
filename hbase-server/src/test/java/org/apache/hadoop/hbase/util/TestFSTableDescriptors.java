@@ -54,7 +54,7 @@ public class TestFSTableDescriptors {
 
   @Test
   public void testCreateAndUpdate() throws IOException {
-    Path testdir = UTIL.getDataTestDir();
+    Path testdir = UTIL.getDataTestDir("testCreateAndUpdate");
     HTableDescriptor htd = new HTableDescriptor("testCreate");
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     assertTrue(FSTableDescriptors.createTableDescriptor(fs, testdir, htd));
