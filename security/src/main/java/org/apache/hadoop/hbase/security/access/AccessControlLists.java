@@ -288,6 +288,13 @@ public class AccessControlLists {
   }
 
   /**
+   * Returns {@code true} if the given table is {@code _acl_} metadata table.
+   */
+  static boolean isAclTable(HTableDescriptor desc) {
+    return Bytes.equals(ACL_TABLE_NAME, desc.getName());
+  }
+
+  /**
    * Loads all of the permission grants stored in a region of the {@code _acl_}
    * table.
    *
