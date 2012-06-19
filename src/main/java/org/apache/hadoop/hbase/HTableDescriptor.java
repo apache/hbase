@@ -1134,11 +1134,13 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
       });
 
+  @Deprecated
   public void setOwner(User owner) {
     setOwnerString(owner != null ? owner.getShortName() : null);
   }
 
   // used by admin.rb:alter(table_name,*args) to update owner.
+  @Deprecated
   public void setOwnerString(String ownerString) {
     if (ownerString != null) {
       setValue(OWNER_KEY, Bytes.toBytes(ownerString));
@@ -1147,12 +1149,14 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     }
   }
 
+  @Deprecated
   public String getOwnerString() {
     if (getValue(OWNER_KEY) != null) {
       return Bytes.toString(getValue(OWNER_KEY));
     }
     // Note that every table should have an owner (i.e. should have OWNER_KEY set).
-    // .META. and -ROOT- should return system user as owner, not null (see MasterFileSystem.java:bootstrap()).
+    // .META. and -ROOT- should return system user as owner, not null (see
+    // MasterFileSystem.java:bootstrap()).
     return null;
   }
 }
