@@ -1588,7 +1588,17 @@ public class AssignmentManager extends ZooKeeperListener {
           if (isDisabledorDisablingRegionInRIT(region)) {
             return;
           }
-          setEnabledTable(region);
+          // In case of assign from EnableTableHandler table state is ENABLING. Any how
+          // EnableTableHandler will set ENABLED after assigning all the table regions. If we
+          // try to set to ENABLED directly then client api may think ENABLE table is completed.
+          // When we have a case like all the regions are added directly into META and we call
+          // assignRegion then we need to make the table ENABLED. Hence in such case the table
+          // will not be in ENABLING or ENABLED state.
+          String tableName = region.getTableNameAsString();
+          if (!zkTable.isEnablingTable(tableName) && !zkTable.isEnabledTable(tableName)) {
+            LOG.debug("Setting table " + tableName + " to ENABLED state.");
+            setEnabledTable(region);
+          }
         }
       }
       
