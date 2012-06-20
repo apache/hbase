@@ -635,8 +635,7 @@ Server {
 
     // Make sure root and meta assigned before proceeding.
     if (!assignRootAndMeta(status)) return;
-    serverShutdownHandlerEnabled = true;
-    this.serverManager.expireDeadNotExpiredServers();
+    enableServerShutdownHandler();
 
     // Update meta with new HRI if required. i.e migrate all HRI with HTD to
     // HRI with out HTD in meta and update the status in ROOT. This must happen
@@ -720,6 +719,18 @@ Server {
   }
 
   /**
+   * If ServerShutdownHandler is disabled, we enable it and expire those dead
+   * but not expired servers.
+   * @throws IOException
+   */
+  private void enableServerShutdownHandler() throws IOException {
+    if (!serverShutdownHandlerEnabled) {
+      serverShutdownHandlerEnabled = true;
+      this.serverManager.expireDeadNotExpiredServers();
+    }
+  }
+
+  /**
    * Check <code>-ROOT-</code> and <code>.META.</code> are assigned.  If not,
    * assign them.
    * @throws InterruptedException
@@ -771,6 +782,7 @@ Server {
         splitLogAndExpireIfOnline(currentMetaServer);
       }
       assignmentManager.assignMeta();
+      enableServerShutdownHandler();
       this.catalogTracker.waitForMeta();
       // Above check waits for general meta availability but this does not
       // guarantee that the transition has completed
