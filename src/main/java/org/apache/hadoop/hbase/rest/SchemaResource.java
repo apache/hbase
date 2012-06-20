@@ -81,7 +81,7 @@ public class SchemaResource extends ResourceBase {
     try {
       return table.getTableDescriptor();
     } finally {
-      pool.putTable(table);
+      table.close();
     }
   }
 
