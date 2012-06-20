@@ -25,7 +25,6 @@ import java.util.Iterator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.HTableInterface;
@@ -77,11 +76,6 @@ public class ScannerResultGenerator extends ResultGenerator {
           } else {
             scan.addFamily(split[0]);
           }
-        }
-      } else {
-        for (HColumnDescriptor family: 
-            table.getTableDescriptor().getFamilies()) {
-          scan.addFamily(family.getName());
         }
       }
       scan.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());          

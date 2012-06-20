@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTableInterface;
@@ -57,12 +56,6 @@ public class RowResultGenerator extends ResultGenerator {
           } else {
             get.addFamily(split[0]);
           }
-        }
-      } else {
-        // rowspec does not explicitly specify columns, return them all
-        for (HColumnDescriptor family: 
-            table.getTableDescriptor().getFamilies()) {
-          get.addFamily(family.getName());
         }
       }
       get.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());
