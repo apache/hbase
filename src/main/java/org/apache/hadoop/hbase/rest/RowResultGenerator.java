@@ -76,7 +76,7 @@ public class RowResultGenerator extends ResultGenerator {
       // the log.
       LOG.warn(StringUtils.stringifyException(e));
     } finally {
-      pool.putTable(table);
+      table.close();
     }
   }
 
