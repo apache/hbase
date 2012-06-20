@@ -397,21 +397,12 @@ public class AccessControlLists {
    * used for storage.
    * </p>
    */
-  static ListMultimap<String,TablePermission> getTablePermissions(
-      Configuration conf, byte[] tableName)
-  throws IOException {
+  static ListMultimap<String, TablePermission> getTablePermissions(Configuration conf,
+      byte[] tableName) throws IOException {
     if (tableName == null) tableName = ACL_TABLE_NAME;
 
-    /* TODO: -ROOT- and .META. cannot easily be handled because they must be
-     * online before _acl_ table.  Can anything be done here?
-     */
-    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME) ||
-        Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
-      return ArrayListMultimap.create(0,0);
-    }
-
     // for normal user tables, we just read the table row from _acl_
-    ListMultimap<String,TablePermission> perms = ArrayListMultimap.create();
+    ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
     HTable acls = null;
     try {
       acls = new HTable(conf, ACL_TABLE_NAME);
@@ -421,8 +412,8 @@ public class AccessControlLists {
       if (!row.isEmpty()) {
         perms = parseTablePermissions(tableName, row);
       } else {
-        LOG.info("No permissions found in "+ACL_TABLE_NAME_STR+
-            " for table "+Bytes.toString(tableName));
+        LOG.info("No permissions found in " + ACL_TABLE_NAME_STR + " for table "
+            + Bytes.toString(tableName));
       }
     } finally {
       if (acls != null) acls.close();
