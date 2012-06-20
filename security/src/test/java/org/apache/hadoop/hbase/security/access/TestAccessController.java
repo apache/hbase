@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -591,7 +592,68 @@ public class TestAccessController {
   }
 
   @Test
+  public void testAppend() throws Exception {
+
+    PrivilegedExceptionAction appendAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        Append append = new Append(TEST_TABLE);
+        append.add(TEST_FAMILY, Bytes.toBytes("qualifier"), Bytes.toBytes("value"));
+        ACCESS_CONTROLLER.preAppend(ObserverContext.createAndPrepare(RCP_ENV, null), append);
+        return null;
+      }
+    };
+
+    verifyAllowed(appendAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_RW);
+    verifyDenied(appendAction, USER_CREATE, USER_RO, USER_NONE);
+  }
+
+  @Test
   public void testGrantRevoke() throws Exception {
+
+    PrivilegedExceptionAction grantAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+          TEST_TABLE);
+        protocol.grant(new UserPermission(Bytes.toBytes(USER_RO.getShortName()), TEST_TABLE,
+            TEST_FAMILY, (byte[]) null, Action.READ));
+        return null;
+      }
+    };
+
+    PrivilegedExceptionAction revokeAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+          TEST_TABLE);
+        protocol.revoke(new UserPermission(Bytes.toBytes(USER_RO.getShortName()), TEST_TABLE,
+            TEST_FAMILY, (byte[]) null, Action.READ));
+        return null;
+      }
+    };
+
+    PrivilegedExceptionAction getPermissionsAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
+          TEST_TABLE);
+        protocol.getUserPermissions(TEST_TABLE);
+        return null;
+      }
+    };
+
+    verifyAllowed(grantAction, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(grantAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+
+    verifyAllowed(revokeAction, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(revokeAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+
+    verifyAllowed(getPermissionsAction, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(getPermissionsAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+  }
+
+  @Test
+  public void testPostGrantRevoke() throws Exception {
     final byte[] tableName = Bytes.toBytes("TempTable");
     final byte[] family1 = Bytes.toBytes("f1");
     final byte[] family2 = Bytes.toBytes("f2");
@@ -823,7 +885,7 @@ public class TestAccessController {
   }
 
   @Test
-  public void testGrantRevokeAtQualifierLevel() throws Exception {
+  public void testPostGrantRevokeAtQualifierLevel() throws Exception {
     final byte[] tableName = Bytes.toBytes("testGrantRevokeAtQualifierLevel");
     final byte[] family1 = Bytes.toBytes("f1");
     final byte[] family2 = Bytes.toBytes("f2");
