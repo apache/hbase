@@ -213,14 +213,9 @@ public class RowResource extends ResourceBase {
       throw new WebApplicationException(e,
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {
-      if (table != null) {
-        try {
-          pool.putTable(table);
-        } catch (IOException ioe) {
-          throw new WebApplicationException(ioe,
-              Response.Status.SERVICE_UNAVAILABLE);
-        }
-      }
+      if (table != null) try {
+        table.close();
+      } catch (IOException ioe) { }
     }
   }
 
@@ -275,14 +270,9 @@ public class RowResource extends ResourceBase {
       throw new WebApplicationException(e,
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {
-      if (table != null) {
-        try {
-          pool.putTable(table);
-        } catch (IOException ioe) {
-          throw new WebApplicationException(ioe,
-              Response.Status.SERVICE_UNAVAILABLE);
-        }
-      }
+      if (table != null) try {
+        table.close();
+      } catch (IOException ioe) { }
     }
   }
 
@@ -373,14 +363,9 @@ public class RowResource extends ResourceBase {
       throw new WebApplicationException(e, 
                   Response.Status.SERVICE_UNAVAILABLE);
     } finally {
-      if (table != null) {
-        try {
-          pool.putTable(table);
-        } catch (IOException ioe) {
-          throw new WebApplicationException(ioe,
-              Response.Status.SERVICE_UNAVAILABLE);
-        }
-      }
+      if (table != null) try {
+        table.close();
+      } catch (IOException ioe) { }
     }
     return Response.ok().build();
   }
@@ -450,14 +435,9 @@ public class RowResource extends ResourceBase {
     } catch (IOException e) {
       throw new WebApplicationException(e, Response.Status.SERVICE_UNAVAILABLE);
     } finally {
-      try {
-        if(table != null){
-          pool.putTable(table);
-        }
-      } catch (Exception ioe) {
-        throw new WebApplicationException(ioe,
-          Response.Status.SERVICE_UNAVAILABLE);
-      }
+      if (table != null) try {
+        table.close();
+      } catch (IOException ioe) { }
     }
   }
 
@@ -518,12 +498,9 @@ public class RowResource extends ResourceBase {
     } catch (IOException e) {
       throw new WebApplicationException(e, Response.Status.SERVICE_UNAVAILABLE);
     } finally {
-      try {
-        pool.putTable(table);
-      } catch (Exception ioe) {
-        throw new WebApplicationException(ioe,
-          Response.Status.SERVICE_UNAVAILABLE);
-      }
+      if (table != null) try {
+        table.close();
+      } catch (IOException ioe) { }
     }
   }
 }

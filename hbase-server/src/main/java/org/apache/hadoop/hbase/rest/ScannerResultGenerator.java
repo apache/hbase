@@ -92,7 +92,7 @@ public class ScannerResultGenerator extends ResultGenerator {
       id = Long.toString(System.currentTimeMillis()) +
              Integer.toHexString(scanner.hashCode());
     } finally {
-      pool.putTable(table);
+      table.close();
     }
   }
 

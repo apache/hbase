@@ -76,7 +76,7 @@ public class RegionsResource extends ResourceBase {
     try {
       return ((HTable)table).getRegionsInfo();
     } finally {
-      pool.putTable(table);
+      table.close();
     }
   }
 
