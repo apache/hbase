@@ -28,12 +28,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -48,7 +45,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.client.Get;
@@ -100,13 +96,9 @@ public class ServerManager {
    *  to be piggybacked upon the next processMsgs;
    */
   private ConcurrentHashMap<HServerInfo, ArrayList<HMsg>> pendingMsgsToSvrsMap;
-  
-  // SortedMap server load -> Set of server names
-  private final SortedMap<HServerLoad, Set<String>> loadToServers =
-    Collections.synchronizedSortedMap(new TreeMap<HServerLoad, Set<String>>());
-  // Map of server names -> server load
-  private final Map<String, HServerLoad> serversToLoad =
-    new ConcurrentHashMap<String, HServerLoad>();
+
+  /** A bidirectional map between server names and their load */
+  private ServerLoadMap<HServerLoad> serversToLoad = new ServerLoadMap<HServerLoad>();
 
   private HMaster master;
 
@@ -216,11 +208,19 @@ public class ServerManager {
       String message = "Server start rejected; we already have " + hostAndPort +
         " registered; existingServer=" + existingServer + ", newServer=" + info;
       LOG.info(message);
-      if (existingServer.getStartCode() < info.getStartCode()) {
+      long existingStartCode = existingServer.getStartCode();
+      long newStartCode = info.getStartCode();
+      if (existingStartCode < newStartCode) {
         LOG.info("Triggering server recovery; existingServer looks stale");
         expireServer(existingServer);
+      } else if (existingStartCode == newStartCode) {
+        LOG.debug("Duplicate region server check-in with start code " + existingStartCode + ": " +
+            info.getServerName() + ", processing normally");
+      } else {
+        LOG.info("Newer server has already checked in, telling the old server to stop");
+        throw new YouAreDeadException("A new server with start code " + existingStartCode
+            + " is already online for " + info.getHostnamePort());
       }
-      throw new PleaseHoldException(message);
     }
     checkIsDead(info.getServerName(), "STARTUP");
     LOG.info("Received start message from: " + info.getServerName());
@@ -257,8 +257,17 @@ public class ServerManager {
    * Adds the HSI to the RS list and creates an empty load
    * @param info The region server informations
    */
-  public void recordNewServer(HServerInfo info) {
+  public void recordNewServer(HServerInfo info) throws IOException {
     recordNewServer(info, false);
+  }
+
+  /** Restore the old value for the given key in a map */
+  private static <K, V> void undoMapUpdate(Map<K, V> m, K key, V oldValue) {
+    if (oldValue == null) {
+      m.remove(key);
+    } else {
+      m.put(key, oldValue);
+    }
   }
 
   /**
@@ -267,23 +276,29 @@ public class ServerManager {
    * @param useInfoLoad True if the load from the info should be used
    *                    like under a master failover
    */
-  void recordNewServer(HServerInfo info, boolean useInfoLoad) {
+  void recordNewServer(HServerInfo info, boolean useInfoLoad) throws IOException {
     HServerLoad load = useInfoLoad ? info.getLoad() : new HServerLoad();
     String serverName = info.getServerName();
     info.setLoad(load);
     // We must set this watcher here because it can be set on a fresh start
     // or on a failover
     Watcher watcher = new ServerExpirer(new HServerInfo(info));
-    this.master.getZooKeeperWrapper().updateRSLocationGetWatch(info, watcher);
+
+    // Save the old values so we can rollback if we fail setting the ZK watch
+    HServerInfo oldServerInfo = serversToServerInfo.get(serverName);
+    HServerLoad oldServerLoad = serversToLoad.get(serverName);
+
     this.serversToServerInfo.put(serverName, info);
-    this.serversToLoad.put(serverName, load);
-    synchronized (this.loadToServers) {
-      Set<String> servers = this.loadToServers.get(load);
-      if (servers == null) {
-        servers = new HashSet<String>();
-      }
-      servers.add(serverName);
-      this.loadToServers.put(load, servers);
+    serversToLoad.updateServerLoad(serverName, load);
+
+    // Setting a watch after making changes to internal server to server info / load data
+    // structures because the watch can fire immediately after being set.
+    if (!this.master.getZooKeeperWrapper().setRSLocationWatch(info, watcher)) {
+      // Could not set a watch, undo the above changes.
+      serversToLoad.updateServerLoad(serverName, oldServerLoad);
+      undoMapUpdate(serversToServerInfo, serverName, oldServerInfo);
+      throw new IOException("Could not set a watch on regionserver location "
+          + info.getServerName());
     }
   }
 
@@ -474,14 +489,11 @@ public class ServerManager {
   throws IOException {
     // Refresh the info object and the load information
     this.serversToServerInfo.put(serverInfo.getServerName(), serverInfo);
-    HServerLoad oldLoad = this.serversToLoad.get(serverInfo.getServerName());
+    HServerLoad oldLoad = serversToLoad.get(serverInfo.getServerName());
     HServerLoad newLoad = serverInfo.getLoad();
     if (oldLoad != null) {
       // XXX why are we using oldLoad to update metrics
       this.master.getMetrics().incrementRequests(oldLoad.getNumberOfRequests());
-      if (!oldLoad.equals(newLoad)) {
-        updateLoadToServers(serverInfo.getServerName(), oldLoad);
-      }
     }
 
     // Set the current load information
@@ -491,15 +503,7 @@ public class ServerManager {
           serverInfo.getServerName());
     }
     newLoad.expireAfter = Long.MAX_VALUE;
-    this.serversToLoad.put(serverInfo.getServerName(), newLoad);
-    synchronized (loadToServers) {
-      Set<String> servers = this.loadToServers.get(newLoad);
-      if (servers == null) {
-        servers = new HashSet<String>();
-      }
-      servers.add(serverInfo.getServerName());
-      this.loadToServers.put(newLoad, servers);
-    }
+    serversToLoad.updateServerLoad(serverInfo.getServerName(), newLoad);
 
     // Next, process messages for this server
     return processMsgs(serverInfo, mostLoadedRegions, msgs);
@@ -582,7 +586,7 @@ public class ServerManager {
           // Production code path.
           master.getRegionManager().assignRegions(serverInfo,
               mostLoadedRegions, returnMsgs);
-        } else {
+        } else if (mostLoadedRegions.length > 0) {
           // UNIT TESTS ONLY.
           // We just don't assign anything to "blacklisted" regionservers as
           // required by a unit test (for determinism). This is OK because
@@ -785,8 +789,8 @@ public class ServerManager {
         this.master.getRegionManager().unsetRootRegion();
         if (region.isOffline()) {
           // Can't proceed without root region. Shutdown.
-          LOG.fatal("root region is marked offline");
-          this.master.shutdown();
+          LOG.fatal("root region is marked offline, shutting down the cluster");
+          master.requestClusterShutdown();
           return;
         }
 
@@ -846,25 +850,9 @@ public class ServerManager {
       }
 
       infoUpdated = true;
-      // update load information
-      updateLoadToServers(serverName, this.serversToLoad.remove(serverName));
+      serversToLoad.removeServerLoad(serverName);
     }
     return infoUpdated;
-  }
-
-  private void updateLoadToServers(final String serverName,
-      final HServerLoad load) {
-    if (load == null) return;
-    synchronized (this.loadToServers) {
-      Set<String> servers = this.loadToServers.get(load);
-      if (servers != null) {
-        servers.remove(serverName);
-        if (servers.size() > 0)
-          this.loadToServers.put(load, servers);
-        else
-          this.loadToServers.remove(load);
-      }
-    }
   }
 
   /**
@@ -878,19 +866,11 @@ public class ServerManager {
     int numServers = 0;
     double averageLoad = 0.0;
     synchronized (serversToLoad) {
-      // numServers = serversToLoad.size();
-      // the above was not accurate as a server is first removed from the
-      // serversToServerInfo map, then from the serversToLoad map
-      numServers = serversToServerInfo.size();
-      for (Map.Entry<String, HServerLoad> entry : serversToLoad.entrySet()) {
+      for (Map.Entry<String, HServerLoad> entry : serversToLoad.entries()) {
         HServerInfo hsi = serversToServerInfo.get(entry.getKey());
         if (null != hsi) {
           totalLoad += entry.getValue().getNumberOfRegions();
-        } else {
-          // this server has already been removed from the serversToServerInfo
-          // map, but not from the serversToLoad one yet, thus ignore it for
-          // loadbalancing purposes
-          numServers--;
+          numServers++;
         }
       }
       if (numServers > 0) {
@@ -931,22 +911,6 @@ public class ServerManager {
       if (e.getValue().getServerAddress().equals(hsa)) return e.getValue();
     }
     return null;
-  }
-
-  /**
-   * @return Read-only map of servers to load.
-   */
-  public Map<String, HServerLoad> getServersToLoad() {
-    return Collections.unmodifiableMap(serversToLoad);
-  }
-
-  /**
-   * @return Read-only map of load to servers.
-   */
-  public SortedMap<HServerLoad, Set<String>> getLoadToServers() {
-    synchronized (this.loadToServers) {
-      return Collections.unmodifiableSortedMap(this.loadToServers);
-    }
   }
 
   /**
@@ -1034,16 +998,7 @@ public class ServerManager {
     }
     // Remove the server from the known servers lists and update load info
     this.serversToServerInfo.remove(serverName);
-    HServerLoad load = this.serversToLoad.remove(serverName);
-    if (load != null) {
-      synchronized (this.loadToServers) {
-        Set<String> servers = this.loadToServers.get(load);
-        if (servers != null) {
-          servers.remove(serverName);
-          if (servers.isEmpty()) this.loadToServers.remove(load);
-        }
-      }
-    }
+    serversToLoad.removeServerLoad(serverName);
     // Add to dead servers and queue a shutdown processing.
     LOG.debug("Added=" + serverName +
       " to dead servers, added shutdown processing operation");
@@ -1092,17 +1047,8 @@ public class ServerManager {
     return this.deadServers;
   }
 
-  /**
-   * Add to the passed <code>m</code> servers that are loaded less than
-   * <code>l</code>.
-   * @param l
-   * @param m
-   */
-  void getLightServers(final HServerLoad l,
-      SortedMap<HServerLoad, Set<String>> m) {
-    synchronized (this.loadToServers) {
-      m.putAll(this.loadToServers.headMap(l));
-    }
+  public ServerLoadMap<HServerLoad> getServersToLoad() {
+    return serversToLoad;
   }
 
   public boolean hasEnoughRegionServers() {
@@ -1205,11 +1151,12 @@ public class ServerManager {
     long curTime = EnvironmentEdgeManager.currentTimeMillis();
     boolean waitingForMoreServersInRackToTimeOut = false;
     boolean reportDetails = false;
+    int serverCount = serversToLoad.size();
     if ((curTime > lastDetailedLogAt + (3600 * 1000)) ||
-        lastLoggedServerCount != serversToLoad.size()) {
+        lastLoggedServerCount != serverCount) {
       reportDetails = true;
       lastDetailedLogAt = curTime;
-      lastLoggedServerCount = serversToLoad.size();
+      lastLoggedServerCount = serverCount;
     }
     // rack -> time of last report from rack
     Map<String, Long> rackLastReportAtMap = new HashMap<String, Long>();
@@ -1219,7 +1166,7 @@ public class ServerManager {
     // rack -> #servers in rack
     Map<String, Integer> rackNumServersMap =
         new HashMap<String, Integer>();
-    for (Map.Entry<String, HServerLoad> e : this.serversToLoad.entrySet()) {
+    for (Map.Entry<String, HServerLoad> e : this.serversToLoad.entries()) {
       HServerInfo si = this.serversToServerInfo.get(e.getKey());
       if (si == null) {
         LOG.debug("ServerTimeoutMonitor : no si for " + e.getKey());

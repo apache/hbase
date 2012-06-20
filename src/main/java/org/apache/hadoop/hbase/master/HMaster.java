@@ -38,7 +38,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -70,7 +69,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -695,11 +693,6 @@ public class HMaster extends Thread implements HMasterInterface,
     return this.zooKeeperWrapper;
   }
 
-  // These methods are so don't have to pollute RegionManager with ServerManager.
-  SortedMap<HServerLoad, Set<String>> getLoadToServers() {
-    return this.serverManager.getLoadToServers();
-  }
-
   int numServers() {
     return this.serverManager.numServers();
   }
@@ -718,17 +711,6 @@ public class HMaster extends Thread implements HMasterInterface,
    */
   public Path getOldLogDir() {
     return this.oldLogDir;
-  }
-
-  /**
-   * Add to the passed <code>m</code> servers that are loaded less than
-   * <code>l</code>.
-   * @param l
-   * @param m
-   */
-  void getLightServers(final HServerLoad l,
-      SortedMap<HServerLoad, Set<String>> m) {
-    this.serverManager.getLightServers(l, m);
   }
 
   /** Main processing loop */

@@ -142,8 +142,7 @@ public class AssignmentManager {
         // shutting down.
         if (info != null &&
             !master.getServerManager().isDead(info.getServerName()) &&
-            master.getServerManager().getServersToLoad()
-            .get(info.getServerName()) != null) {
+            master.getServerManager().getServersToServerInfo().get(info.getServerName()) != null) {
           LOG.info("Add a transient assignment from the assignment plan: "
               + " region " + region.getRegionNameAsString() + " to the "
               + positions[i] + " region server" + info.getHostnamePort());

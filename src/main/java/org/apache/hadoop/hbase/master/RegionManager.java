@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -500,15 +501,14 @@ public class RegionManager {
    */
   private int regionsToGiveOtherServers(final int numUnassignedRegions,
       final HServerLoad thisServersLoad) {
-    SortedMap<HServerLoad, Set<String>> lightServers =
-      new TreeMap<HServerLoad, Set<String>>();
-    this.master.getLightServers(thisServersLoad, lightServers);
+    SortedMap<HServerLoad, Collection<String>> lightServers = 
+        master.getServerManager().getServersToLoad().getLightServers(thisServersLoad);
     // Examine the list of servers that are more lightly loaded than this one.
     // Pretend that we will assign regions to these more lightly loaded servers
     // until they reach load equal with ours. Then, see how many regions are
     // left unassigned. That is how many regions we should assign to this server
     int nRegions = 0;
-    for (Map.Entry<HServerLoad, Set<String>> e : lightServers.entrySet()) {
+    for (Map.Entry<HServerLoad, Collection<String>> e : lightServers.entrySet()) {
       HServerLoad lightLoad = new HServerLoad(e.getKey());
       do {
         lightLoad.setNumberOfRegions(lightLoad.getNumberOfRegions() + 1);
@@ -778,15 +778,11 @@ public class RegionManager {
   private int computeNextHeaviestLoad(HServerLoad referenceLoad,
     HServerLoad heavierLoad) {
 
-    SortedMap<HServerLoad, Set<String>> heavyServers =
-      new TreeMap<HServerLoad, Set<String>>();
-    synchronized (master.getLoadToServers()) {
-      heavyServers.putAll(
-        master.getLoadToServers().tailMap(referenceLoad));
-    }
+    SortedMap<HServerLoad, Collection<String>> heavyServers = master.getServerManager().
+        getServersToLoad().getHeavyServers(referenceLoad);
     int nservers = 0;
-    for (Map.Entry<HServerLoad, Set<String>> e : heavyServers.entrySet()) {
-      Set<String> servers = e.getValue();
+    for (Map.Entry<HServerLoad, Collection<String>> e : heavyServers.entrySet()) {
+      Collection<String> servers = e.getValue();
       nservers += servers.size();
       if (e.getKey().compareTo(referenceLoad) == 0) {
         // This is the load factor of the server we are considering
@@ -2154,21 +2150,21 @@ public class RegionManager {
     private int balanceToLowloaded(String srvName, HServerLoad srvLoad,
         double avgLoad) {
 
-      SortedMap<HServerLoad, Set<String>> loadToServers =
-        master.getLoadToServers();
-      // check if server most loaded
-      if (!loadToServers.get(loadToServers.lastKey()).contains(srvName))
+      ServerLoadMap<HServerLoad> serverLoadMap = master.getServerManager().getServersToLoad(); 
+
+      if (!serverLoadMap.isMostLoadedServer(srvName))
         return 0;
 
       // this server is most loaded, we will try to unload it by lowest
       // loaded servers
       int avgLoadMinusSlop = (int)Math.floor(avgLoad * (1 - this.slop)) - 1;
-      int lowestLoad = loadToServers.firstKey().getNumberOfRegions();
+      HServerLoad lowestServerLoad = serverLoadMap.getLowestLoad();
+      int lowestLoad = lowestServerLoad.getNumberOfRegions();
 
       if(lowestLoad >= avgLoadMinusSlop)
         return 0; // there is no low loaded servers
 
-      int lowSrvCount = loadToServers.get(loadToServers.firstKey()).size();
+      int lowSrvCount = serverLoadMap.numServersByLoad(lowestServerLoad);
       int numSrvRegs = srvLoad.getNumberOfRegions();
       int numMoveToLowLoaded = (avgLoadMinusSlop - lowestLoad) * lowSrvCount;
 

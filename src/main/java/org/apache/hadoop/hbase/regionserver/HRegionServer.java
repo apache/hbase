@@ -27,11 +27,13 @@ import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.net.BindException;
 import java.net.InetSocketAddress;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -42,12 +44,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.Date;
-import java.util.Calendar;
-import java.text.SimpleDateFormat;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -91,17 +88,14 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
-import org.apache.hadoop.hbase.HMsg.Type;
-import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
-import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.client.MultiPutResponse;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
@@ -122,7 +116,16 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
-import org.apache.hadoop.hbase.util.*;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.InfoServer;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ParamFormat;
+import org.apache.hadoop.hbase.util.ParamFormatter;
+import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
+import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
@@ -134,7 +137,6 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
@@ -295,7 +297,7 @@ public class HRegionServer implements HRegionInterface,
 
   // Cache configuration and block cache reference
   private final CacheConfig cacheConfig;
-  
+
   // prevents excessive checking of filesystem
   private int minCheckFSIntervalMillis;
 
@@ -368,7 +370,7 @@ public class HRegionServer implements HRegionInterface,
     minCheckFSIntervalMillis =
         conf.getInt("hbase.regionserver.min.check.fs.interval", 30000);
     checkFSAbortTimeOutMillis =
-        conf.getInt("hbase.regionserver.check.fs.abort.timeout", 
+        conf.getInt("hbase.regionserver.check.fs.abort.timeout",
                     conf.getInt(HConstants.ZOOKEEPER_SESSION_TIMEOUT,
                                 HConstants.DEFAULT_ZOOKEEPER_SESSION_TIMEOUT));
     if (minCheckFSIntervalMillis > checkFSAbortTimeOutMillis) {
@@ -399,7 +401,8 @@ public class HRegionServer implements HRegionInterface,
     this.serverInfo = new HServerInfo(new HServerAddress(
       new InetSocketAddress(address.getBindAddress(),
       this.server.getListenerAddress().getPort())), System.currentTimeMillis(),
-      this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 60030), machineName);
+      this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT,
+          HConstants.DEFAULT_REGIONSERVER_INFOPORT), machineName);
     if (this.serverInfo.getServerAddress() == null) {
       throw new NullPointerException("Server address cannot be null; " +
         "hbase-958 debugging");
@@ -1342,7 +1345,8 @@ public class HRegionServer implements HRegionInterface,
     this.leases.setName(n + ".leaseChecker");
     this.leases.start();
     // Put up info server.
-    int port = this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 60030);
+    int port = this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT,
+        HConstants.DEFAULT_REGIONSERVER_INFOPORT);
     // -1 is for disabling info server
     if (port >= 0) {
       String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");
@@ -1579,7 +1583,7 @@ public class HRegionServer implements HRegionInterface,
    * Let the master know we're here
    * Run initialization using parameters passed us by the master.
    */
-  private MapWritable reportForDuty() {
+  private MapWritable reportForDuty() throws YouAreDeadException {
     while (!stopRequested.get() && !getMaster()) {
       sleeper.sleep();
       LOG.warn("Unable to get master for initialization");
@@ -1598,11 +1602,19 @@ public class HRegionServer implements HRegionInterface,
         if (LOG.isDebugEnabled())
           LOG.debug("sending initial server load: " + hsl);
         lastMsg = System.currentTimeMillis();
-        zooKeeperWrapper.writeRSLocation(this.serverInfo);
-        result = this.hbaseMaster.regionServerStartup(this.serverInfo);
-        break;
+        if (zooKeeperWrapper.writeRSLocation(this.serverInfo)) {
+          // We either created the znode, or it existed already. Check in with the master.
+          result = this.hbaseMaster.regionServerStartup(this.serverInfo);
+          break;
+        } else {
+          LOG.error("Could not write RS znode " + serverInfo.getServerName()
+              + " to ZK, will try again");
+        }
       } catch (IOException e) {
         LOG.warn("error telling master we are up", e);
+        if (e instanceof YouAreDeadException) {
+          throw (YouAreDeadException) e;
+        }
       }
       sleeper.sleep(lastMsg);
     }
@@ -2175,8 +2187,8 @@ public class HRegionServer implements HRegionInterface,
   throws IOException {
     return applyMutations(regionName, puts, "multiput_");
   }
-  
-  private int applyMutations(final byte[] regionName, 
+
+  private int applyMutations(final byte[] regionName,
       final List<? extends Mutation> mutations,
       String methodName)
   throws IOException {

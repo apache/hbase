@@ -915,27 +915,26 @@ public class ZooKeeperWrapper implements Watcher {
     return false;
   }
 
+  private String getRSZNode(HServerInfo info) {
+    return rsZNode + ZNODE_PATH_SEPARATOR + info.getServerName();
+  }
+
   /**
-   * Update the RS address and set a watcher on the znode
-   * @param info The RS info
-   * @param watcher The watcher to put on the znode
-   * @return true if the update is done, false if it failed
+   * Set a watch on a region server location node
    */
-  public boolean updateRSLocationGetWatch(HServerInfo info, Watcher watcher) {
-    byte[] data = Bytes.toBytes(info.getServerAddress().toString());
-    String znode = rsZNode + ZNODE_PATH_SEPARATOR + info.getServerName();
+  public boolean setRSLocationWatch(HServerInfo info, Watcher watcher) {
+    String znode = getRSZNode(info);
     try {
-      recoverableZK.setData(znode, data, -1);
-      LOG.debug("<" + instanceName + ">" + "Updated ZNode " + znode
-          + " with data " + info.getServerAddress().toString());
       recoverableZK.getData(znode, watcher, null);
       return true;
     } catch (KeeperException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to update " + znode + " znode in ZooKeeper: " + e);
+      LOG.warn("<" + instanceName + ">" + "Failed to set watch on the " + znode
+          + " znode in ZooKeeper", e);
     } catch (InterruptedException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to update " + znode + " znode in ZooKeeper: " + e);
+      Thread.currentThread().interrupt();
+      LOG.warn("<" + instanceName + ">" + "Failed to set watch on the " + znode
+          + " znode in ZooKeeper", e);
     }
-
     return false;
   }
 
