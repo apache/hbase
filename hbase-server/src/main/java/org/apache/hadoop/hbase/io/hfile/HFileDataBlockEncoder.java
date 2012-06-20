@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Controls what kind of data block encoding is used. If data block encoding is
@@ -33,7 +33,9 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
  */
 @InterfaceAudience.Private
 public interface HFileDataBlockEncoder {
-
+  /** Type of encoding used for data blocks in HFile. Stored in file info. */
+  byte[] DATA_BLOCK_ENCODING = Bytes.toBytes("DATA_BLOCK_ENCODING");
+  
   /**
    * Converts a block from the on-disk format to the in-cache format. Called in
    * the following cases:
@@ -71,11 +73,11 @@ public interface HFileDataBlockEncoder {
   public boolean useEncodedScanner(boolean isCompaction);
 
   /**
-   * Save metadata in StoreFile which will be written to disk
-   * @param storeFileWriter writer for a given StoreFile
+   * Save metadata in HFile which will be written to disk
+   * @param writer writer for a given HFile
    * @exception IOException on disk problems
    */
-  public void saveMetadata(StoreFile.Writer storeFileWriter)
+  public void saveMetadata(HFile.Writer writer)
       throws IOException;
 
   /** @return the on-disk data block encoding */

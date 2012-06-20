@@ -913,7 +913,7 @@ public class TestStoreFile extends HBaseTestCase {
     StoreFile.Reader reader = storeFile.createReader();
     
     Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
-    byte[] value = fileInfo.get(StoreFile.DATA_BLOCK_ENCODING);
+    byte[] value = fileInfo.get(HFileDataBlockEncoder.DATA_BLOCK_ENCODING);
 
     assertEquals(dataBlockEncoderAlgo.getNameInBytes(), value);
   }

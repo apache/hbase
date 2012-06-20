@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 
 /**
  * Does not perform any kind of encoding/decoding.
@@ -71,7 +70,7 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
   }
 
   @Override
-  public void saveMetadata(StoreFile.Writer storeFileWriter) {
+  public void saveMetadata(HFile.Writer writer) {
   }
 
   @Override

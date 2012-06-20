@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
@@ -96,8 +95,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   public static HFileDataBlockEncoder createFromFileInfo(
       FileInfo fileInfo, DataBlockEncoding preferredEncodingInCache)
       throws IOException {
-    byte[] dataBlockEncodingType =
-        fileInfo.get(StoreFile.DATA_BLOCK_ENCODING);
+    byte[] dataBlockEncodingType = fileInfo.get(DATA_BLOCK_ENCODING);
     if (dataBlockEncodingType == null) {
       return NoOpDataBlockEncoder.INSTANCE;
     }
@@ -128,10 +126,8 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   }
 
   @Override
-  public void saveMetadata(StoreFile.Writer storeFileWriter)
-      throws IOException {
-    storeFileWriter.appendFileInfo(StoreFile.DATA_BLOCK_ENCODING,
-        onDisk.getNameInBytes());
+  public void saveMetadata(HFile.Writer writer) throws IOException {
+    writer.appendFileInfo(DATA_BLOCK_ENCODING, onDisk.getNameInBytes());
   }
 
   @Override

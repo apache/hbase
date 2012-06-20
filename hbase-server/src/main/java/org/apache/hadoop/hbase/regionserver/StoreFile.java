@@ -137,10 +137,6 @@ public class StoreFile extends SchemaConfigured {
   /** Key for timestamp of earliest-put in metadata*/
   public static final byte[] EARLIEST_PUT_TS = Bytes.toBytes("EARLIEST_PUT_TS");
 
-  /** Type of encoding used for data blocks in HFile. Stored in file info. */
-  public static final byte[] DATA_BLOCK_ENCODING =
-      Bytes.toBytes("DATA_BLOCK_ENCODING");
-
   // Make default block size for StoreFiles 8k while testing.  TODO: FIX!
   // Need to make it 8k for testing.
   public static final int DEFAULT_BLOCKSIZE_SMALL = 8 * 1024;
@@ -1208,9 +1204,6 @@ public class StoreFile extends SchemaConfigured {
     }
 
     public void close() throws IOException {
-      // Save data block encoder metadata in the file info.
-      dataBlockEncoder.saveMetadata(this);
-
       boolean hasGeneralBloom = this.closeGeneralBloomFilter();
       boolean hasDeleteFamilyBloom = this.closeDeleteFamilyBloomFilter();
 
