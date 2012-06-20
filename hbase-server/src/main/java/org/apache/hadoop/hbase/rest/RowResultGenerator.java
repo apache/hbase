@@ -30,14 +30,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 
 @InterfaceAudience.Private
 public class RowResultGenerator extends ResultGenerator {
@@ -60,12 +58,6 @@ public class RowResultGenerator extends ResultGenerator {
           } else {
             get.addFamily(split[0]);
           }
-        }
-      } else {
-        // rowspec does not explicitly specify columns, return them all
-        for (HColumnDescriptor family: 
-            table.getTableDescriptor().getFamilies()) {
-          get.addFamily(family.getName());
         }
       }
       get.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());
