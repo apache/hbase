@@ -332,6 +332,8 @@ public class HFileWriterV1 extends AbstractHFileWriter {
     if (this.outputStream == null) {
       return;
     }
+    // Save data block encoder metadata in the file info.
+    blockEncoder.saveMetadata(this);
     // Write out the end of the data blocks, then write meta data blocks.
     // followed by fileinfo, data block index and meta block index.
 

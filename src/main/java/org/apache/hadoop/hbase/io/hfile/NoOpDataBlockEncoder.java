@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -54,7 +53,7 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
   }
 
   @Override
-  public void saveMetadata(StoreFile.Writer storeFileWriter) {
+  public void saveMetadata(HFile.Writer writer) {
   }
 
   @Override
