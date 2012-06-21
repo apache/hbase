@@ -19,12 +19,15 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HConstants;
 
+import java.util.Random;
 
 /**
  * Utility used by client connections such as {@link HConnection} and
  * {@link ServerCallable}
  */
 public class ConnectionUtils {
+
+  private static final Random RANDOM = new Random();
   /**
    * Calculate pause time.
    * Built on {@link HConstants#RETRY_BACKOFF}.
@@ -37,6 +40,9 @@ public class ConnectionUtils {
     if (ntries >= HConstants.RETRY_BACKOFF.length) {
       ntries = HConstants.RETRY_BACKOFF.length - 1;
     }
-    return pause * HConstants.RETRY_BACKOFF[ntries];
+
+    long normalPause = pause * HConstants.RETRY_BACKOFF[ntries];
+    long jitter =  (long)(normalPause * RANDOM.nextFloat() * 0.01f); // 1% possible jitter
+    return normalPause + jitter;
   }
 }
