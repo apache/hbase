@@ -240,11 +240,11 @@ java.lang.management.ManagementFactory;
 <tr>
     <td><% op %></td>
     <td><% histo.getCount()%></td>
-    <td><% histo.getMean()%></td>
-    <td><% s.getMedian()%></td>
-    <td><% s.get75thPercentile()%></td>
-    <td><% s.get95thPercentile()%></td>
-    <td><% s.get99thPercentile()%></td>
-    <td><% s.get999thPercentile()%></td>
+    <td><% String.format("%10.2f", histo.getMean()) %></td>
+    <td><% String.format("%10.2f", s.getMedian()) %></td>
+    <td><% String.format("%10.2f", s.get75thPercentile()) %></td>
+    <td><% String.format("%10.2f", s.get95thPercentile()) %></td>
+    <td><% String.format("%10.2f", s.get99thPercentile()) %></td>
+    <td><% String.format("%10.2f", s.get999thPercentile())%></td>
 </tr>
 </%def>
