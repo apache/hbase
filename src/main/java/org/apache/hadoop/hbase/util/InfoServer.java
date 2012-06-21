@@ -123,8 +123,10 @@ public class InfoServer extends HttpServer {
     // web applications.
     final String master = "master";
     String p = getWebAppsPath(master);
-    int index = p.lastIndexOf(master);
     // Now strip master off the end if it is present
-    return index == -1? p: p.substring(0, index);
+    if(p.endsWith(master)) {
+      return p.substring(0, p.lastIndexOf(master));
+    }
+    return p;
   }
 }
