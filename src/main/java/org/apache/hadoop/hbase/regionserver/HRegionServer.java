@@ -420,7 +420,7 @@ public class HRegionServer implements HRegionInterface,
         HConstants.ZOOKEEPER_SESSION_EXPIRED_ABORT_PROCESS, true);
     if (abortProcesstIfZKExpired) {
       zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
-          serverInfo.getServerName(), new RuntimeHaltAbortStrategy());
+          serverInfo.getServerName(), RuntimeHaltAbortStrategy.INSTANCE);
     } else {
       zooKeeperWrapper = ZooKeeperWrapper.createInstance(conf,
           serverInfo.getServerName(), new Abortable() {

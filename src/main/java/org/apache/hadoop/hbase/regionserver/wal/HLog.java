@@ -83,6 +83,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.RuntimeExceptionAbortStrategy;
+import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.StringUtils;
@@ -168,6 +170,8 @@ public class HLog implements Syncable {
   private int initialReplication;    // initial replication factor of SequenceFile.writer
   private Method getNumCurrentReplicas; // refers to DFSOutputStream.getNumCurrentReplicas
   final static Object [] NO_ARGS = new Object []{};
+
+  private final Abortable syncFailureAbortStrategy;
 
   // used to indirectly tell syncFs to force the sync
   private volatile boolean forceSync = false;
@@ -358,6 +362,8 @@ public class HLog implements Syncable {
               final LogActionsListener actionListener, final String prefix)
   throws IOException {
     super();
+    syncFailureAbortStrategy = conf.getBoolean("hbase.hlog.sync.failure.abort.process", true) ?
+        RuntimeHaltAbortStrategy.INSTANCE : RuntimeExceptionAbortStrategy.INSTANCE;
     this.fs = fs;
     this.dir = dir;
     this.conf = conf;
@@ -722,8 +728,7 @@ public class HLog implements Syncable {
           this.writer.sync();
         }
       } catch (IOException ioe) {
-        LOG.fatal("log sync failed when trying to close " + this.writer);
-        Runtime.getRuntime().halt(1);
+        syncFailureAbortStrategy.abort("log sync failed when trying to close " + this.writer, ioe);
       }
       // Close the current writer
       writerCloseSyncDone = true;
@@ -994,7 +999,7 @@ public class HLog implements Syncable {
         LOG.error("Error while syncing, requesting close of hlog ", e);
         requestLogRoll();
       } catch (InterruptedException e) {
-        LOG.debug(getName() + "interrupted while waiting for sync requests");
+        LOG.debug(getName() + " interrupted while waiting for sync requests");
       } finally {
         syncerShuttingDown = true;
         syncDone.signalAll();
@@ -1111,8 +1116,7 @@ public class HLog implements Syncable {
                        " still proceeding ahead...");
           }
         } catch (IOException e) {
-          LOG.fatal("Could not sync hlog. Aborting", e);
-          Runtime.getRuntime().halt(1);
+          syncFailureAbortStrategy.abort("Could not sync hlog. Aborting", e);
         }
       }
 
@@ -1245,10 +1249,9 @@ public class HLog implements Syncable {
       Long oldseq =
         lastSeqWritten.put(regionName, seq);
       if (oldseq != null) {
-        LOG.error("Logic Error Snapshot seq id from earlier flush still" +
+        syncFailureAbortStrategy.abort("Logic Error Snapshot seq id from earlier flush still" +
                   " present! for region " + Bytes.toString(regionName) +
-                  " overwritten oldseq=" + oldseq + "with new seq=" + seq);
-        Runtime.getRuntime().halt(1);
+                  " overwritten oldseq=" + oldseq + "with new seq=" + seq, new Throwable());
       } else {
         LOG.debug("Inserted lastSeqWritten of region snapshot " +
                   regionName + " as " + seq);
@@ -1331,10 +1334,10 @@ public class HLog implements Syncable {
       if (current_memstore_earliest_seq != null &&
           (current_memstore_earliest_seq.longValue() <=
            snapshot_seq.longValue())) {
-        LOG.error("Logic Error region " + Bytes.toString(regionName) +
-                  "acquired edits out of order current memstore seq=" +
-                  current_memstore_earliest_seq + " snapshot seq=" + snapshot_seq);
-        Runtime.getRuntime().halt(1);
+        syncFailureAbortStrategy.abort(
+            "Logic Error region " + Bytes.toString(regionName) +
+            "acquired edits out of order current memstore seq=" +
+            current_memstore_earliest_seq + " snapshot seq=" + snapshot_seq, new Throwable());
       }
     }
     this.cacheFlushLock.unlock();

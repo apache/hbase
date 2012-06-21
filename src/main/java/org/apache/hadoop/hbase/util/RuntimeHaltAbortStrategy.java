@@ -19,14 +19,24 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 
 public class RuntimeHaltAbortStrategy implements Abortable {
   private volatile boolean aborted = false;
 
+  private static Log LOG = LogFactory.getLog(RuntimeHaltAbortStrategy.class);
+
+  private RuntimeHaltAbortStrategy() {
+  }
+
+  public static final RuntimeHaltAbortStrategy INSTANCE = new RuntimeHaltAbortStrategy();
+
   @Override
   public void abort(String why, Throwable e) {
     aborted = true;
+    LOG.fatal(why, e);
     Runtime.getRuntime().halt(1);
   }
 

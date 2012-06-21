@@ -457,7 +457,7 @@ public class HMaster extends Thread implements HMasterInterface,
     }
     if (abortProcesstIfZKExpired) {
       zooKeeperWrapper = ZooKeeperWrapper.createInstance(localConf,
-          getZKWrapperName(), new RuntimeHaltAbortStrategy());
+          getZKWrapperName(), RuntimeHaltAbortStrategy.INSTANCE);
     } else {
       zooKeeperWrapper = ZooKeeperWrapper.createInstance(localConf,
           getZKWrapperName(), new Abortable() {

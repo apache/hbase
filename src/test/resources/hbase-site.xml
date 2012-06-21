@@ -151,6 +151,11 @@
   </property>
 
   <property>
+    <name>hbase.hlog.sync.failure.abort.process</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <name>hbase.client.retries.number</name>
     <value>100</value>
     <description>

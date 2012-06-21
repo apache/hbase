@@ -19,14 +19,21 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 
 public class RuntimeExceptionAbortStrategy implements Abortable {
   private volatile boolean aborted = false;
 
+  private static final Log LOG = LogFactory.getLog(RuntimeExceptionAbortStrategy.class);
+
+  public static final RuntimeExceptionAbortStrategy INSTANCE = new RuntimeExceptionAbortStrategy(); 
+
   @Override
   public void abort(String why, Throwable e) {
     aborted = true;
+    LOG.error(why, e);
     throw new RuntimeException("Abort as Runtime exception because " + why, e);
   }
 
