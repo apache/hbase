@@ -375,7 +375,7 @@ public class AccessController extends BaseRegionObserver
     AuthResult result = null;
 
     for (Action permission : permissions) {
-      if (authManager.authorize(user, tableName, null, null, permission)) {
+      if (authManager.authorize(user, tableName, family, qualifier, permission)) {
         result = AuthResult.allow("Table permission granted", user, permission, tableName, family, qualifier);
         break;
       } else {
@@ -677,30 +677,32 @@ public class AccessController extends BaseRegionObserver
       byte[] tableName) throws IOException {}
 
   @Override
-  public void preMove(ObserverContext<MasterCoprocessorEnvironment> c,
-      HRegionInfo region, ServerName srcServer, ServerName destServer)
-    throws IOException {
-    requirePermission(Permission.Action.ADMIN);
+  public void preMove(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo region,
+      ServerName srcServer, ServerName destServer) throws IOException {
+    requirePermission(region.getTableName(), null, null, Action.ADMIN);
   }
+
   @Override
   public void postMove(ObserverContext<MasterCoprocessorEnvironment> c,
       HRegionInfo region, ServerName srcServer, ServerName destServer)
     throws IOException {}
 
   @Override
-  public void preAssign(ObserverContext<MasterCoprocessorEnvironment> c,
-      HRegionInfo regionInfo) throws IOException {
-    requirePermission(Permission.Action.ADMIN);
+  public void preAssign(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo regionInfo)
+      throws IOException {
+    requirePermission(regionInfo.getTableName(), null, null, Action.ADMIN);
   }
+
   @Override
   public void postAssign(ObserverContext<MasterCoprocessorEnvironment> c,
       HRegionInfo regionInfo) throws IOException {}
 
   @Override
-  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c,
-       HRegionInfo regionInfo, boolean force) throws IOException {
-    requirePermission(Permission.Action.ADMIN);
+  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo regionInfo,
+      boolean force) throws IOException {
+    requirePermission(regionInfo.getTableName(), null, null, Action.ADMIN);
   }
+
   @Override
   public void postUnassign(ObserverContext<MasterCoprocessorEnvironment> c,
       HRegionInfo regionInfo, boolean force) throws IOException {}
