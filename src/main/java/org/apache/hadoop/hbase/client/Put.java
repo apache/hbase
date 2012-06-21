@@ -20,22 +20,21 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.Writable;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 
 /**
@@ -48,6 +47,7 @@ import java.util.TreeMap;
 public class Put extends Mutation
   implements HeapSize, Writable, Row, Comparable<Row> {
   private static final byte PUT_VERSION = (byte)2;
+  private static final int ADDED_ATTRIBUTES_VERSION = 2;
 
   private static final long OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + 2 * ClassSize.REFERENCE +
@@ -379,14 +379,18 @@ public class Put extends Mutation
       }
       this.familyMap.put(family, keys);
     }
-    if (version > 1) {
+    if (version >= ADDED_ATTRIBUTES_VERSION) {
       readAttributes(in);
     }
   }
 
   public void write(final DataOutput out)
   throws IOException {
-    out.writeByte(PUT_VERSION);
+    int version = 1;
+    if (!getAttributesMap().isEmpty()) {
+      version = ADDED_ATTRIBUTES_VERSION;
+    }
+    out.writeByte(version);
     Bytes.writeByteArray(out, this.row);
     out.writeLong(this.ts);
     out.writeLong(this.lockId);
@@ -406,7 +410,9 @@ public class Put extends Mutation
         out.write(kv.getBuffer(), kv.getOffset(), kv.getLength());
       }
     }
-    writeAttributes(out);
+    if (version >= ADDED_ATTRIBUTES_VERSION) {
+      writeAttributes(out);
+    }
   }
 
   /**

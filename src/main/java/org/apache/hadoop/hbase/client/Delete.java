@@ -20,19 +20,17 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
+
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Used to perform Delete operations on a single row.
@@ -69,6 +67,9 @@ import java.util.TreeMap;
 public class Delete extends Mutation
   implements Writable, Row, Comparable<Row> {
   private static final byte DELETE_VERSION = (byte)3;
+
+  private static final int ADDED_WRITE_TO_WAL_VERSION = 3;
+  private static final int ADDED_ATTRIBUTES_VERSION = 2;
 
   /** Constructor for Writable.  DO NOT USE */
   public Delete() {
@@ -236,7 +237,7 @@ public class Delete extends Mutation
     this.row = Bytes.readByteArray(in);
     this.ts = in.readLong();
     this.lockId = in.readLong();
-    if (version > 2) {
+    if (version >= ADDED_WRITE_TO_WAL_VERSION) {
       this.writeToWAL = in.readBoolean();
     }
     this.familyMap.clear();
@@ -246,23 +247,33 @@ public class Delete extends Mutation
       int numColumns = in.readInt();
       List<KeyValue> list = new ArrayList<KeyValue>(numColumns);
       for(int j=0;j<numColumns;j++) {
-    	KeyValue kv = new KeyValue();
-    	kv.readFields(in);
-    	list.add(kv);
+        KeyValue kv = new KeyValue();
+        kv.readFields(in);
+        list.add(kv);
       }
       this.familyMap.put(family, list);
     }
-    if (version > 1) {
+    if (version >= ADDED_ATTRIBUTES_VERSION) {
       readAttributes(in);
     }
   }
 
   public void write(final DataOutput out) throws IOException {
-    out.writeByte(DELETE_VERSION);
+    int version = 1;
+    if (!getAttributesMap().isEmpty()) {
+      version = Math.max(version, ADDED_ATTRIBUTES_VERSION);
+    }
+    if (!writeToWAL) {
+      version = Math.max(version, ADDED_WRITE_TO_WAL_VERSION);
+    }
+
+    out.writeByte(version);
     Bytes.writeByteArray(out, this.row);
     out.writeLong(this.ts);
     out.writeLong(this.lockId);
-    out.writeBoolean(this.writeToWAL);
+    if (version >= ADDED_WRITE_TO_WAL_VERSION) {
+      out.writeBoolean(writeToWAL);
+    }
     out.writeInt(familyMap.size());
     for(Map.Entry<byte [], List<KeyValue>> entry : familyMap.entrySet()) {
       Bytes.writeByteArray(out, entry.getKey());
@@ -272,7 +283,9 @@ public class Delete extends Mutation
         kv.write(out);
       }
     }
-    writeAttributes(out);
+    if (version >= ADDED_ATTRIBUTES_VERSION) {
+      writeAttributes(out);
+    }
   }
 
   /**
