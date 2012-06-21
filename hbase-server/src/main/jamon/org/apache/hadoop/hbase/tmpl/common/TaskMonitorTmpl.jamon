@@ -68,7 +68,7 @@ boolean first = true;
   <%if tasks.isEmpty()%>
     <p>No tasks currently running on this node.</p>
   <%else>
-    <table class="table table-striped">
+    <table class="table">
     <tr>
       <th>Start Time</th>
       <th>Description</th>
@@ -76,7 +76,7 @@ boolean first = true;
       <th>Status</th>
     </tr>
     <%for MonitoredTask task : tasks %>
-    <tr class="task-monitor-<% task.getState() %>">
+    <tr class="<& stateCss; state = task.getState() &>">
       <td><% new Date(task.getStartTime()) %></td>
       <td><% task.getDescription() %></td>
       <td><% task.getState() %>
@@ -91,3 +91,12 @@ boolean first = true;
 
   </%if>
 </%if>
+
+
+<%def stateCss>
+        <%args>
+        MonitoredTask.State state;
+        </%args>
+<%java>       if (state == MonitoredTask.State.COMPLETE) { </%java>alert alert-success<%java> } </%java>
+<%java>  else if (state == MonitoredTask.State.ABORTED)  { </%java>alert alert-error<%java>   } </%java>
+</%def>
