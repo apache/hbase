@@ -2069,6 +2069,10 @@ public final class ClusterStatusProtos {
         getBackupMastersOrBuilderList();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getBackupMastersOrBuilder(
         int index);
+    
+    // optional bool balancerOn = 9;
+    boolean hasBalancerOn();
+    boolean getBalancerOn();
   }
   public static final class ClusterStatus extends
       com.google.protobuf.GeneratedMessage
@@ -2243,6 +2247,16 @@ public final class ClusterStatusProtos {
       return backupMasters_.get(index);
     }
     
+    // optional bool balancerOn = 9;
+    public static final int BALANCERON_FIELD_NUMBER = 9;
+    private boolean balancerOn_;
+    public boolean hasBalancerOn() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public boolean getBalancerOn() {
+      return balancerOn_;
+    }
+    
     private void initFields() {
       hbaseVersion_ = org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.getDefaultInstance();
       liveServers_ = java.util.Collections.emptyList();
@@ -2252,6 +2266,7 @@ public final class ClusterStatusProtos {
       masterCoprocessors_ = java.util.Collections.emptyList();
       master_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       backupMasters_ = java.util.Collections.emptyList();
+      balancerOn_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -2337,6 +2352,9 @@ public final class ClusterStatusProtos {
       for (int i = 0; i < backupMasters_.size(); i++) {
         output.writeMessage(8, backupMasters_.get(i));
       }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBool(9, balancerOn_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -2377,6 +2395,10 @@ public final class ClusterStatusProtos {
       for (int i = 0; i < backupMasters_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(8, backupMasters_.get(i));
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(9, balancerOn_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -2426,6 +2448,11 @@ public final class ClusterStatusProtos {
       }
       result = result && getBackupMastersList()
           .equals(other.getBackupMastersList());
+      result = result && (hasBalancerOn() == other.hasBalancerOn());
+      if (hasBalancerOn()) {
+        result = result && (getBalancerOn()
+            == other.getBalancerOn());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -2466,6 +2493,10 @@ public final class ClusterStatusProtos {
       if (getBackupMastersCount() > 0) {
         hash = (37 * hash) + BACKUPMASTERS_FIELD_NUMBER;
         hash = (53 * hash) + getBackupMastersList().hashCode();
+      }
+      if (hasBalancerOn()) {
+        hash = (37 * hash) + BALANCERON_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getBalancerOn());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -2639,6 +2670,8 @@ public final class ClusterStatusProtos {
         } else {
           backupMastersBuilder_.clear();
         }
+        balancerOn_ = false;
+        bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
       
@@ -2746,6 +2779,10 @@ public final class ClusterStatusProtos {
         } else {
           result.backupMasters_ = backupMastersBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.balancerOn_ = balancerOn_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -2901,6 +2938,9 @@ public final class ClusterStatusProtos {
             }
           }
         }
+        if (other.hasBalancerOn()) {
+          setBalancerOn(other.getBalancerOn());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -3035,6 +3075,11 @@ public final class ClusterStatusProtos {
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addBackupMasters(subBuilder.buildPartial());
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000100;
+              balancerOn_ = input.readBool();
               break;
             }
           }
@@ -4243,6 +4288,27 @@ public final class ClusterStatusProtos {
         return backupMastersBuilder_;
       }
       
+      // optional bool balancerOn = 9;
+      private boolean balancerOn_ ;
+      public boolean hasBalancerOn() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      public boolean getBalancerOn() {
+        return balancerOn_;
+      }
+      public Builder setBalancerOn(boolean value) {
+        bitField0_ |= 0x00000100;
+        balancerOn_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearBalancerOn() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        balancerOn_ = false;
+        onChanged();
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:ClusterStatus)
     }
     
@@ -4294,7 +4360,7 @@ public final class ClusterStatusProtos {
       "spec\030\001 \002(\0132\020.RegionSpecifier\022!\n\013regionSt" +
       "ate\030\002 \002(\0132\014.RegionState\"N\n\016LiveServerInf",
       "o\022\033\n\006server\030\001 \002(\0132\013.ServerName\022\037\n\nserver" +
-      "Load\030\002 \002(\0132\013.ServerLoad\"\303\002\n\rClusterStatu" +
+      "Load\030\002 \002(\0132\013.ServerLoad\"\327\002\n\rClusterStatu" +
       "s\022.\n\014hbaseVersion\030\001 \001(\0132\030.HBaseVersionFi" +
       "leContent\022$\n\013liveServers\030\002 \003(\0132\017.LiveSer" +
       "verInfo\022 \n\013deadServers\030\003 \003(\0132\013.ServerNam" +
@@ -4302,9 +4368,10 @@ public final class ClusterStatusProtos {
       "nTransition\022\035\n\tclusterId\030\005 \001(\0132\n.Cluster" +
       "Id\022(\n\022masterCoprocessors\030\006 \003(\0132\014.Coproce" +
       "ssor\022\033\n\006master\030\007 \001(\0132\013.ServerName\022\"\n\rbac" +
-      "kupMasters\030\010 \003(\0132\013.ServerNameBF\n*org.apa",
-      "che.hadoop.hbase.protobuf.generatedB\023Clu" +
-      "sterStatusProtosH\001\240\001\001"
+      "kupMasters\030\010 \003(\0132\013.ServerName\022\022\n\nbalance",
+      "rOn\030\t \001(\010BF\n*org.apache.hadoop.hbase.pro" +
+      "tobuf.generatedB\023ClusterStatusProtosH\001\240\001" +
+      "\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -4340,7 +4407,7 @@ public final class ClusterStatusProtos {
           internal_static_ClusterStatus_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ClusterStatus_descriptor,
-              new java.lang.String[] { "HbaseVersion", "LiveServers", "DeadServers", "RegionsInTransition", "ClusterId", "MasterCoprocessors", "Master", "BackupMasters", },
+              new java.lang.String[] { "HbaseVersion", "LiveServers", "DeadServers", "RegionsInTransition", "ClusterId", "MasterCoprocessors", "Master", "BackupMasters", "BalancerOn", },
               org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.class,
               org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.Builder.class);
           return null;

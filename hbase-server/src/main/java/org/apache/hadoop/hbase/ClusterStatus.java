@@ -95,6 +95,7 @@ public class ClusterStatus extends VersionedWritable {
   private Map<String, RegionState> intransition;
   private String clusterId;
   private String[] masterCoprocessors;
+  private boolean balancerOn;
 
   /**
    * Constructor, for Writable
@@ -111,7 +112,8 @@ public class ClusterStatus extends VersionedWritable {
       final ServerName master,
       final Collection<ServerName> backupMasters,
       final Map<String, RegionState> rit,
-      final String[] masterCoprocessors) {
+      final String[] masterCoprocessors,
+      final boolean balancerOn) {
     this.hbaseVersion = hbaseVersion;
 
     this.liveServers = servers;
@@ -121,6 +123,7 @@ public class ClusterStatus extends VersionedWritable {
     this.intransition = rit;
     this.clusterId = clusterid;
     this.masterCoprocessors = masterCoprocessors;
+    this.balancerOn = balancerOn;
   }
 
   /**
@@ -275,6 +278,11 @@ public class ClusterStatus extends VersionedWritable {
      return masterCoprocessors;
   }
 
+
+  public boolean isBalancerOn() {
+    return balancerOn;
+  }
+
    /**
     * Convert a ClutserStatus to a protobuf ClusterStatus
     *
@@ -312,6 +320,7 @@ public class ClusterStatus extends VersionedWritable {
     for (ServerName backup : getBackupMasters()) {
       builder.addBackupMasters(ProtobufUtil.toServerName(backup));
     }
+    builder.setBalancerOn(balancerOn);
     return builder.build();
   }
 
@@ -343,6 +352,7 @@ public class ClusterStatus extends VersionedWritable {
     final String[] masterCoprocessors = proto.getMasterCoprocessorsList().toArray(new String[0]);
     return new ClusterStatus(proto.getHbaseVersion().getVersion(),
       ClusterId.convert(proto.getClusterId()).toString(),servers,deadServers,
-      ProtobufUtil.toServerName(proto.getMaster()),backupMasters,rit,masterCoprocessors);
+      ProtobufUtil.toServerName(proto.getMaster()),backupMasters,rit,masterCoprocessors,
+      proto.getBalancerOn());
   }
 }

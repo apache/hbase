@@ -63,4 +63,5 @@ message ClusterStatus {
   repeated Coprocessor masterCoprocessors = 6;
   optional ServerName master = 7;
   repeated ServerName backupMasters = 8;
+  optional bool balancerOn = 9;
 }

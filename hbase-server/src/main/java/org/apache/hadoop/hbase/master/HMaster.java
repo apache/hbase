@@ -1694,7 +1694,7 @@ Server {
       this.serverName,
       backupMasters,
       this.assignmentManager.copyRegionsInTransition(),
-      this.getCoprocessors());
+      this.getCoprocessors(), this.balanceSwitch);
   }
 
   public String getClusterId() {
