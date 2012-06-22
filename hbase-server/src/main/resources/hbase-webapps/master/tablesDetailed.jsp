@@ -71,7 +71,7 @@
     </div>
 
     <div class="container">
-    <div class="row">
+    <div class="row inner_header">
         <div class="span8">
             <h1>User Tables</h1>
         </div>

@@ -34,24 +34,62 @@
 %>
 
 <?xml version="1.0" encoding="UTF-8" ?>
-<!-- Commenting out DOCTYPE so our blue outline shows on hadoop 0.20.205.0, etc.
-     See tail of HBASE-2110 for explaination.
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
--->
+<!-- Dont put a doctype jetty doesnt serve the css/js out correctly so we need quirks mode on -->
 <html xmlns="http://www.w3.org/1999/xhtml">
-<head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-<title>ZooKeeper Dump</title>
-<link rel="stylesheet" type="text/css" href="/static/hbase.css" />
-</head>
-<body>
-<a id="logo" href="http://hbase.org"><img src="/static/hbase_logo.png" alt="HBase Logo" title="HBase Logo" /></a>
-<h1 id="page_title">ZooKeeper Dump</h1>
-<p id="links_menu"><a href="/master.jsp">Master</a>, <a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
-<hr id="head_rule" />
-<pre>
-<%= ZKUtil.dump(watcher) %>
-</pre>
+  <head>
+    <meta charset="utf-8">
+    <title>ZooKeeper Dump</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
 
-</body>
+
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/css/hbase.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+    <body>
+
+        <div class="navbar navbar-fixed-top">
+          <div class="navbar-inner">
+            <div class="container">
+              <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </a>
+              <a class="brand" href="/rs-status">HBase Region Server</a>
+              <div class="nav-collapse">
+                <ul class="nav">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/logs/">Local logs</a></li>
+                    <li><a href="/stacks">Thread Dump</a></li>
+                    <li><a href="/logLevel">Log Level</a></li>
+                    <li><a href="/dump">Debug dump</a></li>
+                </ul>
+              </div><!--/.nav-collapse -->
+            </div>
+          </div>
+        </div>
+
+        <div class="container">
+            <div class="row inner_header">
+                <div class="span8">
+                    <h1>Zookeeper Dump</h1>
+                </div>
+                <div class="span4 logo">
+                    <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
+                </div>
+            </div>
+            <div class="row">
+                <div class="span12">
+                    <pre><%= ZKUtil.dump(watcher).trim() %></pre>
+                </div>
+            </div>
+        </div>
+
+    </body>
 </html>

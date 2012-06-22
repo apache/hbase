@@ -92,7 +92,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
     </div>
 
     <div class="container">
-        <div class="row">
+        <div class="row inner_header">
             <div class="span8">
                 <h1>Master: <% master.getServerName().getHostname() %> </h1>
             </div>

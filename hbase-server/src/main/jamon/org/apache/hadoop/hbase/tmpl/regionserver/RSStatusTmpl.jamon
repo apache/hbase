@@ -89,7 +89,7 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
     </div>
 
 <div class="container">
-    <div class="row">
+    <div class="row inner_header">
         <div class="span8">
             <h1>RegionServer: <% serverName.getHostname() %></h1>
         </div>

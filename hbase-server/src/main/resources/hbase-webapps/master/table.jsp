@@ -106,7 +106,7 @@
 <div class="container">
 
 
-    <div class="row">
+    <div class="row inner_header">
         <div class="span8">
             <h1>Table action request accepted</h1>
         </div>
