@@ -73,11 +73,7 @@
 
 
     <link href="/static/css/bootstrap.css" rel="stylesheet">
-    <style>
-      body {
-        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
-      }
-    </style>
+    <link href="/static/css/hbase.css" rel="stylesheet">
     <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
     <!--[if lt IE 9]>
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
@@ -114,7 +110,7 @@
         <div class="span8">
             <h1>Table action request accepted</h1>
         </div>
-        <div class="span4">
+        <div class="span4 logo">
             <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
         </div>
     </div>

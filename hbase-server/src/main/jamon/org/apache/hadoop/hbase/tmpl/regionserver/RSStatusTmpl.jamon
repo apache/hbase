@@ -54,11 +54,7 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
     <meta name="description" content="">
 
     <link href="/static/css/bootstrap.css" rel="stylesheet">
-    <style type="text/css">
-      body {
-        padding-top: 60px;
-      }
-    </style>
+    <link href="/static/css/hbase.css" rel="stylesheet">
     <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
     <!--[if lt IE 9]>
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
@@ -97,7 +93,7 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
         <div class="span8">
             <h1>RegionServer: <% serverName.getHostname() %></h1>
         </div>
-        <div class="span4">
+        <div class="span4 logo">
             <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
         </div>
     </div>

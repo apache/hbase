@@ -56,12 +56,8 @@ org.apache.hadoop.hbase.HBaseConfiguration;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <link href="/static/css/bootstrap.css" rel="stylesheet">
-    <style  type="text/css">
-      body {
-        padding-top: 60px;
-      }
-    </style>
     <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="/static/css/hbase.css" rel="stylesheet">
     <!--[if lt IE 9]>
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
@@ -100,7 +96,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
             <div class="span8">
                 <h1>Master: <% master.getServerName().getHostname() %> </h1>
             </div>
-            <div class="span4">
+            <div class="span4 logo">
                 <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
             </div>
         </div>

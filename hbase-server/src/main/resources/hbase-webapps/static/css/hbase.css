@@ -15,39 +15,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-h1, h2, h3 { color: DarkSlateBlue }
-table { border: thin solid DodgerBlue }
-tr { border: thin solid DodgerBlue }
-td { border: thin solid DodgerBlue }
-th { border: thin solid DodgerBlue }
-#logo {float: right;}
-#logo img {border: none;}
-#page_title {}
-#tasks_menu {
-  padding: 10px;
-}
-
-div.warning {
-  border: 1px solid #666;
-  background-color: #fcc;
-  font-size: 110%;
-  font-weight: bold;
-}
-
-td.undeployed-region {
-  background-color: #faa;
-}
-
-tr.task-monitor-COMPLETE td {
-  background-color: #afa;
-}
-
-tr.task-monitor-ABORTED td {
-  background-color: #ffa;
-}
-
-tr.task-monitor-WAITING td {
-  background-color: #ccc;
-  font-style: italic;
-}
-+ 
+body { padding-top: 60px; }
+.logo img { float: right; }
