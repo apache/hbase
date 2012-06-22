@@ -51,6 +51,8 @@ public class OfflineMetaRepair {
     System.err
         .println("   -details          Display full report of all regions.");
     System.err.println("   -base <hdfs://>   Base Hbase Data directory");
+    System.err
+        .println("   -sidelineDir <hdfs://> HDFS path to backup existing meta and root.");
     System.err.println("   -fix              Auto fix as many problems as possible");
     System.err.println("   -fixHoles         Auto fix as region holes");
     Runtime.getRuntime().exit(-2);
@@ -85,6 +87,9 @@ public class OfflineMetaRepair {
         conf.set(HConstants.HBASE_DIR, path);
         conf.set("fs.defaultFS", conf.get(HConstants.HBASE_DIR));
         conf.set("fs.default.name", conf.get(HConstants.HBASE_DIR));
+      } else if (cmd.equals("-sidelineDir")) {
+        i++;
+        fsck.setSidelineDir(args[i]);        
       } else if (cmd.equals("-fixHoles")) {
         fixHoles = true;
       } else if (cmd.equals("-fix")) {
