@@ -925,7 +925,8 @@ public final class ProtobufUtil {
         edit.add(new KeyValue(keyValue.toByteArray()));
       }
       if (walEdit.getFamilyScopeCount() > 0) {
-        TreeMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>();
+        TreeMap<byte[], Integer> scopes =
+          new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
         for (FamilyScope scope: walEdit.getFamilyScopeList()) {
           scopes.put(scope.getFamily().toByteArray(),
             Integer.valueOf(scope.getScopeType().ordinal()));
