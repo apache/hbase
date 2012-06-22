@@ -150,9 +150,6 @@ public class HBaseFsck {
   private static final int DEFAULT_OVERLAPS_TO_SIDELINE = 2;
   private static final int DEFAULT_MAX_MERGE = 5;
 
-  private static final String DEFAULT_SIDELINE_DIR = ".hbcktmp-" + 
-                                          System.currentTimeMillis();
-  
   /**********************
    * Internal resources
    **********************/
@@ -163,6 +160,7 @@ public class HBaseFsck {
   private HBaseAdmin admin;
   private HTable meta;
   private ScheduledThreadPoolExecutor executor; // threads to retrieve data from regionservers
+  private long startMillis = System.currentTimeMillis();
 
   /***********
    * Options
@@ -183,7 +181,6 @@ public class HBaseFsck {
   private int maxMerge = DEFAULT_MAX_MERGE; // maximum number of overlapping regions to merge
   private int maxOverlapsToSideline = DEFAULT_OVERLAPS_TO_SIDELINE; // maximum number of overlapping regions to sideline
   private boolean sidelineBigOverlaps = false; // sideline overlaps with >maxMerge regions
-  private Path sidelineDir = null;
 
   private boolean rerun = false; // if we tried to fix something, rerun hbck
   private static boolean summary = false; // if we want to print less output
@@ -820,7 +817,7 @@ public class HBaseFsck {
 
     // we can rebuild, move old root and meta out of the way and start
     LOG.info("HDFS regioninfo's seems good.  Sidelining old .META.");
-    Path backupDir = sidelineOldRootAndMeta();
+    sidelineOldRootAndMeta();
 
     LOG.info("Creating new .META.");
     HRegion meta = createNewRootAndMeta();
@@ -835,7 +832,6 @@ public class HBaseFsck {
     meta.put(puts.toArray(new Put[0]));
     HRegion.closeHRegion(meta);
     LOG.info("Success! .META. table rebuilt.");
-    LOG.info("Old -ROOT- and .META. are moved into " + backupDir);
     return true;
   }
 
@@ -859,11 +855,11 @@ public class HBaseFsck {
   }
 
   private Path getSidelineDir() throws IOException {
-    if (sidelineDir == null) {
-      Path hbaseDir = FSUtils.getRootDir(conf);
-      sidelineDir = new Path(hbaseDir, DEFAULT_SIDELINE_DIR);
-    }
-    return sidelineDir;
+    Path hbaseDir = FSUtils.getRootDir(conf);
+    Path hbckDir = new Path(hbaseDir.getParent(), "hbck");
+    Path backupDir = new Path(hbckDir, hbaseDir.getName() + "-"
+        + startMillis);
+    return backupDir;
   }
 
   /**
@@ -961,7 +957,8 @@ public class HBaseFsck {
     // put current -ROOT- and .META. aside.
     Path hbaseDir = new Path(conf.get(HConstants.HBASE_DIR));
     FileSystem fs = hbaseDir.getFileSystem(conf);
-    Path backupDir = getSidelineDir();
+    Path backupDir = new Path(hbaseDir.getParent(), hbaseDir.getName() + "-"
+        + startMillis);
     fs.mkdirs(backupDir);
 
     sidelineTable(fs, HConstants.ROOT_TABLE_NAME, hbaseDir, backupDir);
@@ -2989,14 +2986,6 @@ public class HBaseFsck {
     timelag = seconds * 1000; // convert to milliseconds
   }
 
-  /**
-   * 
-   * @param sidelineDir - HDFS path to sideline data
-   */
-  public void setSidelineDir(String sidelineDir) {
-    this.sidelineDir = new Path(sidelineDir);
-  }
-  
   protected static void printUsageAndExit() {
     System.err.println("Usage: fsck [opts] {only tables}");
     System.err.println(" where [opts] are:");
