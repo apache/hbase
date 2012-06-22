@@ -1086,35 +1086,36 @@ Server {
       this.assignmentManager.getAssignment(encodedRegionName);
     if (p == null)
       throw new UnknownRegionException(Bytes.toStringBinary(encodedRegionName));
-    HRegionInfo hri = p.getFirst();
     ServerName dest = null;
     if (destServerName == null || destServerName.length == 0) {
-      LOG.info("Passed destination servername is null/empty so " +
-        "choosing a server at random");
-      this.assignmentManager.clearRegionPlan(hri);
-      // Unassign will reassign it elsewhere choosing random server.
-      this.assignmentManager.unassign(hri);
-    } else {
-      dest = new ServerName(Bytes.toString(destServerName));
-      try {
-        if (this.cpHost != null) {
-          if (this.cpHost.preMove(p.getFirst(), p.getSecond(), dest)) {
-            return;
-          }
-        }
-        RegionPlan rp = new RegionPlan(p.getFirst(), p.getSecond(), dest);
-        LOG.info("Added move plan " + rp + ", running balancer");
-        this.assignmentManager.balance(rp);
-        if (this.cpHost != null) {
-          this.cpHost.postMove(p.getFirst(), p.getSecond(), dest);
-        }
-      } catch (IOException ioe) {
-        UnknownRegionException ure = new UnknownRegionException(
-            Bytes.toStringBinary(encodedRegionName));
-        ure.initCause(ioe);
-        throw ure;
-      }
+      LOG.info("Passed destination servername is null or empty so choosing a server at random");
+      List<ServerName> destServers = this.serverManager.getOnlineServersList();
+      destServers.remove(p.getSecond());
+      // If i have only one RS then destination can be null.
+      dest = balancer.randomAssignment(destServers);
     }
+    
+    // Now we can do the move
+    RegionPlan rp = new RegionPlan(p.getFirst(), p.getSecond(), dest);
+    
+    try {
+      if (this.cpHost != null) {
+        if (this.cpHost.preMove(p.getFirst(), p.getSecond(), dest)) {
+          return;
+        }
+      }
+      LOG.info("Added move plan " + rp + ", running balancer");
+      this.assignmentManager.balance(rp);
+      if (this.cpHost != null) {
+        this.cpHost.postMove(p.getFirst(), p.getSecond(), dest);
+      }
+    } catch (IOException ioe) {
+      UnknownRegionException ure = new UnknownRegionException(
+          Bytes.toStringBinary(encodedRegionName));
+      ure.initCause(ioe);
+      throw ure;
+    }
+
   }
 
   public void createTable(HTableDescriptor hTableDescriptor,
