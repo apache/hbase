@@ -62,6 +62,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.HasThread;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -211,7 +212,7 @@ public class HBaseClient {
   /** Thread that reads responses and notifies callers.  Each connection owns a
    * socket connected to a remote address.  Calls are multiplexed through this
    * socket: responses may be delivered out of order. */
-  private class Connection extends Thread {
+  private class Connection extends HasThread {
     private ConnectionId remoteId;
     private Socket socket = null;                 // connected socket
     private DataInputStream in;

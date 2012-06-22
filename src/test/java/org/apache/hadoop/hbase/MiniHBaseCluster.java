@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.hbase.util.HasThread;
 
 /**
  * This class creates a single process HBase cluster.

@@ -44,12 +44,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HasThread;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -598,7 +597,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
    *
    * Thread is triggered into action by {@link LruBlockCache#runEviction()}
    */
-  private static class EvictionThread extends Thread {
+  private static class EvictionThread extends HasThread {
     private WeakReference<LruBlockCache> cache;
 
     public EvictionThread(LruBlockCache cache) {

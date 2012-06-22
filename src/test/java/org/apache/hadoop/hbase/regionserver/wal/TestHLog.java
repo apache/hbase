@@ -58,6 +58,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.apache.hadoop.hbase.util.HasThread;
 
 /** JUnit test case for HLog */
 public class TestHLog  {
@@ -385,7 +386,7 @@ public class TestHLog  {
     final DistributedFileSystem recoveredFs = (DistributedFileSystem)fs;
     final Configuration rlConf = conf;
 
-    class RecoverLogThread extends Thread {
+    class RecoverLogThread extends HasThread {
       public Exception exception = null;
       public void run() {
           try {

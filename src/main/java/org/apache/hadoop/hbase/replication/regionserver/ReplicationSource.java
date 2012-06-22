@@ -53,6 +53,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import org.apache.hadoop.hbase.util.HasThread;
 
 /**
  * Class that handles the source of a replication stream.
@@ -66,7 +67,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * <p/>
  *
  */
-public class ReplicationSource extends Thread
+public class ReplicationSource extends HasThread
     implements ReplicationSourceInterface {
 
   private static final Log LOG = LogFactory.getLog(ReplicationSource.class);

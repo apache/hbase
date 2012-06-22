@@ -25,6 +25,7 @@ import java.util.HashSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.HasThread;
 
 public abstract class MultithreadedTestUtil {
 
@@ -102,7 +103,7 @@ public abstract class MultithreadedTestUtil {
    * A thread that can be added to a test context, and properly
    * passes exceptions through.
    */
-  public static abstract class TestThread extends Thread {
+  public static abstract class TestThread extends HasThread {
     protected final TestContext ctx;
     protected boolean stopped;
 

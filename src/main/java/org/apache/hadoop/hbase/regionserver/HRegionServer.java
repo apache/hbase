@@ -137,6 +137,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.hadoop.hbase.util.HasThread;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
@@ -1990,7 +1991,7 @@ public class HRegionServer implements HRegionInterface,
   /*
    * Thread to run close of a region.
    */
-  private static class RegionCloserThread extends Thread {
+  private static class RegionCloserThread extends HasThread {
     private final HRegion r;
 
     protected RegionCloserThread(final HRegion r) {
@@ -2032,7 +2033,7 @@ public class HRegionServer implements HRegionInterface,
       this.lock.writeLock().unlock();
     }
     // Run region closes in parallel.
-    Set<Thread> threads = new HashSet<Thread>();
+    List<HasThread> threads = new ArrayList<HasThread>();
     try {
       for (final HRegion r : regionsToClose) {
         RegionCloserThread t = new RegionCloserThread(r);
@@ -2040,7 +2041,7 @@ public class HRegionServer implements HRegionInterface,
         threads.add(t);
       }
     } finally {
-      for (Thread t : threads) {
+      for (HasThread t : threads) {
         while (t.isAlive()) {
           try {
             t.join();

@@ -103,6 +103,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
@@ -134,7 +135,7 @@ import com.google.common.collect.Lists;
  * @see HMasterRegionInterface
  * @see Watcher
  */
-public class HMaster extends Thread implements HMasterInterface,
+public class HMaster extends HasThread implements HMasterInterface,
     HMasterRegionInterface, Watcher, StoppableMaster {
   // MASTER is name of the webapp and the attribute name used stuffing this
   //instance into web context.

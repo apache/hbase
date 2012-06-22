@@ -31,15 +31,16 @@ import org.apache.hadoop.util.StringUtils;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import org.apache.hadoop.hbase.util.HasThread;
 
 /**
  * Runs periodically to determine if the HLog should be rolled.
  *
- * NOTE: This class extends Thread rather than Chore because the sleep time
+ * NOTE: This class extends HasThread rather than Chore because the sleep time
  * can be interrupted when there is something to do, rather than the Chore
  * sleep time which is invariant.
  */
-class LogRoller extends Thread implements LogRollListener {
+class LogRoller extends HasThread implements LogRollListener {
   static final Log LOG = LogFactory.getLog(LogRoller.class);
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);

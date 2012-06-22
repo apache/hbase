@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.thrift.TException;
 
 /**
@@ -53,7 +54,7 @@ import org.apache.thrift.TException;
  * <p>
  * This can be enabled with <i>hbase.regionserver.export.thrift</i> set to true.
  */
-public class HRegionThriftServer extends Thread {
+public class HRegionThriftServer extends HasThread {
 
   public static final Log LOG = LogFactory.getLog(HRegionThriftServer.class);
 

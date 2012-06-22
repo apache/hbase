@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.hadoop.hbase.util.HasThread;
 
 /** memstore test case */
 public class TestMemStore extends TestCase {
@@ -376,7 +377,7 @@ public class TestMemStore extends TestCase {
   }
 
 
-  private static class ReadOwnWritesTester extends Thread {
+  private static class ReadOwnWritesTester extends HasThread {
     static final int NUM_TRIES = 1000;
 
     final byte[] row;

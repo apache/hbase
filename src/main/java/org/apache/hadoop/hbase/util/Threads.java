@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.HasThread;
 
 /**
  * Thread Utility
@@ -45,6 +46,12 @@ public class Threads {
   public static Thread setDaemonThreadRunning(final Thread t,
     final String name) {
     return setDaemonThreadRunning(t, name, null);
+  }
+
+  public static HasThread setDaemonThreadRunning(final HasThread t,
+      final String name) {
+    setDaemonThreadRunning(t.getThread(), name, null);
+    return t;
   }
 
   /**
@@ -66,12 +73,22 @@ public class Threads {
     return t;
   }
 
+  public static HasThread setDaemonThreadRunning(final HasThread t,
+      final String name, final UncaughtExceptionHandler handler) {
+    setDaemonThreadRunning(t.getThread(), name, handler);
+    return t;
+  }
+
   /**
    * Shutdown passed thread using isAlive and join.
    * @param t Thread to shutdown
    */
   public static void shutdown(final Thread t) {
     shutdown(t, 0);
+  }
+
+  public static void shutdown(final HasThread t) {
+    shutdown(t.getThread(), 0);
   }
 
   /**
@@ -89,7 +106,10 @@ public class Threads {
       }
     }
   }
-
+  
+  public static void shutdown(final HasThread t, final long joinwait) {
+    shutdown(t.getThread(), joinwait);
+  }
 
   /**
    * @param t Waits on the passed thread to die dumping a threaddump every

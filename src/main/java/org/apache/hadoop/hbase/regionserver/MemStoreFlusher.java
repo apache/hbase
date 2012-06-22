@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;
@@ -43,13 +44,13 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Thread that flushes cache on request
  *
- * NOTE: This class extends Thread rather than Chore because the sleep time
+ * NOTE: This class extends HasThread rather than Chore because the sleep time
  * can be interrupted when there is something to do, rather than the Chore
  * sleep time which is invariant.
  *
  * @see FlushRequester
  */
-class MemStoreFlusher extends Thread implements FlushRequester {
+class MemStoreFlusher extends HasThread implements FlushRequester {
   static final Log LOG = LogFactory.getLog(MemStoreFlusher.class);
   // These two data members go together.  Any entry in the one must have
   // a corresponding entry in the other.

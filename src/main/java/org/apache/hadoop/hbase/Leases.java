@@ -30,6 +30,7 @@ import java.util.concurrent.DelayQueue;
 import java.util.concurrent.TimeUnit;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.util.HasThread;
 
 /**
  * Leases
@@ -46,11 +47,11 @@ import java.io.IOException;
  * You should close() the instance if you want to clean up the thread properly.
  *
  * <p>
- * NOTE: This class extends Thread rather than Chore because the sleep time
+ * NOTE: This class extends HasThread rather than Chore because the sleep time
  * can be interrupted when there is something to do, rather than the Chore
  * sleep time which is invariant.
  */
-public class Leases extends Thread {
+public class Leases extends HasThread {
   private static final Log LOG = LogFactory.getLog(Leases.class.getName());
   private final int leasePeriod;
   private final int leaseCheckFrequency;

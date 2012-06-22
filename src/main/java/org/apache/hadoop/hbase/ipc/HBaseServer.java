@@ -75,6 +75,7 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hbase.util.HasThread;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -273,7 +274,7 @@ public abstract class HBaseServer {
   }
 
   /** Listens on the socket. Creates jobs for the handler threads*/
-  private class Listener extends Thread {
+  private class Listener extends HasThread {
 
     private ServerSocketChannel acceptChannel = null; //the accept channel
     private Selector selector = null; //the selector that we use for the server
@@ -564,7 +565,7 @@ public abstract class HBaseServer {
   }
 
   // Sends responses of RPC back to clients.
-  private class Responder extends Thread {
+  private class Responder extends HasThread {
     private Selector writeSelector;
     private int pending;         // connections waiting to register
 
@@ -1034,7 +1035,7 @@ public abstract class HBaseServer {
   }
 
   /** Handles queued calls . */
-  private class Handler extends Thread {
+  private class Handler extends HasThread {
     static final int BUFFER_INITIAL_SIZE = 1024;
     private MonitoredRPCHandler status;
 

@@ -30,6 +30,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HasThread;
+
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -290,7 +292,7 @@ public class LocalHBaseCluster {
       }
     }
     if (this.masters != null) {
-      for (Thread t : this.masters) {
+      for (HasThread t : this.masters) {
         if (t.isAlive()) {
           try {
             t.join();

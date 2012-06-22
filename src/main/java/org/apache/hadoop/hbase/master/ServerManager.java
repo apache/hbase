@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.hadoop.hbase.util.HasThread;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo,
@@ -1083,7 +1084,7 @@ public class ServerManager {
   }
 
   // should ServerTimeoutMonitor and ServerMonitor be merged XXX?
-  private class ServerTimeoutMonitor extends Thread {
+  private class ServerTimeoutMonitor extends HasThread {
     private final Log LOG =
         LogFactory.getLog(ServerTimeoutMonitor.class.getName());
     int timeout;

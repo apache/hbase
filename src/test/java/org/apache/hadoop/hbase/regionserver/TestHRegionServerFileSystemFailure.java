@@ -19,6 +19,7 @@ import static org.junit.Assert.*;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.apache.hadoop.hbase.util.HasThread;
 
 public class TestHRegionServerFileSystemFailure {
   private static final Log LOG = LogFactory
@@ -43,7 +44,7 @@ public class TestHRegionServerFileSystemFailure {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private static class TableLoader extends Thread {
+  private static class TableLoader extends HasThread {
     private final HTable table;
 
     public TableLoader(HTable table) {

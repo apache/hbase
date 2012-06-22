@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.RuntimeExceptionAbortStrategy;
 import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Threads;
@@ -422,7 +423,7 @@ public class HLog implements Syncable {
     }
 
     logSyncerThread = new LogSyncer(this.optionalFlushInterval);
-    Threads.setDaemonThreadRunning(logSyncerThread,
+    Threads.setDaemonThreadRunning(logSyncerThread.getThread(),
         Thread.currentThread().getName() + ".logSyncer");
   }
 
@@ -949,7 +950,7 @@ public class HLog implements Syncable {
    * This thread is responsible to call syncFs and buffer up the writers while
    * it happens.
    */
-   class LogSyncer extends Thread {
+   class LogSyncer extends HasThread {
 
     // Using fairness to make sure locks are given in order
     private final ReentrantLock lock = new ReentrantLock(true);
@@ -1088,7 +1089,7 @@ public class HLog implements Syncable {
             // after logRollPending became true. So syncing here is not
             // required.
             //
-            // If log roll is pending then either the old log file has been 
+            // If log roll is pending then either the old log file has been
             // synced but not closed. Or old log file has been successfully
             // closed but a new one has not yet been created. In the latter
             // case this.writer will be NULL

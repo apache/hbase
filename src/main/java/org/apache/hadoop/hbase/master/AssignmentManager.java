@@ -19,6 +19,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.master.AssignmentPlan.POSITION;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.HasThread;
 
 /**
  * Manages the preferences for assigning regions to specific servers.
@@ -234,7 +235,7 @@ public class AssignmentManager {
     return this.assignmentPlan.getAssignmentUpdateTS(region);
   }
 
-  private class TransientAssignmentHandler extends Thread {
+  private class TransientAssignmentHandler extends HasThread {
     @Override
     public void run() {
       LOG.debug("Started TransientAssignmentHandler");

@@ -31,11 +31,12 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.HasThread;
 
 /**
  *  Runs a continuous loop, appending files to measure perf
  */
-public class HdfsAppender extends Thread
+public class HdfsAppender extends HasThread
 {
   private static final Log LOG = LogFactory.getLog(HdfsAppender.class);
 

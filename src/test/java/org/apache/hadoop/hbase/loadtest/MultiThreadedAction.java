@@ -27,7 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
-
 public abstract class MultiThreadedAction
 {
   private static final Log LOG = LogFactory.getLog(MultiThreadedAction.class);

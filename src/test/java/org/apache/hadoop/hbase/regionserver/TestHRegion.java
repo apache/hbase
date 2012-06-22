@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.util.Threads;
 
 import com.google.common.collect.Lists;
 
+import org.apache.hadoop.hbase.util.HasThread;
 
 /**
  * Basic stand-alone testing of HRegion.
@@ -184,7 +185,7 @@ public class TestHRegion extends HBaseTestCase {
    * Thread that does get on single row until 'done' flag is flipped.  If an
    * exception causes us to fail, it records it.
    */
-  class GetTillDoneOrException extends Thread {
+  class GetTillDoneOrException extends HasThread {
     private final Get g;
     private final AtomicBoolean done;
     private final AtomicInteger count;
@@ -2407,7 +2408,7 @@ public class TestHRegion extends HBaseTestCase {
     flushThread.checkNoError();
   }
 
-  protected class FlushThread extends Thread {
+  protected class FlushThread extends HasThread {
     private volatile boolean done;
     private Throwable error = null;
 
@@ -2537,7 +2538,7 @@ public class TestHRegion extends HBaseTestCase {
     flushThread.checkNoError();
   }
 
-  protected class PutThread extends Thread {
+  protected class PutThread extends HasThread {
     private volatile boolean done;
     private volatile int numPutsFinished = 0;
 
