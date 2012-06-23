@@ -2662,7 +2662,18 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       byte[] regionName) throws IOException {
     checkOpen();
     HRegion region = getRegion(regionName);
-    return region.bulkLoadHFiles(familyPaths);
+    boolean bypass = false;
+    if (region.getCoprocessorHost() != null) {
+      bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
+    }
+    boolean loaded = false;
+    if (!bypass) {
+      loaded = region.bulkLoadHFiles(familyPaths);
+    }
+    if (region.getCoprocessorHost() != null) {
+      loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, loaded);
+    }
+    return loaded;
   }
 
   Map<String, Integer> rowlocks = new ConcurrentHashMap<String, Integer>();

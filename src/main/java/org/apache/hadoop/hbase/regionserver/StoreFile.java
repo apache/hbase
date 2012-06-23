@@ -231,7 +231,7 @@ public class StoreFile extends SchemaConfigured {
    * @param dataBlockEncoder data block encoding algorithm.
    * @throws IOException When opening the reader fails.
    */
-  StoreFile(final FileSystem fs,
+  public StoreFile(final FileSystem fs,
             final Path p,
             final Configuration conf,
             final CacheConfig cacheConf,
