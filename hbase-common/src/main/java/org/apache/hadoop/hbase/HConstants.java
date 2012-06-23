@@ -229,6 +229,9 @@ public final class HConstants {
   /** Like the previous, but for old logs that are about to be deleted */
   public static final String HREGION_OLDLOGDIR_NAME = ".oldlogs";
 
+  /** Used by HBCK to sideline backup data */
+  public static final String HBCK_SIDELINEDIR_NAME = ".hbck";
+
   /** Used to construct the name of the compaction directory during compaction */
   public static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";
 
@@ -594,7 +597,8 @@ public final class HConstants {
   public static final List<String> HBASE_NON_USER_TABLE_DIRS = new ArrayList<String>(
       Arrays.asList(new String[]{ HREGION_LOGDIR_NAME, HREGION_OLDLOGDIR_NAME,
           CORRUPT_DIR_NAME, Bytes.toString(META_TABLE_NAME),
-          Bytes.toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME }));
+          Bytes.toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME,
+          HBCK_SIDELINEDIR_NAME }));
 
   public static final Pattern CP_HTD_ATTR_KEY_PATTERN = Pattern.compile
       ("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);

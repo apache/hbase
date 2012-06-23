@@ -46,13 +46,15 @@ public class OfflineMetaRepair {
   private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
 
   protected static void printUsageAndExit() {
-    System.err.println("Usage: OfflineMetaRepair [opts] ");
-    System.err.println(" where [opts] are:");
-    System.err
-        .println("   -details          Display full report of all regions.");
-    System.err.println("   -base <hdfs://>   Base Hbase Data directory");
-    System.err.println("   -fix              Auto fix as many problems as possible");
-    System.err.println("   -fixHoles         Auto fix as region holes");
+    StringBuilder sb = new StringBuilder();
+    sb.append("Usage: OfflineMetaRepair [opts]\n").
+       append(" where [opts] are:\n").
+       append("   -details               Display full report of all regions.\n").
+       append("   -base <hdfs://>        Base Hbase Data directory.\n").
+       append("   -sidelineDir <hdfs://> HDFS path to backup existing meta and root.\n").
+       append("   -fix                   Auto fix as many problems as possible.\n").
+       append("   -fixHoles              Auto fix as region holes.");
+    System.err.println(sb.toString());
     Runtime.getRuntime().exit(-2);
   }
 
@@ -79,12 +81,24 @@ public class OfflineMetaRepair {
       if (cmd.equals("-details")) {
         fsck.setDisplayFullReport();
       } else if (cmd.equals("-base")) {
+        if (i == args.length - 1) {
+          System.err.println("OfflineMetaRepair: -base needs an HDFS path.");
+          printUsageAndExit();
+        }
         // update hbase root dir to user-specified base
         i++;
         String path = args[i];
         conf.set(HConstants.HBASE_DIR, path);
         conf.set("fs.defaultFS", conf.get(HConstants.HBASE_DIR));
         conf.set("fs.default.name", conf.get(HConstants.HBASE_DIR));
+      } else if (cmd.equals("-sidelineDir")) {
+        if (i == args.length - 1) {
+          System.err.println("OfflineMetaRepair: -sidelineDir needs an HDFS path.");
+          printUsageAndExit();
+        }
+        // set the hbck sideline dir to user-specified one
+        i++;
+        fsck.setSidelineDir(args[i]);
       } else if (cmd.equals("-fixHoles")) {
         fixHoles = true;
       } else if (cmd.equals("-fix")) {
