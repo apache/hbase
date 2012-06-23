@@ -112,8 +112,13 @@ fi
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
 
-# CLASSPATH initially contains $HBASE_CONF_DIR
-CLASSPATH="${HBASE_CONF_DIR}"
+# user specified classpath to override everything else goes first
+if [ "$HBASE_OVERRIDE_CLASSPATH" != "" ]; then
+  CLASSPATH="${HBASE_OVERRIDE_CLASSPATH}":"${HBASE_CONF_DIR}"
+else
+  CLASSPATH="${HBASE_CONF_DIR}"
+fi
+
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
 add_maven_deps_to_classpath() {
