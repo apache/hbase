@@ -1093,6 +1093,8 @@ Server {
       destServers.remove(p.getSecond());
       // If i have only one RS then destination can be null.
       dest = balancer.randomAssignment(destServers);
+    } else {
+      dest = new ServerName(Bytes.toString(destServerName));
     }
     
     // Now we can do the move
