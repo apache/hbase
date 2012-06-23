@@ -1364,10 +1364,26 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Turn the load balancer on or off.
    * @param b If true, enable balancer. If false, disable balancer.
    * @return Previous balancer value
+   * @deprecated use setBalancerRunning(boolean, boolean) instead
    */
+  @Deprecated
   public boolean balanceSwitch(final boolean b)
   throws MasterNotRunningException, ZooKeeperConnectionException {
     return getMaster().balanceSwitch(b);
+  }
+
+  /**
+   * Turn the load balancer on or off.
+   * @param on If true, enable balancer. If false, disable balancer.
+   * @param synchronous If true, it waits until current balance() call, if outstanding, to return.
+   * @return Previous balancer value
+   */
+  public boolean setBalancerRunning(final boolean on, final boolean synchronous)
+  throws MasterNotRunningException, ZooKeeperConnectionException {
+    if (synchronous == false) {
+      return balanceSwitch(on);
+    }
+    return getMaster().synchronousBalanceSwitch(on);
   }
 
   /**
