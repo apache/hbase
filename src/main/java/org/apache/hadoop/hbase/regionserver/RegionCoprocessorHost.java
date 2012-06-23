@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;
@@ -1267,4 +1268,58 @@ public class RegionCoprocessorHost
       }
     }
   }
+
+  /**
+   * @param familyPaths pairs of { CF, file path } submitted for bulk load
+   * @return true if the default operation should be bypassed
+   * @throws IOException
+   */
+  public boolean preBulkLoadHFile(List<Pair<byte[], String>> familyPaths) throws IOException {
+    boolean bypass = false;
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionObserver)env.getInstance()).preBulkLoadHFile(ctx, familyPaths);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+
+    return bypass;
+  }
+
+  /**
+   * @param familyPaths pairs of { CF, file path } submitted for bulk load
+   * @param hasLoaded whether load was successful or not
+   * @return the possibly modified value of hasLoaded
+   * @throws IOException
+   */
+  public boolean postBulkLoadHFile(List<Pair<byte[], String>> familyPaths, boolean hasLoaded)
+      throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          hasLoaded = ((RegionObserver)env.getInstance()).postBulkLoadHFile(ctx,
+            familyPaths, hasLoaded);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+
+    return hasLoaded;
+  }
+
 }

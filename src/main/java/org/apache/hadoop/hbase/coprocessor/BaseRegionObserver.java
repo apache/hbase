@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.Pair;
 
 import java.io.IOException;
 
@@ -273,5 +274,16 @@ public abstract class BaseRegionObserver implements RegionObserver {
   @Override
   public void postWALRestore(ObserverContext<RegionCoprocessorEnvironment> env,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
+  }
+
+  @Override
+  public void preBulkLoadHFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+    List<Pair<byte[], String>> familyPaths) throws IOException {
+  }
+
+  @Override
+  public boolean postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+    List<Pair<byte[], String>> familyPaths, boolean hasLoaded) throws IOException {
+    return hasLoaded;
   }
 }

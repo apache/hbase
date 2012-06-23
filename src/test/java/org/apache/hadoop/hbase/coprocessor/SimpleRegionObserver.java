@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -45,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * A sample region observer that tests the RegionObserver interface.
@@ -85,6 +88,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   boolean hadPostScannerClose = false;
   boolean hadPreScannerOpen = false;
   boolean hadPostScannerOpen = false;
+  boolean hadPreBulkLoadHFile = false;
+  boolean hadPostBulkLoadHFile = false;
 
   @Override
   public void preOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
@@ -384,6 +389,43 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     return result;
   }
 
+  @Override
+  public void preBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+                               List<Pair<byte[], String>> familyPaths) throws IOException {
+    RegionCoprocessorEnvironment e = ctx.getEnvironment();
+    assertNotNull(e);
+    assertNotNull(e.getRegion());
+    if (Arrays.equals(e.getRegion().getTableDesc().getName(),
+        TestRegionObserverInterface.TEST_TABLE)) {
+      assertNotNull(familyPaths);
+      assertEquals(1,familyPaths.size());
+      assertArrayEquals(familyPaths.get(0).getFirst(), TestRegionObserverInterface.A);
+      String familyPath = familyPaths.get(0).getSecond();
+      String familyName = Bytes.toString(TestRegionObserverInterface.A);
+      assertEquals(familyPath.substring(familyPath.length()-familyName.length()-1),"/"+familyName);
+    }
+    hadPreBulkLoadHFile = true;
+  }
+
+  @Override
+  public boolean postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
+                                   List<Pair<byte[], String>> familyPaths, boolean hasLoaded) throws IOException {
+    RegionCoprocessorEnvironment e = ctx.getEnvironment();
+    assertNotNull(e);
+    assertNotNull(e.getRegion());
+    if (Arrays.equals(e.getRegion().getTableDesc().getName(),
+        TestRegionObserverInterface.TEST_TABLE)) {
+      assertNotNull(familyPaths);
+      assertEquals(1,familyPaths.size());
+      assertArrayEquals(familyPaths.get(0).getFirst(), TestRegionObserverInterface.A);
+      String familyPath = familyPaths.get(0).getSecond();
+      String familyName = Bytes.toString(TestRegionObserverInterface.A);
+      assertEquals(familyPath.substring(familyPath.length()-familyName.length()-1),"/"+familyName);
+    }
+    hadPostBulkLoadHFile = true;
+    return hasLoaded;
+  }
+
   public boolean hadPreGet() {
     return hadPreGet;
   }
@@ -429,5 +471,13 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
   public boolean hadDeleted() {
     return hadPreDeleted && hadPostDeleted;
+  }
+
+  public boolean hadPostBulkLoadHFile() {
+    return hadPostBulkLoadHFile;
+  }
+
+  public boolean hadPreBulkLoadHFile() {
+    return hadPreBulkLoadHFile;
   }
 }
