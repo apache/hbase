@@ -3122,10 +3122,20 @@ public class  HRegionServer implements ClientProtocol,
       HRegion region = getRegion(request.getRegion());
       List<Pair<byte[], String>> familyPaths = new ArrayList<Pair<byte[], String>>();
       for (FamilyPath familyPath: request.getFamilyPathList()) {
-        familyPaths.add(new Pair<byte[], String>(
-          familyPath.getFamily().toByteArray(), familyPath.getPath()));
+        familyPaths.add(new Pair<byte[], String>(familyPath.getFamily().toByteArray(),
+          familyPath.getPath()));
       }
-      boolean loaded = region.bulkLoadHFiles(familyPaths);
+      boolean bypass = false;
+      if (region.getCoprocessorHost() != null) {
+        bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
+      }
+      boolean loaded = false;
+      if (!bypass) {
+        loaded = region.bulkLoadHFiles(familyPaths);
+      }
+      if (region.getCoprocessorHost() != null) {
+        loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, loaded);
+      }
       BulkLoadHFileResponse.Builder builder = BulkLoadHFileResponse.newBuilder();
       builder.setLoaded(loaded);
       return builder.build();

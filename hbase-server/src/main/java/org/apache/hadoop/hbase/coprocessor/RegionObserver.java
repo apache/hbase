@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Coprocessors implement this interface to observe and mediate client actions
@@ -655,4 +656,28 @@ public interface RegionObserver extends Coprocessor {
    */
   void postWALRestore(final ObserverContext<RegionCoprocessorEnvironment> ctx,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
+
+  /**
+   * Called before bulkLoadHFile. Users can create a StoreFile instance to
+   * access the contents of a HFile.
+   *
+   * @param ctx
+   * @param familyPaths pairs of { CF, HFile path } submitted for bulk load. Adding
+   * or removing from this list will add or remove HFiles to be bulk loaded.
+   * @throws IOException
+   */
+  void preBulkLoadHFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+    List<Pair<byte[], String>> familyPaths) throws IOException;
+
+  /**
+   * Called after bulkLoadHFile.
+   *
+   * @param ctx
+   * @param familyPaths pairs of { CF, HFile path } submitted for bulk load
+   * @param hasLoaded whether the bulkLoad was successful
+   * @return the new value of hasLoaded
+   * @throws IOException
+   */
+  boolean postBulkLoadHFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+    List<Pair<byte[], String>> familyPaths, boolean hasLoaded) throws IOException;
 }

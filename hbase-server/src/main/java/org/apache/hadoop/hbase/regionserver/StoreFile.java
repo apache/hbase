@@ -88,7 +88,7 @@ import com.google.common.collect.Ordering;
  * The reason for this weird pattern where you use a different instance for the
  * writer and a reader is that we write once but read a lot more.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate("Coprocessor")
 public class StoreFile extends SchemaConfigured {
   static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
 
@@ -233,7 +233,7 @@ public class StoreFile extends SchemaConfigured {
    * @param dataBlockEncoder data block encoding algorithm.
    * @throws IOException When opening the reader fails.
    */
-  StoreFile(final FileSystem fs,
+  public StoreFile(final FileSystem fs,
             final Path p,
             final Configuration conf,
             final CacheConfig cacheConf,

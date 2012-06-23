@@ -34,6 +34,8 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -52,6 +54,9 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -447,6 +452,37 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
+  @Test
+  public void bulkLoadHFileTest() throws Exception {
+    String testName = TestRegionObserverInterface.class.getName()+".bulkLoadHFileTest";
+    byte[] tableName = TEST_TABLE;
+    Configuration conf = util.getConfiguration();
+    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadPreBulkLoadHFile", "hadPostBulkLoadHFile"},
+        tableName,
+        new Boolean[] {false, false}
+    );
+
+    FileSystem fs = util.getTestFileSystem();
+    final Path dir = util.getDataTestDir(testName).makeQualified(fs);
+    Path familyDir = new Path(dir, Bytes.toString(A));
+
+    createHFile(util.getConfiguration(), fs, new Path(familyDir,Bytes.toString(A)), A, A);
+
+    //Bulk load
+    new LoadIncrementalHFiles(conf).doBulkLoad(dir, new HTable(conf, tableName));
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadPreBulkLoadHFile", "hadPostBulkLoadHFile"},
+        tableName,
+        new Boolean[] {true, true}
+    );
+    util.deleteTable(tableName);
+    table.close();
+  }
+
   // check each region whether the coprocessor upcalls are called or not.
   private void verifyMethodResult(Class c, String methodName[], byte[] tableName,
                                   Object value[]) throws IOException {
@@ -472,6 +508,25 @@ public class TestRegionObserverInterface {
       }
     } catch (Exception e) {
       throw new IOException(e.toString());
+    }
+  }
+
+  private static void createHFile(
+      Configuration conf,
+      FileSystem fs, Path path,
+      byte[] family, byte[] qualifier) throws IOException {
+    HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf))
+        .withPath(fs, path)
+        .withComparator(KeyValue.KEY_COMPARATOR)
+        .create();
+    long now = System.currentTimeMillis();
+    try {
+      for (int i =1;i<=9;i++) {
+        KeyValue kv = new KeyValue(Bytes.toBytes(i+""), family, qualifier, now, Bytes.toBytes(i+""));
+        writer.append(kv);
+      }
+    } finally {
+      writer.close();
     }
   }
 

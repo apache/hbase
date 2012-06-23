@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
  * KeyValueScanner adaptor over the Reader.  It also provides hooks into
  * bloom filter things.
  */
-@InterfaceAudience.Private
-class StoreFileScanner implements KeyValueScanner {
+@InterfaceAudience.LimitedPrivate("Coprocessor")
+public class StoreFileScanner implements KeyValueScanner {
   static final Log LOG = LogFactory.getLog(Store.class);
 
   // the reader it comes from:
