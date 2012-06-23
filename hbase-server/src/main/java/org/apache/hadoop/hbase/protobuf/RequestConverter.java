@@ -1099,7 +1099,7 @@ public final class RequestConverter {
    * @param synchronous
    * @return a SetBalancerRunningRequest
    */
-  public static SetBalancerRunningRequest buildLoadBalancerIsRequest(boolean on, boolean synchronous) {
+  public static SetBalancerRunningRequest buildSetBalancerRunningRequest(boolean on, boolean synchronous) {
     return SetBalancerRunningRequest.newBuilder().setOn(on).setSynchronous(synchronous).build();
   }
 

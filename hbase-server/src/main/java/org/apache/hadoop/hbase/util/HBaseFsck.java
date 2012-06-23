@@ -389,12 +389,12 @@ public class HBaseFsck {
     offlineHdfsIntegrityRepair();
 
     // turn the balancer off
-    boolean oldBalancer = admin.balanceSwitch(false);
+    boolean oldBalancer = admin.setBalancerRunning(false, true);
     try {
       onlineConsistencyRepair();
     }
     finally {
-      admin.balanceSwitch(oldBalancer);
+      admin.setBalancerRunning(oldBalancer, false);
     }
 
     // Print table summary

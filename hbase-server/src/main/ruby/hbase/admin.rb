@@ -88,7 +88,8 @@ module Hbase
     # Enable/disable balancer
     # Returns previous balancer switch setting.
     def balance_switch(enableDisable)
-      @admin.balanceSwitch(java.lang.Boolean::valueOf(enableDisable))
+      @admin.setBalancerRunning(
+        java.lang.Boolean::valueOf(enableDisable), java.lang.Boolean::valueOf(false))
     end
 
     #----------------------------------------------------------------------------------------------

@@ -163,7 +163,7 @@ public class TestHCM {
     }
 
     // Now moving the region to the second server
-    TEST_UTIL.getHBaseAdmin().balanceSwitch(false);
+    TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
     HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME, ROW);
     byte[] regionName = toMove.getRegionInfo().getRegionName();
 

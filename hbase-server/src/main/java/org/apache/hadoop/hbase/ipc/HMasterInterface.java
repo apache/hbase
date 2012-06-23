@@ -287,8 +287,8 @@ public interface HMasterInterface extends VersionedProtocol {
    * - prevBalanceValue: Previous balancer value
    * @throws ServiceException
    */
-  public SetBalancerRunningResponse loadBalancerIs(RpcController controller, SetBalancerRunningRequest req)
-  throws ServiceException;
+  public SetBalancerRunningResponse setBalancerRunning(
+      RpcController controller, SetBalancerRunningRequest req) throws ServiceException;
 
   /**
    * Get list of TableDescriptors for requested tables.

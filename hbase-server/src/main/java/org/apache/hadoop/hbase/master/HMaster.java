@@ -1267,8 +1267,8 @@ Server {
   }
 
   @Override
-  public SetBalancerRunningResponse loadBalancerIs(RpcController controller, SetBalancerRunningRequest req)
-  throws ServiceException {
+  public SetBalancerRunningResponse setBalancerRunning(
+      RpcController controller, SetBalancerRunningRequest req) throws ServiceException {
     boolean prevValue = (req.getSynchronous())?
       synchronousBalanceSwitch(req.getOn()):balanceSwitch(req.getOn());
     return SetBalancerRunningResponse.newBuilder().setPrevBalanceValue(prevValue).build();

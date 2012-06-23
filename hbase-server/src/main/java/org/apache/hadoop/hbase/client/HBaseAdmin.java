@@ -1473,15 +1473,17 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   /**
    * Turn the load balancer on or off.
-   * @param b If true, enable balancer. If false, disable balancer.
+   * @param on If true, enable balancer. If false, disable balancer.
+   * @param synchronous If true, it waits until current balance() call, if outstanding, to return.
    * @return Previous balancer value
    */
-  public boolean balanceSwitch(final boolean b)
+  public boolean setBalancerRunning(final boolean on, final boolean synchronous)
   throws MasterNotRunningException, ZooKeeperConnectionException {
     MasterKeepAliveConnection master = connection.getKeepAliveMaster();
     try {
-      SetBalancerRunningRequest req = RequestConverter.buildLoadBalancerIsRequest(b, false);
-      return master.loadBalancerIs(null, req).getPrevBalanceValue();
+      SetBalancerRunningRequest req =
+        RequestConverter.buildSetBalancerRunningRequest(on, synchronous);
+      return master.setBalancerRunning(null, req).getPrevBalanceValue();
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof MasterNotRunningException) {

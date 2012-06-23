@@ -121,7 +121,7 @@ public class TestSplitTransactionOnCluster {
     int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
-    this.admin.balanceSwitch(false);
+    this.admin.setBalancerRunning(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     cluster.getMaster().setCatalogJanitorEnabled(false);
     try {
@@ -172,7 +172,7 @@ public class TestSplitTransactionOnCluster {
     } finally {
       // Set this flag back.
       SplitRegionHandler.TEST_SKIP = false;
-      admin.balanceSwitch(true);
+      admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
     }
   }
@@ -191,7 +191,7 @@ public class TestSplitTransactionOnCluster {
     int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
-    this.admin.balanceSwitch(false);
+    this.admin.setBalancerRunning(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     cluster.getMaster().setCatalogJanitorEnabled(false);
     try {
@@ -224,7 +224,7 @@ public class TestSplitTransactionOnCluster {
       assertTrue(daughters.size() >= 2);
       // OK, so split happened after we cleared the blocking node.
     } finally {
-      admin.balanceSwitch(true);
+      admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
     }
   }
@@ -250,7 +250,7 @@ public class TestSplitTransactionOnCluster {
     int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
-    this.admin.balanceSwitch(false);
+    this.admin.setBalancerRunning(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     cluster.getMaster().setCatalogJanitorEnabled(false);
     try {
@@ -282,7 +282,7 @@ public class TestSplitTransactionOnCluster {
         assertTrue(daughters.contains(r));
       }
     } finally {
-      admin.balanceSwitch(true);
+      admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
     }
   }
@@ -307,7 +307,7 @@ public class TestSplitTransactionOnCluster {
     int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
-    this.admin.balanceSwitch(false);
+    this.admin.setBalancerRunning(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     cluster.getMaster().setCatalogJanitorEnabled(false);
     try {
@@ -360,7 +360,7 @@ public class TestSplitTransactionOnCluster {
         assertTrue(daughters.contains(r));
       }
     } finally {
-      admin.balanceSwitch(true);
+      admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
     }
   }
@@ -390,7 +390,7 @@ public class TestSplitTransactionOnCluster {
     int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
-    this.admin.balanceSwitch(false);
+    this.admin.setBalancerRunning(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     cluster.getMaster().setCatalogJanitorEnabled(false);
     try {
@@ -442,7 +442,7 @@ public class TestSplitTransactionOnCluster {
     } finally {
       // Set this flag back.
       SplitRegionHandler.TEST_SKIP = false;
-      admin.balanceSwitch(true);
+      admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
     }
   }
@@ -470,7 +470,7 @@ public class TestSplitTransactionOnCluster {
     int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
 
     // Turn off balancer so it doesn't cut in and mess up our placements.
-    this.admin.balanceSwitch(false);
+    this.admin.setBalancerRunning(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     cluster.getMaster().setCatalogJanitorEnabled(false);
     try {
@@ -520,7 +520,7 @@ public class TestSplitTransactionOnCluster {
     } finally {
       // Set this flag back.
       SplitRegionHandler.TEST_SKIP = false;
-      this.admin.balanceSwitch(true);
+      this.admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
     }
   }

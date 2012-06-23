@@ -188,7 +188,7 @@ public class TestDrainingServer {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
 
     // Ensure a stable env
-    TEST_UTIL.getHBaseAdmin().balanceSwitch(false);
+    TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
     waitForAllRegionsOnline();
 
     final long regionCount = TEST_UTIL.getMiniHBaseCluster().countServedRegions();
