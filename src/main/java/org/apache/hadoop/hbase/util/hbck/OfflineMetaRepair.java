@@ -80,7 +80,7 @@ public class OfflineMetaRepair {
         if (i == args.length - 1) {
           System.err.println("OfflineMetaRepair: -base needs an HDFS path.");
           printUsageAndExit();
-        }        
+        }
         // update hbase root dir to user-specified base
         i++;
         String path = args[i];
@@ -94,7 +94,7 @@ public class OfflineMetaRepair {
         }
         // set the hbck sideline dir to user-specified one
         i++;
-        fsck.setSidelineDir(args[i]);        
+        fsck.setSidelineDir(args[i]);
       } else if (cmd.equals("-fixHoles")) {
         fixHoles = true;
       } else if (cmd.equals("-fix")) {

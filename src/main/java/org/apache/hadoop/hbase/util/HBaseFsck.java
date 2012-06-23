@@ -2994,19 +2994,20 @@ public class HBaseFsck {
   public void setSidelineDir(String sidelineDir) {
     this.sidelineDir = new Path(sidelineDir);
   }
-  
+
   protected static void printUsageAndExit() {
     System.err.println("Usage: fsck [opts] {only tables}");
     System.err.println(" where [opts] are:");
     System.err.println("   -help Display help options (this)");
     System.err.println("   -details Display full report of all regions.");
-    System.err.println("   -timelag {timeInSeconds}  Process only regions that " +
+    System.err.println("   -timelag <timeInSeconds>  Process only regions that " +
                        " have not experienced any metadata updates in the last " +
-                       " {{timeInSeconds} seconds.");
-    System.err.println("   -sleepBeforeRerun {timeInSeconds} Sleep this many seconds" +
+                       " <timeInSeconds> seconds.");
+    System.err.println("   -sleepBeforeRerun <timeInSeconds> Sleep this many seconds" +
         " before checking if the fix worked if run with -fix");
     System.err.println("   -summary Print only summary of the tables and status.");
     System.err.println("   -metaonly Only check the state of ROOT and META tables.");
+    System.err.println("   -sidelineDir <hdfs://> HDFS path to backup existing meta and root.");
 
     System.err.println("  Repair options: (expert features, use with caution!)");
     System.err.println("   -fix              Try to fix region assignments.  This is for backwards compatiblity");
@@ -3076,6 +3077,13 @@ public class HBaseFsck {
           printUsageAndExit();
         }
         i++;
+      } else if (cmd.equals("-sidelineDir")) {
+        if (i == args.length - 1) {
+          System.err.println("HBaseFsck: -sidelineDir needs a value.");
+          printUsageAndExit();
+        }
+        i++;
+        fsck.setSidelineDir(args[i]);
       } else if (cmd.equals("-fix")) {
         System.err.println("This option is deprecated, please use " +
           "-fixAssignments instead.");

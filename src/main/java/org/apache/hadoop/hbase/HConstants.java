@@ -589,7 +589,7 @@ public final class HConstants {
   public static final List<String> HBASE_NON_USER_TABLE_DIRS = new ArrayList<String>(
       Arrays.asList(new String[]{ HREGION_LOGDIR_NAME, HREGION_OLDLOGDIR_NAME,
           CORRUPT_DIR_NAME, Bytes.toString(META_TABLE_NAME),
-          Bytes.toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME, 
+          Bytes.toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME,
           HBCK_SIDELINEDIR_NAME }));
 
   public static final Pattern CP_HTD_ATTR_KEY_PATTERN = Pattern.compile
