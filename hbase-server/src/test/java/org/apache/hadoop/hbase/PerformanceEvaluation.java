@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Hash;
@@ -112,15 +113,12 @@ public class PerformanceEvaluation {
   private static final int ONE_GB = 1024 * 1024 * 1000;
   private static final int ROWS_PER_GB = ONE_GB / ROW_LENGTH;
 
+  public static final byte[] COMPRESSION = Bytes.toBytes("NONE");
   public static final byte[] TABLE_NAME = Bytes.toBytes("TestTable");
   public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
   public static final byte[] QUALIFIER_NAME = Bytes.toBytes("data");
 
-  protected static final HTableDescriptor TABLE_DESCRIPTOR;
-  static {
-    TABLE_DESCRIPTOR = new HTableDescriptor(TABLE_NAME);
-    TABLE_DESCRIPTOR.addFamily(new HColumnDescriptor(FAMILY_NAME));
-  }
+  protected HTableDescriptor TABLE_DESCRIPTOR;
 
   protected Map<String, CmdDescriptor> commands = new TreeMap<String, CmdDescriptor>();
 
@@ -129,6 +127,8 @@ public class PerformanceEvaluation {
   private boolean nomapred = false;
   private int N = 1;
   private int R = ROWS_PER_GB;
+  private byte[] tableName = TABLE_NAME;
+  private Compression.Algorithm compression = Compression.Algorithm.NONE;
   private boolean flushCommits = true;
   private boolean writeToWAL = true;
   private int presplitRegions = 0;
@@ -512,6 +512,12 @@ public class PerformanceEvaluation {
   }
 
   protected HTableDescriptor getTableDescriptor() {
+    if (TABLE_DESCRIPTOR == null) {
+      TABLE_DESCRIPTOR = new HTableDescriptor(tableName);
+      HColumnDescriptor family = new HColumnDescriptor(FAMILY_NAME);
+      family.setCompressionType(compression);
+      TABLE_DESCRIPTOR.addFamily(family);
+    }
     return TABLE_DESCRIPTOR;
   }
 
@@ -893,7 +899,7 @@ public class PerformanceEvaluation {
           client = new HBaseClient(zkquorum, znode);
           // Sanity check.
           try {
-            client.ensureTableFamilyExists(TABLE_NAME, FAMILY_NAME).joinUninterruptibly();
+            client.ensureTableFamilyExists(tableName, FAMILY_NAME).joinUninterruptibly();
           } catch (Exception e) {
             throw new RuntimeException("Missing test table/family?", e);
           }
@@ -1188,7 +1194,7 @@ public class PerformanceEvaluation {
 
     @Override
     void testRow(final int i) throws IOException {
-      final GetRequest get = new GetRequest(TABLE_NAME, getRandomRow(this.rand, this.totalRows));
+      final GetRequest get = new GetRequest(tableName, getRandomRow(this.rand, this.totalRows));
       get.family(FAMILY_NAME).qualifier(QUALIFIER_NAME);
 
       client().get(get).addCallback(readCallback).addErrback(errback);
@@ -1225,7 +1231,7 @@ public class PerformanceEvaluation {
 
     @Override
     void testRow(final int i) {
-      final PutRequest put = new PutRequest(TABLE_NAME, getRandomRow(this.rand, this.totalRows),
+      final PutRequest put = new PutRequest(tableName, getRandomRow(this.rand, this.totalRows),
                                             FAMILY_NAME, QUALIFIER_NAME, generateValue(this.rand));
       put.setDurable(writeToWAL);
       put.setBufferable(flushCommits);
@@ -1287,7 +1293,7 @@ public class PerformanceEvaluation {
 
     AsyncScanTest(Configuration conf, TestOptions options, Status status) {
       super(conf, options, status);
-      scanner = client().newScanner(TABLE_NAME);
+      scanner = client().newScanner(tableName);
       scanner.setStartKey(format(this.startRow));
       scanner.setFamily(FAMILY_NAME);
       scanner.setQualifier(QUALIFIER_NAME);
@@ -1327,7 +1333,7 @@ public class PerformanceEvaluation {
 
     @Override
     void testRow(final int i) throws IOException {
-      final GetRequest get = new GetRequest(TABLE_NAME, format(i));
+      final GetRequest get = new GetRequest(tableName, format(i));
       get.family(FAMILY_NAME).qualifier(QUALIFIER_NAME);
       client().get(get).addCallback(readCallback).addErrback(errback);
     }
@@ -1357,7 +1363,7 @@ public class PerformanceEvaluation {
 
     @Override
     void testRow(final int i) {
-      final PutRequest put = new PutRequest(TABLE_NAME, format(i),
+      final PutRequest put = new PutRequest(tableName, format(i),
                                             FAMILY_NAME, QUALIFIER_NAME, generateValue(this.rand));
       put.setDurable(writeToWAL);
       put.setBufferable(flushCommits);
@@ -1423,7 +1429,23 @@ public class PerformanceEvaluation {
    */
   public static byte[] generateValue(final Random r) {
     byte [] b = new byte [ROW_LENGTH];
-    r.nextBytes(b);
+    int i = 0;
+
+    for(i = 0; i < (ROW_LENGTH-8); i += 8) {
+      b[i] = (byte) (65 + r.nextInt(26));
+      b[i+1] = b[i];
+      b[i+2] = b[i];
+      b[i+3] = b[i];
+      b[i+4] = b[i];
+      b[i+5] = b[i];
+      b[i+6] = b[i];
+      b[i+7] = b[i];
+    }
+
+    byte a = (byte) (65 + r.nextInt(26));
+    for(; i < ROW_LENGTH; i++) {
+      b[i] = a;
+    }
     return b;
   }
 
@@ -1441,7 +1463,7 @@ public class PerformanceEvaluation {
     long totalElapsedTime = 0;
 
     TestOptions options = new TestOptions(startRow, perClientRunRows,
-        totalRows, N, TABLE_NAME, flushCommits, writeToWAL);
+        totalRows, N, tableName, flushCommits, writeToWAL);
     final Test t;
     try {
       Constructor<? extends Test> constructor = cmd.getDeclaredConstructor(
@@ -1529,13 +1551,16 @@ public class PerformanceEvaluation {
       System.err.println(message);
     }
     System.err.println("Usage: java " + this.getClass().getName() + " \\");
-    System.err.println("  [--miniCluster] [--nomapred] [--rows=ROWS] <command> <nclients>");
+    System.err.println("  [--miniCluster] [--nomapred] [--rows=ROWS] [--table=NAME] \\");
+    System.err.println("  [--compress=TYPE] <command> <nclients>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" miniCluster     Run the test on an HBaseMiniCluster");
     System.err.println(" nomapred        Run multiple clients using threads " +
       "(rather than use mapreduce)");
     System.err.println(" rows            Rows each client runs. Default: One million");
+    System.err.println(" table           Alternate table name. Default: 'TestTable'");
+    System.err.println(" compress        Compression type to use (GZ, LZO, ...). Default: 'NONE'");
     System.err.println(" flushCommits    Used to determine if the test should flush the table.  Default: false");
     System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
     System.err.println(" presplit        Create presplit table. Recommended for accurate perf analysis (see guide).  Default: disabled");
@@ -1600,6 +1625,18 @@ public class PerformanceEvaluation {
         final String rows = "--rows=";
         if (cmd.startsWith(rows)) {
           this.R = Integer.parseInt(cmd.substring(rows.length()));
+          continue;
+        }
+
+        final String table = "--table=";
+        if (cmd.startsWith(table)) {
+          this.tableName = Bytes.toBytes(cmd.substring(table.length()));
+          continue;
+        }
+
+        final String compress = "--compress=";
+        if (cmd.startsWith(compress)) {
+          this.compression = Compression.Algorithm.valueOf(cmd.substring(compress.length()));
           continue;
         }
 
