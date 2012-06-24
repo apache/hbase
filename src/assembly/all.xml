@@ -90,6 +90,16 @@
       <fileMode>0644</fileMode>
       <directoryMode>0755</directoryMode>
     </fileSet>
+    <!-- Include native libraries -->
+    <fileSet>
+      <directory>hbase-server/target/native</directory>
+      <outputDirectory>native</outputDirectory>
+      <fileMode>0755</fileMode>
+      <directoryMode>0755</directoryMode>
+      <includes>
+        <include>*.so</include>
+      </includes>
+    </fileSet>
     <!-- This is only necessary until maven fixes the intra-project dependency bug 
       in maven 3.0. Until then, we have to include the test jars for sub-projects. When 
       fixed, the below dependencySet stuff is sufficient for pulling in the test jars as 

@@ -63,6 +63,21 @@ do
     hosts=$1
     shift
     HBASE_REGIONSERVERS=$hosts
+  elif [ "--mlock" = "$1" ]
+  then
+    shift
+    mlock_opts=$1
+    shift
+    mlock_agent="$HBASE_HOME/native/libmlockall_agent.so"
+    echo $mlock_agent
+    if [ -e $mlock_agent ]; then
+        HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS -agentpath:$mlock_agent=$mlock_opts"
+    else
+        cat 1>&2 <<EOF
+Unable to find mlockall_agent, hbase must be compiled with -Pnative
+EOF
+        exit 1
+    fi
   else
     # Presume we are at end of options and break
     break
