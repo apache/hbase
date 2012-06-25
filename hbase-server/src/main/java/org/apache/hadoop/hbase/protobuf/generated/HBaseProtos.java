@@ -5521,9 +5521,9 @@ public final class HBaseProtos {
   public interface ServerLoadOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional uint32 requestsPerSecond = 1;
-    boolean hasRequestsPerSecond();
-    int getRequestsPerSecond();
+    // optional uint32 numberOfRequests = 1;
+    boolean hasNumberOfRequests();
+    int getNumberOfRequests();
     
     // optional uint32 totalNumberOfRequests = 2;
     boolean hasTotalNumberOfRequests();
@@ -5556,6 +5556,14 @@ public final class HBaseProtos {
         getCoprocessorsOrBuilderList();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder getCoprocessorsOrBuilder(
         int index);
+    
+    // optional uint64 reportStartTime = 7;
+    boolean hasReportStartTime();
+    long getReportStartTime();
+    
+    // optional uint64 reportEndTime = 8;
+    boolean hasReportEndTime();
+    long getReportEndTime();
   }
   public static final class ServerLoad extends
       com.google.protobuf.GeneratedMessage
@@ -5586,14 +5594,14 @@ public final class HBaseProtos {
     }
     
     private int bitField0_;
-    // optional uint32 requestsPerSecond = 1;
-    public static final int REQUESTSPERSECOND_FIELD_NUMBER = 1;
-    private int requestsPerSecond_;
-    public boolean hasRequestsPerSecond() {
+    // optional uint32 numberOfRequests = 1;
+    public static final int NUMBEROFREQUESTS_FIELD_NUMBER = 1;
+    private int numberOfRequests_;
+    public boolean hasNumberOfRequests() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public int getRequestsPerSecond() {
-      return requestsPerSecond_;
+    public int getNumberOfRequests() {
+      return numberOfRequests_;
     }
     
     // optional uint32 totalNumberOfRequests = 2;
@@ -5668,13 +5676,35 @@ public final class HBaseProtos {
       return coprocessors_.get(index);
     }
     
+    // optional uint64 reportStartTime = 7;
+    public static final int REPORTSTARTTIME_FIELD_NUMBER = 7;
+    private long reportStartTime_;
+    public boolean hasReportStartTime() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    public long getReportStartTime() {
+      return reportStartTime_;
+    }
+    
+    // optional uint64 reportEndTime = 8;
+    public static final int REPORTENDTIME_FIELD_NUMBER = 8;
+    private long reportEndTime_;
+    public boolean hasReportEndTime() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    public long getReportEndTime() {
+      return reportEndTime_;
+    }
+    
     private void initFields() {
-      requestsPerSecond_ = 0;
+      numberOfRequests_ = 0;
       totalNumberOfRequests_ = 0;
       usedHeapMB_ = 0;
       maxHeapMB_ = 0;
       regionLoads_ = java.util.Collections.emptyList();
       coprocessors_ = java.util.Collections.emptyList();
+      reportStartTime_ = 0L;
+      reportEndTime_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -5701,7 +5731,7 @@ public final class HBaseProtos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeUInt32(1, requestsPerSecond_);
+        output.writeUInt32(1, numberOfRequests_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeUInt32(2, totalNumberOfRequests_);
@@ -5718,6 +5748,12 @@ public final class HBaseProtos {
       for (int i = 0; i < coprocessors_.size(); i++) {
         output.writeMessage(6, coprocessors_.get(i));
       }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeUInt64(7, reportStartTime_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeUInt64(8, reportEndTime_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -5729,7 +5765,7 @@ public final class HBaseProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(1, requestsPerSecond_);
+          .computeUInt32Size(1, numberOfRequests_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
@@ -5750,6 +5786,14 @@ public final class HBaseProtos {
       for (int i = 0; i < coprocessors_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(6, coprocessors_.get(i));
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(7, reportStartTime_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(8, reportEndTime_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -5774,10 +5818,10 @@ public final class HBaseProtos {
       org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad other = (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad) obj;
       
       boolean result = true;
-      result = result && (hasRequestsPerSecond() == other.hasRequestsPerSecond());
-      if (hasRequestsPerSecond()) {
-        result = result && (getRequestsPerSecond()
-            == other.getRequestsPerSecond());
+      result = result && (hasNumberOfRequests() == other.hasNumberOfRequests());
+      if (hasNumberOfRequests()) {
+        result = result && (getNumberOfRequests()
+            == other.getNumberOfRequests());
       }
       result = result && (hasTotalNumberOfRequests() == other.hasTotalNumberOfRequests());
       if (hasTotalNumberOfRequests()) {
@@ -5798,6 +5842,16 @@ public final class HBaseProtos {
           .equals(other.getRegionLoadsList());
       result = result && getCoprocessorsList()
           .equals(other.getCoprocessorsList());
+      result = result && (hasReportStartTime() == other.hasReportStartTime());
+      if (hasReportStartTime()) {
+        result = result && (getReportStartTime()
+            == other.getReportStartTime());
+      }
+      result = result && (hasReportEndTime() == other.hasReportEndTime());
+      if (hasReportEndTime()) {
+        result = result && (getReportEndTime()
+            == other.getReportEndTime());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -5807,9 +5861,9 @@ public final class HBaseProtos {
     public int hashCode() {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasRequestsPerSecond()) {
-        hash = (37 * hash) + REQUESTSPERSECOND_FIELD_NUMBER;
-        hash = (53 * hash) + getRequestsPerSecond();
+      if (hasNumberOfRequests()) {
+        hash = (37 * hash) + NUMBEROFREQUESTS_FIELD_NUMBER;
+        hash = (53 * hash) + getNumberOfRequests();
       }
       if (hasTotalNumberOfRequests()) {
         hash = (37 * hash) + TOTALNUMBEROFREQUESTS_FIELD_NUMBER;
@@ -5830,6 +5884,14 @@ public final class HBaseProtos {
       if (getCoprocessorsCount() > 0) {
         hash = (37 * hash) + COPROCESSORS_FIELD_NUMBER;
         hash = (53 * hash) + getCoprocessorsList().hashCode();
+      }
+      if (hasReportStartTime()) {
+        hash = (37 * hash) + REPORTSTARTTIME_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getReportStartTime());
+      }
+      if (hasReportEndTime()) {
+        hash = (37 * hash) + REPORTENDTIME_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getReportEndTime());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -5949,7 +6011,7 @@ public final class HBaseProtos {
       
       public Builder clear() {
         super.clear();
-        requestsPerSecond_ = 0;
+        numberOfRequests_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
         totalNumberOfRequests_ = 0;
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -5969,6 +6031,10 @@ public final class HBaseProtos {
         } else {
           coprocessorsBuilder_.clear();
         }
+        reportStartTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000040);
+        reportEndTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
       
@@ -6010,7 +6076,7 @@ public final class HBaseProtos {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        result.requestsPerSecond_ = requestsPerSecond_;
+        result.numberOfRequests_ = numberOfRequests_;
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
@@ -6041,6 +6107,14 @@ public final class HBaseProtos {
         } else {
           result.coprocessors_ = coprocessorsBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.reportStartTime_ = reportStartTime_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.reportEndTime_ = reportEndTime_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -6057,8 +6131,8 @@ public final class HBaseProtos {
       
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.getDefaultInstance()) return this;
-        if (other.hasRequestsPerSecond()) {
-          setRequestsPerSecond(other.getRequestsPerSecond());
+        if (other.hasNumberOfRequests()) {
+          setNumberOfRequests(other.getNumberOfRequests());
         }
         if (other.hasTotalNumberOfRequests()) {
           setTotalNumberOfRequests(other.getTotalNumberOfRequests());
@@ -6121,6 +6195,12 @@ public final class HBaseProtos {
             }
           }
         }
+        if (other.hasReportStartTime()) {
+          setReportStartTime(other.getReportStartTime());
+        }
+        if (other.hasReportEndTime()) {
+          setReportEndTime(other.getReportEndTime());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -6166,7 +6246,7 @@ public final class HBaseProtos {
             }
             case 8: {
               bitField0_ |= 0x00000001;
-              requestsPerSecond_ = input.readUInt32();
+              numberOfRequests_ = input.readUInt32();
               break;
             }
             case 16: {
@@ -6196,29 +6276,39 @@ public final class HBaseProtos {
               addCoprocessors(subBuilder.buildPartial());
               break;
             }
+            case 56: {
+              bitField0_ |= 0x00000040;
+              reportStartTime_ = input.readUInt64();
+              break;
+            }
+            case 64: {
+              bitField0_ |= 0x00000080;
+              reportEndTime_ = input.readUInt64();
+              break;
+            }
           }
         }
       }
       
       private int bitField0_;
       
-      // optional uint32 requestsPerSecond = 1;
-      private int requestsPerSecond_ ;
-      public boolean hasRequestsPerSecond() {
+      // optional uint32 numberOfRequests = 1;
+      private int numberOfRequests_ ;
+      public boolean hasNumberOfRequests() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public int getRequestsPerSecond() {
-        return requestsPerSecond_;
+      public int getNumberOfRequests() {
+        return numberOfRequests_;
       }
-      public Builder setRequestsPerSecond(int value) {
+      public Builder setNumberOfRequests(int value) {
         bitField0_ |= 0x00000001;
-        requestsPerSecond_ = value;
+        numberOfRequests_ = value;
         onChanged();
         return this;
       }
-      public Builder clearRequestsPerSecond() {
+      public Builder clearNumberOfRequests() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        requestsPerSecond_ = 0;
+        numberOfRequests_ = 0;
         onChanged();
         return this;
       }
@@ -6656,6 +6746,48 @@ public final class HBaseProtos {
           coprocessors_ = null;
         }
         return coprocessorsBuilder_;
+      }
+      
+      // optional uint64 reportStartTime = 7;
+      private long reportStartTime_ ;
+      public boolean hasReportStartTime() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      public long getReportStartTime() {
+        return reportStartTime_;
+      }
+      public Builder setReportStartTime(long value) {
+        bitField0_ |= 0x00000040;
+        reportStartTime_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearReportStartTime() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        reportStartTime_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint64 reportEndTime = 8;
+      private long reportEndTime_ ;
+      public boolean hasReportEndTime() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      public long getReportEndTime() {
+        return reportEndTime_;
+      }
+      public Builder setReportEndTime(long value) {
+        bitField0_ |= 0x00000080;
+        reportEndTime_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearReportEndTime() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        reportEndTime_ = 0L;
+        onChanged();
+        return this;
       }
       
       // @@protoc_insertion_point(builder_scope:ServerLoad)
@@ -9932,24 +10064,25 @@ public final class HBaseProtos {
       "dKVs\030\013 \001(\004\022\027\n\017rootIndexSizeKB\030\014 \001(\r\022\036\n\026t" +
       "otalStaticIndexSizeKB\030\r \001(\r\022\036\n\026totalStat" +
       "icBloomSizeKB\030\016 \001(\r\022\"\n\014coprocessors\030\017 \003(" +
-      "\0132\014.Coprocessor\"\263\001\n\nServerLoad\022\031\n\021reques" +
-      "tsPerSecond\030\001 \001(\r\022\035\n\025totalNumberOfReques" +
-      "ts\030\002 \001(\r\022\022\n\nusedHeapMB\030\003 \001(\r\022\021\n\tmaxHeapM" +
-      "B\030\004 \001(\r\022 \n\013regionLoads\030\005 \003(\0132\013.RegionLoa" +
-      "d\022\"\n\014coprocessors\030\006 \003(\0132\014.Coprocessor\"%\n",
-      "\tTimeRange\022\014\n\004from\030\001 \001(\004\022\n\n\002to\030\002 \001(\004\"w\n\010" +
-      "KeyValue\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021\n" +
-      "\tqualifier\030\003 \002(\014\022\021\n\ttimestamp\030\004 \001(\004\022\031\n\007k" +
-      "eyType\030\005 \001(\0162\010.KeyType\022\r\n\005value\030\006 \001(\014\"?\n" +
-      "\nServerName\022\020\n\010hostName\030\001 \002(\t\022\014\n\004port\030\002 " +
-      "\001(\r\022\021\n\tstartCode\030\003 \001(\004\"\033\n\013Coprocessor\022\014\n" +
-      "\004name\030\001 \002(\t\"-\n\016NameStringPair\022\014\n\004name\030\001 " +
-      "\002(\t\022\r\n\005value\030\002 \002(\t\",\n\rNameBytesPair\022\014\n\004n" +
-      "ame\030\001 \002(\t\022\r\n\005value\030\002 \001(\014*_\n\007KeyType\022\013\n\007M" +
-      "INIMUM\020\000\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\rDELETE_",
-      "COLUMN\020\014\022\021\n\rDELETE_FAMILY\020\016\022\014\n\007MAXIMUM\020\377" +
-      "\001B>\n*org.apache.hadoop.hbase.protobuf.ge" +
-      "neratedB\013HBaseProtosH\001\240\001\001"
+      "\0132\014.Coprocessor\"\342\001\n\nServerLoad\022\030\n\020number" +
+      "OfRequests\030\001 \001(\r\022\035\n\025totalNumberOfRequest" +
+      "s\030\002 \001(\r\022\022\n\nusedHeapMB\030\003 \001(\r\022\021\n\tmaxHeapMB" +
+      "\030\004 \001(\r\022 \n\013regionLoads\030\005 \003(\0132\013.RegionLoad" +
+      "\022\"\n\014coprocessors\030\006 \003(\0132\014.Coprocessor\022\027\n\017",
+      "reportStartTime\030\007 \001(\004\022\025\n\rreportEndTime\030\010" +
+      " \001(\004\"%\n\tTimeRange\022\014\n\004from\030\001 \001(\004\022\n\n\002to\030\002 " +
+      "\001(\004\"w\n\010KeyValue\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002" +
+      " \002(\014\022\021\n\tqualifier\030\003 \002(\014\022\021\n\ttimestamp\030\004 \001" +
+      "(\004\022\031\n\007keyType\030\005 \001(\0162\010.KeyType\022\r\n\005value\030\006" +
+      " \001(\014\"?\n\nServerName\022\020\n\010hostName\030\001 \002(\t\022\014\n\004" +
+      "port\030\002 \001(\r\022\021\n\tstartCode\030\003 \001(\004\"\033\n\013Coproce" +
+      "ssor\022\014\n\004name\030\001 \002(\t\"-\n\016NameStringPair\022\014\n\004" +
+      "name\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\",\n\rNameBytesPa" +
+      "ir\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001(\014*_\n\007KeyTy",
+      "pe\022\013\n\007MINIMUM\020\000\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\r" +
+      "DELETE_COLUMN\020\014\022\021\n\rDELETE_FAMILY\020\016\022\014\n\007MA" +
+      "XIMUM\020\377\001B>\n*org.apache.hadoop.hbase.prot" +
+      "obuf.generatedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -10017,7 +10150,7 @@ public final class HBaseProtos {
           internal_static_ServerLoad_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ServerLoad_descriptor,
-              new java.lang.String[] { "RequestsPerSecond", "TotalNumberOfRequests", "UsedHeapMB", "MaxHeapMB", "RegionLoads", "Coprocessors", },
+              new java.lang.String[] { "NumberOfRequests", "TotalNumberOfRequests", "UsedHeapMB", "MaxHeapMB", "RegionLoads", "Coprocessors", "ReportStartTime", "ReportEndTime", },
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.class,
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder.class);
           internal_static_TimeRange_descriptor =

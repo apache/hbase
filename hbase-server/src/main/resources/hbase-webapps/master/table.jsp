@@ -26,7 +26,7 @@
   import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.ServerLoad"
-  import="org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad"
+  import="org.apache.hadoop.hbase.RegionLoad"
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
@@ -269,13 +269,9 @@
     if (addr != null) {
       ServerLoad sl = master.getServerManager().getLoad(addr);
       if (sl != null) {
-        List<RegionLoad> list = sl.getRegionLoadsList();
-        byte [] regionName = regionInfo.getRegionName();
-        for (RegionLoad rgLoad : list) {
-          if (rgLoad.getRegionSpecifier().getValue().toByteArray().equals(regionName)) {
-            req = ProtobufUtil.getTotalRequestsCount(rgLoad);
-            break;
-          }
+        Map<byte[], RegionLoad> map = sl.getRegionsLoad();
+        if (map.containsKey(regionInfo.getRegionName())) {
+          req = map.get(regionInfo.getRegionName()).getRequestsCount();
         }
         // This port might be wrong if RS actually ended up using something else.
         urlRegionServer =

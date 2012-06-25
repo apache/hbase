@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Action;
@@ -253,7 +252,9 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
 
     addToMap(ColumnRangeFilter.class, code++);
 
-    addToMap(HServerLoad.class, code++);
+    // HServerLoad no longer exists; increase code so other classes stay the same.
+    code++;
+    //addToMap(HServerLoad.class, code++);
 
     addToMap(RegionOpeningState.class, code++);
 

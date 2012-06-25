@@ -36,7 +36,8 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
@@ -76,7 +77,7 @@ public class StorageClusterStatusResource extends ResourceBase {
       model.setRequests(status.getRequestsCount());
       model.setAverageLoad(status.getAverageLoad());
       for (ServerName info: status.getServers()) {
-        HServerLoad load = status.getLoad(info);
+        ServerLoad load = status.getLoad(info);
         StorageClusterStatusModel.Node node =
           model.addLiveNode(
             info.getHostname() + ":" +
@@ -84,7 +85,7 @@ public class StorageClusterStatusResource extends ResourceBase {
             info.getStartcode(), load.getUsedHeapMB(),
             load.getMaxHeapMB());
         node.setRequests(load.getNumberOfRequests());
-        for (HServerLoad.RegionLoad region: load.getRegionsLoad().values()) {
+        for (RegionLoad region: load.getRegionsLoad().values()) {
           node.addRegion(region.getName(), region.getStores(),
             region.getStorefiles(), region.getStorefileSizeMB(),
             region.getMemStoreSizeMB(), region.getStorefileIndexSizeMB(),

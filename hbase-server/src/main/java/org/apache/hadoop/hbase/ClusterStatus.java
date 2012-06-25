@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.HashSet;
-import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo;
@@ -45,7 +44,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Re
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.HServerLoad.RegionLoad;
+import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.VersionMismatchException;
@@ -161,7 +160,7 @@ public class ClusterStatus extends VersionedWritable {
   public int getRegionsCount() {
     int count = 0;
     for (Map.Entry<ServerName, ServerLoad> e: this.liveServers.entrySet()) {
-      count += e.getValue().getRegionLoadsCount();
+      count += e.getValue().getNumberOfRegions();
     }
     return count;
   }
@@ -262,8 +261,8 @@ public class ClusterStatus extends VersionedWritable {
    * @param sn
    * @return Server's load or null if not found.
    */
-  public HServerLoad getLoad(final ServerName sn) {
-    return HServerLoad.convert(this.liveServers.get(sn));
+  public ServerLoad getLoad(final ServerName sn) {
+    return this.liveServers.get(sn);
   }
 
   public Map<String, RegionState> getRegionsInTransition() {

@@ -93,15 +93,15 @@ Arrays.sort(serverNames);
     for (ServerName serverName: serverNames) {
 
     ServerLoad sl = master.getServerManager().getLoad(serverName);
-    int requestsPerSecond = 0,
-    numRegionsOnline = 0;
+    double requestsPerSecond = 0.0;
+    int numRegionsOnline = 0;
 
     if (sl != null) {
         requestsPerSecond = sl.getRequestsPerSecond();
-        numRegionsOnline = sl.getRegionLoadsCount();
-        totalRegions += sl.getRegionLoadsCount();
+        numRegionsOnline = sl.getNumberOfRegions();
+        totalRegions += sl.getNumberOfRegions();
         // Is this correct?  Adding a rate to a measure.
-        totalRequests += sl.getRequestsPerSecond();
+        totalRequests += sl.getNumberOfRequests();
     }
     long startcode = serverName.getStartcode();
 </%java>
@@ -144,7 +144,7 @@ for (ServerName serverName: serverNames) {
     <td><& serverNameLink; serverName=serverName; &></td>
     <td><% sl.getUsedHeapMB() %>MB</td>
     <td><% sl.getMaxHeapMB() %>MB</td>
-    <td><% sl.getMemstoreSizeMB() %>MB</td>
+    <td><% sl.getMemstoreSizeInMB() %>MB</td>
 
 </tr>
 <%java>
@@ -219,7 +219,7 @@ if (sl != null) {
 <td><% sl.getStores() %></td>
 <td><% sl.getStorefiles() %></td>
 <td><% sl.getStoreUncompressedSizeMB() %>MB</td>
-<td><% sl.getStorefileSizeMB() %>MB</td>
+<td><% sl.getStorefileSizeInMB() %>MB</td>
 <td><% sl.getTotalStaticIndexSizeKB() %>KB</td>
 <td><% sl.getTotalStaticBloomSizeKB() %>KB</td>
 </tr>

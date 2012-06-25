@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerLoad;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
+import org.apache.hadoop.hbase.RegionLoad;
 
 import javax.tools.*;
 import java.io.*;
@@ -571,9 +571,10 @@ public class TestClassLoading {
     for(Map.Entry<ServerName,ServerLoad> server:
         TEST_UTIL.getMiniHBaseCluster().getMaster().getServerManager().
             getOnlineServers().entrySet()) {
-      for (RegionLoad region : server.getValue().getRegionLoadsList()) {
-        if (Bytes.toString(region.getRegionSpecifier().getValue().toByteArray()).equals(tableName)) {
-          // this server server hosts a region of tableName: add this server..
+      for( Map.Entry<byte[], RegionLoad> region:
+          server.getValue().getRegionsLoad().entrySet()) {
+        if (region.getValue().getNameAsString().equals(tableName)) {
+          // this server hosts a region of tableName: add this server..
           serverLoadHashMap.put(server.getKey(),server.getValue());
           // .. and skip the rest of the regions that it hosts.
           break;
@@ -599,8 +600,7 @@ public class TestClassLoading {
       }
       boolean any_failed = false;
       for(Map.Entry<ServerName,ServerLoad> server: servers.entrySet()) {
-        actualCoprocessors =
-          ServerLoad.getAllCoprocessors(server.getValue());
+        actualCoprocessors = server.getValue().getAllCoprocessors();
         if (!Arrays.equals(actualCoprocessors, expectedCoprocessors)) {
           LOG.debug("failed comparison: actual: " +
               Arrays.toString(actualCoprocessors) +

@@ -25,8 +25,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.HServerLoad.RegionLoad;
+import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -316,9 +316,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private void updateRegionLoad() {
     loads.clear();
     for (ServerName sn : clusterStatus.getServers()) {
-      HServerLoad hsl = clusterStatus.getLoad(sn);
-      if (hsl == null) continue;
-      for (Entry<byte[], RegionLoad> entry : hsl.getRegionsLoad().entrySet()) {
+      ServerLoad sl = clusterStatus.getLoad(sn);
+      if (sl == null) continue;
+      for (Entry<byte[], RegionLoad> entry : sl.getRegionsLoad().entrySet()) {
         loads.put(Bytes.toString(entry.getKey()), entry.getValue());
 
       }

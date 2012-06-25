@@ -781,7 +781,7 @@ public class  HRegionServer implements ClientProtocol,
         long now = System.currentTimeMillis();
         if ((now - lastMsg) >= msgInterval) {
           doMetrics();
-          tryRegionServerReport();
+          tryRegionServerReport(lastMsg, now);
           lastMsg = System.currentTimeMillis();
         }
         if (!this.stopped) this.sleeper.sleep();
@@ -887,9 +887,9 @@ public class  HRegionServer implements ClientProtocol,
     return allUserRegionsOffline;
   }
 
-  void tryRegionServerReport()
+  void tryRegionServerReport(long reportStartTime, long reportEndTime)
   throws IOException {
-    HBaseProtos.ServerLoad sl = buildServerLoad();
+    HBaseProtos.ServerLoad sl = buildServerLoad(reportStartTime, reportEndTime);
     // Why we do this?
     this.requestCount.set(0);
     try {
@@ -911,13 +911,13 @@ public class  HRegionServer implements ClientProtocol,
     }
   }
 
-  HBaseProtos.ServerLoad buildServerLoad() {
+  HBaseProtos.ServerLoad buildServerLoad(long reportStartTime, long reportEndTime) {
     Collection<HRegion> regions = getOnlineRegionsLocalContext();
     MemoryUsage memory =
       ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
 
     HBaseProtos.ServerLoad.Builder serverLoad = HBaseProtos.ServerLoad.newBuilder();
-    serverLoad.setRequestsPerSecond((int)metrics.getRequests());
+    serverLoad.setNumberOfRequests((int)metrics.getRequests());
     serverLoad.setTotalNumberOfRequests(requestCount.get());
     serverLoad.setUsedHeapMB((int)(memory.getUsed() / 1024 / 1024));
     serverLoad.setMaxHeapMB((int) (memory.getMax() / 1024 / 1024));
@@ -929,6 +929,8 @@ public class  HRegionServer implements ClientProtocol,
     for (HRegion region : regions) {
       serverLoad.addRegionLoads(createRegionLoad(region));
     }
+    serverLoad.setReportStartTime(reportStartTime);
+    serverLoad.setReportEndTime(reportEndTime);
 
     return serverLoad.build();
   }
@@ -2313,9 +2315,10 @@ public class  HRegionServer implements ClientProtocol,
 
   // used by org/apache/hbase/tmpl/regionserver/RSStatusTmpl.jamon (HBASE-4070).
   public String[] getCoprocessors() {
-    HBaseProtos.ServerLoad sl = buildServerLoad();
+    // passing fake times to buildServerLoad is okay, because we only care about the coprocessor part.
+    HBaseProtos.ServerLoad sl = buildServerLoad(0, 0);
     return sl == null? null:
-      ServerLoad.getRegionServerCoprocessors(new ServerLoad(sl));
+      new ServerLoad(sl).getRegionServerCoprocessors();
   }
 
   /**

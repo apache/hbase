@@ -38,8 +38,8 @@ public class TestServerLoad {
     assertEquals(114, sl.getStorefiles());
     assertEquals(129, sl.getStoreUncompressedSizeMB());
     assertEquals(504, sl.getRootIndexSizeKB());
-    assertEquals(820, sl.getStorefileSizeMB());
-    assertEquals(82, sl.getStorefileIndexSizeMB());
+    assertEquals(820, sl.getStorefileSizeInMB());
+    assertEquals(82, sl.getStorefileIndexSizeInMB());
     assertEquals(0, sl.getReadRequestsCount());
     
   }

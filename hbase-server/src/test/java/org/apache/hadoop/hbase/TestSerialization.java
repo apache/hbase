@@ -66,18 +66,6 @@ public class TestSerialization {
     assertTrue(slt.equals(sltDeserialized));
   }
 
-  @Test
-  public void testHServerLoadVersioning() throws IOException {
-    Set<String> cps = new HashSet<String>(0);
-    Map<byte [], RegionLoad> regions = new TreeMap<byte [], RegionLoad>(Bytes.BYTES_COMPARATOR);
-    regions.put(HConstants.META_TABLE_NAME,
-      new HServerLoad092.RegionLoad(HConstants.META_TABLE_NAME, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, cps));
-    HServerLoad092 hsl092 = new HServerLoad092(0, 0, 0, 0, regions, cps);
-    byte [] hsl092bytes = Writables.getBytes(hsl092);
-    Writables.getWritable(hsl092bytes, new HServerLoad());
-    // TO BE CONTINUED
-  }
-
   @Test public void testCompareFilter() throws Exception {
     Filter f = new RowFilter(CompareOp.EQUAL,
       new BinaryComparator(Bytes.toBytes("testRowOne-2")));

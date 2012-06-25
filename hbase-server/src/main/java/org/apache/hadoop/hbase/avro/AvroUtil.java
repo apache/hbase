@@ -31,7 +31,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
@@ -76,7 +77,7 @@ public class AvroUtil {
     return asa;
   }
 
-  static public ARegionLoad hrlToARL(HServerLoad.RegionLoad rl) throws IOException {
+  static public ARegionLoad hrlToARL(RegionLoad rl) throws IOException {
     ARegionLoad arl = new ARegionLoad();
     arl.memStoreSizeMB = rl.getMemStoreSizeMB();
     arl.name = ByteBuffer.wrap(rl.getName());
@@ -87,20 +88,20 @@ public class AvroUtil {
     return arl;
   }
 
-  static public AServerLoad hslToASL(HServerLoad hsl) throws IOException {
+  static public AServerLoad hslToASL(ServerLoad sl) throws IOException {
     AServerLoad asl = new AServerLoad();
-    asl.load = hsl.getLoad();
-    asl.maxHeapMB = hsl.getMaxHeapMB();
-    asl.memStoreSizeInMB = hsl.getMemStoreSizeInMB();
-    asl.numberOfRegions = hsl.getNumberOfRegions();
-    asl.numberOfRequests = hsl.getNumberOfRequests();
+    asl.load = sl.getLoad();
+    asl.maxHeapMB = sl.getMaxHeapMB();
+    asl.memStoreSizeInMB = sl.getMemstoreSizeInMB();
+    asl.numberOfRegions = sl.getNumberOfRegions();
+    asl.numberOfRequests = sl.getNumberOfRequests();
 
-    Collection<HServerLoad.RegionLoad> regionLoads = hsl.getRegionsLoad().values();
+    Collection<RegionLoad> regionLoads = sl.getRegionsLoad().values();
     Schema s = Schema.createArray(ARegionLoad.SCHEMA$);
     GenericData.Array<ARegionLoad> aregionLoads = null;
     if (regionLoads != null) {
       aregionLoads = new GenericData.Array<ARegionLoad>(regionLoads.size(), s);
-      for (HServerLoad.RegionLoad rl : regionLoads) {
+      for (RegionLoad rl : regionLoads) {
 	aregionLoads.add(hrlToARL(rl));
       }
     } else {
@@ -108,17 +109,17 @@ public class AvroUtil {
     }
     asl.regionsLoad = aregionLoads;
 
-    asl.storefileIndexSizeInMB = hsl.getStorefileIndexSizeInMB();
-    asl.storefiles = hsl.getStorefiles();
-    asl.storefileSizeInMB = hsl.getStorefileSizeInMB();
-    asl.usedHeapMB = hsl.getUsedHeapMB();
+    asl.storefileIndexSizeInMB = sl.getStorefileIndexSizeInMB();
+    asl.storefiles = sl.getStorefiles();
+    asl.storefileSizeInMB = sl.getStorefileSizeInMB();
+    asl.usedHeapMB = sl.getUsedHeapMB();
     return asl;
   }
 
-  static public AServerInfo hsiToASI(ServerName sn, HServerLoad hsl) throws IOException {
+  static public AServerInfo hsiToASI(ServerName sn, ServerLoad sl) throws IOException {
     AServerInfo asi = new AServerInfo();
     asi.infoPort = -1;
-    asi.load = hslToASL(hsl);
+    asi.load = hslToASL(sl);
     asi.serverAddress = hsaToASA(new HServerAddress(sn.getHostname(), sn.getPort()));
     asi.serverName = new Utf8(sn.toString());
     asi.startCode = sn.getStartcode();

@@ -21,14 +21,18 @@
 package org.apache.hadoop.hbase;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
+import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 
 /**
@@ -78,12 +82,12 @@ public class ServerLoad {
 
   protected HBaseProtos.ServerLoad serverLoad;
 
-  /* @return number of requests per second since last report. */
-  public int getRequestsPerSecond() {
-    return serverLoad.getRequestsPerSecond();
+  /* @return number of requests  since last report. */
+  public int getNumberOfRequests() {
+    return serverLoad.getNumberOfRequests();
   }
-  public boolean hasRequestsPerSecond() {
-    return serverLoad.hasRequestsPerSecond();
+  public boolean hasNumberOfRequests() {
+    return serverLoad.hasNumberOfRequests();
   }
 
   /* @return total Number of requests from the start of the region server. */
@@ -110,31 +114,6 @@ public class ServerLoad {
     return serverLoad.hasMaxHeapMB();
   }
 
-  /* Returns list of RegionLoads, which contain information on the load of individual regions. */
-  public List<RegionLoad> getRegionLoadsList() {
-    return serverLoad.getRegionLoadsList();
-  }
-  public RegionLoad getRegionLoads(int index) {
-    return serverLoad.getRegionLoads(index);
-  }
-  public int getRegionLoadsCount() {
-    return serverLoad.getRegionLoadsCount();
-  }
-
-  /**
-   * @return the list Regionserver-level coprocessors, e.g., WALObserver implementations.
-   * Region-level coprocessors, on the other hand, are stored inside the RegionLoad objects.
-   */
-  public List<Coprocessor> getCoprocessorsList() {
-    return serverLoad.getCoprocessorsList();
-  }
-  public Coprocessor getCoprocessors(int index) {
-    return serverLoad.getCoprocessors(index);
-  }
-  public int getCoprocessorsCount() {
-    return serverLoad.getCoprocessorsCount();
-  }
-
   public int getStores() {
     return stores;
   }
@@ -147,15 +126,15 @@ public class ServerLoad {
     return storeUncompressedSizeMB;
   }
 
-  public int getStorefileSizeMB() {
+  public int getStorefileSizeInMB() {
     return storefileSizeMB;
   }
 
-  public int getMemstoreSizeMB() {
+  public int getMemstoreSizeInMB() {
     return memstoreSizeMB;
   }
 
-  public int getStorefileIndexSizeMB() {
+  public int getStorefileIndexSizeInMB() {
     return storefileIndexSizeMB;
   }
 
@@ -188,16 +167,48 @@ public class ServerLoad {
   }
 
   /**
-   * Return the RegionServer-level coprocessors from a ServerLoad pb.
-   * @param sl - ServerLoad
+   * @return the number of regions
+   */
+  public int getNumberOfRegions() {
+    return serverLoad.getRegionLoadsCount();
+  }
+
+  /**
+   * Originally, this method factored in the effect of requests going to the
+   * server as well. However, this does not interact very well with the current
+   * region rebalancing code, which only factors number of regions. For the
+   * interim, until we can figure out how to make rebalancing use all the info
+   * available, we're just going to make load purely the number of regions.
+   *
+   * @return load factor for this server
+   */
+  public int getLoad() {
+    // See above comment
+    // int load = numberOfRequests == 0 ? 1 : numberOfRequests;
+    // load *= numberOfRegions == 0 ? 1 : numberOfRegions;
+    // return load;
+    return getNumberOfRegions();
+  }
+
+  /**
+   * @return region load metrics
+   */
+  public Map<byte[], RegionLoad> getRegionsLoad() {
+    Map<byte[], RegionLoad> regionLoads =
+      new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
+    for (HBaseProtos.RegionLoad rl : serverLoad.getRegionLoadsList()) {
+      RegionLoad regionLoad = new RegionLoad(rl);
+      regionLoads.put(regionLoad.getName(), regionLoad);
+    }
+    return regionLoads;
+  }
+
+  /**
+   * Return the RegionServer-level coprocessors
    * @return string array of loaded RegionServer-level coprocessors
    */
-  public static String[] getRegionServerCoprocessors(ServerLoad sl) {
-    if (sl == null) {
-      return null;
-    }
-
-    List<Coprocessor> list = sl.getCoprocessorsList();
+  public String[] getRegionServerCoprocessors() {
+    List<Coprocessor> list = getServerLoadPB().getCoprocessorsList();
     String [] ret = new String[list.size()];
     int i = 0;
     for (Coprocessor elem : list) {
@@ -209,23 +220,18 @@ public class ServerLoad {
 
   /**
    * Return the RegionServer-level and Region-level coprocessors
-   * from a ServerLoad pb.
-   * @param sl - ServerLoad
    * @return string array of loaded RegionServer-level and
    *         Region-level coprocessors
    */
-  public static String[] getAllCoprocessors(ServerLoad sl) {
-    if (sl == null) {
-      return null;
-    }
-
+  public String[] getAllCoprocessors() {
     // Need a set to remove duplicates, but since generated Coprocessor class
     // is not Comparable, make it a Set<String> instead of Set<Coprocessor>
     TreeSet<String> coprocessSet = new TreeSet<String>();
-    for (Coprocessor coprocessor : sl.getCoprocessorsList()) {
+    for (Coprocessor coprocessor : getServerLoadPB().getCoprocessorsList()) {
       coprocessSet.add(coprocessor.getName());
     }
-    for (RegionLoad rl : sl.getRegionLoadsList()) {
+
+    for (HBaseProtos.RegionLoad rl : getServerLoadPB().getRegionLoadsList()) {
       for (Coprocessor coprocessor : rl.getCoprocessorsList()) {
         coprocessSet.add(coprocessor.getName());
       }
@@ -234,13 +240,30 @@ public class ServerLoad {
     return coprocessSet.toArray(new String[0]);
   }
 
+  /**
+   * @deprecated Use getAllCoprocessors instead
+   */
+  public String[] getCoprocessors() {
+    return getAllCoprocessors();
+  }
 
+  /**
+   * @return number of requests per second received since the last report
+   */
+  public double getRequestsPerSecond() {
+    long msgInterval = serverLoad.getReportEndTime() - serverLoad.getReportStartTime();
+    return (msgInterval==0)?0.0:(getNumberOfRequests()/(double)msgInterval);
+  }
+
+  /**
+   * @see java.lang.Object#toString()
+   */
   @Override
   public String toString() {
-    StringBuilder sb =
+     StringBuilder sb =
         Strings.appendKeyValue(new StringBuilder(), "requestsPerSecond",
-          Integer.valueOf(this.getRequestsPerSecond()));
-    Strings.appendKeyValue(sb, "numberOfOnlineRegions", Integer.valueOf(getRegionLoadsCount()));
+          Double.valueOf(getRequestsPerSecond()));
+    Strings.appendKeyValue(sb, "numberOfOnlineRegions", Integer.valueOf(getNumberOfRegions()));
     sb = Strings.appendKeyValue(sb, "usedHeapMB", Integer.valueOf(this.getUsedHeapMB()));
     sb = Strings.appendKeyValue(sb, "maxHeapMB", Integer.valueOf(getMaxHeapMB()));
     sb = Strings.appendKeyValue(sb, "numberOfStores", Integer.valueOf(this.stores));
@@ -279,7 +302,7 @@ public class ServerLoad {
     }
     sb = Strings.appendKeyValue(sb, "compactionProgressPct", compactionProgressPct);
 
-    String[] coprocessorStrings = getAllCoprocessors(this);
+    String[] coprocessorStrings = getAllCoprocessors();
     if (coprocessorStrings != null) {
       sb = Strings.appendKeyValue(sb, "coprocessors", Arrays.toString(coprocessorStrings));
     }

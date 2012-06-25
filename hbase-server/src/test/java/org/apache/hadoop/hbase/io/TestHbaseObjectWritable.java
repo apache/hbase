@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
@@ -524,7 +523,6 @@ public class TestHbaseObjectWritable extends TestCase {
     assertEquals(72,HbaseObjectWritable.getClassCode(RandomRowFilter.class).intValue());
     assertEquals(73,HbaseObjectWritable.getClassCode(CompareOp.class).intValue());
     assertEquals(74,HbaseObjectWritable.getClassCode(ColumnRangeFilter.class).intValue());
-    assertEquals(75,HbaseObjectWritable.getClassCode(HServerLoad.class).intValue());
     assertEquals(76,HbaseObjectWritable.getClassCode(RegionOpeningState.class).intValue());
     assertEquals(77,HbaseObjectWritable.getClassCode(HTableDescriptor[].class).intValue());
     assertEquals(78,HbaseObjectWritable.getClassCode(Append.class).intValue());

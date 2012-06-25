@@ -137,8 +137,8 @@ message RegionLoad {
 /* Server-level protobufs */
 
 message ServerLoad {
-  /** Number of requests per second since last report. */
-  optional uint32 requestsPerSecond = 1;
+  /** Number of requests since last report. */
+  optional uint32 numberOfRequests = 1;
 
   /** Total Number of requests from the start of the region server. */
   optional uint32 totalNumberOfRequests = 2;
@@ -158,6 +158,20 @@ message ServerLoad {
    * objects.
    */
   repeated Coprocessor coprocessors = 6;
+
+  /**
+   * Time when incremental (non-total) counts began being calculated (e.g. numberOfRequests)
+   * time is measured as the difference, measured in milliseconds, between the current time
+   * and midnight, January 1, 1970 UTC.
+   */
+  optional uint64 reportStartTime = 7;
+
+  /**
+   * Time when report was generated.
+   * time is measured as the difference, measured in milliseconds, between the current time
+   * and midnight, January 1, 1970 UTC.
+   */
+  optional uint64 reportEndTime = 8;
 }
 
 /**
