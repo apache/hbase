@@ -1039,7 +1039,7 @@ public class TestHBaseFsck {
         Writables.getBytes(hri));
       p.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
         Writables.getBytes(a));
-      p.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
+      p.add(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER,
         Writables.getBytes(b));
       meta.put(p);
       meta.flushCommits();
