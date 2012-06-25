@@ -748,7 +748,8 @@ Server {
     boolean rit = this.assignmentManager.
       processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.ROOT_REGIONINFO);
     ServerName currentRootServer = null;
-    if (!catalogTracker.verifyRootRegionLocation(timeout)) {
+    boolean rootRegionLocation = catalogTracker.verifyRootRegionLocation(timeout);
+    if (!rit && !rootRegionLocation) {
       currentRootServer = this.catalogTracker.getRootLocation();
       splitLogAndExpireIfOnline(currentRootServer);
       this.assignmentManager.assignRoot();
@@ -757,7 +758,13 @@ Server {
       // This guarantees that the transition assigning -ROOT- has completed
       this.assignmentManager.waitForAssignment(HRegionInfo.ROOT_REGIONINFO);
       assigned++;
-    } else {
+    } else if (rit && !rootRegionLocation) {
+      // Make sure a -ROOT- location is set.
+      if (!isRootLocation()) return false;
+      // This guarantees that the transition assigning -ROOT- has completed
+      this.assignmentManager.waitForAssignment(HRegionInfo.ROOT_REGIONINFO);
+      assigned++;
+    } else if (rootRegionLocation) {
       // Region already assigned.  We didn't assign it.  Add to in-memory state.
       this.assignmentManager.regionOnline(HRegionInfo.ROOT_REGIONINFO,
         this.catalogTracker.getRootLocation());
@@ -774,7 +781,8 @@ Server {
     status.setStatus("Assigning META region");
     rit = this.assignmentManager.
       processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
-    if (!this.catalogTracker.verifyMetaRegionLocation(timeout)) {
+    boolean metaRegionLocation = this.catalogTracker.verifyMetaRegionLocation(timeout);
+    if (!rit && !metaRegionLocation) {
       ServerName currentMetaServer =
         this.catalogTracker.getMetaLocationOrReadLocationFromRoot();
       if (currentMetaServer != null
@@ -782,11 +790,11 @@ Server {
         splitLogAndExpireIfOnline(currentMetaServer);
       }
       assignmentManager.assignMeta();
-      enableServerShutdownHandler();
-      this.catalogTracker.waitForMeta();
-      // Above check waits for general meta availability but this does not
-      // guarantee that the transition has completed
-      this.assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
+      enableSSHandWaitForMeta();
+      assigned++;
+    } else if (rit && !metaRegionLocation) {
+      // Wait until META region added to region server onlineRegions. See HBASE-5875.
+      enableSSHandWaitForMeta();
       assigned++;
     } else {
       // Region already assigned.  We didnt' assign it.  Add to in-memory state.
@@ -798,6 +806,14 @@ Server {
       ", location=" + catalogTracker.getMetaLocation());
     status.setStatus("META and ROOT assigned.");
     return true;
+  }
+
+  private void enableSSHandWaitForMeta() throws IOException, InterruptedException {
+    enableServerShutdownHandler();
+    this.catalogTracker.waitForMeta();
+    // Above check waits for general meta availability but this does not
+    // guarantee that the transition has completed
+    this.assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
   }
 
   /**
