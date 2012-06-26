@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -53,7 +52,6 @@ public class TestClassLoading {
   private static final Log LOG = LogFactory.getLog(TestClassLoading.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static Configuration conf;
   private static MiniDFSCluster cluster;
 
   static final int BUFFER_SIZE = 4096;
@@ -84,7 +82,7 @@ public class TestClassLoading {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    conf = TEST_UTIL.getConfiguration();
+    Configuration conf = TEST_UTIL.getConfiguration();
 
     // regionCoprocessor1 will be loaded on all regionservers, since it is
     // loaded for any tables (user or meta).
@@ -233,7 +231,7 @@ public class TestClassLoading {
       // with configuration values
     htd.setValue("COPROCESSOR$2", jarFileOnHDFS2.toString() + "|" + cpName2 +
       "|" + Coprocessor.PRIORITY_USER + "|k1=v1,k2=v2,k3=v3");
-    HBaseAdmin admin = new HBaseAdmin(this.conf);
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
       if (admin.isTableEnabled(tableName)) {
         admin.disableTable(tableName);
@@ -241,6 +239,7 @@ public class TestClassLoading {
       admin.deleteTable(tableName);
     }
     admin.createTable(htd);
+    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
 
     // verify that the coprocessors were loaded
     boolean found1 = false, found2 = false, found2_k1 = false,
@@ -277,12 +276,13 @@ public class TestClassLoading {
     File jarFile = buildCoprocessorJar(cpName3);
 
     // create a table that references the jar
-    HTableDescriptor htd = new HTableDescriptor(cpName3);
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("test"));
     htd.setValue("COPROCESSOR$1", jarFile.toString() + "|" + cpName3 + "|" +
       Coprocessor.PRIORITY_USER);
-    HBaseAdmin admin = new HBaseAdmin(this.conf);
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(htd);
+    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
 
     // verify that the coprocessor was loaded
     boolean found = false;
@@ -337,7 +337,7 @@ public class TestClassLoading {
     htd.addCoprocessor(cpName5, new Path(jarFile5.getPath()),
         Coprocessor.PRIORITY_USER, kvs);
 
-    HBaseAdmin admin = new HBaseAdmin(this.conf);
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
       if (admin.isTableEnabled(tableName)) {
         admin.disableTable(tableName);
@@ -345,6 +345,7 @@ public class TestClassLoading {
       admin.deleteTable(tableName);
     }
     admin.createTable(htd);
+    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
 
     // verify that the coprocessor was loaded
     boolean found_2 = false, found_1 = false, found_3 = false,
@@ -441,7 +442,7 @@ public class TestClassLoading {
       // with configuration values
     htd.setValue("COPROCESSOR$2", jarFileOnHDFS.toString() + "|" + cpName2 +
       "|" + Coprocessor.PRIORITY_USER + "|k1=v1,k2=v2,k3=v3");
-    HBaseAdmin admin = new HBaseAdmin(this.conf);
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
       if (admin.isTableEnabled(tableName)) {
         admin.disableTable(tableName);
@@ -449,6 +450,7 @@ public class TestClassLoading {
       admin.deleteTable(tableName);
     }
     admin.createTable(htd);
+    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
 
     // verify that the coprocessors were loaded
     boolean found1 = false, found2 = false, found2_k1 = false,
@@ -490,7 +492,7 @@ public class TestClassLoading {
     // name "ColumnAggregationEndpoint" will appear before regionCoprocessor2's
     // name "GenericEndpoint" because "C" is before "G" lexicographically.
 
-    HBaseAdmin admin = new HBaseAdmin(this.conf);
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
     // disable all user tables, if any are loaded.
     for (HTableDescriptor htd: admin.listTables()) {
@@ -520,6 +522,7 @@ public class TestClassLoading {
     String userTable1 = "userTable1";
     HTableDescriptor userTD1 = new HTableDescriptor(userTable1);
     admin.createTable(userTD1);
+    TEST_UTIL.waitTableAvailable(userTD1.getName(), 5000);
     // table should be enabled now.
     assertTrue(admin.isTableEnabled(userTable1));
     assertAllRegionServers(regionServerSystemAndUserCoprocessors, userTable1);
@@ -538,6 +541,7 @@ public class TestClassLoading {
     htd2.setValue("COPROCESSOR$1", jarFile1.toString() + "|" + userTableCP +
       "|" + Coprocessor.PRIORITY_USER);
     admin.createTable(htd2);
+    TEST_UTIL.waitTableAvailable(htd2.getName(), 5000);
     // table should be enabled now.
     assertTrue(admin.isTableEnabled(userTable2));
 
