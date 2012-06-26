@@ -219,7 +219,7 @@ public class TestMasterNoCluster {
         RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();;
         ServerName sn = ServerName.parseVersionedServerName(sns[i].getVersionedBytes());
         request.setServer(ProtobufUtil.toServerName(sn));
-        request.setLoad(ServerLoad.EMPTY_SERVERLOAD.getServerLoadPB());
+        request.setLoad(ServerLoad.EMPTY_SERVERLOAD.obtainServerLoadPB());
         master.regionServerReport(null, request.build());
       }
       // Master should now come up.

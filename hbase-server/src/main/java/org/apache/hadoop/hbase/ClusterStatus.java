@@ -294,7 +294,7 @@ public class ClusterStatus extends VersionedWritable {
     for (Map.Entry<ServerName, ServerLoad> entry : liveServers.entrySet()) {
       LiveServerInfo.Builder lsi =
         LiveServerInfo.newBuilder().setServer(ProtobufUtil.toServerName(entry.getKey()));
-      lsi.setServerLoad(entry.getValue().getServerLoadPB());
+      lsi.setServerLoad(entry.getValue().obtainServerLoadPB());
       builder.addLiveServers(lsi.build());
     }
     for (ServerName deadServer : getDeadServerNames()) {

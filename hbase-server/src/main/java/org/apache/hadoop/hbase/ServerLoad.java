@@ -75,8 +75,10 @@ public class ServerLoad {
     
   }
 
+  // NOTE: Function name cannot start with "get" because then an OpenDataException is thrown because
+  // HBaseProtos.ServerLoad cannot be converted to an open data type(see HBASE-5967).
   /* @return the underlying ServerLoad protobuf object */
-  public HBaseProtos.ServerLoad getServerLoadPB() {
+  public HBaseProtos.ServerLoad obtainServerLoadPB() {
     return serverLoad;
   }
 
@@ -208,7 +210,7 @@ public class ServerLoad {
    * @return string array of loaded RegionServer-level coprocessors
    */
   public String[] getRegionServerCoprocessors() {
-    List<Coprocessor> list = getServerLoadPB().getCoprocessorsList();
+    List<Coprocessor> list = obtainServerLoadPB().getCoprocessorsList();
     String [] ret = new String[list.size()];
     int i = 0;
     for (Coprocessor elem : list) {
@@ -227,11 +229,11 @@ public class ServerLoad {
     // Need a set to remove duplicates, but since generated Coprocessor class
     // is not Comparable, make it a Set<String> instead of Set<Coprocessor>
     TreeSet<String> coprocessSet = new TreeSet<String>();
-    for (Coprocessor coprocessor : getServerLoadPB().getCoprocessorsList()) {
+    for (Coprocessor coprocessor : obtainServerLoadPB().getCoprocessorsList()) {
       coprocessSet.add(coprocessor.getName());
     }
 
-    for (HBaseProtos.RegionLoad rl : getServerLoadPB().getRegionLoadsList()) {
+    for (HBaseProtos.RegionLoad rl : obtainServerLoadPB().getRegionLoadsList()) {
       for (Coprocessor coprocessor : rl.getCoprocessorsList()) {
         coprocessSet.add(coprocessor.getName());
       }
