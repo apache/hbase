@@ -634,6 +634,14 @@ public class HConnectionManager {
       checkIfBaseNodeAvailable();
       ServerName sn = null;
       synchronized (this.masterLock) {
+        try {
+          if (master != null && master.isMasterRunning()) {
+            return master;
+          }
+        } catch (UndeclaredThrowableException ute) {
+          // log, but ignore, the loop below will attempt to reconnect
+          LOG.info("Exception contacting master. Retrying...", ute.getCause());
+        }
         this.master = null;
 
         for (int tries = 0;
