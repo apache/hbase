@@ -149,6 +149,8 @@ public class HRegionServer implements HRegionInterface,
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_RESTARTING = new HMsg(
       Type.MSG_REPORT_EXITING_FOR_RESTART);
+  private static final HMsg REPORT_BEGINNING_OF_THE_END = new HMsg(
+      Type.MSG_REPORT_BEGINNING_OF_THE_END);
   private static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
   private static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg [] {};
   private static final String UNABLE_TO_READ_MASTER_ADDRESS_ERR_MSG =
@@ -673,6 +675,31 @@ public class HRegionServer implements HRegionInterface,
         abort("Unhandled exception", t);
       }
     }
+
+    // tell the master that we are going to shut down
+    // do it on separate thread because we don't want to block here if
+    // master is inaccessible. It is OK if this thread's message arrives
+    // out of order at the master.
+    Thread t = new Thread() {
+      @Override
+      public void run() {
+        try {
+          HMsg[] exitMsg = new HMsg[1];
+          exitMsg[0] = REPORT_BEGINNING_OF_THE_END;
+          LOG.info("prepping master for region server shutdown : " +
+              serverInfo.getServerName());
+          hbaseMaster.regionServerReport(serverInfo, exitMsg, (HRegionInfo[])null);
+        } catch (Throwable e) {
+          LOG.warn("Failed to send exiting message to master: ",
+              RemoteExceptionHandler.checkThrowable(e));
+        }
+      }
+    };
+    t.setName("reporting-start-of-exit-to-master");
+    t.setDaemon(true);
+    t.start();
+
+    
     // shutdown thriftserver
     if (thriftServer != null) {
       thriftServer.shutdown();

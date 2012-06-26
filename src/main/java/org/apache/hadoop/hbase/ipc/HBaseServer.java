@@ -532,8 +532,10 @@ public abstract class HBaseServer {
       } catch (InterruptedException ieo) {
         throw ieo;
       } catch (Exception e) {
-        LOG.warn(getName() + ": readAndProcess threw exception " + e +
-            ". Count of bytes read: " + count, e);
+        if (count > 0) {
+          LOG.warn(getName() + ": readAndProcess threw exception " + e +
+              ". Count of bytes read: " + count, e);
+        }
         count = -1; //so that the (count < 0) block is executed
       }
       if (count < 0) {

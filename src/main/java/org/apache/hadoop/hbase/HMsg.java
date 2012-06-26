@@ -145,6 +145,12 @@ public class HMsg implements Writable {
      * region the region server was serving, unless it was told to quiesce.
      */
     MSG_REPORT_EXITING_FOR_RESTART,
+
+    /**
+     * Region server is preparing to shutdown. Master will not get regular
+     * region server reports any more.
+      */
+    MSG_REPORT_BEGINNING_OF_THE_END,
   }
 
   private Type type = null;

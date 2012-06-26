@@ -44,10 +44,6 @@ public class ServerLoadMap<L extends Comparable<?>> {
     rwLock.writeLock().lock();
     try {
       L currentLoad = serversToLoad.get(serverName);
-      if (load != null && load.equals(currentLoad)) {
-        // The load for this server is already the same as what we are trying to set.
-        return;
-      }
 
       if (currentLoad != null) {
         // Remove the server from its current load bucket.

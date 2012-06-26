@@ -322,7 +322,21 @@ public class ServerManager {
     HServerInfo info = new HServerInfo(serverInfo);
     checkIsDead(info.getServerName(), "REPORT");
     if (msgs.length > 0) {
-      if (msgs[0].isType(HMsg.Type.MSG_REPORT_EXITING)) {
+      if (msgs[0].isType(HMsg.Type.MSG_REPORT_BEGINNING_OF_THE_END)) {
+        // region server is going to shut down. do not expect any more reports
+        // from this server
+        HServerLoad load = this.serversToLoad.get(info.getServerName());
+        if (load != null) {
+          load.lastLoadRefreshTime = 0;
+          LOG.info("Server " + serverInfo.getServerName() +
+              " is preparing to shutdown");
+        } else {
+          LOG.info("Server " + serverInfo.getServerName() +
+              " sent preparing to shutdown, " +
+              "but that server probably already exited"); 
+        }
+        return HMsg.EMPTY_HMSG_ARRAY;
+      } else if (msgs[0].isType(HMsg.Type.MSG_REPORT_EXITING)) {
         processRegionServerExit(info, msgs);
         return HMsg.EMPTY_HMSG_ARRAY;
       } else if (msgs[0].isType(HMsg.Type.MSG_REPORT_EXITING_FOR_RESTART)) {
@@ -1188,6 +1202,8 @@ public class ServerManager {
         // but hasn't yet had the first report from the rs. It is usually
         // in the master failover path. It might be a while before the rs
         // discovers the new master and starts reporting to the new master
+        //
+        // could also mean that the region server is shutting down
         continue;
       }
       Long timeOfLastPingFromThisRack = rackLastReportAtMap.get(rack);
@@ -1199,7 +1215,8 @@ public class ServerManager {
       boolean expired = curTime > load.expireAfter;
       if (reportDetails) {
         LOG.debug("server=" + si.getServerName() + " rack=" + rack +
-            " timed-out=" + timedOut + "expired=" + expired);
+            " timed-out=" + timedOut + " expired=" + expired +
+            " timeOfLastPingFromServer=" + timeOfLastPingFromThisServer);
       }
       if (!timedOut) {
         continue;
