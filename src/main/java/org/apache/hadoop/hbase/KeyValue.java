@@ -131,6 +131,15 @@ public class KeyValue implements Writable, HeapSize {
     return COMPARATOR.getRawComparator();
   }
 
+  /** Size of the row length field in bytes */
+  public static final int ROW_LENGTH_SIZE = Bytes.SIZEOF_SHORT;
+
+  /** Size of the family length field in bytes */
+  public static final int FAMILY_LENGTH_SIZE = Bytes.SIZEOF_BYTE;
+
+  /** Size of the timestamp field in bytes */
+  public static final int TIMESTAMP_SIZE = Bytes.SIZEOF_LONG;
+
   // Size of the timestamp and type byte on end of a key -- a long + a byte.
   public static final int TIMESTAMP_TYPE_SIZE =
     Bytes.SIZEOF_LONG /* timestamp */ +
@@ -1910,57 +1919,11 @@ public class KeyValue implements Writable, HeapSize {
         return compare;
       }
 
-      // Compare column family.  Start compare past row and family length.
-      int lcolumnoffset = Bytes.SIZEOF_SHORT + lrowlength + 1 + loffset;
-      int rcolumnoffset = Bytes.SIZEOF_SHORT + rrowlength + 1 + roffset;
-      int lcolumnlength = llength - TIMESTAMP_TYPE_SIZE -
-        (lcolumnoffset - loffset);
-      int rcolumnlength = rlength - TIMESTAMP_TYPE_SIZE -
-        (rcolumnoffset - roffset);
-
-      // if row matches, and no column in the 'left' AND put type is 'minimum',
-      // then return that left is larger than right.
-
-      // This supports 'last key on a row' - the magic is if there is no column in the
-      // left operand, and the left operand has a type of '0' - magical value,
-      // then we say the left is bigger.  This will let us seek to the last key in
-      // a row.
-
-      byte ltype = left[loffset + (llength - 1)];
-      byte rtype = right[roffset + (rlength - 1)];
-
-      if (lcolumnlength == 0 && ltype == Type.Minimum.getCode()) {
-        return 1; // left is bigger.
-      }
-      if (rcolumnlength == 0 && rtype == Type.Minimum.getCode()) {
-        return -1;
-      }
-
-      // TODO the family and qualifier should be compared separately
-      compare = Bytes.compareTo(left, lcolumnoffset, lcolumnlength, right,
-          rcolumnoffset, rcolumnlength);
-      if (compare != 0) {
-        return compare;
-      }
-
-      if (!this.ignoreTimestamp) {
-        // Get timestamps.
-        long ltimestamp = Bytes.toLong(left,
-            loffset + (llength - TIMESTAMP_TYPE_SIZE));
-        long rtimestamp = Bytes.toLong(right,
-            roffset + (rlength - TIMESTAMP_TYPE_SIZE));
-        compare = compareTimestamps(ltimestamp, rtimestamp);
-        if (compare != 0) {
-          return compare;
-        }
-      }
-
-      if (!this.ignoreType) {
-        // Compare types. Let the delete types sort ahead of puts; i.e. types
-        // of higher numbers sort before those of lesser numbers
-        return (0xff & rtype) - (0xff & ltype);
-      }
-      return 0;
+      // Compare the rest of the two KVs. This function will not compare rows
+      // anyway, so we don't need to tell it that the common prefix includes the
+      // row.
+      return compareWithoutRow(left, loffset, llength, right, roffset, rlength,
+          rrowlength);
     }
 
     public int compare(byte[] left, byte[] right) {
@@ -1977,6 +1940,103 @@ public class KeyValue implements Writable, HeapSize {
         byte [] right, int roffset, int rlength, final int rfamilylength) {
       return KeyValue.compareColumns(left, loffset, llength, lfamilylength,
         right, roffset, rlength, rfamilylength);
+    }
+
+    /**
+     * Compare columnFamily, qualifier, timestamp, and key type (everything
+     * except the row). Note that we are assuming that row portions of both KVs
+     * have already been parsed and found identical, and we don't validate that
+     * assumption here.
+     * @return comparison result.
+     */
+    private int compareWithoutRow(byte[] left, int loffset,
+        int llength, byte[] right, int roffset, int rlength, short rowlength) {
+      // Column family offset.
+      int commonLength = ROW_LENGTH_SIZE + FAMILY_LENGTH_SIZE + rowlength;
+      int lfamilyoffset = commonLength + loffset;
+      int rfamilyoffset = commonLength + roffset;
+
+      // Column family length.
+      int lfamilylength = left[lfamilyoffset - 1];
+      int rfamilylength = right[rfamilyoffset - 1];
+
+      // Qualifier length.
+      int lqualifierlength = llength - TIMESTAMP_TYPE_SIZE - commonLength
+          - lfamilylength;
+      int rqualifierlength = rlength - TIMESTAMP_TYPE_SIZE - commonLength
+          - rfamilylength;
+
+      // If row matches, and no column in the 'left' AND put type is 'minimum',
+      // then return that left is larger than right.
+
+      // This supports 'last key on a row' - the magic is if there is no column
+      // in the left operand, and the left operand has a type of '0' - magical
+      // value, then we say the left is bigger.  This will let us seek to the
+      // last key in a row.
+
+      byte ltype = left[loffset + (llength - 1)];
+      byte rtype = right[roffset + (rlength - 1)];
+
+      // If the column is not specified, the "minimum" key type appears the
+      // latest in the sorted order, regardless of the timestamp. This is used
+      // for specifying the last key/value in a given row, because there is no
+      // "lexicographically last column" (it would be infinitely long). The
+      // "maximum" key type does not need this behavior.
+      if (lfamilylength == 0 && lqualifierlength == 0
+          && ltype == Type.Minimum.getCode()) {
+        // left is "bigger", i.e. it appears later in the sorted order
+        return 1;
+      }
+      if (rfamilylength == 0 && rqualifierlength == 0
+          && rtype == Type.Minimum.getCode()) {
+        return -1;
+      }
+      // If left family size is not equal to right family size, we need not
+      // compare the qualifiers. 
+      if (lfamilylength != rfamilylength) {
+        // Compare column family.
+        return Bytes.compareTo(left, lfamilyoffset,
+            lfamilylength, right, rfamilyoffset, rfamilylength);
+      }
+      // Compare family & qualifier together.
+      // commonLength + TIMESTAMP_TYPE_SIZE
+      int commonLengthWithTSAndType = TIMESTAMP_TYPE_SIZE + commonLength;
+      // ColumnFamily + Qualifier length.
+      int lcolumnlength = llength - commonLengthWithTSAndType;
+      int rcolumnlength = rlength - commonLengthWithTSAndType;
+      final int comparison = Bytes.compareTo(left, lfamilyoffset,
+          lcolumnlength, right, rfamilyoffset, rcolumnlength);
+      if (comparison != 0) {
+        return comparison;
+      }
+
+      return compareTimestampAndType(left, loffset, llength, right, roffset,
+          rlength, ltype, rtype);
+    }
+
+    private int compareTimestampAndType(byte[] left, int loffset, int llength,
+        byte[] right, int roffset, int rlength, byte ltype, byte rtype) {
+      int compare;
+      if (!this.ignoreTimestamp) {
+        // Get timestamps.
+        long ltimestamp = Bytes.toLong(left,
+            loffset + (llength - TIMESTAMP_TYPE_SIZE));
+        long rtimestamp = Bytes.toLong(right,
+            roffset + (rlength - TIMESTAMP_TYPE_SIZE));
+        compare = compareTimestamps(ltimestamp, rtimestamp);
+        if (compare != 0) {
+          return compare;
+        }
+      }
+
+      if (!this.ignoreType) {
+        // Compare types. Let the delete types sort ahead of puts; i.e. types
+        // of higher numbers sort before those of lesser numbers. Maximum (255)
+        // appears ahead of everything, and minimum (0) appears after
+        // everything.
+        return (0xff & rtype) - (0xff & ltype);
+      }
+      return 0;
     }
 
     int compareTimestamps(final long ltimestamp, final long rtimestamp) {
