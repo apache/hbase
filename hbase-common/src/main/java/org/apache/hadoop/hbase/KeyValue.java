@@ -2413,33 +2413,29 @@ public class KeyValue implements Writable, HeapSize {
     }
 
     /**
-     * Compare column, timestamp, and key type (everything except the row).
-     * This method is used both in the normal comparator and the "same-prefix"
-     * comparator. Note that we are assuming that row portions of both KVs have
-     * already been parsed and found identical, and we don't validate that
-     * assumption here.
-     * @param commonPrefix the length of the common prefix of the two
-     *          key-values being compared, including row length and row
+     * Compare columnFamily, qualifier, timestamp, and key type (everything
+     * except the row). This method is used both in the normal comparator and
+     * the "same-prefix" comparator. Note that we are assuming that row portions
+     * of both KVs have already been parsed and found identical, and we don't
+     * validate that assumption here.
+     * @param commonPrefix
+     *          the length of the common prefix of the two key-values being
+     *          compared, including row length and row
      */
     private int compareWithoutRow(int commonPrefix, byte[] left, int loffset,
         int llength, byte[] right, int roffset, int rlength, short rowlength) {
-      // Compare column family. Start comparing past row and family length.
-      int lcolumnoffset = ROW_LENGTH_SIZE + FAMILY_LENGTH_SIZE +
-          rowlength + loffset;
-      int rcolumnoffset = ROW_LENGTH_SIZE + FAMILY_LENGTH_SIZE +
-          rowlength + roffset;
-      int lcolumnlength = llength - TIMESTAMP_TYPE_SIZE -
-          (lcolumnoffset - loffset);
-      int rcolumnlength = rlength - TIMESTAMP_TYPE_SIZE -
-          (rcolumnoffset - roffset);
+      /***
+       * KeyValue Format and commonLength:
+       * |_keyLen_|_valLen_|_rowLen_|_rowKey_|_famiLen_|_fami_|_Quali_|....
+       * ------------------|-------commonLength--------|--------------
+       */
+      int commonLength = ROW_LENGTH_SIZE + FAMILY_LENGTH_SIZE + rowlength;
 
-      // If row matches, and no column in the 'left' AND put type is 'minimum',
-      // then return that left is larger than right.
-
-      // This supports 'last key on a row' - the magic is if there is no column
-      // in the left operand, and the left operand has a type of '0' - magical
-      // value, then we say the left is bigger.  This will let us seek to the
-      // last key in a row.
+      // commonLength + TIMESTAMP_TYPE_SIZE
+      int commonLengthWithTSAndType = TIMESTAMP_TYPE_SIZE + commonLength;
+      // ColumnFamily + Qualifier length.
+      int lcolumnlength = llength - commonLengthWithTSAndType;
+      int rcolumnlength = rlength - commonLengthWithTSAndType;
 
       byte ltype = left[loffset + (llength - 1)];
       byte rtype = right[roffset + (rlength - 1)];
@@ -2447,7 +2443,7 @@ public class KeyValue implements Writable, HeapSize {
       // If the column is not specified, the "minimum" key type appears the
       // latest in the sorted order, regardless of the timestamp. This is used
       // for specifying the last key/value in a given row, because there is no
-      // "lexicographically last column" (it would be infinitely long).  The
+      // "lexicographically last column" (it would be infinitely long). The
       // "maximum" key type does not need this behavior.
       if (lcolumnlength == 0 && ltype == Type.Minimum.getCode()) {
         // left is "bigger", i.e. it appears later in the sorted order
@@ -2457,20 +2453,38 @@ public class KeyValue implements Writable, HeapSize {
         return -1;
       }
 
+      int lfamilyoffset = commonLength + loffset;
+      int rfamilyoffset = commonLength + roffset;
+
+      // Column family length.
+      int lfamilylength = left[lfamilyoffset - 1];
+      int rfamilylength = right[rfamilyoffset - 1];
+      // If left family size is not equal to right family size, we need not
+      // compare the qualifiers. 
+      boolean sameFamilySize = (lfamilylength == rfamilylength);
       int common = 0;
       if (commonPrefix > 0) {
-        common = Math.max(0, commonPrefix -
-            rowlength - ROW_LENGTH_SIZE - FAMILY_LENGTH_SIZE);
-        common = Math.min(common, Math.min(lcolumnlength, rcolumnlength));
+        common = Math.max(0, commonPrefix - commonLength);
+        if (!sameFamilySize) {
+          // Common should not be larger than Math.min(lfamilylength,
+          // rfamilylength).
+          common = Math.min(common, Math.min(lfamilylength, rfamilylength));
+        } else {
+          common = Math.min(common, Math.min(lcolumnlength, rcolumnlength));
+        }
       }
-
-      final int comparisonResult = Bytes.compareTo(
-          left, lcolumnoffset + common, lcolumnlength - common,
-          right, rcolumnoffset + common, rcolumnlength - common);
-      if (comparisonResult != 0) {
-        return comparisonResult;
+      if (!sameFamilySize) {
+        // comparing column family is enough.
+        return Bytes.compareTo(left, lfamilyoffset + common, lfamilylength
+            - common, right, rfamilyoffset + common, rfamilylength - common);
       }
-
+      // Compare family & qualifier together.
+      final int comparison = Bytes.compareTo(left, lfamilyoffset + common,
+          lcolumnlength - common, right, rfamilyoffset + common,
+          rcolumnlength - common);
+      if (comparison != 0) {
+        return comparison;
+      }
       return compareTimestampAndType(left, loffset, llength, right, roffset,
           rlength, ltype, rtype);
     }
