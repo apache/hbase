@@ -276,7 +276,7 @@ public class TestClassLoading {
     File jarFile = buildCoprocessorJar(cpName3);
 
     // create a table that references the jar
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(cpName3);
     htd.addFamily(new HColumnDescriptor("test"));
     htd.setValue("COPROCESSOR$1", jarFile.toString() + "|" + cpName3 + "|" +
       Coprocessor.PRIORITY_USER);
