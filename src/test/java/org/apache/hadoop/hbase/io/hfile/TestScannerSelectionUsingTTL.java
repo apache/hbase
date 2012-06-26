@@ -27,6 +27,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -38,7 +39,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -98,6 +98,8 @@ public class TestScannerSelectionUsingTTL {
 
   @Test
   public void testScannerSelection() throws IOException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setBoolean("hbase.store.delete.expired.storefile", false);
     HColumnDescriptor hcd =
       new HColumnDescriptor(FAMILY_BYTES)
           .setMaxVersions(Integer.MAX_VALUE)
@@ -107,7 +109,7 @@ public class TestScannerSelectionUsingTTL {
     HRegionInfo info = new HRegionInfo(Bytes.toBytes(TABLE));
     HRegion region =
         HRegion.createHRegion(info, TEST_UTIL.getClusterTestDir(),
-            TEST_UTIL.getConfiguration(), htd);
+            conf, htd);
 
     for (int iFile = 0; iFile < totalNumFiles; ++iFile) {
       if (iFile == NUM_EXPIRED_FILES) {
@@ -127,7 +129,7 @@ public class TestScannerSelectionUsingTTL {
 
     Scan scan = new Scan();
     scan.setMaxVersions(Integer.MAX_VALUE);
-    CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
+    CacheConfig cacheConf = new CacheConfig(conf);
     LruBlockCache cache = (LruBlockCache) cacheConf.getBlockCache();
     cache.clearCache();
     InternalScanner scanner = region.getScanner(scan);
