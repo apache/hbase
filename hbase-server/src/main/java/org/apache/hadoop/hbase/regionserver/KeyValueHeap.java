@@ -365,7 +365,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
           // Compare the current scanner to the next scanner. We try to avoid
           // putting the current one back into the heap if possible.
           KeyValue nextKV = nextEarliestScanner.peek();
-          if (nextKV == null || comparator.compare(curKV, nextKV) <= 0) {
+          if (nextKV == null || comparator.compare(curKV, nextKV) < 0) {
             // We already have the scanner with the earliest KV, so return it.
             return kvScanner;
           }

@@ -3708,6 +3708,67 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(expected, appendResult);
     this.region = null;
   }
+
+  /**
+   * Test case to check put function with memstore flushing for same row, same ts
+   * @throws Exception
+   */
+  public void testPutWithMemStoreFlush() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    String method = "testPutWithMemStoreFlush";
+    byte[] tableName = Bytes.toBytes(method);
+    byte[] family = Bytes.toBytes("family");;
+    byte[] qualifier = Bytes.toBytes("qualifier");
+    byte[] row = Bytes.toBytes("putRow");
+    byte[] value = null;
+    this.region = initHRegion(tableName, method, conf, family);
+    Put put = null;
+    Get get = null;
+    List<KeyValue> kvs = null;
+    Result res = null;
+
+    put = new Put(row);
+    value = Bytes.toBytes("value0");
+    put.add(family, qualifier, 1234567l, value);
+    region.put(put);
+    get = new Get(row);
+    get.addColumn(family, qualifier);
+    get.setMaxVersions();
+    res = this.region.get(get, null);
+    kvs = res.getColumn(family, qualifier);
+    assertEquals(1, kvs.size());
+    assertEquals(Bytes.toBytes("value0"), kvs.get(0).getValue());
+
+    region.flushcache();
+    get = new Get(row);
+    get.addColumn(family, qualifier);
+    get.setMaxVersions();
+    res = this.region.get(get, null);
+    kvs = res.getColumn(family, qualifier);
+    assertEquals(1, kvs.size());
+    assertEquals(Bytes.toBytes("value0"), kvs.get(0).getValue());
+
+    put = new Put(row);
+    value = Bytes.toBytes("value1");
+    put.add(family, qualifier, 1234567l, value);
+    region.put(put);
+    get = new Get(row);
+    get.addColumn(family, qualifier);
+    get.setMaxVersions();
+    res = this.region.get(get, null);
+    kvs = res.getColumn(family, qualifier);
+    assertEquals(1, kvs.size());
+    assertEquals(Bytes.toBytes("value1"), kvs.get(0).getValue());
+
+    region.flushcache();
+    get = new Get(row);
+    get.addColumn(family, qualifier);
+    get.setMaxVersions();
+    res = this.region.get(get, null);
+    kvs = res.getColumn(family, qualifier);
+    assertEquals(1, kvs.size());
+    assertEquals(Bytes.toBytes("value1"), kvs.get(0).getValue());
+  }
   
   private void putData(int startRow, int numRows, byte [] qf,
       byte [] ...families)
