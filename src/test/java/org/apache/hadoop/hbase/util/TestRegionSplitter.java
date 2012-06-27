@@ -35,9 +35,13 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
+import org.apache.hadoop.hbase.mapreduce.TableSplit;
 import org.apache.hadoop.hbase.util.RegionSplitter.HexStringSplit;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RegionSplitter.UniformSplit;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -89,6 +93,9 @@ public class TestRegionSplitter {
           // Do table creation/pre-splitting and verification of region boundaries
       preSplitTableAndVerify(expectedBounds,
           HexStringSplit.class.getSimpleName(), "NewHexPresplitTable");
+
+      preSplitTableAndVerifyMRSplit(expectedBounds,
+          4, HexStringSplit.class.getSimpleName(), "NewHexPresplitTableForMR");
   }
 
   /**
@@ -118,6 +125,9 @@ public class TestRegionSplitter {
       // Do table creation/pre-splitting and verification of region boundaries
       preSplitTableAndVerify(expectedBounds, UniformSplit.class.getSimpleName(),
         "NewUniformPresplitTable");
+
+      preSplitTableAndVerifyMRSplit(expectedBounds, 4, UniformSplit.class.getSimpleName(),
+        "NewUniformPresplitTableForMR");
   }
 
   /**
@@ -282,6 +292,47 @@ public class TestRegionSplitter {
     RegionSplitter.createPresplitTable(tableName, splitAlgo,
         new String[] { CF_NAME }, conf);
     verifyBounds(expectedBounds, tableName);
+  }
+
+  private void preSplitTableAndVerifyMRSplit(List<byte[]> expectedBounds, int mappersPerRegion,
+      String splitClass, String tableName) throws Exception {
+    final int numRegions = (expectedBounds.size() - 1) / mappersPerRegion;
+    final Configuration conf = UTIL.getConfiguration();
+    conf.setInt("split.count", numRegions);
+
+    SplitAlgorithm splitAlgo = RegionSplitter.newSplitAlgoInstance(conf,
+        splitClass);
+    RegionSplitter.createPresplitTable(tableName, splitAlgo,
+        new String[] { CF_NAME }, conf);
+
+    conf.set(TableInputFormat.SPLIT_ALGO, splitClass);
+    conf.setInt(TableInputFormat.MAPPERS_PER_REGION, mappersPerRegion);
+    conf.set(TableInputFormat.INPUT_TABLE, tableName);
+    verifyBoundsForMRSplits(expectedBounds, conf);
+  }
+
+  private void verifyBoundsForMRSplits(List<byte[]> expectedBounds,
+      Configuration conf)
+      throws Exception {
+    // Get split boundaries from the table and verify their endpoints
+    JobContext context = new JobContext(conf, null);
+    TableInputFormat inf = new TableInputFormat();
+    inf.setConf(conf);
+    List<InputSplit> splits = inf.getSplits(context);
+
+    for (InputSplit split: splits) {
+      byte[] regionStart = ((TableSplit)split).getStartRow();
+      byte[] regionEnd = ((TableSplit)split).getEndRow();
+
+      // This region's start key should be one of the region boundaries
+      int startBoundaryIndex = indexOfBytes(expectedBounds, regionStart);
+      assertNotSame(-1, startBoundaryIndex);
+
+      // This region's end key should be the region boundary that comes
+      // after the starting boundary.
+      byte[] expectedRegionEnd = expectedBounds.get(startBoundaryIndex + 1);
+      assertEquals(0, Bytes.compareTo(regionEnd, expectedRegionEnd));
+    }
   }
 
   private void verifyBounds(List<byte[]> expectedBounds, String tableName)

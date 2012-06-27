@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RegionSplitter;
+import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -85,6 +87,8 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   private TableRecordReader tableRecordReader = null;
   /** The number of mappers to assign to each region. */
   private int numMappersPerRegion = 1;
+  /** Splitting algorithm to be used to split the keys */
+  private String splitAlgmName; // default to Uniform
 
   /** The reverse DNS lookup cache mapping: IPAddress => HostName */
   private HashMap<InetAddress, String> reverseDNSCacheMap =
@@ -160,44 +164,33 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       // Insert null keys at edges
       startKeys[0] = HConstants.EMPTY_START_ROW;
       stopKeys[numRegions * numMappersPerRegion - 1] = HConstants.EMPTY_END_ROW;
-      // Split the second region
-      byte[][] dividingKeys = Bytes.split(keys.getFirst()[1],
-          keys.getSecond()[1], numMappersPerRegion - 1);
-      int count = numMappersPerRegion - 1;
-      stopKeys[count] = keys.getSecond()[0];
-      // Use the interval between these splits to calculate the approximate
-        // dividing keys of the first region
-      for (byte[] approxKey : Bytes.arithmeticProgSeq(dividingKeys[1], dividingKeys[0],
-          numMappersPerRegion - 1)) {
-        startKeys[count--] = approxKey;
-        stopKeys[count] = approxKey;
-      }
-      // Add the second region dividing keys
-      for (int i = 0; i < numMappersPerRegion; i++) {
-        startKeys[numMappersPerRegion + i] = dividingKeys[i];
-        stopKeys[numMappersPerRegion + i] = dividingKeys[i + 1];
-      }
-      // Fill out all the split keys for center regions (3rd...(n-1)th)
-      for (int i = 2; i < numRegions - 1; i++) {
-        dividingKeys = Bytes.split(keys.getFirst()[i],
-            keys.getSecond()[i], numMappersPerRegion - 1);
-        for (int j = 0; j < numMappersPerRegion; j++) {
-          startKeys[i * numMappersPerRegion + j] = dividingKeys[j];
-          stopKeys[i * numMappersPerRegion + j] = dividingKeys[j + 1];
+
+      byte[][] originalStartKeys = keys.getFirst();
+      byte[][] originalStopKeys = keys.getSecond();
+      SplitAlgorithm algmImpl;
+
+      for (int i = 0; i < originalStartKeys.length; i++) {
+        // get a new instance each time
+        algmImpl = RegionSplitter.newSplitAlgoInstance(context.getConfiguration(),
+            this.splitAlgmName);
+        if (originalStartKeys[i].length != 0)
+          algmImpl.setFirstRow(algmImpl.rowToStr(originalStartKeys[i]));
+        if (originalStopKeys[i].length != 0)
+          algmImpl.setLastRow(algmImpl.rowToStr(originalStopKeys[i]));
+        byte[][] dividingKeys = algmImpl.split(numMappersPerRegion);
+
+        startKeys[i*numMappersPerRegion] = originalStartKeys[i];
+        for (int j = 0; j < numMappersPerRegion - 1; j++) {
+          stopKeys[i * numMappersPerRegion + j] = dividingKeys[j];
+          startKeys[i * numMappersPerRegion + j + 1] = dividingKeys[j];
         }
-      }
-      // Use the previous intervals to calc dividing keys of the last region
-      count = numMappersPerRegion * (numRegions - 1);
-      startKeys[count] = keys.getFirst()[numRegions - 1];
-      for (byte[] approxKey : Bytes.arithmeticProgSeq(dividingKeys[numMappersPerRegion - 1],
-          dividingKeys[numMappersPerRegion], numMappersPerRegion - 1)) {
-        stopKeys[count++] = approxKey;
-        startKeys[count] = approxKey;
+        stopKeys[(i+1)*numMappersPerRegion - 1] = originalStopKeys[i];
       }
       splitKeys = new Pair<byte[][], byte[][]>();
       splitKeys.setFirst(startKeys);
       splitKeys.setSecond(stopKeys);
     }
+
     List<InputSplit> splits =
         new ArrayList<InputSplit>(numRegions * numMappersPerRegion);
     byte[] startRow = scan.getStartRow();
@@ -334,8 +327,16 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   public void setNumMapperPerRegion(int num) throws IllegalArgumentException {
     if (num <= 0) {
       throw new IllegalArgumentException("Expecting at least 1 mapper " +
-		"per region; instead got: " + num);
+          "per region; instead got: " + num);
     }
     numMappersPerRegion = num;
+  }
+
+  public void setSplitAlgorithm(String name) {
+    this.splitAlgmName = name;
+  }
+
+  public String getSplitAlgorithm() {
+    return splitAlgmName;
   }
 }

@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.RegionSplitter;
+import org.apache.hadoop.hbase.util.RegionSplitter.UniformSplit;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -63,6 +65,8 @@ implements Configurable {
   public static final String SCAN_CACHEDROWS = "hbase.mapreduce.scan.cachedrows";
   /** The number of mappers that should be assigned to each region. */
   public static final String MAPPERS_PER_REGION = "hbase.mapreduce.mappersperregion";
+  /** The Algorithm used to splie each region's keyspace. */
+  public static final String SPLIT_ALGO = "hbase.mapreduce.tableinputformat.split.algo";
 
   /** The configuration. */
   private Configuration conf = null;
@@ -144,6 +148,8 @@ implements Configurable {
     if (conf.get(MAPPERS_PER_REGION) != null) {
       setNumMapperPerRegion(Integer.parseInt(conf.get(MAPPERS_PER_REGION)));
     }
+
+    setSplitAlgorithm(conf.get(SPLIT_ALGO, UniformSplit.class.getSimpleName()));
 
     setScan(scan);
   }
