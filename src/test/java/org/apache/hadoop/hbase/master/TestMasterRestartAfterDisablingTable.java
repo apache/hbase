@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -96,9 +95,7 @@ public class TestMasterRestartAfterDisablingTable {
         "stopping the active master so that the backup can become active");
     cluster.hbaseCluster.waitOnMaster(activeMaster);
     cluster.waitForActiveAndReadyMaster();
-    assertTrue("The table should not be in enabled state", cluster.getMaster()
-        .getAssignmentManager().getZKTable().isDisablingOrDisabledTable(
-            "tableRestart"));
+
     log("Enabling table\n");
     TEST_UTIL.getHBaseAdmin().enableTable(table);
     log("Waiting for no more RIT\n");
@@ -108,8 +105,6 @@ public class TestMasterRestartAfterDisablingTable {
     assertEquals(
         "The assigned regions were not onlined after master switch except for the catalog tables.",
         6, regions.size());
-    assertTrue("The table should be in enabled state", cluster.getMaster()
-        .getAssignmentManager().getZKTable().isEnabledTable("tableRestart"));
   }
 
   private void log(String msg) {

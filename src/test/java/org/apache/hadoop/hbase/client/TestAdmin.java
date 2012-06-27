@@ -137,9 +137,6 @@ public class TestAdmin {
     ht.get(get);
 
     this.admin.disableTable(table);
-    assertTrue("Table must be disabled.", TEST_UTIL.getHbaseCluster()
-        .getMaster().getAssignmentManager().getZKTable().isDisabledTable(
-            Bytes.toString(table)));
 
     // Test that table is disabled
     get = new Get(row);
@@ -154,9 +151,7 @@ public class TestAdmin {
     }
     assertTrue(ok);
     this.admin.enableTable(table);
-    assertTrue("Table must be enabled.", TEST_UTIL.getHbaseCluster()
-        .getMaster().getAssignmentManager().getZKTable().isEnabledTable(
-            Bytes.toString(table)));
+
     // Test that table is enabled
     try {
       ht.get(get);
@@ -994,8 +989,6 @@ public class TestAdmin {
 
     htd.addFamily(hcd);
     admin.createTable(htd, null);
-    assertTrue("Table state must be ENABLED", HTable.isTableEnabled(config,
-        Bytes.toString(TABLENAME)));
     return admin;
   }
   @Test

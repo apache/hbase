@@ -36,6 +36,7 @@ Release 0.90.7 - Unreleased
    HBASE-5874  When 'fs.default.name' not configured, the hbck tool and Merge tool throws IllegalArgumentException (fulin wang)
    HBASE-6190  TestPriorityCompactionQueue throws NPE 
    HBASE-6200  KeyComparator.compareWithoutRow can be wrong when families have the same prefix (Jieshan)
+   HBASE-5904  Revert HBASE-5155 - is_enabled from shell returns differently breaking compatibility. (David S. Wang)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition

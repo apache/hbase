@@ -627,8 +627,7 @@ public class TestMasterFailover {
         Bytes.toBytes("iii"), Bytes.toBytes("jjj")
     };
 
-    String enabledTableName = "enabledTable";
-    byte [] enabledTable = Bytes.toBytes(enabledTableName);
+    byte [] enabledTable = Bytes.toBytes("enabledTable");
     HTableDescriptor htdEnabled = new HTableDescriptor(enabledTable);
     htdEnabled.addFamily(new HColumnDescriptor(FAMILY));
     List<HRegionInfo> enabledRegions = TEST_UTIL.createMultiRegionsInMeta(
@@ -674,8 +673,6 @@ public class TestMasterFailover {
       master.assignRegion(hri);
     }
 
-    assertTrue(" Table must be enabled.", master.getAssignmentManager()
-        .getZKTable().isEnabledTable(enabledTableName));
     // we also need regions assigned out on the dead server
     List<HRegionInfo> enabledAndOnDeadRegions = new ArrayList<HRegionInfo>();
     enabledAndOnDeadRegions.add(enabledRegions.remove(0));
@@ -720,8 +717,6 @@ public class TestMasterFailover {
     // Disable the disabledTable in ZK
     ZKTable zktable = new ZKTable(zkw);
     zktable.setDisabledTable(Bytes.toString(disabledTable));
-    assertTrue(" The enabled table should be identified on master fail over.",
-        zktable.isEnabledTable(enabledTableName));
 
     /*
      * ZK = CLOSING
