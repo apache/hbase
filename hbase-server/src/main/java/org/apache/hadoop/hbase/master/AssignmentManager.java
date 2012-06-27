@@ -447,6 +447,13 @@ public class AssignmentManager extends ZooKeeperListener {
     // no lock concurrent access ok: some threads may be adding/removing items but its java-valid
     nodes.removeAll(regionsInTransition.keySet());
 
+    // If some dead servers are processed by ServerShutdownHandler, we shouldn't
+    // assign all user regions( some would be assigned by
+    // ServerShutdownHandler), consider it as a failover
+    if (!this.serverManager.getDeadServers().isEmpty()) {
+      this.failover = true;
+    }
+
     // If we found user regions out on cluster, its a failover.
     if (this.failover) {
       LOG.info("Found regions out on cluster or in RIT; failover");
@@ -2811,6 +2818,9 @@ public class AssignmentManager extends ZooKeeperListener {
       // skip regions of dead servers because SSH will process regions during rs expiration. 
       // see HBASE-5916
       if (actualDeadServers.contains(deadServer.getKey())) {
+        for (Pair<HRegionInfo, Result> deadRegion : deadServer.getValue()) {
+          nodes.remove(deadRegion.getFirst().getEncodedName());
+        }
         continue;
       }
       List<Pair<HRegionInfo, Result>> regions = deadServer.getValue();
