@@ -325,8 +325,9 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     // Make lease timeout longer, lease checks less frequent
     TEST_UTIL.getConfiguration().setInt(
         "hbase.master.lease.thread.wakefrequency", 5 * 1000);
-    TEST_UTIL.getConfiguration().setInt(
-        "hbase.regionserver.lease.period", 10 * 1000);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 10 * 1000);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD,
+      10 * 1000);
     // Increase the amount of time between client retries
     TEST_UTIL.getConfiguration().setLong("hbase.client.pause", 15 * 1000);
     // This size should make it so we always split using the addContent

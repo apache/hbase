@@ -536,16 +536,25 @@ public final class HConstants {
   public static String HBASE_CLIENT_INSTANCE_ID = "hbase.client.instance.id";
 
   /**
-   * HRegion server lease period in milliseconds. Clients must report in within this period
-   * else they are considered dead. Unit measured in ms (milliseconds).
+   * The row lock timeout period in milliseconds.
    */
-  public static String HBASE_REGIONSERVER_LEASE_PERIOD_KEY =
-    "hbase.regionserver.lease.period";
+  public static String HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD =
+	  "hbase.regionserver.rowlock.timeout.period";
 
   /**
-   * Default value of {@link #HBASE_REGIONSERVER_LEASE_PERIOD_KEY}.
+   * Default value of {@link #HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD}.
    */
-  public static long DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD = 60000;
+  public static int DEFAULT_HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD = 60000;
+
+  /**
+   * The client scanner timeout period in milliseconds.
+   */
+  public static String HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = "hbase.client.scanner.timeout.period";
+
+  /**
+   * Default value of {@link #HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD}.
+   */
+  public static int DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = 60000;
 
   /**
    * timeout for each RPC

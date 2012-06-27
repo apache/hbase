@@ -25,7 +25,9 @@ import static org.junit.Assert.fail;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -48,7 +50,7 @@ public class TestScannerTimeout {
   private final static byte[] SOME_BYTES = Bytes.toBytes("f");
   private final static byte[] TABLE_NAME = Bytes.toBytes("t");
   private final static int NB_ROWS = 10;
-  // Be careful w/ what you set this timer too... it can get in the way of
+  // Be careful w/ what you set this timer to... it can get in the way of
   // the mini cluster coming up -- the verification in particular.
   private final static int SCANNER_TIMEOUT = 10000;
   private final static int SCANNER_CACHING = 5;
@@ -59,7 +61,7 @@ public class TestScannerTimeout {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
-    c.setInt("hbase.regionserver.lease.period", SCANNER_TIMEOUT);
+    c.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT);
     // We need more than one region server for this test
     TEST_UTIL.startMiniCluster(2);
     HTable table = TEST_UTIL.createTable(TABLE_NAME, SOME_BYTES);
@@ -134,8 +136,7 @@ public class TestScannerTimeout {
     // Since the RS is already created, this conf is client-side only for
     // this new table
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    conf.setInt(
-        HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY, SCANNER_TIMEOUT*100);
+    conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT * 100);
     HTable higherScanTimeoutTable = new HTable(conf, TABLE_NAME);
     ResultScanner r = higherScanTimeoutTable.getScanner(scan);
     // This takes way less than SCANNER_TIMEOUT*100
@@ -201,8 +202,7 @@ public class TestScannerTimeout {
     // Since the RS is already created, this conf is client-side only for
     // this new table
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    conf.setInt(
-        HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY, SCANNER_TIMEOUT*100);
+    conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT * 100);
     HTable higherScanTimeoutTable = new HTable(conf, TABLE_NAME);
     ResultScanner r = higherScanTimeoutTable.getScanner(scan);
     int count = 1;

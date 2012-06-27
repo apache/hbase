@@ -106,9 +106,8 @@ public class ClientScanner extends AbstractClientScanner {
           HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
           HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
       }
-      this.scannerTimeout = (int) conf.getLong(
-          HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
-          HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
+    this.scannerTimeout = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
+      HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
 
       // check if application wants to collect scan metrics
       byte[] enableMetrics = scan.getAttribute(

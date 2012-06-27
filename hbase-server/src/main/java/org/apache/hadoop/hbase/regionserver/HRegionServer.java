@@ -422,6 +422,16 @@ public class  HRegionServer implements ClientProtocol,
    */
   private MovedRegionsCleaner movedRegionsCleaner;
 
+  /**
+   * The lease timeout period for row locks (milliseconds).
+   */
+  private final int rowLockLeaseTimeoutPeriod;
+
+  /**
+   * The lease timeout period for client scanners (milliseconds).
+   */
+  private final int scannerLeaseTimeoutPeriod;
+
 
   /**
    * Starts a HRegionServer at the default location
@@ -465,6 +475,13 @@ public class  HRegionServer implements ClientProtocol,
 
     this.abortRequested = false;
     this.stopped = false;
+
+    this.rowLockLeaseTimeoutPeriod = conf.getInt(
+      HConstants.HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD,
+      HConstants.DEFAULT_HBASE_REGIONSERVER_ROWLOCK_TIMEOUT_PERIOD);
+
+    this.scannerLeaseTimeoutPeriod = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
+      HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
 
     // Server to handle client requests.
     String hostname = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
@@ -705,10 +722,7 @@ public class  HRegionServer implements ClientProtocol,
     this.compactionChecker = new CompactionChecker(this,
       this.threadWakeFrequency * multiplier, this);
 
-    this.leases = new Leases((int) conf.getLong(
-        HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
-        HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD),
-        this.threadWakeFrequency);
+    this.leases = new Leases(this.threadWakeFrequency);
 
     // Create the thread for the ThriftServer.
     if (conf.getBoolean("hbase.regionserver.export.thrift", false)) {
@@ -2658,7 +2672,8 @@ public class  HRegionServer implements ClientProtocol,
     long lockId = nextLong();
     String lockName = String.valueOf(lockId);
     rowlocks.put(lockName, r);
-    this.leases.createLease(lockName, new RowLockListener(lockName, region));
+    this.leases.createLease(lockName, this.rowLockLeaseTimeoutPeriod, new RowLockListener(lockName,
+        region));
     return lockId;
   }
 
@@ -2666,7 +2681,8 @@ public class  HRegionServer implements ClientProtocol,
     long scannerId = nextLong();
     String scannerName = String.valueOf(scannerId);
     scanners.put(scannerName, s);
-    this.leases.createLease(scannerName, new ScannerListener(scannerName));
+    this.leases.createLease(scannerName, this.scannerLeaseTimeoutPeriod, new ScannerListener(
+        scannerName));
     return scannerId;
   }
 
@@ -2925,7 +2941,7 @@ public class  HRegionServer implements ClientProtocol,
           }
           scannerId = addScanner(scanner);
           scannerName = String.valueOf(scannerId);
-          ttl = leases.leasePeriod;
+          ttl = this.scannerLeaseTimeoutPeriod;
         }
 
         if (rows > 0) {
@@ -2999,7 +3015,7 @@ public class  HRegionServer implements ClientProtocol,
             // Adding resets expiration time on lease.
             if (scanners.containsKey(scannerName)) {
               if (lease != null) leases.addLease(lease);
-              ttl = leases.leasePeriod;
+              ttl = this.scannerLeaseTimeoutPeriod;
             }
           }
         }

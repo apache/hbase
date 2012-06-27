@@ -55,7 +55,6 @@ import java.io.IOException;
 @InterfaceAudience.Private
 public class Leases extends HasThread {
   private static final Log LOG = LogFactory.getLog(Leases.class.getName());
-  protected final int leasePeriod;
   private final int leaseCheckFrequency;
   private volatile DelayQueue<Lease> leaseQueue = new DelayQueue<Lease>();
   protected final Map<String, Lease> leases = new HashMap<String, Lease>();
@@ -63,13 +62,11 @@ public class Leases extends HasThread {
 
   /**
    * Creates a lease monitor
-   *
-   * @param leasePeriod - length of time (milliseconds) that the lease is valid
+   * 
    * @param leaseCheckFrequency - how often the lease should be checked
-   * (milliseconds)
+   *          (milliseconds)
    */
-  public Leases(final int leasePeriod, final int leaseCheckFrequency) {
-    this.leasePeriod = leasePeriod;
+  public Leases(final int leaseCheckFrequency) {
     this.leaseCheckFrequency = leaseCheckFrequency;
     setDaemon(true);
   }
@@ -135,15 +132,16 @@ public class Leases extends HasThread {
   }
 
   /**
-   * Obtain a lease
-   *
+   * Obtain a lease.
+   * 
    * @param leaseName name of the lease
+   * @param leaseTimeoutPeriod length of the lease in milliseconds
    * @param listener listener that will process lease expirations
    * @throws LeaseStillHeldException
    */
-  public void createLease(String leaseName, final LeaseListener listener)
-  throws LeaseStillHeldException {
-    addLease(new Lease(leaseName, listener));
+  public void createLease(String leaseName, int leaseTimeoutPeriod, final LeaseListener listener)
+      throws LeaseStillHeldException {
+    addLease(new Lease(leaseName, leaseTimeoutPeriod, listener));
   }
 
   /**
@@ -155,7 +153,7 @@ public class Leases extends HasThread {
     if (this.stopRequested) {
       return;
     }
-    lease.setExpirationTime(System.currentTimeMillis() + this.leasePeriod);
+    lease.resetExpirationTime();
     synchronized (leaseQueue) {
       if (leases.containsKey(lease.getLeaseName())) {
         throw new LeaseStillHeldException(lease.getLeaseName());
@@ -202,7 +200,7 @@ public class Leases extends HasThread {
         throw new LeaseException("lease '" + leaseName +
         "' does not exist or has already expired");
       }
-      lease.setExpirationTime(System.currentTimeMillis() + leasePeriod);
+      lease.resetExpirationTime();
       leaseQueue.add(lease);
     }
   }
@@ -241,16 +239,14 @@ public class Leases extends HasThread {
   static class Lease implements Delayed {
     private final String leaseName;
     private final LeaseListener listener;
+    private int leaseTimeoutPeriod;
     private long expirationTime;
 
-    Lease(final String leaseName, LeaseListener listener) {
-      this(leaseName, listener, 0);
-    }
-
-    Lease(final String leaseName, LeaseListener listener, long expirationTime) {
+    Lease(final String leaseName, int leaseTimeoutPeriod, LeaseListener listener) {
       this.leaseName = leaseName;
       this.listener = listener;
-      this.expirationTime = expirationTime;
+      this.leaseTimeoutPeriod = leaseTimeoutPeriod;
+      this.expirationTime = 0;
     }
 
     /** @return the lease name */
@@ -294,9 +290,11 @@ public class Leases extends HasThread {
       return this.equals(o) ? 0 : (delta > 0 ? 1 : -1);
     }
 
-    /** @param expirationTime the expirationTime to set */
-    public void setExpirationTime(long expirationTime) {
-      this.expirationTime = expirationTime;
+    /**
+     * Resets the expiration time of the lease.
+     */
+    public void resetExpirationTime() {
+      this.expirationTime = System.currentTimeMillis() + this.leaseTimeoutPeriod;
     }
   }
 }
