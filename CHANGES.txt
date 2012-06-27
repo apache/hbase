@@ -35,6 +35,7 @@ Release 0.90.7 - Unreleased
    HBASE-6124  https://issues.apache.org/jira/secure/attachment/12530072/patch-0.90.txt (Jimmy Xiang)
    HBASE-5874  When 'fs.default.name' not configured, the hbck tool and Merge tool throws IllegalArgumentException (fulin wang)
    HBASE-6190  TestPriorityCompactionQueue throws NPE 
+   HBASE-6200  KeyComparator.compareWithoutRow can be wrong when families have the same prefix (Jieshan)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition

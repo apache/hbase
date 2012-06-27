@@ -339,6 +339,34 @@ public class TestKeyValue extends TestCase {
     assertTrue(cmp > 0);
   }
 
+  public void testCompareWithoutRow() {
+    final KVComparator c = KeyValue.COMPARATOR;
+    byte[] row = Bytes.toBytes("row");
+    byte[] fami0 = Bytes.toBytes("fami");
+    byte[] fami1 = Bytes.toBytes("fami1");
+    byte[] fami2 = Bytes.toBytes("fami2");
+    byte[] qual0 = Bytes.toBytes("");
+    byte[] qual1 = Bytes.toBytes("qf1");
+    byte[] qual2 = Bytes.toBytes("qf2");
+    long ts = 1;
+    // 'fami1:'
+    KeyValue kv1_0 = new KeyValue(row, fami1, qual0, ts, Type.Put);
+    // 'fami1:qual1'
+    KeyValue kv1_1 = new KeyValue(row, fami1, qual1, ts, Type.Put);
+    // 'fami2:qual1'
+    KeyValue kv2_1 = new KeyValue(row, fami2, qual1, ts, Type.Put);
+    // 'fami:qf1'
+    KeyValue kv0_1 = new KeyValue(row, fami0, qual1, ts, Type.Put);
+    // 'fami:qf2'
+    KeyValue kv0_2 = new KeyValue(row, fami0, qual2, ts, Type.Put);
+    // 'fami:qf1' < 'fami:qf2'
+    assertKVLess(c, kv0_1, kv0_2);
+    // 'fami1:qual1' < 'fami2:qual1'
+    assertKVLess(c, kv1_1, kv2_1);
+    // 'fami:qf1' < 'fami1:'
+    assertKVLess(c, kv0_1, kv1_0);
+  }
+
   public void testFirstLastOnRow() {
     final KVComparator c = KeyValue.COMPARATOR;
     long ts = 1;
