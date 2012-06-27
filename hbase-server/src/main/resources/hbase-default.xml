@@ -139,7 +139,7 @@
     caching values will enable faster scanners but will eat up more memory
     and some calls of next may take longer and longer times when the cache is empty.
     Do not set this value such that the time between invocations is greater
-    than the scanner timeout; i.e. hbase.regionserver.lease.period
+    than the scanner timeout; i.e. hbase.client.scanner.timeout.period
     </description>
   </property>
   <property>
@@ -154,11 +154,16 @@
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.lease.period</name>
+    <name>hbase.client.scanner.timeout.period</name>
     <value>60000</value>
-    <description>HRegion server lease period in milliseconds. Default is
-    60 seconds. Clients must report in within this period else they are
-    considered dead.</description>
+    <description>Client scanner lease period in milliseconds. Default is
+    60 seconds. </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.rowlock.timeout.period</name>
+    <value>60000</value>
+    <description>Row lock time out period in milliseconds. Default is
+    60 seconds. </description>
   </property>
   <property>
     <name>hbase.regionserver.handler.count</name>
