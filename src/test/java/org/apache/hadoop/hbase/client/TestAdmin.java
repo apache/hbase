@@ -281,7 +281,7 @@ public class TestAdmin {
     boolean ok = false;
     try {
       ht.get(get);
-    } catch (RetriesExhaustedException e) {
+    } catch (RegionOfflineException e) {
       ok = true;
     }
     // with online schema change it is possible to add column

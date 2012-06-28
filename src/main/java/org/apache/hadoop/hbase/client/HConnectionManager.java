@@ -1328,6 +1328,8 @@ public class HConnectionManager {
                   callable.getRegionName(), callable.getRow(), tries,
                   exceptions);
             }
+            LOG.debug("getRegionServerWithRetries failed, sleeping for " +
+                pauseTime +"ms. tries = " + tries, t);
             try {
               Thread.sleep(pauseTime);
             } catch (InterruptedException e) {
@@ -1338,6 +1340,9 @@ public class HConnectionManager {
             // has been re-populated. We had anyway invalidated it earlier
             // before going to sleep.
             callable.instantiateRegionLocation(false);
+          } else {
+            LOG.debug("getRegionServerWithRetries failed, " +
+                "retrying immediately tries=" + tries, t);
           }
         }
       }
