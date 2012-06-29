@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -762,6 +763,13 @@ public class TestAssignmentManager {
       this.gate.set(true);
       return randomServerName;
     }
+    
+    @Override
+    public Map<ServerName, List<HRegionInfo>> retainAssignment(
+        Map<HRegionInfo, ServerName> regions, List<ServerName> servers) {
+      this.gate.set(true);
+      return super.retainAssignment(regions, servers);
+    }
   }
   
   /**
@@ -793,6 +801,50 @@ public class TestAssignmentManager {
     assertTrue("The region should be assigned immediately.", null != am.regionPlans.get(REGIONINFO
         .getEncodedName()));
   }
+  
+  /**
+   * Test verifies whether assignment is skipped for regions of tables in DISABLING state during
+   * clean cluster startup. See HBASE-6281.
+   * 
+   * @throws KeeperException
+   * @throws IOException
+   * @throws Exception
+   */
+  @Test
+  public void testDisablingTableRegionsAssignmentDuringCleanClusterStartup()
+      throws KeeperException, IOException, Exception {
+    this.server.getConfiguration().setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        MockedLoadBalancer.class, LoadBalancer.class);
+    Mockito.when(this.serverManager.getOnlineServers()).thenReturn(
+        new HashMap<ServerName, ServerLoad>(0));
+    List<ServerName> destServers = new ArrayList<ServerName>(1);
+    destServers.add(SERVERNAME_A);
+    Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(destServers);
+    // To avoid cast exception in DisableTableHandler process.
+    Server server = new HMaster(HTU.getConfiguration());
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
+        this.serverManager);
+    AtomicBoolean gate = new AtomicBoolean(false);
+    if (balancer instanceof MockedLoadBalancer) {
+      ((MockedLoadBalancer) balancer).setGateVariable(gate);
+    }
+    try{
+      // set table in disabling state.
+      am.getZKTable().setDisablingTable(REGIONINFO.getTableNameAsString());
+      am.joinCluster();
+      // should not call retainAssignment if we get empty regions in assignAllUserRegions.
+      assertFalse(
+          "Assign should not be invoked for disabling table regions during clean cluster startup.",
+          gate.get());
+      // need to change table state from disabling to disabled.
+      assertTrue("Table should be disabled.",
+          am.getZKTable().isDisabledTable(REGIONINFO.getTableNameAsString()));      
+    } finally {
+      am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
+      am.shutdown();
+    }
+  }
+
   /**
    * Creates a new ephemeral node in the SPLITTING state for the specified region.
    * Create it ephemeral in case regionserver dies mid-split.
@@ -866,7 +918,7 @@ public class TestAssignmentManager {
     // Get a meta row result that has region up on SERVERNAME_A for REGIONINFO
     Result r = Mocking.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
     ScanResponse.Builder builder = ScanResponse.newBuilder();
-    builder.setMoreResults(false);
+    builder.setMoreResults(true);
     builder.addResult(ProtobufUtil.toResult(r));
     Mockito.when(ri.scan(
       (RpcController)Mockito.any(), (ScanRequest)Mockito.any())).
@@ -946,6 +998,7 @@ public class TestAssignmentManager {
     {
       assignInvoked = true;
     };
+    
     /** reset the watcher */
     void setWatcher(ZooKeeperWatcher watcher) {
       this.watcher = watcher;
