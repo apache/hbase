@@ -93,7 +93,7 @@ public abstract class BaseRegionObserver implements RegionObserver {
 
   @Override
   public void preCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final List<StoreFile> candidates) { }
+      final Store store, final List<StoreFile> candidates) throws IOException { }
 
   @Override
   public void postCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,

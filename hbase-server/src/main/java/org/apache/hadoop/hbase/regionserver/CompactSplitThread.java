@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -148,19 +149,19 @@ public class CompactSplitThread implements CompactionRequestor {
   }
 
   public synchronized void requestCompaction(final HRegion r,
-      final String why) {
+      final String why) throws IOException {
     for(Store s : r.getStores().values()) {
       requestCompaction(r, s, why, Store.NO_PRIORITY);
     }
   }
 
   public synchronized void requestCompaction(final HRegion r, final Store s,
-      final String why) {
+      final String why) throws IOException {
     requestCompaction(r, s, why, Store.NO_PRIORITY);
   }
 
   public synchronized void requestCompaction(final HRegion r, final String why,
-      int p) {
+      int p) throws IOException {
     for(Store s : r.getStores().values()) {
       requestCompaction(r, s, why, p);
     }
@@ -173,7 +174,7 @@ public class CompactSplitThread implements CompactionRequestor {
    * @param priority override the default priority (NO_PRIORITY == decide)
    */
   public synchronized void requestCompaction(final HRegion r, final Store s,
-      final String why, int priority) {
+      final String why, int priority) throws IOException {
     if (this.server.isStopped()) {
       return;
     }

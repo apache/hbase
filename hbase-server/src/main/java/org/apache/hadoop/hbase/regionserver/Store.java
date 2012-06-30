@@ -1241,11 +1241,11 @@ public class Store extends SchemaConfigured implements HeapSize {
     return ret;
   }
 
-  public CompactionRequest requestCompaction() {
+  public CompactionRequest requestCompaction() throws IOException {
     return requestCompaction(NO_PRIORITY);
   }
 
-  public CompactionRequest requestCompaction(int priority) {
+  public CompactionRequest requestCompaction(int priority) throws IOException {
     // don't even select for compaction if writes are disabled
     if (!this.region.areWritesEnabled()) {
       return null;
@@ -1309,9 +1309,6 @@ public class Store extends SchemaConfigured implements HeapSize {
         int pri = getCompactPriority(priority);
         ret = new CompactionRequest(region, this, filesToCompact, isMajor, pri);
       }
-    } catch (IOException ex) {
-      LOG.error("Compaction Request failed for region " + region + ", store "
-          + this, RemoteExceptionHandler.checkIOException(ex));
     } finally {
       this.lock.readLock().unlock();
     }

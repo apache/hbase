@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
@@ -793,6 +794,12 @@ public class AccessController extends BaseRegionObserver
       final Store store, final InternalScanner scanner) throws IOException {
     requirePermission(getTableName(e.getEnvironment()), null, null, Action.ADMIN);
     return scanner;
+  }
+
+  @Override
+  public void preCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final Store store, final List<StoreFile> candidates) throws IOException {
+    requirePermission(getTableName(e.getEnvironment()), null, null, Action.ADMIN);
   }
 
   @Override

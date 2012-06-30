@@ -474,6 +474,19 @@ public class TestAccessController {
     verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
   }
 
+  @Test
+  public void testPreCompactSelection() throws Exception {
+    PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preCompactSelection(ObserverContext.createAndPrepare(RCP_ENV, null), null, null);
+        return null;
+      }
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+  }
+
   private void verifyRead(PrivilegedExceptionAction action) throws Exception {
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_RW, USER_RO);
     verifyDenied(action, USER_NONE, USER_CREATE);

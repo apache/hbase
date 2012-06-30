@@ -85,9 +85,10 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * @param store the store where compaction is being requested
    * @param candidates the store files currently available for compaction
+   * @throws IOException if an error occurred on the coprocessor
    */
   void preCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final List<StoreFile> candidates);
+      final Store store, final List<StoreFile> candidates) throws IOException;
 
   /**
    * Called after the {@link StoreFile}s to compact have been selected from the

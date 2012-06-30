@@ -358,7 +358,13 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
           LOG.warn("Region " + region.getRegionNameAsString() + " has too many " +
             "store files; delaying flush up to " + this.blockingWaitTime + "ms");
           if (!this.server.compactSplitThread.requestSplit(region)) {
-            this.server.compactSplitThread.requestCompaction(region, getName());
+            try {
+              this.server.compactSplitThread.requestCompaction(region, getName());
+            }  catch (IOException e) {
+              LOG.error("Cache flush failed" +
+                (region != null ? (" for region " + Bytes.toStringBinary(region.getRegionName())) : ""),
+                RemoteExceptionHandler.checkIOException(e));
+            }
           }
         }
 
