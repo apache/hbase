@@ -19,34 +19,40 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+
 public interface CompactionRequestor {
   /**
    * @param r Region to compact
    * @param why Why compaction was requested -- used in debug messages
+   * @throws IOException
    */
-  public void requestCompaction(final HRegion r, final String why);
+  public void requestCompaction(final HRegion r, final String why) throws IOException;
 
   /**
    * @param r Region to compact
    * @param s Store within region to compact
    * @param why Why compaction was requested -- used in debug messages
+   * @throws IOException
    */
-  public void requestCompaction(final HRegion r, final Store s, final String why);
+  public void requestCompaction(final HRegion r, final Store s, final String why) throws IOException;
 
   /**
    * @param r Region to compact
    * @param why Why compaction was requested -- used in debug messages
    * @param pri Priority of this compaction. minHeap. <=0 is critical
+   * @throws IOException
    */
-  public void requestCompaction(final HRegion r, final String why, int pri);
+  public void requestCompaction(final HRegion r, final String why, int pri) throws IOException;
 
   /**
    * @param r Region to compact
    * @param s Store within region to compact
    * @param why Why compaction was requested -- used in debug messages
    * @param pri Priority of this compaction. minHeap. <=0 is critical
+   * @throws IOException
    */
   public void requestCompaction(final HRegion r, final Store s,
-      final String why, int pri);
+      final String why, int pri) throws IOException;
 
 }

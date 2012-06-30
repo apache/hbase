@@ -309,15 +309,21 @@ public class RegionCoprocessorHost
    * @param store The store where compaction is being requested
    * @param candidates The currently available store files
    * @return If {@code true}, skip the normal selection process and use the current list
+   * @throws IOException
    */
-  public boolean preCompactSelection(Store store, List<StoreFile> candidates) {
+  public boolean preCompactSelection(Store store, List<StoreFile> candidates) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
-        ((RegionObserver)env.getInstance()).preCompactSelection(
-            ctx, store, candidates);
+        try {
+          ((RegionObserver)env.getInstance()).preCompactSelection(
+              ctx, store, candidates);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env,e);
+
+        }
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
           break;
