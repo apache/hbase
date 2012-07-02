@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -3418,6 +3419,98 @@ public class TestHRegion extends HBaseTestCase {
       HRegion.closeHRegion(this.region);
       this.region = null;
     }
+  }
+  
+  /**
+   * TestCase for increment
+   *
+   */
+  private static class Incrementer implements Runnable {
+    private HRegion region;
+    private final static byte[] incRow = Bytes.toBytes("incRow");
+    private final static byte[] family = Bytes.toBytes("family");
+    private final static byte[] qualifier = Bytes.toBytes("qualifier");
+    private final static long ONE = 1l;
+    private int incCounter;
+
+    public Incrementer(HRegion region, int incCounter) {
+      this.region = region;
+      this.incCounter = incCounter;
+    }
+
+    @Override
+    public void run() {
+      int count = 0;
+      while (count < incCounter) {
+        Increment inc = new Increment(incRow);
+        inc.addColumn(family, qualifier, ONE);
+        count++;
+        try {
+          region.increment(inc, null, true);
+        } catch (IOException e) {
+          e.printStackTrace();
+          break;
+        }
+      }
+    }
+  }
+  
+  /**
+   * Test case to check increment function with memstore flushing
+   * @throws Exception
+   */
+  @Test
+  public void testParallelIncrementWithMemStoreFlush() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    String method = "testParallelIncrementWithMemStoreFlush";
+    byte[] tableName = Bytes.toBytes(method);
+    byte[] family = Incrementer.family;
+    this.region = initHRegion(tableName, method, conf, family);
+    final HRegion region = this.region;
+    final AtomicBoolean incrementDone = new AtomicBoolean(false);
+    Runnable reader = new Runnable() {
+      @Override
+      public void run() {
+        while (!incrementDone.get()) {
+          try {
+            region.flushcache();
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        }
+      }
+    };
+
+    //after all increment finished, the row will increment to 20*100 = 2000
+    int threadNum = 20;
+    int incCounter = 100;
+    long expected = threadNum * incCounter;
+    Thread[] incrementers = new Thread[threadNum];
+    Thread flushThread = new Thread(reader);
+    for (int i = 0; i < threadNum; i++) {
+      incrementers[i] = new Thread(new Incrementer(this.region, incCounter));
+      incrementers[i].start();
+    }
+    flushThread.start();
+    for (int i = 0; i < threadNum; i++) {
+      incrementers[i].join();
+    }
+
+    incrementDone.set(true);
+    flushThread.join();
+
+    Get get = new Get(Incrementer.incRow);
+    get.addColumn(Incrementer.family, Incrementer.qualifier);
+    get.setMaxVersions(1);
+    Result res = this.region.get(get, null);
+    List<KeyValue> kvs = res.getColumn(Incrementer.family,
+        Incrementer.qualifier);
+    
+    //we just got the latest version
+    assertEquals(kvs.size(), 1);
+    KeyValue kv = kvs.get(0);
+    assertEquals(expected, Bytes.toLong(kv.getBuffer(), kv.getValueOffset()));
+    this.region = null;
   }
 
   private void putData(int startRow, int numRows, byte [] qf,
