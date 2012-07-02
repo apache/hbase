@@ -869,6 +869,8 @@ public class KeyValue implements Writable, HeapSize {
     if (this.isLatestTimestamp()) {
       int tsOffset = getTimestampOffset();
       System.arraycopy(now, 0, this.bytes, tsOffset, Bytes.SIZEOF_LONG);
+      // clear cache or else getTimestamp() possibly returns an old value
+      timestampCache = -1L;
       return true;
     }
     return false;
