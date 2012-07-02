@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -772,8 +773,7 @@ public class TestAssignmentManager {
     Mockito.when(ri .openScanner((byte[]) Mockito.any(), (Scan) Mockito.any())).
       thenReturn(System.currentTimeMillis());
     // Return good result 'r' first and then return null to indicate end of scan
-    Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt())).
-      thenReturn(new Result[] { r }, (Result[]) null);
+    Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt())).thenReturn(new Result[] { r });
     // If a get, return the above result too for REGIONINFO
     Mockito.when(ri.get((byte[]) Mockito.any(), (Get) Mockito.any())).
       thenReturn(r);
@@ -842,6 +842,49 @@ public class TestAssignmentManager {
   }
   
   /**
+   * Test verifies whether assignment is skipped for regions of tables in DISABLING state during
+   * clean cluster startup. See HBASE-6281.
+   * 
+   * @throws KeeperException
+   * @throws IOException
+   * @throws Exception
+   */
+  @Test
+  public void testDisablingTableRegionsAssignmentDuringCleanClusterStartup()
+      throws KeeperException, IOException, Exception {
+    this.server.getConfiguration().setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        MockedLoadBalancer.class, LoadBalancer.class);
+    Mockito.when(this.serverManager.getOnlineServers()).thenReturn(
+        new HashMap<ServerName, HServerLoad>(0));
+    List<ServerName> destServers = new ArrayList<ServerName>(1);
+    destServers.add(SERVERNAME_A);
+    Mockito.when(this.serverManager.getDrainingServersList()).thenReturn(destServers);
+    // To avoid cast exception in DisableTableHandler process.
+    //Server server = new HMaster(HTU.getConfiguration());
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
+        this.serverManager);
+    AtomicBoolean gate = new AtomicBoolean(false);
+    if (balancer instanceof MockedLoadBalancer) {
+      ((MockedLoadBalancer) balancer).setGateVariable(gate);
+    }
+    try{
+      // set table in disabling state.
+      am.getZKTable().setDisablingTable(REGIONINFO.getTableNameAsString());
+      am.joinCluster();
+      // should not call retainAssignment if we get empty regions in assignAllUserRegions.
+      assertFalse(
+          "Assign should not be invoked for disabling table regions during clean cluster startup.",
+          gate.get());
+      // need to change table state from disabling to disabled.
+      assertTrue("Table should be disabled.",
+          am.getZKTable().isDisabledTable(REGIONINFO.getTableNameAsString()));      
+    } finally {
+      am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
+      am.shutdown();
+    }
+  }
+
+  /**
    * Mocked load balancer class used in the testcase to make sure that the testcase waits until
    * random assignment is called and the gate variable is set to true.
    */
@@ -858,6 +901,14 @@ public class TestAssignmentManager {
       this.gate.set(true);
       return randomServerName;
     }
+    
+    @Override
+    public Map<ServerName, List<HRegionInfo>> retainAssignment(
+        Map<HRegionInfo, ServerName> regions, List<ServerName> servers) {
+      this.gate.set(true);
+      return super.retainAssignment(regions, servers);
+    }
+
   }
 
   /**

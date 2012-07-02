@@ -2256,9 +2256,14 @@ public class AssignmentManager extends ZooKeeperListener {
     // If there are no servers we need not proceed with region assignment.
     if(servers.isEmpty()) return;
 
+    // Skip assignment for regions of tables in DISABLING state also because
+    // during clean cluster startup no RS is alive and regions map also doesn't
+    // have any information about the regions. See HBASE-6281.
+    Set<String> disablingAndDisabledTables = new HashSet<String>(this.disablingTables);
+    disablingAndDisabledTables.addAll(this.zkTable.getDisabledTables());
     // Scan META for all user regions, skipping any disabled tables
-    Map<HRegionInfo, ServerName> allRegions =
-      MetaReader.fullScan(catalogTracker, this.zkTable.getDisabledTables(), true);
+    Map<HRegionInfo, ServerName> allRegions = MetaReader.fullScan(catalogTracker,
+        disablingAndDisabledTables, true);
     if (allRegions == null || allRegions.isEmpty()) return;
 
     // Determine what type of assignment to do on startup
