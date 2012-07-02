@@ -488,6 +488,21 @@ public class TestKeyValue extends TestCase {
     assertTrue(Bytes.equals(kv1.getRow(), kv2.getRow()));
   }
 
+  /**
+   * Tests that getTimestamp() does always return the proper timestamp, even after updating it.
+   * See HBASE-6265.
+   */
+  public void testGetTimestamp() {
+    KeyValue kv = new KeyValue(Bytes.toBytes("myRow"), Bytes.toBytes("myCF"),
+      Bytes.toBytes("myQualifier"), HConstants.LATEST_TIMESTAMP,
+      Bytes.toBytes("myValue"));
+    long time1 = kv.getTimestamp();
+    kv.updateLatestStamp(Bytes.toBytes(12345L));
+    long time2 = kv.getTimestamp();
+    assertEquals(HConstants.LATEST_TIMESTAMP, time1);
+    assertEquals(12345L, time2);
+  }
+
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
