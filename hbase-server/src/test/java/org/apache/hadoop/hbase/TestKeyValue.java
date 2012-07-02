@@ -59,7 +59,7 @@ public class TestKeyValue extends TestCase {
     assertFalse(aaa.matchingColumn(family2,qualifier2));
   }
 
-  /** 
+  /**
    * Test a corner case when the family qualifier is a prefix of the
    *  column qualifier.
    */
@@ -173,13 +173,13 @@ public class TestKeyValue extends TestCase {
   public void testBadMetaCompareSingleDelim() {
     MetaComparator c = new KeyValue.MetaComparator();
     long now = System.currentTimeMillis();
-    // meta keys values are not quite right.  A users can enter illegal values 
+    // meta keys values are not quite right.  A users can enter illegal values
     // from shell when scanning meta.
     KeyValue a = new KeyValue(Bytes.toBytes("table,a1"), now);
     KeyValue b = new KeyValue(Bytes.toBytes("table,a2"), now);
     try {
       c.compare(a, b);
-    } catch (IllegalArgumentException iae) { 
+    } catch (IllegalArgumentException iae) {
       assertEquals(".META. key must have two ',' delimiters and have the following" +
       		" format: '<table>,<key>,<etc>'", iae.getMessage());
       return;
@@ -190,13 +190,13 @@ public class TestKeyValue extends TestCase {
   public void testMetaComparatorTableKeysWithCommaOk() {
     MetaComparator c = new KeyValue.MetaComparator();
     long now = System.currentTimeMillis();
-    // meta keys values are not quite right.  A users can enter illegal values 
+    // meta keys values are not quite right.  A users can enter illegal values
     // from shell when scanning meta.
     KeyValue a = new KeyValue(Bytes.toBytes("table,key,with,commas1,1234"), now);
     KeyValue b = new KeyValue(Bytes.toBytes("table,key,with,commas2,0123"), now);
     assertTrue(c.compare(a, b) < 0);
   }
-  
+
   /**
    * Tests cases where rows keys have characters below the ','.
    * See HBASE-832
@@ -502,6 +502,21 @@ public class TestKeyValue extends TestCase {
     assertEquals(kv1, kv2);
     // check cache state (getRow() return the cached value if the cache is set)
     assertTrue(Bytes.equals(kv1.getRow(), kv2.getRow()));
+  }
+
+  /**
+   * Tests that getTimestamp() does always return the proper timestamp, even after updating it.
+   * See HBASE-6265.
+   */
+  public void testGetTimestamp() {
+    KeyValue kv = new KeyValue(Bytes.toBytes("myRow"), Bytes.toBytes("myCF"),
+      Bytes.toBytes("myQualifier"), HConstants.LATEST_TIMESTAMP,
+      Bytes.toBytes("myValue"));
+    long time1 = kv.getTimestamp();
+    kv.updateLatestStamp(Bytes.toBytes(12345L));
+    long time2 = kv.getTimestamp();
+    assertEquals(HConstants.LATEST_TIMESTAMP, time1);
+    assertEquals(12345L, time2);
   }
 
   @org.junit.Rule

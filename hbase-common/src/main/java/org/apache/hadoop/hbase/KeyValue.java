@@ -1165,6 +1165,8 @@ public class KeyValue implements Writable, HeapSize {
     if (this.isLatestTimestamp()) {
       int tsOffset = getTimestampOffset();
       System.arraycopy(now, 0, this.bytes, tsOffset, Bytes.SIZEOF_LONG);
+      // clear cache or else getTimestamp() possibly returns an old value
+      timestampCache = -1L;
       return true;
     }
     return false;
@@ -2460,7 +2462,7 @@ public class KeyValue implements Writable, HeapSize {
       int lfamilylength = left[lfamilyoffset - 1];
       int rfamilylength = right[rfamilyoffset - 1];
       // If left family size is not equal to right family size, we need not
-      // compare the qualifiers. 
+      // compare the qualifiers.
       boolean sameFamilySize = (lfamilylength == rfamilylength);
       int common = 0;
       if (commonPrefix > 0) {
