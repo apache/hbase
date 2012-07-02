@@ -38,8 +38,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.collect.MapEvictionListener;
-import com.google.common.collect.MapMaker;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
 
 /**
  * SingleSizeCache is a slab allocated cache that caches elements up to a single
@@ -91,18 +92,30 @@ public class SingleSizeCache implements BlockCache, HeapSize {
     // This evictionListener is called whenever the cache automatically
     // evicts
     // something.
-    MapEvictionListener<BlockCacheKey, CacheablePair> listener = new MapEvictionListener<BlockCacheKey, CacheablePair>() {
-      @Override
-      public void onEviction(BlockCacheKey key, CacheablePair value) {
-        timeSinceLastAccess.set(System.nanoTime()
-            - value.recentlyAccessed.get());
-        stats.evict();
-        doEviction(key, value);
-      }
-    };
+    RemovalListener<BlockCacheKey, CacheablePair> listener =
+      new RemovalListener<BlockCacheKey, CacheablePair>() {
+        @Override
+        public void onRemoval(
+            RemovalNotification<BlockCacheKey, CacheablePair> notification) {
+          if (!notification.wasEvicted()) {
+            // Only process removals by eviction, not by replacement or
+            // explicit removal
+            return;
+          }
+          CacheablePair value = notification.getValue();
+          timeSinceLastAccess.set(System.nanoTime()
+              - value.recentlyAccessed.get());
+          stats.evict();
+          doEviction(notification.getKey(), value);
+        }
+      };
 
-    backingMap = new MapMaker().maximumSize(numBlocks - 1)
-        .evictionListener(listener).makeMap();
+    backingMap = CacheBuilder.newBuilder()
+        .maximumSize(numBlocks - 1)
+        .removalListener(listener)
+        .<BlockCacheKey, CacheablePair>build()
+        .asMap();
+
 
   }
 
