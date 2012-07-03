@@ -23,17 +23,20 @@ import static org.apache.hadoop.hbase.util.FSUtils.recoverFileLease;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
@@ -44,7 +47,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
@@ -52,14 +54,11 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
-import org.apache.hadoop.io.MultipleIOException;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 
 /**
  * This class is responsible for splitting up a bunch of regionserver commit log
@@ -80,6 +79,9 @@ public class HLogSplitter {
   protected final Path oldLogDir;
   protected final FileSystem fs;
   protected final Configuration conf;
+
+  // Thread pool for closing LogWriters in parallel
+  protected final ExecutorService logCloseThreadPool;
 
   // If an exception is thrown by one of the other threads, it will be
   // stored here.
@@ -134,12 +136,13 @@ public class HLogSplitter {
   }
 
   public HLogSplitter(Configuration conf, Path rootDir, Path srcDir,
-      Path oldLogDir, FileSystem fs) {
+      Path oldLogDir, FileSystem fs, ExecutorService logCloseThreadPool) {
     this.conf = conf;
     this.rootDir = rootDir;
     this.srcDir = srcDir;
     this.oldLogDir = oldLogDir;
     this.fs = fs;
+    this.logCloseThreadPool = logCloseThreadPool;
   }
 
   /**
@@ -162,9 +165,10 @@ public class HLogSplitter {
    */
   static public boolean splitLogFileToTemp(Path rootDir, String tmpname,
       FileStatus logfile, FileSystem fs,
-      Configuration conf, CancelableProgressable reporter) throws IOException {
+      Configuration conf, CancelableProgressable reporter,
+      ExecutorService logCloseThreadPool) throws IOException {
     HLogSplitter s = new HLogSplitter(conf, rootDir, null, null /* oldLogDir */,
-        fs);
+        fs, logCloseThreadPool);
     return s.splitLogFileToTemp(logfile, tmpname, reporter);
   }
 
@@ -258,6 +262,7 @@ public class HLogSplitter {
       throw e;
     } finally {
       int n = 0;
+      List<Future<Void>> closeResults = new ArrayList<Future<Void>>();
       for (Object o : logWriters.values()) {
         long t1 = EnvironmentEdgeManager.currentTimeMillis();
         if ((t1 - last_report_at) > period) {
@@ -271,13 +276,42 @@ public class HLogSplitter {
           continue;
         }
         n++;
-        WriterAndPath wap = (WriterAndPath)o;
+
+        final WriterAndPath wap = (WriterAndPath)o;
         try {
-          wap.w.close();
-        } catch (IOException ioe) {
-          LOG.warn("Failed to close recovered edits writer " + wap.p, ioe);
+          Future<Void> closeResult =
+              logCloseThreadPool.submit(new Callable<Void>() {
+                @Override
+                public Void call() {
+                  try {
+                    wap.w.close();
+                  } catch (IOException ioe) {
+                    LOG.warn("Failed to close recovered edits writer " + wap.p, 
+                        ioe);
+                  }
+                  LOG.debug("Closed " + wap.p);
+                  return null;
+                }
+              });
+          closeResults.add(closeResult);
+        } catch (RejectedExecutionException ree) {
+          LOG.warn("Could not close writer " + wap.p + " due to thread pool " +
+              "shutting down.", ree);
         }
-        LOG.debug("Closed " + wap.p);
+      }
+      try {
+        for (Future<Void> closeResult : closeResults) {
+          // Uncaught unchecked exception from the threads performing close
+          // should be propagated into the main thread.
+          closeResult.get();
+        }
+      } catch (ExecutionException ee) {
+        LOG.error("Unexpected exception while closing a log writer", ee);
+        throw new IOException("Unexpected exception while closing", ee);
+      } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
+        LOG.error("Interrupted while closing a log writer", ie);
+        throw new InterruptedIOException("Interrupted while closing " + ie);
       }
       try {
         in.close();

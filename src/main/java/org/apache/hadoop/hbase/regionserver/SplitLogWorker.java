@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -96,7 +97,7 @@ public class SplitLogWorker implements Runnable, Watcher {
   }
 
   public SplitLogWorker(ZooKeeperWrapper watcher, final Configuration conf,
-      final String serverName) {
+      final String serverName, final ExecutorService logCloseThreadPool) {
     this(watcher, conf, serverName, new TaskExecutor () {
       @Override
       public Status exec(String filename, CancelableProgressable p) {
@@ -127,7 +128,7 @@ public class SplitLogWorker implements Runnable, Watcher {
           String tmpname =
             ZKSplitLog.getSplitLogDirTmpComponent(serverName, filename);
           if (HLogSplitter.splitLogFileToTemp(rootdir, tmpname,
-              st, fs, conf, p) == false) {
+              st, fs, conf, p, logCloseThreadPool) == false) {
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {

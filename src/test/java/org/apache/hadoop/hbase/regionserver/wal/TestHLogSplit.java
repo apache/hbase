@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -46,6 +48,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
@@ -78,7 +81,8 @@ public class TestHLogSplit {
 
   private static final int NUM_WRITERS = 10;
   private static final int ENTRIES = 10; // entries per writer per region
-
+  private static final int NUM_CLOSE_THREADS = 10;
+  
   private HLog.Writer[] writer = new HLog.Writer[NUM_WRITERS];
   private long seq = 0;
   private static final byte[] TABLE_NAME = "t1".getBytes();
@@ -91,6 +95,9 @@ public class TestHLogSplit {
   private static final Path tabledir = new Path(hbaseDir,
       Bytes.toString(TABLE_NAME));
 
+  private static final ExecutorService logCloseThreadPool =
+      Executors.newFixedThreadPool(NUM_CLOSE_THREADS,
+          new DaemonThreadFactory("split-logClose-thread-"));
 
   static enum Corruptions {
     INSERT_GARBAGE_ON_FIRST_LINE,
@@ -718,7 +725,7 @@ public class TestHLogSplit {
     FileStatus logfile = fs.listStatus(hlogDir)[0];
     fs.initialize(fs.getUri(), conf);
     HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
-        reporter);
+        reporter, logCloseThreadPool);
     HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
         logfile.getPath().toString(), conf);
 
@@ -744,7 +751,7 @@ public class TestHLogSplit {
     fs.delete(regiondir, true);
 
     HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
-        reporter);
+        reporter, logCloseThreadPool);
     HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
         logfile.getPath().toString(), conf);
     // This test passes if there are no exceptions when
@@ -762,7 +769,7 @@ public class TestHLogSplit {
     fs.initialize(fs.getUri(), conf);
 
     HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
-        reporter);
+        reporter, logCloseThreadPool);
     HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
         logfile.getPath().toString(), conf);
     Path tdir = HTableDescriptor.getTableDir(hbaseDir, TABLE_NAME);
@@ -780,7 +787,7 @@ public class TestHLogSplit {
     fs.initialize(fs.getUri(), conf);
 
     HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
-        reporter);
+        reporter, logCloseThreadPool);
     HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
         logfile.getPath().toString(), conf);
     for (String region : regions) {
@@ -800,7 +807,7 @@ public class TestHLogSplit {
 
     fs.initialize(fs.getUri(), conf);
     HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
-        reporter);
+        reporter, logCloseThreadPool);
     HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
         logfile.getPath().toString(), conf);
 

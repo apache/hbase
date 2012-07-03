@@ -47,6 +47,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -119,6 +121,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricTyp
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -272,6 +275,8 @@ public class HRegionServer implements HRegionInterface,
 
   private ZooKeeperWrapper zooKeeperWrapper;
 
+  private final ExecutorService logCloseThreadPool;
+  
   // Log Splitting Worker
   private SplitLogWorker splitLogWorker;
 
@@ -386,6 +391,12 @@ public class HRegionServer implements HRegionInterface,
     }
     LOG.info("minCheckFSIntervalMillis=" + minCheckFSIntervalMillis);
     LOG.info("checkFSAbortTimeOutMillis=" + checkFSAbortTimeOutMillis);
+    
+    int logCloseThreads =
+        conf.getInt("hbase.hlog.split.close.threads", 20);
+    logCloseThreadPool =
+        Executors.newFixedThreadPool(logCloseThreads,
+            new DaemonThreadFactory("hregionserver-split-logClose-thread-"));
   }
 
   /**
@@ -1417,7 +1428,8 @@ public class HRegionServer implements HRegionInterface,
     this.server.start();
     // Create the log splitting worker and start it
     this.splitLogWorker = new SplitLogWorker(this.zooKeeperWrapper,
-        this.getConfiguration(), this.serverInfo.getServerName());
+        this.getConfiguration(), this.serverInfo.getServerName(),
+        logCloseThreadPool);
     splitLogWorker.start();
     LOG.info("HRegionServer started at: " +
       this.serverInfo.getServerAddress().toString());
@@ -1497,6 +1509,7 @@ public class HRegionServer implements HRegionInterface,
       // Wakes run() if it is sleeping
       notifyAll(); // FindBugs NN_NAKED_NOTIFY
     }
+    logCloseThreadPool.shutdown();
   }
 
   /**
