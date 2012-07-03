@@ -46,6 +46,8 @@ message Get {
   optional TimeRange timeRange = 6;
   optional uint32 maxVersions = 7 [default = 1];
   optional bool cacheBlocks = 8 [default = true];
+  optional uint32 storeLimit = 9;
+  optional uint32 storeOffset = 10;
 }
 
 /**
@@ -195,6 +197,8 @@ message Scan {
   optional bool cacheBlocks = 8 [default = true];
   optional uint32 batchSize = 9;
   optional uint64 maxResultSize = 10;
+  optional uint32 storeLimit = 11;
+  optional uint32 storeOffset = 12;
 }
 
 /**

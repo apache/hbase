@@ -69,16 +69,29 @@ import java.util.TreeSet;
 @InterfaceStability.Stable
 public class Get extends OperationWithAttributes
   implements Writable, Row, Comparable<Row> {
-  private static final byte GET_VERSION = (byte)2;
+
+  private static final byte VERSION_WITHOUT_PAGINATION = (byte) 2;
+  private static final byte VERSION_WITH_PAGINATION = (byte) 3;
+  private static final byte GET_VERSION = VERSION_WITH_PAGINATION;
 
   private byte [] row = null;
   private long lockId = -1L;
   private int maxVersions = 1;
   private boolean cacheBlocks = true;
+  private int storeLimit = -1;
+  private int storeOffset = 0;
   private Filter filter = null;
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
+
+  /** @return the most backward-compatible version for this scan possible for its parameters */
+  private byte getVersion() {
+    if (storeLimit != -1 || storeOffset != 0) {
+      return VERSION_WITH_PAGINATION;
+    }
+    return VERSION_WITHOUT_PAGINATION;
+  }
 
   /** Constructor for Writable.  DO NOT USE */
   public Get() {}
@@ -194,6 +207,27 @@ public class Get extends OperationWithAttributes
   }
 
   /**
+   * Set the maximum number of values to return per row per Column Family
+   * @param limit the maximum number of values returned / row / CF
+   * @return this for invocation chaining
+   */
+  public Get setMaxResultsPerColumnFamily(int limit) {
+    this.storeLimit = limit;
+    return this;
+  }
+
+  /**
+   * Set offset for the row per Column Family. This offset is only within a particular row/CF
+   * combination. It gets reset back to zero when we move to the next row or CF.
+   * @param offset is the number of kvs that will be skipped.
+   * @return this for invocation chaining
+   */
+  public Get setRowOffsetPerColumnFamily(int offset) {
+    this.storeOffset = offset;
+    return this;
+  }
+
+  /**
    * Apply the specified server-side filter when performing the Get.
    * Only {@link Filter#filterKeyValue(KeyValue)} is called AFTER all tests
    * for ttl, column match, deletes and max versions have been run.
@@ -267,6 +301,24 @@ public class Get extends OperationWithAttributes
    */
   public int getMaxVersions() {
     return this.maxVersions;
+  }
+
+  /**
+   * Method for retrieving the get's maximum number of values
+   * to return per Column Family
+   * @return the maximum number of values to fetch per CF
+   */
+  public int getMaxResultsPerColumnFamily() {
+    return this.storeLimit;
+  }
+
+  /**
+   * Method for retrieving the get's offset per row per column
+   * family (#kvs to be skipped)
+   * @return the row offset
+   */
+  public int getRowOffsetPerColumnFamily() {
+    return this.storeOffset;
   }
 
   /**
@@ -399,6 +451,10 @@ public class Get extends OperationWithAttributes
     this.row = Bytes.readByteArray(in);
     this.lockId = in.readLong();
     this.maxVersions = in.readInt();
+    if (version >= VERSION_WITH_PAGINATION) {
+      this.storeLimit = in.readInt();
+      this.storeOffset = in.readInt();
+    }
     boolean hasFilter = in.readBoolean();
     if (hasFilter) {
       this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
@@ -429,10 +485,15 @@ public class Get extends OperationWithAttributes
 
   public void write(final DataOutput out)
   throws IOException {
-    out.writeByte(GET_VERSION);
+    byte version = getVersion();
+    out.writeByte(version);
     Bytes.writeByteArray(out, this.row);
     out.writeLong(this.lockId);
     out.writeInt(this.maxVersions);
+    if (version >= VERSION_WITH_PAGINATION) {
+      out.writeInt(this.storeLimit);
+      out.writeInt(this.storeOffset);
+    }
     if(this.filter == null) {
       out.writeBoolean(false);
     } else {

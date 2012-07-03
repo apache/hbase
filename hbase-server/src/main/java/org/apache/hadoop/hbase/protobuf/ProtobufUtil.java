@@ -345,6 +345,12 @@ public final class ProtobufUtil {
     if (proto.hasMaxVersions()) {
       get.setMaxVersions(proto.getMaxVersions());
     }
+    if (proto.hasStoreLimit()) {
+      get.setMaxResultsPerColumnFamily(proto.getStoreLimit());
+    }
+    if (proto.hasStoreOffset()) {
+      get.setRowOffsetPerColumnFamily(proto.getStoreOffset());
+    }
     if (proto.hasTimeRange()) {
       HBaseProtos.TimeRange timeRange = proto.getTimeRange();
       long minStamp = 0;
@@ -612,6 +618,12 @@ public final class ProtobufUtil {
       }
       scanBuilder.addColumn(columnBuilder.build());
     }
+    if (scan.getMaxResultsPerColumnFamily() >= 0) {
+      scanBuilder.setStoreLimit(scan.getMaxResultsPerColumnFamily());
+    }
+    if (scan.getRowOffsetPerColumnFamily() > 0) {
+      scanBuilder.setStoreOffset(scan.getRowOffsetPerColumnFamily());
+    }
     return scanBuilder.build();
   }
 
@@ -638,6 +650,12 @@ public final class ProtobufUtil {
     }
     if (proto.hasMaxVersions()) {
       scan.setMaxVersions(proto.getMaxVersions());
+    }
+    if (proto.hasStoreLimit()) {
+      scan.setMaxResultsPerColumnFamily(proto.getStoreLimit());
+    }
+    if (proto.hasStoreOffset()) {
+      scan.setRowOffsetPerColumnFamily(proto.getStoreOffset());
     }
     if (proto.hasTimeRange()) {
       HBaseProtos.TimeRange timeRange = proto.getTimeRange();
@@ -769,6 +787,12 @@ public final class ProtobufUtil {
         }
         builder.addColumn(columnBuilder.build());
       }
+    }
+    if (get.getMaxResultsPerColumnFamily() >= 0) {
+      builder.setStoreLimit(get.getMaxResultsPerColumnFamily());
+    }
+    if (get.getRowOffsetPerColumnFamily() > 0) {
+      builder.setStoreOffset(get.getRowOffsetPerColumnFamily());
     }
     return builder.build();
   }

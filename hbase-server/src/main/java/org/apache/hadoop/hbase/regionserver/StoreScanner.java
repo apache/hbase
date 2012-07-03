@@ -51,6 +51,9 @@ class StoreScanner extends NonLazyKeyValueScanner
   private KeyValueHeap heap;
   private boolean cacheBlocks;
 
+  private int countPerRow = 0;
+  private int storeLimit = -1;
+  private int storeOffset = 0;
 
   private String metricNamePrefix;
   // Used to indicate that the scanner has closed (see HBASE-1107)
@@ -132,6 +135,12 @@ class StoreScanner extends NonLazyKeyValueScanner
         scanner.seek(matcher.getStartKey());
       }
     }
+
+    // set storeLimit
+    this.storeLimit = scan.getMaxResultsPerColumnFamily();
+
+    // set rowOffset
+    this.storeOffset = scan.getRowOffsetPerColumnFamily();
 
     // Combine all seeked scanners with a heap
     heap = new KeyValueHeap(scanners, store.comparator);
@@ -342,6 +351,7 @@ class StoreScanner extends NonLazyKeyValueScanner
     // only call setRow if the row changes; avoids confusing the query matcher
     // if scanning intra-row
     if ((matcher.row == null) || !peeked.matchingRow(matcher.row)) {
+      this.countPerRow = 0;
       matcher.setRow(peeked.getRow());
     }
 
@@ -371,11 +381,27 @@ class StoreScanner extends NonLazyKeyValueScanner
           if (f != null) {
             kv = f.transform(kv);
           }
-          results.add(kv);
 
-          if (metric != null) {
-            RegionMetricsStorage.incrNumericMetric(this.metricNamePrefix + metric,
+          this.countPerRow++;
+          if (storeLimit > -1 &&
+              this.countPerRow > (storeLimit + storeOffset)) {
+            // do what SEEK_NEXT_ROW does.
+            if (!matcher.moreRowsMayExistAfter(kv)) {
+              outResult.addAll(results);
+              return false;
+            }
+            reseek(matcher.getKeyForNextRow(kv));
+            break LOOP;
+          }
+
+          // add to results only if we have skipped #storeOffset kvs
+          // also update metric accordingly
+          if (this.countPerRow > storeOffset) {
+            if (metric != null) {
+              RegionMetricsStorage.incrNumericMetric(this.metricNamePrefix + metric,
                 kv.getLength());
+            }
+            results.add(kv);
           }
 
           if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
@@ -533,6 +559,7 @@ class StoreScanner extends NonLazyKeyValueScanner
       kv = lastTopKey;
     }
     if ((matcher.row == null) || !kv.matchingRow(matcher.row)) {
+      this.countPerRow = 0;
       matcher.reset();
       matcher.setRow(kv.getRow());
     }

@@ -91,11 +91,20 @@ public class Scan extends OperationWithAttributes implements Writable {
   private static final String RAW_ATTR = "_raw_";
   private static final String ISOLATION_LEVEL = "_isolationlevel_";
 
-  private static final byte SCAN_VERSION = (byte)3;
+  private static final byte VERSION_WITH_PAGINATION = (byte)4;
+  private static final byte VERSION_WITH_RESULT_SIZE = (byte)3;
+  private static final byte VERSION_WITH_ATTRIBUTES = (byte)2;
+  
+  private static final byte SCAN_VERSION = VERSION_WITH_PAGINATION;
+  
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
   private int batch = -1;
+
+  private int storeLimit = -1;
+  private int storeOffset = 0;
+  
   // If application wants to collect scan metrics, it needs to
   // call scan.setAttribute(SCAN_ATTRIBUTES_ENABLE, Bytes.toBytes(Boolean.TRUE))
   static public String SCAN_ATTRIBUTES_METRICS_ENABLE =
@@ -114,6 +123,22 @@ public class Scan extends OperationWithAttributes implements Writable {
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
 
+  /**
+   * @return the most backward-compatible version for this scan possible for its parameters
+   */
+  private byte getVersion() {
+    if (storeLimit != -1 || storeOffset != 0) {
+      return VERSION_WITH_PAGINATION;
+    }
+    if (maxResultSize != -1) { 
+      return VERSION_WITH_RESULT_SIZE;
+    }
+    if (getAttributeSize() != 0) {
+      return VERSION_WITH_ATTRIBUTES;
+    }
+    return 1;
+  }
+  
   /**
    * Create a Scan operation across all rows.
    */
@@ -156,6 +181,8 @@ public class Scan extends OperationWithAttributes implements Writable {
     stopRow  = scan.getStopRow();
     maxVersions = scan.getMaxVersions();
     batch = scan.getBatch();
+    storeLimit = scan.getMaxResultsPerColumnFamily();
+    storeOffset = scan.getRowOffsetPerColumnFamily();
     caching = scan.getCaching();
     maxResultSize = scan.getMaxResultSize();
     cacheBlocks = scan.getCacheBlocks();
@@ -189,6 +216,8 @@ public class Scan extends OperationWithAttributes implements Writable {
     this.filter = get.getFilter();
     this.cacheBlocks = get.getCacheBlocks();
     this.maxVersions = get.getMaxVersions();
+    this.storeLimit = get.getMaxResultsPerColumnFamily();
+    this.storeOffset = get.getRowOffsetPerColumnFamily();
     this.tr = get.getTimeRange();
     this.familyMap = get.getFamilyMap();
   }
@@ -324,6 +353,22 @@ public class Scan extends OperationWithAttributes implements Writable {
   }
 
   /**
+   * Set the maximum number of values to return per row per Column Family
+   * @param limit the maximum number of values returned / row / CF
+   */
+  public void setMaxResultsPerColumnFamily(int limit) {
+    this.storeLimit = limit;
+  }
+
+  /**
+   * Set offset for the row per Column Family.
+   * @param offset is the number of kvs that will be skipped.
+   */
+  public void setRowOffsetPerColumnFamily(int offset) {
+    this.storeOffset = offset;
+  }
+
+  /**
    * Set the number of rows for caching that will be passed to scanners.
    * If not set, the default setting from {@link HTable#getScannerCaching()} will apply.
    * Higher caching values will enable faster scanners but will use more memory.
@@ -432,6 +477,22 @@ public class Scan extends OperationWithAttributes implements Writable {
    */
   public int getBatch() {
     return this.batch;
+  }
+
+  /**
+   * @return maximum number of values to return per row per CF
+   */
+  public int getMaxResultsPerColumnFamily() {
+    return this.storeLimit;
+  }
+
+  /**
+   * Method for retrieving the scan's offset per row per column
+   * family (#kvs to be skipped)
+   * @return row offset
+   */
+  public int getRowOffsetPerColumnFamily() {
+    return this.storeOffset;
   }
 
   /**
@@ -591,6 +652,10 @@ public class Scan extends OperationWithAttributes implements Writable {
     this.stopRow = Bytes.readByteArray(in);
     this.maxVersions = in.readInt();
     this.batch = in.readInt();
+    if (version >= VERSION_WITH_PAGINATION) {
+      this.storeLimit = in.readInt();
+      this.storeOffset = in.readInt();
+    }
     this.caching = in.readInt();
     this.cacheBlocks = in.readBoolean();
     if(in.readBoolean()) {
@@ -613,21 +678,26 @@ public class Scan extends OperationWithAttributes implements Writable {
       this.familyMap.put(family, set);
     }
 
-    if (version > 1) {
+    if (version >= VERSION_WITH_ATTRIBUTES) {
       readAttributes(in);
     }
-    if (version > 2) {
+    if (version >= VERSION_WITH_RESULT_SIZE) {
       this.maxResultSize = in.readLong();
     }
   }
 
   public void write(final DataOutput out)
   throws IOException {
-    out.writeByte(SCAN_VERSION);
+    byte version = getVersion();
+    out.writeByte(version);
     Bytes.writeByteArray(out, this.startRow);
     Bytes.writeByteArray(out, this.stopRow);
     out.writeInt(this.maxVersions);
     out.writeInt(this.batch);
+    if (version >= VERSION_WITH_PAGINATION) {
+      out.writeInt(this.storeLimit);
+      out.writeInt(this.storeOffset);
+    }
     out.writeInt(this.caching);
     out.writeBoolean(this.cacheBlocks);
     if(this.filter == null) {
@@ -651,8 +721,12 @@ public class Scan extends OperationWithAttributes implements Writable {
         out.writeInt(0);
       }
     }
-    writeAttributes(out);
-    out.writeLong(maxResultSize);
+    if (version >= VERSION_WITH_ATTRIBUTES) {
+      writeAttributes(out);
+    }
+    if (version >= VERSION_WITH_RESULT_SIZE) {
+      out.writeLong(maxResultSize);
+    }
   }
 
   /**

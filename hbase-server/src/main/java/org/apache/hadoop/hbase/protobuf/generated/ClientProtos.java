@@ -549,6 +549,14 @@ public final class ClientProtos {
     // optional bool cacheBlocks = 8 [default = true];
     boolean hasCacheBlocks();
     boolean getCacheBlocks();
+
+    // optional uint32 storeLimit = 9;
+    boolean hasStoreLimit();
+    int getStoreLimit();
+
+    // optional uint32 storeOffset = 10;
+    boolean hasStoreOffset();
+    int getStoreOffset();
   }
   public static final class Get extends
       com.google.protobuf.GeneratedMessage
@@ -687,6 +695,26 @@ public final class ClientProtos {
       return cacheBlocks_;
     }
     
+    // optional uint32 storeLimit = 9;
+    public static final int STORELIMIT_FIELD_NUMBER = 9;
+    private int storeLimit_;
+    public boolean hasStoreLimit() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    public int getStoreLimit() {
+      return storeLimit_;
+    }
+
+    // optional uint32 storeOffset = 10;
+    public static final int STOREOFFSET_FIELD_NUMBER = 10;
+    private int storeOffset_;
+    public boolean hasStoreOffset() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    public int getStoreOffset() {
+      return storeOffset_;
+    }
+
     private void initFields() {
       row_ = com.google.protobuf.ByteString.EMPTY;
       column_ = java.util.Collections.emptyList();
@@ -696,6 +724,8 @@ public final class ClientProtos {
       timeRange_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.getDefaultInstance();
       maxVersions_ = 1;
       cacheBlocks_ = true;
+      storeLimit_ = 0;
+      storeOffset_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -755,6 +785,12 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeBool(8, cacheBlocks_);
       }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeUInt32(9, storeLimit_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeUInt32(10, storeOffset_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -795,6 +831,14 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(8, cacheBlocks_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(9, storeLimit_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(10, storeOffset_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -853,6 +897,16 @@ public final class ClientProtos {
         result = result && (getCacheBlocks()
             == other.getCacheBlocks());
       }
+      result = result && (hasStoreLimit() == other.hasStoreLimit());
+      if (hasStoreLimit()) {
+        result = result && (getStoreLimit()
+            == other.getStoreLimit());
+      }
+      result = result && (hasStoreOffset() == other.hasStoreOffset());
+      if (hasStoreOffset()) {
+        result = result && (getStoreOffset()
+            == other.getStoreOffset());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -893,6 +947,14 @@ public final class ClientProtos {
       if (hasCacheBlocks()) {
         hash = (37 * hash) + CACHEBLOCKS_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getCacheBlocks());
+      }
+      if (hasStoreLimit()) {
+        hash = (37 * hash) + STORELIMIT_FIELD_NUMBER;
+        hash = (53 * hash) + getStoreLimit();
+      }
+      if (hasStoreOffset()) {
+        hash = (37 * hash) + STOREOFFSET_FIELD_NUMBER;
+        hash = (53 * hash) + getStoreOffset();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -1046,6 +1108,10 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000040);
         cacheBlocks_ = true;
         bitField0_ = (bitField0_ & ~0x00000080);
+        storeLimit_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000100);
+        storeOffset_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000200);
         return this;
       }
       
@@ -1134,6 +1200,14 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000020;
         }
         result.cacheBlocks_ = cacheBlocks_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.storeLimit_ = storeLimit_;
+        if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.storeOffset_ = storeOffset_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1219,6 +1293,12 @@ public final class ClientProtos {
         }
         if (other.hasCacheBlocks()) {
           setCacheBlocks(other.getCacheBlocks());
+        }
+        if (other.hasStoreLimit()) {
+          setStoreLimit(other.getStoreLimit());
+        }
+        if (other.hasStoreOffset()) {
+          setStoreOffset(other.getStoreOffset());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1321,6 +1401,16 @@ public final class ClientProtos {
             case 64: {
               bitField0_ |= 0x00000080;
               cacheBlocks_ = input.readBool();
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000100;
+              storeLimit_ = input.readUInt32();
+              break;
+            }
+            case 80: {
+              bitField0_ |= 0x00000200;
+              storeOffset_ = input.readUInt32();
               break;
             }
           }
@@ -1968,6 +2058,48 @@ public final class ClientProtos {
         return this;
       }
       
+      // optional uint32 storeLimit = 9;
+      private int storeLimit_ ;
+      public boolean hasStoreLimit() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      public int getStoreLimit() {
+        return storeLimit_;
+      }
+      public Builder setStoreLimit(int value) {
+        bitField0_ |= 0x00000100;
+        storeLimit_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearStoreLimit() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        storeLimit_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional uint32 storeOffset = 10;
+      private int storeOffset_ ;
+      public boolean hasStoreOffset() {
+        return ((bitField0_ & 0x00000200) == 0x00000200);
+      }
+      public int getStoreOffset() {
+        return storeOffset_;
+      }
+      public Builder setStoreOffset(int value) {
+        bitField0_ |= 0x00000200;
+        storeOffset_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearStoreOffset() {
+        bitField0_ = (bitField0_ & ~0x00000200);
+        storeOffset_ = 0;
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:Get)
     }
     
@@ -8732,6 +8864,14 @@ public final class ClientProtos {
     // optional uint64 maxResultSize = 10;
     boolean hasMaxResultSize();
     long getMaxResultSize();
+
+    // optional uint32 storeLimit = 11;
+    boolean hasStoreLimit();
+    int getStoreLimit();
+
+    // optional uint32 storeOffset = 12;
+    boolean hasStoreOffset();
+    int getStoreOffset();
   }
   public static final class Scan extends
       com.google.protobuf.GeneratedMessage
@@ -8890,6 +9030,26 @@ public final class ClientProtos {
       return maxResultSize_;
     }
     
+    // optional uint32 storeLimit = 11;
+    public static final int STORELIMIT_FIELD_NUMBER = 11;
+    private int storeLimit_;
+    public boolean hasStoreLimit() {
+      return ((bitField0_ & 0x00000100) == 0x00000100);
+    }
+    public int getStoreLimit() {
+      return storeLimit_;
+    }
+
+    // optional uint32 storeOffset = 12;
+    public static final int STOREOFFSET_FIELD_NUMBER = 12;
+    private int storeOffset_;
+    public boolean hasStoreOffset() {
+      return ((bitField0_ & 0x00000200) == 0x00000200);
+    }
+    public int getStoreOffset() {
+      return storeOffset_;
+    }
+
     private void initFields() {
       column_ = java.util.Collections.emptyList();
       attribute_ = java.util.Collections.emptyList();
@@ -8901,6 +9061,8 @@ public final class ClientProtos {
       cacheBlocks_ = true;
       batchSize_ = 0;
       maxResultSize_ = 0L;
+      storeLimit_ = 0;
+      storeOffset_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -8962,6 +9124,12 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         output.writeUInt64(10, maxResultSize_);
       }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        output.writeUInt32(11, storeLimit_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        output.writeUInt32(12, storeOffset_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -9010,6 +9178,14 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(10, maxResultSize_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(11, storeLimit_);
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(12, storeOffset_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -9078,6 +9254,16 @@ public final class ClientProtos {
         result = result && (getMaxResultSize()
             == other.getMaxResultSize());
       }
+      result = result && (hasStoreLimit() == other.hasStoreLimit());
+      if (hasStoreLimit()) {
+        result = result && (getStoreLimit()
+            == other.getStoreLimit());
+      }
+      result = result && (hasStoreOffset() == other.hasStoreOffset());
+      if (hasStoreOffset()) {
+        result = result && (getStoreOffset()
+            == other.getStoreOffset());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -9126,6 +9312,14 @@ public final class ClientProtos {
       if (hasMaxResultSize()) {
         hash = (37 * hash) + MAXRESULTSIZE_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getMaxResultSize());
+      }
+      if (hasStoreLimit()) {
+        hash = (37 * hash) + STORELIMIT_FIELD_NUMBER;
+        hash = (53 * hash) + getStoreLimit();
+      }
+      if (hasStoreOffset()) {
+        hash = (37 * hash) + STOREOFFSET_FIELD_NUMBER;
+        hash = (53 * hash) + getStoreOffset();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -9283,6 +9477,10 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000100);
         maxResultSize_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000200);
+        storeLimit_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000400);
+        storeOffset_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000800);
         return this;
       }
       
@@ -9379,6 +9577,14 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000080;
         }
         result.maxResultSize_ = maxResultSize_;
+        if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
+          to_bitField0_ |= 0x00000100;
+        }
+        result.storeLimit_ = storeLimit_;
+        if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
+          to_bitField0_ |= 0x00000200;
+        }
+        result.storeOffset_ = storeOffset_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -9470,6 +9676,12 @@ public final class ClientProtos {
         }
         if (other.hasMaxResultSize()) {
           setMaxResultSize(other.getMaxResultSize());
+        }
+        if (other.hasStoreLimit()) {
+          setStoreLimit(other.getStoreLimit());
+        }
+        if (other.hasStoreOffset()) {
+          setStoreOffset(other.getStoreOffset());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -9578,6 +9790,16 @@ public final class ClientProtos {
             case 80: {
               bitField0_ |= 0x00000200;
               maxResultSize_ = input.readUInt64();
+              break;
+            }
+            case 88: {
+              bitField0_ |= 0x00000400;
+              storeLimit_ = input.readUInt32();
+              break;
+            }
+            case 96: {
+              bitField0_ |= 0x00000800;
+              storeOffset_ = input.readUInt32();
               break;
             }
           }
@@ -10270,6 +10492,48 @@ public final class ClientProtos {
         return this;
       }
       
+      // optional uint32 storeLimit = 11;
+      private int storeLimit_ ;
+      public boolean hasStoreLimit() {
+        return ((bitField0_ & 0x00000400) == 0x00000400);
+      }
+      public int getStoreLimit() {
+        return storeLimit_;
+      }
+      public Builder setStoreLimit(int value) {
+        bitField0_ |= 0x00000400;
+        storeLimit_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearStoreLimit() {
+        bitField0_ = (bitField0_ & ~0x00000400);
+        storeLimit_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional uint32 storeOffset = 12;
+      private int storeOffset_ ;
+      public boolean hasStoreOffset() {
+        return ((bitField0_ & 0x00000800) == 0x00000800);
+      }
+      public int getStoreOffset() {
+        return storeOffset_;
+      }
+      public Builder setStoreOffset(int value) {
+        bitField0_ |= 0x00000800;
+        storeOffset_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearStoreOffset() {
+        bitField0_ = (bitField0_ & ~0x00000800);
+        storeOffset_ = 0;
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:Scan)
     }
     
@@ -21385,92 +21649,94 @@ public final class ClientProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\014Client.proto\032\013hbase.proto\"+\n\006Column\022\016\n" +
-      "\006family\030\001 \002(\014\022\021\n\tqualifier\030\002 \003(\014\"\320\001\n\003Get" +
+      "\006family\030\001 \002(\014\022\021\n\tqualifier\030\002 \003(\014\"\371\001\n\003Get" +
       "\022\013\n\003row\030\001 \002(\014\022\027\n\006column\030\002 \003(\0132\007.Column\022!" +
       "\n\tattribute\030\003 \003(\0132\016.NameBytesPair\022\016\n\006loc" +
       "kId\030\004 \001(\004\022\036\n\006filter\030\005 \001(\0132\016.NameBytesPai" +
       "r\022\035\n\ttimeRange\030\006 \001(\0132\n.TimeRange\022\026\n\013maxV" +
       "ersions\030\007 \001(\r:\0011\022\031\n\013cacheBlocks\030\010 \001(\010:\004t" +
-      "rue\"\037\n\006Result\022\025\n\rkeyValueBytes\030\001 \003(\014\"r\n\n" +
-      "GetRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpeci" +
-      "fier\022\021\n\003get\030\002 \002(\0132\004.Get\022\030\n\020closestRowBef",
-      "ore\030\003 \001(\010\022\025\n\rexistenceOnly\030\004 \001(\010\"6\n\013GetR" +
-      "esponse\022\027\n\006result\030\001 \001(\0132\007.Result\022\016\n\006exis" +
-      "ts\030\002 \001(\010\"\200\002\n\tCondition\022\013\n\003row\030\001 \002(\014\022\016\n\006f" +
-      "amily\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022+\n\013compar" +
-      "eType\030\004 \002(\0162\026.Condition.CompareType\022\"\n\nc" +
-      "omparator\030\005 \002(\0132\016.NameBytesPair\"r\n\013Compa" +
-      "reType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005E" +
-      "QUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUA" +
-      "L\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006\"\306\004\n\006Mutate\022\013" +
-      "\n\003row\030\001 \002(\014\022&\n\nmutateType\030\002 \002(\0162\022.Mutate",
-      ".MutateType\022(\n\013columnValue\030\003 \003(\0132\023.Mutat" +
-      "e.ColumnValue\022!\n\tattribute\030\004 \003(\0132\016.NameB" +
-      "ytesPair\022\021\n\ttimestamp\030\005 \001(\004\022\016\n\006lockId\030\006 " +
-      "\001(\004\022\030\n\nwriteToWAL\030\007 \001(\010:\004true\022\035\n\ttimeRan" +
-      "ge\030\n \001(\0132\n.TimeRange\032\310\001\n\013ColumnValue\022\016\n\006" +
-      "family\030\001 \002(\014\022:\n\016qualifierValue\030\002 \003(\0132\".M" +
-      "utate.ColumnValue.QualifierValue\032m\n\016Qual" +
-      "ifierValue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002" +
-      " \001(\014\022\021\n\ttimestamp\030\003 \001(\004\022&\n\ndeleteType\030\004 " +
-      "\001(\0162\022.Mutate.DeleteType\"<\n\nMutateType\022\n\n",
-      "\006APPEND\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DEL" +
-      "ETE\020\003\"U\n\nDeleteType\022\026\n\022DELETE_ONE_VERSIO" +
-      "N\020\000\022\034\n\030DELETE_MULTIPLE_VERSIONS\020\001\022\021\n\rDEL" +
-      "ETE_FAMILY\020\002\"i\n\rMutateRequest\022 \n\006region\030" +
-      "\001 \002(\0132\020.RegionSpecifier\022\027\n\006mutate\030\002 \002(\0132" +
-      "\007.Mutate\022\035\n\tcondition\030\003 \001(\0132\n.Condition\"" +
-      "<\n\016MutateResponse\022\027\n\006result\030\001 \001(\0132\007.Resu" +
-      "lt\022\021\n\tprocessed\030\002 \001(\010\"\201\002\n\004Scan\022\027\n\006column" +
-      "\030\001 \003(\0132\007.Column\022!\n\tattribute\030\002 \003(\0132\016.Nam" +
-      "eBytesPair\022\020\n\010startRow\030\003 \001(\014\022\017\n\007stopRow\030",
-      "\004 \001(\014\022\036\n\006filter\030\005 \001(\0132\016.NameBytesPair\022\035\n" +
-      "\ttimeRange\030\006 \001(\0132\n.TimeRange\022\026\n\013maxVersi" +
-      "ons\030\007 \001(\r:\0011\022\031\n\013cacheBlocks\030\010 \001(\010:\004true\022" +
-      "\021\n\tbatchSize\030\t \001(\r\022\025\n\rmaxResultSize\030\n \001(" +
-      "\004\"\203\001\n\013ScanRequest\022 \n\006region\030\001 \001(\0132\020.Regi" +
-      "onSpecifier\022\023\n\004scan\030\002 \001(\0132\005.Scan\022\021\n\tscan" +
-      "nerId\030\003 \001(\004\022\024\n\014numberOfRows\030\004 \001(\r\022\024\n\014clo" +
-      "seScanner\030\005 \001(\010\"\\\n\014ScanResponse\022\027\n\006resul" +
-      "t\030\001 \003(\0132\007.Result\022\021\n\tscannerId\030\002 \001(\004\022\023\n\013m" +
-      "oreResults\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\"?\n\016LockRow",
-      "Request\022 \n\006region\030\001 \002(\0132\020.RegionSpecifie" +
-      "r\022\013\n\003row\030\002 \003(\014\".\n\017LockRowResponse\022\016\n\006loc" +
-      "kId\030\001 \002(\004\022\013\n\003ttl\030\002 \001(\r\"D\n\020UnlockRowReque" +
-      "st\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006" +
-      "lockId\030\002 \002(\004\"\023\n\021UnlockRowResponse\"\232\001\n\024Bu" +
-      "lkLoadHFileRequest\022 \n\006region\030\001 \002(\0132\020.Reg" +
-      "ionSpecifier\0224\n\nfamilyPath\030\002 \003(\0132 .BulkL" +
-      "oadHFileRequest.FamilyPath\032*\n\nFamilyPath" +
-      "\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLo" +
-      "adHFileResponse\022\016\n\006loaded\030\001 \002(\010\"\203\001\n\004Exec",
-      "\022\013\n\003row\030\001 \002(\014\022\024\n\014protocolName\030\002 \002(\t\022\022\n\nm" +
-      "ethodName\030\003 \002(\t\022!\n\010property\030\004 \003(\0132\017.Name" +
-      "StringPair\022!\n\tparameter\030\005 \003(\0132\016.NameByte" +
-      "sPair\"O\n\026ExecCoprocessorRequest\022 \n\006regio" +
-      "n\030\001 \002(\0132\020.RegionSpecifier\022\023\n\004call\030\002 \002(\0132" +
-      "\005.Exec\"8\n\027ExecCoprocessorResponse\022\035\n\005val" +
-      "ue\030\001 \002(\0132\016.NameBytesPair\"N\n\013MultiAction\022" +
-      "\027\n\006mutate\030\001 \001(\0132\007.Mutate\022\021\n\003get\030\002 \001(\0132\004." +
-      "Get\022\023\n\004exec\030\003 \001(\0132\005.Exec\"P\n\014ActionResult" +
-      "\022\035\n\005value\030\001 \001(\0132\016.NameBytesPair\022!\n\texcep",
-      "tion\030\002 \001(\0132\016.NameBytesPair\"^\n\014MultiReque" +
-      "st\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\034\n\006" +
-      "action\030\002 \003(\0132\014.MultiAction\022\016\n\006atomic\030\003 \001" +
-      "(\010\".\n\rMultiResponse\022\035\n\006result\030\001 \003(\0132\r.Ac" +
-      "tionResult2\221\003\n\rClientService\022 \n\003get\022\013.Ge" +
-      "tRequest\032\014.GetResponse\022)\n\006mutate\022\016.Mutat" +
-      "eRequest\032\017.MutateResponse\022#\n\004scan\022\014.Scan" +
-      "Request\032\r.ScanResponse\022,\n\007lockRow\022\017.Lock" +
-      "RowRequest\032\020.LockRowResponse\0222\n\tunlockRo" +
-      "w\022\021.UnlockRowRequest\032\022.UnlockRowResponse",
-      "\022>\n\rbulkLoadHFile\022\025.BulkLoadHFileRequest" +
-      "\032\026.BulkLoadHFileResponse\022D\n\017execCoproces" +
-      "sor\022\027.ExecCoprocessorRequest\032\030.ExecCopro" +
-      "cessorResponse\022&\n\005multi\022\r.MultiRequest\032\016" +
-      ".MultiResponseBB\n*org.apache.hadoop.hbas" +
-      "e.protobuf.generatedB\014ClientProtosH\001\210\001\001\240" +
-      "\001\001"
+      "rue\022\022\n\nstoreLimit\030\t \001(\r\022\023\n\013storeOffset\030\n" +
+      " \001(\r\"\037\n\006Result\022\025\n\rkeyValueBytes\030\001 \003(\014\"r\n" +
+      "\nGetRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpec",
+      "ifier\022\021\n\003get\030\002 \002(\0132\004.Get\022\030\n\020closestRowBe" +
+      "fore\030\003 \001(\010\022\025\n\rexistenceOnly\030\004 \001(\010\"6\n\013Get" +
+      "Response\022\027\n\006result\030\001 \001(\0132\007.Result\022\016\n\006exi" +
+      "sts\030\002 \001(\010\"\200\002\n\tCondition\022\013\n\003row\030\001 \002(\014\022\016\n\006" +
+      "family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022+\n\013compa" +
+      "reType\030\004 \002(\0162\026.Condition.CompareType\022\"\n\n" +
+      "comparator\030\005 \002(\0132\016.NameBytesPair\"r\n\013Comp" +
+      "areType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005" +
+      "EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQU" +
+      "AL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006\"\306\004\n\006Mutate\022",
+      "\013\n\003row\030\001 \002(\014\022&\n\nmutateType\030\002 \002(\0162\022.Mutat" +
+      "e.MutateType\022(\n\013columnValue\030\003 \003(\0132\023.Muta" +
+      "te.ColumnValue\022!\n\tattribute\030\004 \003(\0132\016.Name" +
+      "BytesPair\022\021\n\ttimestamp\030\005 \001(\004\022\016\n\006lockId\030\006" +
+      " \001(\004\022\030\n\nwriteToWAL\030\007 \001(\010:\004true\022\035\n\ttimeRa" +
+      "nge\030\n \001(\0132\n.TimeRange\032\310\001\n\013ColumnValue\022\016\n" +
+      "\006family\030\001 \002(\014\022:\n\016qualifierValue\030\002 \003(\0132\"." +
+      "Mutate.ColumnValue.QualifierValue\032m\n\016Qua" +
+      "lifierValue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030" +
+      "\002 \001(\014\022\021\n\ttimestamp\030\003 \001(\004\022&\n\ndeleteType\030\004",
+      " \001(\0162\022.Mutate.DeleteType\"<\n\nMutateType\022\n" +
+      "\n\006APPEND\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DE" +
+      "LETE\020\003\"U\n\nDeleteType\022\026\n\022DELETE_ONE_VERSI" +
+      "ON\020\000\022\034\n\030DELETE_MULTIPLE_VERSIONS\020\001\022\021\n\rDE" +
+      "LETE_FAMILY\020\002\"i\n\rMutateRequest\022 \n\006region" +
+      "\030\001 \002(\0132\020.RegionSpecifier\022\027\n\006mutate\030\002 \002(\013" +
+      "2\007.Mutate\022\035\n\tcondition\030\003 \001(\0132\n.Condition" +
+      "\"<\n\016MutateResponse\022\027\n\006result\030\001 \001(\0132\007.Res" +
+      "ult\022\021\n\tprocessed\030\002 \001(\010\"\252\002\n\004Scan\022\027\n\006colum" +
+      "n\030\001 \003(\0132\007.Column\022!\n\tattribute\030\002 \003(\0132\016.Na",
+      "meBytesPair\022\020\n\010startRow\030\003 \001(\014\022\017\n\007stopRow" +
+      "\030\004 \001(\014\022\036\n\006filter\030\005 \001(\0132\016.NameBytesPair\022\035" +
+      "\n\ttimeRange\030\006 \001(\0132\n.TimeRange\022\026\n\013maxVers" +
+      "ions\030\007 \001(\r:\0011\022\031\n\013cacheBlocks\030\010 \001(\010:\004true" +
+      "\022\021\n\tbatchSize\030\t \001(\r\022\025\n\rmaxResultSize\030\n \001" +
+      "(\004\022\022\n\nstoreLimit\030\013 \001(\r\022\023\n\013storeOffset\030\014 " +
+      "\001(\r\"\203\001\n\013ScanRequest\022 \n\006region\030\001 \001(\0132\020.Re" +
+      "gionSpecifier\022\023\n\004scan\030\002 \001(\0132\005.Scan\022\021\n\tsc" +
+      "annerId\030\003 \001(\004\022\024\n\014numberOfRows\030\004 \001(\r\022\024\n\014c" +
+      "loseScanner\030\005 \001(\010\"\\\n\014ScanResponse\022\027\n\006res",
+      "ult\030\001 \003(\0132\007.Result\022\021\n\tscannerId\030\002 \001(\004\022\023\n" +
+      "\013moreResults\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\"?\n\016LockR" +
+      "owRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecif" +
+      "ier\022\013\n\003row\030\002 \003(\014\".\n\017LockRowResponse\022\016\n\006l" +
+      "ockId\030\001 \002(\004\022\013\n\003ttl\030\002 \001(\r\"D\n\020UnlockRowReq" +
+      "uest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\016" +
+      "\n\006lockId\030\002 \002(\004\"\023\n\021UnlockRowResponse\"\232\001\n\024" +
+      "BulkLoadHFileRequest\022 \n\006region\030\001 \002(\0132\020.R" +
+      "egionSpecifier\0224\n\nfamilyPath\030\002 \003(\0132 .Bul" +
+      "kLoadHFileRequest.FamilyPath\032*\n\nFamilyPa",
+      "th\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025Bulk" +
+      "LoadHFileResponse\022\016\n\006loaded\030\001 \002(\010\"\203\001\n\004Ex" +
+      "ec\022\013\n\003row\030\001 \002(\014\022\024\n\014protocolName\030\002 \002(\t\022\022\n" +
+      "\nmethodName\030\003 \002(\t\022!\n\010property\030\004 \003(\0132\017.Na" +
+      "meStringPair\022!\n\tparameter\030\005 \003(\0132\016.NameBy" +
+      "tesPair\"O\n\026ExecCoprocessorRequest\022 \n\006reg" +
+      "ion\030\001 \002(\0132\020.RegionSpecifier\022\023\n\004call\030\002 \002(" +
+      "\0132\005.Exec\"8\n\027ExecCoprocessorResponse\022\035\n\005v" +
+      "alue\030\001 \002(\0132\016.NameBytesPair\"N\n\013MultiActio" +
+      "n\022\027\n\006mutate\030\001 \001(\0132\007.Mutate\022\021\n\003get\030\002 \001(\0132",
+      "\004.Get\022\023\n\004exec\030\003 \001(\0132\005.Exec\"P\n\014ActionResu" +
+      "lt\022\035\n\005value\030\001 \001(\0132\016.NameBytesPair\022!\n\texc" +
+      "eption\030\002 \001(\0132\016.NameBytesPair\"^\n\014MultiReq" +
+      "uest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\034" +
+      "\n\006action\030\002 \003(\0132\014.MultiAction\022\016\n\006atomic\030\003" +
+      " \001(\010\".\n\rMultiResponse\022\035\n\006result\030\001 \003(\0132\r." +
+      "ActionResult2\221\003\n\rClientService\022 \n\003get\022\013." +
+      "GetRequest\032\014.GetResponse\022)\n\006mutate\022\016.Mut" +
+      "ateRequest\032\017.MutateResponse\022#\n\004scan\022\014.Sc" +
+      "anRequest\032\r.ScanResponse\022,\n\007lockRow\022\017.Lo",
+      "ckRowRequest\032\020.LockRowResponse\0222\n\tunlock" +
+      "Row\022\021.UnlockRowRequest\032\022.UnlockRowRespon" +
+      "se\022>\n\rbulkLoadHFile\022\025.BulkLoadHFileReque" +
+      "st\032\026.BulkLoadHFileResponse\022D\n\017execCoproc" +
+      "essor\022\027.ExecCoprocessorRequest\032\030.ExecCop" +
+      "rocessorResponse\022&\n\005multi\022\r.MultiRequest" +
+      "\032\016.MultiResponseBB\n*org.apache.hadoop.hb" +
+      "ase.protobuf.generatedB\014ClientProtosH\001\210\001" +
+      "\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21490,7 +21756,7 @@ public final class ClientProtos {
           internal_static_Get_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Get_descriptor,
-              new java.lang.String[] { "Row", "Column", "Attribute", "LockId", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", },
+              new java.lang.String[] { "Row", "Column", "Attribute", "LockId", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "StoreLimit", "StoreOffset", },
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Get.class,
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Get.Builder.class);
           internal_static_Result_descriptor =
@@ -21570,7 +21836,7 @@ public final class ClientProtos {
           internal_static_Scan_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Scan_descriptor,
-              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", },
+              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", "StoreLimit", "StoreOffset", },
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.class,
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.Builder.class);
           internal_static_ScanRequest_descriptor =

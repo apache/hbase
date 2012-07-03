@@ -23,7 +23,10 @@ import java.util.Collections;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
-/** Similar to {@link HConstants} but for tests. */
+/**
+ * Similar to {@link HConstants} but for tests. Also provides some simple
+ * static utility functions to generate test data.
+ */
 public class HTestConst {
 
   private HTestConst() {
@@ -38,5 +41,27 @@ public class HTestConst {
   public static final Set<String> DEFAULT_CF_STR_SET =
       Collections.unmodifiableSet(new HashSet<String>(
           Arrays.asList(new String[] { DEFAULT_CF_STR })));
+
+  public static final String DEFAULT_ROW_STR = "MyTestRow";
+  public static final byte[] DEFAULT_ROW_BYTES = Bytes.toBytes(DEFAULT_ROW_STR);
+
+  public static final String DEFAULT_QUALIFIER_STR = "MyColumnQualifier";
+  public static final byte[] DEFAULT_QUALIFIER_BYTES = Bytes.toBytes(DEFAULT_QUALIFIER_STR);
+
+  public static String DEFAULT_VALUE_STR = "MyTestValue";
+  public static byte[] DEFAULT_VALUE_BYTES = Bytes.toBytes(DEFAULT_VALUE_STR);
+
+  /**
+   * Generate the given number of unique byte sequences by appending numeric
+   * suffixes (ASCII representations of decimal numbers).
+   */
+  public static byte[][] makeNAscii(byte[] base, int n) {
+    byte [][] ret = new byte[n][];
+    for (int i = 0; i < n; i++) {
+      byte[] tail = Bytes.toBytes(Integer.toString(i));
+      ret[i] = Bytes.add(base, tail);
+    }
+    return ret;
+  }
 
 }
