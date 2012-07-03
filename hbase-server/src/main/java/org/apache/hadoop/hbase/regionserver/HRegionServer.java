@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MultiAction;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
@@ -3224,7 +3225,7 @@ public class  HRegionServer implements ClientProtocol,
         mutateRows(region, mutates);
       } else {
         ActionResult.Builder resultBuilder = null;
-        List<Mutate> puts = new ArrayList<Mutate>();
+        List<Mutate> mutates = new ArrayList<Mutate>();
         for (ClientProtos.MultiAction actionUnion : request.getActionList()) {
           requestCount.incrementAndGet();
           try {
@@ -3239,10 +3240,10 @@ public class  HRegionServer implements ClientProtocol,
             } else if (actionUnion.hasMutate()) {
               Mutate mutate = actionUnion.getMutate();
               MutateType type = mutate.getMutateType();
-              if (type != MutateType.PUT) {
-                if (!puts.isEmpty()) {
-                  put(builder, region, puts);
-                  puts.clear();
+              if (type != MutateType.PUT && type != MutateType.DELETE) {
+                if (!mutates.isEmpty()) {
+                  doBatchOp(builder, region, mutates);
+                  mutates.clear();
                 } else if (!region.getRegionInfo().isMetaTable()) {
                   cacheFlusher.reclaimMemStoreMemory();
                 }
@@ -3256,17 +3257,13 @@ public class  HRegionServer implements ClientProtocol,
                 r = increment(region, mutate);
                 break;
               case PUT:
-                puts.add(mutate);
+                mutates.add(mutate);
                 break;
               case DELETE:
-                Delete delete = ProtobufUtil.toDelete(mutate);
-                Integer lock = getLockFromId(delete.getLockId());
-                region.delete(delete, lock, delete.getWriteToWAL());
-                r = new Result();
+                mutates.add(mutate);
                 break;
-                default:
-                  throw new DoNotRetryIOException(
-                    "Unsupported mutate type: " + type.name());
+              default:
+                throw new DoNotRetryIOException("Unsupported mutate type: " + type.name());
               }
               if (r != null) {
                 result = ProtobufUtil.toResult(r);
@@ -3294,8 +3291,8 @@ public class  HRegionServer implements ClientProtocol,
             builder.addResult(ResponseConverter.buildActionResult(ie));
           }
         }
-        if (!puts.isEmpty()) {
-          put(builder, region, puts);
+        if (!mutates.isEmpty()) {
+          doBatchOp(builder, region, mutates);
         }
       }
       return builder.build();
@@ -3755,16 +3752,16 @@ public class  HRegionServer implements ClientProtocol,
   }
 
   /**
-   * Execute a list of put mutations.
+   * Execute a list of Put/Delete mutations.
    *
    * @param builder
    * @param region
-   * @param puts
+   * @param mutates
    */
-  protected void put(final MultiResponse.Builder builder,
-      final HRegion region, final List<Mutate> puts) {
+  protected void doBatchOp(final MultiResponse.Builder builder,
+      final HRegion region, final List<Mutate> mutates) {
     @SuppressWarnings("unchecked")
-    Pair<Put, Integer>[] putsWithLocks = new Pair[puts.size()];
+    Pair<Mutation, Integer>[] mutationsWithLocks = new Pair[mutates.size()];
 
     try {
       ActionResult.Builder resultBuilder = ActionResult.newBuilder();
@@ -3773,19 +3770,24 @@ public class  HRegionServer implements ClientProtocol,
       ActionResult result = resultBuilder.build();
 
       int i = 0;
-      for (Mutate put : puts) {
-        Put p = ProtobufUtil.toPut(put);
-        Integer lock = getLockFromId(p.getLockId());
-        putsWithLocks[i++] = new Pair<Put, Integer>(p, lock);
+      for (Mutate m : mutates) {
+        Mutation mutation = null;
+        if (m.getMutateType() == MutateType.PUT) {
+          mutation = ProtobufUtil.toPut(m);
+        } else {
+          mutation = ProtobufUtil.toDelete(m);
+        }
+        Integer lock = getLockFromId(mutation.getLockId());
+        mutationsWithLocks[i++] = new Pair<Mutation, Integer>(mutation, lock);
         builder.addResult(result);
       }
 
-      requestCount.addAndGet(puts.size());
+      requestCount.addAndGet(mutates.size());
       if (!region.getRegionInfo().isMetaTable()) {
         cacheFlusher.reclaimMemStoreMemory();
       }
 
-      OperationStatus codes[] = region.put(putsWithLocks);
+      OperationStatus codes[] = region.batchMutate(mutationsWithLocks);
       for (i = 0; i < codes.length; i++) {
         if (codes[i].getOperationStatusCode() != OperationStatusCode.SUCCESS) {
           result = ResponseConverter.buildActionResult(
@@ -3795,7 +3797,7 @@ public class  HRegionServer implements ClientProtocol,
       }
     } catch (IOException ie) {
       ActionResult result = ResponseConverter.buildActionResult(ie);
-      for (int i = 0, n = puts.size(); i < n; i++) {
+      for (int i = 0, n = mutates.size(); i < n; i++) {
         builder.setResult(i, result);
       }
     }

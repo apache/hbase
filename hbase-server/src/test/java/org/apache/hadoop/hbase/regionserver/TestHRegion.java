@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -610,14 +611,14 @@ public class TestHRegion extends HBaseTestCase {
       LOG.info("Nexta, a batch put which uses an already-held lock");
       lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
       LOG.info("...obtained row lock");
-      List<Pair<Put, Integer>> putsAndLocks = Lists.newArrayList();
+      List<Pair<Mutation, Integer>> putsAndLocks = Lists.newArrayList();
       for (int i = 0; i < 10; i++) {
-        Pair<Put, Integer> pair = new Pair<Put, Integer>(puts[i], null);
+        Pair<Mutation, Integer> pair = new Pair<Mutation, Integer>(puts[i], null);
         if (i == 2) pair.setSecond(lockedRow);
         putsAndLocks.add(pair);
       }
   
-      codes = region.put(putsAndLocks.toArray(new Pair[0]));
+      codes = region.batchMutate(putsAndLocks.toArray(new Pair[0]));
       LOG.info("...performed put");
       for (int i = 0; i < 10; i++) {
         assertEquals((i == 5) ? OperationStatusCode.SANITY_CHECK_FAILURE :

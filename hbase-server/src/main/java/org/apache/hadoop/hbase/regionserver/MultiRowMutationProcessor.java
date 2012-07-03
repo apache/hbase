@@ -69,7 +69,7 @@ class MultiRowMutationProcessor extends BaseRowProcessor<Void> {
       } else if (m instanceof Delete) {
         Delete d = (Delete) m;
         region.prepareDelete(d);
-        region.prepareDeleteTimestamps(d, byteNow);
+        region.prepareDeleteTimestamps(d.getFamilyMap(), byteNow);
       } else {
         throw new DoNotRetryIOException(
             "Action must be Put or Delete. But was: "

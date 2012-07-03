@@ -46,6 +46,7 @@ public class OperationMetrics {
   private static final String ICV_KEY = "incrementColumnValue_";
   private static final String INCREMENT_KEY = "increment_";
   private static final String MULTIPUT_KEY = "multiput_";
+  private static final String MULTIDELETE_KEY = "multidelete_";
   private static final String APPEND_KEY = "append_";
   
   /** Conf key controlling whether we should expose metrics.*/
@@ -101,6 +102,16 @@ public class OperationMetrics {
     doUpdateTimeVarying(columnFamilies, MULTIPUT_KEY, value);
   }
 
+  /**
+   * Update the stats associated with {@link HTable#delete(java.util.List)}.
+   *
+   * @param columnFamilies Set of CF's this multidelete is associated with
+   * @param value the time
+   */
+  public void updateMultiDeleteMetrics(Set<byte[]> columnFamilies, long value) {
+    doUpdateTimeVarying(columnFamilies, MULTIDELETE_KEY, value);
+  }
+  
   /**
    * Update the metrics associated with a {@link Get}
    * 
