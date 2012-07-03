@@ -28,7 +28,7 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.MasterMonitorProtocol;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -50,8 +50,8 @@ public class TestHMasterRPCException {
     ServerName sm = hm.getServerName();
     InetSocketAddress isa = new InetSocketAddress(sm.getHostname(), sm.getPort());
     try {
-      HMasterInterface inf = (HMasterInterface) HBaseRPC.getProxy(
-        HMasterInterface.class,  HMasterInterface.VERSION, isa, conf, 100);
+      MasterMonitorProtocol inf = (MasterMonitorProtocol) HBaseRPC.getProxy(
+        MasterMonitorProtocol.class,  MasterMonitorProtocol.VERSION, isa, conf, 100);
       fail();
     } catch (ServerNotRunningYetException ex) {
       assertTrue(ex.getMessage().startsWith(

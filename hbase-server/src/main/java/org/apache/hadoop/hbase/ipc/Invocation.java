@@ -34,6 +34,8 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.ClientProtocol;
+import org.apache.hadoop.hbase.MasterMonitorProtocol;
+import org.apache.hadoop.hbase.MasterAdminProtocol;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -65,6 +67,8 @@ public class Invocation extends VersionedWritable implements Configurable {
       Long.valueOf(AdminProtocol.VERSION));
     PROTOCOL_VERSION.put(RegionServerStatusService.BlockingInterface.class,
       Long.valueOf(RegionServerStatusProtocol.VERSION));
+    PROTOCOL_VERSION.put(MasterMonitorProtocol.class,Long.valueOf(MasterMonitorProtocol.VERSION));
+    PROTOCOL_VERSION.put(MasterAdminProtocol.class,Long.valueOf(MasterAdminProtocol.VERSION));
   }
 
   // For protobuf protocols, which use ServiceException, instead of IOException
@@ -75,7 +79,8 @@ public class Invocation extends VersionedWritable implements Configurable {
     PROTOBUF_PROTOCOLS.add(ClientProtocol.class);
     PROTOBUF_PROTOCOLS.add(AdminProtocol.class);
     PROTOBUF_PROTOCOLS.add(RegionServerStatusProtocol.class);
-    PROTOBUF_PROTOCOLS.add(HMasterInterface.class);
+    PROTOBUF_PROTOCOLS.add(MasterMonitorProtocol.class);
+    PROTOBUF_PROTOCOLS.add(MasterAdminProtocol.class);
   }
 
   private static byte RPC_VERSION = 1;

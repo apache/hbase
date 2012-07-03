@@ -1,0 +1,239 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// This file contains protocol buffers that are used for MasterAdminProtocol.
+
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "MasterAdminProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
+
+import "hbase.proto";
+
+/* Column-level protobufs */
+
+message AddColumnRequest {
+  required bytes tableName = 1;
+  required ColumnFamilySchema columnFamilies = 2;
+}
+
+message AddColumnResponse {
+}
+
+message DeleteColumnRequest {
+  required bytes tableName = 1;
+  required bytes columnName = 2;
+}
+
+message DeleteColumnResponse {
+}
+
+message ModifyColumnRequest {
+  required bytes tableName = 1;
+  required ColumnFamilySchema columnFamilies = 2;
+}
+
+message ModifyColumnResponse {
+}
+
+/* Region-level Protos */
+
+message MoveRegionRequest {
+  required RegionSpecifier region = 1;
+  optional ServerName destServerName = 2;
+}
+
+message MoveRegionResponse {
+}
+
+message AssignRegionRequest {
+  required RegionSpecifier region = 1;
+}
+
+message AssignRegionResponse {
+}
+
+message UnassignRegionRequest {
+  required RegionSpecifier region = 1;
+  optional bool force = 2 [default = false];
+}
+
+message UnassignRegionResponse {
+}
+
+message OfflineRegionRequest {
+  required RegionSpecifier region = 1;
+}
+
+message OfflineRegionResponse {
+}
+
+/* Table-level protobufs */
+
+message CreateTableRequest {
+  required TableSchema tableSchema = 1;
+  repeated bytes splitKeys = 2;
+}
+
+message CreateTableResponse {
+}
+
+message DeleteTableRequest {
+  required bytes tableName = 1;
+}
+
+message DeleteTableResponse {
+}
+
+message EnableTableRequest {
+  required bytes tableName = 1;
+}
+
+message EnableTableResponse {
+}
+
+message DisableTableRequest {
+  required bytes tableName = 1;
+}
+
+message DisableTableResponse {
+}
+
+message ModifyTableRequest {
+  required bytes tableName = 1;
+  required TableSchema tableSchema = 2;
+}
+
+message ModifyTableResponse {
+}
+
+/* Cluster-level protobufs */
+
+
+message ShutdownRequest {
+}
+
+message ShutdownResponse {
+}
+
+message StopMasterRequest {
+}
+
+message StopMasterResponse {
+}
+
+message BalanceRequest {
+}
+
+message BalanceResponse {
+  required bool balancerRan = 1;
+}
+
+message SetBalancerRunningRequest {
+  required bool on = 1;
+  optional bool synchronous = 2;
+}
+
+message SetBalancerRunningResponse {
+  optional bool prevBalanceValue = 1;
+}
+
+service MasterAdminService {
+  /** Adds a column to the specified table. */
+  rpc addColumn(AddColumnRequest)
+    returns(AddColumnResponse);
+
+  /** Deletes a column from the specified table. Table must be disabled. */
+  rpc deleteColumn(DeleteColumnRequest)
+    returns(DeleteColumnResponse);
+
+  /** Modifies an existing column on the specified table. */
+  rpc modifyColumn(ModifyColumnRequest)
+    returns(ModifyColumnResponse);
+
+  /** Move the region region to the destination server. */
+  rpc moveRegion(MoveRegionRequest)
+    returns(MoveRegionResponse);
+
+  /** Assign a region to a server chosen at random. */
+  rpc assignRegion(AssignRegionRequest)
+    returns(AssignRegionResponse);
+
+  /**
+   * Unassign a region from current hosting regionserver.  Region will then be
+   * assigned to a regionserver chosen at random.  Region could be reassigned
+   * back to the same server.  Use moveRegion if you want
+   * to control the region movement.
+   */
+  rpc unassignRegion(UnassignRegionRequest)
+    returns(UnassignRegionResponse);
+
+  /**
+   * Offline a region from the assignment manager's in-memory state.  The
+   * region should be in a closed state and there will be no attempt to
+   * automatically reassign the region as in unassign.   This is a special
+   * method, and should only be used by experts or hbck.
+   */
+  rpc offlineRegion(OfflineRegionRequest)
+    returns(OfflineRegionResponse);
+
+  /** Deletes a table */
+  rpc deleteTable(DeleteTableRequest)
+    returns(DeleteTableResponse);
+
+  /** Puts the table on-line (only needed if table has been previously taken offline) */
+  rpc enableTable(EnableTableRequest)
+    returns(EnableTableResponse);
+
+  /** Take table offline */
+  rpc disableTable(DisableTableRequest)
+    returns(DisableTableResponse);
+
+  /** Modify a table's metadata */
+  rpc modifyTable(ModifyTableRequest)
+    returns(ModifyTableResponse);
+
+  /** Creates a new table asynchronously */
+  rpc createTable(CreateTableRequest)
+    returns(CreateTableResponse);
+
+    /** Shutdown an HBase cluster. */
+  rpc shutdown(ShutdownRequest)
+    returns(ShutdownResponse);
+
+  /** Stop HBase Master only.  Does not shutdown the cluster. */
+  rpc stopMaster(StopMasterRequest)
+    returns(StopMasterResponse);
+
+  /**
+   * Run the balancer.  Will run the balancer and if regions to move, it will
+   * go ahead and do the reassignments.  Can NOT run for various reasons.
+   * Check logs.
+   */
+  rpc balance(BalanceRequest)
+    returns(BalanceResponse);
+
+  /**
+   * Turn the load balancer on or off.
+   * If synchronous is true, it waits until current balance() call, if outstanding, to return.
+   */
+  rpc setBalancerRunning(SetBalancerRunningRequest)
+    returns(SetBalancerRunningResponse);
+
+}

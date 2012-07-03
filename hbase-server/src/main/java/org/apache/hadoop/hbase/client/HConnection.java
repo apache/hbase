@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
@@ -78,20 +77,6 @@ public interface HConnection extends Abortable, Closeable {
    */
   @Deprecated
   public ZooKeeperWatcher getZooKeeperWatcher() throws IOException;
-
-  /**
-   * @return proxy connection to master server for this instance
-   * @throws MasterNotRunningException if the master is not running
-   * @throws ZooKeeperConnectionException if unable to connect to zookeeper
-   * @deprecated Removed because it was a mistake exposing master in this
-   * interface (master is an implementation detail). Master functions are
-   * available from HConnection or HBaseAdmin, without having to use
-   * directly the master.
-   * Deprecated in HBase 0.94
-   */
-  @Deprecated
-  public HMasterInterface getMaster()
-    throws MasterNotRunningException, ZooKeeperConnectionException;
 
   /** @return - true if the master server is running */
   public boolean isMasterRunning()

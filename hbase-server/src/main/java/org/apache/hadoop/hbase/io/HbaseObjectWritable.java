@@ -122,7 +122,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
 
   // Here we maintain two static maps of classes to code and vice versa.
   // Add new classes+codes as wanted or figure way to auto-generate these
-  // maps from the HMasterInterface.
+  // maps.
   static final Map<Integer, Class<?>> CODE_TO_CLASS =
     new HashMap<Integer, Class<?>>();
   static final Map<Class<?>, Integer> CLASS_TO_CODE =

@@ -1,5 +1,5 @@
 /**
- * Copyright 2012 The Apache Software Foundation
+ * Copyright The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,7 +21,7 @@
 package org.apache.hadoop.hbase.client;
 
 
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.MasterAdminProtocol;
 
 import java.io.Closeable;
 
@@ -32,10 +32,11 @@ import java.io.Closeable;
  * This interface is used by a dynamic proxy. It allows to have a #close
  *  function in a master client.
  *
- * This class is intended to be used internally by HBase classes; but not by
- * final user code. Hence it's package protected.
+ * This class is intended to be used internally by HBase classes that need to
+ * speak the MasterAdminProtocol; but not by * final user code. Hence it's
+ * package protected.
  */
-interface MasterKeepAliveConnection extends HMasterInterface, Closeable {
+interface MasterAdminKeepAliveConnection extends MasterAdminProtocol, Closeable {
 
   @Override
   public void close();

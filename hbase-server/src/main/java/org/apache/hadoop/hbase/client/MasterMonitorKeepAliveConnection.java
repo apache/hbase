@@ -1,4 +1,6 @@
 /**
+ * Copyright The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,23 +18,27 @@
  * limitations under the License.
  */
 
-// This file contains protocol buffers that are used for protocols implemented by the master.
+package org.apache.hadoop.hbase.client;
 
-option java_package = "org.apache.hadoop.hbase.protobuf.generated";
-option java_outer_classname = "MasterProtos";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
-option optimize_for = SPEED;
 
-message IsMasterRunningRequest {
+import org.apache.hadoop.hbase.MasterMonitorProtocol;
+
+import java.io.Closeable;
+
+/**
+ * A KeepAlive connection is not physically closed immediately after the close,
+ *  but rather kept alive for a few minutes. It makes sense only if it's shared.
+ *
+ * This interface is used by a dynamic proxy. It allows to have a #close
+ *  function in a master client.
+ *
+ * This class is intended to be used internally by HBase classes that need to
+ * speak the MasterMonitorProtocol; but not by final user code. Hence it's
+ * package protected.
+ */
+interface MasterMonitorKeepAliveConnection extends MasterMonitorProtocol, Closeable {
+
+  @Override
+  public void close();
 }
 
-message IsMasterRunningResponse {
-  required bool isMasterRunning = 1;
-}
-
-service MasterService {
-  /** return true if master is available */
-  rpc isMasterRunning(IsMasterRunningRequest)
-    returns(IsMasterRunningResponse);
-}

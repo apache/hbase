@@ -25,6 +25,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.ClientProtocol;
+import org.apache.hadoop.hbase.MasterMonitorProtocol;
+import org.apache.hadoop.hbase.MasterAdminProtocol;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -66,7 +68,8 @@ public class HBaseRpcMetrics implements Updater {
 
     context.registerUpdater(this);
 
-    initMethods(HMasterInterface.class);
+    initMethods(MasterMonitorProtocol.class);
+    initMethods(MasterAdminProtocol.class);
     initMethods(RegionServerStatusProtocol.class);
     initMethods(ClientProtocol.class);
     initMethods(AdminProtocol.class);

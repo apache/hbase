@@ -65,13 +65,17 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.MasterProtocol;
+import org.apache.hadoop.hbase.MasterMonitorProtocol;
+import org.apache.hadoop.hbase.MasterAdminProtocol;
+import org.apache.hadoop.hbase.client.MasterAdminKeepAliveConnection;
+import org.apache.hadoop.hbase.client.MasterMonitorKeepAliveConnection;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.*;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -523,7 +527,6 @@ public class HConnectionManager {
     private final Object masterAndZKLock = new Object();
 
     private long keepZooKeeperWatcherAliveUntil = Long.MAX_VALUE;
-    private long keepMasterAliveUntil = Long.MAX_VALUE;
     private final DelayedClosing delayedClosing =
       DelayedClosing.createAndStart(this);
 
@@ -657,12 +660,26 @@ public class HConnectionManager {
       return this.conf;
     }
 
+    private static class MasterProtocolState {
+      public MasterProtocol protocol;
+      public int userCount;
+      public long keepAliveUntil = Long.MAX_VALUE;
+      public final Class<? extends MasterProtocol> protocolClass;
+      public long version;
+
+      public MasterProtocolState (
+          final Class<? extends MasterProtocol> protocolClass, long version) {
+        this.protocolClass = protocolClass;
+        this.version = version;
+      }
+    }
 
     /**
      * Create a new Master proxy. Try once only.
      */
-    private HMasterInterface createMasterInterface()
-      throws IOException, KeeperException, ServiceException {
+    private MasterProtocol createMasterInterface(
+        MasterProtocolState masterProtocolState)
+        throws IOException, KeeperException, ServiceException {
 
       ZooKeeperKeepAliveConnection zkw;
       try {
@@ -685,9 +702,10 @@ public class HConnectionManager {
 
         InetSocketAddress isa =
           new InetSocketAddress(sn.getHostname(), sn.getPort());
-        HMasterInterface tryMaster = (HMasterInterface) HBaseRPC.getProxy(
-          HMasterInterface.class, HMasterInterface.VERSION, isa, this.conf,
-          this.rpcTimeout);
+        MasterProtocol tryMaster = (MasterProtocol) HBaseRPC.getProxy(
+          masterProtocolState.protocolClass,
+          masterProtocolState.version,
+          isa, this.conf,this.rpcTimeout);
 
         if (tryMaster.isMasterRunning(
             null, RequestConverter.buildIsMasterRunningRequest()).getIsMasterRunning()) {
@@ -703,50 +721,24 @@ public class HConnectionManager {
       }
     }
 
-
-    /**
-     * Get a connection to master. This connection will be reset if master dies.
-     * Don't close it, it will be closed with the connection.
-     * @deprecated This function is deprecated because it creates a never ending
-     * connection to master and  hence wastes resources.
-     * In the hbase.client package, use {@link #getKeepAliveMaster()} instead.
-     *
-     * Internally, we're using the shared master as there is no reason to create
-     *  a new connection. However, in this case, we will never close the shared
-     *  master.
-     */
-    @Override
-    @Deprecated
-    public HMasterInterface getMaster() throws
-      MasterNotRunningException, ZooKeeperConnectionException {
-      synchronized (this.masterAndZKLock) {
-        canCloseMaster = false;
-        try {
-          return getKeepAliveMaster();
-        } catch (MasterNotRunningException e) {
-          throw e;
-        }
-      }
-    }
-
     /**
      * Create a master, retries if necessary.
      */
-    private HMasterInterface createMasterWithRetries()
-      throws MasterNotRunningException {
+    private MasterProtocol createMasterWithRetries(
+      MasterProtocolState masterProtocolState) throws MasterNotRunningException {
 
       // The lock must be at the beginning to prevent multiple master creation
       //  (and leaks) in a multithread context
       synchronized (this.masterAndZKLock) {
         Exception exceptionCaught = null;
-        HMasterInterface master = null;
+        MasterProtocol master = null;
         int tries = 0;
         while (
           !this.closed && master == null
           ) {
           tries++;
           try {
-            master = createMasterInterface();
+            master = createMasterInterface(masterProtocolState);
           } catch (IOException e) {
             exceptionCaught = e;
           } catch (KeeperException e) {
@@ -818,7 +810,7 @@ public class HConnectionManager {
       // When getting the master proxy connection, we check it's running,
       // so if there is no exception, it means we've been able to get a
       // connection on a running master
-      getKeepAliveMaster().close();
+      getKeepAliveMasterMonitor().close();
       return true;
     }
 
@@ -1471,7 +1463,7 @@ public class HConnectionManager {
     /**
      * Creates a Chore thread to check the connections to master & zookeeper
      *  and close them when they reach their closing time (
-     *  {@link #keepMasterAliveUntil} and
+     *  {@link #MasterProtocolState.keepAliveUntil} and
      *  {@link #keepZooKeeperWatcherAliveUntil}). Keep alive time is
      *  managed by the release functions and the variable {@link #keepAlive}
      */
@@ -1499,6 +1491,13 @@ public class HConnectionManager {
         return new DelayedClosing(hci, stoppable);
       }
 
+      protected void closeMasterProtocol(MasterProtocolState protocolState) {
+        if (System.currentTimeMillis() > protocolState.keepAliveUntil) {
+          hci.closeMasterProtocol(protocolState);
+          protocolState.keepAliveUntil = Long.MAX_VALUE;
+        }
+      }
+
       @Override
       protected void chore() {
         synchronized (hci.masterAndZKLock) {
@@ -1510,12 +1509,8 @@ public class HConnectionManager {
               hci.keepZooKeeperWatcherAliveUntil = Long.MAX_VALUE;
             }
           }
-          if (hci.canCloseMaster) {
-            if (System.currentTimeMillis() > hci.keepMasterAliveUntil) {
-              hci.closeMaster();
-              hci.keepMasterAliveUntil = Long.MAX_VALUE;
-            }
-          }
+          closeMasterProtocol(hci.masterAdminProtocol);
+          closeMasterProtocol(hci.masterMonitorProtocol);
         }
       }
 
@@ -1543,14 +1538,14 @@ public class HConnectionManager {
       }
     }
 
-    private static class MasterHandler implements InvocationHandler {
+    private static class MasterProtocolHandler implements InvocationHandler {
       private HConnectionImplementation connection;
-      private HMasterInterface master;
+      private MasterProtocolState protocolStateTracker;
 
-      protected MasterHandler(HConnectionImplementation connection,
-                                    HMasterInterface master) {
+      protected MasterProtocolHandler(HConnectionImplementation connection,
+                                    MasterProtocolState protocolStateTracker) {
         this.connection = connection;
-        this.master = master;
+        this.protocolStateTracker = protocolStateTracker;
       }
 
       @Override
@@ -1558,11 +1553,11 @@ public class HConnectionManager {
         throws Throwable {
         if (method.getName().equals("close") &&
               method.getParameterTypes().length == 0) {
-          release(connection, master);
+          release(connection, protocolStateTracker);
           return null;
         } else {
           try {
-            return method.invoke(master, args);
+            return method.invoke(protocolStateTracker.protocol, args);
           }catch  (InvocationTargetException e){
             // We will have this for all the exception, checked on not, sent
             //  by any layer, including the functional exception
@@ -1581,20 +1576,15 @@ public class HConnectionManager {
 
       private void release(
         HConnectionImplementation connection,
-        org.apache.hadoop.hbase.ipc.HMasterInterface target) {
+        MasterProtocolState target) {
         connection.releaseMaster(target);
       }
     }
 
-    private HMasterInterface keepAliveMaster;
-    private int keepAliveMasterUserCount;
-
-    // The old interface {@link #getMaster} allows to get a master that's never
-    //  closed. So if someone uses this interface, we never close the shared
-    //  master whatever the user count...
-    // When closing the connection, we close the master as well, as in the
-    //  previous implementation.
-    private boolean canCloseMaster = true;
+    MasterProtocolState masterAdminProtocol =
+      new MasterProtocolState(MasterAdminProtocol.class, MasterAdminProtocol.VERSION);
+    MasterProtocolState masterMonitorProtocol =
+      new MasterProtocolState(MasterMonitorProtocol.class, MasterMonitorProtocol.VERSION);
 
     /**
      * This function allows HBaseAdmin and potentially others
@@ -1603,33 +1593,58 @@ public class HConnectionManager {
      * @return The shared instance. Never returns null.
      * @throws MasterNotRunningException
      */
-    MasterKeepAliveConnection getKeepAliveMaster()
-      throws MasterNotRunningException {
+    private Object getKeepAliveMasterProtocol(
+        MasterProtocolState protocolState, Class connectionClass)
+        throws MasterNotRunningException {
       synchronized (masterAndZKLock) {
-        if (!isKeepAliveMasterConnectedAndRunning()) {
-          if (keepAliveMaster != null) {
-            HBaseRPC.stopProxy(keepAliveMaster);
+        if (!isKeepAliveMasterConnectedAndRunning(protocolState)) {
+          if (protocolState.protocol != null) {
+            HBaseRPC.stopProxy(protocolState.protocol);
           }
-          keepAliveMaster = null;
-          keepAliveMaster = createMasterWithRetries();
+          protocolState.protocol = null;
+          protocolState.protocol = createMasterWithRetries(protocolState);
         }
-        keepAliveMasterUserCount++;
-        keepMasterAliveUntil = Long.MAX_VALUE;
+        protocolState.userCount++;
+        protocolState.keepAliveUntil = Long.MAX_VALUE;
 
-        return (MasterKeepAliveConnection) Proxy.newProxyInstance(
-          MasterKeepAliveConnection.class.getClassLoader(),
-          new Class[]{MasterKeepAliveConnection.class},
-          new MasterHandler(this, keepAliveMaster)
+        return Proxy.newProxyInstance(
+          connectionClass.getClassLoader(),
+          new Class[]{connectionClass},
+          new MasterProtocolHandler(this, protocolState)
         );
       }
     }
 
-    private boolean isKeepAliveMasterConnectedAndRunning(){
-      if (keepAliveMaster == null){
+    /**
+     * This function allows HBaseAdmin and potentially others
+     * to get a shared MasterAdminProtocol connection.
+     *
+     * @return The shared instance. Never returns null.
+     * @throws MasterNotRunningException
+     */
+    MasterAdminKeepAliveConnection getKeepAliveMasterAdmin() throws MasterNotRunningException {
+      return (MasterAdminKeepAliveConnection)
+        getKeepAliveMasterProtocol(masterAdminProtocol, MasterAdminKeepAliveConnection.class);
+    }
+
+    /**
+     * This function allows HBaseAdminProtocol and potentially others
+     * to get a shared MasterMonitor connection.
+     *
+     * @return The shared instance. Never returns null.
+     * @throws MasterNotRunningException
+     */
+    MasterMonitorKeepAliveConnection getKeepAliveMasterMonitor() throws MasterNotRunningException {
+      return (MasterMonitorKeepAliveConnection)
+        getKeepAliveMasterProtocol(masterMonitorProtocol, MasterMonitorKeepAliveConnection.class);
+    }
+
+    private boolean isKeepAliveMasterConnectedAndRunning(MasterProtocolState protocolState){
+      if (protocolState.protocol == null){
         return false;
       }
       try {
-         return keepAliveMaster.isMasterRunning(
+         return protocolState.protocol.isMasterRunning(
            null, RequestConverter.buildIsMasterRunningRequest()).getIsMasterRunning();
       }catch (UndeclaredThrowableException e){
         // It's somehow messy, but we can receive exceptions such as
@@ -1644,17 +1659,26 @@ public class HConnectionManager {
       }
     }
 
-   private void releaseMaster(HMasterInterface master) {
-      if (master == null){
+   private void releaseMaster(MasterProtocolState protocolState) {
+      if (protocolState.protocol == null){
         return;
       }
       synchronized (masterAndZKLock) {
-        --keepAliveMasterUserCount;
-        if (keepAliveMasterUserCount <= 0) {
-          keepMasterAliveUntil =
+        --protocolState.userCount;
+        if (protocolState.userCount <= 0) {
+          protocolState.keepAliveUntil =
             System.currentTimeMillis() + keepAlive;
         }
       }
+    }
+
+    private void closeMasterProtocol(MasterProtocolState protocolState) {
+      if (protocolState.protocol != null){
+        LOG.info("Closing master protocol: " + protocolState.protocolClass.getName());
+        HBaseRPC.stopProxy(protocolState.protocol);
+        protocolState.protocol = null;
+      }
+      protocolState.userCount = 0;
     }
 
     /**
@@ -1663,15 +1687,10 @@ public class HConnectionManager {
      */
     private void closeMaster() {
       synchronized (masterAndZKLock) {
-        if (keepAliveMaster != null ){
-          LOG.info("Closing master connection");
-          HBaseRPC.stopProxy(keepAliveMaster);
-          keepAliveMaster = null;
-        }
-        keepAliveMasterUserCount = 0;
+        closeMasterProtocol(masterAdminProtocol);
+        closeMasterProtocol(masterMonitorProtocol);
       }
     }
-
 
     @Override
     public <T> T getRegionServerWithRetries(ServerCallable<T> callable)
@@ -2357,7 +2376,7 @@ public class HConnectionManager {
 
     @Override
     public HTableDescriptor[] listTables() throws IOException {
-      MasterKeepAliveConnection master = getKeepAliveMaster();
+      MasterMonitorKeepAliveConnection master = getKeepAliveMasterMonitor();
       try {
         GetTableDescriptorsRequest req =
           RequestConverter.buildGetTableDescriptorsRequest(null);
@@ -2372,7 +2391,7 @@ public class HConnectionManager {
     @Override
     public HTableDescriptor[] getHTableDescriptors(List<String> tableNames) throws IOException {
       if (tableNames == null || tableNames.isEmpty()) return new HTableDescriptor[0];
-      MasterKeepAliveConnection master = getKeepAliveMaster();
+      MasterMonitorKeepAliveConnection master = getKeepAliveMasterMonitor();
       try {
         GetTableDescriptorsRequest req =
           RequestConverter.buildGetTableDescriptorsRequest(tableNames);
@@ -2401,7 +2420,7 @@ public class HConnectionManager {
       if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
         return HTableDescriptor.META_TABLEDESC;
       }
-      MasterKeepAliveConnection master = getKeepAliveMaster();
+      MasterMonitorKeepAliveConnection master = getKeepAliveMasterMonitor();
       GetTableDescriptorsResponse htds;
       try {
         GetTableDescriptorsRequest req =
@@ -2441,3 +2460,4 @@ public class HConnectionManager {
     log.debug("Set serverside HConnection retries=" + retries);
   }
 }
+
