@@ -267,7 +267,14 @@ public abstract class FSUtils {
   public static String getVersion(FileSystem fs, Path rootdir)
   throws IOException, DeserializationException {
     Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
-    FileStatus [] status = fs.listStatus(versionFile);
+    FileStatus[] status = null;
+    try {
+      // hadoop 2.0 throws FNFE if directory does not exist.  
+      // hadoop 1.0 returns null if directory does not exist.
+      status = fs.listStatus(versionFile);
+    } catch (FileNotFoundException fnfe) {
+      return null;
+    }
     if (status == null || status.length == 0) return null;
     String version = null;
     byte [] content = new byte [(int)status[0].getLen()];
