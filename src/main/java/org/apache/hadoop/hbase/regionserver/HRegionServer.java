@@ -103,11 +103,13 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.master.RegionPlacement;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionServerDynamicMetrics;
@@ -314,6 +316,9 @@ public class HRegionServer implements HRegionInterface,
   private volatile long checkFSFailingSince;
 
   private String stopReason = "not stopping";
+
+  // profiling threadlocal
+  public static final ThreadLocal<ProfilingData> threadLocalProfilingData = new ThreadLocal<ProfilingData> ();
 
   /**
    * Starts a HRegionServer at the default location
@@ -1353,6 +1358,7 @@ public class HRegionServer implements HRegionInterface,
    * by this hosting server.  Worker logs the exception and exits.
    */
   private void startServiceThreads() throws IOException {
+    HBaseRPC.startProxy();
     String n = Thread.currentThread().getName();
     UncaughtExceptionHandler handler = new UncaughtExceptionHandler() {
       @Override
@@ -1585,7 +1591,8 @@ public class HRegionServer implements HRegionInterface,
         // should retry indefinitely.
         master = (HMasterRegionInterface)HBaseRPC.getProxy(
           HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
-          masterAddress.getInetSocketAddress(), this.conf, this.rpcTimeout);
+          masterAddress.getInetSocketAddress(), this.conf, this.rpcTimeout, 
+          HBaseRPCOptions.DEFAULT);
       } catch (IOException e) {
         LOG.warn("Unable to connect to master. Retrying. Error was:", e);
         sleeper.sleep();

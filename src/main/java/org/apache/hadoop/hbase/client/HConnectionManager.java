@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -90,7 +91,7 @@ public class HConnectionManager {
     Runtime.getRuntime().addShutdownHook(new Thread("HCM.shutdownHook") {
       @Override
       public void run() {
-        HConnectionManager.deleteAllConnections(true);
+        HConnectionManager.deleteAllConnections();
       }
     });
   }
@@ -153,7 +154,7 @@ public class HConnectionManager {
       Integer key = HBaseConfiguration.hashCode(conf);
       TableServers t = HBASE_INSTANCES.remove(key);
       if (t != null) {
-        t.close(stopProxy);
+        t.close();
       }
     }
   }
@@ -162,13 +163,14 @@ public class HConnectionManager {
    * Delete information for all connections.
    * @param stopProxy stop the proxy as well
    */
-  public static void deleteAllConnections(boolean stopProxy) {
+  public static void deleteAllConnections() {
     synchronized (HBASE_INSTANCES) {
       for (TableServers t : HBASE_INSTANCES.values()) {
         if (t != null) {
-          t.close(stopProxy);
+          t.close();
         }
       }
+      HBaseRPC.stopClients ();
     }
     synchronized (ZK_WRAPPERS) {
       for (ClientZKConnection connection : ZK_WRAPPERS.values()) {
@@ -363,11 +365,6 @@ public class HConnectionManager {
 
     private volatile Configuration conf;
 
-    // Known region HServerAddress.toString() -> HRegionInterface
-    private final Map<String, HRegionInterface> servers =
-      new ConcurrentHashMap<String, HRegionInterface>();
-    private final ConcurrentHashMap<String, String> connectionLock = new ConcurrentHashMap<String, String>();
-
     // Used by master and region servers during safe mode only
     private volatile HRegionLocation rootRegionLocation;
 
@@ -470,7 +467,7 @@ public class HConnectionManager {
               HMasterInterface tryMaster = (HMasterInterface)HBaseRPC.getProxy(
                   HMasterInterface.class, HBaseRPCProtocolVersion.versionID,
                   masterLocation.getInetSocketAddress(), this.conf,
-                  (int)this.rpcTimeout);
+                  (int)this.rpcTimeout, HBaseRPCOptions.DEFAULT);
 
               if (tryMaster.isMasterRunning()) {
                 this.master = tryMaster;
@@ -651,7 +648,8 @@ public class HConnectionManager {
       scan.setCaching(rows);
       ScannerCallable s = new ScannerCallable(this,
           (Bytes.equals(tableName, HConstants.META_TABLE_NAME) ?
-              HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME), scan);
+              HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME), 
+              scan, HBaseRPCOptions.DEFAULT);
       try {
         // Open scanner
         getRegionServerWithRetries(s);
@@ -1139,39 +1137,38 @@ public class HConnectionManager {
     }
 
     public HRegionInterface getHRegionConnection(
-        HServerAddress regionServer, boolean getMaster)
+        HServerAddress regionServer, boolean getMaster, HBaseRPCOptions options)
     throws IOException {
       if (getMaster) {
         getMaster();
       }
       HRegionInterface server;
-      String rsName = regionServer.toString();
-      // See if we already have a connection (common case)
-      server = this.servers.get(rsName);
-      if (server == null) {
-        // create a unique lock for this RS (if necessary)
-        this.connectionLock.putIfAbsent(rsName, rsName);
-        // get the RS lock
-        synchronized (this.connectionLock.get(rsName)) {
-          // do one more lookup in case we were stalled above
-          server = this.servers.get(rsName);
-          if (server == null) {
-            try {
-              // definitely a cache miss. establish an RPC for this RS
-              // set hbase.ipc.client.connect.max.retries to retry connection
-              // attempts
-              server = (HRegionInterface) HBaseRPC.getProxy(
-                  serverInterfaceClass, HBaseRPCProtocolVersion.versionID,
-                  regionServer.getInetSocketAddress(), this.conf,
-                  this.rpcTimeout);
-              this.servers.put(rsName, server);
-            } catch (RemoteException e) {
-              throw RemoteExceptionHandler.decodeRemoteException(e);
-            }
-          }
-        }
+      
+      try {
+        // establish an RPC for this RS
+        // set hbase.ipc.client.connect.max.retries to retry connection
+        // attempts
+        server = (HRegionInterface) HBaseRPC.getProxy(
+            serverInterfaceClass, HBaseRPCProtocolVersion.versionID,
+            regionServer.getInetSocketAddress(), this.conf,
+            this.rpcTimeout, options);
+      } catch (RemoteException e) {
+        throw RemoteExceptionHandler.decodeRemoteException(e);
       }
+
       return server;
+    }
+
+    public HRegionInterface getHRegionConnection(
+        HServerAddress regionServer, HBaseRPCOptions options)
+    throws IOException {
+      return getHRegionConnection(regionServer, false, options);
+    }
+
+    public HRegionInterface getHRegionConnection(
+        HServerAddress regionServer, boolean getMaster)
+    throws IOException {
+      return getHRegionConnection(regionServer, getMaster, HBaseRPCOptions.DEFAULT);
     }
 
     public HRegionInterface getHRegionConnection(
@@ -1520,7 +1517,7 @@ public class HConnectionManager {
     }
 
     public int processBatchOfRows(final ArrayList<Put> list,
-      final byte[] tableName)
+      final byte[] tableName, final HBaseRPCOptions options)
     throws IOException {
       if (list.isEmpty()) return 0;
       Batch<Object> b = new Batch<Object>(this) {
@@ -1531,7 +1528,7 @@ public class HConnectionManager {
         throws IOException, RuntimeException {
           final List<Put> puts = (List<Put>)currentList;
           return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
-              tableName, row) {
+              tableName, row, options) {
             public Integer call() throws IOException {
               return server.put(location.getRegionInfo().getRegionName(), puts);
             }
@@ -1542,7 +1539,7 @@ public class HConnectionManager {
     }
 
     public Result[] processBatchOfGets(final List<Get> list,
-        final byte[] tableName)
+        final byte[] tableName, final HBaseRPCOptions options)
         throws IOException {
       if (list.isEmpty()) {
         return null;
@@ -1558,7 +1555,7 @@ public class HConnectionManager {
             RuntimeException {
           final List<Get> gets = (List<Get>) currentList;
           Result[] tmp = getRegionServerWithRetries(new ServerCallable<Result[]>(
-              this.c, tableName, row) {
+              this.c, tableName, row, options) {
             public Result[] call() throws IOException {
               return server.get(location.getRegionInfo().getRegionName(), gets);
             }
@@ -1575,7 +1572,7 @@ public class HConnectionManager {
     }
 
     public int processBatchOfRowMutations(final List<RowMutations> list,
-      final byte[] tableName)
+      final byte[] tableName, final HBaseRPCOptions options)
     throws IOException {
       if (list.isEmpty()) return 0;
       Batch<Object> b = new Batch<Object>(this) {
@@ -1586,7 +1583,7 @@ public class HConnectionManager {
         throws IOException, RuntimeException {
           final List<RowMutations> mutations = (List<RowMutations>)currentList;
           getRegionServerWithRetries(new ServerCallable<Void>(this.c,
-                tableName, row) {
+                tableName, row, options) {
               public Void call() throws IOException {
                 server.mutateRow(location.getRegionInfo().getRegionName(),
                   mutations);
@@ -1600,7 +1597,7 @@ public class HConnectionManager {
       }
 
     public int processBatchOfDeletes(final List<Delete> list,
-      final byte[] tableName)
+      final byte[] tableName, final HBaseRPCOptions options)
     throws IOException {
       if (list.isEmpty()) return 0;
       Batch<Object> b = new Batch<Object>(this) {
@@ -1611,7 +1608,7 @@ public class HConnectionManager {
         throws IOException, RuntimeException {
           final List<Delete> deletes = (List<Delete>)currentList;
           return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
-                tableName, row) {
+                tableName, row, options) {
               public Integer call() throws IOException {
                 return server.delete(location.getRegionInfo().getRegionName(),
                   deletes);
@@ -1622,23 +1619,11 @@ public class HConnectionManager {
       return b.process(list, tableName, new Object());
       }
 
-    void close(boolean stopProxy) {
+    public void close() {
       if (master != null) {
-        if (stopProxy) {
-          HBaseRPC.stopProxy(master);
-        }
         master = null;
         masterChecked = false;
       }
-      if (stopProxy) {
-        for (HRegionInterface i: servers.values()) {
-          HBaseRPC.stopProxy(i);
-        }
-      }
-    }
-
-    public void close() {
-      close(true);
     }
 
     /**
@@ -1650,7 +1635,7 @@ public class HConnectionManager {
      * @throws IOException
      */
     private Throwable processSinglePut(Put put,
-        List<Put> failed, final byte[] tableName) throws IOException {
+        List<Put> failed, final byte[] tableName, HBaseRPCOptions options) throws IOException {
       // XXX error handling should mirror getRegionServerWithRetries()
       // Get server address
       byte [] row = put.getRow();
@@ -1664,7 +1649,7 @@ public class HConnectionManager {
 
       // Create the multiPutCallable
       Callable<MultiPutResponse> multiPutCallable =
-        createPutCallable(multiPut.address, multiPut, tableName);
+        createPutCallable(multiPut.address, multiPut, tableName, options);
 
       try {
         // Get the MultiPutResponse
@@ -1700,7 +1685,7 @@ public class HConnectionManager {
      * @throws IOException
      */
     private void processBatchOfMultiPut(List<Put> list,
-        List<Put> failed, final byte[] tableName) throws IOException {
+        List<Put> failed, final byte[] tableName, HBaseRPCOptions options) throws IOException {
       // XXX error handling should mirror getRegionServerWithRetries()
       Collections.sort(list);
       Map<HServerAddress, MultiPut> regionPuts =
@@ -1731,7 +1716,7 @@ public class HConnectionManager {
           new ArrayList<Future<MultiPutResponse>>(regionPuts.size());
       for ( MultiPut put : multiPuts ) {
         futures.add(HTable.multiPutThreadPool.submit(
-            createPutCallable(put.address, put, tableName)));
+            createPutCallable(put.address, put, tableName, options)));
       }
 
       // step 3:
@@ -1776,13 +1761,13 @@ public class HConnectionManager {
     }
 
     /** {@inheritDoc} */
-    public List<Put> processSingleMultiPut(MultiPut mput) {
+    public List<Put> processSingleMultiPut(MultiPut mput, HBaseRPCOptions options) {
       if (mput == null || mput.address == null)
         return null;
       List<Put> failedPuts = null;
 
       Future<MultiPutResponse> future = HTable.multiPutThreadPool.submit(
-          createPutCallable(mput.address, mput, null));
+          createPutCallable(mput.address, mput, null, options));
 
       try {
         MultiPutResponse resp = future.get();
@@ -1831,16 +1816,16 @@ public class HConnectionManager {
      *  - Otherwise, we throw a generic exception indicating that an error occurred.
      *    The 'list' parameter is mutated to contain those puts that did not succeed.
      */
-    public void processBatchOfPuts(List<Put> list, final byte[] tableName)
+    public void processBatchOfPuts(List<Put> list, final byte[] tableName, HBaseRPCOptions options)
     throws IOException {
       boolean singletonList = list.size() == 1;
       Throwable singleRowCause = null;
       for ( int tries = 0 ; tries < numRetries && !list.isEmpty(); ++tries) {
         List<Put> failed = new ArrayList<Put>();
         if (singletonList) {
-          singleRowCause = this.processSinglePut(list.get(0), failed, tableName);
+          singleRowCause = this.processSinglePut(list.get(0), failed, tableName, options);
         } else {
-          this.processBatchOfMultiPut(list, failed, tableName);
+          this.processBatchOfMultiPut(list, failed, tableName, options);
         }
 
         list.clear();
@@ -1879,12 +1864,12 @@ public class HConnectionManager {
 
     private Callable<MultiPutResponse> createPutCallable(
         final HServerAddress address, final MultiPut puts,
-        final byte [] tableName) {
+        final byte [] tableName, final HBaseRPCOptions options) {
       final HConnection connection = this;
       return new Callable<MultiPutResponse>() {
         public MultiPutResponse call() throws IOException {
           return getRegionServerWithoutRetries(
-              new ServerCallable<MultiPutResponse>(connection, tableName, null) {
+              new ServerCallable<MultiPutResponse>(connection, tableName, null, options) {
                 public MultiPutResponse call() throws IOException {
                   MultiPutResponse resp = server.multiPut(puts);
                   resp.request = puts;
@@ -1897,7 +1882,7 @@ public class HConnectionManager {
                 }
                 @Override
                 public void instantiateServer() throws IOException {
-                  server = connection.getHRegionConnection(address);
+                  server = connection.getHRegionConnection(address, options);
                 }
               }
           );

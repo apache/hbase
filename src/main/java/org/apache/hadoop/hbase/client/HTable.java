@@ -51,6 +51,9 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
+import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
@@ -77,6 +80,7 @@ public class HTable implements HTableInterface {
   private long currentWriteBufferSize;
   protected int scannerCaching;
   private int maxKeyValueSize;
+  private HBaseRPCOptions options;
 
   private long maxScannerResultSize;
 
@@ -160,7 +164,12 @@ public class HTable implements HTableInterface {
       HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
     this.maxKeyValueSize = conf.getInt("hbase.client.keyvalue.maxsize", -1);
-
+    this.options = new HBaseRPCOptions ();
+    String compressionAlgo = conf.get(HConstants.HBASE_RPC_COMPRESSION_KEY);
+    if (compressionAlgo != null) {
+      this.options.setRPCCompression(
+          Compression.getCompressionAlgorithmByName(compressionAlgo));
+    }
   }
 
   public Configuration getConfiguration() {
@@ -499,7 +508,7 @@ public class HTable implements HTableInterface {
    public Result getRowOrBefore(final byte[] row, final byte[] family)
    throws IOException {
      return connection.getRegionServerWithRetries(
-         new ServerCallable<Result>(connection, tableName, row) {
+         new ServerCallable<Result>(connection, tableName, row, this.options) {
        public Result call() throws IOException {
          return server.getClosestRowBefore(location.getRegionInfo().getRegionName(),
            row, family);
@@ -528,7 +537,7 @@ public class HTable implements HTableInterface {
 
   public Result get(final Get get) throws IOException {
     return connection.getRegionServerWithRetries(
-        new ServerCallable<Result>(connection, tableName, get.getRow()) {
+        new ServerCallable<Result>(connection, tableName, get.getRow(), this.options) {
           public Result call() throws IOException {
             return server.get(location.getRegionInfo().getRegionName(), get);
           }
@@ -537,13 +546,17 @@ public class HTable implements HTableInterface {
   }
 
   public Result[] get(List<Get> gets) throws IOException {
-    return connection.processBatchOfGets(gets, tableName);
+    return connection.processBatchOfGets(gets, tableName, this.options);
+  }
+
+  public ProfilingData getProfilingData () {
+    return this.options.profilingResult;
   }
 
   public void delete(final Delete delete)
   throws IOException {
     connection.getRegionServerWithRetries(
-        new ServerCallable<Boolean>(connection, tableName, delete.getRow()) {
+        new ServerCallable<Boolean>(connection, tableName, delete.getRow(), this.options) {
           public Boolean call() throws IOException {
             server.delete(location.getRegionInfo().getRegionName(), delete);
             return null; // FindBugs NP_BOOLEAN_RETURN_NULL
@@ -556,7 +569,7 @@ public class HTable implements HTableInterface {
   throws IOException {
     int last = 0;
     try {
-      last = connection.processBatchOfDeletes(deletes, this.tableName);
+      last = connection.processBatchOfDeletes(deletes, this.tableName, this.options);
     } finally {
       deletes.subList(0, last).clear();
     }
@@ -602,7 +615,7 @@ public class HTable implements HTableInterface {
           "Invalid arguments to incrementColumnValue", npe);
     }
     return connection.getRegionServerWithRetries(
-        new ServerCallable<Long>(connection, tableName, row) {
+        new ServerCallable<Long>(connection, tableName, row, this.options) {
           public Long call() throws IOException {
             return server.incrementColumnValue(
                 location.getRegionInfo().getRegionName(), row, family,
@@ -630,7 +643,7 @@ public class HTable implements HTableInterface {
       final Put put)
   throws IOException {
     return connection.getRegionServerWithRetries(
-        new ServerCallable<Boolean>(connection, tableName, row) {
+        new ServerCallable<Boolean>(connection, tableName, row, this.options) {
           public Boolean call() throws IOException {
             return server.checkAndPut(location.getRegionInfo().getRegionName(),
                 row, family, qualifier, value, put) ? Boolean.TRUE : Boolean.FALSE;
@@ -657,7 +670,7 @@ public class HTable implements HTableInterface {
       final Delete delete)
   throws IOException {
     return connection.getRegionServerWithRetries(
-        new ServerCallable<Boolean>(connection, tableName, row) {
+        new ServerCallable<Boolean>(connection, tableName, row, this.options) {
           public Boolean call() throws IOException {
             return server.checkAndDelete(
                 location.getRegionInfo().getRegionName(),
@@ -674,7 +687,7 @@ public class HTable implements HTableInterface {
   @Override
   public void mutateRow(final RowMutations arm) throws IOException {
     connection.getRegionServerWithRetries(
-	    new ServerCallable<Void>(connection, tableName, arm.getRow()) {
+	    new ServerCallable<Void>(connection, tableName, arm.getRow(), this.options) {
 	      public Void call() throws IOException {
 	        server.mutateRow(location.getRegionInfo().getRegionName(), arm);
 	        return null;
@@ -687,7 +700,7 @@ public class HTable implements HTableInterface {
    */
   @Override
   public void mutateRow(final List<RowMutations> armList) throws IOException {
-	  connection.processBatchOfRowMutations(armList, this.tableName);
+	  connection.processBatchOfRowMutations(armList, this.tableName, this.options);
   }
 
   /**
@@ -703,7 +716,7 @@ public class HTable implements HTableInterface {
    */
   public boolean exists(final Get get) throws IOException {
     return connection.getRegionServerWithRetries(
-        new ServerCallable<Boolean>(connection, tableName, get.getRow()) {
+        new ServerCallable<Boolean>(connection, tableName, get.getRow(), this.options) {
           public Boolean call() throws IOException {
             return server.
                 exists(location.getRegionInfo().getRegionName(), get);
@@ -714,7 +727,7 @@ public class HTable implements HTableInterface {
 
   public void flushCommits() throws IOException {
     try {
-      connection.processBatchOfPuts(writeBuffer, tableName);
+      connection.processBatchOfPuts(writeBuffer, tableName, this.options);
     } finally {
       if (clearBufferOnFail) {
         writeBuffer.clear();
@@ -752,7 +765,7 @@ public class HTable implements HTableInterface {
   public RowLock lockRow(final byte [] row)
   throws IOException {
     return connection.getRegionServerWithRetries(
-      new ServerCallable<RowLock>(connection, tableName, row) {
+      new ServerCallable<RowLock>(connection, tableName, row, this.options) {
         public RowLock call() throws IOException {
           long lockId =
               server.lockRow(location.getRegionInfo().getRegionName(), row);
@@ -765,7 +778,7 @@ public class HTable implements HTableInterface {
   public void unlockRow(final RowLock rl)
   throws IOException {
     connection.getRegionServerWithRetries(
-      new ServerCallable<Boolean>(connection, tableName, rl.getRow()) {
+      new ServerCallable<Boolean>(connection, tableName, rl.getRow(), this.options) {
         public Boolean call() throws IOException {
           server.unlockRow(location.getRegionInfo().getRegionName(),
               rl.getLockId());
@@ -974,7 +987,7 @@ public class HTable implements HTableInterface {
           Bytes.toStringBinary(localStartKey) + "'");
       }
       try {
-        callable = getScannerCallable(localStartKey, nbRows);
+        callable = getScannerCallable(localStartKey, nbRows, options);
         // Open a scanner on the region server starting at the
         // beginning of the region
         getConnection().getRegionServerWithRetries(callable);
@@ -987,10 +1000,10 @@ public class HTable implements HTableInterface {
     }
 
     protected ScannerCallable getScannerCallable(byte [] localStartKey,
-        int nbRows) {
+        int nbRows, HBaseRPCOptions options) {
       scan.setStartRow(localStartKey);
       ScannerCallable s = new ScannerCallable(getConnection(),
-        getTableName(), scan);
+        getTableName(), scan, options);
       s.setCaching(nbRows);
       return s;
     }
@@ -1210,5 +1223,25 @@ public class HTable implements HTableInterface {
   public static boolean getRegionCachePrefetch(final byte[] tableName) {
     return HConnectionManager.getConnection(HBaseConfiguration.create()).
     getRegionCachePrefetch(tableName);
+  }
+
+  @Override
+  public void setProfiling(boolean prof) {
+    options.setRequestProfiling (prof);
+  }
+
+  @Override
+  public boolean getProfiling() {
+    return options.getRequestProfiling ();
+  }
+
+  @Override
+  public void setTag (String tag) {
+    this.options.setTag (tag);
+  }
+
+  @Override
+  public String getTag () {
+    return this.options.getTag ();
   }
 }

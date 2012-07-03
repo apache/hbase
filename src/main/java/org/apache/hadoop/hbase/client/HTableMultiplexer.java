@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 
 /**
  * HTableMultiplexer provides a thread-safe non blocking PUT API across all the tables.
@@ -95,8 +96,9 @@ public class HTableMultiplexer {
    * @return true if the request can be accepted by its corresponding buffer queue.
    * @throws IOException
    */
-  public boolean put(final byte[] table, final Put put) throws IOException {
-    return put(table, put, this.retryNum);
+  public boolean put(final byte[] table, final Put put,
+      HBaseRPCOptions options) throws IOException {
+    return put(table, put, this.retryNum, options);
   }
 
   /**
@@ -107,14 +109,15 @@ public class HTableMultiplexer {
    * @return the list of puts which could not be queued
    * @throws IOException
    */
-  public List<Put> put(final byte[] table, final List<Put> puts) throws IOException {
+  public List<Put> put(final byte[] table, final List<Put> puts,
+      HBaseRPCOptions options) throws IOException {
     if (puts == null)
       return null;
     
     List <Put> failedPuts = null;
     boolean result;
     for (Put put : puts) {
-      result = put(table, put, this.retryNum);
+      result = put(table, put, this.retryNum, options);
       if (result == false) {
         
         // Create the failed puts list if necessary
@@ -138,7 +141,8 @@ public class HTableMultiplexer {
    * @return true if the request can be accepted by its corresponding buffer queue.
    * @throws IOException
    */
-  public boolean put(final byte[] table, final Put put, int retry) throws IOException {
+  public boolean put(final byte[] table, final Put put, int retry,
+      HBaseRPCOptions options) throws IOException {
     if (retry <= 0) {
       return false;
     }
@@ -154,7 +158,7 @@ public class HTableMultiplexer {
         // Add the put pair into its corresponding queue.
         queue = getBufferedQueue(addr);
         // Generate a MultiPutStatus obj and offer it into the queue
-        PutStatus s = new PutStatus(loc.getRegionInfo(), put, retry);
+        PutStatus s = new PutStatus(loc.getRegionInfo(), put, retry, options);
         
         return queue.offer(s);
       }
@@ -285,11 +289,13 @@ public class HTableMultiplexer {
     private final HRegionInfo regionInfo;
     private final Put put;
     private final int retryCount;
+    private final HBaseRPCOptions options;
     public PutStatus(final HRegionInfo regionInfo, final Put put,
-        final int retryCount) {
+        final int retryCount, final HBaseRPCOptions options) {
       this.regionInfo = regionInfo;
       this.put = put;
       this.retryCount = retryCount;
+      this.options = options;
     }
 
     public HRegionInfo getRegionInfo() {
@@ -300,6 +306,9 @@ public class HTableMultiplexer {
     }
     public int getRetryCount() {
       return retryCount;
+    }
+    public HBaseRPCOptions getOptions () {
+      return options;
     }
   }
 
@@ -346,7 +355,8 @@ public class HTableMultiplexer {
         return false;
       } else {
         // Retry one more time
-        return this.htableMultiplexer.put(tableName, failedPut, retryCount);
+        HBaseRPCOptions options = failedPutStatus.getOptions ();
+        return this.htableMultiplexer.put(tableName, failedPut, retryCount, options);
       }
     }
 
@@ -382,15 +392,18 @@ public class HTableMultiplexer {
           if (processingList.size() > 0) {
             // Create the MultiPut object
             MultiPut mput = new MultiPut(this.addr);
+            HBaseRPCOptions options = null;
             for (PutStatus putStatus: processingList) {
               // Update the MultiPut
               mput.add(putStatus.getRegionInfo().getRegionName(), 
                   putStatus.getPut());
+              if (putStatus.getOptions () != null) {
+                options = putStatus.getOptions ();
+              }
             }
             
             // Process this multiput request
-            List<Put> failed = connection.processSingleMultiPut(mput);
-            
+            List<Put> failed = connection.processSingleMultiPut(mput, options);
             if (failed != null) {
               if (failed.size() == processingList.size()) {
                 // All the puts for this region server are failed. Going to retry it later

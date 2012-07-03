@@ -43,6 +43,8 @@ public class MultiThreadedWriter extends MultiThreadedAction {
   private Set<HBaseWriterThread> writers = new HashSet<HBaseWriterThread>();
 
   private boolean isMultiPut = false;
+  
+  private final double profilePercent;
 
   /**
    * A temporary place to keep track of inserted keys. This is written to by
@@ -76,10 +78,16 @@ public class MultiThreadedWriter extends MultiThreadedAction {
 
   /** Enable this if used in conjunction with a concurrent reader. */
   private boolean trackInsertedKeys;
-
+  
   public MultiThreadedWriter(Configuration conf, byte[] tableName,
       byte[] columnFamily) {
+    this (conf, tableName, columnFamily, 0);
+  }
+  
+  public MultiThreadedWriter(Configuration conf, byte[] tableName,
+      byte[] columnFamily, double profilePercent) {
     super(conf, tableName, columnFamily, "W");
+    this.profilePercent = profilePercent;
   }
 
   /** Use multi-puts vs. separate puts for every column in a row */
@@ -141,10 +149,11 @@ public class MultiThreadedWriter extends MultiThreadedAction {
               % (maxColumnsPerKey - minColumnsPerKey);
           numKeys.addAndGet(1);
           if (isMultiPut) {
-            multiPutInsertKey(rowKey, 0, numColumns);
+            multiPutInsertKey(rowKey, 0, numColumns,
+                random.nextInt(100) < profilePercent);
           } else {
             for (long col = 0; col < numColumns; ++col) {
-              insert(rowKey, col);
+              insert(rowKey, col, random.nextInt(100) < profilePercent);
             }
           }
           if (trackInsertedKeys) {
@@ -161,11 +170,12 @@ public class MultiThreadedWriter extends MultiThreadedAction {
       }
     }
 
-    public void insert(long rowKey, long col) {
+    public void insert(long rowKey, long col, boolean profile) {
       Put put = new Put(longToByteArrayKey(rowKey));
       String colAsStr = String.valueOf(col);
       put.add(columnFamily, Bytes.toBytes(colAsStr),
           dataGenerator.generateRandomSizeValue(rowKey, colAsStr));
+      table.setProfiling(profile);
       try {
         long start = System.currentTimeMillis();
         table.put(put);
@@ -178,7 +188,8 @@ public class MultiThreadedWriter extends MultiThreadedAction {
       }
     }
 
-    public void multiPutInsertKey(long rowKey, long startCol, long endCol) {
+    public void multiPutInsertKey(long rowKey, long startCol, long endCol,
+        boolean profile) {
       if (verbose) {
         LOG.debug("Preparing put for key = " + rowKey + ", cols = ["
             + startCol + ", " + endCol + ")");
@@ -198,7 +209,8 @@ public class MultiThreadedWriter extends MultiThreadedAction {
         value = dataGenerator.generateRandomSizeValue(rowKey, qualStr);
         put.add(columnFamily, columnQualifier, value);
       }
-
+      table.setProfiling (profile);
+      
       try {
         long start = System.currentTimeMillis();
         table.put(put);

@@ -21,6 +21,8 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 import java.io.IOException;
@@ -36,6 +38,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
   protected final byte [] row;
   protected HRegionLocation location;
   protected HRegionInterface server;
+  protected HBaseRPCOptions options;
 
   /**
    * @param connection connection callable is on
@@ -43,14 +46,26 @@ public abstract class ServerCallable<T> implements Callable<T> {
    * @param row row we are querying
    */
   public ServerCallable(HConnection connection, byte [] tableName, byte [] row) {
-    this.connection = connection;
-    this.tableName = tableName;
-    this.row = row;
+    this (connection, tableName, row, HBaseRPCOptions.DEFAULT);
   }
 
 
   /**
-   * 
+   * @param connection connection callable is on
+   * @param tableName table name callable is on
+   * @param row row we are querying
+   * @param options client options for ipc layer
+   */
+  public ServerCallable(HConnection connection, byte [] tableName, byte [] row, 
+      HBaseRPCOptions options) {
+    this.connection = connection;
+    this.tableName = tableName;
+    this.row = row;
+    this.options = options;
+  }
+
+  /**
+   *
    * @param reload set this to true if connection should re-find the region
    * @throws IOException
    */
@@ -63,7 +78,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
    * @throws IOException e
    */
   public void instantiateServer() throws IOException {
-    this.server = connection.getHRegionConnection(location.getServerAddress());
+    this.server = connection.getHRegionConnection(location.getServerAddress(), this.options);
   }
 
   /** @return the server name */

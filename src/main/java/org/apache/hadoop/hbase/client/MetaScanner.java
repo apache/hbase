@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 
 import java.io.IOException;
 
@@ -155,7 +156,7 @@ public class MetaScanner {
     do {
       final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
       callable = new ScannerCallable(connection, metaTableName,
-          scan);
+          scan, HBaseRPCOptions.DEFAULT);
       // Open scanner
       connection.getRegionServerWithRetries(callable);
 

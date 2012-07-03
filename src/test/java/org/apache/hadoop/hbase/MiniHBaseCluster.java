@@ -62,6 +62,10 @@ public class MiniHBaseCluster {
 
   static long PREFERRED_ASSIGNMENT = 1000L;
   static long WAIT_FOR_LOADBALANCER = 2000L;
+  
+  // need reference count to prevent the first cluster
+  // from shutting things the other still needs
+  static int numClusters = 0;
   /**
    * Start a MiniHBaseCluster.
    * @param conf Configuration to be used for cluster
@@ -84,6 +88,7 @@ public class MiniHBaseCluster {
       int numRegionServers)
   throws IOException, InterruptedException {
     this.conf = conf;
+    MiniHBaseCluster.numClusters ++;
     conf.set(HConstants.MASTER_PORT, "0");
     conf.setLong("hbase.master.applyPreferredAssignment.period",
         PREFERRED_ASSIGNMENT);
@@ -371,7 +376,10 @@ public class MiniHBaseCluster {
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
     }
-    HConnectionManager.deleteAllConnections(false);
+    MiniHBaseCluster.numClusters --;
+    if (MiniHBaseCluster.numClusters <= 0) {
+      HConnectionManager.deleteAllConnections();
+    }
   }
 
   /**

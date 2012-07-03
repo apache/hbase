@@ -43,7 +43,23 @@ module Hbase
     def initialize(configuration, table_name, formatter)
       @table = HTable.new(configuration, table_name)
     end
+    
+    #----------------------------------------------------------------------------------------------
+    # Set profiling on or off
+    def set_profiling(prof)
+      @table.setProfiling(prof)
+    end
 
+#----------------------------------------------------------------------------------------------
+    # Get profiling data
+    def get_profiling()
+      data = @table.getProfilingData()
+      if data == nil
+        return nil
+      else
+        return data.toString()
+      end
+    end
     #----------------------------------------------------------------------------------------------
     # Put a cell 'value' at specified table/row/column
     def put(row, column, value, timestamp = nil)

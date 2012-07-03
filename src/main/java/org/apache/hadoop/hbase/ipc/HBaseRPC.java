@@ -57,6 +57,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** A simple RPC mechanism.
  *
@@ -85,6 +87,9 @@ import java.util.Map;
  */
 public class HBaseRPC {
   protected static final Log LOG = LogFactory.getLog(HBaseRPC.class.getName());
+  
+  private final static Map<InetSocketAddress, Long> versions =
+      new ConcurrentHashMap<InetSocketAddress, Long>();
 
   private HBaseRPC() {
     super();
@@ -202,8 +207,6 @@ public class HBaseRPC {
         // Make an hbase client instead of hadoop Client.
         client = new HBaseClient(HbaseObjectWritable.class, conf, factory);
         clients.put(factory, client);
-      } else {
-        client.incCount();
       }
       return client;
     }
@@ -221,18 +224,18 @@ public class HBaseRPC {
 
     /**
      * Stop a RPC client connection
-     * A RPC client is closed only when its reference count becomes zero.
      * @param client client to stop
      */
     protected void stopClient(HBaseClient client) {
       synchronized (this) {
-        client.decCount();
-        if (client.isZeroReference()) {
-          clients.remove(client.getSocketFactory());
-        }
+        clients.remove(client.getSocketFactory());
       }
-      if (client.isZeroReference()) {
-        client.stop();
+      client.stop();
+    }
+    
+    protected void stopClients () {
+      for (Map.Entry<SocketFactory, HBaseClient> e : clients.entrySet()) {
+        this.stopClient (e.getValue ());
       }
     }
   }
@@ -245,8 +248,7 @@ public class HBaseRPC {
     private HBaseClient client;
     private boolean isClosed = false;
     final private int rpcTimeout;
-    private Compression.Algorithm rpcCompression =
-      HConstants.DEFAULT_HBASE_RPC_COMPRESSION;
+    public HBaseRPCOptions options;
 
     /**
      * @param address address for invoker
@@ -255,16 +257,13 @@ public class HBaseRPC {
      * @param factory socket factory
      */
     public Invoker(InetSocketAddress address, UserGroupInformation ticket,
-                   Configuration conf, SocketFactory factory, int rpcTimeout) {
+                   Configuration conf, SocketFactory factory, 
+                   int rpcTimeout, HBaseRPCOptions options) {
       this.address = address;
       this.ticket = ticket;
       this.client = CLIENTS.getClient(conf, factory);
       this.rpcTimeout = rpcTimeout;
-      String compressionAlgo = conf.get(HConstants.HBASE_RPC_COMPRESSION_KEY);
-      if (compressionAlgo != null) {
-        rpcCompression =
-          Compression.getCompressionAlgorithmByName(compressionAlgo);
-      }
+      this.options = options;
     }
 
     public Object invoke(Object proxy, Method method, Object[] args)
@@ -276,7 +275,7 @@ public class HBaseRPC {
       }
       HbaseObjectWritable value = (HbaseObjectWritable)
         client.call(new Invocation(method, args), address, ticket,
-            rpcTimeout, rpcCompression);
+            rpcTimeout, options);
       if (isTraceEnabled) {
         long callTime = System.currentTimeMillis() - startTime;
         LOG.trace("Call: " + method.getName() + " " + callTime);
@@ -291,6 +290,10 @@ public class HBaseRPC {
         CLIENTS.stopClient(client);
       }
     }
+  }
+  
+  public static void stopClients () {
+    CLIENTS.stopClients();
   }
 
   /**
@@ -356,9 +359,9 @@ public class HBaseRPC {
    */
   public static VersionedProtocol getProxy(Class<?> protocol,
       long clientVersion, InetSocketAddress addr, Configuration conf,
-      SocketFactory factory, int rpcTimeout) throws IOException {
+      SocketFactory factory, int rpcTimeout, HBaseRPCOptions options) throws IOException {
     return getProxy(protocol, clientVersion, addr, null, conf, factory,
-        rpcTimeout);
+        rpcTimeout, options);
   }
 
   /**
@@ -377,19 +380,24 @@ public class HBaseRPC {
    */
   public static VersionedProtocol getProxy(Class<?> protocol,
       long clientVersion, InetSocketAddress addr, UserGroupInformation ticket,
-      Configuration conf, SocketFactory factory, int rpcTimeout)
+      Configuration conf, SocketFactory factory, int rpcTimeout, HBaseRPCOptions options)
   throws IOException {
     VersionedProtocol proxy =
         (VersionedProtocol) Proxy.newProxyInstance(
             protocol.getClassLoader(), new Class[]{protocol},
-            new Invoker(addr, ticket, conf, factory, rpcTimeout));
-    long serverVersion = proxy.getProtocolVersion(protocol.getName(),
-                                                  clientVersion);
-    if (serverVersion == clientVersion) {
+            new Invoker(addr, ticket, conf, factory, rpcTimeout, options));
+    
+    Long serverVersion = versions.get (addr);
+    if (serverVersion == null) {
+      serverVersion = proxy.getProtocolVersion(protocol.getName(), clientVersion);
+      versions.put (addr, serverVersion);
+    }
+    
+    if ((long) serverVersion == clientVersion) {
       return proxy;
     }
     throw new VersionMismatch(protocol.getName(), clientVersion,
-                              serverVersion);
+                              (long) serverVersion);
   }
 
   /**
@@ -405,11 +413,21 @@ public class HBaseRPC {
    */
   public static VersionedProtocol getProxy(Class<?> protocol,
       long clientVersion, InetSocketAddress addr, Configuration conf,
-      int rpcTimeout)
+      int rpcTimeout, HBaseRPCOptions options)
       throws IOException {
 
     return getProxy(protocol, clientVersion, addr, conf, NetUtils
-        .getDefaultSocketFactory(conf), rpcTimeout);
+        .getDefaultSocketFactory(conf), rpcTimeout, options);
+  }
+  
+  /* this is needed for unit tests. some tests start multiple
+   * region servers using a single HBaseClient object. we need to
+   * reference count so the first region server to shut down
+   * doesn't shut down the HBaseClient object
+   */
+  static AtomicInteger numProxies = new AtomicInteger (0);
+  public static void startProxy () {
+    numProxies.incrementAndGet();
   }
 
   /**
@@ -417,51 +435,9 @@ public class HBaseRPC {
    * @param proxy the proxy to be stopped
    */
   public static void stopProxy(VersionedProtocol proxy) {
-    if (proxy!=null) {
+    numProxies.decrementAndGet();
+    if (proxy!=null && numProxies.get () <= 0) {
       ((Invoker)Proxy.getInvocationHandler(proxy)).close();
-    }
-  }
-
-  /**
-   * Expert: Make multiple, parallel calls to a set of servers.
-   *
-   * @param method method to invoke
-   * @param params array of parameters
-   * @param addrs array of addresses
-   * @param conf configuration
-   * @return values
-   * @throws IOException e
-   */
-  public static Object[] call(Method method, Object[][] params,
-                              InetSocketAddress[] addrs, Configuration conf)
-    throws IOException {
-
-    Invocation[] invocations = new Invocation[params.length];
-    for (int i = 0; i < params.length; i++)
-      invocations[i] = new Invocation(method, params[i]);
-    HBaseClient client = CLIENTS.getClient(conf);
-    Compression.Algorithm rpcCompression = Compression.Algorithm.NONE;
-    String compressionAlgo = conf.get(HConstants.HBASE_RPC_COMPRESSION_KEY);
-    if (compressionAlgo != null) {
-      rpcCompression =
-          Compression.getCompressionAlgorithmByName(compressionAlgo);
-    }
-    try {
-    Writable[] wrappedValues = client.call(invocations, addrs, rpcCompression);
-
-    if (method.getReturnType() == Void.TYPE) {
-      return null;
-    }
-
-    Object[] values =
-      (Object[])Array.newInstance(method.getReturnType(), wrappedValues.length);
-    for (int i = 0; i < values.length; i++)
-      if (wrappedValues[i] != null)
-        values[i] = ((HbaseObjectWritable)wrappedValues[i]).get();
-
-    return values;
-    } finally {
-      CLIENTS.stopClient(client);
     }
   }
 

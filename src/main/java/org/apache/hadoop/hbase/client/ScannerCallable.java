@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.ipc.RemoteException;
 import org.mortbay.log.Log;
 
@@ -46,8 +47,9 @@ public class ScannerCallable extends ServerCallable<Result[]> {
    * @param tableName table callable is on
    * @param scan the scan to execute
    */
-  public ScannerCallable (HConnection connection, byte [] tableName, Scan scan) {
-    super(connection, tableName, scan.getStartRow());
+  public ScannerCallable (HConnection connection, byte [] tableName, 
+      Scan scan, HBaseRPCOptions options) {
+    super(connection, tableName, scan.getStartRow(), options);
     this.scan = scan;
   }
 

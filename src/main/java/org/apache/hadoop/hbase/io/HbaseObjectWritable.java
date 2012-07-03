@@ -68,6 +68,8 @@ import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
+import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -109,6 +111,10 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
   // sending of the class name using reflection, etc.
   private static final byte NOT_ENCODED = 0;
   static {
+    
+    // Add new objects to the end of the list to preserve
+    // old protocol numbers
+    
     byte code = NOT_ENCODED + 1;
     // Primitive types.
     addToMap(Boolean.TYPE, code++);
@@ -160,7 +166,6 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(Result.class, code++);
     addToMap(Result[].class, code++);
     addToMap(Scan.class, code++);
-
     addToMap(WhileMatchFilter.class, code++);
     addToMap(PrefixFilter.class, code++);
     addToMap(PageFilter.class, code++);
@@ -202,6 +207,9 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(AssignmentPlan.class, code++);
 
     addToMap(RowMutations.class, code++);
+    
+    addToMap(HBaseRPCOptions.class, code++);
+    addToMap(ProfilingData.class, code++);
   }
 
   private Class<?> declaredClass;

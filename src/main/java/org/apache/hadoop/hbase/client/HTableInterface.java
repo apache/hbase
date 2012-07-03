@@ -323,4 +323,31 @@ public interface HTableInterface {
    */
   void unlockRow(RowLock rl) throws IOException;
 
+  /**
+   * Set profiling on/off
+   *
+   * @param prof true for on, false for off.
+   */
+  void setProfiling(boolean prof);
+
+  /**
+   * Is profiling on/off?
+   *
+   * @return A boolean, true if profiling is on.
+   */
+  boolean getProfiling();
+
+  /**
+   * Set application tag, null for no tag
+   *
+   * @param tag the tag to set to
+   */
+  void setTag(String tag);
+
+  /**
+   * get current tag
+   *
+   * @return A string, the current application tag
+   */
+  String getTag();
 }

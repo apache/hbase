@@ -70,9 +70,22 @@ module Shell
     @debug = false
     attr_accessor :debug
 
+    @profiling = false
+    attr_accessor :profiling
+
+    @saved_table = nil  #used for retrieving profiling data
+
     def initialize(hbase, formatter)
       self.hbase = hbase
       self.formatter = formatter
+    end
+
+    def get_profiling()
+      if @saved_table == nil
+        return nil
+      else
+        return @saved_table.get_profiling()
+      end
     end
 
     def hbase_admin
@@ -80,7 +93,9 @@ module Shell
     end
 
     def hbase_table(name)
-      hbase.table(name, formatter)
+      @saved_table = hbase.table(name, formatter)
+      @saved_table.set_profiling(@profiling)
+      return @saved_table
     end
 
     def export_commands(where)
@@ -252,6 +267,8 @@ Shell.load_command_group(
     flush
     major_compact
     move_region
+    set_profiling
+    get_profiling
     shutdown
     split
     zk

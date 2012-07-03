@@ -614,4 +614,20 @@ public class RemoteHTable implements HTableInterface {
 		throws IOException {
     throw new IOException("atomicMutation not supported");
   }
+
+  @Override
+  public void setProfiling(boolean prof) {}
+
+  @Override
+  public boolean getProfiling() {
+    return false;
+  }
+
+  @Override
+  public void setTag (String tag) {}
+
+  @Override
+  public String getTag () {
+    return null;
+  }
 }

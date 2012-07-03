@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.HTableMultiplexer.HTableMultiplexerStatus;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -80,7 +81,7 @@ public class TestHTableMultiplexer {
     for (int i = 0; i < NUM_REGIONS; i++) {
       Put put = new Put(startRows[i]);
       put.add(FAMILY, QUALIFIER, VALUE1);
-      success = multiplexer.put(TABLE, put);
+      success = multiplexer.put(TABLE, put, HBaseRPCOptions.DEFAULT);
       Assert.assertTrue(success);
 
       // ensure the buffer has been flushed
@@ -101,7 +102,7 @@ public class TestHTableMultiplexer {
       put.add(FAMILY, QUALIFIER, VALUE2);
       multiput.add(put);
     }
-    failedPuts = multiplexer.put(TABLE, multiput);
+    failedPuts = multiplexer.put(TABLE, multiput, HBaseRPCOptions.DEFAULT);
     Assert.assertTrue(failedPuts == null);
 
     // ensure the buffer has been flushed

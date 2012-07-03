@@ -39,6 +39,7 @@ public class MultiThreadedReader extends MultiThreadedAction
 
   private Set<HBaseReaderThread> readers = new HashSet<HBaseReaderThread>();
   private final double verifyPercent;
+  private final double profilePercent;
   private volatile boolean aborted;
 
   private MultiThreadedWriter writer = null;
@@ -73,8 +74,14 @@ public class MultiThreadedReader extends MultiThreadedAction
 
   public MultiThreadedReader(Configuration conf, byte[] tableName,
       byte[] columnFamily, double verifyPercent) {
+    this (conf, tableName, columnFamily, verifyPercent, 0);
+  }
+  
+  public MultiThreadedReader(Configuration conf, byte[] tableName,
+      byte[] columnFamily, double verifyPercent, double profilePercent) {
     super(conf, tableName, columnFamily, "R");
     this.verifyPercent = verifyPercent;
+    this.profilePercent = profilePercent;
   }
 
   public void linkToWriter(MultiThreadedWriter writer) {
@@ -231,7 +238,8 @@ public class MultiThreadedReader extends MultiThreadedAction
           LOG.info("[" + readerId + "] " + "Querying key " + keyToRead
               + ", cf " + Bytes.toStringBinary(columnFamily));
         }
-        queryKey(get, random.nextInt(100) < verifyPercent);
+        queryKey(get, random.nextInt(100) < verifyPercent, 
+            random.nextInt(100) < profilePercent);
       } catch (IOException e) {
         numReadFailures.addAndGet(1);
         LOG.debug("[" + readerId + "] FAILED read, key = " + (keyToRead + "")
@@ -241,11 +249,12 @@ public class MultiThreadedReader extends MultiThreadedAction
       return get;
     }
 
-    public void queryKey(Get get, boolean verify) throws IOException {
+    public void queryKey(Get get, boolean verify, boolean profile) throws IOException {
       String rowKey = Bytes.toString(get.getRow());
 
       // read the data
       long start = System.currentTimeMillis();
+      table.setProfiling (profile);
       Result result = table.get(get);
       totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
       numKeys.addAndGet(1);

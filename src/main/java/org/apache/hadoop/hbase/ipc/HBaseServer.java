@@ -96,10 +96,11 @@ public abstract class HBaseServer {
   // 1 : Introduce ping and server does not throw away RPCs
   // 3 : RPC was refactored in 0.19
   public static final byte VERSION_3 = 3;
-  // 4 : includes support for compression on RPCs
-  public static final byte VERSION_COMPRESSED_RPC = 4;
+  // 4 : RPC options object in RPC protocol with compression,
+  //     profiling, and tagging
+  public static final byte VERSION_RPCOPTIONS = 4;
 
-  public static final byte CURRENT_VERSION = VERSION_COMPRESSED_RPC;
+  public static final byte CURRENT_VERSION = VERSION_RPCOPTIONS;
 
   /**
    * How many calls/handler are allowed in the queue.
@@ -238,6 +239,9 @@ public abstract class HBaseServer {
     protected Compression.Algorithm compressionAlgo =
       Compression.Algorithm.NONE;
     protected int version = CURRENT_VERSION;     // version used for the call
+    
+    protected boolean shouldProfile = false;
+    protected ProfilingData profilingData = null;
 
     public Call(int id, Writable param, Connection connection) {
       this.id = id;
@@ -991,20 +995,14 @@ public abstract class HBaseServer {
       int id = uncompressedIs.readInt();
       if (LOG.isTraceEnabled())
         LOG.trace(" got #" + id);
-
-      if (version >= VERSION_COMPRESSED_RPC) {
-
-        // 2. read the compression used for the request
-        String rxCompressionAlgoName = uncompressedIs.readUTF();
-        rxCompression =
-          Compression.getCompressionAlgorithmByName(rxCompressionAlgoName);
-
-        // 3. read the compression requested for the response
-        String txCompressionAlgoName = uncompressedIs.readUTF();
-        txCompression =
-          Compression.getCompressionAlgorithmByName(txCompressionAlgoName);
-
-        // 4. set up a decompressor to read the rest of the request
+      
+      HBaseRPCOptions options = new HBaseRPCOptions ();
+      if (version >= VERSION_RPCOPTIONS) {
+        // 2. read rpc options uncompressed
+        options.readFields(dis);
+        rxCompression = options.getRPCCompression();
+        txCompression = options.getRPCCompression();
+        // 3. set up a decompressor to read the rest of the request
         if (rxCompression != Compression.Algorithm.NONE) {
           Decompressor decompressor = rxCompression.getDecompressor();
           InputStream is = rxCompression.createDecompressionStream(
@@ -1012,12 +1010,13 @@ public abstract class HBaseServer {
           dis = new DataInputStream(is);
         }
       }
-
-      // 5. read the rest of the params
+      // 4. read the rest of the params
       Writable param = ReflectionUtils.newInstance(paramClass, conf);
       param.readFields(dis);
 
       Call call = new Call(id, param, this);
+      call.shouldProfile = options.getRequestProfiling ();
+      
       call.setRPCCompression(txCompression);
       call.setVersion(version);
       callQueue.put(call);              // queue the call; maybe blocked here
@@ -1068,9 +1067,13 @@ public abstract class HBaseServer {
           String errorClass = null;
           String error = null;
           Writable value = null;
+          call.profilingData = new ProfilingData ();
+          HRegionServer.threadLocalProfilingData.set (call.profilingData);
+          
           CurCall.set(call);
           UserGroupInformation previous = UserGroupInformation.getCurrentUGI();
           UserGroupInformation.setCurrentUser(call.connection.ticket);
+          long start = System.currentTimeMillis ();
           try {
             // make the call
             value = call(call.param, call.timestamp, status);
@@ -1079,8 +1082,11 @@ public abstract class HBaseServer {
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           }
+          long total = System.currentTimeMillis () - start;
+          call.profilingData.addLong("total_server_time.ms", total);
           UserGroupInformation.setCurrentUser(previous);
           CurCall.set(null);
+          HRegionServer.threadLocalProfilingData.remove ();
 
           int size = BUFFER_INITIAL_SIZE;
           if (value instanceof WritableWithSize) {
@@ -1106,11 +1112,11 @@ public abstract class HBaseServer {
 
           // 1. write call id uncompressed
           out.writeInt(call.id);
-
+          
           // 2. write error flag uncompressed
           out.writeBoolean(error != null);
-
-          if (call.getVersion() >= VERSION_COMPRESSED_RPC) {
+          
+          if (call.getVersion() >= VERSION_RPCOPTIONS) {
             // 3. write the compression type for the rest of the response
             out.writeUTF(call.getRPCCompression().getName());
 
@@ -1126,6 +1132,15 @@ public abstract class HBaseServer {
           // 5. write the output as per the compression
           if (error == null) {
             value.write(out);
+            // write profiling data if requested
+            if (call.getVersion () >= VERSION_RPCOPTIONS) {
+            	if (!call.shouldProfile) {
+            		out.writeBoolean(false);
+            	} else {
+            		out.writeBoolean(true);
+            		call.profilingData.write(out);
+            	}
+            }
           } else {
             WritableUtils.writeString(out, errorClass);
             WritableUtils.writeString(out, error);

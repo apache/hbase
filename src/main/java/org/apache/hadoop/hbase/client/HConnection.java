@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
@@ -142,6 +143,28 @@ public interface HConnection extends Closeable {
   /**
    * Establishes a connection to the region server at the specified address.
    * @param regionServer - the server to connect to
+   * @param options - ipc options to use
+   * @return proxy for HRegionServer
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HRegionInterface getHRegionConnection(HServerAddress regionServer, HBaseRPCOptions options)
+  throws IOException;
+
+  /**
+   * Establishes a connection to the region server at the specified address.
+   * @param regionServer - the server to connect to
+   * @param getMaster - do we check if master is alive
+   * @param options - ipc options to use
+   * @return proxy for HRegionServer
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HRegionInterface getHRegionConnection(
+      HServerAddress regionServer, boolean getMaster, HBaseRPCOptions options)
+  throws IOException;
+
+  /**
+   * Establishes a connection to the region server at the specified address.
+   * @param regionServer - the server to connect to
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
    */
@@ -204,39 +227,44 @@ public interface HConnection extends Closeable {
    *          A batch of Gets to process.
    * @param tableName
    *          The name of the table
+   * @param options
+   *          RPC options object
    * @return Count of committed Puts. On fault, < list.size().
    * @throws IOException
    *           if a remote or network exception occurs
    */
   public Result[] processBatchOfGets(List<Get> actions,
-      final byte[] tableName)
+      final byte[] tableName, final HBaseRPCOptions options)
  throws IOException;
 
   /**
    * Process a batch of Puts. Does the retries.
    * @param list A batch of Puts to process.
    * @param tableName The name of the table
+   * @param options ipc options
    * @return Count of committed Puts.  On fault, < list.size().
    * @throws IOException if a remote or network exception occurs
    */
-  public int processBatchOfRows(ArrayList<Put> list, byte[] tableName)
+  public int processBatchOfRows(ArrayList<Put> list, byte[] tableName, HBaseRPCOptions options)
   throws IOException;
 
   /**
    * Process a batch of Deletes. Does the retries.
    * @param list A batch of Deletes to process.
-   * @return Count of committed Deletes. On fault, < list.size().
    * @param tableName The name of the table
+   * @param options ipc options
+   * @return Count of committed Deletes. On fault, < list.size().
    * @throws IOException if a remote or network exception occurs
    */
-  public int processBatchOfDeletes(List<Delete> list, byte[] tableName)
+  public int processBatchOfDeletes(List<Delete> list, byte[] tableName, 
+      final HBaseRPCOptions options)
   throws IOException;
 
-  public void processBatchOfPuts(List<Put> list, final byte[] tableName)
+  public void processBatchOfPuts(List<Put> list, final byte[] tableName, HBaseRPCOptions options)
   throws IOException;
 
     public int processBatchOfRowMutations(final List<RowMutations> list,
-      final byte[] tableName)
+      final byte[] tableName, HBaseRPCOptions options)
     throws IOException;
 
   /**
@@ -250,7 +278,7 @@ public interface HConnection extends Closeable {
    * @return the list of failed put among the MultiPut request, otherwise return null 
    *         if all puts are sent to the HRegionServer successfully.
    */
-  public List<Put> processSingleMultiPut(MultiPut mput);
+  public List<Put> processSingleMultiPut(MultiPut mput, HBaseRPCOptions options);
   
   /**
    * Delete the cached location

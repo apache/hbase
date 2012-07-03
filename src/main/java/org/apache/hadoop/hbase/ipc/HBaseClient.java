@@ -94,7 +94,6 @@ public class HBaseClient {
   private final int connectionTimeOutMillSec; // the connection time out
 
   protected final SocketFactory socketFactory;           // how to create sockets
-  private int refCount = 1;
 
   final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
   final static int DEFAULT_PING_INTERVAL = 60000; // 1 min
@@ -122,31 +121,6 @@ public class HBaseClient {
     return conf.getInt(PING_INTERVAL_NAME, DEFAULT_PING_INTERVAL);
   }
 
-  /**
-   * Increment this client's reference count
-   *
-   */
-  synchronized void incCount() {
-    refCount++;
-  }
-
-  /**
-   * Decrement this client's reference count
-   *
-   */
-  synchronized void decCount() {
-    refCount--;
-  }
-
-  /**
-   * Return if this client has no reference
-   *
-   * @return true if this client has no reference; false otherwise
-   */
-  synchronized boolean isZeroReference() {
-    return refCount==0;
-  }
-
   /** A call waiting for a value. */
   private class Call {
     final int id;                                       // call id
@@ -154,9 +128,8 @@ public class HBaseClient {
     Writable value;                               // value, null if error
     IOException error;                            // exception, null if value
     boolean done;                                 // true when call is done
-    protected Compression.Algorithm compressionAlgo =
-      Compression.Algorithm.NONE;
     protected int version = HBaseServer.CURRENT_VERSION;
+    public HBaseRPCOptions options;
 
     protected Call(Writable param) {
       this.param = param;
@@ -198,14 +171,6 @@ public class HBaseClient {
 
     public int getVersion() {
       return version;
-    }
-
-    public void setRPCCompression(Compression.Algorithm compressionAlgo) {
-      this.compressionAlgo = compressionAlgo;
-    }
-
-    public Compression.Algorithm getRPCCompression() {
-      return this.compressionAlgo;
     }
   }
 
@@ -520,7 +485,6 @@ public class HBaseClient {
       if (shouldCloseConnection.get()) {
         return;
       }
-
       DataOutputStream uncompressedOS = null;
       DataOutputStream outOS = null;
       try {
@@ -535,24 +499,23 @@ public class HBaseClient {
           try {
             // 1. write the call id uncompressed
             uncompressedOS.writeInt(call.id);
+         
+            // 2. write RPC options uncompressed
+            if (call.version >= HBaseServer.VERSION_RPCOPTIONS) {
+              call.options.write(outOS);
+            }
 
             // preserve backwards compatibility
-            if (call.getRPCCompression() != Compression.Algorithm.NONE) {
-              // 2. write the compression algo used to compress the request being sent
-              uncompressedOS.writeUTF(call.getRPCCompression().getName());
-              
-              // 3. write the compression algo to use for the response
-              uncompressedOS.writeUTF(call.getRPCCompression().getName());
-              
-              // 4. setup the compressor
-              Compressor compressor = call.getRPCCompression().getCompressor();
+            if (call.options.getRPCCompression() != Compression.Algorithm.NONE) {
+              // 3. setup the compressor
+              Compressor compressor = call.options.getRPCCompression().getCompressor();
               OutputStream compressedOutputStream =
-                  call.getRPCCompression().createCompressionStream(
-                      uncompressedOS, compressor, 0);
+                call.options.getRPCCompression().createCompressionStream(
+                  uncompressedOS, compressor, 0);
               outOS = new DataOutputStream(compressedOutputStream);
             }
 
-            // 5. write the output params with the correct compression type
+            // 4. write the output params with the correct compression type
             call.param.write(outOS);
             outOS.flush();
             baos.flush();
@@ -595,7 +558,6 @@ public class HBaseClient {
         return;
       }
       touch();
-
       try {
         DataInputStream localIn = in;
 
@@ -604,11 +566,10 @@ public class HBaseClient {
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + id);
         Call call = calls.get(id);
-
         // 2. read the error boolean uncompressed
         boolean isError = localIn.readBoolean();
 
-        if (call.getVersion() >= HBaseServer.VERSION_COMPRESSED_RPC) {
+        if (call.getVersion() >= HBaseServer.VERSION_RPCOPTIONS) {
           // 3. read the compression type used for the rest of the response
           String compressionAlgoName = localIn.readUTF();
           Compression.Algorithm rpcCompression =
@@ -622,7 +583,6 @@ public class HBaseClient {
             localIn = new DataInputStream(is);
           }
         }
-
         // 5. read the rest of the value
         if (isError) {
           //noinspection ThrowableInstanceNeverThrown
@@ -632,6 +592,14 @@ public class HBaseClient {
         } else {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(localIn);                 // read value
+          call.options.profilingResult = null;  // clear out previous results
+          if (call.getVersion() >= HBaseServer.VERSION_RPCOPTIONS) {
+            boolean hasProfiling = localIn.readBoolean ();
+            if (hasProfiling) {
+              call.options.profilingResult = new ProfilingData ();
+              call.options.profilingResult.readFields(localIn);
+            }
+          }
           call.setValue(value);
           calls.remove(id);
         }
@@ -824,17 +792,17 @@ public class HBaseClient {
    * @return Writable
    * @throws IOException e
    */
-  public Writable call(Writable param, InetSocketAddress address)
+  public Writable call(Writable param, InetSocketAddress address, HBaseRPCOptions options)
   throws IOException {
-      return call(param, address, null, 0, Compression.Algorithm.NONE);
+      return call(param, address, null, 0, options);
   }
 
   public Writable call(Writable param, InetSocketAddress addr,
                        UserGroupInformation ticket, int rpcTimeout,
-                       Compression.Algorithm rpcCompression)
+                       HBaseRPCOptions options)
                        throws IOException {
     Call call = new Call(param);
-    call.setRPCCompression(rpcCompression);
+    call.options = options;
     Connection connection = getConnection(addr, ticket, rpcTimeout, call);
     connection.sendParam(call);                 // send the parameter
     boolean interrupted = false;
@@ -907,7 +875,7 @@ public class HBaseClient {
    * @throws IOException e
    */
   public Writable[] call(Writable[] params, InetSocketAddress[] addresses,
-      Compression.Algorithm rpcCompression)
+      HBaseRPCOptions options)
     throws IOException {
     if (addresses.length == 0) return new Writable[0];
 
@@ -917,7 +885,7 @@ public class HBaseClient {
     synchronized (results) {
       for (int i = 0; i < params.length; i++) {
         ParallelCall call = new ParallelCall(params[i], results, i);
-        call.setRPCCompression(rpcCompression);
+        call.options = options;
         try {
           Connection connection = getConnection(addresses[i], null, 0, call);
           connection.sendParam(call);             // send each parameter
@@ -951,11 +919,12 @@ public class HBaseClient {
     }
     // RPC compression is only supported from version 4, so make backward compatible
     byte version = HBaseServer.CURRENT_VERSION;
-    if (call.getRPCCompression() == Compression.Algorithm.NONE) {
+    if (call.options.getRPCCompression() == Compression.Algorithm.NONE
+        && !call.options.getRequestProfiling ()
+        && call.options.getTag () == null) {
       version = HBaseServer.VERSION_3;
     }
     call.setVersion(version);
-
     Connection connection;
     /* we could avoid this allocation for each RPC by having a
      * connectionsId object and with set() method. We need to manage the

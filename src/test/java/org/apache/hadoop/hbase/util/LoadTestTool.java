@@ -95,6 +95,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   private static final String OPT_START_KEY = "start_key";
   private static final String OPT_TABLE_NAME = "tn";
   private static final String OPT_ZK_QUORUM = "zk";
+  private static final String OPT_PROFILING = "profiling";
 
   private static final long DEFAULT_START_KEY = 0;
 
@@ -125,6 +126,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   private int keyWindow = MultiThreadedReader.DEFAULT_KEY_WINDOW;
   private int maxReadErrors = MultiThreadedReader.DEFAULT_MAX_ERRORS;
   private int verifyPercent;
+  private int profilePercent = 0;
 
   private String[] splitColonSeparated(String option,
       int minNumCols, int maxNumCols) {
@@ -196,6 +198,8 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptWithArg(OPT_START_KEY, "The first key to read/write " +
         "(a 0-based index). The default value is " +
         DEFAULT_START_KEY + ".");
+    addOptWithArg(OPT_PROFILING, "Percent of reads/writes to request " +
+        "profiling data");
   }
 
   @Override
@@ -266,6 +270,14 @@ public class LoadTestTool extends AbstractHBaseTool {
       System.out.println("Percent of keys to verify: " + verifyPercent);
       System.out.println("Reader threads: " + numReaderThreads);
     }
+    
+    if (cmd.hasOption(OPT_PROFILING)) {
+      this.profilePercent = parseInt(cmd.getOptionValue(OPT_PROFILING),
+          0, 100);
+      
+      System.out.println ("Requesting profiling data on " + profilePercent +
+          "% of reads/writes");
+    }
 
     System.out.println("Key range: [" + startKey + ".." + (endKey - 1) + "]");
   }
@@ -299,7 +311,8 @@ public class LoadTestTool extends AbstractHBaseTool {
     applyColumnFamilyOptions(tableName, COLUMN_FAMILIES);
 
     if (isWrite) {
-      writerThreads = new MultiThreadedWriter(conf, tableName, COLUMN_FAMILY);
+      writerThreads = new MultiThreadedWriter(conf, tableName, COLUMN_FAMILY, 
+          profilePercent);
       writerThreads.setMultiPut(isMultiPut);
       writerThreads.setColumnsPerKey(minColsPerKey, maxColsPerKey);
       writerThreads.setDataSize(minColDataSize, maxColDataSize);
@@ -307,7 +320,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     if (isRead) {
       readerThreads = new MultiThreadedReader(conf, tableName, COLUMN_FAMILY,
-          verifyPercent);
+          verifyPercent, profilePercent);
       readerThreads.setMaxErrors(maxReadErrors);
       readerThreads.setKeyWindow(keyWindow);
     }
