@@ -107,7 +107,7 @@ public final class Compression {
           try {
             Class<?> externalCodec =
                 getClassLoaderForCodec().loadClass("com.hadoop.compression.lzo.LzoCodec");
-            lzoCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, 
+            lzoCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec,
                 new Configuration(conf));
           } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
@@ -172,8 +172,7 @@ public final class Compression {
             try {
               Class<?> externalCodec =
                   getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.SnappyCodec");
-              snappyCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, 
-                  conf);
+              snappyCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
             } catch (ClassNotFoundException e) {
               throw new RuntimeException(e);
             }
@@ -191,8 +190,7 @@ public final class Compression {
           try {
             Class<?> externalCodec =
                 getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.Lz4Codec");
-            lz4Codec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, 
-                conf);
+            lz4Codec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
           } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
           }

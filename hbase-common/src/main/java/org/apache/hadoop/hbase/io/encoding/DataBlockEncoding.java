@@ -18,9 +18,7 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -38,9 +36,9 @@ public enum DataBlockEncoding {
   /** Disable data block encoding. */
   NONE(0, null),
   // id 1 is reserved for the BITSET algorithm to be added later
-  PREFIX(2, new PrefixKeyDeltaEncoder()),
-  DIFF(3, new DiffKeyDeltaEncoder()),
-  FAST_DIFF(4, new FastDiffDeltaEncoder());
+  PREFIX(2, createEncoder("org.apache.hadoop.hbase.io.encoding.PrefixKeyDeltaEncoder")),
+  DIFF(3, createEncoder("org.apache.hadoop.hbase.io.encoding.DiffKeyDeltaEncoder")),
+  FAST_DIFF(4, createEncoder("org.apache.hadoop.hbase.io.encoding.FastDiffDeltaEncoder"));
 
   private final short id;
   private final byte[] idInBytes;
@@ -170,6 +168,18 @@ public enum DataBlockEncoding {
 
   public static DataBlockEncoding getEncodingById(short dataBlockEncodingId) {
     return idToEncoding.get(dataBlockEncodingId);
+  }
+
+  protected static DataBlockEncoder createEncoder(String fullyQualifiedClassName){
+      try {
+        return (DataBlockEncoder)Class.forName(fullyQualifiedClassName).newInstance();
+      } catch (InstantiationException e) {
+        throw new RuntimeException(e);
+      } catch (IllegalAccessException e) {
+        throw new RuntimeException(e);
+      } catch (ClassNotFoundException e) {
+        throw new IllegalArgumentException(e);
+      }
   }
 
 }

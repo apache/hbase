@@ -17,9 +17,9 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 
 /**
  * A decoding context that is created by a reader's encoder, and is shared
@@ -35,16 +35,19 @@ public interface HFileBlockDecodingContext {
   public Compression.Algorithm getCompression();
 
   /**
-   * Perform all actions that need to be done before the encoder's real
-   * decoding process. Decompression needs to be done if
-   * {@link #getCompression()} returns a valid compression algorithm.
+   * Perform all actions that need to be done before the encoder's real decoding process.
+   * Decompression needs to be done if {@link #getCompression()} returns a valid compression
+   * algorithm.
    *
-   * @param block HFile block object
+   * @param onDiskSizeWithoutHeader numBytes after block and encoding headers
+   * @param uncompressedSizeWithoutHeader numBytes without header required to store the block after
+   *          decompressing (not decoding)
+   * @param blockBufferWithoutHeader ByteBuffer pointed after the header but before the data
    * @param onDiskBlock on disk bytes to be decoded
    * @param offset data start offset in onDiskBlock
    * @throws IOException
    */
-  public void prepareDecoding(HFileBlock block, byte[] onDiskBlock,
-      int offset) throws IOException;
+  public void prepareDecoding(int onDiskSizeWithoutHeader, int uncompressedSizeWithoutHeader,
+      ByteBuffer blockBufferWithoutHeader, byte[] onDiskBlock, int offset) throws IOException;
 
 }

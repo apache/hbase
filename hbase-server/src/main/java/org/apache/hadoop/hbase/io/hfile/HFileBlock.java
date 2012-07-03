@@ -1728,9 +1728,13 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         // This will allocate a new buffer but keep header bytes.
         b.allocateBuffer(nextBlockOnDiskSize > 0);
         if (b.blockType.equals(BlockType.ENCODED_DATA)) {
-          encodedBlockDecodingCtx.prepareDecoding(b, onDiskBlock, hdrSize);
+          encodedBlockDecodingCtx.prepareDecoding(b.getOnDiskSizeWithoutHeader(),
+              b.getUncompressedSizeWithoutHeader(), b.getBufferWithoutHeader(), onDiskBlock,
+              hdrSize);
         } else {
-          defaultDecodingCtx.prepareDecoding(b, onDiskBlock, hdrSize);
+          defaultDecodingCtx.prepareDecoding(b.getOnDiskSizeWithoutHeader(),
+              b.getUncompressedSizeWithoutHeader(), b.getBufferWithoutHeader(), onDiskBlock,
+              hdrSize);
         }
         if (nextBlockOnDiskSize > 0) {
           // Copy next block's header bytes into the new block if we have them.

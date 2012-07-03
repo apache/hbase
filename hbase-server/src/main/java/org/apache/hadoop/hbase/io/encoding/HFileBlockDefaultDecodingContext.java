@@ -44,17 +44,14 @@ public class HFileBlockDefaultDecodingContext implements
   }
 
   @Override
-  public void prepareDecoding(HFileBlock block,
-      byte[] onDiskBlock, int offset) throws IOException {
-    DataInputStream dis =
-        new DataInputStream(new ByteArrayInputStream(
-            onDiskBlock, offset,
-            block.getOnDiskSizeWithoutHeader()));
+  public void prepareDecoding(int onDiskSizeWithoutHeader, int uncompressedSizeWithoutHeader,
+      ByteBuffer blockBufferWithoutHeader, byte[] onDiskBlock, int offset) throws IOException {
+    DataInputStream dis = new DataInputStream(new ByteArrayInputStream(onDiskBlock, offset,
+        onDiskSizeWithoutHeader));
 
-    ByteBuffer buffer = block.getBufferWithoutHeader();
-    Compression.decompress(buffer.array(), buffer.arrayOffset(),
-        (InputStream) dis, block.getOnDiskSizeWithoutHeader(),
-        block.getUncompressedSizeWithoutHeader(), compressAlgo);
+    Compression.decompress(blockBufferWithoutHeader.array(),
+      blockBufferWithoutHeader.arrayOffset(), (InputStream) dis, onDiskSizeWithoutHeader,
+      uncompressedSizeWithoutHeader, compressAlgo);
   }
 
   @Override
