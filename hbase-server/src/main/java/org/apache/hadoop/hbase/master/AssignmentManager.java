@@ -3150,6 +3150,10 @@ public class AssignmentManager extends ZooKeeperListener {
         invokeUnassign(regionInfo);
         break;
         
+      case SPLIT:
+      case SPLITTING:
+        break;
+        
       default:
         throw new IllegalStateException("Received event is not valid.");
       }
