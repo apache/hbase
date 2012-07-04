@@ -1996,7 +1996,7 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Perform a batch of mutations.
    * It supports only Put and Delete mutations and will ignore other types passed.
-   * @param putsAndLocks
+   * @param mutationsAndLocks
    *          the list of mutations paired with their requested lock IDs.
    * @return an array of OperationStatus which internally contains the
    *         OperationStatusCode and the exceptionMessage if any.
