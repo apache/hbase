@@ -185,22 +185,6 @@ public class TestHTablePool {
         Assert.assertTrue("alien table rejected", true);
       }
     }
-
-    @Test
-    public void testClassCastException() {
-      //this test makes sure that client code that
-      //casts the table it got from pool to HTable won't break
-      HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
-        Integer.MAX_VALUE);
-      String tableName = Bytes.toString(TABLENAME);
-      try {
-        // get table and check if type is HTable
-        HTable table = (HTable) pool.getTable(tableName);
-        Assert.assertTrue("return type is HTable as expected", true);
-      } catch (ClassCastException e) {
-        Assert.fail("return type is not HTable");
-      }
-    }
   }
 
 	public static class TestHTableReusablePool extends TestHTablePoolType {

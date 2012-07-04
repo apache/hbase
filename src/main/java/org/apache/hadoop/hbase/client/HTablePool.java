@@ -320,12 +320,11 @@ public class HTablePool implements Closeable {
    * wrapped table back to the table pool
    * 
    */
-  class PooledHTable extends HTable {
+  class PooledHTable implements HTableInterface {
 
     private HTableInterface table; // actual table implementation
 
     public PooledHTable(HTableInterface table) throws IOException {
-      super(table.getConfiguration(), table.getTableName());
       this.table = table;
     }
 
