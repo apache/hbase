@@ -179,7 +179,7 @@ public class CatalogTracker {
     this(zk, conf, HConnectionManager.getConnection(conf), abortable, defaultTimeout);
   }
 
-  CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
+  public CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
       HConnection connection, Abortable abortable, final int defaultTimeout)
   throws IOException {
     this.connection = connection;

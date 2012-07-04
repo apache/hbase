@@ -2150,9 +2150,14 @@ public class AssignmentManager extends ZooKeeperListener {
     // If there are no servers we need not proceed with region assignment.
     if(servers.isEmpty()) return;
 
+    // Skip assignment for regions of tables in DISABLING state because during clean cluster
+    // startup no RS is alive and regions map also doesn't have any information about the regions.
+    // See HBASE-6281.
+    Set<String> disablingAndDisabledTables = new HashSet<String>(this.disablingTables);
+    disablingAndDisabledTables.addAll(this.zkTable.getDisabledTables());
     // Scan META for all user regions, skipping any disabled tables
-    Map<HRegionInfo, ServerName> allRegions =
-      MetaReader.fullScan(catalogTracker, this.zkTable.getDisabledTables(), true);
+    Map<HRegionInfo, ServerName> allRegions = MetaReader.fullScan(catalogTracker,
+        disablingAndDisabledTables, true);
     if (allRegions == null || allRegions.isEmpty()) return;
 
     // Determine what type of assignment to do on startup
@@ -2387,8 +2392,7 @@ public class AssignmentManager extends ZooKeeperListener {
             " has null regionLocation." + " But its table " + tableName +
             " isn't in ENABLING state.");
         }
-        addTheTablesInPartialState(this.disablingTables, this.enablingTables, regionInfo,
-            tableName);
+        addTheTablesInPartialState(regionInfo, tableName);
       } else if (!onlineServers.contains(regionLocation)) {
         // Region is located on a server that isn't online
         List<Pair<HRegionInfo, Result>> offlineRegions =
@@ -2398,6 +2402,7 @@ public class AssignmentManager extends ZooKeeperListener {
           offlineServers.put(regionLocation, offlineRegions);
         }
         offlineRegions.add(new Pair<HRegionInfo,Result>(regionInfo, result));
+        addTheTablesInPartialState(regionInfo, tableName);
       } else {
         // If region is in offline and split state check the ZKNode
         if (regionInfo.isOffline() && regionInfo.isSplit()) {
@@ -2422,20 +2427,17 @@ public class AssignmentManager extends ZooKeeperListener {
             addToServers(regionLocation, regionInfo);            
           }
         }
-        addTheTablesInPartialState(this.disablingTables, this.enablingTables, regionInfo,
-            tableName);
+        addTheTablesInPartialState(regionInfo, tableName);
       }
     }
     return offlineServers;
   }
 
-  private void addTheTablesInPartialState(Set<String> disablingTables,
-      Set<String> enablingTables, HRegionInfo regionInfo,
-      String disablingTableName) {
+  private void addTheTablesInPartialState(HRegionInfo regionInfo, String disablingTableName) {
     if (checkIfRegionBelongsToDisabling(regionInfo)) {
-      disablingTables.add(disablingTableName);
+      this.disablingTables.add(disablingTableName);
     } else if (checkIfRegionsBelongsToEnabling(regionInfo)) {
-      enablingTables.add(disablingTableName);
+      this.enablingTables.add(disablingTableName);
     }
   }
 

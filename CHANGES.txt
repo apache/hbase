@@ -86,6 +86,8 @@ Release 0.92.2 - Unreleased
    HBASE-6200  KeyComparator.compareWithoutRow can be wrong when families have the same prefix (Jieshan)
    HBASE-6265  Calling getTimestamp() on a KV in cp.prePut() causes KV not to be flushed
    HBASE-6322  Unnecessary creation of finalizers in HTablePool (Ryan Brush)
+   HBASE-6281  Assignment need not be called for disabling table regions
+               during clean cluster start up (Rajesh Babu)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
