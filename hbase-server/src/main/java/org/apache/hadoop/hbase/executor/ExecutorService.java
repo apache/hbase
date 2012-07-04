@@ -107,61 +107,6 @@ public class ExecutorService {
   }
 
   /**
-   * Returns the executor service type (the thread pool instance) for the
-   * passed event handler type.
-   * @param type EventHandler type.
-   */
-  public ExecutorType getExecutorServiceType(final EventHandler.EventType type) {
-    switch(type) {
-      // Master executor services
-
-      case RS_ZK_REGION_CLOSED:
-      case RS_ZK_REGION_FAILED_OPEN:
-        return ExecutorType.MASTER_CLOSE_REGION;
-
-      case RS_ZK_REGION_OPENED:
-        return ExecutorType.MASTER_OPEN_REGION;
-
-      case RS_ZK_REGION_SPLIT:
-      case M_SERVER_SHUTDOWN:
-        return ExecutorType.MASTER_SERVER_OPERATIONS;
-
-      case M_META_SERVER_SHUTDOWN:
-        return ExecutorType.MASTER_META_SERVER_OPERATIONS;
-
-      case C_M_DELETE_TABLE:
-      case C_M_DISABLE_TABLE:
-      case C_M_ENABLE_TABLE:
-      case C_M_MODIFY_TABLE:
-      case C_M_CREATE_TABLE:
-        return ExecutorType.MASTER_TABLE_OPERATIONS;
-
-      // RegionServer executor services
-
-      case M_RS_OPEN_REGION:
-        return ExecutorType.RS_OPEN_REGION;
-
-      case M_RS_OPEN_ROOT:
-        return ExecutorType.RS_OPEN_ROOT;
-
-      case M_RS_OPEN_META:
-        return ExecutorType.RS_OPEN_META;
-
-      case M_RS_CLOSE_REGION:
-        return ExecutorType.RS_CLOSE_REGION;
-
-      case M_RS_CLOSE_ROOT:
-        return ExecutorType.RS_CLOSE_ROOT;
-
-      case M_RS_CLOSE_META:
-        return ExecutorType.RS_CLOSE_META;
-
-      default:
-        throw new RuntimeException("Unhandled event type " + type);
-    }
-  }
-
-  /**
    * Default constructor.
    * @param servername Name of the hosting server.
    */
@@ -226,7 +171,7 @@ public class ExecutorService {
   }
 
   public void submit(final EventHandler eh) {
-    Executor executor = getExecutor(getExecutorServiceType(eh.getEventType()));
+    Executor executor = getExecutor(eh.getEventType().getExecutorServiceType());
     if (executor == null) {
       // This happens only when events are submitted after shutdown() was
       // called, so dropping them should be "ok" since it means we're

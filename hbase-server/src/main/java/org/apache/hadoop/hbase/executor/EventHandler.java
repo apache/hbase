@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 
 
 /**
@@ -106,47 +107,49 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     // Messages originating from RS (NOTE: there is NO direct communication from
     // RS to Master). These are a result of RS updates into ZK.
     // RS_ZK_REGION_CLOSING    (1),   // It is replaced by M_ZK_REGION_CLOSING(HBASE-4739)
-    RS_ZK_REGION_CLOSED       (2),   // RS has finished closing a region
-    RS_ZK_REGION_OPENING      (3),   // RS is in process of opening a region
-    RS_ZK_REGION_OPENED       (4),   // RS has finished opening a region
-    RS_ZK_REGION_SPLITTING    (5),   // RS has started a region split
-    RS_ZK_REGION_SPLIT        (6),   // RS split has completed.
-    RS_ZK_REGION_FAILED_OPEN  (7),   // RS failed to open a region
+    RS_ZK_REGION_CLOSED       (2, ExecutorType.MASTER_CLOSE_REGION),   // RS has finished closing a region
+    RS_ZK_REGION_OPENING      (3, null), // RS is in process of opening a region
+    RS_ZK_REGION_OPENED       (4, ExecutorType.MASTER_OPEN_REGION), // RS has finished opening a region
+    RS_ZK_REGION_SPLITTING    (5, null), // RS has started a region split
+    RS_ZK_REGION_SPLIT        (6, ExecutorType.MASTER_SERVER_OPERATIONS),   // RS split has completed.
+    RS_ZK_REGION_FAILED_OPEN  (7, ExecutorType.MASTER_CLOSE_REGION),   // RS failed to open a region
 
     // Messages originating from Master to RS
-    M_RS_OPEN_REGION          (20),  // Master asking RS to open a region
-    M_RS_OPEN_ROOT            (21),  // Master asking RS to open root
-    M_RS_OPEN_META            (22),  // Master asking RS to open meta
-    M_RS_CLOSE_REGION         (23),  // Master asking RS to close a region
-    M_RS_CLOSE_ROOT           (24),  // Master asking RS to close root
-    M_RS_CLOSE_META           (25),  // Master asking RS to close meta
+    M_RS_OPEN_REGION          (20, ExecutorType.RS_OPEN_REGION),  // Master asking RS to open a region
+    M_RS_OPEN_ROOT            (21, ExecutorType.RS_OPEN_REGION),  // Master asking RS to open root
+    M_RS_OPEN_META            (22, ExecutorType.RS_OPEN_META),  // Master asking RS to open meta
+    M_RS_CLOSE_REGION         (23, ExecutorType.RS_CLOSE_REGION),  // Master asking RS to close a region
+    M_RS_CLOSE_ROOT           (24, ExecutorType.RS_CLOSE_ROOT),  // Master asking RS to close root
+    M_RS_CLOSE_META           (25, ExecutorType.RS_CLOSE_META),  // Master asking RS to close meta
 
     // Messages originating from Client to Master
-    C_M_DELETE_TABLE          (40),   // Client asking Master to delete a table
-    C_M_DISABLE_TABLE         (41),   // Client asking Master to disable a table
-    C_M_ENABLE_TABLE          (42),   // Client asking Master to enable a table
-    C_M_MODIFY_TABLE          (43),   // Client asking Master to modify a table
-    C_M_ADD_FAMILY            (44),   // Client asking Master to add family to table
-    C_M_DELETE_FAMILY         (45),   // Client asking Master to delete family of table
-    C_M_MODIFY_FAMILY         (46),   // Client asking Master to modify family of table
-    C_M_CREATE_TABLE          (47),   // Client asking Master to create a table
+    C_M_DELETE_TABLE          (40, ExecutorType.MASTER_TABLE_OPERATIONS),   // Client asking Master to delete a table
+    C_M_DISABLE_TABLE         (41, ExecutorType.MASTER_TABLE_OPERATIONS),   // Client asking Master to disable a table
+    C_M_ENABLE_TABLE          (42, ExecutorType.MASTER_TABLE_OPERATIONS),   // Client asking Master to enable a table
+    C_M_MODIFY_TABLE          (43, ExecutorType.MASTER_TABLE_OPERATIONS),   // Client asking Master to modify a table
+    C_M_ADD_FAMILY            (44, null), // Client asking Master to add family to table
+    C_M_DELETE_FAMILY         (45, null), // Client asking Master to delete family of table
+    C_M_MODIFY_FAMILY         (46, null), // Client asking Master to modify family of table
+    C_M_CREATE_TABLE          (47, ExecutorType.MASTER_TABLE_OPERATIONS),   // Client asking Master to create a table
 
     // Updates from master to ZK. This is done by the master and there is
     // nothing to process by either Master or RS
-    M_ZK_REGION_OFFLINE       (50),  // Master adds this region as offline in ZK
-    M_ZK_REGION_CLOSING       (51),  // Master adds this region as closing in ZK
+    M_ZK_REGION_OFFLINE       (50, null), // Master adds this region as offline in ZK
+    M_ZK_REGION_CLOSING       (51, null), // Master adds this region as closing in ZK
 
     // Master controlled events to be executed on the master
-    M_SERVER_SHUTDOWN         (70),  // Master is processing shutdown of a RS
-    M_META_SERVER_SHUTDOWN    (72);  // Master is processing shutdown of RS hosting a meta region (-ROOT- or .META.).
+    M_SERVER_SHUTDOWN         (70, ExecutorType.MASTER_SERVER_OPERATIONS),  // Master is processing shutdown of a RS
+    M_META_SERVER_SHUTDOWN    (72, ExecutorType.MASTER_META_SERVER_OPERATIONS);  // Master is processing shutdown of RS hosting a meta region (-ROOT- or .META.).
 
     private final int code;
+    private final ExecutorService.ExecutorType executor;
 
     /**
      * Constructor
      */
-    EventType(final int code) {
+    EventType(final int code, final ExecutorType executor) {
       this.code = code;
+      this.executor = executor;
     }
 
     public int getCode() {
@@ -168,6 +171,10 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
         this.equals(EventType.C_M_MODIFY_FAMILY) ||
         this.equals(EventType.C_M_MODIFY_TABLE)
       );
+    }
+
+    ExecutorType getExecutorServiceType() {
+      return this.executor;
     }
   }
 
