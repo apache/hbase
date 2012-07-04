@@ -34,9 +34,6 @@
 
     <section><title>Prerequisites</title>
     <para>
-       HBase must have been built using the new maven profile for secure Hadoop/HBase: <code>-P security</code>. Secure Hadoop dependent classes are separated under a pseudo-module in the security/ directory and are only included if built with the secure Hadoop profile. 
-    </para>
-    <para>
         You need to have a working Kerberos KDC.
     </para>
     <para>
@@ -116,10 +113,6 @@
         <value>true</value>
       </property>
       <property>
-        <name>hbase.rpc.engine</name>
-        <value>org.apache.hadoop.hbase.ipc.SecureRpcEngine</value>
-      </property>
-      <property>
       <name>hbase.coprocessor.region.classes</name>
         <value>org.apache.hadoop.hbase.security.token.TokenProvider</value>
       </property>
@@ -139,10 +132,6 @@
         <name>hbase.security.authentication</name>
         <value>kerberos</value>
       </property> 
-      <property>
-        <name>hbase.rpc.engine</name>
-        <value>org.apache.hadoop.hbase.ipc.SecureRpcEngine</value>
-      </property>
     ]]></programlisting>
     <para>
         The client environment must be logged in to Kerberos from KDC or
@@ -151,9 +140,8 @@
     </para>
     <para>
         Be advised that if the <code>hbase.security.authentication</code>
-        and <code>hbase.rpc.engine</code> properties in the client- and
-        server-side site files do not match, the client will not be able to
-        communicate with the cluster.
+        in the client- and server-side site files do not match, the client will 
+        not be able to communicate with the cluster.
     </para>
     <para>
         Once HBase is configured for secure RPC it is possible to optionally

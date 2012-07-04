@@ -369,8 +369,7 @@ the developer machine as well.
 (no fork) and then medium tests in a separate JVM for each test instance.
 Medium tests are NOT executed if there is an error in a small test.
 Large tests are NOT executed.  There is one report for small tests, and one report for
-medium tests if they are executed. To run small and medium tests with the security
-profile enabled, do <programlisting>mvn test -P security</programlisting>
+medium tests if they are executed. 
 </para>
 </section>
 
@@ -392,8 +391,6 @@ pass multiple, individual tests as a comma-delimited list:
 <programlisting>mvn test -P localTests -Dtest=MyTest1,MyTest2,MyTest3</programlisting>
 You can also pass a package, which will run all tests under the package:
 <programlisting>mvn test -P localTests -Dtest=org.apache.hadoop.hbase.client.*</programlisting>
-To run a single test with the security profile enabled:
-<programlisting>mvn test -P security,localTests -Dtest=TestGet</programlisting>
 </para>
 
 <para>

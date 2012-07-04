@@ -1176,7 +1176,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
                 <programlisting>
                 git clone git://git.apache.org/hbase.git
                 cd hbase
-                mvn -Psecurity,localTests clean test -Dtest=TestZooKeeperACL
+                mvn -PlocalTests clean test -Dtest=TestZooKeeperACL
                 </programlisting>
 
                 Then configure HBase as described above.
