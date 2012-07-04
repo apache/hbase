@@ -69,7 +69,7 @@ import org.mockito.Mockito;
  * Test {@link AssignmentManager}
  */
 public class TestAssignmentManager {
-  private static final Log LOG = LogFactory.getLog(TestActiveMasterManager.class);
+  private static final Log LOG = LogFactory.getLog(TestAssignmentManager.class);
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final ServerName SERVERNAME_A =
     new ServerName("example.org", 1234, 5678);
