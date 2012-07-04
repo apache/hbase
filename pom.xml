@@ -254,6 +254,14 @@
       <organization>Facebook</organization>
       <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
+    <developer>
+      <id>nkeywal</id>
+      <name>Nicolas Liochon</name>
+      <email>nkeywal@apache.org</email>
+      <timezone>+1</timezone>
+      <organization>Scaled Risk</organization>
+      <organizationUrl>http://www.scaledrisk.com</organizationUrl>
+    </developer>
   </developers>
   <repositories>
     <repository>
