@@ -189,6 +189,10 @@ public class MasterFileSystem {
         HLog.SPLIT_SKIP_ERRORS_DEFAULT);
     Path logsDirPath = new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
     do {
+      if (master.isStopped()) {
+        LOG.warn("Master stopped while splitting logs");
+        break;
+      }
       List<ServerName> serverNames = new ArrayList<ServerName>();
       try {
         if (!this.fs.exists(logsDirPath)) return;
