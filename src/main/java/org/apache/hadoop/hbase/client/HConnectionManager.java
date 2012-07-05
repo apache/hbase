@@ -807,17 +807,17 @@ public class HConnectionManager {
     public HRegionLocation locateRegion(final byte [] tableName,
         final byte [] row)
     throws IOException{
-      return locateRegion(tableName, row, true);
+      return locateRegion(tableName, row, true, true);
     }
 
     public HRegionLocation relocateRegion(final byte [] tableName,
         final byte [] row)
     throws IOException{
-      return locateRegion(tableName, row, false);
+      return locateRegion(tableName, row, false, true);
     }
 
     private HRegionLocation locateRegion(final byte [] tableName,
-      final byte [] row, boolean useCache)
+      final byte [] row, boolean useCache, boolean retry)
     throws IOException {
       if (this.closed) throw new IOException(toString() + " closed");
       if (tableName == null || tableName.length == 0) {
@@ -839,11 +839,11 @@ public class HConnectionManager {
         }
       } else if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
         return locateRegionInMeta(HConstants.ROOT_TABLE_NAME, tableName, row,
-            useCache, metaRegionLock);
+            useCache, metaRegionLock, retry);
       } else {
         // Region not in the cache - have to go to the meta RS
         return locateRegionInMeta(HConstants.META_TABLE_NAME, tableName, row,
-            useCache, userRegionLock);
+            useCache, userRegionLock, retry);
       }
     }
 
@@ -913,7 +913,7 @@ public class HConnectionManager {
       */
     private HRegionLocation locateRegionInMeta(final byte [] parentTable,
       final byte [] tableName, final byte [] row, boolean useCache,
-      Object regionLockObject)
+      Object regionLockObject, boolean retry)
     throws IOException {
       HRegionLocation location;
       // If we are supposed to be using the cache, look in the cache to see if
@@ -925,13 +925,14 @@ public class HConnectionManager {
         }
       }
 
+      int localNumRetries = retry ? numRetries : 1;
       // build the key of the meta region we should be looking for.
       // the extra 9's on the end are necessary to allow "exact" matches
       // without knowing the precise region names.
       byte [] metaKey = HRegionInfo.createRegionName(tableName, row,
         HConstants.NINES, false);
       for (int tries = 0; true; tries++) {
-        if (tries >= numRetries) {
+        if (tries >= localNumRetries) {
           throw new NoServerForRegionException("Unable to find region for "
             + Bytes.toStringBinary(row) + " after " + numRetries + " tries.");
         }
@@ -939,7 +940,7 @@ public class HConnectionManager {
         HRegionLocation metaLocation = null;
         try {
           // locate the root or meta region
-          metaLocation = locateRegion(parentTable, metaKey);
+          metaLocation = locateRegion(parentTable, metaKey, true, false);
           // If null still, go around again.
           if (metaLocation == null) continue;
           HRegionInterface server =
@@ -1488,7 +1489,7 @@ public class HConnectionManager {
         for (int i = 0; i < workingList.size(); i++) {
           Row row = workingList.get(i);
           if (row != null) {
-            HRegionLocation loc = locateRegion(tableName, row.getRow(), true);
+            HRegionLocation loc = locateRegion(tableName, row.getRow());
             byte[] regionName = loc.getRegionInfo().getRegionName();
 
             MultiAction<R> actions = actionsByServer.get(loc);
