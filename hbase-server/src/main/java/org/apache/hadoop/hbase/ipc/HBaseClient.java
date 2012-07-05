@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.net.SocketFactory;
+import javax.security.sasl.SaslException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -614,6 +615,14 @@ public class HBaseClient {
      * again.
      * The other problem is to do with ticket expiry. To handle that,
      * a relogin is attempted.
+     * <p>
+     * The retry logic is governed by the {@link #shouldAuthenticateOverKrb}
+     * method. In case when the user doesn't have valid credentials, we don't
+     * need to retry (from cache or ticket). In such cases, it is prudent to
+     * throw a runtime exception when we receive a SaslException from the
+     * underlying authentication implementation, so there is no retry from 
+     * other high level (for eg, HCM or HBaseAdmin).
+     * </p>
      */
     private synchronized void handleSaslConnectionFailure(
         final int currRetries,
@@ -651,8 +660,16 @@ public class HBaseClient {
             LOG.warn("Exception encountered while connecting to " +
                 "the server : " + ex);
           }
-          if (ex instanceof RemoteException)
+          if (ex instanceof RemoteException) {
             throw (RemoteException)ex;
+          }
+          if (ex instanceof SaslException) {
+            String msg = "SASL authentication failed." +
+              " The most likely cause is missing or invalid credentials." +
+              " Consider 'kinit'.";
+            LOG.fatal(msg, ex);
+            throw new RuntimeException(msg, ex);
+          }
           throw new IOException(ex);
         }
       });
