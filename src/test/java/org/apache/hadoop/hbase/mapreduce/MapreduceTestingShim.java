@@ -49,17 +49,11 @@ abstract public class MapreduceTestingShim {
   abstract public JobContext newJobContext(Configuration jobConf)
       throws IOException;
 
-  abstract public String obtainMROutputDirProp();
-  
   public static JobContext createJobContext(Configuration jobConf)
       throws IOException {
     return instance.newJobContext(jobConf);
   }
 
-  public static String getMROutputDirProp() {
-    return instance.obtainMROutputDirProp();
-  }
-  
   private static class MapreduceV1Shim extends MapreduceTestingShim {
     public JobContext newJobContext(Configuration jobConf) throws IOException {
       // Implementing:
@@ -73,11 +67,6 @@ abstract public class MapreduceTestingShim {
         throw new IllegalStateException(
             "Failed to instantiate new JobContext(jobConf, new JobID())", e);
       }
-    }
-
-    @Override
-    public String obtainMROutputDirProp() {
-      return "mapred.output.dir";
     }
   };
 
@@ -93,12 +82,6 @@ abstract public class MapreduceTestingShim {
         throw new IllegalStateException(
             "Failed to return from Job.getInstance(jobConf)");
       }
-    }
-
-    @Override
-    public String obtainMROutputDirProp() {
-      // o.a.h.mapreduce.lib.output FileOutputFormat.OUTDIR
-      return "mapreduce.output.fileoutputformat.outputdir";
     }
   };
 
