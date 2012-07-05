@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -81,6 +82,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
@@ -289,21 +291,6 @@ public class HBaseTestingUtility {
     createSubDirAndSystemProperty(
       "hadoop.log.dir",
       testPath, "hadoop-log-dir");
-
-    // This is defaulted in core-default.xml to /tmp/hadoop-${user.name}, but
-    //  we want our own value to ensure uniqueness on the same machine
-    createSubDirAndSystemProperty(
-      "hadoop.tmp.dir",
-      testPath, "hadoop-tmp-dir");
-
-    // Read and modified in org.apache.hadoop.mapred.MiniMRCluster
-    createSubDir(
-      "mapred.local.dir",
-      testPath, "mapred-local-dir");
-
-    createSubDirAndSystemProperty(
-      "mapred.working.dir",
-      testPath, "mapred-working-dir");
   }
 
   private void createSubDir(String propertyName, Path parent, String subDirName){
@@ -439,6 +426,24 @@ public class HBaseTestingUtility {
     this.dfsCluster.waitClusterUp();
 
     return this.dfsCluster;
+  }
+
+  /** This is used before starting HDFS and map-reduce mini-clusters */
+  private void createDirsAndSetProperties() {
+    setupClusterTestDir();
+    System.setProperty(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
+    createDirAndSetProperty("hadoop_tmp", "hadoop.tmp.dir");
+    createDirAndSetProperty("mapred_output", MapreduceTestingShim.getMROutputDirProp());
+    createDirAndSetProperty("mapred_local", "mapred.local.dir");
+  }
+
+  private String createDirAndSetProperty(final String relPath, String property) {
+    String path = clusterTestDir.getPath() + "/" + relPath;
+    System.setProperty(property, path);
+    conf.set(property, path);
+    new File(path).mkdirs();
+    LOG.info("Setting " + property + " to " + path + " in system properties and HBase conf");
+    return path;
   }
 
   /**
@@ -1268,10 +1273,13 @@ public class HBaseTestingUtility {
     conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));
     mrCluster = new MiniMRCluster(servers,
       FileSystem.get(conf).getUri().toString(), 1);
+    JobConf jobConf = mrCluster.createJobConf();
     LOG.info("Mini mapreduce cluster started");
+
+    // This fixes TestImportTsv but breaks TestImportExport tests
     conf.set("mapred.job.tracker",
         mrCluster.createJobConf().get("mapred.job.tracker"));
-    /* this for mrv2 support */
+    // this for mrv2 support; mr1 ignores this 
     conf.set("mapreduce.framework.name", "yarn");
   }
 
