@@ -51,6 +51,7 @@ public class FSHDFSUtils extends FSUtils{
    */
   public static final long LEASE_SOFTLIMIT_PERIOD = 60 * 1000;
 
+  @Override
   public void recoverFileLease(final FileSystem fs, final Path p, Configuration conf)
   throws IOException{
     if (!isAppendSupported(conf)) {
@@ -111,7 +112,9 @@ public class FSHDFSUtils extends FSUtils{
       try {
         Thread.sleep(1000);
       } catch (InterruptedException ex) {
-        new InterruptedIOException().initCause(ex);
+        InterruptedIOException iioe = new InterruptedIOException();
+        iioe.initCause(ex);
+        throw iioe;
       }
     }
     LOG.info("Finished lease recover attempt for " + p);
