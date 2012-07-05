@@ -330,6 +330,21 @@ public class HBaseTestingUtility {
     createSubDirAndSystemProperty(
       "hadoop.log.dir",
       testPath, "hadoop-log-dir");
+
+    // This is defaulted in core-default.xml to /tmp/hadoop-${user.name}, but
+    //  we want our own value to ensure uniqueness on the same machine
+    createSubDirAndSystemProperty(
+      "hadoop.tmp.dir",
+      testPath, "hadoop-tmp-dir");
+
+    // Read and modified in org.apache.hadoop.mapred.MiniMRCluster
+    createSubDir(
+      "mapred.local.dir",
+      testPath, "mapred-local-dir");
+
+    createSubDirAndSystemProperty(
+      "mapred.working.dir",
+      testPath, "mapred-working-dir");
   }
 
   private void createSubDir(String propertyName, Path parent, String subDirName){
@@ -422,7 +437,7 @@ public class HBaseTestingUtility {
 
     return this.dfsCluster;
   }
-  
+
   public MiniDFSCluster startMiniDFSClusterForTestHLog(int namenodePort) throws IOException {
     createDirsAndSetProperties();
     dfsCluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null,
@@ -430,14 +445,17 @@ public class HBaseTestingUtility {
     return dfsCluster;
   }
 
-
   /** This is used before starting HDFS and map-reduce mini-clusters */
   private void createDirsAndSetProperties() {
     setupClusterTestDir();
     System.setProperty(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
+    createDirAndSetProperty("cache_data", "test.cache.data");
     createDirAndSetProperty("hadoop_tmp", "hadoop.tmp.dir");
+    hadoopLogDir = createDirAndSetProperty("hadoop_logs", "hadoop.log.dir");
     createDirAndSetProperty("mapred_output", MapreduceTestingShim.getMROutputDirProp());
     createDirAndSetProperty("mapred_local", "mapred.local.dir");
+    createDirAndSetProperty("mapred_system", "mapred.system.dir");
+    createDirAndSetProperty("mapred_temp", "mapred.temp.dir");
   }
 
   private String createDirAndSetProperty(final String relPath, String property) {
@@ -1315,12 +1333,16 @@ public class HBaseTestingUtility {
     // Allow the user to override FS URI for this map-reduce cluster to use.
     mrCluster = new MiniMRCluster(servers,
       FS_URI != null ? FS_URI : FileSystem.get(conf).getUri().toString(), 1);
-    JobConf jobConf = mrCluster.createJobConf();
+    JobConf jobConf = MapreduceTestingShim.getJobConf(mrCluster);
+    if (jobConf == null) {
+      jobConf = mrCluster.createJobConf();
+    }
+    jobConf.set("mapred.local.dir",
+      conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
     LOG.info("Mini mapreduce cluster started");
 
-    // This fixes TestImportTsv but breaks TestImportExport tests
-    conf.set("mapred.job.tracker",
-        mrCluster.createJobConf().get("mapred.job.tracker"));
+    // Needed for TestImportTsv.
+    conf.set("mapred.job.tracker", jobConf.get("mapred.job.tracker"));
     // this for mrv2 support; mr1 ignores this 
     conf.set("mapreduce.framework.name", "yarn");
     String rmAdress = jobConf.get("yarn.resourcemanager.address");
