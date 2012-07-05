@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,7 +28,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.junit.After;
@@ -44,7 +45,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import static org.junit.Assert.assertEquals;
 
 @Category(MediumTests.class)
 public class TestImportExport {
@@ -58,12 +58,11 @@ public class TestImportExport {
   private static final byte[] QUAL = Bytes.toBytes("q");
   private static final String OUTPUT_DIR = "outputdir";
 
-  private static MiniHBaseCluster cluster;
   private static long now = System.currentTimeMillis();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    cluster = UTIL.startMiniCluster();
+    UTIL.startMiniCluster();
     UTIL.startMiniMapReduceCluster();
   }
 
@@ -105,15 +104,15 @@ public class TestImportExport {
         "1000"
     };
 
-    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
     Job job = Export.createSubmittableJob(conf, args);
     job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
+    HBaseFsck.debugLsr(conf, new Path("."));
     assertTrue(job.isSuccessful());
-
 
     String IMPORT_TABLE = "importTableSimpleCase";
     t = UTIL.createTable(Bytes.toBytes(IMPORT_TABLE), FAMILYB);
@@ -123,13 +122,14 @@ public class TestImportExport {
         OUTPUT_DIR
     };
 
-    opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
     conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
     job = Import.createSubmittableJob(conf, args);
     job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
+    HBaseFsck.debugLsr(conf, new Path("."));
     assertTrue(job.isSuccessful());
 
     Get g = new Get(ROW1);
@@ -174,7 +174,7 @@ public class TestImportExport {
         "1000"
     };
 
-    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
@@ -198,7 +198,7 @@ public class TestImportExport {
         OUTPUT_DIR
     };
 
-    opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
+    opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
     conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
