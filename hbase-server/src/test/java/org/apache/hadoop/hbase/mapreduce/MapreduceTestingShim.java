@@ -19,12 +19,9 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
@@ -37,7 +34,6 @@ import org.apache.hadoop.mapreduce.JobID;
  */
 abstract public class MapreduceTestingShim {
   private static MapreduceTestingShim instance;
-  private static Class[] emptyParam = new Class[] {};
 
   static {
     try {
@@ -52,18 +48,12 @@ abstract public class MapreduceTestingShim {
 
   abstract public JobContext newJobContext(Configuration jobConf)
       throws IOException;
-  
-  abstract public JobConf obtainJobConf(MiniMRCluster cluster);
 
   abstract public String obtainMROutputDirProp();
   
   public static JobContext createJobContext(Configuration jobConf)
       throws IOException {
     return instance.newJobContext(jobConf);
-  }
-  
-  public static JobConf getJobConf(MiniMRCluster cluster) {
-    return instance.obtainJobConf(cluster);
   }
 
   public static String getMROutputDirProp() {
@@ -84,23 +74,6 @@ abstract public class MapreduceTestingShim {
             "Failed to instantiate new JobContext(jobConf, new JobID())", e);
       }
     }
-    
-    public JobConf obtainJobConf(MiniMRCluster cluster) {
-      if (cluster == null) return null;
-      try {
-        Object runner = cluster.getJobTrackerRunner();
-        Method meth = runner.getClass().getDeclaredMethod("getJobTracker", emptyParam);
-        Object tracker = meth.invoke(runner, new Object []{});
-        Method m = tracker.getClass().getDeclaredMethod("getConf", emptyParam);
-        return (JobConf) m.invoke(tracker, new Object []{});
-      } catch (NoSuchMethodException nsme) {
-        return null;
-      } catch (InvocationTargetException ite) {
-        return null;
-      } catch (IllegalAccessException iae) {
-        return null;
-      }
-    }
 
     @Override
     public String obtainMROutputDirProp() {
@@ -119,19 +92,6 @@ abstract public class MapreduceTestingShim {
         e.printStackTrace();
         throw new IllegalStateException(
             "Failed to return from Job.getInstance(jobConf)");
-      }
-    }
-    
-    public JobConf obtainJobConf(MiniMRCluster cluster) {
-      try {
-        Method meth = MiniMRCluster.class.getMethod("getJobTrackerConf", emptyParam);
-        return (JobConf) meth.invoke(cluster, new Object []{});
-      } catch (NoSuchMethodException nsme) {
-        return null;
-      } catch (InvocationTargetException ite) {
-        return null;
-      } catch (IllegalAccessException iae) {
-        return null;
       }
     }
 
