@@ -805,6 +805,7 @@
     <jersey.version>1.4</jersey.version>
     <jruby.version>1.6.5</jruby.version>
     <junit.version>4.10-HBASE-1</junit.version>
+    <slf4j.version>1.4.3</slf4j.version>
     <log4j.version>1.2.16</log4j.version>
     <mockito-all.version>1.8.5</mockito-all.version>
     <protobuf.version>2.4.0a</protobuf.version>
@@ -1119,6 +1120,8 @@
         <artifactId>junit</artifactId>
         <version>${junit.version}</version>
         <scope>test</scope>
+        <!-- FIXME: the following needs to go away once HBASE-4955 is fixed -->
+        <optional>true</optional>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
