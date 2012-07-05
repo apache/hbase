@@ -61,10 +61,8 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
   static final Log LOG = LogFactory.getLog(SlabCache.class);
   static final int STAT_THREAD_PERIOD_SECS = 60 * 5;
 
-  private final ScheduledExecutorService scheduleThreadPool = Executors
-      .newScheduledThreadPool(1,
-          new ThreadFactoryBuilder().setNameFormat("Slab Statistics #%d")
-              .build());
+  private final ScheduledExecutorService scheduleThreadPool = Executors.newScheduledThreadPool(1,
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Slab Statistics #%d").build());
 
   long size;
   private final CacheStats stats;
