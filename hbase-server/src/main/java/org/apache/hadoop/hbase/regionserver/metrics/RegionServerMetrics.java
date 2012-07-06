@@ -286,11 +286,11 @@ public class RegionServerMetrics implements Updater {
   /**
    * time each scheduled compaction takes
    */
-  protected final PersistentMetricsTimeVaryingRate compactionTime =
-    new PersistentMetricsTimeVaryingRate("compactionTime", registry);
+  protected final MetricsHistogram compactionTime =
+      new MetricsHistogram("compactionTime", registry);
 
-  protected final PersistentMetricsTimeVaryingRate compactionSize =
-    new PersistentMetricsTimeVaryingRate("compactionSize", registry);
+  protected final MetricsHistogram compactionSize =
+      new MetricsHistogram("compactionSize", registry);
 
   /**
    * time each scheduled flush takes
@@ -364,8 +364,8 @@ public class RegionServerMetrics implements Updater {
       if (this.extendedPeriod > 0 &&
           this.lastUpdate - this.lastExtUpdate >= this.extendedPeriod) {
         this.lastExtUpdate = this.lastUpdate;
-        this.compactionTime.resetMinMaxAvg();
-        this.compactionSize.resetMinMaxAvg();
+        this.compactionTime.clear();
+        this.compactionSize.clear();
         this.flushTime.resetMinMaxAvg();
         this.flushSize.resetMinMaxAvg();
         this.resetAllMinMax();
@@ -499,8 +499,8 @@ public class RegionServerMetrics implements Updater {
    * @param size bytesize of storefiles in the compaction
    */
   public synchronized void addCompaction(long time, long size) {
-    this.compactionTime.inc(time);
-    this.compactionSize.inc(size);
+    this.compactionTime.update(time);
+    this.compactionSize.update(size);
   }
 
   /**

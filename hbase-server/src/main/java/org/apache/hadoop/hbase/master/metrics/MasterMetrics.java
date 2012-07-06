@@ -24,7 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.HBaseInfo;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
-import org.apache.hadoop.hbase.metrics.PersistentMetricsTimeVaryingRate;
+import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -60,12 +60,10 @@ public class MasterMetrics implements Updater {
     new MetricsRate("cluster_requests", registry);
 
   /** Time it takes to finish HLog.splitLog() */
-  final PersistentMetricsTimeVaryingRate splitTime =
-    new PersistentMetricsTimeVaryingRate("splitTime", registry);
+  final MetricsHistogram splitTime = new MetricsHistogram("splitTime", registry);
 
   /** Size of HLog files being split */
-  final PersistentMetricsTimeVaryingRate splitSize =
-    new PersistentMetricsTimeVaryingRate("splitSize", registry);
+  final MetricsHistogram splitSize = new MetricsHistogram("splitSize", registry);
 
   /**
     * Regions in Transition metrics such as number of RIT regions, oldest
@@ -122,8 +120,8 @@ public class MasterMetrics implements Updater {
       if (this.extendedPeriod > 0 &&
           this.lastUpdate - this.lastExtUpdate >= this.extendedPeriod) {
         this.lastExtUpdate = this.lastUpdate;
-        this.splitTime.resetMinMaxAvg();
-        this.splitSize.resetMinMaxAvg();
+        this.splitTime.clear();
+        this.splitSize.clear();
         this.resetAllMinMax();
       }
 
@@ -147,8 +145,8 @@ public class MasterMetrics implements Updater {
    * @param size length of original HLogs that were split
    */
   public synchronized void addSplit(long time, long size) {
-    splitTime.inc(time);
-    splitSize.inc(size);
+    splitTime.update(time);
+    splitSize.update(size);
   }
 
   /**
