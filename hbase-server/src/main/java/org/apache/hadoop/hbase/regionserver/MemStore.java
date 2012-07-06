@@ -679,8 +679,8 @@ public class MemStore implements HeapSize {
     private Iterator<KeyValue> snapshotIt;
 
     // The kvset and snapshot at the time of creating this scanner
-    volatile KeyValueSkipListSet kvsetAtCreation;
-    volatile KeyValueSkipListSet snapshotAtCreation;
+    private KeyValueSkipListSet kvsetAtCreation;
+    private KeyValueSkipListSet snapshotAtCreation;
 
     // Sub lists on which we're iterating
     private SortedSet<KeyValue> kvTail;
