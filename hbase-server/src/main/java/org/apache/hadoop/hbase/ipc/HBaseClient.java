@@ -39,8 +39,8 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Random;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -53,23 +53,23 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.DataOutputOutputStream;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
+import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.AuthMethod;
 import org.apache.hadoop.hbase.security.KerberosInfo;
 import org.apache.hadoop.hbase.security.TokenInfo;
-import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.AuthMethod;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSelector;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.hbase.io.DataOutputOutputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -96,8 +96,8 @@ import com.google.protobuf.ByteString;
 @InterfaceAudience.Private
 public class HBaseClient {
 
-  private static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.ipc.HBaseClient");
+  private static final Log LOG = LogFactory
+      .getLog("org.apache.hadoop.ipc.HBaseClient");
   protected final PoolMap<ConnectionId, Connection> connections;
 
   protected final Class<? extends Writable> valueClass;   // class of call values
@@ -869,7 +869,7 @@ public class HBaseClient {
 
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + id);
-        Call call = calls.remove(id);
+        Call call = calls.get(id);
 
         Status status = response.getStatus();
         if (status == Status.SUCCESS) {
@@ -883,12 +883,14 @@ public class HBaseClient {
           if (call != null) {
             call.setValue(value);
           }
+          calls.remove(id);
         } else if (status == Status.ERROR) {
           if (call != null) {
             //noinspection ThrowableInstanceNeverThrown
             call.setException(new RemoteException(
                 response.getException().getExceptionName(),
                 response.getException().getStackTrace()));
+            calls.remove(id);
           }
         } else if (status == Status.FATAL) {
           // Close the connection
