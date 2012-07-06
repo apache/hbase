@@ -1293,7 +1293,7 @@ public class HLogSplitter {
 
       boolean progress_failed = false;
       try {
-        for (int i = 0; i < logWriters.size(); i++) {
+        for (int i = 0, n = logWriters.size(); i < n; i++) {
           Future<Void> future = completionService.take();
           future.get();
           if (!progress_failed && !reportProgressIfIsDistributedLogSplitting()) {
@@ -1327,18 +1327,36 @@ public class HLogSplitter {
         if (thrown == null) {
           thrown = Lists.newArrayList();
         }
-        for (WriterAndPath wap : logWriters.values()) {
-          try {
-            wap.w.close();
-          } catch (IOException ioe) {
-            LOG.error("Couldn't close log at " + wap.p, ioe);
-            thrown.add(ioe);
-            continue;
+        try {
+          for (WriterThread t : writerThreads) {
+            while (t.isAlive()) {
+              t.shouldStop = true;
+              t.interrupt();
+              try {
+                t.join(10);
+              } catch (InterruptedException e) {
+                IOException iie = new InterruptedIOException();
+                iie.initCause(e);
+                throw iie;
+              }
+            }
           }
-          LOG.info("Closed path " + wap.p + " (wrote " + wap.editsWritten
-              + " edits in " + (wap.nanosSpent / 1000 / 1000) + "ms)");
+        } finally {
+          synchronized (logWriters) {
+            for (WriterAndPath wap : logWriters.values()) {
+              try {
+                wap.w.close();
+              } catch (IOException ioe) {
+                LOG.error("Couldn't close log at " + wap.p, ioe);
+                thrown.add(ioe);
+                continue;
+              }
+              LOG.info("Closed path " + wap.p + " (wrote " + wap.editsWritten
+                  + " edits in " + (wap.nanosSpent / 1000 / 1000) + "ms)");
+            }
+          }
+          logWritersClosed = true;
         }
-        logWritersClosed = true;
       }
       return thrown;
     }
@@ -1423,11 +1441,6 @@ public class HLogSplitter {
     long editsWritten = 0;
     /* Number of nanos spent writing to this log */
     long nanosSpent = 0;
-    
-    /* To check whether a close has already been tried on the
-     * writer
-     */
-    boolean writerClosed = false;
 
     WriterAndPath(final Path p, final Writer w) {
       this.p = p;
