@@ -402,7 +402,7 @@ public class HConnectionManager {
    * added to the {@link HConnectionKey#properties} list.
    *
    */
-  static class HConnectionKey {
+  public static class HConnectionKey {
     public static String[] CONNECTION_PROPERTIES = new String[] {
         HConstants.ZOOKEEPER_QUORUM, HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.ZOOKEEPER_CLIENT_PORT,
