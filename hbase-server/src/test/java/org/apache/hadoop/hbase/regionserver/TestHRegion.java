@@ -151,6 +151,56 @@ public class TestHRegion extends HBaseTestCase {
   // /tmp/testtable
   //////////////////////////////////////////////////////////////////////////////
 
+  public void testCompactionAffectedByScanners() throws Exception {
+    String method = "testCompactionAffectedByScanners";
+    byte[] tableName = Bytes.toBytes(method);
+    byte[] family = Bytes.toBytes("family");
+    Configuration conf = HBaseConfiguration.create();
+    this.region = initHRegion(tableName, method, conf, family);
+
+    Put put = new Put(Bytes.toBytes("r1"));
+    put.add(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
+    region.put(put);
+    region.flushcache();
+
+
+    Scan scan = new Scan();
+    scan.setMaxVersions(3);
+    // open the first scanner
+    RegionScanner scanner1 = region.getScanner(scan);
+
+    Delete delete = new Delete(Bytes.toBytes("r1"));
+    region.delete(delete, null, false);
+    region.flushcache();
+
+    // open the second scanner
+    RegionScanner scanner2 = region.getScanner(scan);
+
+    List<KeyValue> results = new ArrayList<KeyValue>();
+
+    System.out.println("Smallest read point:" + region.getSmallestReadPoint());
+
+    // make a major compaction
+    region.compactStores(true);
+
+    // open the third scanner
+    RegionScanner scanner3 = region.getScanner(scan);
+
+    // get data from scanner 1, 2, 3 after major compaction
+    scanner1.next(results);
+    System.out.println(results);
+    assertEquals(1, results.size());
+
+    results.clear();
+    scanner2.next(results);
+    System.out.println(results);
+    assertEquals(0, results.size());
+
+    results.clear();
+    scanner3.next(results);
+    System.out.println(results);
+    assertEquals(0, results.size());
+  }
 
   public void testSkipRecoveredEditsReplay() throws Exception {
     String method = "testSkipRecoveredEditsReplay";

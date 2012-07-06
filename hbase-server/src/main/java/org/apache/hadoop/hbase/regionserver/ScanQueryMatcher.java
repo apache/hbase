@@ -293,10 +293,9 @@ public class ScanQueryMatcher {
         }
         // Can't early out now, because DelFam come before any other keys
       }
-      if (retainDeletesInOutput ||
-          (!isUserScan &&
-              (EnvironmentEdgeManager.currentTimeMillis() - timestamp) <= 
-              timeToPurgeDeletes)) {
+      if (retainDeletesInOutput
+          || (!isUserScan && (EnvironmentEdgeManager.currentTimeMillis() - timestamp) <= timeToPurgeDeletes)
+          || kv.getMemstoreTS() > maxReadPointToTrackVersions) {
         // always include or it is not time yet to check whether it is OK
         // to purge deltes or not
         return MatchCode.INCLUDE;
