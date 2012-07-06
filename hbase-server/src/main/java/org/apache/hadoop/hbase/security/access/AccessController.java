@@ -664,6 +664,10 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> c, byte[] tableName)
       throws IOException {
+    if (Bytes.equals(tableName, AccessControlLists.ACL_GLOBAL_NAME)) {
+      throw new AccessDeniedException("Not allowed to disable "
+          + AccessControlLists.ACL_TABLE_NAME_STR + " table.");
+    }
     requirePermission(tableName, null, null, Action.ADMIN, Action.CREATE);
   }
 

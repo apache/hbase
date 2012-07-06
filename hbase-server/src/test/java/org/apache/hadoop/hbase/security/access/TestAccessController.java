@@ -306,8 +306,19 @@ public class TestAccessController {
       }
     };
 
+    PrivilegedExceptionAction disableAclTable = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preDisableTable(ObserverContext.createAndPrepare(CP_ENV, null),
+            AccessControlLists.ACL_TABLE_NAME);
+        return null;
+      }
+    };
+
     verifyAllowed(disableTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER);
     verifyDenied(disableTable, USER_RW, USER_RO, USER_NONE);
+    
+    // No user should be allowed to disable _acl_ table
+    verifyDenied(disableAclTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_RW, USER_RO);
   }
 
   @Test
