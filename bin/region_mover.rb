@@ -213,6 +213,16 @@ def stripServer(servers, hostname)
   return servername
 end
 
+# Returns a new serverlist that excludes the servername whose hostname portion
+# matches from the passed array of servers.
+def stripExcludes(servers, excludefile)
+  excludes = readExcludes(excludefile)
+  servers =  servers.find_all{|server| !excludes.contains(getHostnameFromServerName(server)) }
+  # return updated servers list
+  return servers
+end
+
+
 # Return servername that matches passed hostname
 def getServerName(servers, hostname)
   servername = nil
@@ -309,6 +319,10 @@ def unloadRegions(options, hostname)
   # Remove the server we are unloading from from list of servers.
   # Side-effect is the servername that matches this hostname 
   servername = stripServer(servers, hostname)
+
+  # Remove the servers in our exclude list from list of servers.
+  servers = stripExcludes(servers, options[:excludesFile])
+  puts "Valid region move targets: ", servers
   movedRegions = java.util.ArrayList.new()
   while true
     rs = getRegions(config, servername)
@@ -383,6 +397,29 @@ def loadRegions(options, hostname)
   end
 end
 
+# Returns an array of hosts to exclude as region move targets
+def readExcludes(filename)
+  if filename == nil
+    return java.util.ArrayList.new()
+  end 
+  if ! File.exist?(filename)  
+      puts "Error: Unable to read host exclude file: ", filename
+      raise RuntimeError
+  end 
+
+  f = File.new(filename, "r")
+  # Read excluded hosts list
+  excludes = java.util.ArrayList.new()
+  while (line = f.gets)
+    line.strip! # do an inplace drop of pre and post whitespaces
+    excludes.add(line) unless line.empty? # exclude empty lines
+  end
+  puts "Excluding hosts as region move targets: ", excludes
+  f.close
+  
+  return excludes
+end
+
 def getFilename(options, targetServer)
   filename = options[:file]
   if not filename
@@ -408,6 +445,9 @@ optparse = OptionParser.new do |opts|
   options[:debug] = false
   opts.on('-d', '--debug', 'Display extra debug logging') do
     options[:debug] = true
+  end
+  opts.on('-x', '--excludefile=FILE', 'File with hosts-per-line to exclude as unload targets; default excludes only target host; useful for rack decommisioning.') do |file|
+    options[:excludesFile] = file
   end
 end
 optparse.parse!
