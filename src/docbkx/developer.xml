@@ -87,7 +87,8 @@ git clone git://git.apache.org/hbase.git
             and then close Eclipse and execute...
             <programlisting>mvn eclipse:eclipse</programlisting>
             ... from your local HBase project directory in your workspace to generate some new <filename>.project</filename> 
-            and <filename>.classpath</filename>files.  Then reopen Eclipse, and import the .project file in the HBase directory to a workspace.
+            and <filename>.classpath</filename>files.  Then reopen Eclipse, or refresh your eclipse project (F5), and import
+            the .project file in the HBase directory to a workspace.
             </para>
             </section>
             <section xml:id="eclipse.maven.class">
