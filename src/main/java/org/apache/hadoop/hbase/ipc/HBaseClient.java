@@ -68,8 +68,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 public class HBaseClient {
 
-  private static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.ipc.HBaseClient");
+  private static final Log LOG = LogFactory
+      .getLog("org.apache.hadoop.ipc.HBaseClient");
   protected final PoolMap<ConnectionId, Connection> connections;
 
   protected final Class<? extends Writable> valueClass;   // class of call values
@@ -572,7 +572,7 @@ public class HBaseClient {
 
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + id);
-        Call call = calls.remove(id);
+        Call call = calls.get(id);
 
         // Read the flag byte
         byte flag = in.readByte();
@@ -597,6 +597,7 @@ public class HBaseClient {
             call.setValue(value);
           }
         }
+        calls.remove(id);
       } catch (IOException e) {
         if (e instanceof SocketTimeoutException && remoteId.rpcTimeout > 0) {
           // Clean up open calls but don't treat this as a fatal condition,
