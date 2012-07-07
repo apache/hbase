@@ -87,6 +87,7 @@ Release 0.92.2 - Unreleased
    HBASE-6265  Calling getTimestamp() on a KV in cp.prePut() causes KV not to be flushed
    HBASE-6281  Assignment need not be called for disabling table regions
                during clean cluster start up (Rajesh Babu)
+   HBASE-6313  Client hangs because the client is not notified (binlijin)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
