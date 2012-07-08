@@ -67,6 +67,13 @@ class SplitRequest implements Runnable {
         st.execute(this.server, this.server);
         this.server.getMetrics().incrementSplitSuccessCount();
       } catch (Exception e) {
+        if (this.server.isStopping() || this.server.isStopped()) {
+          LOG.info(
+              "Skip rollback/cleanup of failed split of "
+                  + parent.getRegionNameAsString() + " because server is"
+                  + (this.server.isStopping() ? " stopping" : " stopped"), e);
+          return;
+        }
         try {
           LOG.info("Running rollback/cleanup of failed split of " +
             parent.getRegionNameAsString() + "; " + e.getMessage(), e);
