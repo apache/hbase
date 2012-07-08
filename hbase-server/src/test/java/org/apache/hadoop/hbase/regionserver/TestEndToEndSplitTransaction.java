@@ -136,7 +136,8 @@ public class TestEndToEndSplitTransaction {
     assertTrue(test(con, tableName, lastRow, server));
 
     // 4. phase III
-    split.transitionZKNode(server, regions.getFirst(), regions.getSecond());
+    split.transitionZKNode(server, server, regions.getFirst(),
+        regions.getSecond());
     assertTrue(test(con, tableName, firstRow, server));
     assertTrue(test(con, tableName, lastRow, server));
   }

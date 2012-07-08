@@ -342,11 +342,6 @@ public class SplitTransaction {
     boolean stopping = services != null && services.isStopping();
     // TODO: Is this check needed here?
     if (stopped || stopping) {
-      // add 2nd daughter first (see HBASE-4335)
-      MetaEditor.addDaughter(server.getCatalogTracker(),
-          b.getRegionInfo(), services.getServerName());
-      MetaEditor.addDaughter(server.getCatalogTracker(),
-          a.getRegionInfo(), services.getServerName());
       LOG.info("Not opening daughters " +
           b.getRegionInfo().getRegionNameAsString() +
           " and " +
@@ -397,7 +392,8 @@ public class SplitTransaction {
    * @param a second daughter region
    * @throws IOException If thrown, transaction failed. Call {@link #rollback(Server, RegionServerServices)}
    */
-  /* package */void transitionZKNode(final Server server, HRegion a, HRegion b)
+  /* package */void transitionZKNode(final Server server,
+      final RegionServerServices services, HRegion a, HRegion b)
       throws IOException {
     // Tell master about split by updating zk.  If we fail, abort.
     if (server != null && server.getZooKeeper() != null) {
@@ -421,7 +417,8 @@ public class SplitTransaction {
             parent.getRegionInfo(), a.getRegionInfo(), b.getRegionInfo(),
             server.getServerName(), this.znodeVersion);
           spins++;
-        } while (this.znodeVersion != -1);
+        } while (this.znodeVersion != -1 && !server.isStopped()
+            && !services.isStopping());
       } catch (Exception e) {
         if (e instanceof InterruptedException) {
           Thread.currentThread().interrupt();
@@ -455,7 +452,7 @@ public class SplitTransaction {
   throws IOException {
     PairOfSameType<HRegion> regions = createDaughters(server, services);
     openDaughters(server, services, regions.getFirst(), regions.getSecond());
-    transitionZKNode(server, regions.getFirst(), regions.getSecond());
+    transitionZKNode(server, services, regions.getFirst(), regions.getSecond());
     return regions;
   }
 

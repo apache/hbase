@@ -872,6 +872,11 @@ public class  HRegionServer implements ClientProtocol,
       this.hbaseMaster = null;
     }
     this.leases.close();
+
+    if (!killed) {
+      join();
+    }
+
     try {
       deleteMyEphemeralNode();
     } catch (KeeperException e) {
@@ -884,9 +889,6 @@ public class  HRegionServer implements ClientProtocol,
     LOG.info("stopping server " + this.serverNameFromMasterPOV +
       "; zookeeper connection closed.");
 
-    if (!killed) {
-      join();
-    }
     LOG.info(Thread.currentThread().getName() + " exiting");
   }
 
@@ -1634,6 +1636,7 @@ public class  HRegionServer implements ClientProtocol,
   public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct,
       final boolean daughter)
   throws KeeperException, IOException {
+    checkOpen();
     LOG.info("Post open deploy tasks for region=" + r.getRegionNameAsString() +
       ", daughter=" + daughter);
     // Do checks to see if we need to compact (references or too many files)
