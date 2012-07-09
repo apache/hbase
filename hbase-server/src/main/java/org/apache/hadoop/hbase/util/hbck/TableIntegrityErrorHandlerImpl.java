@@ -53,6 +53,13 @@ abstract public class TableIntegrityErrorHandlerImpl implements
   @Override
   public void handleRegionStartKeyNotEmpty(HbckInfo hi) throws IOException {
   }
+  
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void handleRegionEndKeyNotEmpty(byte[] curEndKey) throws IOException {
+  }
 
   /**
    * {@inheritDoc}
