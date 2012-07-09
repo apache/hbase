@@ -41,7 +41,7 @@
     <link href="/static/css/hbase.css" rel="stylesheet">
     <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
     <!--[if lt IE 9]>
-      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+      <script src="/static/js/html5shiv.js"></script>
     <![endif]-->
   </head>
 
@@ -98,5 +98,8 @@
 </table>
 <% } %>
 </div>
+<script src="/static/js/jquery.min.js" type="text/javascript"></script>
+<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
+
 </body>
 </html>
