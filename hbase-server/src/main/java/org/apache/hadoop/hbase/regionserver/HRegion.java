@@ -3342,9 +3342,9 @@ public class HRegion implements HeapSize { // , Writable{
 
       // validation failed because of some sort of IO problem.
       if (ioes.size() != 0) {
-        LOG.error("There were IO errors when checking if bulk load is ok.  " +
-            "throwing exception!");
-        throw MultipleIOException.createIOException(ioes);
+        IOException e = MultipleIOException.createIOException(ioes);
+        LOG.error("There were one or more IO errors when checking if the bulk load is ok.", e);
+        throw e;
       }
 
       for (Pair<byte[], String> p : familyPaths) {
@@ -3354,12 +3354,12 @@ public class HRegion implements HeapSize { // , Writable{
         try {
           store.bulkLoadHFile(path);
         } catch (IOException ioe) {
-          // a failure here causes an atomicity violation that we currently
-          // cannot recover from since it is likely a failed hdfs operation.
+          // A failure here can cause an atomicity violation that we currently
+          // cannot recover from since it is likely a failed HDFS operation.
 
           // TODO Need a better story for reverting partial failures due to HDFS.
           LOG.error("There was a partial failure due to IO when attempting to" +
-              " load " + Bytes.toString(p.getFirst()) + " : "+ p.getSecond());
+              " load " + Bytes.toString(p.getFirst()) + " : "+ p.getSecond(), ioe);
           throw ioe;
         }
       }

@@ -564,14 +564,14 @@ public class Store extends SchemaConfigured implements HeapSize {
   void bulkLoadHFile(String srcPathStr) throws IOException {
     Path srcPath = new Path(srcPathStr);
 
-    // Move the file if it's on another filesystem
+    // Copy the file if it's on another filesystem
     FileSystem srcFs = srcPath.getFileSystem(conf);
     if (!srcFs.equals(fs)) {
-      LOG.info("File " + srcPath + " on different filesystem than " +
-          "destination store - moving to this filesystem.");
+      LOG.info("Bulk-load file " + srcPath + " is on different filesystem than " +
+          "the destination store. Copying file over to destination filesystem.");
       Path tmpPath = getTmpPath();
       FileUtil.copy(srcFs, srcPath, fs, tmpPath, false, conf);
-      LOG.info("Copied to temporary path on dst filesystem: " + tmpPath);
+      LOG.info("Copied " + srcPath + " to temporary path on destination filesystem: " + tmpPath);
       srcPath = tmpPath;
     }
 
@@ -585,7 +585,7 @@ public class Store extends SchemaConfigured implements HeapSize {
 
     sf.createReader();
 
-    LOG.info("Moved hfile " + srcPath + " into store directory " +
+    LOG.info("Moved HFile " + srcPath + " into store directory " +
         homedir + " - updating store file list.");
 
     // Append the new storefile into the list
