@@ -1016,6 +1016,62 @@ public class TestHBaseFsck {
   }
 
   /**
+   * This creates and fixes a bad table with a missing region which is the 1st region -- hole in
+   * meta and data missing in the fs.
+   */
+  @Test
+  public void testMissingFirstRegion() throws Exception {
+    String table = "testMissingFirstRegion";
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // Mess it up by leaving a hole in the assignment, meta, and hdfs data
+      TEST_UTIL.getHBaseAdmin().disableTable(table);
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes(""), Bytes.toBytes("A"), true,
+          true, true);
+      TEST_UTIL.getHBaseAdmin().enableTable(table);
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.FIRST_REGION_STARTKEY_NOT_EMPTY });
+      // fix hole
+      doFsck(conf, true);
+      // check that hole fixed
+      assertNoErrors(doFsck(conf, false));
+    } finally {
+      deleteTable(table);
+    }
+  }
+  
+  /**
+   * This creates and fixes a bad table with missing last region -- hole in meta and data missing in
+   * the fs.
+   */
+  @Test
+  public void testMissingLastRegion() throws Exception {
+    String table = "testMissingLastRegion";
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // Mess it up by leaving a hole in the assignment, meta, and hdfs data
+      TEST_UTIL.getHBaseAdmin().disableTable(table);
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("C"), Bytes.toBytes(""), true,
+          true, true);
+      TEST_UTIL.getHBaseAdmin().enableTable(table);
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.LAST_REGION_ENDKEY_NOT_EMPTY });
+      // fix hole
+      doFsck(conf, true);
+      // check that hole fixed
+      assertNoErrors(doFsck(conf, false));
+    } finally {
+      deleteTable(table);
+    }
+  }
+
+  /**
    * A split parent in meta, in hdfs, and not deployed
    */
   @Test

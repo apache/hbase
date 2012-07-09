@@ -48,6 +48,15 @@ public interface TableIntegrityErrorHandler {
    *    has an empty start key.
    */
   void handleRegionStartKeyNotEmpty(HbckInfo hi) throws IOException;
+  
+  /**
+   * Callback for handling case where a Table has a last region that does not
+   * have an empty end key.
+   *
+   * @param curEndKey The end key of the current last region. There should be a new region
+   *    with start key as this and an empty end key.
+   */
+  void handleRegionEndKeyNotEmpty(byte[] curEndKey) throws IOException;
 
   /**
    * Callback for handling a region that has the same start and end key.

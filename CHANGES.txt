@@ -37,6 +37,7 @@ Release 0.90.7 - Unreleased
    HBASE-6190  TestPriorityCompactionQueue throws NPE 
    HBASE-6200  KeyComparator.compareWithoutRow can be wrong when families have the same prefix (Jieshan)
    HBASE-5904  Revert HBASE-5155 - is_enabled from shell returns differently breaking compatibility. (David S. Wang)
+   HBASE-4379  [hbck] Does not complain about tables with no end region [z,] (Anoop Sam John)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
