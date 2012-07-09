@@ -88,6 +88,7 @@ Release 0.92.2 - Unreleased
    HBASE-6281  Assignment need not be called for disabling table regions
                during clean cluster start up (Rajesh Babu)
    HBASE-6313  Client hangs because the client is not notified (binlijin)
+   HBASE-4379  [hbck] Does not complain about tables with no end region [z,] (Anoop Sam John)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)

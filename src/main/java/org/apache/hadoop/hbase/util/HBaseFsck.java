@@ -1692,6 +1692,13 @@ public class HBaseFsck {
             + " create a new region and regioninfo in HDFS to plug the hole.",
             getTableInfo(), hi);
       }
+      
+      @Override
+      public void handleRegionEndKeyNotEmpty(byte[] curEndKey) throws IOException {
+        errors.reportError(ERROR_CODE.LAST_REGION_ENDKEY_NOT_EMPTY,
+            "Last region should end with an empty key. You need to "
+                + "create a new region and regioninfo in HDFS to plug the hole.", getTableInfo());
+      }
 
       @Override
       public void handleDegenerateRegion(HbckInfo hi) throws IOException{
@@ -1777,6 +1784,21 @@ public class HBaseFsck {
         fixes++;
       }
 
+      public void handleRegionEndKeyNotEmpty(byte[] curEndKey) throws IOException {
+        errors.reportError(ERROR_CODE.LAST_REGION_ENDKEY_NOT_EMPTY,
+            "Last region should end with an empty key. Creating a new "
+                + "region and regioninfo in HDFS to plug the hole.", getTableInfo());
+        HTableDescriptor htd = getTableInfo().getHTD();
+        // from curEndKey to EMPTY_START_ROW
+        HRegionInfo newRegion = new HRegionInfo(htd.getName(), curEndKey,
+            HConstants.EMPTY_START_ROW);
+
+        HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
+        LOG.info("Table region end key was not empty. Created new empty region: " + newRegion
+            + " " + region);
+        fixes++;
+      }
+      
       /**
        * There is a hole in the hdfs regions that violates the table integrity
        * rules.  Create a new empty region that patches the hole.
@@ -1946,6 +1968,12 @@ public class HBaseFsck {
      * @throws IOException
      */
     public boolean checkRegionChain(TableIntegrityErrorHandler handler) throws IOException {
+      // When table is disabled no need to check for the region chain. Some of the regions
+      // accidently if deployed, this below code might report some issues like missing start
+      // or end regions or region hole in chain and may try to fix which is unwanted.
+      if (disabledTables.contains(this.tableName.getBytes())) {
+        return true;
+      }
       int originalErrorsCount = errors.getErrorList().size();
       Multimap<byte[], HbckInfo> regions = sc.calcCoverage();
       SortedSet<byte[]> splits = sc.getSplits();
@@ -2017,6 +2045,12 @@ public class HBaseFsck {
         prevKey = key;
       }
 
+      // When the last region of a table is proper and having an empty end key, 'prevKey'
+      // will be null.
+      if (prevKey != null) {
+        handler.handleRegionEndKeyNotEmpty(prevKey);
+      }
+      
       for (Collection<HbckInfo> overlap : overlapGroups.asMap().values()) {
         handler.handleOverlapGroup(overlap);
       }
@@ -2527,7 +2561,7 @@ public class HBaseFsck {
       UNKNOWN, NO_META_REGION, NULL_ROOT_REGION, NO_VERSION_FILE, NOT_IN_META_HDFS, NOT_IN_META,
       NOT_IN_META_OR_DEPLOYED, NOT_IN_HDFS_OR_DEPLOYED, NOT_IN_HDFS, SERVER_DOES_NOT_MATCH_META, NOT_DEPLOYED,
       MULTI_DEPLOYED, SHOULD_NOT_BE_DEPLOYED, MULTI_META_REGION, RS_CONNECT_FAILURE,
-      FIRST_REGION_STARTKEY_NOT_EMPTY, DUPE_STARTKEYS,
+      FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT
     }
@@ -2535,6 +2569,7 @@ public class HBaseFsck {
     public void report(String message);
     public void reportError(String message);
     public void reportError(ERROR_CODE errorCode, String message);
+    public void reportError(ERROR_CODE errorCode, String message, TableInfo table);
     public void reportError(ERROR_CODE errorCode, String message, TableInfo table, HbckInfo info);
     public void reportError(ERROR_CODE errorCode, String message, TableInfo table, HbckInfo info1, HbckInfo info2);
     public int summarize();
@@ -2570,6 +2605,11 @@ public class HBaseFsck {
       showProgress = 0;
     }
 
+    public synchronized void reportError(ERROR_CODE errorCode, String message, TableInfo table) {
+      errorTables.add(table);
+      reportError(errorCode, message);
+    }
+    
     public synchronized void reportError(ERROR_CODE errorCode, String message, TableInfo table,
                                          HbckInfo info) {
       errorTables.add(table);
