@@ -228,6 +228,7 @@ Bug
     [HBASE-5897] - prePut coprocessor hook causing substantial CPU usage
     [HBASE-5908] - TestHLogSplit.testTralingGarbageCorruptionFileSkipErrorsPasses should not use append to corrupt the HLog
     [HBASE-6265] - Calling getTimestamp() on a KV in cp.prePut() causes KV not to be flushed
+    [HBASE-6357] - Failed distributed log splitting stuck on master web UI
 
 Improvement
 
