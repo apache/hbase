@@ -266,8 +266,10 @@ public class SplitLogManager extends ZooKeeperListener {
       SplitLogCounters.tot_mgr_log_split_batch_err.incrementAndGet();
       LOG.warn("error while splitting logs in " + logDirs +
       " installed = " + batch.installed + " but only " + batch.done + " done");
-      throw new IOException("error or interrupt while splitting logs in "
-          + logDirs + " Task = " + batch);
+      String msg = "error or interrupted while splitting logs in "
+        + logDirs + " Task = " + batch;
+      status.abort(msg);
+      throw new IOException(msg);
     }
     for(Path logDir: logDirs){
       status.setStatus("Cleaning up log directory...");
