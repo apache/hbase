@@ -2839,10 +2839,19 @@ public class HRegion implements HeapSize { // , Writable{
       try {
         seqid = replayRecoveredEdits(edits, maxSeqIdInStores, reporter);
       } catch (IOException e) {
-        boolean skipErrors = conf.getBoolean("hbase.skip.errors", false);
+        boolean skipErrors = conf.getBoolean(
+            HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS,
+            conf.getBoolean(
+                "hbase.skip.errors",
+                HConstants.DEFAULT_HREGION_EDITS_REPLAY_SKIP_ERRORS));
+        if (conf.get("hbase.skip.errors") != null) {
+          LOG.warn(
+              "The property 'hbase.skip.errors' has been deprecated. Please use " +
+              HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + " instead.");
+        }
         if (skipErrors) {
           Path p = HLog.moveAsideBadEditsFile(fs, edits);
-          LOG.error("hbase.skip.errors=true so continuing. Renamed " + edits +
+          LOG.error(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS"=true so continuing. Renamed " + edits +
             " as " + p, e);
         } else {
           throw e;
