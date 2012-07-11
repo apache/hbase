@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.MultiResponse;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
@@ -2018,15 +2019,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
 
       @SuppressWarnings("unchecked")
-      Pair<Put, Integer>[] putsWithLocks = new Pair[puts.size()];
+      Pair<Mutation, Integer>[] putsWithLocks = new Pair[puts.size()];
 
       for (Put p : puts) {
         Integer lock = getLockFromId(p.getLockId());
-        putsWithLocks[i++] = new Pair<Put, Integer>(p, lock);
+        putsWithLocks[i++] = new Pair<Mutation, Integer>(p, lock);
       }
 
       this.requestCount.addAndGet(puts.size());
-      OperationStatus codes[] = region.put(putsWithLocks);
+      OperationStatus codes[] = region.batchMutate(putsWithLocks);
       for (i = 0; i < codes.length; i++) {
         if (codes[i].getOperationStatusCode() != OperationStatusCode.SUCCESS) {
           return i;
@@ -3376,20 +3377,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // actions in the list.
       Collections.sort(actionsForRegion);
       Row action;
-      List<Action<R>> puts = new ArrayList<Action<R>>();
+      List<Action<R>> mutations = new ArrayList<Action<R>>();
       for (Action<R> a : actionsForRegion) {
         action = a.getAction();
         int originalIndex = a.getOriginalIndex();
 
         try {
-          if (action instanceof Delete) {
-            delete(regionName, (Delete)action);
-            response.add(regionName, originalIndex, new Result());
+          if (action instanceof Delete || action instanceof Put) {
+            mutations.add(a); 
           } else if (action instanceof Get) {
             response.add(regionName, originalIndex,
                 get(regionName, (Get)action));
-          } else if (action instanceof Put) {
-            puts.add(a);  // wont throw.
           } else if (action instanceof Exec) {
             ExecResult result = execCoprocessor(regionName, (Exec)action);
             response.add(regionName, new Pair<Integer, Object>(
@@ -3418,7 +3416,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // We do the puts with result.put so we can get the batching efficiency
       // we so need. All this data munging doesn't seem great, but at least
       // we arent copying bytes or anything.
-      if (!puts.isEmpty()) {
+      if (!mutations.isEmpty()) {
         try {
           HRegion region = getRegion(regionName);
 
@@ -3426,30 +3424,30 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             this.cacheFlusher.reclaimMemStoreMemory();
           }
 
-          List<Pair<Put,Integer>> putsWithLocks =
-              Lists.newArrayListWithCapacity(puts.size());
-          for (Action<R> a : puts) {
-            Put p = (Put) a.getAction();
+          List<Pair<Mutation,Integer>> mutationsWithLocks =
+              Lists.newArrayListWithCapacity(mutations.size());
+          for (Action<R> a : mutations) {
+            Mutation m = (Mutation) a.getAction();
 
             Integer lock;
             try {
-              lock = getLockFromId(p.getLockId());
+              lock = getLockFromId(m.getLockId());
             } catch (UnknownRowLockException ex) {
               response.add(regionName, a.getOriginalIndex(), ex);
               continue;
             }
-            putsWithLocks.add(new Pair<Put, Integer>(p, lock));
+            mutationsWithLocks.add(new Pair<Mutation, Integer>(m, lock));
           }
 
-          this.requestCount.addAndGet(puts.size());
+          this.requestCount.addAndGet(mutations.size());
 
           OperationStatus[] codes =
-              region.put(putsWithLocks.toArray(new Pair[]{}));
+              region.batchMutate(mutationsWithLocks.toArray(new Pair[]{}));
 
           for( int i = 0 ; i < codes.length ; i++) {
             OperationStatus code = codes[i];
 
-            Action<R> theAction = puts.get(i);
+            Action<R> theAction = mutations.get(i);
             Object result = null;
 
             if (code.getOperationStatusCode() == OperationStatusCode.SUCCESS) {
@@ -3464,7 +3462,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           }
         } catch (IOException ioe) {
           // fail all the puts with the ioe in question.
-          for (Action<R> a: puts) {
+          for (Action<R> a: mutations) {
             response.add(regionName, a.getOriginalIndex(), ioe);
           }
         }
