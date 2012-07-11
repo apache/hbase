@@ -139,10 +139,8 @@ public class SplitLogManager extends ZooKeeperListener {
     this(zkw, conf, stopper, serverName, new TaskFinisher() {
       @Override
       public Status finish(ServerName workerName, String logfile) {
-        String tmpname =
-          ZKSplitLog.getSplitLogDirTmpComponent(workerName.toString(), logfile);
         try {
-          HLogSplitter.moveRecoveredEditsFromTemp(tmpname, logfile, conf);
+          HLogSplitter.finishSplitLogFile(logfile, conf);
         } catch (IOException e) {
           LOG.warn("Could not finish splitting of log file " + logfile);
           return Status.ERR;

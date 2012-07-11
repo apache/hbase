@@ -660,10 +660,10 @@ public class TestWALReplay {
     wal.completeCacheFlush(hri.getEncodedNameAsBytes(), hri.getTableName(), sequenceNumber, false);
     wal.close();
     FileStatus[] listStatus = this.fs.listStatus(wal.getDir());
-    HLogSplitter.splitLogFileToTemp(hbaseRootDir, hbaseRootDir + "/temp", listStatus[0], this.fs,
-        this.conf, null);
-    FileStatus[] listStatus1 = this.fs.listStatus(new Path(hbaseRootDir + "/temp/" + tableNameStr
-        + "/" + hri.getEncodedName() + "/recovered.edits"));
+    HLogSplitter.splitLogFile(hbaseRootDir, listStatus[0], this.fs, this.conf,
+        null);
+    FileStatus[] listStatus1 = this.fs.listStatus(new Path(hbaseRootDir + "/"
+        + tableNameStr + "/" + hri.getEncodedName() + "/recovered.edits"));
     int editCount = 0;
     for (FileStatus fileStatus : listStatus1) {
       editCount = Integer.parseInt(fileStatus.getPath().getName());
