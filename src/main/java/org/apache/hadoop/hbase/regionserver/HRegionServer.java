@@ -248,6 +248,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   /** region server process name */
   public static final String REGIONSERVER = "regionserver";
+  
+  /** region server configuration name */
+  public static final String REGIONSERVER_CONF = "regionserver_conf";
 
   /*
    * Space is reserved in HRS constructor and then released when aborting to
@@ -1558,6 +1561,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         this.infoServer.addServlet("status", "/rs-status", RSStatusServlet.class);
         this.infoServer.addServlet("dump", "/dump", RSDumpServlet.class);
         this.infoServer.setAttribute(REGIONSERVER, this);
+        this.infoServer.setAttribute(REGIONSERVER_CONF, conf);
         this.infoServer.start();
         break;
       } catch (BindException e) {
