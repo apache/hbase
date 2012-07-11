@@ -2851,8 +2851,9 @@ public class HRegion implements HeapSize { // , Writable{
         }
         if (skipErrors) {
           Path p = HLog.moveAsideBadEditsFile(fs, edits);
-          LOG.error(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS"=true so continuing. Renamed " + edits +
-            " as " + p, e);
+          LOG.error(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS
+              + "=true so continuing. Renamed " + edits +
+              " as " + p, e);
         } else {
           throw e;
         }
