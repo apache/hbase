@@ -1016,10 +1016,9 @@ public class TestHLogSplit {
     generateHLogs(1, 10, -1);
     FileStatus logfile = fs.listStatus(hlogDir)[0];
     fs.initialize(fs.getUri(), conf);
-    HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs,
-        conf, reporter);
-    HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
-        logfile.getPath().toString(), conf);
+    HLogSplitter.splitLogFile(hbaseDir, logfile, fs, conf, reporter);
+    HLogSplitter.finishSplitLogFile(hbaseDir, oldLogDir, logfile.getPath()
+        .toString(), conf);
 
 
     Path originalLog = (fs.listStatus(oldLogDir))[0].getPath();
@@ -1046,10 +1045,9 @@ public class TestHLogSplit {
     LOG.info("Region directory is" + regiondir);
     fs.delete(regiondir, true);
     
-    HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs,
-        conf, reporter);
-    HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
-        logfile.getPath().toString(), conf);
+    HLogSplitter.splitLogFile(hbaseDir, logfile, fs, conf, reporter);
+    HLogSplitter.finishSplitLogFile(hbaseDir, oldLogDir, logfile.getPath()
+        .toString(), conf);
     
     assertTrue(!fs.exists(regiondir));
     assertTrue(true);
@@ -1065,10 +1063,9 @@ public class TestHLogSplit {
 
     fs.initialize(fs.getUri(), conf);
 
-    HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs,
-        conf, reporter);
-    HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
-        logfile.getPath().toString(), conf);
+    HLogSplitter.splitLogFile(hbaseDir, logfile, fs, conf, reporter);
+    HLogSplitter.finishSplitLogFile(hbaseDir, oldLogDir, logfile.getPath()
+        .toString(), conf);
     Path tdir = HTableDescriptor.getTableDir(hbaseDir, TABLE_NAME);
     assertFalse(fs.exists(tdir));
 
@@ -1082,10 +1079,9 @@ public class TestHLogSplit {
     FileStatus logfile = fs.listStatus(hlogDir)[0];
     fs.initialize(fs.getUri(), conf);
 
-    HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs,
-        conf, reporter);
-    HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
-        logfile.getPath().toString(), conf);
+    HLogSplitter.splitLogFile(hbaseDir, logfile, fs, conf, reporter);
+    HLogSplitter.finishSplitLogFile(hbaseDir, oldLogDir, logfile.getPath()
+        .toString(), conf);
     for (String region : regions) {
       Path recovered = getLogForRegion(hbaseDir, TABLE_NAME, region);
       assertEquals(10, countHLog(recovered, fs, conf));
@@ -1103,10 +1099,9 @@ public class TestHLogSplit {
         Corruptions.INSERT_GARBAGE_ON_FIRST_LINE, true, fs);
 
     fs.initialize(fs.getUri(), conf);
-    HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs,
-        conf, reporter);
-    HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
-        logfile.getPath().toString(), conf);
+    HLogSplitter.splitLogFile(hbaseDir, logfile, fs, conf, reporter);
+    HLogSplitter.finishSplitLogFile(hbaseDir, oldLogDir, logfile.getPath()
+        .toString(), conf);
 
     final Path corruptDir = new Path(conf.get(HConstants.HBASE_DIR), conf.get(
         "hbase.regionserver.hlog.splitlog.corrupt.dir", ".corrupt"));

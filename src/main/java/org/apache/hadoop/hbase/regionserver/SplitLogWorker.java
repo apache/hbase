@@ -108,9 +108,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         // interrupted or has encountered a transient error and when it has
         // encountered a bad non-retry-able persistent error.
         try {
-          String tmpname =
-            ZKSplitLog.getSplitLogDirTmpComponent(serverName, filename);
-          if (HLogSplitter.splitLogFileToTemp(rootdir, tmpname,
+          if (HLogSplitter.splitLogFile(rootdir,
               fs.getFileStatus(new Path(filename)), fs, conf, p) == false) {
             return Status.PREEMPTED;
           }
