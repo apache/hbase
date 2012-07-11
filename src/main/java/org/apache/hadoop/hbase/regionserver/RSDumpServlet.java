@@ -44,6 +44,10 @@ public class RSDumpServlet extends StateDumpServlet {
     HRegionServer hrs = (HRegionServer)getServletContext().getAttribute(
         HRegionServer.REGIONSERVER);
     assert hrs != null : "No RS in context!";
+    
+    Configuration hrsconf = (Configuration)getServletContext().getAttribute(
+        HRegionServer.REGIONSERVER_CONF);
+    assert hrsconf != null : "No RS conf in context";
 
     response.setContentType("text/plain");
     OutputStream os = response.getOutputStream();
@@ -80,6 +84,30 @@ public class RSDumpServlet extends StateDumpServlet {
     long tailKb = getTailKbParam(request);
     LogMonitoring.dumpTailOfLogs(out, tailKb);
     
+    out.println("\n\nRS Queue:");
+    out.println(LINE);
+    if(isShowQueueDump(hrsconf)) {
+      dumpQueue(hrs, out);
+    }
+    
     out.flush();
-  }  
+  }
+  
+  private boolean isShowQueueDump(Configuration conf){
+    return conf.getBoolean("hbase.regionserver.servlet.show.queuedump", true);
+  }
+  
+  private void dumpQueue(HRegionServer hrs, PrintWriter out)
+      throws IOException {
+    // 1. Print out Compaction/Split Queue
+    out.println("Compaction/Split Queue summary: " 
+        + hrs.compactSplitThread.toString() );
+    out.println(hrs.compactSplitThread.dumpQueue());
+
+    // 2. Print out flush Queue
+    out.println("\nFlush Queue summary: "
+        + hrs.cacheFlusher.toString());
+    out.println(hrs.cacheFlusher.dumpQueue());
+  }
+  
 }
