@@ -156,27 +156,13 @@ public class ZKSplitLog {
     return new Path(new Path(rootdir, HConstants.SPLIT_LOGDIR_NAME), tmpname);
   }
 
-  public static Path stripSplitLogTempDir(Path rootdir, Path file) {
-    int skipDepth = rootdir.depth() + 2;
-    List<String> components = new ArrayList<String>(10);
-    do {
-      components.add(file.getName());
-      file = file.getParent();
-    } while (file.depth() > skipDepth);
-    Path ret = rootdir;
-    for (int i = components.size() - 1; i >= 0; i--) {
-      ret = new Path(ret, components.get(i));
-    }
-    return ret;
-  }
-
   public static String getSplitLogDirTmpComponent(String worker, String file) {
     return (worker + "_" + ZKSplitLog.encode(file));
   }
 
-  public static void markCorrupted(Path rootdir, String tmpname,
+  public static void markCorrupted(Path rootdir, String logFileName,
       FileSystem fs) {
-    Path file = new Path(getSplitLogDir(rootdir, tmpname), "corrupt");
+    Path file = new Path(getSplitLogDir(rootdir, logFileName), "corrupt");
     try {
       fs.createNewFile(file);
     } catch (IOException e) {
@@ -185,16 +171,12 @@ public class ZKSplitLog {
     }
   }
 
-  public static boolean isCorrupted(Path rootdir, String tmpname,
+  public static boolean isCorrupted(Path rootdir, String logFileName,
       FileSystem fs) throws IOException {
-    Path file = new Path(getSplitLogDir(rootdir, tmpname), "corrupt");
+    Path file = new Path(getSplitLogDir(rootdir, logFileName), "corrupt");
     boolean isCorrupt;
     isCorrupt = fs.exists(file);
     return isCorrupt;
-  }
-
-  public static boolean isCorruptFlagFile(Path file) {
-    return file.getName().equals("corrupt");
   }
 
 
