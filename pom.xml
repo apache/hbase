@@ -395,9 +395,7 @@
             <target>${compileSource}</target>
             <showWarnings>true</showWarnings>
             <showDeprecation>false</showDeprecation>
-            <compilerArguments>
-              <Xlint:-options/>
-            </compilerArguments>
+            <compilerArgument>-Xlint:-options</compilerArgument>
           </configuration>
         </plugin>
         <!-- Test oriented plugins -->
