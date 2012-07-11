@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -118,6 +120,40 @@ public class CompactSplitThread implements CompactionRequestor {
         + largeCompactions.getQueue().size() + ":"
         + smallCompactions.getQueue().size() + ")"
         + ", split_queue=" + splits.getQueue().size();
+  }
+  
+  public String dumpQueue() {
+    StringBuffer queueLists = new StringBuffer();
+    queueLists.append("Compaction/Split Queue dump:\n");
+    queueLists.append("  LargeCompation Queue:\n");
+    BlockingQueue<Runnable> lq = largeCompactions.getQueue();
+    Iterator it = lq.iterator();
+    while(it.hasNext()){
+      queueLists.append("    "+it.next().toString());
+      queueLists.append("\n");
+    }
+    
+    if( smallCompactions != null ){
+      queueLists.append("\n");
+      queueLists.append("  SmallCompation Queue:\n");
+      lq = smallCompactions.getQueue();
+      it = lq.iterator();
+      while(it.hasNext()){
+        queueLists.append("    "+it.next().toString());
+        queueLists.append("\n");
+      }
+    }
+    
+    queueLists.append("\n");
+    queueLists.append("  Split Queue:\n");
+    lq = splits.getQueue();
+    it = lq.iterator();
+    while(it.hasNext()){
+      queueLists.append("    "+it.next().toString());
+      queueLists.append("\n");
+    }
+    
+    return queueLists.toString();
   }
 
   public synchronized boolean requestSplit(final HRegion r) {
