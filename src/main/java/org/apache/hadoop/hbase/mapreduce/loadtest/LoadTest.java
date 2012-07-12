@@ -56,6 +56,8 @@ public class LoadTest extends Configured implements Tool {
 
   private static final String DEFAULT_DATAGENERATOR =
       RandomDataGenerator.class.getName();
+  
+  public static final double DEFAULT_PROFILING_FRACTION = 0.001;
 
   public static class Map
       extends Mapper<LongWritable, Text, LongWritable, Text> {
