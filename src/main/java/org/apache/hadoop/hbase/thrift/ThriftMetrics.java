@@ -66,6 +66,8 @@ public class ThriftMetrics implements Updater {
   private MetricsTimeVaryingRate slowThriftCall =
       new MetricsTimeVaryingRate("slowThriftCall", registry);
 
+   private final ThriftMBean mbean;
+  
   public ThriftMetrics(int port, Configuration conf, Class<?> iface) {
     slowResponseTime = conf.getLong(
         SLOW_RESPONSE_NANO_SEC, DEFAULT_SLOW_RESPONSE_NANO_SEC);
@@ -79,6 +81,12 @@ public class ThriftMetrics implements Updater {
     context.registerUpdater(this);
 
     createMetricsForMethods(iface);
+    
+    mbean = new ThriftMBean(registry, CONTEXT_NAME);
+  }
+  
+  public void shutdown(){
+     mbean.shutdown();
   }
 
   public void incTimeInQueue(long time) {

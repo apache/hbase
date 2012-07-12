@@ -265,6 +265,7 @@ public class ThriftServerRunner implements Runnable {
       tserver.stop();
       tserver = null;
     }
+    metrics.shutdown();
   }
 
   /**
