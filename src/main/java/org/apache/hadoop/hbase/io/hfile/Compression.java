@@ -34,7 +34,6 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.GzipCodec;
-import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -108,15 +107,31 @@ public final class Compression {
       }
     },
     SNAPPY("snappy") {
-    	private transient CompressionCodec snappyCodec;
-	    @Override
-	    CompressionCodec getCodec(Configuration conf) {
-	      if (snappyCodec == null) {
-	        snappyCodec = new SnappyCodec();
-	        ((Configurable) snappyCodec).setConf(new Configuration(conf));
-	      }
-	      return (CompressionCodec) snappyCodec;
-	    }
+      private transient CompressionCodec snappyCodec;
+
+      @SuppressWarnings("unchecked")
+      @Override
+      CompressionCodec getCodec(Configuration conf) {
+        if (snappyCodec == null) {
+          try {
+            Class<? extends CompressionCodec> snappyCodecClass = 
+                (Class<? extends CompressionCodec>) 
+                Class.forName(CompressionCodec.class.getPackage().getName() + ".SnappyCodec");
+            snappyCodec = snappyCodecClass.newInstance();
+          } catch (InstantiationException e) {
+            LOG.error(e);
+            throw new RuntimeException(e);
+          } catch (IllegalAccessException e) {
+            LOG.error(e);
+            throw new RuntimeException(e);
+          } catch (ClassNotFoundException e) {
+            LOG.error(e);
+            throw new RuntimeException(e);
+          }
+          ((Configurable) snappyCodec).setConf(new Configuration(conf));
+        }
+        return (CompressionCodec) snappyCodec;
+      }
     },
     NONE("none") {
       @Override
