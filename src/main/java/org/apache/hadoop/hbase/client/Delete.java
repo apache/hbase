@@ -65,7 +65,7 @@ import org.apache.hadoop.io.Writable;
  * timestamp.  The constructor timestamp is not referenced.
  */
 public class Delete extends Mutation
-  implements Writable, Row, Comparable<Row> {
+  implements Writable, Comparable<Row> {
   private static final byte DELETE_VERSION = (byte)3;
 
   private static final int ADDED_WRITE_TO_WAL_VERSION = 3;
@@ -106,7 +106,7 @@ public class Delete extends Mutation
     this.row = row;
     this.ts = timestamp;
     if (rowLock != null) {
-    	this.lockId = rowLock.getLockId();
+      this.lockId = rowLock.getLockId();
     }
   }
 

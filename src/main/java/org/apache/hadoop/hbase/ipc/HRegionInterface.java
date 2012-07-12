@@ -26,11 +26,15 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Restartable;
+import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.client.MultiPutResponse;
+import org.apache.hadoop.hbase.client.MultiAction;
+import org.apache.hadoop.hbase.client.MultiResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -334,6 +338,13 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
    */
   public HServerInfo getHServerInfo() throws IOException;
 
+  /**
+   * Method used for doing multiple actions(Deletes, Gets and Puts) in one call
+   * @param multi
+   * @return MultiResult
+   * @throws IOException
+   */
+  public MultiResponse multiAction(MultiAction multi) throws IOException;
 
   /**
    * Multi put for putting multiple regions worth of puts at once.

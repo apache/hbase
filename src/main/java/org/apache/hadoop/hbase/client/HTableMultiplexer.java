@@ -391,6 +391,7 @@ public class HTableMultiplexer {
 
           if (processingList.size() > 0) {
             // Create the MultiPut object
+            // Amit: Need to change this to use multi, at some point in future.
             MultiPut mput = new MultiPut(this.addr);
             HBaseRPCOptions options = null;
             for (PutStatus putStatus: processingList) {

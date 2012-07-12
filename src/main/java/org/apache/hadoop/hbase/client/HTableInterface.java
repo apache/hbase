@@ -80,7 +80,7 @@ public interface HTableInterface {
    */
   Result get(Get get) throws IOException;
 
-	/**
+   /**
    * Extracts certain cells from the given rows, in batch.
    *
    * @param gets The objects that specify what data to fetch and from which rows.
@@ -94,9 +94,9 @@ public interface HTableInterface {
    *
    * @since 0.20.0
    */
-	public Result[] get(List<Get> gets) throws IOException;
+  public Result[] get(List<Get> gets) throws IOException;
 
-	/**
+  /**
    * Return the row that matches <i>row</i> exactly,
    * or the one that immediately precedes it.
    *
@@ -163,6 +163,7 @@ public interface HTableInterface {
    * @throws IOException if a remote or network exception occurs. In that case
    * the {@code puts} argument will contain the {@link Put} instances that
    * have not be successfully applied.
+   * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
    */
   void put(List<Put> puts) throws IOException;
@@ -224,7 +225,7 @@ public interface HTableInterface {
   /**
    * Atomically increments a column value.
    * <p>
-   * Equivalent to {@code {@link #incrementColumnValue(byte[], byte[], byte[],
+   * Equivalent to {@link #incrementColumnValue(byte[], byte[], byte[],
    * long, boolean) incrementColumnValue}(row, family, qualifier, amount,
    * <b>true</b>)}
    * @param row The row that contains the cell to increment.
@@ -289,7 +290,7 @@ public interface HTableInterface {
    * Executes all the buffered {@link Put} operations.
    * <p>
    * This method gets called once automatically for every {@link Put} or batch
-   * of {@link Put}s (when {@link #put(List<Put>)} is used) when
+   * of {@link Put}s (when <code>put(List<Put>)</code> is used) when
    * {@link #isAutoFlush} is {@code true}.
    * @throws IOException if a remote or network exception occurs.
    */
@@ -350,4 +351,8 @@ public interface HTableInterface {
    * @return A string, the current application tag
    */
   String getTag();
+
+  Result[] batchGet(List<Get> actions) throws IOException;
+
+  void batchMutate(List<Mutation> actions) throws IOException;
 }

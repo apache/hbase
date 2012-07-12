@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -255,9 +257,9 @@ public class RemoteHTable implements HTableInterface {
     client.shutdown();
   }
 
-	public Result[] get(List<Get> gets) throws IOException {
+  public Result[] get(List<Get> gets) throws IOException {
     throw new IOException("multi get is not supported here");
-	}
+  }
 
   public Result get(Get get) throws IOException {
     TimeRange range = get.getTimeRange();
@@ -603,7 +605,6 @@ public class RemoteHTable implements HTableInterface {
     throw new IOException("incrementColumnValue not supported");
   }
 
-
   @Override
   public void mutateRow(RowMutations arm) throws IOException {
     throw new IOException("atomicMutation not supported");
@@ -611,7 +612,7 @@ public class RemoteHTable implements HTableInterface {
 
   @Override
   public void mutateRow(List<RowMutations> armList)
-		throws IOException {
+    throws IOException {
     throw new IOException("atomicMutation not supported");
   }
 
@@ -629,5 +630,15 @@ public class RemoteHTable implements HTableInterface {
   @Override
   public String getTag () {
     return null;
+  }
+
+  public Result[] batchGet(List<Get> actions) throws IOException {
+    // TODO Auto-generated method stub
+    throw new IOException("batchGet not supported");
+  }
+
+  @Override
+  public void batchMutate(List<Mutation> actions) throws IOException {
+    throw new IOException("batchMutate not supported");
   }
 }

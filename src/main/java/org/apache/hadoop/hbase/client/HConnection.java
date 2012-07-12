@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -263,9 +264,46 @@ public interface HConnection extends Closeable {
   public void processBatchOfPuts(List<Put> list, final byte[] tableName, HBaseRPCOptions options)
   throws IOException;
 
-    public int processBatchOfRowMutations(final List<RowMutations> list,
-      final byte[] tableName, HBaseRPCOptions options)
-    throws IOException;
+  public int processBatchOfRowMutations(final List<RowMutations> list,
+    final byte[] tableName, HBaseRPCOptions options)
+  throws IOException;
+
+  /**
+   * Process a mixed batch of Get actions. All actions for a
+   * RegionServer are forwarded in one RPC call.
+   *
+   *
+   * @param actions The List of Gets.
+   * @param tableName Name of the hbase table
+   * @param pool thread pool for parallel execution
+   * @param results An empty array, same size as list. If an exception is thrown,
+   * you can test here for partial results, and to determine which actions
+   * processed successfully.
+   * @param options HBaseRPCOptions to be used
+   * @throws IOException,InterruptedException if there are problems talking to META.
+   *  Or, operations were not successfully completed.
+   */
+  public void processBatchedGets(List<Get> actions, final byte[] tableName,
+      ExecutorService pool, Result[] results, HBaseRPCOptions options)
+      throws IOException, InterruptedException;
+
+  /**
+   * Process a mixed batch of Put and Delete operations. All actions for a
+   * RegionServer are forwarded in one RPC call.
+   *
+   *
+   * @param actions The collection of Put/Delete operations.
+   * @param tableName Name of the hbase table
+   * @param pool thread pool for parallel execution
+   * @param failures populated with failed operation if there are errors.
+   * @param options HBaseRPCOptions to be used
+   * @throws IOException,InterruptedException if there are problems talking to META.
+   *  Or, operations were not successfully completed.
+   */
+  public void processBatchedMutations(List<Mutation> actions, final byte[] tableName,
+      ExecutorService pool, List<Mutation> failures, HBaseRPCOptions options)
+      throws IOException, InterruptedException;
+
 
   /**
    * Process the MultiPut request by submitting it to the multiPutThreadPool in HTable.

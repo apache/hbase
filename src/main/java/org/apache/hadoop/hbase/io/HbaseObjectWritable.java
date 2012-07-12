@@ -41,6 +41,9 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.MultiAction;
+import org.apache.hadoop.hbase.client.MultiResponse;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -210,6 +213,9 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     
     addToMap(HBaseRPCOptions.class, code++);
     addToMap(ProfilingData.class, code++);
+
+    addToMap(MultiAction.class, code++);
+    addToMap(MultiResponse.class, code++);
   }
 
   private Class<?> declaredClass;

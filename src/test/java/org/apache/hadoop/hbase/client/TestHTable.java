@@ -63,7 +63,7 @@ public class TestHTable {
     HTable ht = TEST_UTIL.createTable(TABLE, new byte[][]{FAMILY},
         3, Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
     byte [][] ROWS = ht.getStartKeys();
-    ThreadPoolExecutor pool = (ThreadPoolExecutor)HTable.multiPutThreadPool;
+    ThreadPoolExecutor pool = (ThreadPoolExecutor)HTable.multiActionThreadPool;
     int previousPoolSize = pool.getPoolSize();
     int previousLargestPoolSize = pool.getLargestPoolSize();
     long previousCompletedTaskCount = pool.getCompletedTaskCount();

@@ -1754,33 +1754,50 @@ public class TestFromClientSide {
     scanner.close();
 
     // Add test of bulk deleting.
-    for (int i = 0; i < 10; i++) {
-      byte [] bytes = Bytes.toBytes(i);
-      put = new Put(bytes);
-      put.add(FAMILIES[0], QUALIFIER, bytes);
-      ht.put(put);
-    }
-    for (int i = 0; i < 10; i++) {
-      byte [] bytes = Bytes.toBytes(i);
-      get = new Get(bytes);
-      get.addFamily(FAMILIES[0]);
-      result = ht.get(get);
-      assertTrue(result.size() == 1);
-    }
-    ArrayList<Delete> deletes = new ArrayList<Delete>();
-    for (int i = 0; i < 10; i++) {
-      byte [] bytes = Bytes.toBytes(i);
-      delete = new Delete(bytes);
-      delete.deleteFamily(FAMILIES[0]);
-      deletes.add(delete);
-    }
-    ht.delete(deletes);
-    for (int i = 0; i < 10; i++) {
-      byte [] bytes = Bytes.toBytes(i);
-      get = new Get(bytes);
-      get.addFamily(FAMILIES[0]);
-      result = ht.get(get);
-      assertTrue(result.size() == 0);
+    // version 0 tests the framework with delete(List<Delete>);
+    // version 1 tests the framework with batchMutate(List<Mutation>);
+    for(int tests = 0; tests < 2; tests++) {
+      ArrayList<Mutation> puts = new ArrayList<Mutation>();
+      for (int i = 0; i < 10; i++) {
+        byte [] bytes = Bytes.toBytes(i);
+        put = new Put(bytes);
+        put.add(FAMILIES[0], QUALIFIER, bytes);
+        if (tests == 0)
+          ht.put(put);
+        else
+          puts.add(put);
+      }
+
+      if (tests != 0)
+        ht.batchMutate(puts);
+
+      for (int i = 0; i < 10; i++) {
+        byte [] bytes = Bytes.toBytes(i);
+        get = new Get(bytes);
+        get.addFamily(FAMILIES[0]);
+        result = ht.get(get);
+        assertTrue(result.size() == 1);
+      }
+      ArrayList<Delete> deletes = new ArrayList<Delete>();
+      for (int i = 0; i < 10; i++) {
+        byte [] bytes = Bytes.toBytes(i);
+        delete = new Delete(bytes);
+        delete.deleteFamily(FAMILIES[0]);
+        deletes.add(delete);
+      }
+
+      if (tests == 0)
+        ht.delete(deletes);
+      else
+        ht.batchMutate(new ArrayList<Mutation>(deletes));
+
+      for (int i = 0; i < 10; i++) {
+        byte [] bytes = Bytes.toBytes(i);
+        get = new Get(bytes);
+        get.addFamily(FAMILIES[0]);
+        result = ht.get(get);
+        assertTrue(result.size() == 0);
+      }
     }
   }
 
@@ -3412,26 +3429,38 @@ public class TestFromClientSide {
       nbRows++;
     assertEquals(NB_BATCH_ROWS, nbRows);
 
-    // now multi get!!
-    Result[] reses = table.get(rowsGets);
-    assertEquals(NB_BATCH_ROWS, reses.length);
-    int i = 0;
-    for (Result r : reses) {
-      assertEquals(r.getValue(CONTENTS_FAMILY, null).length, 5);
-      assertEquals(new String(r.getValue(CONTENTS_FAMILY, null)), value + i);
-      i++;
-    }
+    // Add test of bulk gets.
+    // version 0 tests the framework with get(List<Get>);
+    // version 1 tests the framework with batchGet(List<Get>);
+    for (int tests = 0; tests < 2; tests++) {
+      // now multi get!!
+      Result[] reses;
+      if (tests == 0)
+        reses = table.get(rowsGets);
+      else
+        reses = table.batchGet(rowsGets);
+      assertEquals(NB_BATCH_ROWS, reses.length);
+      int i = 0;
+      for (Result r : reses) {
+        assertEquals(r.getValue(CONTENTS_FAMILY, null).length, 5);
+        assertEquals(new String(r.getValue(CONTENTS_FAMILY, null)), value + i);
+        i++;
+      }
 
-    // make sure order is preserved by multi get!
-    Collections.reverse(rowsGets);
-    reses = table.get(rowsGets);
-    assertEquals(NB_BATCH_ROWS, reses.length);
-    i = 1;
-    for (Result r : reses) {
-      assertEquals(r.getValue(CONTENTS_FAMILY, null).length, 5);
-      assertEquals(new String(r.getValue(CONTENTS_FAMILY, null)), value
-          + (NB_BATCH_ROWS - i));
-      i++;
+      // make sure order is preserved by multi get!
+      Collections.reverse(rowsGets);
+      if (tests == 0)
+        reses = table.get(rowsGets);
+      else
+        reses = table.batchGet(rowsGets);
+      assertEquals(NB_BATCH_ROWS, reses.length);
+      i = 1;
+      for (Result r : reses) {
+        assertEquals(r.getValue(CONTENTS_FAMILY, null).length, 5);
+        assertEquals(new String(r.getValue(CONTENTS_FAMILY, null)), value
+            + (NB_BATCH_ROWS - i));
+        i++;
+      }
     }
   }
 

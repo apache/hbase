@@ -68,6 +68,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -90,6 +91,14 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.HMsg.Type;
+import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.client.MultiAction;
+import org.apache.hadoop.hbase.client.MultiResponse;
+import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MultiPut;
@@ -2202,7 +2211,7 @@ public class HRegionServer implements HRegionInterface,
   @Override
   public void mutateRow(byte[] regionName, RowMutations arm)
       throws IOException {
-          mutateRow(regionName, Collections.singletonList(arm));
+    mutateRow(regionName, Collections.singletonList(arm));
   }
 
   @Override
@@ -3041,6 +3050,58 @@ public class HRegionServer implements HRegionInterface,
   @Override
   public HServerInfo getHServerInfo() throws IOException {
     return serverInfo;
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public MultiResponse multiAction(MultiAction mActions) throws IOException {
+    checkOpen();
+    MultiResponse response = new MultiResponse();
+    if (mActions.deletes != null) {
+      for (Map.Entry<byte[], List<Delete>> e : mActions.deletes.entrySet()) {
+        byte[] regionName = e.getKey();
+
+        Object result;
+         try {
+           result = delete(regionName, e.getValue());
+         } catch (IOException exception){
+           result = exception;
+         }
+
+         response.addDeleteResponse(regionName, result);
+      }
+    }
+
+    if (mActions.puts != null) {
+      for (Map.Entry<byte[], List<Put>> e : mActions.puts.entrySet()) {
+        byte[] regionName = e.getKey();
+
+        Object result;
+         try {
+           result = put(regionName, e.getValue());
+         } catch (IOException exception){
+           result = exception;
+         }
+
+         response.addPutResponse(regionName, result);
+      }
+    }
+
+    if (mActions.gets != null) {
+      for (Map.Entry<byte[], List<Get>> e : mActions.gets.entrySet()) {
+        byte[] regionName = e.getKey();
+
+        Object result;
+         try {
+           result = get(regionName, e.getValue());
+         } catch (IOException exception){
+           result = exception;
+         }
+
+         response.addGetResponse(regionName, result);
+      }
+    }
+    return response;
   }
 
   @Override

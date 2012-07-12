@@ -36,12 +36,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -57,7 +59,6 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
@@ -313,7 +314,7 @@ public class HConnectionManager {
       else
         LOG.fatal(msg);
 
-			this.aborted = true;
+      this.aborted = true;
       closeZooKeeperConnection();
     }
 
@@ -369,9 +370,9 @@ public class HConnectionManager {
     // Used by master and region servers during safe mode only
     private volatile HRegionLocation rootRegionLocation;
 
-    private final Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>>
+    private final Map<Integer, SortedMap<byte [], HRegionLocation>>
       cachedRegionLocations =
-        new HashMap<Integer, SoftValueSortedMap<byte [], HRegionLocation>>();
+        new HashMap<Integer, SortedMap<byte [], HRegionLocation>>();
 
     // The presence of a server in the map implies it's likely that there is an
     // entry in cachedRegionLocations that map to this server; but the absence
@@ -975,7 +976,7 @@ public class HConnectionManager {
      */
     HRegionLocation getCachedLocation(final byte [] tableName,
         final byte [] row) {
-      SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
+      SortedMap<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
 
       // start to examine the cache. we can only do cache actions
@@ -999,7 +1000,7 @@ public class HConnectionManager {
 
       // Cut the cache so that we only get the part that could contain
       // regions that match our key
-      SoftValueSortedMap<byte[], HRegionLocation> matchingRegions =
+      SortedMap<byte[], HRegionLocation> matchingRegions =
         tableLocations.headMap(row);
 
       // if that portion of the map is empty, then we're done. otherwise,
@@ -1037,7 +1038,7 @@ public class HConnectionManager {
      */
     public void deleteCachedLocation(final byte [] tableName, final byte [] row) {
       synchronized (this.cachedRegionLocations) {
-        SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
+        Map<byte [], HRegionLocation> tableLocations =
             getTableLocations(tableName);
 
         // start to examine the cache. we can only do cache actions
@@ -1070,7 +1071,7 @@ public class HConnectionManager {
         if (!cachedServers.contains(server)) {
           return;
         }
-        for (SoftValueSortedMap<byte[], HRegionLocation> tableLocations :
+        for (Map<byte[], HRegionLocation> tableLocations :
             cachedRegionLocations.values()) {
           for (Entry<byte[], HRegionLocation> e : tableLocations.entrySet()) {
             if (e.getValue().getServerAddress().toString().equals(server)) {
@@ -1090,11 +1091,11 @@ public class HConnectionManager {
      * @param tableName
      * @return Map of cached locations for passed <code>tableName</code>
      */
-    private SoftValueSortedMap<byte [], HRegionLocation> getTableLocations(
+    private SortedMap<byte [], HRegionLocation> getTableLocations(
         final byte [] tableName) {
       // find the map of cached locations for this table
       Integer key = Bytes.mapKey(tableName);
-      SoftValueSortedMap<byte [], HRegionLocation> result;
+      SortedMap<byte [], HRegionLocation> result;
       synchronized (this.cachedRegionLocations) {
         result = this.cachedRegionLocations.get(key);
         // if tableLocations for this table isn't built yet, make one
@@ -1123,7 +1124,7 @@ public class HConnectionManager {
     private void cacheLocation(final byte [] tableName,
         final HRegionLocation location) {
       byte [] startKey = location.getRegionInfo().getStartKey();
-      SoftValueSortedMap<byte [], HRegionLocation> tableLocations =
+      Map<byte [], HRegionLocation> tableLocations =
         getTableLocations(tableName);
       boolean hasNewCache = false;
       synchronized (this.cachedRegionLocations) {
@@ -1366,6 +1367,33 @@ public class HConnectionManager {
       }
     }
 
+    private <R> Callable<MultiResponse> createMultiActionCallable(final HServerAddress address,
+        final MultiAction multi, final byte [] tableName,
+        final HBaseRPCOptions options) {
+      final HConnection connection = this;
+      return new Callable<MultiResponse>() {
+       public MultiResponse call() throws IOException {
+         return getRegionServerWithoutRetries(
+             new ServerCallable<MultiResponse>(connection, tableName, null, options) {
+               public MultiResponse call() throws IOException {
+                 return server.multiAction(multi);
+               }
+
+               @Override
+               public void instantiateRegionLocation(boolean reload) throws IOException {
+                 // do nothing.
+               }
+
+               @Override
+               public void instantiateServer() throws IOException {
+                 server = connection.getHRegionConnection(address, options);
+               }
+             }
+         );
+       }
+     };
+   }
+
     private HRegionLocation
       getRegionLocationForRowWithRetries(byte[] tableName, byte[] rowKey,
         boolean reload)
@@ -1398,6 +1426,310 @@ public class HConnectionManager {
           HConstants.EMPTY_BYTE_ARRAY, rowKey, tries, exceptions);
       }
       return location;
+    }
+
+    private  <R extends Row>  Map<HServerAddress, MultiAction> splitRequestsByRegionServer(
+        List<R> workingList, final byte[] tableName, boolean isGets) throws IOException{
+       Map<HServerAddress, MultiAction> actionsByServer =
+         new HashMap<HServerAddress, MultiAction>();
+       for (int i = 0; i < workingList.size(); i++) {
+         Row row = workingList.get(i);
+         if (row != null) {
+           HRegionLocation loc = locateRegion(tableName, row.getRow(), true);
+           byte[] regionName = loc.getRegionInfo().getRegionName();
+
+           MultiAction actions = actionsByServer.get(loc.getServerAddress());
+           if (actions == null) {
+             actions = new MultiAction();
+             actionsByServer.put(loc.getServerAddress(), actions);
+           }
+
+           if (isGets) {
+             actions.addGet(regionName, (Get)row, i);
+           } else {
+             actions.mutate(regionName, (Mutation)row);
+           }
+         }
+       }
+       return actionsByServer;
+    }
+
+    private Map<HServerAddress, Future<MultiResponse>> makeServerRequests(
+        Map<HServerAddress, MultiAction> actionsByServer,
+         final byte[] tableName,
+         ExecutorService pool,
+         HBaseRPCOptions options) {
+
+         Map<HServerAddress, Future<MultiResponse>> futures =
+             new HashMap<HServerAddress, Future<MultiResponse>>(
+                 actionsByServer.size());
+
+         boolean singleServer = (actionsByServer.size() == 1);
+         for (Entry<HServerAddress, MultiAction> e: actionsByServer.entrySet()) {
+           Callable<MultiResponse> callable =
+             createMultiActionCallable(e.getKey(), e.getValue(), tableName, options);
+           Future<MultiResponse> task;
+           if (singleServer) {
+             task = new FutureTask<MultiResponse>(callable);
+             ((FutureTask<MultiResponse>)task).run();
+           } else {
+             task = pool.submit(callable);
+           }
+           futures.put(e.getKey(), task);
+         }
+         return futures;
+     }
+
+    /*
+     * Collects responses from each of the RegionServers.
+     * If there are failures, a list of failed operations is returned.
+     */
+    private List<Mutation> collectResponsesForMutateFromAllRS(byte[] tableName,
+        Map<HServerAddress, MultiAction> actionsByServer,
+        Map<HServerAddress, Future<MultiResponse>> futures)
+      throws InterruptedException, IOException {
+
+     List<Mutation> newWorkingList = null;
+     for (Entry<HServerAddress, Future<MultiResponse>> responsePerServer
+          : futures.entrySet()) {
+       HServerAddress address = responsePerServer.getKey();
+       MultiAction request = actionsByServer.get(address);
+
+       Future<MultiResponse> future = responsePerServer.getValue();
+       MultiResponse resp = null;
+
+       try {
+         resp = future.get();
+       } catch (InterruptedException ie) {
+         throw ie;
+       } catch (ExecutionException e) {
+         translateException(e.getCause());
+       }
+
+       // If we got a response. Let us go through the responses from each region and
+       // process the Puts and Deletes.
+       // If the response is null, we will add it to newWorkingList here.
+       if (request.deletes != null) {
+         newWorkingList = processMutationResponseFromOneRegionServer(tableName, resp,
+             request.deletes, newWorkingList, true);
+       }
+       if (request.puts != null) {
+         newWorkingList = processMutationResponseFromOneRegionServer(tableName, resp,
+             request.puts, newWorkingList, false);
+       }
+     }
+      return newWorkingList;
+    }
+
+   /*
+    * Collects responses from each of the RegionServers and populates
+    * the result array. If there are failures, a list of failed operations
+    * is returned.
+    */
+    private List<Get> collectResponsesForGetFromAllRS(byte[] tableName,
+         Map<HServerAddress, MultiAction> actionsByServer,
+         Map<HServerAddress, Future<MultiResponse>> futures,
+         List<Get> orig_list,
+         Result[] results) throws IOException, InterruptedException {
+
+       List<Get> newWorkingList = null;
+       for (Entry<HServerAddress, Future<MultiResponse>> responsePerServer
+            : futures.entrySet()) {
+         HServerAddress address = responsePerServer.getKey();
+         MultiAction request = actionsByServer.get(address);
+
+         Future<MultiResponse> future = responsePerServer.getValue();
+         MultiResponse resp = null;
+
+         try {
+           resp = future.get();
+         } catch (InterruptedException ie) {
+           throw ie;
+         } catch (ExecutionException e) {
+           translateException(e.getCause());
+         }
+
+         if (resp == null) {
+           // Entire server failed
+           LOG.debug("Failed all for server: " + address + ", removing from cache");
+         }
+
+         newWorkingList = processGetResponseFromOneRegionServer(tableName, resp, request, orig_list,
+            newWorkingList, results);
+       }
+       return newWorkingList;
+     }
+
+     private <R extends Mutation> List<Mutation> processMutationResponseFromOneRegionServer(byte[] tableName,
+        MultiResponse resp,
+        Map<byte[], List<R>> map,
+        List<Mutation> newWorkingList,
+        boolean isDelete) throws IOException {
+        // If we got a response. Let us go through the responses from each region and
+        // process the Puts and Deletes.
+        for (Map.Entry<byte[], List<R>> e : map.entrySet()) {
+          byte[] regionName = e.getKey();
+          List<R> regionOps = map.get(regionName);
+
+          long result = 0;
+          try {
+            if (isDelete)
+              result = resp.getDeleteResult(regionName);
+            else
+              result = resp.getPutResult(regionName);
+
+            if (result != -1) {
+              if (newWorkingList == null)
+                newWorkingList = new ArrayList<Mutation>();
+
+              newWorkingList.addAll(regionOps.subList((int) result,
+                  regionOps.size()));
+            }
+          } catch (Exception ex) {
+            // If response is null, we will catch a NPE here.
+            translateException(ex);
+            if (newWorkingList == null)
+              newWorkingList = new ArrayList<Mutation>();
+
+            newWorkingList.addAll(regionOps);
+            // enough to remove from cache one of the rows from the region
+            deleteCachedLocation(tableName, regionOps.get(0).getRow());
+          }
+        }
+
+      return newWorkingList;
+    }
+
+    private List<Get> processGetResponseFromOneRegionServer(byte[] tableName,
+       MultiResponse resp, MultiAction request,
+       List<Get> orig_list, List<Get> newWorkingList,
+       Result[] results) throws IOException {
+
+       for (Map.Entry<byte[], List<Get>> e : request.gets.entrySet()) {
+         byte[] regionName = e.getKey();
+         List<Get> regionGets = request.gets.get(regionName);
+         List<Integer> origIndices = request.originalIndex.get(regionName);
+
+         Result [] getResult;
+         try {
+           getResult = resp.getGetResult(regionName);
+
+           // fill up the result[] array accordingly
+           assert(origIndices.size() == getResult.length);
+           for(int i = 0; i < getResult.length; i++) {
+             results[origIndices.get(i)] = getResult[i];
+           }
+         } catch (Exception ex) {
+           // If response is null, we will catch a NPE here.
+           translateException(ex);
+           if (newWorkingList == null)
+             newWorkingList = new ArrayList<Get>(orig_list.size());
+
+           // Add the element to the correct position
+           for(int i = 0; i < regionGets.size(); i++) {
+             newWorkingList.add(origIndices.get(i), regionGets.get(i));
+           }
+
+           // enough to clear this once for a region
+           deleteCachedLocation(tableName, regionGets.get(0).getRow());
+         }
+       }
+
+     return newWorkingList;
+   }
+
+   @Override
+    public void processBatchedMutations(List<Mutation> orig_list,
+        final byte[] tableName,
+        ExecutorService pool,
+        List<Mutation> failures, HBaseRPCOptions options) throws IOException, InterruptedException {
+
+      // Keep track of the most recent servers for any given item for better
+      // exception reporting.  We keep HRegionLocation to save on parsing.
+      // Later below when we use lastServers, we'll pull what we need from
+      // lastServers.
+      List<Mutation> workingList = orig_list;
+
+      for (int tries = 0;
+           workingList != null && !workingList.isEmpty() && tries < numRetries;
+           ++tries) {
+
+
+        if (tries >= 1) {
+          long sleepTime = getPauseTime(tries);
+          LOG.debug("Retry " + tries + ", sleep for " + sleepTime + "ms!");
+          Thread.sleep(sleepTime);
+        }
+
+        // step 1: break up into regionserver-sized chunks and build the data structs
+        Map<HServerAddress, MultiAction> actionsByServer =
+          splitRequestsByRegionServer(workingList, tableName, false);
+
+        // step 2: make the requests
+        Map<HServerAddress, Future<MultiResponse>> futures =
+          makeServerRequests(actionsByServer, tableName, pool, options);
+
+        // step 3: collect the failures and successes and prepare for retry
+        workingList = collectResponsesForMutateFromAllRS(tableName,
+            actionsByServer, futures);
+      }
+
+      if (workingList != null && !workingList.isEmpty()) {
+        if (failures != null) failures.addAll(workingList);
+        throw new RetriesExhaustedException(
+            workingList.size() + "mutate operations remaining after "
+            + numRetries + " retries");
+      }
+    }
+
+   @Override
+    public  void processBatchedGets(List<Get> orig_list,
+        final byte[] tableName,
+        ExecutorService pool,
+        Result[] results, HBaseRPCOptions options)
+    throws IOException, InterruptedException {
+
+      // if results is not NULL
+      // results must be the same size as list
+      if (results != null && (results.length != orig_list.size())) {
+        throw new IllegalArgumentException(
+            "argument results must be the same size as argument list");
+      }
+
+      // Keep track of the most recent servers for any given item for better
+      // exception reporting.  We keep HRegionLocation to save on parsing.
+      // Later below when we use lastServers, we'll pull what we need from
+      // lastServers.
+      List<Get> workingList = orig_list;
+
+      for (int tries = 0;
+           workingList != null && !workingList.isEmpty() && tries < numRetries;
+           ++tries) {
+
+        if (tries >= 1) {
+          long sleepTime = getPauseTime(tries);
+          LOG.debug("Retry " + tries + ", sleep for " + sleepTime + "ms!");
+          Thread.sleep(sleepTime);
+        }
+
+        // step 1: break up into regionserver-sized chunks and build the data structs
+        Map<HServerAddress, MultiAction> actionsByServer =
+          splitRequestsByRegionServer(workingList, tableName, true);
+
+        // step 2: make the requests
+        Map<HServerAddress, Future<MultiResponse>> futures =
+          makeServerRequests(actionsByServer, tableName, pool, options);
+
+        // step 3: collect the failures and successes and prepare for retry
+        workingList = collectResponsesForGetFromAllRS(tableName, actionsByServer,
+            futures, workingList, results);
+      }
+
+      if (workingList != null && !workingList.isEmpty()) {
+        throw new RetriesExhaustedException(
+            workingList.size() + " get operations remaining after "
+            + numRetries + " retries");
+      }
     }
 
     /*
@@ -1719,7 +2051,7 @@ public class HConnectionManager {
       List<Future<MultiPutResponse>> futures =
           new ArrayList<Future<MultiPutResponse>>(regionPuts.size());
       for ( MultiPut put : multiPuts ) {
-        futures.add(HTable.multiPutThreadPool.submit(
+        futures.add(HTable.multiActionThreadPool.submit(
             createPutCallable(put.address, put, tableName, options)));
       }
 
@@ -1770,7 +2102,7 @@ public class HConnectionManager {
         return null;
       List<Put> failedPuts = null;
 
-      Future<MultiPutResponse> future = HTable.multiPutThreadPool.submit(
+      Future<MultiPutResponse> future = HTable.multiActionThreadPool.submit(
           createPutCallable(mput.address, mput, null, options));
 
       try {
@@ -1914,7 +2246,7 @@ public class HConnectionManager {
     int getNumberOfCachedRegionLocations(final byte[] tableName) {
       Integer key = Bytes.mapKey(tableName);
       synchronized (this.cachedRegionLocations) {
-        SoftValueSortedMap<byte[], HRegionLocation> tableLocs =
+        Map<byte[], HRegionLocation> tableLocs =
           this.cachedRegionLocations.get(key);
 
         if (tableLocs == null) {

@@ -84,15 +84,15 @@ public class HTable implements HTableInterface {
 
   private long maxScannerResultSize;
 
-  // Share this multiput thread pool across all the HTable instance;
+  // Share this multiaction thread pool across all the HTable instance;
   // The total number of threads will be bounded #HTable * #RegionServer.
-  static ExecutorService multiPutThreadPool =
+  static ExecutorService multiActionThreadPool =
     new ThreadPoolExecutor(1, Integer.MAX_VALUE,
       60, TimeUnit.SECONDS,
       new SynchronousQueue<Runnable>(),
       new DaemonThreadFactory("htable-thread-"));
   static {
-    ((ThreadPoolExecutor)multiPutThreadPool).allowCoreThreadTimeOut(true);
+    ((ThreadPoolExecutor)multiActionThreadPool).allowCoreThreadTimeOut(true);
   }
 
   /**
@@ -150,9 +150,11 @@ public class HTable implements HTableInterface {
       return;
     }
     this.connection = HConnectionManager.getConnection(conf);
-    this.scannerTimeout =
-      (int) conf.getLong(HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY, HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
+    this.scannerTimeout = (int) conf.getLong(
+        HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
+        HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
     this.configuration = conf;
+
     this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
     this.writeBufferSize = conf.getLong("hbase.client.write.buffer", 2097152);
     this.clearBufferOnFail = true;
@@ -553,10 +555,45 @@ public class HTable implements HTableInterface {
     return this.options.profilingResult;
   }
 
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public Result[] batchGet(final List<Get> actions)
+      throws IOException {
+    Result[] results = new Result[actions.size()];
+    try {
+      connection.processBatchedGets(actions, tableName, multiActionThreadPool,
+          results, this.options);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+    return results;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void batchMutate(final List<Mutation> actions)
+      throws IOException {
+    try {
+      connection.processBatchedMutations(actions,
+          tableName, multiActionThreadPool, null, this.options);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
   public void delete(final Delete delete)
   throws IOException {
     connection.getRegionServerWithRetries(
-        new ServerCallable<Boolean>(connection, tableName, delete.getRow(), this.options) {
+        new ServerCallable<Boolean>(connection,
+            tableName, delete.getRow(), this.options) {
           public Boolean call() throws IOException {
             server.delete(location.getRegionInfo().getRegionName(), delete);
             return null; // FindBugs NP_BOOLEAN_RETURN_NULL
@@ -687,12 +724,12 @@ public class HTable implements HTableInterface {
   @Override
   public void mutateRow(final RowMutations arm) throws IOException {
     connection.getRegionServerWithRetries(
-	    new ServerCallable<Void>(connection, tableName, arm.getRow(), this.options) {
-	      public Void call() throws IOException {
-	        server.mutateRow(location.getRegionInfo().getRegionName(), arm);
-	        return null;
-	      }
-	    });
+      new ServerCallable<Void>(connection, tableName, arm.getRow(), this.options) {
+        public Void call() throws IOException {
+          server.mutateRow(location.getRegionInfo().getRegionName(), arm);
+          return null;
+        }
+      });
   }
 
   /**
@@ -700,7 +737,7 @@ public class HTable implements HTableInterface {
    */
   @Override
   public void mutateRow(final List<RowMutations> armList) throws IOException {
-	  connection.processBatchOfRowMutations(armList, this.tableName, this.options);
+    connection.processBatchOfRowMutations(armList, this.tableName, this.options);
   }
 
   /**
@@ -742,7 +779,11 @@ public class HTable implements HTableInterface {
     }
   }
 
-  public void close() throws IOException{
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void close() throws IOException {
     flushCommits();
   }
 

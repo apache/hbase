@@ -45,7 +45,7 @@ import org.apache.hadoop.io.Writable;
  * {@link #add(byte[], byte[], long, byte[]) add} if setting the timestamp.
  */
 public class Put extends Mutation
-  implements HeapSize, Writable, Row, Comparable<Row> {
+  implements HeapSize, Writable, Comparable<Row> {
   private static final byte PUT_VERSION = (byte)2;
   private static final int ADDED_ATTRIBUTES_VERSION = 2;
 

@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public abstract class Mutation extends OperationWithAttributes {
+public abstract class Mutation extends OperationWithAttributes implements Row {
   // Attribute used in Mutations to indicate the originating cluster.
   private static final String CLUSTER_ID_ATTR = "_c.id_";
 
