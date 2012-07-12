@@ -101,7 +101,6 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -286,9 +285,6 @@ Server {
    */
   private ObjectName mxBean = null;
 
-  //should we check the compression codec type at master side, default true, HBASE-6370
-  private final boolean masterCheckCompression;
-
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -356,9 +352,6 @@ Server {
     this.metrics = new MasterMetrics(getServerName().toString());
     // metrics interval: using the same property as region server.
     this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
-
-    //should we check the compression codec type at master side, default true, HBASE-6370
-    this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
   }
 
   /**
@@ -1383,7 +1376,6 @@ Server {
 
     HRegionInfo [] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
-    checkCompression(hTableDescriptor);
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
@@ -1395,21 +1387,6 @@ Server {
       cpHost.postCreateTable(hTableDescriptor, newRegions);
     }
 
-  }
-
-  private void checkCompression(final HTableDescriptor htd)
-  throws IOException {
-    if (!this.masterCheckCompression) return;
-    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
-      checkCompression(hcd);
-    }
-  }
-
-  private void checkCompression(final HColumnDescriptor hcd)
-  throws IOException {
-    if (!this.masterCheckCompression) return;
-    CompressionTest.testCompression(hcd.getCompression());
-    CompressionTest.testCompression(hcd.getCompactionCompression());
   }
 
   @Override
@@ -1528,7 +1505,6 @@ Server {
 
     try {
       checkInitialized();
-      checkCompression(descriptor);
       if (cpHost != null) {
         if (cpHost.preModifyColumn(tableName, descriptor)) {
           return ModifyColumnResponse.newBuilder().build();
@@ -1650,7 +1626,6 @@ Server {
     HTableDescriptor htd = HTableDescriptor.convert(req.getTableSchema());
     try {
       checkInitialized();
-      checkCompression(htd);
       if (cpHost != null) {
         cpHost.preModifyTable(tableName, htd);
       }
