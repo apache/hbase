@@ -71,10 +71,12 @@ public final class Compression {
   }
 
   /**
-   * Compression algorithms.
+   * Compression algorithms. Don't change the order of codecs here, and add new codecs to the end
+   * of the list, because we are using ordinal numbers of elements of this enum in some of our
+   * persistent data formats.
    */
   public static enum Algorithm {
-	LZO("lzo") {
+    LZO("lzo") {
       // Use base type to avoid compile-time dependencies.
       private transient CompressionCodec lzoCodec;
 
@@ -82,8 +84,8 @@ public final class Compression {
       CompressionCodec getCodec(Configuration conf) {
         if (lzoCodec == null) {
           try {
-            Class<?> externalCodec =
-                ClassLoader.getSystemClassLoader().loadClass("com.hadoop.compression.lzo.LzoCodec");
+            Class<?> externalCodec = ClassLoader.getSystemClassLoader().loadClass(
+                "com.hadoop.compression.lzo.LzoCodec");
             lzoCodec = (CompressionCodec) ReflectionUtils.newInstance(externalCodec, conf);
           } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
@@ -104,33 +106,6 @@ public final class Compression {
         }
 
         return codec;
-      }
-    },
-    SNAPPY("snappy") {
-      private transient CompressionCodec snappyCodec;
-
-      @SuppressWarnings("unchecked")
-      @Override
-      CompressionCodec getCodec(Configuration conf) {
-        if (snappyCodec == null) {
-          try {
-            Class<? extends CompressionCodec> snappyCodecClass = 
-                (Class<? extends CompressionCodec>) 
-                Class.forName(CompressionCodec.class.getPackage().getName() + ".SnappyCodec");
-            snappyCodec = snappyCodecClass.newInstance();
-          } catch (InstantiationException e) {
-            LOG.error(e);
-            throw new RuntimeException(e);
-          } catch (IllegalAccessException e) {
-            LOG.error(e);
-            throw new RuntimeException(e);
-          } catch (ClassNotFoundException e) {
-            LOG.error(e);
-            throw new RuntimeException(e);
-          }
-          ((Configurable) snappyCodec).setConf(new Configuration(conf));
-        }
-        return (CompressionCodec) snappyCodec;
       }
     },
     NONE("none") {
@@ -163,6 +138,33 @@ public final class Compression {
         }
 
         return downStream;
+      }
+    },
+    SNAPPY("snappy") {
+      private transient CompressionCodec snappyCodec;
+
+      @SuppressWarnings("unchecked")
+      @Override
+      CompressionCodec getCodec(Configuration conf) {
+        if (snappyCodec == null) {
+          try {
+            Class<? extends CompressionCodec> snappyCodecClass = 
+                (Class<? extends CompressionCodec>) 
+                Class.forName(CompressionCodec.class.getPackage().getName() + ".SnappyCodec");
+            snappyCodec = snappyCodecClass.newInstance();
+          } catch (InstantiationException e) {
+            LOG.error(e);
+            throw new RuntimeException(e);
+          } catch (IllegalAccessException e) {
+            LOG.error(e);
+            throw new RuntimeException(e);
+          } catch (ClassNotFoundException e) {
+            LOG.error(e);
+            throw new RuntimeException(e);
+          }
+          ((Configurable) snappyCodec).setConf(new Configuration(conf));
+        }
+        return (CompressionCodec) snappyCodec;
       }
     };
 
