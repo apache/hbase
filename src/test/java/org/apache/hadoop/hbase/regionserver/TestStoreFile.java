@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.CacheTestHelper;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
@@ -740,6 +741,10 @@ public class TestStoreFile extends HBaseTestCase {
     // Grab the block cache and get the initial hit/miss counts
     BlockCache bc = new CacheConfig(conf).getBlockCache();
     assertNotNull(bc);
+
+    // Do delayed eviction. Test relies on that.
+    CacheTestHelper.forceDelayedEviction(bc);
+
     CacheStats cs = bc.getStats();
     long startHit = cs.getHitCount();
     long startMiss = cs.getMissCount();
@@ -766,6 +771,7 @@ public class TestStoreFile extends HBaseTestCase {
     startMiss += 3;
     scanner.close();
     reader.close(cacheConf.shouldEvictOnClose());
+    CacheTestHelper.forceDelayedEviction(bc);
 
     // Now write a StoreFile with three blocks, with cache on write on
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
@@ -786,6 +792,7 @@ public class TestStoreFile extends HBaseTestCase {
     startHit += 3;
     scanner.close();
     reader.close(cacheConf.shouldEvictOnClose());
+    CacheTestHelper.forceDelayedEviction(bc);
 
     // Let's read back the two files to ensure the blocks exactly match
     hsf = new StoreFile(this.fs, pathCowOff, conf, cacheConf,
@@ -823,6 +830,7 @@ public class TestStoreFile extends HBaseTestCase {
     readerOne.close(cacheConf.shouldEvictOnClose());
     scannerTwo.close();
     readerTwo.close(cacheConf.shouldEvictOnClose());
+    CacheTestHelper.forceDelayedEviction(bc);
 
     // Let's close the first file with evict on close turned on
     conf.setBoolean("hbase.rs.evictblocksonclose", true);
@@ -831,6 +839,7 @@ public class TestStoreFile extends HBaseTestCase {
         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
     reader = hsf.createReader();
     reader.close(cacheConf.shouldEvictOnClose());
+    CacheTestHelper.forceDelayedEviction(bc);
 
     // We should have 3 new evictions
     assertEquals(startHit, cs.getHitCount());
@@ -845,6 +854,7 @@ public class TestStoreFile extends HBaseTestCase {
         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
     reader = hsf.createReader();
     reader.close(cacheConf.shouldEvictOnClose());
+    CacheTestHelper.forceDelayedEviction(bc);
 
     // We expect no changes
     assertEquals(startHit, cs.getHitCount());

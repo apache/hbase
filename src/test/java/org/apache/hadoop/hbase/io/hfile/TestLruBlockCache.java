@@ -374,6 +374,28 @@ public class TestLruBlockCache {
 
 
   }
+  
+  @Test
+  public void testDelayedFileEviction() throws Exception {
+    long maxSize = 100000;
+    long blockSize = calculateBlockSizeDefault(maxSize, 10);
+    String fileName = "testFile";
+    LruBlockCache cache = new LruBlockCache(maxSize,blockSize,false);
+
+    CachedItem [] blocks = generateFileBlocks(fileName, 5, 10000);
+    // Add and get the multi blocks
+    for (CachedItem block : blocks) {
+      cache.cacheBlock(block.cacheKey, block);
+      assertEquals(cache.getBlock(block.cacheKey, true), block);
+    }
+
+    cache.evictBlocksByHfileName(fileName);
+    
+    CacheTestHelper.forceDelayedEviction(cache);
+    
+    for (CachedItem block : blocks)
+      assertEquals(null, cache.getBlock(block.cacheKey, true));
+  }
 
   // test scan resistance
   @Test
@@ -507,6 +529,14 @@ public class TestLruBlockCache {
     }
     return blocks;
   }
+  
+  private CachedItem [] generateFileBlocks(String fileName, int numBlocks, int size) {
+    CachedItem [] blocks = new CachedItem[numBlocks];
+    for(int i=0;i<numBlocks;i++) {
+      blocks[i] = new CachedItem(fileName, size, size * i);
+    }
+    return blocks;
+  }
 
   private CachedItem [] generateFixedBlocks(int numBlocks, long size, String pfx) {
     return generateFixedBlocks(numBlocks, (int)size, pfx);
@@ -552,6 +582,11 @@ public class TestLruBlockCache {
 
     CachedItem(String blockName, int size) {
       this.cacheKey = new BlockCacheKey(blockName, 0);
+      this.size = size;
+    }
+    
+    CachedItem(String blockName, int size, int offset) {
+      this.cacheKey = new BlockCacheKey(blockName, offset);
       this.size = size;
     }
 

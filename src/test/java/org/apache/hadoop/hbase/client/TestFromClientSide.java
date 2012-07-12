@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.CacheTestHelper;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -4163,7 +4164,8 @@ public class TestFromClientSide {
     cacheConf.setCacheDataOnWrite(true);
     cacheConf.setEvictOnClose(true);
     BlockCache cache = cacheConf.getBlockCache();
-
+    // Get rid of blocks marked to be evicted.
+    CacheTestHelper.forceDelayedEviction(cache);
     // establish baseline stats
     long startBlockCount = cache.getBlockCount();
     long startBlockHits = cache.getStats().getHitCount();
@@ -4180,6 +4182,7 @@ public class TestFromClientSide {
     // flush the data
     System.out.println("Flushing cache");
     region.flushcache();
+    CacheTestHelper.forceDelayedEviction(cache);
     // expect one more block in cache, no change in hits/misses
     long expectedBlockCount = startBlockCount + 1;
     long expectedBlockHits = startBlockHits;
@@ -4207,6 +4210,7 @@ public class TestFromClientSide {
     // flush, one new block
     System.out.println("Flushing cache");
     region.flushcache();
+    CacheTestHelper.forceDelayedEviction(cache);
     assertEquals(++expectedBlockCount, cache.getBlockCount());
     assertEquals(expectedBlockHits, cache.getStats().getHitCount());
     assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
@@ -4218,6 +4222,7 @@ public class TestFromClientSide {
     waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
     assertEquals(1, store.getNumberOfStoreFiles());
     expectedBlockCount -= 2; // evicted two blocks, cached none
+    CacheTestHelper.forceDelayedEviction(cache);
     assertEquals(expectedBlockCount, cache.getBlockCount());
     expectedBlockHits += 2;
     assertEquals(expectedBlockMiss, cache.getStats().getMissCount());

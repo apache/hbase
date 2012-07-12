@@ -25,9 +25,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -124,6 +127,9 @@ public class LruBlockCache implements BlockCache, HeapSize {
   /** Eviction thread */
   private final EvictionThread evictionThread;
 
+  /** Synchronized list of closed files **/
+  private final List<String> recentlyClosedFiles; 
+  
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
   private final ScheduledExecutorService scheduleThreadPool =
     Executors.newScheduledThreadPool(1,
@@ -270,6 +276,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
     }
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
         statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
+    
+    this.recentlyClosedFiles = Collections.synchronizedList(new LinkedList<String>());
   }
 
   public void setMaxSize(long maxSize) {
@@ -367,27 +375,51 @@ public class LruBlockCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Evicts all blocks for a specific HFile. This is an
-   * expensive operation implemented as a linear-time search through all blocks
- * in the cache. Ideally this should be a search in a log-access-time map.
+   * Adds specific HFile to a list of recently closed files. Next time the eviction happens
+   * all blocks of the File will be evicted.
    *
    * <p>
    * This is used for evict-on-close to remove all blocks of a specific HFile.
    *
-   * @return the number of blocks evicted
+   * @return 0
    */
   @Override
   public int evictBlocksByHfileName(String hfileName) {
     int numEvicted = 0;
-    for (BlockCacheKey key : map.keySet()) {
-      if (key.getHfileName().equals(hfileName)) {
-        if (evictBlock(key))
-          ++numEvicted;
-      }
-    }
+    recentlyClosedFiles.add(hfileName);
     return numEvicted;
   }
 
+  /**
+   * Evicts blocks specified by file names in recentlyClosedFiles list and clears the list.
+   * 
+   * @return number of freed bytes
+   */
+  private long doDelayedEviction(){
+    Set<String> closedRecently = new HashSet<String>();
+    
+    LOG.debug("Delayed eviction started.");
+    
+    synchronized(recentlyClosedFiles){
+      for (String fname : recentlyClosedFiles){
+        closedRecently.add(fname);
+      }
+      recentlyClosedFiles.clear();
+    }
+    
+    long bytesFreed = 0;
+    for (CachedBlock block : map.values()){
+      if (closedRecently.contains(block.getCacheKey().getHfileName())){
+          bytesFreed += evictBlock(block);
+      }
+    }
+    
+    float freedMB = ((float)bytesFreed)/((float)(1024*1024));
+    LOG.debug("Delayed eviction finished. Freed " + Float.toString(freedMB) + " MB");
+    
+    return bytesFreed;
+  }
+  
   protected long evictBlock(CachedBlock block) {
     map.remove(block.getCacheKey());
     updateSizeMetrics(block, true);
@@ -395,7 +427,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     stats.evicted(block);
     return block.heapSize();
   }
-
+  
   /**
    * Multi-threaded call to run the eviction process.
    */
@@ -420,6 +452,12 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
       long bytesToFree = size.get() - minSize();
 
+
+      if(bytesToFree <= 0) return;
+
+      doDelayedEviction();
+
+      bytesToFree = size.get() - minSize();
       LOG.debug("Block cache LRU eviction started.  Attempting to free " +
           bytesToFree + " bytes");
 
@@ -806,7 +844,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
   }
 
   public final static long CACHE_FIXED_OVERHEAD = ClassSize.align(
-      (3 * Bytes.SIZEOF_LONG) + (8 * ClassSize.REFERENCE) +
+      (3 * Bytes.SIZEOF_LONG) + (9 * ClassSize.REFERENCE) +
       (5 * Bytes.SIZEOF_FLOAT) + Bytes.SIZEOF_BOOLEAN
       + ClassSize.OBJECT);
 
