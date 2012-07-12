@@ -144,6 +144,8 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.hadoop.hbase.util.HasThread;
 
+import com.google.common.base.Preconditions;
+
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
  * the HMaster. There are many HRegionServers in a single HBase deployment.
@@ -225,6 +227,7 @@ public class HRegionServer implements HRegionInterface,
   // Server to handle client requests.  Default access so can be accessed by
   // unit tests.
   HBaseServer server;
+  private volatile boolean isRpcServerRunning;
 
   // Leases
   private Leases leases;
@@ -324,6 +327,9 @@ public class HRegionServer implements HRegionInterface,
 
   // profiling threadlocal
   public static final ThreadLocal<ProfilingData> threadLocalProfilingData = new ThreadLocal<ProfilingData> ();
+
+  /** Regionserver launched by the main method. Not used in tests. */
+  private static HRegionServer mainRegionServer;
 
   /**
    * Starts a HRegionServer at the default location
@@ -721,6 +727,7 @@ public class HRegionServer implements HRegionInterface,
       thriftServer.shutdown();
     }
     this.leases.closeAfterLeasesExpire();
+    isRpcServerRunning = false;
     this.worker.stop();
     this.server.stop();
     if (this.splitLogWorker != null) {
@@ -1426,6 +1433,7 @@ public class HRegionServer implements HRegionInterface,
     // Start Server.  This service is like leases in that it internally runs
     // a thread.
     this.server.start();
+    isRpcServerRunning = true;
     // Create the log splitting worker and start it
     this.splitLogWorker = new SplitLogWorker(this.zooKeeperWrapper,
         this.getConfiguration(), this.serverInfo.getServerName(),
@@ -3189,6 +3197,9 @@ public class HRegionServer implements HRegionInterface,
               LOG.info("vmInputArguments=" + runtime.getInputArguments());
             }
             HRegionServer hrs = constructRegionServer(regionServerClass, conf);
+            Preconditions.checkState(mainRegionServer == null,
+                "Main regionserver initialized twice");
+            mainRegionServer = hrs;
             startRegionServer(hrs);
           }
         } catch (Throwable t) {
@@ -3270,6 +3281,21 @@ public class HRegionServer implements HRegionInterface,
 
   public String getStopReason() {
     return stopReason;
+  }
+
+  /**
+   * Get the regionserver running in this JVM as part of the main method (mini-cluster RS instances
+   * do not count), if the given address matches. This is used to "short-circuit" client calls done
+   * by the Thrift handler within the regionserver to the same regionserver.
+   * @return the main region server in this JVM or null if the address does not match
+   */
+  public static HRegionInterface getMainRS(HServerAddress address) {
+    if (mainRegionServer != null && 
+        address.equals(mainRegionServer.serverInfo.getServerAddress()) &&
+        mainRegionServer.isRpcServerRunning) {
+      return mainRegionServer;
+    }
+    return null;
   }
 
 }

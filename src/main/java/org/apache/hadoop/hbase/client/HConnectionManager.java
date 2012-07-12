@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
@@ -1142,8 +1143,11 @@ public class HConnectionManager {
       if (getMaster) {
         getMaster();
       }
-      HRegionInterface server;
-      
+      HRegionInterface server = HRegionServer.getMainRS(regionServer);  
+      if (server != null) {
+        return server;
+      }
+
       try {
         // establish an RPC for this RS
         // set hbase.ipc.client.connect.max.retries to retry connection
