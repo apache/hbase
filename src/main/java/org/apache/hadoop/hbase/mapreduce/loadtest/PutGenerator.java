@@ -17,6 +17,7 @@ public class PutGenerator implements OperationGenerator {
   protected final AtomicLong nextKey;
   protected final byte[] columnFamily;
   protected final KeyCounter keysWritten;
+  protected double profilingFraction = LoadTest.DEFAULT_PROFILING_FRACTION;
 
   // If queue is null, then bulk inserts will be generated, otherwise, inserts
   // of single KeyValues will be generated.
@@ -31,7 +32,7 @@ public class PutGenerator implements OperationGenerator {
    * @param bulkInsert if true, operations will each insert multiple key-values
    */
   public PutGenerator(byte[] columnFamily, KeyCounter keysWritten,
-      long startKey, boolean bulkInsert) {
+      long startKey, boolean bulkInsert, double profilingFraction) {
     nextKey = new AtomicLong(startKey);
     this.columnFamily = columnFamily;
     this.keysWritten = keysWritten;
@@ -40,6 +41,7 @@ public class PutGenerator implements OperationGenerator {
     } else {
       this.queue = new LinkedBlockingQueue<PutOperation>();
     }
+    this.profilingFraction = profilingFraction;
   }
 
   public Operation nextOperation(DataGenerator dataGenerator) {
@@ -79,7 +81,7 @@ public class PutGenerator implements OperationGenerator {
   protected PutOperation getBulkPut(DataGenerator dataGenerator, long key) {
     Put put = dataGenerator.constructBulkPut(key, columnFamily);
     if (put != null) {
-      return new PutOperation(key, put, keysWritten);
+      return new PutOperation(key, put, keysWritten, profilingFraction);
     } else {
       // Key was defined to be skipped, mark it as complete so it can be read.
       keysWritten.markKey(key, true);
@@ -93,9 +95,10 @@ public class PutGenerator implements OperationGenerator {
       AtomicInteger remainingParts = new AtomicInteger(puts.size());
       for (int i = 1; i < puts.size(); i++) {
         queue.offer(new PutOperation(key, puts.get(i), keysWritten,
-            remainingParts));
+            remainingParts, profilingFraction));
       }
-      return new PutOperation(key, puts.get(0), keysWritten, remainingParts);
+      return new PutOperation(key, puts.get(0), keysWritten, remainingParts, 
+          profilingFraction);
     } else {
       keysWritten.markKey(key, true);
       return null;

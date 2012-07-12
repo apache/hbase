@@ -1,6 +1,7 @@
 package org.apache.hadoop.hbase.mapreduce.loadtest;
 
 import java.io.IOException;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hbase.client.HTable;
@@ -15,6 +16,8 @@ public class PutOperation extends Operation {
   private final long key;
   private boolean success;
   private final KeyCounter writtenKeys;
+  private final double profilingFraction;
+  private Random random;
 
   // Multi-part operations need to coordinate between themselves so that only
   // one of the parts makes certain updates. Related parts share an atomic
@@ -29,8 +32,9 @@ public class PutOperation extends Operation {
    * @param put
    * @param writtenKeys the sink of keys to be updated after execution
    */
-  public PutOperation(long key, Put put, KeyCounter writtenKeys) {
-    this(key, put, writtenKeys, null);
+  public PutOperation(long key, Put put, KeyCounter writtenKeys, 
+      double profilingFraction) {
+    this(key, put, writtenKeys, null, profilingFraction);
   }
 
   /**
@@ -42,14 +46,15 @@ public class PutOperation extends Operation {
    * @param writtenKeys the sink of keys to be updated after execution
    */
   public PutOperation(long key, Put put, KeyCounter writtenKeys,
-      AtomicInteger partsRemaining) {
+      AtomicInteger partsRemaining, double profilingFraction) {
     this.put = put;
     this.key = key;
     this.writtenKeys = writtenKeys;
     this.success = false;
-
+    this.profilingFraction = profilingFraction;
     this.partsRemaining = partsRemaining;
     this.wasLast = false;
+    this.random = new Random();
   }
 
   public Operation.Type getType() {
@@ -59,6 +64,7 @@ public class PutOperation extends Operation {
   }
 
   public void perform(HTable table) throws IOException {
+    table.setProfiling(random.nextDouble() < profilingFraction);
     table.put(put);
     success = true;
     if (partsRemaining != null) {

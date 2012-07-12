@@ -20,12 +20,13 @@ public class SeparateWorkloadGenerator extends Workload.Generator {
   private int getThreads = 20;
   private int getOpsPerSecond = getThreads * 1000000;
   private double getVerificationFraction = 0.05;
+  private double getProfilingFraction = 0.05;
 
   public List<List<Workload>> generateWorkloads(int numWorkloads, String args) {
 
     if (args != null) {
       String[] splits = args.split(":");
-      if (splits.length != 5) {
+      if (splits.length != 6) {
         throw new IllegalArgumentException("Wrong number of argument splits");
       }
       insertOpsPerSecond = Integer.parseInt(splits[0]);
@@ -33,6 +34,7 @@ public class SeparateWorkloadGenerator extends Workload.Generator {
       getOpsPerSecond = Integer.parseInt(splits[2]);
       getThreads = Integer.parseInt(splits[3]);
       getVerificationFraction = Double.parseDouble(splits[4]);
+      getProfilingFraction = Double.parseDouble(splits[5]);
     }
 
     List<List<Workload>> workloads =
@@ -42,9 +44,9 @@ public class SeparateWorkloadGenerator extends Workload.Generator {
       long startKey = Long.MAX_VALUE / numWorkloads * i;
       KeyCounter keysWritten = new KeyCounter(startKey);
       clientWorkloads.add(new GetWorkload(getOpsPerSecond, getThreads,
-          getVerificationFraction, keysWritten));
+          getVerificationFraction, getProfilingFraction, keysWritten));
       clientWorkloads.add(new InsertWorkload(startKey, insertOpsPerSecond,
-          insertThreads, keysWritten));
+          insertThreads, getProfilingFraction, keysWritten));
       workloads.add(clientWorkloads);
     }
     return workloads;
@@ -62,19 +64,22 @@ public class SeparateWorkloadGenerator extends Workload.Generator {
     private int opsPerSecond;
     private int numThreads;
     private double getVerificationFraction;
+    private double getProfilingFraction = LoadTest.DEFAULT_PROFILING_FRACTION;
     private KeyCounter keysWritten;
 
     public GetWorkload(int opsPerSecond, int numThreads,
-        double getVerificationFraction, KeyCounter keysWritten) {
+        double getVerificationFraction, double getProfilingFraction,
+        KeyCounter keysWritten) {
       this.opsPerSecond = opsPerSecond;
       this.numThreads = numThreads;
       this.getVerificationFraction = getVerificationFraction;
+      this.getProfilingFraction = getProfilingFraction;
       this.keysWritten = keysWritten;
     }
 
     public OperationGenerator constructGenerator() {
       return new GetGenerator(columnFamily, keysWritten,
-          getVerificationFraction);
+          getVerificationFraction, getProfilingFraction);
     }
 
     public int getNumThreads() {
@@ -96,18 +101,21 @@ public class SeparateWorkloadGenerator extends Workload.Generator {
     private long startKey;
     private int opsPerSecond;
     private int numThreads;
+    private double getProfilingFraction;
     private KeyCounter keysWritten;
 
     public InsertWorkload(long startKey, int opsPerSecond, int numThreads,
-        KeyCounter keysWritten) {
+        double getProfilingFraction, KeyCounter keysWritten) {
       this.startKey = startKey;
       this.opsPerSecond = opsPerSecond;
       this.numThreads = numThreads;
+      this.getProfilingFraction = getProfilingFraction;
       this.keysWritten = keysWritten;
     }
 
     public OperationGenerator constructGenerator() {
-      return new PutGenerator(columnFamily, keysWritten, startKey, true);
+      return new PutGenerator(columnFamily, keysWritten, startKey, true,
+          getProfilingFraction);
     }
 
     public int getNumThreads() {

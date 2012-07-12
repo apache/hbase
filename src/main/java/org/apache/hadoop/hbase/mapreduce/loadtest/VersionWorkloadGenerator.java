@@ -22,12 +22,13 @@ public class VersionWorkloadGenerator extends Workload.Generator {
   private int reinsertWeight = 1;
   private int getWeight = 1;
   private double getVerificationFraction = 0.05;
+  private double getProfilingFraction = LoadTest.DEFAULT_PROFILING_FRACTION;
 
   public List<List<Workload>> generateWorkloads(int numWorkloads, String args) {
 
     if (args != null) {
       String[] splits = args.split(":");
-      if (splits.length != 6) {
+      if (splits.length != 7) {
         throw new IllegalArgumentException("Wrong number of argument splits");
       }
       opsPerSecond = Integer.parseInt(splits[0]);
@@ -36,6 +37,7 @@ public class VersionWorkloadGenerator extends Workload.Generator {
       reinsertWeight = Integer.parseInt(splits[3]);
       getWeight = Integer.parseInt(splits[4]);
       getVerificationFraction = Double.parseDouble(splits[5]);
+      getProfilingFraction = Double.parseDouble(splits[6]);
     }
 
     List<List<Workload>> workloads =
@@ -45,7 +47,7 @@ public class VersionWorkloadGenerator extends Workload.Generator {
       long startKey = Long.MAX_VALUE / numWorkloads * i;
       clientWorkloads.add(new MessagesWorkload(startKey, opsPerSecond,
           numThreads, insertWeight, reinsertWeight, getWeight,
-          getVerificationFraction));
+          getVerificationFraction, getProfilingFraction));
       workloads.add(clientWorkloads);
     }
     return workloads;
@@ -71,10 +73,11 @@ public class VersionWorkloadGenerator extends Workload.Generator {
     private int reinsertWeight;
     private int getWeight;
     private double getVerificationFraction;
+    private double getProfilingFraction;
 
     public MessagesWorkload(long startKey, int opsPerSecond, int numThreads,
         int insertWeight, int getWeight, int reinsertWeight,
-        double getVerificationFraction) {
+        double getVerificationFraction, double getProfilingFraction) {
       this.startKey = startKey;
       this.opsPerSecond = opsPerSecond;
       this.numThreads = numThreads;
@@ -82,17 +85,20 @@ public class VersionWorkloadGenerator extends Workload.Generator {
       this.reinsertWeight = reinsertWeight;
       this.getWeight = getWeight;
       this.getVerificationFraction = getVerificationFraction;
+      this.getProfilingFraction = getProfilingFraction;
     }
 
     public OperationGenerator constructGenerator() {
       KeyCounter keysWritten = new KeyCounter(startKey);
       PutGenerator insertGenerator =
-          new PutGenerator(columnFamily, keysWritten, startKey, true);
+          new PutGenerator(columnFamily, keysWritten, startKey, true, 
+              getProfilingFraction);
       PutReGenerator insertReGenerator =
-          new PutReGenerator(columnFamily, keysWritten, true);
+          new PutReGenerator(columnFamily, keysWritten, true,
+              getProfilingFraction);
       GetGenerator getGenerator =
-          new GetGenerator(columnFamily, keysWritten, getVerificationFraction,
-              Integer.MAX_VALUE, 3600000);
+          new GetGenerator(columnFamily, keysWritten, getVerificationFraction, 
+              getProfilingFraction, Integer.MAX_VALUE, 3600000);
 
       CompositeOperationGenerator compositeGenerator =
           new CompositeOperationGenerator();

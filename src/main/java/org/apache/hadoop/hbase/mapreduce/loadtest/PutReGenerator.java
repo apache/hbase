@@ -16,8 +16,8 @@ public class PutReGenerator extends PutGenerator {
    * @param bulkInsert if true, operations will each insert multiple key-values
    */
   public PutReGenerator(byte[] columnFamily, KeyCounter keysWritten,
-      boolean bulkInsert) {
-    super(columnFamily, keysWritten, 0, bulkInsert);
+      boolean bulkInsert, double profilingFraction) {
+    super(columnFamily, keysWritten, 0, bulkInsert, profilingFraction);
   }
 
   /**

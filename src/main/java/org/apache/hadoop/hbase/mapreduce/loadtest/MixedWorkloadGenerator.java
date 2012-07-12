@@ -20,11 +20,12 @@ public class MixedWorkloadGenerator extends Workload.Generator {
   private int insertWeight = 1;
   private int getWeight = 1;
   private double getVerificationFraction = 0.05;
+  private double getProfilingFraction = LoadTest.DEFAULT_PROFILING_FRACTION;
 
   public List<List<Workload>> generateWorkloads(int numWorkloads, String args) {
     if (args != null) {
       String[] splits = args.split(":");
-      if (splits.length != 5) {
+      if (splits.length != 6) {
         throw new IllegalArgumentException("Wrong number of argument splits");
       }
       opsPerSecond = Integer.parseInt(splits[0]);
@@ -32,6 +33,7 @@ public class MixedWorkloadGenerator extends Workload.Generator {
       insertWeight = Integer.parseInt(splits[2]);
       getWeight = Integer.parseInt(splits[3]);
       getVerificationFraction = Double.parseDouble(splits[4]);
+      getProfilingFraction = Double.parseDouble(splits[5]);
     }
 
     List<List<Workload>> workloads = new ArrayList<List<Workload>>(numWorkloads);
@@ -39,7 +41,8 @@ public class MixedWorkloadGenerator extends Workload.Generator {
       List<Workload> clientWorkloads = new ArrayList<Workload>();
       long startKey = Long.MAX_VALUE / numWorkloads * i;
       clientWorkloads.add(new MixedWorkload(startKey, opsPerSecond, numThreads,
-          insertWeight, getWeight, getVerificationFraction));
+          insertWeight, getWeight, getVerificationFraction,
+          getProfilingFraction));
       workloads.add(clientWorkloads);
     }
     return workloads;
@@ -60,23 +63,28 @@ public class MixedWorkloadGenerator extends Workload.Generator {
     private int insertWeight;
     private int getWeight;
     private double getVerificationFraction;
+    private double getProfilingFraction;
 
     public MixedWorkload(long startKey, int opsPerSecond, int numThreads,
-        int insertWeight, int getWeight, double getVerificationFraction) {
+        int insertWeight, int getWeight, double getVerificationFraction,
+        double getProfilingFraction) {
       this.startKey = startKey;
       this.opsPerSecond = opsPerSecond;
       this.numThreads = numThreads;
       this.insertWeight = insertWeight;
       this.getWeight = getWeight;
       this.getVerificationFraction = getVerificationFraction;
+      this.getProfilingFraction = getProfilingFraction;
     }
 
     public OperationGenerator constructGenerator() {
       KeyCounter keysWritten = new KeyCounter(startKey);
       PutGenerator insertGenerator =
-          new PutGenerator(columnFamily, keysWritten, startKey, true);
+          new PutGenerator(columnFamily, keysWritten, startKey, true,
+              getProfilingFraction);
       GetGenerator getGenerator =
-          new GetGenerator(columnFamily, keysWritten, getVerificationFraction);
+          new GetGenerator(columnFamily, keysWritten, getVerificationFraction,
+              getProfilingFraction);
 
       CompositeOperationGenerator compositeGenerator =
           new CompositeOperationGenerator();

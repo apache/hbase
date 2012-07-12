@@ -17,6 +17,7 @@ public class GetGenerator implements OperationGenerator {
   private byte[] columnFamily;
   private Random random;
   private double verifyFraction;
+  private double profilingFraction;
   private int maxVersions;
   private long minTime;
   private long maxTime;
@@ -31,8 +32,9 @@ public class GetGenerator implements OperationGenerator {
    * @param verifyFraction the fraction in [0,1] of operations to verify
    */
   public GetGenerator(byte[] columnFamily, KeyCounter keysWritten,
-      double verifyFraction) {
-    this(columnFamily, keysWritten, verifyFraction, 1, 0, Long.MAX_VALUE);
+      double verifyFraction, double profilingFraction) {
+    this(columnFamily, keysWritten, verifyFraction,
+        profilingFraction, 1, 0, Long.MAX_VALUE);
   }
 
   /**
@@ -47,9 +49,10 @@ public class GetGenerator implements OperationGenerator {
    * @param timeDelta the maximum allowed age of a version, in milliseconds
    */
   public GetGenerator(byte[] columnFamily, KeyCounter keysWritten,
-      double verifyFraction, int maxVersions, long timeDelta) {
-    this(columnFamily, keysWritten, verifyFraction, maxVersions, 0, 0,
-        timeDelta);
+      double verifyFraction, double profilingFraction,
+      int maxVersions, long timeDelta) {
+    this(columnFamily, keysWritten, verifyFraction, profilingFraction,
+        maxVersions, 0, 0, timeDelta);
   }
 
   /**
@@ -65,21 +68,23 @@ public class GetGenerator implements OperationGenerator {
    * @param maxTime the latest allowable timestamp on a version
    */
   public GetGenerator(byte[] columnFamily, KeyCounter keysWritten,
-      double verifyFraction, int maxVersions, long minTime, long maxTime) {
-    this(columnFamily, keysWritten, verifyFraction, maxVersions, minTime,
-        maxTime, 0);
+      double verifyFraction, double profilingFraction, 
+      int maxVersions, long minTime, long maxTime) {
+    this(columnFamily, keysWritten, verifyFraction, profilingFraction,
+        maxVersions, minTime, maxTime, 0);
   }
 
   /**
    * Private constructor, used by public constructors to set all properties.
    */
   private GetGenerator(byte[] columnFamily, KeyCounter keysWritten,
-      double verifyFraction, int maxVersions, long minTime, long maxTime,
-      long timeDelta) {
+      double verifyFraction, double profilingFraction, int maxVersions, 
+      long minTime, long maxTime, long timeDelta) {
     this.keysWritten = keysWritten;
     this.columnFamily = columnFamily;
     this.random = new Random();
     this.verifyFraction = verifyFraction;
+    this.profilingFraction = profilingFraction;
     this.maxVersions = maxVersions;
     this.minTime = minTime;
     this.maxTime = maxTime;
@@ -109,7 +114,7 @@ public class GetGenerator implements OperationGenerator {
         e.printStackTrace();
       }
       boolean verify = random.nextDouble() < verifyFraction;
-      return new GetOperation(key, get, verify ? dataGenerator : null);
+      return new GetOperation(key, get, verify ? dataGenerator : null, profilingFraction);
     } catch (KeyCounter.NoKeysException e) {
       return null;
     }
