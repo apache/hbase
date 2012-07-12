@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.RuntimeExceptionAbortStrategy;
@@ -802,9 +803,15 @@ public class HLog implements Syncable {
    */
   public void close() throws IOException {
     try {
-      logSyncerThread.interrupt();
-      // Make sure we synced everything
-      logSyncerThread.join(this.optionalFlushInterval*2);
+      logSyncerThread.syncerShuttingDown = true;
+      // wait for 2 seconds to gracefully close the syncer
+      logSyncerThread.join(2000);
+      if (logSyncerThread.isAlive()) {
+        // interrupting the logSyncer will most likely interrupt the dfs
+        // sync() call. And interrupting log sync will abort the jvm
+        LOG.warn("Could not shutdown log-syncer in 2s. Interrupting it now");
+        logSyncerThread.interrupt();
+      }
     } catch (InterruptedException e) {
       LOG.error("Exception while waiting for syncer thread to die", e);
     }
@@ -860,6 +867,11 @@ public class HLog implements Syncable {
    */
   public void append(HRegionInfo regionInfo, HLogKey logKey, WALEdit logEdit)
   throws IOException {
+    if (logSyncerThread.syncerShuttingDown) {
+      // can't acquire lock for the duration of append()
+      // so this is just a best-effort check
+      throw new IOException("Cannot append; logSyncer shutting down");
+    }
     byte [] regionName = regionInfo.getRegionName();
     synchronized (updateLock) {
       if (this.closed) {
@@ -913,6 +925,11 @@ public class HLog implements Syncable {
   throws IOException {
     if (edits.isEmpty()) return;
 
+    if (logSyncerThread.syncerShuttingDown) {
+      // can't acquire lock for the duration of append()
+      // so this is just a best-effort check
+      throw new IOException("Cannot append; logSyncer shutting down");
+    }
     byte[] regionName = info.getRegionName();
     long txid = 0;
     long start = System.currentTimeMillis();
@@ -961,46 +978,64 @@ public class HLog implements Syncable {
     // Condition used to signal that the sync is done
     private final Condition syncDone = lock.newCondition();
 
-    private final long optionalFlushInterval;
+    private long optionalFlushInterval;
 
     // this variable is protected by this.lock
-    private boolean syncerShuttingDown = false;
+    volatile boolean syncerShuttingDown = false;
 
     LogSyncer(long optionalFlushInterval) {
       this.optionalFlushInterval = optionalFlushInterval;
+      if (this.optionalFlushInterval <= 0) {
+        LOG.warn("optionalFlushInterval = " + this.optionalFlushInterval +
+            " turning off periodic forced flushes");
+        this.optionalFlushInterval = Long.MAX_VALUE;
+      }
     }
 
     @Override
     public void run() {
       try {
+        long lastHFlushAt = EnvironmentEdgeManager.currentTimeMillis();
+        boolean isQueueEmpty;
         lock.lock();
         // awaiting with a timeout doesn't always
         // throw exceptions on interrupt
-        while(!this.isInterrupted()) {
-
-          // Wait until something has to be hflushed or do it if we waited
-          // enough time (useful if something appends but does not hflush).
-          // 0 or less means that it timed out and maybe waited a bit more.
-          if (!(queueEmpty.awaitNanos(
-              this.optionalFlushInterval*1000000) <= 0)) {
-            forceSync = true;
+        do {
+          forceSync = false;
+          // wake up every 100ms to check if logsyncer has to shut down
+          queueEmpty.awaitNanos(100*1000000);
+          if (unflushedEntries.get() == syncTillHere) {
+            // call hflush() if we haven't flushed for a while now
+            // This force-sync is just a safety mechanism - we being
+            // paranoid. If there hasn't been any syncing activity for
+            // optionalFlushInterval then force a sync. I am not sure what it
+            // is supposed to fix.
+            if ((EnvironmentEdgeManager.currentTimeMillis() - lastHFlushAt) >=
+                this.optionalFlushInterval) {
+              forceSync = true;
+            } else {
+              continue;
+            }
           }
-
           // We got the signal, let's hflush. We currently own the lock so new
           // writes are waiting to acquire it in addToSyncQueue while the ones
           // we hflush are waiting on await()
           hflush();
+          assert unflushedEntries.get() == syncTillHere :
+              "hflush should not have returned without flushing everything!";
+          lastHFlushAt = EnvironmentEdgeManager.currentTimeMillis();
 
           // Release all the clients waiting on the hflush. Notice that we still
           // own the lock until we get back to await at which point all the
           // other threads waiting will first acquire and release locks
           syncDone.signalAll();
-        }
-      } catch (IOException e) {
-        LOG.error("Error while syncing, requesting close of hlog ", e);
-        requestLogRoll();
+        } while (!syncerShuttingDown);
       } catch (InterruptedException e) {
         LOG.debug(getName() + " interrupted while waiting for sync requests");
+        if (unflushedEntries.get() != syncTillHere) {
+          syncFailureAbortStrategy.abort("LogSyncer interrupted before it" + 
+              " could sync everything. Aborting JVM", e);
+        }
       } finally {
         syncerShuttingDown = true;
         syncDone.signalAll();
@@ -1028,10 +1063,6 @@ public class HLog implements Syncable {
         }
         lock.lock();
         try {
-          if (syncerShuttingDown) {
-            LOG.warn(getName() + " was shut down while waiting for sync");
-            return;
-          }
           // Wake the thread
           queueEmpty.signal();
 
@@ -1041,7 +1072,7 @@ public class HLog implements Syncable {
             syncDone.await();
           }
         } catch (InterruptedException e) {
-          LOG.debug(getName() + " was interrupted while waiting for sync", e);
+          LOG.warn(getName() + " was interrupted while waiting for sync", e);
         } finally {
           lock.unlock();
         }
@@ -1049,7 +1080,7 @@ public class HLog implements Syncable {
     }
   }
 
-  public void sync(){
+  public void sync() {
     sync(false);
   }
 
@@ -1072,7 +1103,7 @@ public class HLog implements Syncable {
     logSyncerThread.addToSyncQueue(force, txid);
   }
 
-  public void hflush() throws IOException {
+  public void hflush() {
     synchronized (this.updateLock) {
       if (this.closed) {
         return;
@@ -1097,7 +1128,6 @@ public class HLog implements Syncable {
           }
           this.syncTillHere = doneUpto;
           syncTime.inc(System.currentTimeMillis() - now);
-          this.forceSync = false;
 
           // if the number of replicas in HDFS has fallen below the initial
           // value, then roll logs.
@@ -1121,8 +1151,12 @@ public class HLog implements Syncable {
         }
       }
 
-      if (!logRollRequested && (this.writer.getLength() > this.logrollsize)) {
-        requestLogRoll();
+      try {
+        if (!logRollRequested && (this.writer.getLength() > this.logrollsize)) {
+          requestLogRoll();
+        }
+      } catch (IOException ioe) {
+        LOG.warn("Failed to get length of the log file. Ignoring", ioe);
       }
     }
   }
@@ -1150,7 +1184,7 @@ public class HLog implements Syncable {
     return this.getNumCurrentReplicas != null;
   }
 
-  public void hsync() throws IOException {
+  public void hsync() {
     // Not yet implemented up in hdfs so just call hflush.
     hflush();
   }
@@ -2162,6 +2196,7 @@ public class HLog implements Syncable {
 
   /** Used in a simulated kill of a regionserver */
   public void kill() {
+    logSyncerThread.syncerShuttingDown = true;
     logSyncerThread.interrupt();
   }
 }
