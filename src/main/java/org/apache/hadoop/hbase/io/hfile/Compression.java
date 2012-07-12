@@ -34,6 +34,7 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -74,7 +75,7 @@ public final class Compression {
    * Compression algorithms.
    */
   public static enum Algorithm {
-    LZO("lzo") {
+	LZO("lzo") {
       // Use base type to avoid compile-time dependencies.
       private transient CompressionCodec lzoCodec;
 
@@ -106,7 +107,17 @@ public final class Compression {
         return codec;
       }
     },
-
+    SNAPPY("snappy") {
+    	private transient CompressionCodec snappyCodec;
+	    @Override
+	    CompressionCodec getCodec(Configuration conf) {
+	      if (snappyCodec == null) {
+	        snappyCodec = new SnappyCodec();
+	        ((Configurable) snappyCodec).setConf(new Configuration(conf));
+	      }
+	      return (CompressionCodec) snappyCodec;
+	    }
+    },
     NONE("none") {
       @Override
       DefaultCodec getCodec(Configuration conf) {

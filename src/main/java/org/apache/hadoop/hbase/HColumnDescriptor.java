@@ -525,12 +525,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setCompressionType(Compression.Algorithm type) {
-    String compressionType;
-    switch (type) {
-      case LZO: compressionType = "LZO"; break;
-      case GZ: compressionType = "GZ"; break;
-      default: compressionType = "NONE"; break;
-    }
+    String compressionType = type.getName().toUpperCase();
     return setValue(COMPRESSION, compressionType);
   }
 
