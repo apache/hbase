@@ -219,9 +219,6 @@ java.lang.management.ManagementFactory;
 
 </tr>
 
-    <& histogramRow; op ="Get"; histo = metrics.getLatencies &>
-    <& histogramRow; op ="Put"; histo = metrics.putLatencies &>
-    <& histogramRow; op ="Delete"; histo = metrics.deleteLatencies &>
     <& histogramRow; op ="FS Read"; histo = metrics.fsReadLatencyHistogram &>
     <& histogramRow; op ="FS PRead"; histo = metrics.fsPreadLatencyHistogram &>
     <& histogramRow; op ="FS Write"; histo = metrics.fsWriteLatencyHistogram &>
