@@ -294,6 +294,7 @@ public abstract class HBaseServer {
     protected ThreadPoolExecutor deserializationThreadPool;
 
     public Listener() throws IOException {
+      // this will trigger a DNS lookup
       address = new InetSocketAddress(bindAddress, port);
       // Create a new server socket and set to non blocking mode
       acceptChannel = ServerSocketChannel.open();

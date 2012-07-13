@@ -360,9 +360,9 @@ public class HRegionServer implements HRegionInterface,
       conf.get(HConstants.REGIONSERVER_PORT,
           Integer.toString(HConstants.DEFAULT_REGIONSERVER_PORT));
     // This is not necessarily the address we will run with.  The address we
-    // use will be in #serverInfo data member.  For example, we may have been
-    // passed a port of 0 which means we should pick some ephemeral port to bind
-    // to.
+    // use will be in #serverInfo data member
+    // If we are passed a port 0 then we have to bind to ephemeral port to get
+    // the port value
     address = new HServerAddress(addressStr);
     LOG.info("My address is " + address);
 
@@ -430,16 +430,21 @@ public class HRegionServer implements HRegionInterface,
     this.abortRequested = false;
     this.stopRequested.set(false);
 
-    // Server to handle client requests
-    this.server = HBaseRPC.getServer(this, address.getBindAddress(),
-      address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
-      false, conf);
-    this.server.setErrorHandler(this);
     // Address is giving a default IP for the moment. Will be changed after
     // calling the master.
+    int port;
+    if ((port = address.getPort()) == 0) {
+      // start the RPC server to get the actual ephemeral port value
+      this.server = HBaseRPC.getServer(this, address.getBindAddress(),
+          address.getPort(),
+          conf.getInt("hbase.regionserver.handler.count", 10),
+          false, conf);
+      this.server.setErrorHandler(this);
+      port = this.server.getListenerAddress().getPort();
+    }
     this.serverInfo = new HServerInfo(new HServerAddress(
-      new InetSocketAddress(address.getBindAddress(),
-      this.server.getListenerAddress().getPort())), System.currentTimeMillis(),
+      new InetSocketAddress(address.getBindAddress(), port)),
+      System.currentTimeMillis(),
       this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT,
           HConstants.DEFAULT_REGIONSERVER_INFOPORT), machineName);
     if (this.serverInfo.getServerAddress() == null) {
@@ -743,7 +748,9 @@ public class HRegionServer implements HRegionInterface,
     this.leases.closeAfterLeasesExpire();
     isRpcServerRunning = false;
     this.worker.stop();
-    this.server.stop();
+    if (this.server != null) {
+      this.server.stop();
+    }
     if (this.splitLogWorker != null) {
       splitLogWorker.stop();
     }
@@ -1454,8 +1461,15 @@ public class HRegionServer implements HRegionInterface,
 
     this.replicationHandler.startReplicationServices();
 
-    // Start Server.  This service is like leases in that it internally runs
-    // a thread.
+    if (this.server == null) {
+      // Start Server to handle client requests.
+      this.server = HBaseRPC.getServer(this,
+          serverInfo.getServerAddress().getBindAddress(),
+          serverInfo.getServerAddress().getPort(),
+          conf.getInt("hbase.regionserver.handler.count", 10),
+          false, conf);
+      this.server.setErrorHandler(this);
+    }
     this.server.start();
     isRpcServerRunning = true;
     // Create the log splitting worker and start it

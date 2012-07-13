@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -192,7 +193,7 @@ public class HMaster extends HasThread implements HMasterInterface,
   // The Path to the old logs dir
   private final Path oldLogDir;
 
-  private final HBaseServer rpcServer;
+  private HBaseServer rpcServer;
   private final HServerAddress address;
 
   private final ServerConnection connection;
@@ -245,13 +246,22 @@ public class HMaster extends HasThread implements HMasterInterface,
   public HMaster(Configuration conf) throws IOException {
     this.conf = conf;
 
-    // Get my address and create an rpc server instance.  The rpc-server port
-    // can be ephemeral...ensure we have the correct info
+    // Get my address. So what's the difference between the temp a and address?
+    // address.toString() will always produce an IP address as the hostname.
+    // a.toStrng() can have the canonical-name of the host as the hostname.
+    // If the configured master port is 0, then a will bind it to an
+    // ephemeral port first by starting the rpc server.
     HServerAddress a = new HServerAddress(getMyAddress(this.conf));
-    this.rpcServer = HBaseRPC.getServer(this, a.getBindAddress(),
-      a.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
-      false, conf);
-    this.address = new HServerAddress(this.rpcServer.getListenerAddress());
+    int port;
+    if ((port = a.getPort()) == 0) {
+      this.rpcServer = HBaseRPC.getServer(this, a.getBindAddress(),
+          a.getPort(),
+          conf.getInt("hbase.regionserver.handler.count", 10),
+          false, conf);
+      port = this.rpcServer.getListenerAddress().getPort();
+    }
+    this.address = new HServerAddress(new InetSocketAddress(a.getBindAddress(),
+        port));
     setName(getServerName());
 
     // Figure out if this is a fresh cluster start. This is done by checking the
@@ -797,7 +807,9 @@ public class HMaster extends HasThread implements HMasterInterface,
         ex.printStackTrace();
       }
     }
-    this.rpcServer.stop();
+    if (this.rpcServer != null) {
+      this.rpcServer.stop();
+    }
 
     logSplitThreadPool.shutdown();
 
@@ -1170,8 +1182,14 @@ public class HMaster extends HasThread implements HMasterInterface,
         this.splitLogManager.finishInitialization();
       }
       // Start the server so that region servers are running before we start
-      // splitting logs and before we start assigning regions. XXX What will happen
-      // if master starts receiving requests before regions are assigned?
+      // splitting logs and before we start assigning regions. XXX What will
+      // happen if master starts receiving requests before regions are assigned?
+      if (this.rpcServer == null) {
+        this.rpcServer = HBaseRPC.getServer(this, this.address.getBindAddress(),
+            this.address.getPort(),
+            conf.getInt("hbase.regionserver.handler.count", 10),
+            false, conf);
+      }
       this.rpcServer.start();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Started service threads");
