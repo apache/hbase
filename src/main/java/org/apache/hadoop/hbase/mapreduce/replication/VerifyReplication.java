@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
@@ -137,7 +136,10 @@ public class VerifyReplication {
     }
 
     protected void cleanup(Context context) {
-      replicatedScanner.close();
+      if (replicatedScanner != null) {
+        replicatedScanner.close();
+        replicatedScanner = null;
+      }
     }
   }
 
