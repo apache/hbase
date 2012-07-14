@@ -104,6 +104,7 @@ Bug
     [HBASE-6377] - HBASE-5533 metrics miss all operations submitted via MultiAction
     [HBASE-6380] - bulkload should update the store.storeSize
     [HBASE-6389] - Modify the conditions to ensure that Master waits for sufficient number of Region Servers before starting region assignments
+    [HBASE-6394] - verifyrep MR job map tasks throws NullPointerException
 
 Improvement
 
