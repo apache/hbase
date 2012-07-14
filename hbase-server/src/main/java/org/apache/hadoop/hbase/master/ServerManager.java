@@ -582,12 +582,12 @@ public class ServerManager {
    * Wait for the region servers to report in.
    * We will wait until one of this condition is met:
    *  - the master is stopped
-   *  - the 'hbase.master.wait.on.regionservers.timeout' is reached
    *  - the 'hbase.master.wait.on.regionservers.maxtostart' number of
    *    region servers is reached
    *  - the 'hbase.master.wait.on.regionservers.mintostart' is reached AND
    *   there have been no new region server in for
-   *      'hbase.master.wait.on.regionservers.interval' time
+   *      'hbase.master.wait.on.regionservers.interval' time AND
+   *   the 'hbase.master.wait.on.regionservers.timeout' is reached
    *
    * @throws InterruptedException
    */
@@ -596,11 +596,18 @@ public class ServerManager {
     final long interval = this.master.getConfiguration().
       getLong("hbase.master.wait.on.regionservers.interval", 1500);
     final long timeout = this.master.getConfiguration().
-    getLong("hbase.master.wait.on.regionservers.timeout", 4500);
+      getLong("hbase.master.wait.on.regionservers.timeout", 4500);
     final int minToStart = this.master.getConfiguration().
-    getInt("hbase.master.wait.on.regionservers.mintostart", 1);
-    final int maxToStart = this.master.getConfiguration().
-    getInt("hbase.master.wait.on.regionservers.maxtostart", Integer.MAX_VALUE);
+      getInt("hbase.master.wait.on.regionservers.mintostart", 1);
+    int maxToStart = this.master.getConfiguration().
+      getInt("hbase.master.wait.on.regionservers.maxtostart", Integer.MAX_VALUE);
+    if (maxToStart < minToStart) {
+        LOG.warn(String.format(
+            "The value of 'hbase.master.wait.on.regionservers.maxtostart' (%d)" +
+            " is set less than 'hbase.master.wait.on.regionservers.mintostart'" +
+            " (%d), ignoring.", maxToStart, minToStart));
+        maxToStart = Integer.MAX_VALUE;
+    }
 
     long now =  System.currentTimeMillis();
     final long startTime = now;
@@ -611,9 +618,8 @@ public class ServerManager {
     int oldCount = 0;
     while (
       !this.master.isStopped() &&
-        slept < timeout &&
         count < maxToStart &&
-        (lastCountChange+interval > now || count < minToStart)
+        (lastCountChange+interval > now || timeout > slept || count < minToStart)
       ){
 
       // Log some info at every interval time or if there is a change
