@@ -2135,9 +2135,14 @@ public class HBaseFsck {
   }
 
   public void dumpSidelinedRegions(Map<Path, HbckInfo> regions) {
-    for (Path k : regions.keySet()) {
-      System.out.println("To be bulk loaded sidelined region dir: "
-        + k.toString());
+    for (Map.Entry<Path, HbckInfo> entry: regions.entrySet()) {
+      String tableName = Bytes.toStringBinary(entry.getValue().getTableName());
+      Path path = entry.getKey();
+      System.out.println("This sidelined region dir should be bulk loaded: "
+        + path.toString());
+      System.out.println("Bulk load command looks like: "
+        + "hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles "
+        + path.toUri().getPath() + " "+ tableName);
     }
   }
 
