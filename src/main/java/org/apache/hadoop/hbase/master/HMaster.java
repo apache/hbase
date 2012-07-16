@@ -254,10 +254,9 @@ public class HMaster extends HasThread implements HMasterInterface,
     HServerAddress a = new HServerAddress(getMyAddress(this.conf));
     int port;
     if ((port = a.getPort()) == 0) {
-      this.rpcServer = HBaseRPC.getServer(this, a.getBindAddress(),
-          a.getPort(),
-          conf.getInt("hbase.regionserver.handler.count", 10),
-          false, conf);
+      // We initialize the RPC server here if the port is unknown (e.g. in unit tests).
+      // In production we try to start the RPC server immediately before starting RPC threads.
+      initRpcServer(a);
       port = this.rpcServer.getListenerAddress().getPort();
     }
     this.address = new HServerAddress(new InetSocketAddress(a.getBindAddress(),
@@ -372,6 +371,18 @@ public class HMaster extends HasThread implements HMasterInterface,
     } else {
       tableLockManager = null;
     }
+  }
+
+  private void initRpcServer(HServerAddress address) throws IOException {
+    if (this.rpcServer != null) {
+      LOG.info("Master RPC server is already initialized");
+      return;
+    }
+    LOG.info("Initializing master RPC server at " + address);
+    this.rpcServer = HBaseRPC.getServer(this, address.getBindAddress(),
+        address.getPort(),
+        conf.getInt("hbase.regionserver.handler.count", 10),
+        false, conf);
   }
 
   public boolean shouldAssignRegionsWithFavoredNodes() {
@@ -1184,12 +1195,9 @@ public class HMaster extends HasThread implements HMasterInterface,
       // Start the server so that region servers are running before we start
       // splitting logs and before we start assigning regions. XXX What will
       // happen if master starts receiving requests before regions are assigned?
-      if (this.rpcServer == null) {
-        this.rpcServer = HBaseRPC.getServer(this, this.address.getBindAddress(),
-            this.address.getPort(),
-            conf.getInt("hbase.regionserver.handler.count", 10),
-            false, conf);
-      }
+      // NOTE: If the master bind port is 0 (e.g. in unit tests) we initialize the RPC server
+      // earlier and do nothing here.
+      initRpcServer(this.address);
       this.rpcServer.start();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Started service threads");
