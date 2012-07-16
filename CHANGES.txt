@@ -90,6 +90,7 @@ Release 0.92.2 - Unreleased
    HBASE-6313  Client hangs because the client is not notified (binlijin)
    HBASE-4379  [hbck] Does not complain about tables with no end region [z,] (Anoop Sam John)
    HBASE-6357  Failed distributed log splitting stuck on master web UI
+   HBASE-6382  Upgrade Jersey to 1.8 to match Hadoop 1 and 2
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
