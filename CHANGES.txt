@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.1 - 7/13/2012
+Release 0.94.1 - 7/16/2012
 Sub-task
 
     [HBASE-5342] - Grant/Revoke global permissions
@@ -105,6 +105,7 @@ Bug
     [HBASE-6380] - bulkload should update the store.storeSize
     [HBASE-6389] - Modify the conditions to ensure that Master waits for sufficient number of Region Servers before starting region assignments
     [HBASE-6394] - verifyrep MR job map tasks throws NullPointerException
+    [HBASE-6397] - [hbck] print out bulk load commands for sidelined regions if necessary
 
 Improvement
 
