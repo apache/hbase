@@ -803,7 +803,7 @@
     <jaxb-api.version>2.1</jaxb-api.version>
     <jetty.version>6.1.26</jetty.version>
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
-    <jersey.version>1.4</jersey.version>
+    <jersey.version>1.8</jersey.version>
     <jruby.version>1.6.5</jruby.version>
     <junit.version>4.10-HBASE-1</junit.version>
     <slf4j.version>1.4.3</slf4j.version>
