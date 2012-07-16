@@ -24,6 +24,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.WritableComparable;
@@ -35,6 +37,13 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
   private InetSocketAddress address;
   private String stringValue;
   private String hostAddress;
+
+  /** 
+   * We don't expect the IP addresses of HBase servers to change, so we cache them
+   * indefinitely. At this level we only do positive caching.
+   */
+  private static ConcurrentMap<String, InetSocketAddress> addressCache =
+      new ConcurrentHashMap<String, InetSocketAddress>();
 
   public HServerAddress() {
     this.address = null;
@@ -62,7 +71,18 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     }
     String host = hostAndPort.substring(0, colonIndex);
     int port = Integer.parseInt(hostAndPort.substring(colonIndex + 1));
-    this.address = new InetSocketAddress(host, port);
+    address = addressCache.get(hostAndPort);
+    if (address == null) {
+      this.address = new InetSocketAddress(host, port);
+      if (getBindAddress() != null) {
+        // Resolved the hostname successfully, cache it.
+        InetSocketAddress existingAddress = addressCache.putIfAbsent(hostAndPort, address);
+        if (existingAddress != null) {
+          // Another thread cached the address ahead of us, reuse it.
+          this.address = existingAddress;
+        }
+      }
+    }
     this.stringValue = getHostAddressWithPort();
     checkBindAddressCanBeResolved();
   }
