@@ -138,6 +138,7 @@ Improvement
     [HBASE-6332] - Improve POM for better integration with downstream ivy projects
     [HBASE-6334] - TestImprovement for TestHRegion.testWritesWhileGetting
     [HBASE-6341] - Publicly expose HConnectionKey
+    [HBASE-6382] - Upgrade Jersey to 1.8 to match Hadoop 1 and 2
     [HBASE-6384] - hbck should group together those sidelined regions need to be bulk loaded later
 
 New Feature
