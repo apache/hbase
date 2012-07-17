@@ -59,6 +59,11 @@ public class LoadTest extends Configured implements Tool {
   
   public static final double DEFAULT_PROFILING_FRACTION = 0.001;
 
+  // Since all tasks share the same jmx port, some tasks might fail since
+  // they might run on the same machine and try to bind to the same jmx port.
+  // Alleviating this situation by retrying tasks as long as we can.
+  public static final int MAX_REDUCE_TASK_ATTEMPTS = Integer.MAX_VALUE;
+
   public static class Map
       extends Mapper<LongWritable, Text, LongWritable, Text> {
 
@@ -264,6 +269,7 @@ public class LoadTest extends Configured implements Tool {
         "-Dcom.sun.management.jmxremote.authenticate=false" +
         " -Dcom.sun.management.jmxremote.ssl=false" +
         " -Dcom.sun.management.jmxremote.port=" + jmxPort);
+    conf.setInt("mapred.reduce.max.attempts", MAX_REDUCE_TASK_ATTEMPTS);
 
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
     String currentDate = dateFormat.format(new Date());
