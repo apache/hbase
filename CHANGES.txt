@@ -52,6 +52,7 @@ Release 0.90.7 - Unreleased
    HBASE-6173  hbck check specified tables only
    HBASE-5360  [uberhbck] Add options for how to handle offline split parents. 
    HBASE-6283  [region_mover.rb] Add option to exclude list of hosts on unload instead of just assuming the source node
+   HBASE-6382  Upgrade Jersey to 1.8 to match Hadoop 1 and 2 (David S. Wang)
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems
