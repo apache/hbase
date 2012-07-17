@@ -1021,15 +1021,17 @@ public class HLog implements Syncable {
           // writes are waiting to acquire it in addToSyncQueue while the ones
           // we hflush are waiting on await()
           hflush();
-          assert unflushedEntries.get() == syncTillHere :
-              "hflush should not have returned without flushing everything!";
           lastHFlushAt = EnvironmentEdgeManager.currentTimeMillis();
 
           // Release all the clients waiting on the hflush. Notice that we still
           // own the lock until we get back to await at which point all the
           // other threads waiting will first acquire and release locks
           syncDone.signalAll();
-        } while (!syncerShuttingDown);
+        } while (!syncerShuttingDown ||
+            (unflushedEntries.get() != syncTillHere));
+        // The check above involves synchronization between syncerShuttingDown
+        // and unflushedEntries in append(). The check for syncerShutDown has to
+        // come before.
       } catch (InterruptedException e) {
         LOG.debug(getName() + " interrupted while waiting for sync requests");
         if (unflushedEntries.get() != syncTillHere) {
@@ -1126,6 +1128,10 @@ public class HLog implements Syncable {
             // case this.writer will be NULL
             this.writer.sync();
           }
+          // A better name for syncTillHere variable would have been
+          // syncedAtLeastTillHere. Between the time unflushedEntries is
+          // snapshotted and writer.sync() is called, append can append more
+          // entries to the log.
           this.syncTillHere = doneUpto;
           syncTime.inc(System.currentTimeMillis() - now);
 
