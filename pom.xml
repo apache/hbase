@@ -41,6 +41,9 @@
   <url>http://hbase.apache.org</url>
   <modules>
     <module>hbase-server</module>
+    <module>hbase-hadoop2-compat</module>
+    <module>hbase-hadoop1-compat</module>
+    <module>hbase-hadoop-compat</module>
     <module>hbase-common</module>
     <module>hbase-it</module>
   </modules>
@@ -600,7 +603,7 @@
           <tarLongFileMode>gnu</tarLongFileMode>
           <appendAssemblyId>false</appendAssemblyId>
           <descriptors>
-            <descriptor>src/assembly/all.xml</descriptor>
+            <descriptor>${assembly.file}</descriptor>
           </descriptors>
         </configuration>
       </plugin>
@@ -786,6 +789,8 @@
     <compileSource>1.6</compileSource>
     <hbase.version>${project.version}</hbase.version>
     <!-- Dependencies -->
+    <hadoop-two.version>2.0.0-alpha</hadoop-two.version>
+    <hadoop-one.version>1.0.3</hadoop-one.version>
     <avro.version>1.5.3</avro.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.4</commons-codec.version>
@@ -837,6 +842,7 @@
     <server.test.jar>hbase-server-${project.version}-tests.jar</server.test.jar>
     <surefire.version>2.12-TRUNK-HBASE-2</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
+    <compat.module>hbase-hadoop1-compat</compat.module>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
@@ -863,6 +869,16 @@
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-common</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-hadoop-compat</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>${compat.module}</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -1227,8 +1243,10 @@
         </property>
       </activation>
       <properties>
-        <hadoop.version>1.0.3</hadoop.version>
+        <hadoop.version>${hadoop-one.version}</hadoop.version>
         <slf4j.version>1.4.3</slf4j.version>
+        <compat.module>hbase-hadoop1-compat</compat.module>
+        <assembly.file>src/assembly/hadoop-one-compat.xml</assembly.file>
       </properties>
       <dependencyManagement>
         <dependencies>
@@ -1282,26 +1300,28 @@
       </activation>
       <properties>
         <slf4j.version>1.6.1</slf4j.version>
-        <hadoop.version>2.0.0-alpha</hadoop.version>
+        <hadoop.version>${hadoop-two.version}</hadoop.version>
+        <compat.module>hbase-hadoop2-compat</compat.module>
+        <assembly.file>src/assembly/hadoop-two-compat.xml</assembly.file>
       </properties>
       <dependencyManagement>
         <dependencies>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
-            <version>${hadoop.version}</version>
+            <version>${hadoop-two.version}</version>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-annotations</artifactId>
-            <version>${hadoop.version}</version>
+            <version>${hadoop-two.version}</version>
           </dependency>
           <!-- This was marked as test dep in earlier pom, but was scoped compile. 
             Where do we actually need it? -->
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-minicluster</artifactId>
-            <version>${hadoop.version}</version>
+            <version>${hadoop-two.version}</version>
           </dependency>
         </dependencies>
       </dependencyManagement>

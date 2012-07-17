@@ -124,7 +124,10 @@
       <!-- Now, select which projects to include in this module-set. -->
       <!-- Just add future modules here assuming the wildcare doesn't match -->
       <includes>
-        <include>org.apache.hbase:hbase-*</include>
+        <include>org.apache.hbase:hbase-common</include>
+        <include>org.apache.hbase:hbase-hadoop-compat</include>
+        <include>org.apache.hbase:hbase-hadoop2-compat</include>
+        <include>org.apache.hbase:hbase-server</include>
       </includes>
       <!-- Include all the sources in the top directory -->
       <sources>

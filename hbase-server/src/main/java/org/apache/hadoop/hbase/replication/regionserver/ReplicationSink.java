@@ -19,13 +19,6 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.Map.Entry;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -39,7 +32,15 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.replication.regionserver.metrics.ReplicationSinkMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 
 /**
  * This class is responsible for replicating the edits coming
@@ -133,7 +134,7 @@ public class ReplicationSink {
       }
       this.metrics.setAgeOfLastAppliedOp(
           entries[entries.length-1].getKey().getWriteTime());
-      this.metrics.appliedBatchesRate.inc(1);
+      this.metrics.applyBatch(entries.length);
       LOG.info("Total replicated: " + totalReplicated);
     } catch (IOException ex) {
       LOG.error("Unable to accept edit because:", ex);
@@ -173,7 +174,6 @@ public class ReplicationSink {
     try {
       table = this.pool.getTable(tableName);
       table.batch(rows);
-      this.metrics.appliedOpsRate.inc(rows.size());
     } catch (InterruptedException ix) {
       throw new IOException(ix);
     } finally {

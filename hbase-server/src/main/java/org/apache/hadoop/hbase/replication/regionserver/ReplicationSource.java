@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
+import org.apache.hadoop.hbase.replication.regionserver.metrics.ReplicationSourceMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -238,7 +239,7 @@ public class ReplicationSource extends Thread
   @Override
   public void enqueueLog(Path log) {
     this.queue.put(log);
-    this.metrics.sizeOfLogQueue.set(queue.size());
+    this.metrics.setSizeOfLogQueue(queue.size());
   }
 
   @Override
@@ -246,6 +247,7 @@ public class ReplicationSource extends Thread
     connectToPeers();
     // We were stopped while looping to connect to sinks, just abort
     if (!this.isActive()) {
+      metrics.clear();
       return;
     }
     // delay this until we are in an asynchronous thread
@@ -376,6 +378,7 @@ public class ReplicationSource extends Thread
       }
     }
     LOG.debug("Source exiting " + peerId);
+    metrics.clear();
   }
 
   /**
@@ -393,7 +396,7 @@ public class ReplicationSource extends Thread
     HLog.Entry entry = this.reader.next(this.entriesArray[currentNbEntries]);
     while (entry != null) {
       WALEdit edit = entry.getEdit();
-      this.metrics.logEditsReadRate.inc(1);
+      this.metrics.incrLogEditsRead();
       seenEntries++;
       // Remove all KVs that should not be replicated
       HLogKey logKey = entry.getKey();
@@ -415,7 +418,7 @@ public class ReplicationSource extends Thread
           currentNbOperations += countDistinctRowKeys(edit);
           currentNbEntries++;
         } else {
-          this.metrics.logEditsFilteredRate.inc(1);
+          this.metrics.incrLogEditsFiltered();
         }
       }
       // Stop if too many entries or too big
@@ -455,7 +458,7 @@ public class ReplicationSource extends Thread
     try {
       if (this.currentPath == null) {
         this.currentPath = queue.poll(this.sleepForRetries, TimeUnit.MILLISECONDS);
-        this.metrics.sizeOfLogQueue.set(queue.size());
+        this.metrics.setSizeOfLogQueue(queue.size());
       }
     } catch (InterruptedException e) {
       LOG.warn("Interrupted while reading edits", e);
@@ -616,9 +619,7 @@ public class ReplicationSource extends Thread
           this.lastLoggedPosition = this.position;
         }
         this.totalReplicatedEdits += currentNbEntries;
-        this.metrics.shippedBatchesRate.inc(1);
-        this.metrics.shippedOpsRate.inc(
-            this.currentNbOperations);
+        this.metrics.shipBatch(this.currentNbOperations);
         this.metrics.setAgeOfLastShippedOp(
             this.entriesArray[this.entriesArray.length-1].getKey().getWriteTime());
         LOG.debug("Replicated in total: " + this.totalReplicatedEdits);
