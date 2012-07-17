@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
+import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -2641,21 +2642,19 @@ public class TestHRegion extends HBaseTestCase {
 
   /**
    * Writes very wide records and gets the latest row every time..
-   * Flushes and compacts the region every now and then to keep things
-   * realistic.
+   * Flushes and compacts the region aggressively to catch issues.
    *
    * @throws IOException          by flush / scan / compaction
    * @throws InterruptedException when joining threads
    */
   public void testWritesWhileGetting()
-    throws IOException, InterruptedException {
+    throws Exception {
     byte[] tableName = Bytes.toBytes("testWritesWhileGetting");
     int testCount = 100;
     int numRows = 1;
     int numFamilies = 10;
     int numQualifiers = 100;
-    int flushInterval = 10;
-    int compactInterval = 10 * flushInterval;
+    int compactInterval = 100;
     byte[][] families = new byte[numFamilies][];
     for (int i = 0; i < numFamilies; i++) {
       families[i] = Bytes.toBytes("family" + i);
@@ -2666,76 +2665,99 @@ public class TestHRegion extends HBaseTestCase {
     }
 
     String method = "testWritesWhileGetting";
-    initHRegion(tableName, method, families);
-    PutThread putThread = new PutThread(numRows, families, qualifiers);
-    putThread.start();
-    putThread.waitForFirstPut();
+    Configuration conf = HBaseConfiguration.create();
+    // This test flushes constantly and can cause many files to be created, possibly
+    // extending over the ulimit.  Make sure compactions are aggressive in reducing
+    // the number of HFiles created.
+    conf.setInt("hbase.hstore.compaction.min", 1);
+    conf.setInt("hbase.hstore.compaction.max", 1000);
+    initHRegion(tableName, method, conf, families);
 
-    FlushThread flushThread = new FlushThread();
-    flushThread.start();
+    PutThread putThread = null;
+    MultithreadedTestUtil.TestContext ctx =
+      new MultithreadedTestUtil.TestContext(HBaseConfiguration.create());
+    try {
+      putThread = new PutThread(numRows, families, qualifiers);
+      putThread.start();
+      putThread.waitForFirstPut();
 
-    Get get = new Get(Bytes.toBytes("row0"));
-    Result result = null;
-
-    int expectedCount = numFamilies * numQualifiers;
-
-    long prevTimestamp = 0L;
-    for (int i = 0; i < testCount; i++) {
-
-      if (i != 0 && i % compactInterval == 0) {
-        region.compactStores(true);
-      }
-
-      if (i != 0 && i % flushInterval == 0) {
-        //System.out.println("iteration = " + i);
-        flushThread.flush();
-      }
-
-      boolean previousEmpty = result == null || result.isEmpty();
-      result = region.get(get, null);
-      if (!result.isEmpty() || !previousEmpty || i > compactInterval) {
-        assertEquals("i=" + i, expectedCount, result.size());
-        // TODO this was removed, now what dangit?!
-        // search looking for the qualifier in question?
-        long timestamp = 0;
-        for (KeyValue kv : result.sorted()) {
-          if (Bytes.equals(kv.getFamily(), families[0])
-            && Bytes.equals(kv.getQualifier(), qualifiers[0])) {
-            timestamp = kv.getTimestamp();
+      // Add a thread that flushes as fast as possible
+      ctx.addThread(new RepeatingTestThread(ctx) {
+        private int flushesSinceCompact = 0;
+        private final int maxFlushesSinceCompact = 20;
+        public void doAnAction() throws Exception {
+          if (region.flushcache()) {
+            ++flushesSinceCompact;
+          }
+          // Compact regularly to avoid creating too many files and exceeding the ulimit.
+          if (flushesSinceCompact == maxFlushesSinceCompact) {
+            region.compactStores(false);
+            flushesSinceCompact = 0;
           }
         }
-        assertTrue(timestamp >= prevTimestamp);
-        prevTimestamp = timestamp;
-        KeyValue previousKV = null;
+      });
+      ctx.startThreads();
 
-        for (KeyValue kv : result.raw()) {
-          byte[] thisValue = kv.getValue();
-          if (previousKV != null) {
-            if (Bytes.compareTo(previousKV.getValue(), thisValue) != 0) {
-              LOG.warn("These two KV should have the same value." +
-                " Previous KV:" +
-                previousKV + "(memStoreTS:" + previousKV.getMemstoreTS() + ")" +
-                ", New KV: " +
-                kv + "(memStoreTS:" + kv.getMemstoreTS() + ")"
-              );
-              assertEquals(previousKV.getValue(), thisValue);
+      Get get = new Get(Bytes.toBytes("row0"));
+      Result result = null;
+
+      int expectedCount = numFamilies * numQualifiers;
+
+      long prevTimestamp = 0L;
+      for (int i = 0; i < testCount; i++) {
+
+        boolean previousEmpty = result == null || result.isEmpty();
+        result = region.get(get, null);
+        if (!result.isEmpty() || !previousEmpty || i > compactInterval) {
+          assertEquals("i=" + i, expectedCount, result.size());
+          // TODO this was removed, now what dangit?!
+          // search looking for the qualifier in question?
+          long timestamp = 0;
+          for (KeyValue kv : result.sorted()) {
+            if (Bytes.equals(kv.getFamily(), families[0])
+              && Bytes.equals(kv.getQualifier(), qualifiers[0])) {
+              timestamp = kv.getTimestamp();
             }
           }
-          previousKV = kv;
+          assertTrue(timestamp >= prevTimestamp);
+          prevTimestamp = timestamp;
+          KeyValue previousKV = null;
+
+          for (KeyValue kv : result.raw()) {
+            byte[] thisValue = kv.getValue();
+            if (previousKV != null) {
+              // Only catch an error if it occurs within a single column family (see HBASE-4195).
+              // There is a known issue on 0.90 between column families (see HBASE-2856), so ignore
+              // those errors.
+              if (Bytes.compareTo(previousKV.getValue(), thisValue) != 0
+                  && Bytes.compareTo(previousKV.getFamily(), kv.getFamily()) == 0) {
+                LOG.warn("These two KV should have the same value." +
+                  " Previous KV:" +
+                  previousKV + "(memStoreTS:" + previousKV.getMemstoreTS()
+                  + " family:" + Bytes.toString(previousKV.getFamily()) + ")" +
+                  ", New KV: " +
+                  kv + "(memStoreTS:" + kv.getMemstoreTS()
+                  + " family:" + Bytes.toString(kv.getFamily()) + ")"
+                );
+                assertEquals(0, Bytes.compareTo(previousKV.getValue(), thisValue));
+              }
+            }
+            previousKV = kv;
+          }
         }
       }
+    } finally {
+      if (putThread != null) putThread.done();
+
+      region.flushcache();
+
+      if (putThread != null) {
+        putThread.join();
+        putThread.checkNoError();
+      }
+
+      ctx.stop();
     }
-
-    putThread.done();
-
-    region.flushcache();
-
-    putThread.join();
-    putThread.checkNoError();
-
-    flushThread.done();
-    flushThread.join();
-    flushThread.checkNoError();
   }
 
 
