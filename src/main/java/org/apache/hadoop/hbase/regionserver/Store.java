@@ -554,8 +554,10 @@ public class Store extends SchemaConfigured implements HeapSize {
         this.family.getBloomFilterType(), this.dataBlockEncoder);
     passSchemaMetricsTo(sf);
 
-    sf.createReader();
-
+    StoreFile.Reader r = sf.createReader();
+    this.storeSize += r.length();
+    this.totalUncompressedBytes += r.getTotalUncompressedBytes();
+    
     LOG.info("Moved hfile " + srcPath + " into store directory " +
         homedir + " - updating store file list.");
 

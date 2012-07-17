@@ -1952,15 +1952,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   /** {@inheritDoc} */
   public Result get(byte[] regionName, Get get) throws IOException {
     checkOpen();
-    final long startTime = System.nanoTime();
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
       return region.get(get, getLockFromId(get.getLockId()));
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
-    } finally {
-      this.metrics.getLatencies.update(System.nanoTime() - startTime);
     }
   }
 
@@ -1992,7 +1989,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       throw new IllegalArgumentException("update has null row");
     }
 
-    final long startTime = System.nanoTime();
     checkOpen();
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
@@ -2004,8 +2000,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       region.put(put, getLockFromId(put.getLockId()), writeToWAL);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
-    } finally {
-      this.metrics.putLatencies.update(System.nanoTime() - startTime);
     }
   }
 
@@ -2015,7 +2009,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     HRegion region = null;
     int i = 0;
 
-    final long startTime = System.nanoTime();
     try {
       region = getRegion(regionName);
       if (!region.getRegionInfo().isMetaTable()) {
@@ -2040,14 +2033,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       return -1;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
-    } finally {
-      // going to count this as puts.size() PUTs for latency calculations
-      final long totalTime = System.nanoTime() - startTime;
-      final long putCount = i;
-      final long perPutTime = totalTime / putCount;
-      for (int request = 0; request < putCount; request++) {
-        this.metrics.putLatencies.update(perPutTime);
-      }
     }
   }
 
@@ -2520,7 +2505,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public void delete(final byte[] regionName, final Delete delete)
       throws IOException {
     checkOpen();
-    final long startTime = System.nanoTime();
     try {
       boolean writeToWAL = delete.getWriteToWAL();
       this.requestCount.incrementAndGet();
@@ -2532,8 +2516,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       region.delete(delete, lid, writeToWAL);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
-    } finally {
-      this.metrics.deleteLatencies.update(System.nanoTime() - startTime);
     }
   }
 
@@ -2551,12 +2533,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       int size = deletes.size();
       Integer[] locks = new Integer[size];
       for (Delete delete : deletes) {
-        final long startTime = System.nanoTime();
         this.requestCount.incrementAndGet();
         locks[i] = getLockFromId(delete.getLockId());
         region.delete(delete, locks[i], delete.getWriteToWAL());
         i++;
-        this.metrics.deleteLatencies.update(System.nanoTime() - startTime);
       }
     } catch (WrongRegionException ex) {
       LOG.debug("Batch deletes: " + i, ex);

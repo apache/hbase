@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.1 - 7/12/2012
+Release 0.94.1 - 7/16/2012
 Sub-task
 
     [HBASE-5342] - Grant/Revoke global permissions
@@ -98,7 +98,14 @@ Bug
     [HBASE-6328] - FSHDFSUtils#recoverFileLease tries to rethrow InterruptedException but actually shallows it
     [HBASE-6329] - Stopping META regionserver when splitting region could cause daughter region to be assigned twice
     [HBASE-6337] - [MTTR] Remove renaming tmp log file in SplitLogManager
+    [HBASE-6357] - Failed distributed log splitting stuck on master web UI
     [HBASE-6369] - HTable is not closed in AggregationClient
+    [HBASE-6375] - Master may be using a stale list of region servers for creating assignment plan during startup
+    [HBASE-6377] - HBASE-5533 metrics miss all operations submitted via MultiAction
+    [HBASE-6380] - bulkload should update the store.storeSize
+    [HBASE-6389] - Modify the conditions to ensure that Master waits for sufficient number of Region Servers before starting region assignments
+    [HBASE-6394] - verifyrep MR job map tasks throws NullPointerException
+    [HBASE-6397] - [hbck] print out bulk load commands for sidelined regions if necessary
 
 Improvement
 
@@ -131,6 +138,8 @@ Improvement
     [HBASE-6332] - Improve POM for better integration with downstream ivy projects
     [HBASE-6334] - TestImprovement for TestHRegion.testWritesWhileGetting
     [HBASE-6341] - Publicly expose HConnectionKey
+    [HBASE-6382] - Upgrade Jersey to 1.8 to match Hadoop 1 and 2
+    [HBASE-6384] - hbck should group together those sidelined regions need to be bulk loaded later
 
 New Feature
 

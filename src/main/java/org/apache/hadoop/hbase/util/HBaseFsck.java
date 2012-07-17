@@ -144,6 +144,7 @@ public class HBaseFsck {
   private static boolean rsSupportsOffline = true;
   private static final int DEFAULT_OVERLAPS_TO_SIDELINE = 2;
   private static final int DEFAULT_MAX_MERGE = 5;
+  private static final String TO_BE_LOADED = "to_be_loaded";
 
   /**********************
    * Internal resources
@@ -873,8 +874,20 @@ public class HBaseFsck {
   /**
    * Sideline a region dir (instead of deleting it)
    */
-  Path sidelineRegionDir(FileSystem fs, HbckInfo hi)
-    throws IOException {
+  Path sidelineRegionDir(FileSystem fs, HbckInfo hi) throws IOException {
+    return sidelineRegionDir(fs, null, hi);
+  }
+
+  /**
+   * Sideline a region dir (instead of deleting it)
+   *
+   * @param parentDir if specified, the region will be sidelined to
+   * folder like .../parentDir/<table name>/<region name>. The purpose
+   * is to group together similar regions sidelined, for example, those
+   * regions should be bulk loaded back later on. If null, it is ignored.
+   */
+  Path sidelineRegionDir(FileSystem fs,
+      String parentDir, HbckInfo hi) throws IOException {
     String tableName = Bytes.toString(hi.getTableName());
     Path regionDir = hi.getHdfsRegionDir();
 
@@ -883,7 +896,11 @@ public class HBaseFsck {
       return null;
     }
 
-    Path sidelineTableDir= new Path(getSidelineDir(), tableName);
+    Path rootDir = getSidelineDir();
+    if (parentDir != null) {
+      rootDir = new Path(rootDir, parentDir);
+    }
+    Path sidelineTableDir= new Path(rootDir, tableName);
     Path sidelineRegionDir = new Path(sidelineTableDir, regionDir.getName());
     fs.mkdirs(sidelineRegionDir);
     boolean success = false;
@@ -1957,7 +1974,7 @@ public class HBaseFsck {
           offline(regionToSideline.getRegionName());
 
           LOG.info("Before sideline big overlapped region: " + regionToSideline.toString());
-          Path sidelineRegionDir = sidelineRegionDir(fs, regionToSideline);
+          Path sidelineRegionDir = sidelineRegionDir(fs, TO_BE_LOADED, regionToSideline);
           if (sidelineRegionDir != null) {
             sidelinedRegions.put(sidelineRegionDir, regionToSideline);
             LOG.info("After sidelined big overlapped region: "
@@ -2117,9 +2134,14 @@ public class HBaseFsck {
   }
 
   public void dumpSidelinedRegions(Map<Path, HbckInfo> regions) {
-    for (Path k : regions.keySet()) {
-      System.out.println("To be bulk loaded sidelined region dir: "
-        + k.toString());
+    for (Map.Entry<Path, HbckInfo> entry: regions.entrySet()) {
+      String tableName = Bytes.toStringBinary(entry.getValue().getTableName());
+      Path path = entry.getKey();
+      System.out.println("This sidelined region dir should be bulk loaded: "
+        + path.toString());
+      System.out.println("Bulk load command looks like: "
+        + "hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles "
+        + path.toUri().getPath() + " "+ tableName);
     }
   }
 
