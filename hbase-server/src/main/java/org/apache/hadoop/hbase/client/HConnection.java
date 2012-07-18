@@ -33,11 +33,11 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MasterAdminProtocol;
+import org.apache.hadoop.hbase.MasterMonitorProtocol;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.client.AdminProtocol;
-import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -183,6 +183,17 @@ public interface HConnection extends Abortable, Closeable {
    */
   public List<HRegionLocation> locateRegions(byte[] tableName)
   throws IOException;
+
+  /**
+   * Returns a {@link MasterAdminProtocol} to the active master
+   */
+  public MasterAdminProtocol getMasterAdmin() throws IOException;
+
+  /**
+   * Returns an {@link MasterMonitorProtocol} to the active master
+   */
+  public MasterMonitorProtocol getMasterMonitor() throws IOException;
+
 
   /**
    * Establishes a connection to the region server at the specified address.
