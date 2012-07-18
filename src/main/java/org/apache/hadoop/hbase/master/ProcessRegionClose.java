@@ -42,10 +42,11 @@ public class ProcessRegionClose extends ProcessRegionStatusChange {
   * @param offlineRegion if true, set the region to offline in meta
   * @param reassignRegion if true, region is to be reassigned
   */
-  public ProcessRegionClose(HMaster master, HRegionInfo regionInfo,
+  public ProcessRegionClose(HMaster master, String serverName,
+      HRegionInfo regionInfo,
       boolean offlineRegion, boolean reassignRegion) {
 
-   super(master, regionInfo);
+   super(master, serverName, regionInfo);
    this.offlineRegion = offlineRegion;
    this.reassignRegion = reassignRegion;
   }
@@ -53,7 +54,8 @@ public class ProcessRegionClose extends ProcessRegionStatusChange {
   @Override
   public String toString() {
     return "ProcessRegionClose of " + this.regionInfo.getRegionNameAsString() +
-      ", " + this.offlineRegion + ", reassign: " + this.reassignRegion;
+      ", " + this.offlineRegion + ", reassign: " + this.reassignRegion +
+      " from server " + this.serverName;
   }
 
   @Override

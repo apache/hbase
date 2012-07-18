@@ -804,7 +804,8 @@ public class ServerManager {
       //       the region's state.
       this.master.getRegionManager().setClosed(region.getRegionNameAsString());
       RegionServerOperation op =
-        new ProcessRegionClose(master, region, offlineRegion, reassignRegion);
+        new ProcessRegionClose(master, serverInfo.getServerName(), 
+            region, offlineRegion, reassignRegion);
       this.master.getRegionServerOperationQueue().put(op);
 
       if (reassignRegion) {

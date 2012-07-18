@@ -36,8 +36,9 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
    * @param master the master
    * @param regionInfo region info
    */
-  public ProcessRegionStatusChange(HMaster master, HRegionInfo regionInfo) {
-    super(master);
+  public ProcessRegionStatusChange(HMaster master, String serverName,
+      HRegionInfo regionInfo) {
+    super(master, serverName);
     this.regionInfo = regionInfo;
     this.isMetaTable = regionInfo.isMetaTable();
   }

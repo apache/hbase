@@ -41,12 +41,14 @@ abstract class RegionServerOperation implements Delayed {
 
   private long expire;
   protected final HMaster master;
+  protected final String serverName; // server sent the message or task
   /* How long we stay on queue.
    */
   private int delay;
 
-  protected RegionServerOperation(HMaster master) {
+  protected RegionServerOperation(HMaster master, String serverName) {
     this.master = master;
+    this.serverName = serverName;
     this.delay = this.master.getConfiguration().
       getInt("hbase.server.thread.wakefrequency", 10 * 1000);
     // Set the future time at which we expect to be released from the

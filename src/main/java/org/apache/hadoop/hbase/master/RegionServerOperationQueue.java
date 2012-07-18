@@ -94,9 +94,13 @@ public class RegionServerOperationQueue {
     new CopyOnWriteArraySet<RegionServerOperationListener>();
   private final int threadWakeFrequency;
   private final Sleeper sleeper;
+  private final ServerManager smgr;
 
-  RegionServerOperationQueue(final Configuration c, StopStatus stop) {
-    this.threadWakeFrequency = c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
+  RegionServerOperationQueue(final Configuration c, ServerManager smgr,
+      StopStatus stop) {
+    this.threadWakeFrequency = c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+        10 * 1000);
+    this.smgr = smgr;
     this.stop = stop;
     this.sleeper = new Sleeper(this.threadWakeFrequency, stop);
   }
@@ -146,6 +150,12 @@ public class RegionServerOperationQueue {
       return ProcessingResultCode.NOOP;
     }
 
+    if (!(op instanceof ProcessServerShutdown)) {
+      if (smgr.getServerInfo(op.serverName) == null) {
+        LOG.debug("Discarding RegionServerOperation because server is dead " +
+          op);
+      }
+    }
     try {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Processing todo: " + op.toString());

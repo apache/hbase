@@ -404,12 +404,14 @@ public class HMaster extends HasThread implements HMasterInterface,
     detectClusterStartup();
     isActiveMaster = true;
 
-    this.regionServerOperationQueue =
-      new RegionServerOperationQueue(this.conf, getClosedStatus());
-
     synchronized(this) {
       serverManager = new ServerManager(this);
     }
+
+    this.regionServerOperationQueue =
+      new RegionServerOperationQueue(this.conf, serverManager,
+          getClosedStatus());
+
 
     // Start the unassigned watcher - which will create the unassigned region
     // in ZK. This is needed before RegionManager() constructor tries to assign

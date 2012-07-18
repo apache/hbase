@@ -77,7 +77,7 @@ class ProcessServerShutdown extends RegionServerOperation {
    * @param serverInfo
    */
   public ProcessServerShutdown(HMaster master, HServerInfo serverInfo) {
-    super(master);
+    super(master, serverInfo.getServerName());
     this.deadServer = serverInfo.getServerName();
     this.deadServerAddress = serverInfo.getServerAddress();
     this.rootRescanned = false;

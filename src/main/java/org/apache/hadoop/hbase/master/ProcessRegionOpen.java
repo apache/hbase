@@ -45,7 +45,7 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
    */
   public ProcessRegionOpen(HMaster master, HServerInfo info,
       HRegionInfo regionInfo) {
-    super(master, regionInfo);
+    super(master, info.getServerName(), regionInfo);
     if (info == null) {
       throw new NullPointerException("HServerInfo cannot be null; " +
         "hbase-958 debugging");
@@ -55,7 +55,8 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
 
   @Override
   public String toString() {
-    return "PendingOpenOperation from " + serverInfo.getServerName();
+    return "PendingOpenOperation from " + serverInfo.getServerName() +
+        " for region " + this.regionInfo.getRegionNameAsString();
   }
 
   @Override

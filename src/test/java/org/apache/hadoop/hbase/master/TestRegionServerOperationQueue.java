@@ -45,7 +45,7 @@ public class TestRegionServerOperationQueue {
   @Before
   public void setUp() throws Exception {
     this.conf = new Configuration();
-    this.queue = new RegionServerOperationQueue(this.conf, stopStatus);
+    this.queue = new RegionServerOperationQueue(this.conf, null, stopStatus);
   }
 
   @After
