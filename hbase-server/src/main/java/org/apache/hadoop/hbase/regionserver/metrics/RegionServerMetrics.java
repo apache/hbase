@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.metrics.ExactCounterMetric;
 import org.apache.hadoop.hbase.metrics.HBaseInfo;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
-import org.apache.hadoop.hbase.metrics.PersistentMetricsTimeVaryingRate;
 import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
 import com.yammer.metrics.stats.Snapshot;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -276,11 +275,11 @@ public class RegionServerMetrics implements Updater {
   /**
    * time each scheduled flush takes
    */
-  protected final PersistentMetricsTimeVaryingRate flushTime =
-    new PersistentMetricsTimeVaryingRate("flushTime", registry);
+  protected final MetricsHistogram flushTime =
+    new MetricsHistogram("flushTime", registry);
 
-  protected final PersistentMetricsTimeVaryingRate flushSize =
-    new PersistentMetricsTimeVaryingRate("flushSize", registry);
+  protected final MetricsHistogram flushSize =
+    new MetricsHistogram("flushSize", registry);
   
   public final MetricsLongValue slowHLogAppendCount =
       new MetricsLongValue("slowHLogAppendCount", registry);
@@ -347,8 +346,8 @@ public class RegionServerMetrics implements Updater {
         this.lastExtUpdate = this.lastUpdate;
         this.compactionTime.clear();
         this.compactionSize.clear();
-        this.flushTime.resetMinMaxAvg();
-        this.flushSize.resetMinMaxAvg();
+        this.flushTime.clear();
+        this.flushSize.clear();
         this.resetAllMinMax();
       }
 
@@ -485,8 +484,8 @@ public class RegionServerMetrics implements Updater {
    */
   public synchronized void addFlush(final List<Pair<Long,Long>> flushes) {
     for (Pair<Long,Long> f : flushes) {
-      this.flushTime.inc(f.getFirst());
-      this.flushSize.inc(f.getSecond());
+      this.flushTime.update(f.getFirst());
+      this.flushSize.update(f.getSecond());
     }
   }
 
