@@ -321,6 +321,14 @@ public class ServerManager {
   throws IOException {
     HServerInfo info = new HServerInfo(serverInfo);
     checkIsDead(info.getServerName(), "REPORT");
+    HServerInfo storedInfo = this.serversToServerInfo.get(info.getServerName());
+    if (storedInfo == null) {
+      LOG.warn("Received report from unknown server -- telling it " +
+        "to " + HMsg.REGIONSERVER_STOP + ": " + info.getServerName());
+      // The HBaseMaster may have been restarted.
+      // Tell the RegionServer to abort!
+      return new HMsg[] {HMsg.REGIONSERVER_STOP};
+    }
     if (msgs.length > 0) {
       if (msgs[0].isType(HMsg.Type.MSG_REPORT_BEGINNING_OF_THE_END)) {
         // region server is going to shut down. do not expect any more reports
@@ -371,36 +379,7 @@ public class ServerManager {
       // will send us one of these messages after it gets MSG_REGIONSERVER_STOP
       return new HMsg [] {HMsg.REGIONSERVER_STOP};
     }
-
-    HServerInfo storedInfo = this.serversToServerInfo.get(info.getServerName());
-    if (storedInfo == null) {
-      LOG.warn("Received report from unknown server -- telling it " +
-        "to " + HMsg.REGIONSERVER_STOP + ": " + info.getServerName());
-      // The HBaseMaster may have been restarted.
-      // Tell the RegionServer to abort!
-      return new HMsg[] {HMsg.REGIONSERVER_STOP};
-    } else if (storedInfo.getStartCode() != info.getStartCode()) {
-      // This state is reachable if:
-      //
-      // 1) RegionServer A started
-      // 2) RegionServer B started on the same machine, then
-      //    clobbered A in regionServerStartup.
-      // 3) RegionServer A returns, expecting to work as usual.
-      //
-      // The answer is to ask A to shut down for good.
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("region server race condition detected: " +
-            info.getServerName());
-      }
-      
-      processServerInfoOnShutdown(info.getServerName(), true);
-      notifyServers();
-
-      return new HMsg[] {HMsg.REGIONSERVER_STOP};
-    } else {
-      return processRegionServerAllsWell(info, mostLoadedRegions, msgs);
-    }
+    return processRegionServerAllsWell(info, mostLoadedRegions, msgs);
   }
 
   /**
@@ -450,45 +429,45 @@ public class ServerManager {
   private void processRegionServerExit(HServerInfo serverInfo, HMsg[] msgs) {
     // This method removes ROOT/META from the list and marks them to be
     // reassigned in addition to other housework.
-    if (processServerInfoOnShutdown(serverInfo.getServerName(), false)) {
-      // Only process the exit message if the server still has registered info.
-      // Otherwise we could end up processing the server exit twice.
-      LOG.info("Region server " + serverInfo.getServerName() +
-          ": MSG_REPORT_EXITING");
-      // Get all the regions the server was serving reassigned
-      // (if we are not shutting down).
-      if (!master.isClosed()) {
-        for (int i = 1; i < msgs.length; i++) {
-          LOG.info("Processing " + msgs[i] + " from " +
-              serverInfo.getServerName());
-          assert msgs[i].getType() == HMsg.Type.MSG_REGION_CLOSE;
-          HRegionInfo info = msgs[i].getRegionInfo();
-          // Meta/root region offlining is handed in removeServerInfo above.
-          if (!info.isMetaRegion()) {
-            synchronized (master.getRegionManager()) {
-              if (!master.getRegionManager().isOfflined(info.getRegionNameAsString())) {
-                master.getRegionManager().setUnassigned(info, true);
-              } else {
-                master.getRegionManager().removeRegion(info);
-              }
+    processServerInfoOnShutdown(serverInfo);
+    // Only process the exit message if the server still has registered info.
+    // Otherwise we could end up processing the server exit twice.
+    LOG.info("Region server " + serverInfo.getServerName() +
+        ": MSG_REPORT_EXITING");
+    // Get all the regions the server was serving reassigned
+    // (if we are not shutting down).
+    if (!master.isClosed()) {
+      for (int i = 1; i < msgs.length; i++) {
+        LOG.info("Processing " + msgs[i] + " from " +
+            serverInfo.getServerName());
+        assert msgs[i].getType() == HMsg.Type.MSG_REGION_CLOSE;
+        HRegionInfo info = msgs[i].getRegionInfo();
+        // Meta/root region offlining is handed in removeServerInfo above.
+        if (!info.isMetaRegion()) {
+          synchronized (master.getRegionManager()) {
+            if (!master.getRegionManager().isOfflined(info.getRegionNameAsString())) {
+              master.getRegionManager().setUnassigned(info, true);
+            } else {
+              master.getRegionManager().removeRegion(info);
             }
           }
         }
       }
-      // There should not be any regions in transition for this server - the
-      // server should finish transitions itself before closing
-      Map<String, RegionState> inTransition = master.getRegionManager()
-          .getRegionsInTransitionOnServer(serverInfo.getServerName());
-      for (Map.Entry<String, RegionState> entry : inTransition.entrySet()) {
-        LOG.warn("Region server " + serverInfo.getServerName()
-            + " shut down with region " + entry.getKey() + " in transition "
-            + "state " + entry.getValue());
-        master.getRegionManager().setUnassigned(entry.getValue().getRegionInfo(),
-            true);
-      }
-      LOG.info("Removing server's info " + serverInfo.getServerName());
-      this.serversToServerInfo.remove(serverInfo.getServerName());
     }
+    // There should not be any regions in transition for this server - the
+    // server should finish transitions itself before closing
+    Map<String, RegionState> inTransition = master.getRegionManager()
+        .getRegionsInTransitionOnServer(serverInfo.getServerName());
+    for (Map.Entry<String, RegionState> entry : inTransition.entrySet()) {
+      LOG.warn("Region server " + serverInfo.getServerName()
+          + " shut down with region " + entry.getKey() + " in transition "
+          + "state " + entry.getValue());
+      master.getRegionManager().setUnassigned(entry.getValue().getRegionInfo(),
+          true);
+    }
+    LOG.info("Removing server's info " + serverInfo.getServerName());
+    this.serversToServerInfo.remove(serverInfo.getServerName());
+    serversToLoad.removeServerLoad(serverInfo.getServerName());
   }
 
   /*
@@ -839,35 +818,23 @@ public class ServerManager {
     }
   }
 
-  /** Update a server load information because it's shutting down*/
-  private boolean processServerInfoOnShutdown(final String serverName, boolean toRemove) {
-    boolean infoUpdated = false;
-    HServerInfo info = this.serversToServerInfo.get(serverName);
-    // Only update load information once.
-    // This method can be called a couple of times during shutdown.
-    if (info != null) {
-      if (toRemove) {
-        this.serversToServerInfo.remove(serverName);
-        LOG.info("Removing server's info " + serverName);
-      }
-      this.master.getRegionManager().offlineMetaServer(info.getServerAddress());
-
-      //HBASE-1928: Check whether this server has been transitioning the ROOT table
-      if (this.master.getRegionManager().isRootInTransitionOnThisServer(serverName)) {
-         this.master.getRegionManager().unsetRootRegion();
-         this.master.getRegionManager().reassignRootRegion();
-      }
-
-      //HBASE-1928: Check whether this server has been transitioning the META table
-      HRegionInfo metaServerRegionInfo = this.master.getRegionManager().getMetaServerRegionInfo (serverName);
-      if (metaServerRegionInfo != null) {
-         this.master.getRegionManager().setUnassigned(metaServerRegionInfo, true);
-      }
-
-      infoUpdated = true;
-      serversToLoad.removeServerLoad(serverName);
+  private void processServerInfoOnShutdown(HServerInfo info) {
+    String serverName = info.getServerName();
+    this.master.getRegionManager().offlineMetaServer(info.getServerAddress());
+    
+    //HBASE-1928: Check whether this server has been transitioning the ROOT table
+    if (this.master.getRegionManager().isRootInTransitionOnThisServer(serverName)) {
+      this.master.getRegionManager().unsetRootRegion();
+      this.master.getRegionManager().reassignRootRegion();
     }
-    return infoUpdated;
+    
+    //HBASE-1928: Check whether this server has been transitioning the META table
+    HRegionInfo metaServerRegionInfo = this.master.getRegionManager().getMetaServerRegionInfo (serverName);
+    if (metaServerRegionInfo != null) {
+      this.master.getRegionManager().setUnassigned(metaServerRegionInfo, true);
+    }
+    
+    return;
   }
 
   /**
