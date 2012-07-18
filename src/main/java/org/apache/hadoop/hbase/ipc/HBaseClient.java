@@ -130,6 +130,7 @@ public class HBaseClient {
     boolean done;                                 // true when call is done
     protected int version = HBaseServer.CURRENT_VERSION;
     public HBaseRPCOptions options;
+    public long startTime;
 
     protected Call(Writable param) {
       this.param = param;
@@ -519,6 +520,7 @@ public class HBaseClient {
             call.param.write(outOS);
             outOS.flush();
             baos.flush();
+            call.startTime = System.currentTimeMillis();
           } catch (IOException e) {
             LOG.error("Failed to prepare request in in-mem buffers!", e);
             markClosed(e);
@@ -566,6 +568,7 @@ public class HBaseClient {
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + id);
         Call call = calls.get(id);
+        long totalTime = System.currentTimeMillis() - call.startTime;
         // 2. read the error boolean uncompressed
         boolean isError = localIn.readBoolean();
 
@@ -596,8 +599,15 @@ public class HBaseClient {
           if (call.getVersion() >= HBaseServer.VERSION_RPCOPTIONS) {
             boolean hasProfiling = localIn.readBoolean ();
             if (hasProfiling) {
-              call.options.profilingResult = new ProfilingData ();
+              call.options.profilingResult = new ProfilingData();
               call.options.profilingResult.readFields(localIn);
+              Long serverTimeObj = call.options.profilingResult.getLong(
+                  ProfilingData.TOTAL_SERVER_TIME_MS);
+              if (serverTimeObj != null) {
+                call.options.profilingResult.addLong(
+                    ProfilingData.CLIENT_NETWORK_LATENCY_MS, 
+                    totalTime - serverTimeObj);
+              }
             }
           }
           call.setValue(value);

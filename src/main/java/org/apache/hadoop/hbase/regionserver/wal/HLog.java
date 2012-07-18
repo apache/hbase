@@ -77,9 +77,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -954,13 +956,21 @@ public class HLog implements Syncable {
       // Only count 1 row as an unflushed entry.
       txid = this.unflushedEntries.incrementAndGet();
     }
-    writeTime.inc(System.currentTimeMillis() - start);
+    long time = System.currentTimeMillis() - start;
+    writeTime.inc(time);
+    ProfilingData pData = HRegionServer.threadLocalProfilingData.get();
+    if (pData != null) {
+      pData.addLong(ProfilingData.HLOG_WRITE_TIME_MS, time);
+    }
 
     // sync txn to file system
     start = System.currentTimeMillis();
     this.sync(info.isMetaRegion(), txid);
-    gsyncTime.inc(System.currentTimeMillis() - start);
-
+    time = System.currentTimeMillis() - start;
+    gsyncTime.inc(time);
+    if (pData != null) {
+      pData.addLong(ProfilingData.HLOG_SYNC_TIME_MS, time);
+    }
   }
 
   /**

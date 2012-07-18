@@ -242,6 +242,7 @@ public abstract class HBaseServer {
     
     protected boolean shouldProfile = false;
     protected ProfilingData profilingData = null;
+    protected String tag = null;
 
     public Call(int id, Writable param, Connection connection) {
       this.id = id;
@@ -249,6 +250,14 @@ public abstract class HBaseServer {
       this.connection = connection;
       this.timestamp = System.currentTimeMillis();
       this.response = null;
+    }
+    
+    public void setTag (String tag) {
+      this.tag = tag;
+    }
+    
+    public String getTag () {
+      return tag;
     }
 
     public void setVersion(int version) {
@@ -1020,6 +1029,7 @@ public abstract class HBaseServer {
       
       call.setRPCCompression(txCompression);
       call.setVersion(version);
+      call.setTag (options.getTag());
       callQueue.put(call);              // queue the call; maybe blocked here
     }
 
@@ -1084,7 +1094,8 @@ public abstract class HBaseServer {
             error = StringUtils.stringifyException(e);
           }
           long total = System.currentTimeMillis () - start;
-          call.profilingData.addLong("total_server_time.ms", total);
+          call.profilingData.addLong(
+              ProfilingData.TOTAL_SERVER_TIME_MS, total);
           UserGroupInformation.setCurrentUser(previous);
           CurCall.set(null);
           HRegionServer.threadLocalProfilingData.remove ();
@@ -1141,6 +1152,10 @@ public abstract class HBaseServer {
             		out.writeBoolean(true);
             		call.profilingData.write(out);
             	}
+            	if (call.profilingData != null) {
+                LOG.debug("Profiling info (" + call.getTag () + "): " + 
+                      call.profilingData.toString ());
+              }
             }
           } else {
             WritableUtils.writeString(out, errorClass);

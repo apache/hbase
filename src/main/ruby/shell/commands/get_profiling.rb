@@ -37,7 +37,6 @@ module Shell
         if shell.get_profiling() == nil
           puts "No profiling data."
         else
-          puts "Profiling data:"
           puts shell.get_profiling()
         end
       end

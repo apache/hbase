@@ -36,6 +36,9 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.ProfilingData;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.io.WritableUtils;
@@ -300,6 +303,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
                 "has wrong encoding: " + cachedBlock.getDataBlockEncoding() +
                 " (expected: " + dataBlockEncoder.getEncodingInCache() + ")");
           }
+          ProfilingData pData = HRegionServer.threadLocalProfilingData.get();
+          if (pData != null) {
+            pData.incInt(ProfilingData.DATA_BLOCK_HIT_CNT);
+          }
           return cachedBlock;
         }
         // Carry on, please load.
@@ -331,7 +338,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
         cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
             cacheConf.isInMemory());
       }
-
+      ProfilingData pData = HRegionServer.threadLocalProfilingData.get();
+      if (pData != null) {
+        pData.incInt(ProfilingData.DATA_BLOCK_MISS_CNT);
+        pData.incLong(ProfilingData.TOTAL_BLOCK_READ_TIME_NS, delta);
+      }
       return hfileBlock;
     } finally {
       offsetLock.releaseLockEntry(lockEntry);

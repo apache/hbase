@@ -50,14 +50,14 @@ module Hbase
       @table.setProfiling(prof)
     end
 
-#----------------------------------------------------------------------------------------------
+    #----------------------------------------------------------------------------------------------
     # Get profiling data
     def get_profiling()
       data = @table.getProfilingData()
       if data == nil
         return nil
       else
-        return data.toString()
+        return data.toPrettyString()
       end
     end
     #----------------------------------------------------------------------------------------------
