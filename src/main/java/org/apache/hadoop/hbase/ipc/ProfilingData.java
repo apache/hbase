@@ -60,27 +60,27 @@ public class ProfilingData implements Writable {
    */
   public static final String RPC_METHOD_NAME = "rpc_method_name";
 
-	private Map<String, String> mapString = new HashMap<String, String> ();
-	private Map<String, MutableLong> mapLong = new HashMap<String, MutableLong> ();
-	private Map<String, MutableInt> mapInt = new HashMap<String, MutableInt> ();
-	private Map<String, Boolean> mapBoolean = new HashMap<String, Boolean> ();
-	private Map<String, MutableFloat> mapFloat = new HashMap<String, MutableFloat> ();
+	private Map<String, String> mapString = new HashMap<String, String>();
+	private Map<String, MutableLong> mapLong = new HashMap<String, MutableLong>();
+	private Map<String, MutableInt> mapInt = new HashMap<String, MutableInt>();
+	private Map<String, Boolean> mapBoolean = new HashMap<String, Boolean>();
+	private Map<String, MutableFloat> mapFloat = new HashMap<String, MutableFloat>();
 
-	public ProfilingData () {}
+	public ProfilingData() {}
 
-	public void addString (String key, String val) {
+	public void addString(String key, String val) {
 		mapString.put(key, val);
 	}
 
-	public String getString (String key) {
+	public String getString(String key) {
 	  return mapString.get(key);
 	}
 	
-	public void addLong (String key, long val) {
+	public void addLong(String key, long val) {
     mapLong.put(key, new MutableLong(val));
   }
 
-  public Long getLong (String key) {
+  public Long getLong(String key) {
     MutableLong ret = mapLong.get(key);
     if (ret == null) {
       return null;
@@ -88,32 +88,32 @@ public class ProfilingData implements Writable {
     return ret.toLong();
   }
   
-  public void incLong (String key, long amt) {
+  public void incLong(String key, long amt) {
     MutableLong dat = mapLong.get(key);
     if (dat == null) {
-      this.addLong (key, amt);
+      this.addLong(key, amt);
     } else {
-      dat.add (amt);
+      dat.add(amt);
     }
   }
 
-  public void incLong (String key) {
-    this.incLong (key, 1);
+  public void incLong(String key) {
+    this.incLong(key, 1);
   }
 
-  public void decLong (String key, long amt) {
-    this.incLong (key, -amt);
+  public void decLong(String key, long amt) {
+    this.incLong(key, -amt);
   }
 
-  public void decLong (String key) {
-    this.decLong (key, 1);
+  public void decLong(String key) {
+    this.incLong(key, -1);
   }
   
-  public void addInt (String key, int val) {
-    mapInt.put (key, new MutableInt (val));
+  public void addInt(String key, int val) {
+    mapInt.put(key, new MutableInt(val));
   }
 
-  public Integer getInt (String key) {
+  public Integer getInt(String key) {
     MutableInt ret = mapInt.get(key);
     if (ret == null) {
       return null;
@@ -121,40 +121,40 @@ public class ProfilingData implements Writable {
     return ret.toInteger();
   }
 
-  public void incInt (String key, int amt) {
+  public void incInt(String key, int amt) {
     MutableInt dat = mapInt.get(key);
     if (dat == null) {
-      this.addInt (key, amt);
+      this.addInt(key, amt);
     } else {
-      dat.add (amt);
+      dat.add(amt);
     }
   }
 
-  public void incInt (String key) {
+  public void incInt(String key) {
     this.incInt (key, 1);
   }
 
-  public void decInt (String key, int amt) {
-    this.incInt (key, -amt);
+  public void decInt(String key, int amt) {
+    this.incInt(key, -amt);
   }
 
-  public void decInt (String key) {
-    this.decInt (key, 1);
+  public void decInt(String key) {
+    this.decInt(key, 1);
   }
   
-  public void addBoolean (String key, boolean val) {
-    mapBoolean.put (key, val);
+  public void addBoolean(String key, boolean val) {
+    mapBoolean.put(key, val);
   }
 
-  public Boolean getBoolean (String key) {
-    return mapBoolean.get (key);
+  public Boolean getBoolean(String key) {
+    return mapBoolean.get(key);
   }
   
-  public void addFloat (String key, float val) {
-    mapFloat.put (key, new MutableFloat (val));
+  public void addFloat(String key, float val) {
+    mapFloat.put(key, new MutableFloat (val));
   }
 
-  public Float getFloat (String key) {
+  public Float getFloat(String key) {
     MutableFloat ret = mapFloat.get(key);
     if (ret == null) {
       return null;
@@ -162,42 +162,42 @@ public class ProfilingData implements Writable {
     return ret.toFloat();
   }
   
-  public void incFloat (String key, float amt) {
+  public void incFloat(String key, float amt) {
     MutableFloat dat = mapFloat.get(key);
     if (dat == null) {
-      this.addFloat (key, amt);
+      this.addFloat(key, amt);
     } else {
-      dat.add (amt);
+      dat.add(amt);
     }
   }
   
-  public void decFloat (String key, float amt) {
-    this.incFloat (key, -amt);
+  public void decFloat(String key, float amt) {
+    this.incFloat(key, -amt);
   }
 	
 	@Override
 	public void write(DataOutput out) throws IOException {
-	  out.writeInt(mapString.size ());
+	  out.writeInt(mapString.size());
 	  for (Map.Entry<String,String> entry : mapString.entrySet ()) {
       out.writeUTF(entry.getKey());
       out.writeUTF(entry.getValue());
     }
-	  out.writeInt(mapBoolean.size ());
+	  out.writeInt(mapBoolean.size());
     for (Map.Entry<String,Boolean> entry : mapBoolean.entrySet ()) {
       out.writeUTF(entry.getKey());
       out.writeBoolean(entry.getValue());
     }
-    out.writeInt(mapInt.size ());
+    out.writeInt(mapInt.size());
     for (Map.Entry<String,MutableInt> entry : mapInt.entrySet ()) {
       out.writeUTF(entry.getKey());
       out.writeInt(entry.getValue().intValue());
     }
-    out.writeInt(mapLong.size ());
+    out.writeInt(mapLong.size());
     for (Map.Entry<String,MutableLong> entry : mapLong.entrySet ()) {
       out.writeUTF(entry.getKey());
       out.writeLong(entry.getValue().longValue());
     }
-    out.writeFloat(mapFloat.size ());
+    out.writeInt(mapFloat.size());
     for (Map.Entry<String,MutableFloat> entry : mapFloat.entrySet ()) {
       out.writeUTF(entry.getKey());
       out.writeFloat(entry.getValue().floatValue());
@@ -209,66 +209,66 @@ public class ProfilingData implements Writable {
 	  int size;
 	  String key;
 	  size = in.readInt();
-	  mapString.clear ();
+	  mapString.clear();
     for (int i = 0; i < size; i ++) {
       key = in.readUTF();
       this.addString(key, in.readUTF());
     }
     size = in.readInt();
-    mapBoolean.clear ();
+    mapBoolean.clear();
     for (int i = 0; i < size; i ++) {
       key = in.readUTF();
       this.addBoolean(key, in.readBoolean());
     }
     size = in.readInt();
-    mapInt.clear ();
+    mapInt.clear();
     for (int i = 0; i < size; i ++) {
       key = in.readUTF();
       this.addInt(key, in.readInt());
     }
     size = in.readInt();
-    mapLong.clear ();
+    mapLong.clear();
     for (int i = 0; i < size; i ++) {
       key = in.readUTF();
       this.addLong(key, in.readLong());
     }
     size = in.readInt();
-    mapFloat.clear ();
+    mapFloat.clear();
     for (int i = 0; i < size; i ++) {
       key = in.readUTF();
       this.addFloat(key, in.readFloat());
     }
 	}
 	
-	public String toString (String delim) {
+	public String toString(String delim) {
 	  StringBuilder sb = new StringBuilder ();
-    for (Map.Entry<String,String> entry : mapString.entrySet ()) {
-      sb.append (entry.getKey () + ":" + entry.getValue () + delim);
+    for (Map.Entry<String, String> entry : mapString.entrySet()) {
+      sb.append(entry.getKey() + ":" + entry.getValue() + delim);
     }
-    for (Map.Entry<String,Boolean> entry : mapBoolean.entrySet ()) {
-      sb.append (entry.getKey () + ":" + entry.getValue () + delim);
+    for (Map.Entry<String, Boolean> entry : mapBoolean.entrySet()) {
+      sb.append(entry.getKey() + ":" + entry.getValue() + delim);
     }
-    for (Map.Entry<String,MutableInt> entry : mapInt.entrySet ()) {
-      sb.append (entry.getKey () + ":" + entry.getValue () + delim);
+    for (Map.Entry<String, MutableInt> entry : mapInt.entrySet()) {
+      sb.append(entry.getKey() + ":" + entry.getValue() + delim);
     }
-    for (Map.Entry<String,MutableLong> entry : mapLong.entrySet ()) {
-      sb.append (entry.getKey () + ":" + entry.getValue () + delim);
+    for (Map.Entry<String, MutableLong> entry : mapLong.entrySet()) {
+      sb.append(entry.getKey() + ":" + entry.getValue() + delim);
     }
-    for (Map.Entry<String,MutableFloat> entry : mapFloat.entrySet ()) {
-      sb.append (entry.getKey () + ":" + entry.getValue () + delim);
+    for (Map.Entry<String, MutableFloat> entry : mapFloat.entrySet()) {
+      sb.append(entry.getKey() + ":" + entry.getValue() + delim);
     }
-    if (sb.length () >= delim.length ()) {
-      sb.delete(sb.length () - delim.length (), sb.length ());
+    if (sb.length() >= delim.length()) {
+      sb.delete(sb.length() - delim.length(), sb.length());
     }
-    return sb.toString ();
+    return sb.toString();
 	}
 	
 	@Override
-	public String toString () {
-	  return this.toString (", ");
+	public String toString() {
+	  return this.toString(", ");
 	}
 	
-	public String toPrettyString () {
-	  return this.toString ("\n");
+	public String toPrettyString() {
+	  return this.toString("\n");
   }
 }

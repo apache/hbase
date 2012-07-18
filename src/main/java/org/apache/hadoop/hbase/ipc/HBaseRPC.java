@@ -569,9 +569,9 @@ public class HBaseRPC {
           throw new IOException("Could not find requested method, the usual " +
               "cause is a version mismatch between client and server.");
         }
-        if (HRegionServer.threadLocalProfilingData.get () != null) {
-          HRegionServer.threadLocalProfilingData.get ().addString(
-              ProfilingData.RPC_METHOD_NAME, call.getMethodName ());
+        ProfilingData pData = HRegionServer.threadLocalProfilingData.get();
+        if (pData != null) {
+          pData.addString(ProfilingData.RPC_METHOD_NAME, call.getMethodName ());
         }
         if (verbose) trace("Call: " + call);
         Method method = implementation.getMethod(call.getMethodName(),

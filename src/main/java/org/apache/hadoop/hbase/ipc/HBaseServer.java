@@ -252,11 +252,11 @@ public abstract class HBaseServer {
       this.response = null;
     }
     
-    public void setTag (String tag) {
+    public void setTag(String tag) {
       this.tag = tag;
     }
     
-    public String getTag () {
+    public String getTag() {
       return tag;
     }
 
@@ -1029,7 +1029,7 @@ public abstract class HBaseServer {
       
       call.setRPCCompression(txCompression);
       call.setVersion(version);
-      call.setTag (options.getTag());
+      call.setTag(options.getTag());
       callQueue.put(call);              // queue the call; maybe blocked here
     }
 
