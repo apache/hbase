@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
@@ -115,7 +116,7 @@ public class AvroUtil {
 
   static public AServerInfo hsiToASI(HServerInfo hsi) throws IOException {
     AServerInfo asi = new AServerInfo();
-    asi.infoPort = hsi.getInfoPort();
+    asi.infoPort = HConstants.DEFAULT_REGIONSERVER_INFOPORT;
     asi.load = hslToASL(hsi.getLoad());
     asi.serverAddress = hsaToASA(hsi.getServerAddress());
     asi.serverName = new Utf8(hsi.getServerName());

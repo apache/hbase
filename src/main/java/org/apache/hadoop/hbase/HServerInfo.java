@@ -53,7 +53,6 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   private HServerAddress serverAddress;
   private long startCode;
   private HServerLoad load;
-  private int infoPort;
   // Servername is made of hostname, port and startcode.
   private String serverName = null;
   // Hostname of the regionserver.
@@ -61,8 +60,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   private String cachedHostnamePort = null;
 
   public HServerInfo() {
-    this(new HServerAddress(), 0, HConstants.DEFAULT_REGIONSERVER_INFOPORT,
-      "default name");
+    this(new HServerAddress(), 0, "default name");
   }
 
   /**
@@ -72,17 +70,14 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
    * @param infoPort Port the webui runs on.
    * @param hostname Server hostname.
    */
-  public HServerInfo(HServerAddress serverAddress, final int infoPort,
-      final String hostname) {
-    this(serverAddress, System.currentTimeMillis(), infoPort, hostname);
+  public HServerInfo(HServerAddress serverAddress, final String hostname) {
+    this(serverAddress, System.currentTimeMillis(), hostname);
   }
 
-  public HServerInfo(HServerAddress serverAddress, long startCode,
-      final int infoPort, String hostname) {
+  public HServerInfo(HServerAddress serverAddress, long startCode, String hostname) {
     this.serverAddress = serverAddress;
     this.startCode = startCode;
     this.load = new HServerLoad();
-    this.infoPort = infoPort;
     this.hostname = hostname;
   }
 
@@ -94,7 +89,6 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.serverAddress = new HServerAddress(other.getServerAddress());
     this.startCode = other.getStartCode();
     this.load = other.getLoad();
-    this.infoPort = other.getInfoPort();
     this.hostname = other.hostname;
   }
 
@@ -117,10 +111,6 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
 
   public synchronized long getStartCode() {
     return startCode;
-  }
-
-  public int getInfoPort() {
-    return this.infoPort;
   }
 
   public String getHostname() {
@@ -226,7 +216,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.serverAddress.readFields(in);
     this.startCode = in.readLong();
     this.load.readFields(in);
-    this.infoPort = in.readInt();
+    in.readInt();
     this.hostname = in.readUTF();
   }
 
@@ -234,7 +224,8 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.serverAddress.write(out);
     out.writeLong(this.startCode);
     this.load.write(out);
-    out.writeInt(this.infoPort);
+    // Still serializing the info port for backward compatibility but it is not used.
+    out.writeInt(HConstants.DEFAULT_REGIONSERVER_INFOPORT);
     out.writeUTF(hostname);
   }
 

@@ -15,6 +15,7 @@
   import="org.apache.hadoop.hbase.HConstants"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
+  int rsInfoPort = conf.getInt(HConstants.REGIONSERVER_INFO_PORT, HConstants.DEFAULT_REGIONSERVER_INFOPORT);
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
   String tableName = request.getParameter("name");
   HTable table = new HTable(conf, tableName);
@@ -84,8 +85,7 @@
 %>
 <%= tableHeader %>
 <%
-  int infoPort = master.getServerManager().getHServerInfo(rootLocation).getInfoPort();
-  String url = "http://" + rootLocation.getHostname() + ":" + infoPort + "/";
+  String url = "http://" + rootLocation.getHostname() + ":" + rsInfoPort + "/";
 %>
 <tr>
   <td><%= tableName %></td>
@@ -102,12 +102,11 @@
 <%
   Map<byte [], MetaRegion> onlineRegions = master.getRegionManager().getOnlineMetaRegions();
   for (MetaRegion meta: onlineRegions.values()) {
-    int infoPort = master.getServerManager().getHServerInfo(meta.getServer()).getInfoPort();
-    String url = "http://" + meta.getServer().getHostname() + ":" + infoPort + "/";
+    String url = "http://" + meta.getServer().getHostname() + ":" + rsInfoPort + "/";
 %>
 <tr>
   <td><%= Bytes.toString(meta.getRegionName()) %></td>
-    <td><a href="<%= url %>"><%= meta.getServer().getHostname().toString() + ":" + infoPort %></a></td>
+    <td><a href="<%= url %>"><%= meta.getServer().getHostname().toString() + ":" + rsInfoPort %></a></td>
     <td>-</td><td><%= Bytes.toString(meta.getStartKey()) %></td><td><%= Bytes.toString(meta.getEndKey()) %></td>
 </tr>
 <%  } %>
@@ -139,13 +138,12 @@
 <%=     tableHeader %>
 <%
   for(Map.Entry<HRegionInfo, HServerAddress> hriEntry : regions.entrySet()) {
-    int infoPort = master.getServerManager().getHServerInfo(hriEntry.getValue()).getInfoPort();
     String urlRegionServer =
-        "http://" + hriEntry.getValue().getHostname().toString() + ":" + infoPort + "/";
+        "http://" + hriEntry.getValue().getHostname().toString() + ":" + rsInfoPort + "/";
 %>
 <tr>
   <td><%= Bytes.toStringBinary(hriEntry.getKey().getRegionName())%></td>
-  <td><a href="<%= urlRegionServer %>"><%= hriEntry.getValue().getHostname().toString() + ":" + infoPort %></a></td>
+  <td><a href="<%= urlRegionServer %>"><%= hriEntry.getValue().getHostname().toString() + ":" + rsInfoPort %></a></td>
   <td><%= Bytes.toStringBinary(hriEntry.getKey().getStartKey())%></td>
   <td><%= Bytes.toStringBinary(hriEntry.getKey().getEndKey())%></td>
 </tr>

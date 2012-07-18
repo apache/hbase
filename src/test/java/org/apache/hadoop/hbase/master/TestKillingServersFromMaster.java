@@ -68,8 +68,7 @@ public class TestKillingServersFromMaster {
       (MiniHBaseClusterRegionServer)cluster.getRegionServer(0);
     HServerInfo hsi = firstServer.getServerInfo();
     // This constructor creates a new startcode
-    firstServer.setHServerInfo(new HServerInfo(hsi.getServerAddress(),
-      hsi.getInfoPort(), hsi.getHostname()));
+    firstServer.setHServerInfo(new HServerInfo(hsi.getServerAddress(), hsi.getHostname()));
     cluster.waitOnRegionServer(0);
     assertEquals(1, cluster.getLiveRegionServerThreads().size());
   }

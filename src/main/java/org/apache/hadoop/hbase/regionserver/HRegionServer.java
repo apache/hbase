@@ -444,9 +444,7 @@ public class HRegionServer implements HRegionInterface,
     }
     this.serverInfo = new HServerInfo(new HServerAddress(
       new InetSocketAddress(address.getBindAddress(), port)),
-      System.currentTimeMillis(),
-      this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT,
-          HConstants.DEFAULT_REGIONSERVER_INFOPORT), machineName);
+      System.currentTimeMillis(), machineName);
     if (this.serverInfo.getServerAddress() == null) {
       throw new NullPointerException("Server address cannot be null; " +
         "hbase-958 debugging");
@@ -1451,12 +1449,11 @@ public class HRegionServer implements HRegionInterface,
           // auto bind enabled, try to use another port
           LOG.info("Failed binding http info server to port: " + port);
           port++;
-          // update HRS server info port.
-          this.serverInfo = new HServerInfo(this.serverInfo.getServerAddress(),
-            this.serverInfo.getStartCode(), port,
-            this.serverInfo.getHostname());
         }
       }
+      // update HRS server info port.
+      this.serverInfo = new HServerInfo(this.serverInfo.getServerAddress(),
+        this.serverInfo.getStartCode(), this.serverInfo.getHostname());
     }
 
     this.replicationHandler.startReplicationServices();

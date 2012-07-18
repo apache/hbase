@@ -14,6 +14,7 @@
   import="org.apache.hadoop.hbase.HColumnDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
+  int rsInfoPort = conf.getInt(HConstants.REGIONSERVER_INFO_PORT, HConstants.DEFAULT_REGIONSERVER_INFOPORT);
   HServerAddress rootLocation = master.getRegionManager().getRootRegionLocation();
   Map<byte [], MetaRegion> onlineRegions = master.getRegionManager().getOnlineMetaRegions();
   Map<String, HServerInfo> serverToServerInfos =
@@ -144,7 +145,7 @@
      Arrays.sort(serverNames);
      for (String serverName: serverNames) {
        HServerInfo hsi = serverToServerInfos.get(serverName);
-       String hostname = hsi.getServerAddress().getHostname() + ":" + hsi.getInfoPort();
+       String hostname = hsi.getServerAddress().getHostname() + ":" + rsInfoPort;
        String url = "http://" + hostname + "/";
        totalRegions += hsi.getLoad().getNumberOfRegions();
        totalRequests += hsi.getLoad().getNumberOfRequests() / interval;
