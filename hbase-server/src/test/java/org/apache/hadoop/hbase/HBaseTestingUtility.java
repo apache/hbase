@@ -655,9 +655,8 @@ public class HBaseTestingUtility {
 
     // These settings will make the server waits until this exact number of
     //  regions servers are connected.
-    String count = String.valueOf(numSlaves);
-    conf.setIfUnset("hbase.master.wait.on.regionservers.mintostart", count);
-    conf.setIfUnset("hbase.master.wait.on.regionservers.maxtostart", count);
+    conf.setInt("hbase.master.wait.on.regionservers.mintostart", numSlaves);
+    conf.setInt("hbase.master.wait.on.regionservers.maxtostart", numSlaves);
 
     Configuration c = new Configuration(this.conf);
     this.hbaseCluster = new MiniHBaseCluster(c, numMasters, numSlaves);

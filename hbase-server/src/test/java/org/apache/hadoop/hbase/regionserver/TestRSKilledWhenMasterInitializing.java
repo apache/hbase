@@ -69,11 +69,8 @@ public class TestRSKilledWhenMasterInitializing {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // Set it so that this test runs with my custom master
-    Configuration conf = TESTUTIL.getConfiguration();      
-    conf.setClass(HConstants.MASTER_IMPL, TestingMaster.class, HMaster.class);
-    conf.setInt("hbase.master.wait.on.regionservers.mintostart", 3);
-    conf.setInt("hbase.master.wait.on.regionservers.maxtostart", 4);
-    
+    TESTUTIL.getConfiguration().setClass(HConstants.MASTER_IMPL,
+        TestingMaster.class, HMaster.class);
     // Start up the cluster.
     TESTUTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
   }
