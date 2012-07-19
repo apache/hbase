@@ -41,6 +41,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
@@ -984,7 +985,6 @@ public class HLog implements Syncable {
    */
   public void close() throws IOException {
     try {
-      logSyncerThread.interrupt();
       logSyncerThread.close();
       // Make sure we synced everything
       logSyncerThread.join(this.optionalFlushInterval*2);
@@ -1197,8 +1197,8 @@ public class HLog implements Syncable {
    class LogSyncer extends HasThread {
 
     private final long optionalFlushInterval;
-    
-    private boolean closeLogSyncer = false;
+
+    private AtomicBoolean closeLogSyncer = new AtomicBoolean(false);
 
     // List of pending writes to the HLog. There corresponds to transactions
     // that have not yet returned to the client. We keep them cached here
@@ -1217,11 +1217,13 @@ public class HLog implements Syncable {
       try {
         // awaiting with a timeout doesn't always
         // throw exceptions on interrupt
-        while(!this.isInterrupted() && !closeLogSyncer) {
+        while(!this.isInterrupted() && !closeLogSyncer.get()) {
 
           try {
             if (unflushedEntries.get() <= syncedTillHere) {
-              Thread.sleep(this.optionalFlushInterval);
+              synchronized (closeLogSyncer) {
+                closeLogSyncer.wait(this.optionalFlushInterval);
+              }
             }
             sync();
           } catch (IOException e) {
@@ -1260,9 +1262,12 @@ public class HLog implements Syncable {
         writer.append(e);
       }
     }
-    
-    void close(){
-      closeLogSyncer = true;
+
+    void close() {
+      synchronized (closeLogSyncer) {
+        closeLogSyncer.set(true);
+        closeLogSyncer.notifyAll();
+      }
     }
   }
 
