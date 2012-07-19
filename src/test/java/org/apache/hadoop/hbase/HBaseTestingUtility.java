@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
@@ -1265,14 +1266,30 @@ public class HBaseTestingUtility {
   public void startMiniMapReduceCluster(final int servers) throws IOException {
     LOG.info("Starting mini mapreduce cluster...");
     // These are needed for the new and improved Map/Reduce framework
-    conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));
+    Configuration c = getConfiguration();
+    String logDir = c.get("hadoop.log.dir");
+    String tmpDir = c.get("hadoop.tmp.dir");
+    if (logDir == null) {
+      logDir = tmpDir;
+    }
+    System.setProperty("hadoop.log.dir", logDir);
+    c.set("mapred.output.dir", tmpDir);
     mrCluster = new MiniMRCluster(servers,
       FileSystem.get(conf).getUri().toString(), 1);
     LOG.info("Mini mapreduce cluster started");
-    conf.set("mapred.job.tracker",
-        mrCluster.createJobConf().get("mapred.job.tracker"));
+    JobConf mrClusterJobConf = mrCluster.createJobConf();
+    c.set("mapred.job.tracker", mrClusterJobConf.get("mapred.job.tracker"));
     /* this for mrv2 support */
     conf.set("mapreduce.framework.name", "yarn");
+    String rmAdress = mrClusterJobConf.get("yarn.resourcemanager.address");
+    if (rmAdress != null) {
+      conf.set("yarn.resourcemanager.address", rmAdress);
+    }
+    String schedulerAdress =
+      mrClusterJobConf.get("yarn.resourcemanager.scheduler.address");
+    if (schedulerAdress != null) {
+      conf.set("yarn.resourcemanager.scheduler.address", schedulerAdress);
+    }
   }
 
   /**
