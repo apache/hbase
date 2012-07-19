@@ -1238,6 +1238,7 @@ public class HBaseFsck {
    * the offline ipc call exposed on the master (<0.90.6, <0.92.0) a master
    * restart or failover may be required.
    */
+  @SuppressWarnings("deprecation")
   private void closeRegion(HbckInfo hi) throws IOException, InterruptedException {
     if (hi.metaEntry == null && hi.hdfsEntry == null) {
       undeployRegions(hi);
@@ -1894,22 +1895,22 @@ public class HBaseFsck {
           LOG.debug("Contained region dir before close");
           debugLsr(hi.getHdfsRegionDir());
           try {
+            LOG.info("Closing region: " + hi);
             closeRegion(hi);
           } catch (IOException ioe) {
-            // TODO exercise this
-            LOG.warn("Was unable to close region " + hi.getRegionNameAsString()
-                + ".  Just continuing... ");
+            LOG.warn("Was unable to close region " + hi
+              + ".  Just continuing... ", ioe);
           } catch (InterruptedException e) {
-            // TODO exercise this
-            LOG.warn("Was unable to close region " + hi.getRegionNameAsString()
-                + ".  Just continuing... ");
+            LOG.warn("Was unable to close region " + hi
+              + ".  Just continuing... ", e);
           }
 
           try {
             LOG.info("Offlining region: " + hi);
             offline(hi.getRegionName());
           } catch (IOException ioe) {
-            LOG.warn("Unable to offline region from master: " + hi, ioe);
+            LOG.warn("Unable to offline region from master: " + hi
+              + ".  Just continuing... ", ioe);
           }
         }
 
@@ -1958,14 +1959,21 @@ public class HBaseFsck {
           try {
             LOG.info("Closing region: " + regionToSideline);
             closeRegion(regionToSideline);
-          } catch (InterruptedException ie) {
-            LOG.warn("Was unable to close region " + regionToSideline.getRegionNameAsString()
-              + ".  Interrupted.");
-            throw new IOException(ie);
+          } catch (IOException ioe) {
+            LOG.warn("Was unable to close region " + regionToSideline
+              + ".  Just continuing... ", ioe);
+          } catch (InterruptedException e) {
+            LOG.warn("Was unable to close region " + regionToSideline
+              + ".  Just continuing... ", e);
           }
 
-          LOG.info("Offlining region: " + regionToSideline);
-          offline(regionToSideline.getRegionName());
+          try {
+            LOG.info("Offlining region: " + regionToSideline);
+            offline(regionToSideline.getRegionName());
+          } catch (IOException ioe) {
+            LOG.warn("Unable to offline region from master: " + regionToSideline
+              + ".  Just continuing... ", ioe);
+          }
 
           LOG.info("Before sideline big overlapped region: " + regionToSideline.toString());
           Path sidelineRegionDir = sidelineRegionDir(fs, TO_BE_LOADED, regionToSideline);

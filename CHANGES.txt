@@ -40,6 +40,8 @@ Release 0.90.7 - Unreleased
    HBASE-4379  [hbck] Does not complain about tables with no end region [z,] (Anoop Sam John)
    HBASE-6385  [0.90 branch] Backport HBASE-4195 to 0.90 (Posible inconsistency in a memstore read after a reseek, 
                possible performance improvement) (Gregory Chanan)
+   HBASE-6392  UnknownRegionException blocks hbck from sideline big overlap regions
+  
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
