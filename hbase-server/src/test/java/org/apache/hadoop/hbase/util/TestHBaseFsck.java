@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertNoErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -62,9 +63,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -73,6 +76,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Multimap;
 
 /**
  * This tests HBaseFsck's ability to detect reasons for inconsistent tables.
@@ -483,8 +488,7 @@ public class TestHBaseFsck {
       // differentiate on ts/regionId!  We actually need to recheck
       // deployments!
       HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-      ServerName hsi;
-      while ( (hsi = findDeployedHSI(getDeployedHRIs(admin), hriDupe)) == null) {
+      while (findDeployedHSI(getDeployedHRIs(admin), hriDupe) == null) {
         Thread.sleep(250);
       }
 
@@ -547,7 +551,6 @@ public class TestHBaseFsck {
     }
   }
 
-
   /**
    * This creates and fixes a bad table where a region is completely contained
    * by another region.
@@ -580,6 +583,98 @@ public class TestHBaseFsck {
       assertNoErrors(hbck2);
       assertEquals(0, hbck2.getOverlapGroups(table).size());
       assertEquals(ROWKEYS.length, countRows());
+    } finally {
+       deleteTable(table);
+    }
+  }
+
+  /**
+   * This creates and fixes a bad table where an overlap group of
+   * 3 regions. Set HBaseFsck.maxMerge to 2 to trigger sideline overlapped
+   * region. Mess around the meta data so that closeRegion/offlineRegion
+   * throws exceptions.
+   */
+  @Test
+  public void testSidelineOverlapRegion() throws Exception {
+    String table = "testSidelineOverlapRegion";
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+
+      // Mess it up by creating an overlap
+      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      HMaster master = cluster.getMaster();
+      HRegionInfo hriOverlap1 = createRegion(conf, tbl.getTableDescriptor(),
+        Bytes.toBytes("A"), Bytes.toBytes("AB"));
+      master.assignRegion(hriOverlap1);
+      master.getAssignmentManager().waitForAssignment(hriOverlap1);
+      HRegionInfo hriOverlap2 = createRegion(conf, tbl.getTableDescriptor(),
+        Bytes.toBytes("AB"), Bytes.toBytes("B"));
+      master.assignRegion(hriOverlap2);
+      master.getAssignmentManager().waitForAssignment(hriOverlap2);
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.DUPE_STARTKEYS,
+        ERROR_CODE.DUPE_STARTKEYS, ERROR_CODE.OVERLAP_IN_REGION_CHAIN});
+      assertEquals(3, hbck.getOverlapGroups(table).size());
+      assertEquals(ROWKEYS.length, countRows());
+
+      // mess around the overlapped regions, to trigger NotServingRegionException
+      Multimap<byte[], HbckInfo> overlapGroups = hbck.getOverlapGroups(table);
+      ServerName serverName = null;
+      byte[] regionName = null;
+      for (HbckInfo hbi: overlapGroups.values()) {
+        if ("A".equals(Bytes.toString(hbi.getStartKey()))
+            && "B".equals(Bytes.toString(hbi.getEndKey()))) {
+          regionName = hbi.getRegionName();
+
+          // get an RS not serving the region to force bad assignment info in to META.
+          int k = cluster.getServerWith(regionName);
+          for (int i = 0; i < 3; i++) {
+            if (i != k) {
+              HRegionServer rs = cluster.getRegionServer(i);
+              serverName = rs.getServerName();
+              break;
+            }
+          }
+
+          HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+          HBaseFsckRepair.closeRegionSilentlyAndWait(admin,
+            cluster.getRegionServer(k).getServerName(), hbi.getHdfsHRI());
+          admin.offline(regionName);
+          break;
+        }
+      }
+
+      assertNotNull(regionName);
+      assertNotNull(serverName);
+      HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+      Put put = new Put(regionName);
+      put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+        Bytes.toBytes(serverName.getHostAndPort()));
+      meta.put(put);
+
+      // fix the problem.
+      HBaseFsck fsck = new HBaseFsck(conf);
+      fsck.connect();
+      fsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setFixAssignments(true);
+      fsck.setFixMeta(true);
+      fsck.setFixHdfsHoles(true);
+      fsck.setFixHdfsOverlaps(true);
+      fsck.setFixHdfsOrphans(true);
+      fsck.setFixVersionFile(true);
+      fsck.setSidelineBigOverlaps(true);
+      fsck.setMaxMerge(2);
+      fsck.onlineHbck();
+
+      // verify that overlaps are fixed, and there are less rows
+      // since one region is sidelined.
+      HBaseFsck hbck2 = doFsck(conf,false);
+      assertNoErrors(hbck2);
+      assertEquals(0, hbck2.getOverlapGroups(table).size());
+      assertTrue(ROWKEYS.length > countRows());
     } finally {
        deleteTable(table);
     }
