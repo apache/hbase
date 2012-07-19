@@ -720,8 +720,16 @@ public class Result implements Writable, WritableWithSize {
       return;
     }
     byte [] raw = new byte[totalBuffer];
-    in.readFully(raw, 0, totalBuffer);
+    readChunked(in, raw, 0, totalBuffer);
     bytes = new ImmutableBytesWritable(raw, 0, totalBuffer);
+  }
+
+  private void readChunked(final DataInput in, byte[] dest, int ofs, int len)
+  throws IOException {
+    int maxRead = 8192;
+
+    for (; ofs < len; ofs += maxRead)
+      in.readFully(dest, ofs, Math.min(len - ofs, maxRead));
   }
 
   //Create KeyValue[] when needed
