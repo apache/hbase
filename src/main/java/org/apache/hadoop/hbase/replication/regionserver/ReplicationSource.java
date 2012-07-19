@@ -705,7 +705,10 @@ public class ReplicationSource extends Thread
           + " because an error occurred: " + reason, cause);
     }
     this.running = false;
-    Threads.shutdown(this, this.sleepForRetries);
+    // Only wait for the thread to die if it's not us
+    if (!Thread.currentThread().equals(this)) {
+      Threads.shutdown(this, this.sleepForRetries);
+    }
   }
 
   /**
