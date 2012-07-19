@@ -200,10 +200,9 @@ public class TestLruBlockCache {
     assertTrue(cache.heapSize() <
         (maxSize * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
 
-    // All blocks except block 0 and 1 should be in the cache
+    // All blocks except block 0  should be in the cache
     assertTrue(cache.getBlock(blocks[0].cacheKey, true) == null);
-    assertTrue(cache.getBlock(blocks[1].cacheKey, true) == null);
-    for(int i=2;i<blocks.length;i++) {
+    for(int i=1;i<blocks.length;i++) {
       assertEquals(cache.getBlock(blocks[i].cacheKey, true),
           blocks[i]);
     }

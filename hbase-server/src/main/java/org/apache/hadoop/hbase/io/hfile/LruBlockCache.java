@@ -99,14 +99,15 @@ public class LruBlockCache implements BlockCache, HeapSize {
   static final Log LOG = LogFactory.getLog(LruBlockCache.class);
 
   /** Default Configuration Parameters*/
-
+  static final String LRU_MIN_FACTOR = "hbase.lru.blockcache.min.factor";
+  
   /** Backing Concurrent Map Configuration */
   static final float DEFAULT_LOAD_FACTOR = 0.75f;
   static final int DEFAULT_CONCURRENCY_LEVEL = 16;
 
   /** Eviction thresholds */
-  static final float DEFAULT_MIN_FACTOR = 0.75f;
-  static final float DEFAULT_ACCEPTABLE_FACTOR = 0.85f;
+  static final float DEFAULT_MIN_FACTOR = 0.95f;
+  static final float DEFAULT_ACCEPTABLE_FACTOR = 0.99f;
 
   /** Priority buckets */
   static final float DEFAULT_SINGLE_FACTOR = 0.25f;
@@ -195,6 +196,22 @@ public class LruBlockCache implements BlockCache, HeapSize {
         DEFAULT_MIN_FACTOR, DEFAULT_ACCEPTABLE_FACTOR,
         DEFAULT_SINGLE_FACTOR, DEFAULT_MULTI_FACTOR,
         DEFAULT_MEMORY_FACTOR);
+  }
+  
+  public LruBlockCache(long maxSize, long blockSize, boolean evictionThread, Configuration conf) {
+    this(maxSize, blockSize, evictionThread,
+        (int)Math.ceil(1.2*maxSize/blockSize),
+        DEFAULT_LOAD_FACTOR, 
+        DEFAULT_CONCURRENCY_LEVEL,
+        conf.getFloat(LRU_MIN_FACTOR, DEFAULT_MIN_FACTOR), 
+        DEFAULT_ACCEPTABLE_FACTOR,
+        DEFAULT_SINGLE_FACTOR, 
+        DEFAULT_MULTI_FACTOR,
+        DEFAULT_MEMORY_FACTOR);
+  }
+  
+  public LruBlockCache(long maxSize, long blockSize, Configuration conf) {
+    this(maxSize, blockSize, true, conf);
   }
 
   /**
