@@ -223,8 +223,11 @@ public abstract class HBaseServer implements RpcServer {
    *  @return String
    */
   public static String getRemoteAddress() {
-    InetAddress addr = getRemoteIp();
-    return (addr == null) ? null : addr.getHostAddress();
+    Call call = CurCall.get();
+    if (call != null) {
+      return call.connection.getHostAddress();
+    }
+    return null;
   }
 
   protected String bindAddress;
