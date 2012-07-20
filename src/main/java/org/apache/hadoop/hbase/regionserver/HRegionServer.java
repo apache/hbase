@@ -791,9 +791,9 @@ public class HRegionServer implements HRegionInterface,
       }
       LOG.info("aborting server at: " + this.serverInfo.getServerName());
     } else {
-      Collection<HRegion> regionsToClose = this.onlineRegions.values();
+      int numRegionsToClose  = this.onlineRegions.values().size();
       ArrayList<HRegion> regionsClosed = closeAllRegions();
-      if (regionsToClose.size() == regionsClosed.size()) {
+      if (numRegionsToClose == regionsClosed.size()) {
         try {
           if (this.hlog != null) {
             hlog.closeAndDelete();
