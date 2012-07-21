@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.security.TokenInfo;
 import org.apache.hadoop.hbase.security.KerberosInfo;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
@@ -35,8 +37,12 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableR
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest;
@@ -303,4 +309,41 @@ public interface MasterAdminProtocol extends
   @Override
   public IsMasterRunningResponse isMasterRunning(RpcController c, IsMasterRunningRequest req)
   throws ServiceException;
+
+  /**
+   * Run a scan of the catalog table
+   * @param c Unused (set to null).
+   * @param req CatalogScanRequest
+   * @return CatalogScanResponse that contains the int return code corresponding
+   *         to the number of entries cleaned
+   * @throws ServiceException
+   */
+  @Override
+  public CatalogScanResponse runCatalogScan(RpcController c,
+      CatalogScanRequest req) throws ServiceException;
+
+  /**
+   * Enable/Disable the catalog janitor
+   * @param c Unused (set to null).
+   * @param req EnableCatalogJanitorRequest that contains:<br>
+   * - enable: If true, enable catalog janitor. If false, disable janitor.<br>
+   * @return EnableCatalogJanitorResponse that contains:<br>
+   * - prevValue: true, if it was enabled previously; false, otherwise
+   * @throws ServiceException
+   */
+  @Override
+  public EnableCatalogJanitorResponse enableCatalogJanitor(RpcController c,
+      EnableCatalogJanitorRequest req) throws ServiceException;
+
+  /**
+   * Query whether the catalog janitor is enabled
+   * @param c Unused (set to null).
+   * @param req IsCatalogJanitorEnabledRequest
+   * @return IsCatalogCatalogJanitorEnabledResponse that contains:<br>
+   * - value: true, if it is enabled; false, otherwise
+   * @throws ServiceException
+   */
+  @Override
+  public IsCatalogJanitorEnabledResponse isCatalogJanitorEnabled(RpcController c,
+      IsCatalogJanitorEnabledRequest req) throws ServiceException;
 }

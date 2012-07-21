@@ -25,6 +25,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -62,7 +63,8 @@ class CatalogJanitor extends Chore {
   private static final Log LOG = LogFactory.getLog(CatalogJanitor.class.getName());
   private final Server server;
   private final MasterServices services;
-  private boolean enabled = true;
+  private AtomicBoolean enabled = new AtomicBoolean(true);
+  private AtomicBoolean alreadyRunning = new AtomicBoolean(false);
 
   CatalogJanitor(final Server server, final MasterServices services) {
     super(server.getServerName() + "-CatalogJanitor",
@@ -75,7 +77,7 @@ class CatalogJanitor extends Chore {
   @Override
   protected boolean initialChore() {
     try {
-      if (this.enabled) scan();
+      if (this.enabled.get()) scan();
     } catch (IOException e) {
       LOG.warn("Failed initial scan of catalog table", e);
       return false;
@@ -86,14 +88,22 @@ class CatalogJanitor extends Chore {
   /**
    * @param enabled
    */
-  public void setEnabled(final boolean enabled) {
-    this.enabled = enabled;
+  public boolean setEnabled(final boolean enabled) {
+    return this.enabled.getAndSet(enabled);
+  }
+
+  boolean getEnabled() {
+    return this.enabled.get();
   }
 
   @Override
   protected void chore() {
     try {
-      scan();
+      if (this.enabled.get()) {
+        scan();
+      } else {
+        LOG.warn("CatalogJanitor disabled! Not running scan.");
+      }
     } catch (IOException e) {
       LOG.warn("Failed scan of catalog table", e);
     }
@@ -135,30 +145,37 @@ class CatalogJanitor extends Chore {
    * @throws IOException
    */
   int scan() throws IOException {
-    Pair<Integer, Map<HRegionInfo, Result>> pair = getSplitParents();
-    int count = pair.getFirst();
-    Map<HRegionInfo, Result> splitParents = pair.getSecond();
-
-    // Now work on our list of found parents. See if any we can clean up.
-    int cleaned = 0;
-    HashSet<HRegionInfo> parentNotCleaned = new HashSet<HRegionInfo>(); //regions whose parents are still around
-    for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
-      if (!parentNotCleaned.contains(e.getKey()) && cleanParent(e.getKey(), e.getValue())) {
-        cleaned++;
-      } else {
-        // We could not clean the parent, so it's daughters should not be cleaned either (HBASE-6160)
-        parentNotCleaned.add(getDaughterRegionInfo(e.getValue(), HConstants.SPLITA_QUALIFIER));
-        parentNotCleaned.add(getDaughterRegionInfo(e.getValue(), HConstants.SPLITB_QUALIFIER));
+    try {
+      if (!alreadyRunning.compareAndSet(false, true)) {
+        return 0;
       }
+      Pair<Integer, Map<HRegionInfo, Result>> pair = getSplitParents();
+      int count = pair.getFirst();
+      Map<HRegionInfo, Result> splitParents = pair.getSecond();
+
+      // Now work on our list of found parents. See if any we can clean up.
+      int cleaned = 0;
+      HashSet<HRegionInfo> parentNotCleaned = new HashSet<HRegionInfo>(); //regions whose parents are still around
+      for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
+        if (!parentNotCleaned.contains(e.getKey()) && cleanParent(e.getKey(), e.getValue())) {
+          cleaned++;
+        } else {
+          // We could not clean the parent, so it's daughters should not be cleaned either (HBASE-6160)
+          parentNotCleaned.add(getDaughterRegionInfo(e.getValue(), HConstants.SPLITA_QUALIFIER));
+          parentNotCleaned.add(getDaughterRegionInfo(e.getValue(), HConstants.SPLITB_QUALIFIER));
+        }
+      }
+      if (cleaned != 0) {
+        LOG.info("Scanned " + count + " catalog row(s) and gc'd " + cleaned +
+            " unreferenced parent region(s)");
+      } else if (LOG.isDebugEnabled()) {
+        LOG.debug("Scanned " + count + " catalog row(s) and gc'd " + cleaned +
+            " unreferenced parent region(s)");
+      }
+      return cleaned;
+    } finally {
+      alreadyRunning.set(false);
     }
-    if (cleaned != 0) {
-      LOG.info("Scanned " + count + " catalog row(s) and gc'd " + cleaned +
-        " unreferenced parent region(s)");
-    } else if (LOG.isDebugEnabled()) {
-      LOG.debug("Scanned " + count + " catalog row(s) and gc'd " + cleaned +
-      " unreferenced parent region(s)");
-    }
-    return cleaned;
   }
 
   /**

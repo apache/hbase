@@ -287,6 +287,9 @@ Shell.load_command_group(
     unassign
     zk_dump
     hlog_roll
+    catalogjanitor_run
+    catalogjanitor_switch
+    catalogjanitor_enabled
   ]
 )
 

@@ -26,6 +26,7 @@ ServerName metaLocation = null;
 List<ServerName> servers = null;
 Set<ServerName> deadServers = null;
 boolean showAppendWarning = false;
+boolean catalogJanitorEnabled = true;
 String filter = "general";
 String format = "html";
 </%args>
@@ -117,6 +118,12 @@ org.apache.hadoop.hbase.HBaseConfiguration;
           This may result in data loss.
           Please see the <a href="http://wiki.apache.org/hadoop/Hbase/HdfsSyncSupport">HBase wiki</a>
           for details.
+          </div>
+        </%if>
+        <%if !catalogJanitorEnabled %>
+          <div class="alert alert-error">
+          Please note that your cluster is running with the CatalogJanitor disabled. It can be
+          re-enabled from the hbase shell by running the command 'catalogjanitor_switch true'
           </div>
         </%if>
 

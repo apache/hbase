@@ -82,11 +82,14 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
@@ -1110,5 +1113,29 @@ public final class RequestConverter {
    */
   public static GetClusterStatusRequest buildGetClusterStatusRequest() {
     return GetClusterStatusRequest.newBuilder().build();
+  }
+
+  /**
+   * Creates a request for running a catalog scan
+   * @return A {@link CatalogScanRequest}
+   */
+  public static CatalogScanRequest buildCatalogScanRequest() {
+    return CatalogScanRequest.newBuilder().build();
+  }
+
+  /**
+   * Creates a request for enabling/disabling the catalog janitor
+   * @return A {@link EnableCatalogJanitorRequest}
+   */
+  public static EnableCatalogJanitorRequest buildEnableCatalogJanitorRequest(boolean enable) {
+    return EnableCatalogJanitorRequest.newBuilder().setEnable(enable).build();
+  }
+
+  /**
+   * Creates a request for querying the master whether the catalog janitor is enabled
+   * @return A {@link IsCatalogJanitorEnabledRequest}
+   */
+  public static IsCatalogJanitorEnabledRequest buildIsCatalogJanitorEnabledRequest() {
+    return IsCatalogJanitorEnabledRequest.newBuilder().build();
   }
 }

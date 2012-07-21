@@ -93,6 +93,27 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Request a scan of the catalog table (for garbage collection)
+    # Returns an int signifying the number of entries cleaned
+    def catalogjanitor_run()
+      @admin.runCatalogScan()
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Enable/disable the catalog janitor
+    # Returns previous catalog janitor switch setting.
+    def catalogjanitor_switch(enableDisable)
+      @admin.enableCatalogJanitor(java.lang.Boolean::valueOf(enableDisable))
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Query on the catalog janitor state (enabled/disabled?)
+    # Returns catalog janitor state (true signifies enabled).
+    def catalogjanitor_enabled()
+      @admin.isCatalogJanitorEnabled()
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Enables a table
     def enable(table_name)
       tableExists(table_name)

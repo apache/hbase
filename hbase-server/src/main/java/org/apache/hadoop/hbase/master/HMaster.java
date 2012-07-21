@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.MasterAdminProtocol;
 import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
@@ -130,6 +131,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnReq
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
@@ -138,8 +141,12 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableR
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest;
@@ -1154,6 +1161,30 @@ Server {
   public IsMasterRunningResponse isMasterRunning(RpcController c, IsMasterRunningRequest req)
   throws ServiceException {
     return IsMasterRunningResponse.newBuilder().setIsMasterRunning(isMasterRunning()).build();
+  }
+
+  @Override
+  public CatalogScanResponse runCatalogScan(RpcController c,
+      CatalogScanRequest req) throws ServiceException {
+    try {
+      return ResponseConverter.buildCatalogScanResponse(catalogJanitorChore.scan());
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public EnableCatalogJanitorResponse enableCatalogJanitor(RpcController c,
+      EnableCatalogJanitorRequest req) throws ServiceException {
+    return EnableCatalogJanitorResponse.newBuilder().
+        setPrevValue(catalogJanitorChore.setEnabled(req.getEnable())).build();
+  }
+
+  @Override
+  public IsCatalogJanitorEnabledResponse isCatalogJanitorEnabled(RpcController c,
+      IsCatalogJanitorEnabledRequest req) throws ServiceException {
+    return IsCatalogJanitorEnabledResponse.newBuilder().
+        setValue(catalogJanitorChore.getEnabled()).build();
   }
 
   /**

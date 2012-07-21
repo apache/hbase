@@ -1503,6 +1503,55 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
+   * Enable/Disable the catalog janitor
+   * @param enable if true enables the catalog janitor
+   * @return the previous state
+   * @throws ServiceException
+   * @throws MasterNotRunningException
+   */
+  public boolean enableCatalogJanitor(boolean enable)
+      throws ServiceException, MasterNotRunningException {
+    MasterAdminKeepAliveConnection master = connection.getKeepAliveMasterAdmin();
+    try {
+      return master.enableCatalogJanitor(null,
+          RequestConverter.buildEnableCatalogJanitorRequest(enable)).getPrevValue();
+    } finally {
+      master.close();
+    }
+  }
+
+  /**
+   * Ask for a scan of the catalog table
+   * @return the number of entries cleaned
+   * @throws ServiceException
+   * @throws MasterNotRunningException
+   */
+  public int runCatalogScan() throws ServiceException, MasterNotRunningException {
+    MasterAdminKeepAliveConnection master = connection.getKeepAliveMasterAdmin();
+    try {
+      return master.runCatalogScan(null,
+          RequestConverter.buildCatalogScanRequest()).getScanResult();
+    } finally {
+      master.close();
+    }
+  }
+
+  /**
+   * Query on the catalog janitor state (Enabled/Disabled?)
+   * @throws ServiceException
+   * @throws MasterNotRunningException
+   */
+  public boolean isCatalogJanitorEnabled() throws ServiceException, MasterNotRunningException {
+    MasterAdminKeepAliveConnection master = connection.getKeepAliveMasterAdmin();
+    try {
+      return master.isCatalogJanitorEnabled(null,
+          RequestConverter.buildIsCatalogJanitorEnabledRequest()).getValue();
+    } finally {
+      master.close();
+    }
+  }
+
+  /**
    * Split a table or an individual region.
    * Asynchronous operation.
    *

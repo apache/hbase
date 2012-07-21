@@ -36,7 +36,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
+import com.google.protobuf.ServiceException;
 
 /**
  * The servlet responsible for rendering the index page of the
@@ -65,13 +67,20 @@ public class MasterStatusServlet extends HttpServlet {
     Set<ServerName> deadServers = master.getServerManager().getDeadServers();
 
     response.setContentType("text/html");
-    MasterStatusTmpl tmpl = new MasterStatusTmpl()
+    MasterStatusTmpl tmpl;
+    try {
+       tmpl = new MasterStatusTmpl()
       .setFrags(frags)
       .setShowAppendWarning(shouldShowAppendWarning(conf))
       .setRootLocation(rootLocation)
       .setMetaLocation(metaLocation)
       .setServers(servers)
-      .setDeadServers(deadServers);
+      .setDeadServers(deadServers)
+      .setCatalogJanitorEnabled(master.isCatalogJanitorEnabled(null,
+          RequestConverter.buildIsCatalogJanitorEnabledRequest()).getValue());
+    } catch (ServiceException s) {
+      throw new IOException(s);
+    }
     if (request.getParameter("filter") != null)
       tmpl.setFilter(request.getParameter("filter"));
     if (request.getParameter("format") != null)

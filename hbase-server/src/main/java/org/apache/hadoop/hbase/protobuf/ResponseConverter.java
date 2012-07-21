@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.util.StringUtils;
 
@@ -217,6 +219,22 @@ public final class ResponseConverter {
       builder.addRegionInfo(HRegionInfo.convert(region));
     }
     return builder.build();
+  }
+
+  /**
+   * Creates a response for the catalog scan request
+   * @return A CatalogScanResponse
+   */
+  public static CatalogScanResponse buildCatalogScanResponse(int numCleaned) {
+    return CatalogScanResponse.newBuilder().setScanResult(numCleaned).build();
+  }
+
+  /**
+   * Creates a response for the catalog scan request
+   * @return A EnableCatalogJanitorResponse
+   */
+  public static EnableCatalogJanitorResponse buildEnableCatalogJanitorResponse(boolean prevValue) {
+    return EnableCatalogJanitorResponse.newBuilder().setPrevValue(prevValue).build();
   }
 
 // End utilities for Admin

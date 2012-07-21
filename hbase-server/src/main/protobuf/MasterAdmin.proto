@@ -154,6 +154,28 @@ message SetBalancerRunningResponse {
   optional bool prevBalanceValue = 1;
 }
 
+message CatalogScanRequest {
+}
+
+message CatalogScanResponse {
+  optional int32 scanResult = 1;
+}
+
+message EnableCatalogJanitorRequest {
+  required bool enable = 1;
+}
+
+message EnableCatalogJanitorResponse {
+  optional bool prevValue = 1;
+}
+
+message IsCatalogJanitorEnabledRequest {
+}
+
+message IsCatalogJanitorEnabledResponse {
+  required bool value = 1;
+}
+
 service MasterAdminService {
   /** Adds a column to the specified table. */
   rpc addColumn(AddColumnRequest)
@@ -236,4 +258,19 @@ service MasterAdminService {
   rpc setBalancerRunning(SetBalancerRunningRequest)
     returns(SetBalancerRunningResponse);
 
+  /** Get a run of the catalog janitor */
+  rpc runCatalogScan(CatalogScanRequest)
+     returns(CatalogScanResponse);
+
+  /**
+   * Enable the catalog janitor on or off.
+   */
+  rpc enableCatalogJanitor(EnableCatalogJanitorRequest)
+     returns(EnableCatalogJanitorResponse);
+
+  /**
+   * Query whether the catalog janitor is enabled.
+   */
+  rpc isCatalogJanitorEnabled(IsCatalogJanitorEnabledRequest)
+     returns(IsCatalogJanitorEnabledResponse);
 }
