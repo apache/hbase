@@ -1,6 +1,4 @@
 /**
- * Copyright 2009 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.cleaner;
 
 import static org.junit.Assert.assertEquals;
 
@@ -31,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -105,7 +104,7 @@ public class TestLogsCleaner {
       }
     }
 
-    // sleep for sometime to get newer modifcation time 
+    // sleep for sometime to get newer modifcation time
     Thread.sleep(ttl);
     fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + now));
 
@@ -164,7 +163,7 @@ public class TestLogsCleaner {
     public boolean isAborted() {
       return false;
     }
-    
+
     @Override
     public void stop(String why) {}
 

@@ -46,6 +46,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -85,6 +86,8 @@ import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
+import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
+import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
@@ -104,6 +107,8 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
@@ -276,6 +281,7 @@ Server {
 
   private CatalogJanitor catalogJanitorChore;
   private LogCleaner logCleaner;
+  private HFileCleaner hfileCleaner;
 
   private MasterCoprocessorHost cpHost;
   private final ServerName serverName;
@@ -997,11 +1003,18 @@ Server {
 
    // Start log cleaner thread
    String n = Thread.currentThread().getName();
+   int cleanerInterval = conf.getInt("hbase.master.cleaner.interval", 60 * 1000);
    this.logCleaner =
-      new LogCleaner(conf.getInt("hbase.master.cleaner.interval", 60 * 1000),
+      new LogCleaner(cleanerInterval,
          this, conf, getMasterFileSystem().getFileSystem(),
          getMasterFileSystem().getOldLogDir());
          Threads.setDaemonThreadRunning(logCleaner.getThread(), n + ".oldLogCleaner");
+
+   //start the hfile archive cleaner thread
+    Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
+    this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem()
+        .getFileSystem(), archiveDir);
+    Threads.setDaemonThreadRunning(hfileCleaner.getThread(), n + ".archivedHFileCleaner");
 
    // Put up info server.
    int port = this.conf.getInt(HConstants.MASTER_INFO_PORT, 60010);
@@ -1038,6 +1051,8 @@ Server {
     this.rpcServerOpen = false;
     // Clean up and close up shop
     if (this.logCleaner!= null) this.logCleaner.interrupt();
+    if (this.hfileCleaner != null) this.hfileCleaner.interrupt();
+
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
       try {
@@ -2245,5 +2260,9 @@ Server {
     MXBeanImpl mxBeanInfo = MXBeanImpl.init(this);
     MBeanUtil.registerMBean("Master", "Master", mxBeanInfo);
     LOG.info("Registered HMaster MXBean");
+  }
+
+  public HFileCleaner getHFileCleaner() {
+    return this.hfileCleaner;
   }
 }
