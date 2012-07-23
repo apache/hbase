@@ -41,7 +41,7 @@ Release 0.90.7 - Unreleased
    HBASE-6385  [0.90 branch] Backport HBASE-4195 to 0.90 (Posible inconsistency in a memstore read after a reseek, 
                possible performance improvement) (Gregory Chanan)
    HBASE-6392  UnknownRegionException blocks hbck from sideline big overlap regions
-  
+   HBASE-4470  ServerNotRunningException coming out of assignRootAndMeta kills the Master (Gregory Chanan)  
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition

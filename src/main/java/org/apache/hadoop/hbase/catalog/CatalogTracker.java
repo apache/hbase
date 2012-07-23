@@ -25,6 +25,7 @@ import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MetaNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
@@ -539,7 +541,17 @@ public class CatalogTracker {
    */
   public boolean verifyMetaRegionLocation(final long timeout)
   throws InterruptedException, IOException {
-    return getMetaServerConnection(true) != null;
+    HRegionInterface connection = null;
+    try {
+      connection = getMetaServerConnection(true);
+    } catch (NotAllMetaRegionsOnlineException e) {
+      // Pass
+    } catch (ServerNotRunningException e) {
+      // Pass -- remote server is not up so can't be carrying .META.
+    } catch (UnknownHostException e) {
+      // Pass -- server name doesn't resolve so it can't be assigned anything.
+    }
+    return connection != null;
   }
 
   MetaNodeTracker getMetaNodeTracker() {
