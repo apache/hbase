@@ -23,16 +23,18 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.regionserver.CheckedArchivingHFileCleaner;
@@ -54,7 +56,7 @@ import org.junit.experimental.categories.Category;
  * Spin up a small cluster and check that the hfiles of region are properly long-term archived as
  * specified via the {@link ZKTableArchiveClient}.
  */
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestZooKeeperTableArchiveClient {
 
   private static final Log LOG = LogFactory.getLog(TestZooKeeperTableArchiveClient.class);
@@ -95,7 +97,6 @@ public class TestZooKeeperTableArchiveClient {
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, ttl);
     conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
       CheckedArchivingHFileCleaner.class.getCanonicalName(),
-      TimeToLiveHFileCleaner.class.getCanonicalName(),
       LongTermArchivingHFileCleaner.class.getCanonicalName());
   }
 
@@ -195,7 +196,7 @@ public class TestZooKeeperTableArchiveClient {
     out.close();
 
     assertTrue(fs.exists(tmpFile));
-    // make sure we wait long enough for the file to expire
+    // make sure we wait long enough for the files to expire
     Thread.sleep(ttl);
 
     // print currrent state for comparison
@@ -239,6 +240,7 @@ public class TestZooKeeperTableArchiveClient {
    * @throws InterruptedException
    */
   private void ensureHFileCleanersRun() throws InterruptedException {
+    LOG.debug("Waiting on archive cleaners to run...");
     CheckedArchivingHFileCleaner.resetCheck();
     do {
       UTIL.getHBaseCluster().getMaster().getHFileCleaner().triggerNow();
@@ -265,12 +267,14 @@ public class TestZooKeeperTableArchiveClient {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
 
     // put data in the filesystem of the first table
+    LOG.debug("Loading data into:" + STRING_TABLE_NAME);
     loadAndCompact(STRING_TABLE_NAME);
+
     // and some data in the other table
+    LOG.debug("Loading data into:" + otherTable);
     loadAndCompact(otherTable);
 
-    // make sure we wait long enough for the other tables files to expire
-    Thread.sleep(ttl);
+    // make sure we wait long enough for the other table's files to expire
     ensureHFileCleanersRun();
 
     // check to make sure the right things get deleted
@@ -282,20 +286,19 @@ public class TestZooKeeperTableArchiveClient {
     assertTrue("Store archive got deleted", fs.exists(primaryStoreArchive));
     assertTrue("Archived HFiles got deleted",
       FSUtils.listStatus(fs, primaryStoreArchive, null).length > 0);
-    assertNull("Archived HFiles should have gotten deleted, but didn't",
-      FSUtils.listStatus(fs, otherStoreArchive, null));
+    FileStatus[] otherArchiveFiles = FSUtils.listStatus(fs, otherStoreArchive, null);
+    assertNull("Archived HFiles (" + otherStoreArchive
+        + ") should have gotten deleted, but didn't, remaining files:"
+        + getPaths(otherArchiveFiles), otherArchiveFiles);
     // sleep again to make sure we the other table gets cleaned up
-    Thread.sleep(ttl);
     ensureHFileCleanersRun();
     // first pass removes the store archive
     assertFalse(fs.exists(otherStoreArchive));
     // second pass removes the region
-    Thread.sleep(ttl);
     ensureHFileCleanersRun();
     Path parent = otherStoreArchive.getParent();
     assertFalse(fs.exists(parent));
-    // thrid pass remove the table
-    Thread.sleep(ttl);
+    // third pass remove the table
     ensureHFileCleanersRun();
     parent = otherStoreArchive.getParent();
     assertFalse(fs.exists(parent));
@@ -304,6 +307,16 @@ public class TestZooKeeperTableArchiveClient {
 
     FSUtils.logFileSystemState(fs, HFileArchiveUtil.getArchivePath(UTIL.getConfiguration()), LOG);
     UTIL.deleteTable(Bytes.toBytes(otherTable));
+  }
+
+  private List<Path> getPaths(FileStatus[] files) {
+    if (files == null || files.length == 0) return null;
+
+    List<Path> paths = new ArrayList<Path>(files.length);
+    for (FileStatus file : files) {
+      paths.add(file.getPath());
+    }
+    return paths;
   }
 
   private void loadAndCompact(String tableName) throws Exception {
@@ -332,6 +345,9 @@ public class TestZooKeeperTableArchiveClient {
     assertTrue("Didn't create a store archive directory", fs.exists(storeArchiveDir));
     assertTrue("No files in the store archive",
       FSUtils.listStatus(fs, storeArchiveDir, null).length > 0);
+
+    // wait for the compactions to finish
+    region.waitForFlushesAndCompactions();
   }
 
   /**
