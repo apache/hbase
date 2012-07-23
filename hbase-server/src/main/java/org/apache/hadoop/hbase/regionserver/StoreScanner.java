@@ -522,7 +522,7 @@ class StoreScanner extends NonLazyKeyValueScanner
     if (this.heap == null && this.lastTop != null) {
       resetScannerStack(this.lastTop);
       if (this.heap.peek() == null
-          || store.comparator.compare(this.lastTop, this.heap.peek()) != 0) {
+          || store.comparator.compareRows(this.lastTop, this.heap.peek()) != 0) {
         LOG.debug("Storescanner.peek() is changed where before = "
             + this.lastTop.toString() + ",and after = " + this.heap.peek());
         this.lastTop = null;
