@@ -3778,6 +3778,34 @@ public class HRegion implements HeapSize { // , Writable{
                                       final HLog hlog,
                                       final boolean initialize)
       throws IOException {
+    return createHRegion(info, rootDir, conf, hTableDescriptor,
+        hlog, initialize, false);
+  }
+
+  /**
+   * Convenience method creating new HRegions. Used by createTable.
+   * The {@link HLog} for the created region needs to be closed 
+   * explicitly, if it is not null.
+   * Use {@link HRegion#getLog()} to get access.
+   *
+   * @param info Info for region to create.
+   * @param rootDir Root directory for HBase instance
+   * @param conf
+   * @param hTableDescriptor
+   * @param hlog shared HLog
+   * @param boolean initialize - true to initialize the region
+   * @param boolean ignoreHLog
+      - true to skip generate new hlog if it is null, mostly for createTable
+   * @return new HRegion
+   *
+   * @throws IOException
+   */
+  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
+                                      final Configuration conf,
+                                      final HTableDescriptor hTableDescriptor,
+                                      final HLog hlog,
+                                      final boolean initialize, final boolean ignoreHLog)
+      throws IOException {
     LOG.info("creating HRegion " + info.getTableNameAsString()
         + " HTD == " + hTableDescriptor + " RootDir = " + rootDir +
         " Table name == " + info.getTableNameAsString());
@@ -3788,7 +3816,7 @@ public class HRegion implements HeapSize { // , Writable{
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
     HLog effectiveHLog = hlog;
-    if (hlog == null) {
+    if (hlog == null && !ignoreHLog) {
       effectiveHLog = new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME),
           new Path(regionDir, HConstants.HREGION_OLDLOGDIR_NAME), conf);
     }
