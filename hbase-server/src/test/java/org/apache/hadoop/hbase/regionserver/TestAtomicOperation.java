@@ -276,6 +276,9 @@ public class TestAtomicOperation extends HBaseTestCase {
                 synchronized(region) {
                   LOG.debug("flushing");
                   region.flushcache();
+                  if (i%100==0) {
+                    region.compactStores();
+                  }
                 }
               }
               long ts = timeStamps.incrementAndGet();
@@ -361,6 +364,9 @@ public class TestAtomicOperation extends HBaseTestCase {
                 synchronized(region) {
                   LOG.debug("flushing");
                   region.flushcache();
+                  if (i%100==0) {
+                    region.compactStores();
+                  }
                 }
               }
               long ts = timeStamps.incrementAndGet();
