@@ -89,11 +89,6 @@ public class TestCoprocessorInterface extends HBaseTestCase {
       return false;
     }
 
-    @Override
-    public long getMaxResultSize() {
-      return delegate.getMaxResultSize();
-    }
-
   }
 
   public static class CoprocessorImpl extends BaseRegionObserver {

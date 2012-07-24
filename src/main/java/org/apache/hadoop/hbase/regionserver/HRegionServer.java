@@ -2385,13 +2385,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
               : results.toArray(new Result[0]);
         }
       }
-      long maxResultSize;
-      if (s.getMaxResultSize() > 0) {
-        maxResultSize = s.getMaxResultSize();
-      } else {
-        maxResultSize = maxScannerResultSize;
-      }
-      for (int i = 0; i < nbRows && currentScanResultSize < maxResultSize; i++) {
+
+      for (int i = 0; i < nbRows
+          && currentScanResultSize < maxScannerResultSize; i++) {
         requestCount.incrementAndGet();
         // Collect values to be returned here
         boolean moreRows = s.next(values);
