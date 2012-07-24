@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Set;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -43,6 +45,9 @@ import org.apache.hadoop.io.WritableComparable;
  * with the master-supplied address.
  */
 public class HServerInfo implements WritableComparable<HServerInfo> {
+
+  private static final Log LOG = LogFactory.getLog(HServerInfo.class);
+
   /*
    * This character is used as separator between server hostname and port and
    * its startcode. Servername is formatted as
@@ -254,5 +259,33 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
       if (hostPortStrippedOfStartCode.equals(serverNameColonReplaced)) return true;
     }
     return false;
+  }
+
+  /**
+   * Parses a server name of the format
+   * <code>&lt;hostname>,&lt;port>,&lt;startcode></code>. We use this when
+   * interpreting znode names.
+   */
+  public static HServerInfo fromServerName(String serverName)
+      throws IllegalArgumentException {
+    String[] components = serverName.split(SERVERNAME_SEPARATOR);
+    if (components.length != 3) {
+      String msg = "Invalid number of components in server name: " + serverName;
+      LOG.info(msg);
+      throw new IllegalArgumentException(msg);
+    }
+    String hostName = components[0];
+    
+    int port;
+    long startCode;
+    try {
+      port = Integer.valueOf(components[1]);
+      startCode = Long.valueOf(components[2]); 
+    } catch (NumberFormatException ex) {
+      String msg = "Could not parse server port or start code in server name: " + serverName;
+      throw new IllegalArgumentException(msg);
+    }
+
+    return new HServerInfo(new HServerAddress(hostName, port), startCode, hostName);
   }
 }

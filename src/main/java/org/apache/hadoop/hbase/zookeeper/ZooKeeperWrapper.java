@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -922,20 +923,20 @@ public class ZooKeeperWrapper implements Watcher {
   /**
    * Set a watch on a region server location node
    */
-  public boolean setRSLocationWatch(HServerInfo info, Watcher watcher) {
+  public void setRSLocationWatch(HServerInfo info, Watcher watcher) throws IOException {
     String znode = getRSZNode(info);
     try {
       recoverableZK.getData(znode, watcher, null);
-      return true;
     } catch (KeeperException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to set watch on the " + znode
           + " znode in ZooKeeper", e);
+      throw new IOException(e);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       LOG.warn("<" + instanceName + ">" + "Failed to set watch on the " + znode
           + " znode in ZooKeeper", e);
+      throw new IOException("Interrupted when setting a watch on " + znode, e);
     }
-    return false;
   }
 
   /**
@@ -944,33 +945,6 @@ public class ZooKeeperWrapper implements Watcher {
    */
   public List<HServerAddress> scanRSDirectory() {
     return scanAddressDirectory(rsZNode, null);
-  }
-
-  /**
-   * Scans the regions servers directory and sets a watch on each znode
-   * @param watcher a watch to use for each znode
-   * @return A list of server addresses
-   */
-  public List<HServerAddress> scanRSDirectory(Watcher watcher) {
-    return scanAddressDirectory(rsZNode, watcher);
-  }
-
-  /**
-   * Method used to make sure the region server directory is empty.
-   *
-   */
-  public void clearRSDirectory() {
-    try {
-      List<String> nodes = recoverableZK.getChildren(rsZNode, false);
-      for (String node : nodes) {
-        LOG.debug("<" + instanceName + ">" + "Deleting node: " + node);
-        recoverableZK.delete(joinPath(this.rsZNode, node), -1);
-      }
-    } catch (KeeperException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to delete " + rsZNode + " znodes in ZooKeeper: " + e);
-    } catch (InterruptedException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to delete " + rsZNode + " znodes in ZooKeeper: " + e);
-    }
   }
 
   /**
@@ -1640,6 +1614,26 @@ public class ZooKeeperWrapper implements Watcher {
       interruptedException(ie);
     }
     return children;
+  }
+
+  /**
+   * @return the list of live regionserver names for which ZNodes exist in the
+   *         RS directory in ZooKeeper
+   */
+  public Set<String> getLiveRSNames() throws IOException {
+    List<String> rsList = null;
+    try {
+      rsList = listChildrenNoWatch(rsZNode);
+    } catch (KeeperException ex) {
+      LOG.warn("Unable to list live regionservers in ZK", ex);
+      throw new IOException(ex);
+    }
+
+    Set<String> liveRS = new TreeSet<String>();
+    if (rsList != null) {
+      liveRS.addAll(rsList);
+    }
+    return liveRS;
   }
 
   /**

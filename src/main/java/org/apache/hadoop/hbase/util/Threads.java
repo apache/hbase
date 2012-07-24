@@ -140,7 +140,20 @@ public class Threads {
     try {
       Thread.sleep(millis);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      LOG.warn("Interrupted when sleeping for " + millis + "ms, ignoring", e);
+    }
+  }
+
+  /**
+   * Sleeps for the given amount of time. Retains the thread's interruption status. 
+   * @param millis How long to sleep for in milliseconds.
+   */
+  public static void sleepRetainInterrupt(int millis) {
+    try {
+      Thread.sleep(millis);
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted when sleeping for " + millis + "ms");
+      Thread.currentThread().interrupt();
     }
   }
 

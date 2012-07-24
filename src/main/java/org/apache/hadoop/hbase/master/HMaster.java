@@ -238,6 +238,8 @@ public class HMaster extends HasThread implements HMasterInterface,
 
   private String stopReason = "not stopping";
 
+  private ZKClusterStateRecovery clusterStateRecovery;
+
   /**
    * Constructor
    * @param conf configuration
@@ -752,6 +754,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     MonitoredTask startupStatus =
       TaskMonitor.get().createStatus("Master startup");
     startupStatus.setDescription("Master startup");
+    clusterStateRecovery = new ZKClusterStateRecovery(this, connection);
     try {
       joinCluster();
       initPreferredAssignment();
@@ -827,9 +830,6 @@ public class HMaster extends HasThread implements HMasterInterface,
     logSplitThreadPool.shutdown();
 
     regionManager.joinThreads();
-    if (clusterShutdownRequested.get()) {
-      zooKeeperWrapper.clearRSDirectory();
-    }
 
     zooKeeperWrapper.close();
     HBaseExecutorService.shutdown();
@@ -965,12 +965,14 @@ public class HMaster extends HasThread implements HMasterInterface,
   private void joinCluster() throws IOException  {
     LOG.debug("Checking cluster state...");
 
-    List<HServerAddress> addresses = this.zooKeeperWrapper.scanRSDirectory();
+    clusterStateRecovery.registerLiveRegionServers();
+
     // Check if this is a fresh start of the cluster
-    if (addresses.isEmpty()) {
+    if (clusterStateRecovery.liveRegionServersAtStartup().isEmpty()) {
       LOG.debug("Master fresh start, proceeding with normal startup");
       return;
     }
+
     // Failover case.
     LOG.info("Master failover, ZK inspection begins...");
     // only read the rootlocation if it is failover
@@ -983,14 +985,14 @@ public class HMaster extends HasThread implements HMasterInterface,
     // - contact every region server to add them to the regionservers list
     // - get their current regions assignment
     // TODO: Run in parallel?
-    for (HServerAddress address : addresses) {
+    for (String serverName : clusterStateRecovery.liveRegionServersAtStartup()) {
+      HServerAddress address = HServerInfo.fromServerName(serverName).getServerAddress();
       HRegionInfo[] regions = null;
       try {
         HRegionInterface hri =
           this.connection.getHRegionConnection(address, false);
         HServerInfo info = hri.getHServerInfo();
         LOG.debug("Inspection found server " + info.getServerName());
-        this.serverManager.recordNewServer(info, true);
         regions = hri.getRegionsAssignment();
       } catch (IOException e) {
         LOG.error("Failed contacting " + address.toString(), e);
@@ -1045,7 +1047,7 @@ public class HMaster extends HasThread implements HMasterInterface,
             Path logDir = status.getPath();
             String serverName = logDir.getName();
             LOG.info("Found log folder : " + serverName);
-            if (this.serverManager.getServerInfo(serverName) == null) {
+            if (!clusterStateRecovery.liveRegionServersAtStartup().contains(serverName)) {
               LOG.info("Log folder " + status.getPath() + " doesn't belong " +
                   "to a known region server, splitting");
               serverNames.add(serverName);

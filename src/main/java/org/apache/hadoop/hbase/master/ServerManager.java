@@ -294,12 +294,13 @@ public class ServerManager {
 
     // Setting a watch after making changes to internal server to server info / load data
     // structures because the watch can fire immediately after being set.
-    if (!this.master.getZooKeeperWrapper().setRSLocationWatch(info, watcher)) {
-      // Could not set a watch, undo the above changes.
+    try {
+      master.getZooKeeperWrapper().setRSLocationWatch(info, watcher);
+    } catch (IOException ex) {
+      // Could not set a watch, undo the above changes and re-throw.
       serversToLoad.updateServerLoad(serverName, oldServerLoad);
       undoMapUpdate(serversToServerInfo, serverName, oldServerInfo);
-      throw new IOException("Could not set a watch on regionserver location "
-          + info.getServerName());
+      throw ex;
     }
   }
 
