@@ -558,6 +558,7 @@
           <version>0.8</version>
           <configuration>
             <excludes>
+              <exclude>**/*.log</exclude>
               <exclude>**/.*</exclude>
               <exclude>**/*.tgz</exclude>
               <exclude>**/*.orig</exclude>
