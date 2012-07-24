@@ -95,13 +95,9 @@ public class ClientScanner extends AbstractClientScanner {
       this.tableName = tableName;
       this.lastNext = System.currentTimeMillis();
       this.connection = connection;
-      if (scan.getMaxResultSize() > 0) {
-        this.maxScannerResultSize = scan.getMaxResultSize();
-      } else {
-        this.maxScannerResultSize = conf.getLong(
+      this.maxScannerResultSize = conf.getLong(
           HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
           HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
-      }
       this.scannerTimeout = (int) conf.getLong(
           HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
           HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
