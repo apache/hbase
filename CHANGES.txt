@@ -1,11 +1,12 @@
 HBase Change Log
 
-Release 0.94.1 - 7/16/2012
+Release 0.94.1 - 7/24/2012
 Sub-task
 
     [HBASE-5342] - Grant/Revoke global permissions
     [HBASE-5372] - Table mutation operations should check table level rights, not global rights
     [HBASE-5385] - Delete table/column should delete stored permissions on -acl- table
+    [HBASE-5659] - TestAtomicOperation.testMultiRowMutationMultiThreads is still failing occasionally
     [HBASE-6061] - Fix ACL "Admin" Table inconsistent permission check
     [HBASE-6062] - preCheckAndPut/Delete() checks for READ when also a WRITE is performed
     [HBASE-6092] - Authorize flush, split, compact operations in AccessController
@@ -23,6 +24,7 @@ Sub-task
 Bug
 
     [HBASE-4379] - [hbck] Does not complain about tables with no end region [Z,]
+    [HBASE-4470] - ServerNotRunningException coming out of assignRootAndMeta kills the Master
     [HBASE-4891] - HTable.ClientScanner needs to clone the Scan object
     [HBASE-5546] - Master assigns region in the original region server when opening region failed
     [HBASE-5722] - NPE in ZKUtil#getChildDataAndWatchForNewChildren when ZK not available or NW down.
@@ -35,6 +37,7 @@ Bug
     [HBASE-5874] - When 'fs.default.name' not configured, the hbck tool and Merge tool throw IllegalArgumentException.
     [HBASE-5875] - Process RIT and Master restart may remove an online server considering it as a dead server
     [HBASE-5876] - TestImportExport has been failing against hadoop 0.23 profile
+    [HBASE-5883] - Backup master is going down due to connection refused exception
     [HBASE-5894] - Table deletion failed but HBaseAdmin#deletetable reports it as success
     [HBASE-5902] - Some scripts are not executable
     [HBASE-5909] - SlabStats should be a daemon thread
@@ -46,6 +49,7 @@ Bug
     [HBASE-5955] - Guava 11 drops MapEvictionListener and Hadoop 2.0.0-alpha requires it
     [HBASE-5963] - ClassCastException: FileSystem$Cache$ClientFinalizer cannot be cast to Thread
     [HBASE-5964] - HFileSystem: "No FileSystem for scheme: hdfs"
+    [HBASE-5966] - MapReduce based tests broken on Hadoop 2.0.0-alpha
     [HBASE-5975] - Failed suppression of fs shutdown hook with Hadoop 2.0.0
     [HBASE-5986] - Clients can see holes in the META table when regions are being split
     [HBASE-6002] - Possible chance of resource leak in HlogSplitter
@@ -94,6 +98,8 @@ Bug
     [HBASE-6303] - HCD.setCompressionType should use Enum support for storing compression types as strings
     [HBASE-6311] - Data error after majorCompaction caused by keeping MVCC for opened scanners
     [HBASE-6313] - Client hangs because the client is not notified
+    [HBASE-6319] - ReplicationSource can call terminate on itself and deadlock
+    [HBASE-6325] - [replication] Race in ReplicationSourceManager.init can initiate a failover even if the node is alive
     [HBASE-6326] - Avoid nested retry loops in HConnectionManager
     [HBASE-6328] - FSHDFSUtils#recoverFileLease tries to rethrow InterruptedException but actually shallows it
     [HBASE-6329] - Stopping META regionserver when splitting region could cause daughter region to be assigned twice
@@ -103,9 +109,15 @@ Bug
     [HBASE-6375] - Master may be using a stale list of region servers for creating assignment plan during startup
     [HBASE-6377] - HBASE-5533 metrics miss all operations submitted via MultiAction
     [HBASE-6380] - bulkload should update the store.storeSize
-    [HBASE-6389] - Modify the conditions to ensure that Master waits for sufficient number of Region Servers before starting region assignments
+    [HBASE-6392] - UnknownRegionException blocks hbck from sideline big overlap regions
     [HBASE-6394] - verifyrep MR job map tasks throws NullPointerException
     [HBASE-6397] - [hbck] print out bulk load commands for sidelined regions if necessary
+    [HBASE-6406] - TestReplicationPeer.testResetZooKeeperSession and TestZooKeeper.testClientSessionExpired fail frequently
+    [HBASE-6420] - Gracefully shutdown logsyncer
+    [HBASE-6426] - Add Hadoop 2.0.x profile to 0.92+
+    [HBASE-6440] - SplitLogManager - log the exception when failed to finish split log file
+    [HBASE-6443] - HLogSplitter should ignore 0 length files
+    [HBASE-6445] - rat check fails if hs_err_pid26514.log dropped in tests
 
 Improvement
 
@@ -138,13 +150,15 @@ Improvement
     [HBASE-6332] - Improve POM for better integration with downstream ivy projects
     [HBASE-6334] - TestImprovement for TestHRegion.testWritesWhileGetting
     [HBASE-6341] - Publicly expose HConnectionKey
+    [HBASE-6363] - HBaseConfiguration can carry a main method that dumps XML output for debug purposes
     [HBASE-6382] - Upgrade Jersey to 1.8 to match Hadoop 1 and 2
     [HBASE-6384] - hbck should group together those sidelined regions need to be bulk loaded later
+    [HBASE-6433] - Improve HBaseServer#getRemoteAddress by utilizing HBaseServer.Connection.hostAddress
 
 New Feature
 
-    [HBASE-2214] - Do HBASE-1996 -- setting size to return in scan rather than count of rows -- properly
     [HBASE-2730] - Expose RS work queue contents on web UI
+    [HBASE-4956] - Control direct memory buffer consumption by HBaseClient
     [HBASE-5609] - Add the ability to pass additional information for slow query logging
     [HBASE-5886] - Add new metric for possible data loss due to puts without WAL
     [HBASE-6044] - copytable: remove rs.* parameters
@@ -156,6 +170,10 @@ Task
     [HBASE-6077] - Document the most common secure RPC troubleshooting resolutions
     [HBASE-6129] - Backport of Add Increment Coalescing in thrift.
     [HBASE-6131] - Add attribution for code added by HBASE-5533 metrics
+
+Test
+
+    [HBASE-5985] - TestMetaMigrationRemovingHTD failed with HADOOP 2.0.0
 
 
 Release 0.94.0 - 5/1/2012
