@@ -84,7 +84,10 @@ public class TestHLog  {
 
     FileStatus[] entries = fs.listStatus(new Path("/"));
     for (FileStatus dir : entries) {
-      fs.delete(dir.getPath(), true);
+      // Go directly to the NN to delete, since fs.delete will try to use
+      // trash and directories like /user cannot be moved to trash.
+      assertTrue(cluster.getNameNode().delete(
+            dir.getPath().toUri().getPath(), true));
     }
 
   }
@@ -350,7 +353,8 @@ public class TestHLog  {
         // wal.writer.close() will throw an exception,
         // but still call this since it closes the LogSyncer thread first
         wal.close();
-      } catch (IOException e) {
+      } catch (Throwable e) {
+        // We can get a RunTimeException here as well.
         LOG.info(e);
       }
       fs.close(); // closing FS last so DFSOutputStream can't call close
