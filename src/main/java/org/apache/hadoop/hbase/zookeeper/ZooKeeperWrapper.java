@@ -667,7 +667,7 @@ public class ZooKeeperWrapper implements Watcher {
     return checkExistenceOf(masterElectionZNode);
   }
 
-  private HServerAddress readAddress(String znode, Watcher watcher) {
+  public HServerAddress readAddress(String znode, Watcher watcher) {
     try {
       LOG.debug("<" + instanceName + ">" + "Trying to read " + znode);
       return readAddressOrThrow(znode, watcher);
@@ -872,26 +872,36 @@ public class ZooKeeperWrapper implements Watcher {
    * @return true if operation succeeded, false otherwise.
    */
   public boolean writeMasterAddress(final HServerAddress address) {
-    LOG.debug("<" + instanceName + ">" + "Writing master address " + address.toString() + " to znode " + masterElectionZNode);
-    if (!ensureParentExists(masterElectionZNode)) {
+    return writeAddressToZK(masterElectionZNode, address, "master");
+  }
+
+  public boolean writeAddressToZK(final String znode,
+      final HServerAddress address, String processName) {
+    String addressStr = address.toString();
+    LOG.debug("<" + instanceName + ">" + "Writing " + processName +
+        " address " + addressStr + " to znode " + znode);
+    if (!ensureParentExists(znode)) {
       return false;
     }
-    LOG.debug("<" + instanceName + ">" + "Znode exists : " + masterElectionZNode);
+    LOG.debug("<" + instanceName + ">" + "Znode exists : " + znode);
 
-    String addressStr = address.toString();
     byte[] data = Bytes.toBytes(addressStr);
     try {
-      recoverableZK.create(masterElectionZNode, data, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
-      LOG.debug("<" + instanceName + ">" + "Wrote master address " + address + " to ZooKeeper");
+      recoverableZK.create(znode, data, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+      LOG.debug("<" + instanceName + ">" + "Wrote " + processName +
+          " address " + addressStr + " to ZooKeeper");
       return true;
     } catch (InterruptedException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to write master address " + address + " to ZooKeeper", e);
+      LOG.warn("<" + instanceName + ">" + "Failed to write " + processName +
+          " address " + addressStr + " to ZooKeeper", e);
     } catch (KeeperException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to write master address " + address + " to ZooKeeper", e);
+      LOG.warn("<" + instanceName + ">" + "Failed to write " + processName +
+          " address " + addressStr + " to ZooKeeper", e);
     }
 
     return false;
   }
+
 
   /**
    * Write in ZK this RS startCode and address.
@@ -900,20 +910,25 @@ public class ZooKeeperWrapper implements Watcher {
    * @return true if the location was written, false if it failed
    */
   public boolean writeRSLocation(HServerInfo info) {
-    ensureExists(rsZNode);
     byte[] data = Bytes.toBytes(info.getServerAddress().toString());
-    String znode = joinPath(rsZNode, info.getServerName());
+    String znode = writeServerLocation(rsZNode, info.getServerName(), data);
+    LOG.debug("<" + instanceName + ">" + "Created ZNode " + rsZNode
+        + " with data " + new String(data));
+    return (znode != null);
+  }
+
+  public String writeServerLocation(String serversZNode, String serverName, byte[] data) {
+    ensureExists(serversZNode);
+    String znode = joinPath(serversZNode, serverName);
     try {
       recoverableZK.create(znode, data, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
-      LOG.debug("<" + instanceName + ">" + "Created ZNode " + znode
-          + " with data " + info.getServerAddress().toString());
-      return true;
+      return znode;
     } catch (KeeperException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to create " + znode + " znode in ZooKeeper: " + e);
     } catch (InterruptedException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to create " + znode + " znode in ZooKeeper: " + e);
     }
-    return false;
+    return null;
   }
 
   private String getRSZNode(HServerInfo info) {
@@ -1318,9 +1333,14 @@ public class ZooKeeperWrapper implements Watcher {
   }
 
   public byte[] readZNode(String znodeName, Stat stat) throws IOException {
+    String fullyQualifiedZNodeName = getZNode(parentZNode, znodeName);
+    return readDataFromFullyQualifiedZNode(fullyQualifiedZNodeName, stat);
+  }
+
+  public byte[] readDataFromFullyQualifiedZNode(
+      String fullyQualifiedZNodeName, Stat stat) throws IOException {
     byte[] data;
     try {
-      String fullyQualifiedZNodeName = getZNode(parentZNode, znodeName);
       data = recoverableZK.getData(fullyQualifiedZNodeName, this, stat);
     } catch (InterruptedException e) {
       throw new IOException(e);
