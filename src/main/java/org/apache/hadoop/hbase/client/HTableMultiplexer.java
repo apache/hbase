@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -345,8 +346,6 @@ public class HTableMultiplexer {
       Put failedPut = failedPutStatus.getPut();
       // The currentPut is failed. So get the table name for the currentPut.
       byte[] tableName = failedPutStatus.getRegionInfo().getTableDesc().getName();
-      // Clear the cached location for the failed puts
-      this.connection.deleteCachedLocation(tableName, failedPut.getRow(), oldLoc);
       // Decrease the retry count
       int retryCount = failedPutStatus.getRetryCount() - 1;
       
@@ -404,7 +403,7 @@ public class HTableMultiplexer {
             }
             
             // Process this multiput request
-            List<Put> failed = connection.processSingleMultiPut(mput, options);
+            List<Put> failed = connection.processListOfMultiPut(Arrays.asList(mput), null, options);
             if (failed != null) {
               if (failed.size() == processingList.size()) {
                 // All the puts for this region server are failed. Going to retry it later

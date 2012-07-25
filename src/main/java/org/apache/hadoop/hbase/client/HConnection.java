@@ -312,11 +312,15 @@ public interface HConnection extends Closeable {
    * 
    * Also it will return the list of failed put among the MultiPut request or return null if all
    * puts are sent to the HRegionServer successfully.
-   * @param mput The MultiPut request
-   * @return the list of failed put among the MultiPut request, otherwise return null 
+   * @param mputs The list of MultiPut requests
+   * @param tableName
+   * @param options The RPC options to be used while communicating with the HRegionServer
+   * @return the list of failed put among the requests, otherwise return null
    *         if all puts are sent to the HRegionServer successfully.
+   * @throws IOException
    */
-  public List<Put> processSingleMultiPut(MultiPut mput, HBaseRPCOptions options);
+  public List<Put> processListOfMultiPut(List<MultiPut> mputs,
+      final byte[] tableName, HBaseRPCOptions options) throws IOException;
   
   /**
    * Delete the cached location
