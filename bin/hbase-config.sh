@@ -104,6 +104,10 @@ if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
   . "${HBASE_CONF_DIR}/hbase-env.sh"
 fi
 
+# Newer versions of glibc use an arena memory allocator that causes virtual
+# memory usage to explode. Tune the variable down to prevent vmem explosion.
+export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}
+
 if [ -z "$JAVA_HOME" ]; then
   for candidate in \
     /usr/lib/jvm/java-6-sun \
