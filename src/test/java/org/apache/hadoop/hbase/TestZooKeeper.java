@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -135,7 +136,9 @@ public class TestZooKeeper {
     testSanity();
   }
 
-  @Test
+  // @Test Disabled because seems to make no sense expiring master session
+  // and then trying to create table (down in testSanity); on master side
+  // it will fail because the master's session has expired -- St.Ack 07/24/2012
   public void testMasterSessionExpired() throws Exception {
     LOG.info("Starting testMasterSessionExpired");
     TEST_UTIL.expireMasterSession();
@@ -262,14 +265,46 @@ public class TestZooKeeper {
     // Assumes the  root of the ZooKeeper space is writable as it creates a node
     // wherever the cluster home is defined.
     ZooKeeperWatcher zk2 = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-        "testMasterAddressManagerFromZK",
-        null);
+      "testMasterAddressManagerFromZK", null);
 
     // I set this acl after the attempted creation of the cluster home node.
-    zk.setACL("/", ZooDefs.Ids.CREATOR_ALL_ACL, -1);
-    zk.create(aclZnode, null, ZooDefs.Ids.CREATOR_ALL_ACL, CreateMode.PERSISTENT);
-    zk.close();
+    // Add retries in case of retryable zk exceptions.
+    while (true) {
+      try {
+        zk.setACL("/", ZooDefs.Ids.CREATOR_ALL_ACL, -1);
+        break;
+      } catch (KeeperException e) {
+        switch (e.code()) {
+          case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
+          case OPERATIONTIMEOUT:
+            LOG.warn("Possibly transient ZooKeeper exception: " + e);
+            Threads.sleep(100);
+            break;
+         default:
+            throw e;
+        }
+      }
+    }
 
+    while (true) {
+      try {
+        zk.create(aclZnode, null, ZooDefs.Ids.CREATOR_ALL_ACL, CreateMode.PERSISTENT);
+        break;
+      } catch (KeeperException e) {
+        switch (e.code()) {
+          case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
+          case OPERATIONTIMEOUT:
+            LOG.warn("Possibly transient ZooKeeper exception: " + e);
+            Threads.sleep(100);
+            break;
+         default:
+            throw e;
+        }
+      }
+    }
+    zk.close();
     ZKUtil.createAndFailSilent(zk2, aclZnode);
  }
 }
