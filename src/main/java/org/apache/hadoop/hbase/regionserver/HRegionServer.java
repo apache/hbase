@@ -48,9 +48,9 @@ import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
@@ -73,7 +73,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -96,18 +95,12 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
-import org.apache.hadoop.hbase.HMsg.Type;
-import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
-import org.apache.hadoop.hbase.client.MultiAction;
-import org.apache.hadoop.hbase.client.MultiResponse;
-import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.client.MultiPutResponse;
+import org.apache.hadoop.hbase.client.MultiResponse;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -119,8 +112,8 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
-import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
@@ -138,6 +131,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ParamFormat;
@@ -156,7 +150,6 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
-import org.apache.hadoop.hbase.util.HasThread;
 
 import com.google.common.base.Preconditions;
 
@@ -308,7 +301,6 @@ public class HRegionServer implements HRegionInterface,
   private final HServerAddress address;
 
   // The main region server thread.
-  @SuppressWarnings("unused")
   private Thread regionServerThread;
 
   private final String machineName;
@@ -445,6 +437,9 @@ public class HRegionServer implements HRegionInterface,
     this.serverInfo = new HServerInfo(new HServerAddress(
       new InetSocketAddress(address.getBindAddress(), port)),
       System.currentTimeMillis(), machineName);
+    if (regionServerThread != null) {
+      Threads.renameThread(regionServerThread, getRSThreadName());
+    }
     if (this.serverInfo.getServerAddress() == null) {
       throw new NullPointerException("Server address cannot be null; " +
         "hbase-958 debugging");
@@ -571,6 +566,7 @@ public class HRegionServer implements HRegionInterface,
   @Override
   public void run() {
     regionServerThread = Thread.currentThread();
+    Threads.renameThread(regionServerThread, getRSThreadName());
     boolean quiesceRequested = false;
     try {
       MapWritable w = null;
@@ -1406,7 +1402,7 @@ public class HRegionServer implements HRegionInterface,
    */
   private void startServiceThreads() throws IOException {
     HBaseRPC.startProxy();
-    String n = Thread.currentThread().getName();
+    String n = getRSThreadName();
     UncaughtExceptionHandler handler = new UncaughtExceptionHandler() {
       @Override
       public void uncaughtException(Thread t, Throwable e) {
@@ -1451,9 +1447,6 @@ public class HRegionServer implements HRegionInterface,
           port++;
         }
       }
-      // update HRS server info port.
-      this.serverInfo = new HServerInfo(this.serverInfo.getServerAddress(),
-        this.serverInfo.getStartCode(), this.serverInfo.getHostname());
     }
 
     this.replicationHandler.startReplicationServices();
@@ -2730,10 +2723,10 @@ public class HRegionServer implements HRegionInterface,
   }
 
   /**
-   * @return true if a stop has been requested.
+   * @return true if a stop or abort has been requested.
    */
   public boolean isStopRequested() {
-    return this.stopRequested.get();
+    return this.stopRequested.get() || abortRequested;
   }
 
   /**
@@ -3115,7 +3108,6 @@ public class HRegionServer implements HRegionInterface,
     return serverInfo;
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public MultiResponse multiAction(MultiAction mActions) throws IOException {
     checkOpen();
@@ -3420,6 +3412,11 @@ public class HRegionServer implements HRegionInterface,
       return mainRegionServer;
     }
     return null;
+  }
+
+  /** @return what the regionserver thread name should be */
+  public String getRSThreadName() {
+    return "RS-" + serverInfo.getServerName();
   }
 
 }

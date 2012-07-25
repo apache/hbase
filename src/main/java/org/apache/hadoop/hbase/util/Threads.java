@@ -201,4 +201,12 @@ public class Threads {
     boundedCachedThreadPool.allowCoreThreadTimeOut(true);
     return boundedCachedThreadPool;
   }
+
+  public static void renameThread(Thread t, String newName) {
+    String oldName = t.getName();
+    if (!t.equals(newName)) {
+      LOG.info("Thread '" + oldName + "' is now known as '" + newName + "'");
+      t.setName(newName);
+    }
+  }
 }

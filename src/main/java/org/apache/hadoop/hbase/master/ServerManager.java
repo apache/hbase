@@ -206,13 +206,13 @@ public class ServerManager {
     String hostAndPort = info.getServerAddress().toString();
     HServerInfo existingServer = haveServerWithSameHostAndPortAlready(info.getHostnamePort());
     if (existingServer != null) {
-      String message = "Server start rejected; we already have " + hostAndPort +
-        " registered; existingServer=" + existingServer + ", newServer=" + info;
+      String message = "Duplicate regionserver check-in for host/port: " + hostAndPort +
+          "; existingServer=" + existingServer + ", newServer=" + info;
       LOG.info(message);
       long existingStartCode = existingServer.getStartCode();
       long newStartCode = info.getStartCode();
       if (existingStartCode < newStartCode) {
-        LOG.info("Triggering server recovery; existingServer looks stale");
+        LOG.info("Existing regionserver looks stale, expiring: " + existingServer);
         expireServer(existingServer);
       } else if (existingStartCode == newStartCode) {
         LOG.debug("Duplicate region server check-in with start code " + existingStartCode + ": " +

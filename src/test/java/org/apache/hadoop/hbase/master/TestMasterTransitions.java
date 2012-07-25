@@ -261,6 +261,7 @@ public class TestMasterTransitions {
    */
   @Test (timeout=300000) public void testAddingServerBeforeOldIsDead2413()
   throws IOException {
+    HBaseTestingUtility.setThreadNameFromMethod();
     LOG.info("Running testAddingServerBeforeOldIsDead2413");
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     int count = count();
@@ -279,21 +280,43 @@ public class TestMasterTransitions {
       HRegionServer hrs = null;
       while (true) {
         try {
+          LOG.info("A new attempt to start a regionserver on port " + port);
           hrs = cluster.startRegionServer().getRegionServer();
-          break;
+          Threads.sleepWithoutInterrupt(1000);
+          if (hrs.isOnline() && !hrs.isStopRequested()) {
+            // The regionserver has started successfully.
+            break;
+          }
         } catch (IOException e) {
           if (e.getCause() != null && e.getCause() instanceof InvocationTargetException) {
             InvocationTargetException ee = (InvocationTargetException)e.getCause();
             if (ee.getCause() != null && ee.getCause() instanceof BindException) {
               LOG.info("BindException; retrying: " + e.toString());
             }
+          } else {
+            // Unknown error when constructing the regionserver, fail the unit test.
+            throw e;
           }
         }
+        // Bind exception, or the regionserver failed to start. Retry.
       }
       LOG.info("STARTED=" + hrs);
-      // Wait until he's been given at least 3 regions before we go on to try
+
+      // Wait until the regionserver has been given at least 3 regions before we go on to try
       // and count rows in table.
-      while (hrs.getOnlineRegions().size() < 3) Threads.sleep(100);
+      int requiredNumRegions = 3;
+      int numOnlineRegions;
+      long lastLogTime = 0;
+      while ((numOnlineRegions = hrs.getOnlineRegions().size()) < requiredNumRegions) {
+        Threads.sleep(100);
+        long now = System.currentTimeMillis();
+        if (now - lastLogTime > 5 * 1000) {
+          LOG.debug("Waiting for " + requiredNumRegions + " to be assigned to " +
+              hrs.getServerInfo().getServerName() + ", currently: " + numOnlineRegions);
+          lastLogTime = now;
+        }
+      }
+
       LOG.info(hrs.toString() + " has " + hrs.getOnlineRegions().size() +
         " regions");
       assertEquals(count, count());
