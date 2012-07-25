@@ -35,7 +35,6 @@ public final class HConstants {
   public enum OperationStatusCode {
     NOT_RUN,
     SUCCESS,
-    SANITY_CHECK_FAILURE,
     FAILURE;
   }
 

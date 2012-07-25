@@ -322,8 +322,10 @@ public interface HConnection extends Closeable {
    * Delete the cached location
    * @param tableName
    * @param row
+   * @param oldLoc
    */
-  public void deleteCachedLocation(final byte [] tableName, final byte [] row);
+  public void deleteCachedLocation(final byte [] tableName, final byte [] row,
+      HServerAddress oldLoc);
   
   /**
    * Enable or disable region cache prefetch for the table. It will be

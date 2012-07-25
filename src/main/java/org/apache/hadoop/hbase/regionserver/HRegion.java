@@ -2016,15 +2016,8 @@ public class HRegion implements HeapSize {
 
         // Check the families in the put. If bad, skip this one.
         if (op instanceof Put) {
-          try {
-            checkFamilies(op.getFamilyMap().keySet());
-            checkTimestamps(op, now);
-          } catch (DoNotRetryIOException dnrioe) {
-            LOG.warn("Sanity check error in batch processing", dnrioe);
-            batchOp.retCodes[lastIndexExclusive] = OperationStatusCode.SANITY_CHECK_FAILURE;
-            lastIndexExclusive++;
-            continue;
-          }
+          checkFamilies(op.getFamilyMap().keySet());
+          checkTimestamps(op, now);
         }
 
         // If we haven't got any rows in our batch, we should block to

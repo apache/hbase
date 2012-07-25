@@ -58,7 +58,7 @@ public class TestHCM {
     HConnectionManager.TableServers conn =
         (HConnectionManager.TableServers) table.getConnection();
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
-    conn.deleteCachedLocation(TABLE_NAME, ROW);
+    conn.deleteCachedLocation(TABLE_NAME, ROW, null);
     HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);
     assertNull("What is this location?? " + rl, rl);
   }

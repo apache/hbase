@@ -376,14 +376,18 @@ public class TestHRegion extends HBaseTestCase {
 
     LOG.info("Next a batch put with one invalid family");
     puts[5].add(Bytes.toBytes("BAD_CF"), qual, val);
-    codes = this.region.put(puts);
-    assertEquals(10, codes.length);
-    for (int i = 0; i < 10; i++) {
-      assertEquals((i == 5) ? OperationStatusCode.SANITY_CHECK_FAILURE :
-        OperationStatusCode.SUCCESS, codes[i]);
-    }
-    assertEquals(1, HLog.getSyncTime().count);
+    try {
+      codes = this.region.put(puts);
 
+      // put should throw an exception
+      assertTrue(false);
+    } catch(IOException e) {
+      // continue
+    }
+
+    // let make the puts good again.
+    puts[5] = new Put(Bytes.toBytes("row_" + 5));
+    puts[5].add(cf, qual, val);
     LOG.info("Next a batch put that has to break into two batches to avoid a lock");
     Integer lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
 
@@ -417,8 +421,7 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(1, HLog.getSyncTime().count);
     codes = retFromThread.get();
     for (int i = 0; i < 10; i++) {
-      assertEquals((i == 5) ? OperationStatusCode.SANITY_CHECK_FAILURE :
-        OperationStatusCode.SUCCESS, codes[i]);
+      assertEquals(OperationStatusCode.SUCCESS, codes[i]);
     }
 
     LOG.info("Nexta, a batch put which uses an already-held lock");
@@ -434,8 +437,7 @@ public class TestHRegion extends HBaseTestCase {
     codes = region.batchMutateWithLocks(putsAndLocks.toArray(new Pair[0]), "multiput_");
     LOG.info("...performed put");
     for (int i = 0; i < 10; i++) {
-      assertEquals((i == 5) ? OperationStatusCode.SANITY_CHECK_FAILURE :
-        OperationStatusCode.SUCCESS, codes[i]);
+      assertEquals(OperationStatusCode.SUCCESS, codes[i]);
     }
     // Make sure we didn't do an extra batch
     assertEquals(1, HLog.getSyncTime().count);
@@ -2775,24 +2777,24 @@ public class TestHRegion extends HBaseTestCase {
     int version = 0;
 
     for (int f =0 ; f < num_storefiles; f++) {
-	for (int i = 0; i < duplicate_multiplier; i ++) {
-		for (int j = 0; j < num_unique_rows; j++) {
-			Put put = new Put(Bytes.toBytes("row" + j));
-			put.add(fam1, qf1, version++, val1);
+      for (int i = 0; i < duplicate_multiplier; i ++) {
+        for (int j = 0; j < num_unique_rows; j++) {
+          Put put = new Put(Bytes.toBytes("row" + j));
+          put.add(fam1, qf1, version++, val1);
           region.put(put);
-		}
-	    }
-	    region.flushcache();
+        }
+      }
+      region.flushcache();
     }
     //before compaction
     Store store = region.getStore(fam1);
     List<StoreFile> storeFiles = store.getStorefiles();
     for (StoreFile storefile : storeFiles) {
-	StoreFile.Reader reader = storefile.getReader();
-	reader.loadFileInfo();
+      StoreFile.Reader reader = storefile.getReader();
+      reader.loadFileInfo();
       reader.loadBloomfilter();
       assertEquals(num_unique_rows * duplicate_multiplier, reader.getEntries());
-	assertEquals(num_unique_rows, reader.getFilterEntries());
+      assertEquals(num_unique_rows, reader.getFilterEntries());
     }
 
     region.compactStores(true);
@@ -2800,10 +2802,10 @@ public class TestHRegion extends HBaseTestCase {
     //after compaction
     storeFiles = store.getStorefiles();
     for (StoreFile storefile : storeFiles) {
-	StoreFile.Reader reader = storefile.getReader();
-	reader.loadFileInfo();
+      StoreFile.Reader reader = storefile.getReader();
+      reader.loadFileInfo();
       reader.loadBloomfilter();
-	assertEquals(num_unique_rows * duplicate_multiplier * num_storefiles,
+      assertEquals(num_unique_rows * duplicate_multiplier * num_storefiles,
           reader.getEntries());
       assertEquals(num_unique_rows, reader.getFilterEntries());
     }

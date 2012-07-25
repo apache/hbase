@@ -37,7 +37,6 @@ import java.io.IOException;
  */
 public class ScannerCallable extends ServerCallable<Result[]> {
   private long scannerId = -1L;
-  private boolean instantiated = false;
   private boolean closed = false;
   private Scan scan;
   private int caching = 1;
@@ -51,25 +50,6 @@ public class ScannerCallable extends ServerCallable<Result[]> {
       Scan scan, HBaseRPCOptions options) {
     super(connection, tableName, scan.getStartRow(), options);
     this.scan = scan;
-  }
-
-  @Override
-  public void instantiateRegionLocation(boolean reload) throws IOException {
-    if (!instantiated || reload) {
-      super.instantiateRegionLocation(reload);
-      instantiated = false;
-    }
-  }
-  /**
-   * @param reload force reload of server location
-   * @throws IOException
-   */
-  @Override
-  public void instantiateServer() throws IOException {
-    if (!instantiated) {
-      super.instantiateServer();
-      instantiated = true;
-    }
   }
 
   /**
@@ -137,7 +117,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
    * @return the HRegionInfo for the current region
    */
   public HRegionInfo getHRegionInfo() {
-    if (!instantiated) {
+    if (location == null) {
       return null;
     }
     return location.getRegionInfo();

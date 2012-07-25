@@ -341,12 +341,12 @@ public class HTableMultiplexer {
       return queue.size() + currentProcessingPutCount.get();
     }
 
-    private boolean resubmitFailedPut(PutStatus failedPutStatus) throws IOException{
+    private boolean resubmitFailedPut(PutStatus failedPutStatus, HServerAddress oldLoc) throws IOException{
       Put failedPut = failedPutStatus.getPut();
       // The currentPut is failed. So get the table name for the currentPut.
       byte[] tableName = failedPutStatus.getRegionInfo().getTableDesc().getName();
       // Clear the cached location for the failed puts
-      this.connection.deleteCachedLocation(tableName, failedPut.getRow());
+      this.connection.deleteCachedLocation(tableName, failedPut.getRow(), oldLoc);
       // Decrease the retry count
       int retryCount = failedPutStatus.getRetryCount() - 1;
       
@@ -409,14 +409,15 @@ public class HTableMultiplexer {
               if (failed.size() == processingList.size()) {
                 // All the puts for this region server are failed. Going to retry it later
                 for (PutStatus putStatus: processingList) {
-                  if (!resubmitFailedPut(putStatus)) {
+                  if (!resubmitFailedPut(putStatus, this.addr)) {
                     failedCount++;
                   }
                 }
               } else {
                 Set<Put> failedPutSet = new HashSet<Put>(failed);
                 for (PutStatus putStatus: processingList) {
-                  if (failedPutSet.contains(putStatus.getPut()) && !resubmitFailedPut(putStatus)) {
+                  if (failedPutSet.contains(putStatus.getPut())
+                      && !resubmitFailedPut(putStatus, this.addr)) {
                     failedCount++;
                   }
                 }
