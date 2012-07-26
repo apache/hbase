@@ -709,6 +709,7 @@ public class HRegionServer implements HRegionInterface,
       if (!checkOOME(t)) {
         abort("Unhandled exception", t);
       }
+      LOG.warn("Stopping - unexpected ...", t);
     }
 
     // tell the master that we are going to shut down
