@@ -1676,6 +1676,7 @@ public class HRegionServer implements HRegionInterface,
 
     MapWritable result = null;
     long lastMsg = 0;
+    boolean znodeWritten = false;
     while(!stopRequested.get()) {
       try {
         this.requestCount.set(0);
@@ -1687,7 +1688,8 @@ public class HRegionServer implements HRegionInterface,
         if (LOG.isDebugEnabled())
           LOG.debug("sending initial server load: " + hsl);
         lastMsg = System.currentTimeMillis();
-        if (zooKeeperWrapper.writeRSLocation(this.serverInfo)) {
+        if (znodeWritten || zooKeeperWrapper.writeRSLocation(this.serverInfo)) {
+          znodeWritten = true;
           // We either created the znode, or it existed already. Check in with the master.
           result = this.hbaseMaster.regionServerStartup(this.serverInfo);
           break;

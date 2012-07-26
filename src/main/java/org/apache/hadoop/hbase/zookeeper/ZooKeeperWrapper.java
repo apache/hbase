@@ -907,7 +907,8 @@ public class ZooKeeperWrapper implements Watcher {
    * Write in ZK this RS startCode and address.
    * Ensures that the full path exists.
    * @param info The RS info
-   * @return true if the location was written, false if it failed
+   * @return true if the location was written, false if it failed or if the znode already
+   *         existed
    */
   public boolean writeRSLocation(HServerInfo info) {
     byte[] data = Bytes.toBytes(info.getServerAddress().toString());
