@@ -54,6 +54,27 @@ public class TestFilterList {
   static byte[] GOOD_BYTES = Bytes.toBytes("abc");
   static byte[] BAD_BYTES = Bytes.toBytes("def");
 
+
+  @Test
+  public void testAddFilter() throws Exception {
+    Filter filter1 = new RowFilter();
+    Filter filter2 = new RowFilter();
+
+    FilterList filterList = new FilterList(filter1, filter2);
+    filterList.addFilter(new RowFilter());
+
+    filterList = new FilterList(Arrays.asList(filter1, filter2));
+    filterList.addFilter(new RowFilter());
+
+    filterList = new FilterList(Operator.MUST_PASS_ALL, filter1, filter2);
+    filterList.addFilter(new RowFilter());
+
+    filterList = new FilterList(Operator.MUST_PASS_ALL, Arrays.asList(filter1, filter2));
+    filterList.addFilter(new RowFilter());
+
+  }
+
+
   /**
    * Test "must pass one"
    * @throws Exception

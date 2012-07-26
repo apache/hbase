@@ -74,7 +74,11 @@ public class FilterList implements Filter {
    * @param rowFilters list of filters
    */
   public FilterList(final List<Filter> rowFilters) {
-    this.filters = rowFilters;
+    if (rowFilters instanceof ArrayList) {
+      this.filters = rowFilters;
+    } else {
+      this.filters = new ArrayList<Filter>(rowFilters);
+    }
   }
 
   /**
@@ -83,7 +87,7 @@ public class FilterList implements Filter {
    * @param rowFilters
    */
   public FilterList(final Filter... rowFilters) {
-    this.filters = Arrays.asList(rowFilters);
+    this.filters = new ArrayList<Filter>(Arrays.asList(rowFilters));
   }
 
   /**
@@ -102,7 +106,7 @@ public class FilterList implements Filter {
    * @param rowFilters Set of row filters.
    */
   public FilterList(final Operator operator, final List<Filter> rowFilters) {
-    this.filters = rowFilters;
+    this.filters = new ArrayList<Filter>(rowFilters);
     this.operator = operator;
   }
 
@@ -113,7 +117,7 @@ public class FilterList implements Filter {
    * @param rowFilters Filters to use
    */
   public FilterList(final Operator operator, final Filter... rowFilters) {
-    this.filters = Arrays.asList(rowFilters);
+    this.filters = new ArrayList<Filter>(Arrays.asList(rowFilters));
     this.operator = operator;
   }
 
