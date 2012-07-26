@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
+import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -3092,21 +3093,19 @@ public class TestHRegion extends HBaseTestCase {
 
   /**
    * Writes very wide records and gets the latest row every time..
-   * Flushes and compacts the region every now and then to keep things
-   * realistic.
+   * Flushes and compacts the region aggressivly to catch issues.
    *
    * @throws IOException          by flush / scan / compaction
    * @throws InterruptedException when joining threads
    */
   public void testWritesWhileGetting()
-    throws IOException, InterruptedException {
-    byte[] tableName = Bytes.toBytes("testWritesWhileScanning");
+    throws Exception {
+    byte[] tableName = Bytes.toBytes("testWritesWhileGetting");
     int testCount = 100;
     int numRows = 1;
     int numFamilies = 10;
     int numQualifiers = 100;
-    int flushInterval = 10;
-    int compactInterval = 10 * flushInterval;
+    int compactInterval = 100;
     byte[][] families = new byte[numFamilies][];
     for (int i = 0; i < numFamilies; i++) {
       families[i] = Bytes.toBytes("family" + i);
@@ -3117,14 +3116,37 @@ public class TestHRegion extends HBaseTestCase {
     }
 
     String method = "testWritesWhileGetting";
-    this.region = initHRegion(tableName, method, families);
+    Configuration conf = HBaseConfiguration.create();
+    // This test flushes constantly and can cause many files to be created, possibly
+    // extending over the ulimit.  Make sure compactions are aggressive in reducing
+    // the number of HFiles created.
+    conf.setInt("hbase.hstore.compaction.min", 1);
+    conf.setInt("hbase.hstore.compaction.max", 1000);
+    this.region = initHRegion(tableName, method, conf, families);
+    PutThread putThread = null;
+    MultithreadedTestUtil.TestContext ctx =
+      new MultithreadedTestUtil.TestContext(HBaseConfiguration.create());
     try {
-      PutThread putThread = new PutThread(numRows, families, qualifiers);
+      putThread = new PutThread(numRows, families, qualifiers);
       putThread.start();
       putThread.waitForFirstPut();
 
-      FlushThread flushThread = new FlushThread();
-      flushThread.start();
+      // Add a thread that flushes as fast as possible
+      ctx.addThread(new RepeatingTestThread(ctx) {
+    	private int flushesSinceCompact = 0;
+    	private final int maxFlushesSinceCompact = 20;
+        public void doAnAction() throws Exception {
+          if (region.flushcache()) {
+            ++flushesSinceCompact;
+          }
+          // Compact regularly to avoid creating too many files and exceeding the ulimit.
+          if (flushesSinceCompact == maxFlushesSinceCompact) {
+            region.compactStores(false);
+            flushesSinceCompact = 0;
+          }
+        }
+      });
+      ctx.startThreads();
 
       Get get = new Get(Bytes.toBytes("row0"));
       Result result = null;
@@ -3133,15 +3155,6 @@ public class TestHRegion extends HBaseTestCase {
 
       long prevTimestamp = 0L;
       for (int i = 0; i < testCount; i++) {
-
-        if (i != 0 && i % compactInterval == 0) {
-          region.compactStores(true);
-        }
-
-        if (i != 0 && i % flushInterval == 0) {
-          //System.out.println("iteration = " + i);
-          flushThread.flush();
-        }
 
         boolean previousEmpty = result == null || result.isEmpty();
         result = region.get(get, null);
@@ -3170,25 +3183,24 @@ public class TestHRegion extends HBaseTestCase {
                     ", New KV: " +
                     kv + "(memStoreTS:" + kv.getMemstoreTS() + ")"
                     );
-                assertEquals(previousKV.getValue(), thisValue);
+                assertEquals(0, Bytes.compareTo(previousKV.getValue(), thisValue));
               }
             }
             previousKV = kv;
           }
         }
       }
-
-      putThread.done();
+    } finally {
+      if (putThread != null) putThread.done();
 
       region.flushcache();
 
-      putThread.join();
-      putThread.checkNoError();
+      if (putThread != null) {
+        putThread.join();
+        putThread.checkNoError();
+      }
 
-      flushThread.done();
-      flushThread.join();
-      flushThread.checkNoError();
-    } finally {
+      ctx.stop();
       HRegion.closeHRegion(this.region);
       this.region = null;
     }
