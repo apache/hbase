@@ -86,6 +86,7 @@ public class TestPerRequestProfiling {
 
     LOG.debug("Testing with profiling off");
     // put some values with profiling off
+    table.clearProfilingData();
     byte [][] ROWS = { Bytes.toBytes("a"), Bytes.toBytes("b") };
     for (int i = 0; i < ROWS.length; i++) {
       Put put = new Put(ROWS[i]);
@@ -123,6 +124,7 @@ public class TestPerRequestProfiling {
       table.put(put);
       // autoflush is on by default, or else move this check after flush
       assertTrue (table.getProfilingData () != null);
+      table.clearProfilingData();
     }
     LOG.debug("Wrote some puts to table " + new String(TABLE));
 
@@ -146,7 +148,7 @@ public class TestPerRequestProfiling {
     // turn profiling back off and repeat test to make sure
     // profiling data gets cleared
     table.setProfiling(false);
-    
+    table.clearProfilingData();
     LOG.debug("Testing with profiling off");
     for (int i = 0; i < ROWS.length; i++) {
       Put put = new Put(ROWS[i]);
@@ -173,5 +175,62 @@ public class TestPerRequestProfiling {
       assertTrue (table.getProfilingData () == null);
     }
     LOG.debug("Read and verified from table " + new String(TABLE));
+  }
+  
+  @Test
+  public void testProfilingData() throws Exception {
+    LOG.debug("Testing ProfilingData object");
+    
+    ProfilingData pData1 = new ProfilingData();
+    pData1.addString("testStringKey", "testStringVal");
+    pData1.addBoolean("testBooleanKey", false);
+    pData1.addInt("testIntKey", 1);
+    pData1.addLong("testLongKey", 2);
+    pData1.addFloat("testFloatKey", 3);
+    assertTrue(pData1.getString("testStringKey").equals("testStringVal"));
+    assertTrue(pData1.getBoolean("testBooleanKey") == false);
+    assertTrue(pData1.getInt("testIntKey") == 1);
+    assertTrue(pData1.getLong("testLongKey") == 2);
+    assertTrue(pData1.getFloat("testFloatKey") == 3);
+    pData1.incInt("testIntKey", 3);
+    pData1.incInt("testIntKey");
+    pData1.decInt("testIntKey", 5);
+    pData1.decInt("testIntKey");
+    pData1.incLong("testLongKey", 3);
+    pData1.incLong("testLongKey");
+    pData1.decLong("testLongKey", 5);
+    pData1.decLong("testLongKey");
+    pData1.incFloat("testFloatKey", 3);
+    pData1.decFloat("testFloatKey", 5);
+    assertTrue(pData1.getInt("testIntKey") == -1);
+    assertTrue(pData1.getLong("testLongKey") == 0);
+    assertTrue(pData1.getFloat("testFloatKey") == 1);
+    
+    ProfilingData pData2 = new ProfilingData();
+    pData2.addString("testStringKey", "2");
+    pData2.addString("testStringKey2", "testStringVal");
+    pData2.addBoolean("testBooleanKey", true);
+    pData2.addBoolean("testBooleanKey2", false);
+    pData2.addInt("testIntKey", 4);
+    pData2.addInt("testIntKey2", 1);
+    pData2.addLong("testLongKey", 5);
+    pData2.addLong("testLongKey2", 2);
+    pData2.addFloat("testFloatKey", 6);
+    pData2.addFloat("testFloatKey2", 3);
+    
+    pData1.merge(pData2);
+    assertTrue(pData1.getString("testStringKey").equals("testStringVal" + 
+          ProfilingData.STRING_MERGE_SEPARATOR + "2"));
+    assertTrue(pData1.getBoolean("testBooleanKey") == true);
+    assertTrue(pData1.getInt("testIntKey") == 3);
+    assertTrue(pData1.getLong("testLongKey") == 5);
+    assertTrue(pData1.getFloat("testFloatKey") == 7);
+    assertTrue(pData1.getString("testStringKey2").equals("testStringVal"));
+    assertTrue(pData1.getBoolean("testBooleanKey2") == false);
+    assertTrue(pData1.getInt("testIntKey2") == 1);
+    assertTrue(pData1.getLong("testLongKey2") == 2);
+    assertTrue(pData1.getFloat("testFloatKey2") == 3);
+    
+    LOG.debug("Finished testing ProfilingData object");
   }
 }

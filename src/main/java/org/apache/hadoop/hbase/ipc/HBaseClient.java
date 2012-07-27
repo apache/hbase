@@ -595,12 +595,17 @@ public class HBaseClient {
         } else {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(localIn);                 // read value
-          call.options.profilingResult = null;  // clear out previous results
           if (call.getVersion() >= HBaseServer.VERSION_RPCOPTIONS) {
-            boolean hasProfiling = localIn.readBoolean ();
+            boolean hasProfiling = localIn.readBoolean();
             if (hasProfiling) {
-              call.options.profilingResult = new ProfilingData();
-              call.options.profilingResult.readFields(localIn);
+              if (call.options.profilingResult == null) {
+                call.options.profilingResult = new ProfilingData();
+                call.options.profilingResult.readFields(localIn);
+              } else {
+                ProfilingData pData = new ProfilingData();
+                pData.readFields(localIn);
+                call.options.profilingResult.merge(pData);
+              }
               Long serverTimeObj = call.options.profilingResult.getLong(
                   ProfilingData.TOTAL_SERVER_TIME_MS);
               if (serverTimeObj != null) {

@@ -551,8 +551,12 @@ public class HTable implements HTableInterface {
     return connection.processBatchOfGets(gets, tableName, this.options);
   }
 
-  public ProfilingData getProfilingData () {
+  public ProfilingData getProfilingData() {
     return this.options.profilingResult;
+  }
+  
+  public void clearProfilingData() {
+    this.options.profilingResult = null;
   }
 
   /**

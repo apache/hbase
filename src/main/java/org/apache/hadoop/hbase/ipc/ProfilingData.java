@@ -59,6 +59,11 @@ public class ProfilingData implements Writable {
    *  name of the rpc method called
    */
   public static final String RPC_METHOD_NAME = "rpc_method_name";
+  
+  /**
+   *  separator used when concatenating strings to be merged
+   */
+  public static final String STRING_MERGE_SEPARATOR = ",";
 
 	private Map<String, String> mapString = new HashMap<String, String>();
 	private Map<String, MutableLong> mapLong = new HashMap<String, MutableLong>();
@@ -174,31 +179,87 @@ public class ProfilingData implements Writable {
   public void decFloat(String key, float amt) {
     this.incFloat(key, -amt);
   }
+  
+  public void merge(ProfilingData pData) {
+    // TODO: this just adds/concatenates data, maybe will need
+    // to handle other merge types, eg max, min, average
+    for (Map.Entry<String, String> entry : pData.mapString.entrySet()) {
+      String key = entry.getKey();
+      String val = entry.getValue();
+      String base = this.mapString.get(key);
+      if (base == null) {
+        this.mapString.put(key, val);
+      } else {
+        this.mapString.put(key, base + 
+            ProfilingData.STRING_MERGE_SEPARATOR + val);
+      }
+    }
+    for (Map.Entry<String, Boolean> entry : pData.mapBoolean.entrySet()) {
+      String key = entry.getKey();
+      boolean val = entry.getValue();
+      Boolean base = this.mapBoolean.get(key);
+      if (base == null) {
+        this.mapBoolean.put(key, val);
+      } else {
+        this.mapBoolean.put(key, base || val);
+      }
+    }
+    for (Map.Entry<String, MutableInt> entry : pData.mapInt.entrySet()) {
+      String key = entry.getKey();
+      MutableInt val = entry.getValue();
+      MutableInt base = this.mapInt.get(key);
+      if (base == null) {
+        this.mapInt.put(key, new MutableInt(val.intValue()));
+      } else {
+        base.add(val);
+      }
+    }
+    for (Map.Entry<String, MutableLong> entry : pData.mapLong.entrySet()) {
+      String key = entry.getKey();
+      MutableLong val = entry.getValue();
+      MutableLong base = this.mapLong.get(key);
+      if (base == null) {
+        this.mapLong.put(key, new MutableLong(val.longValue()));
+      } else {
+        base.add(val);
+      }
+    }
+    for (Map.Entry<String, MutableFloat> entry : pData.mapFloat.entrySet()) {
+      String key = entry.getKey();
+      MutableFloat val = entry.getValue();
+      MutableFloat base = this.mapFloat.get(key);
+      if (base == null) {
+        this.mapFloat.put(key, new MutableFloat(val.floatValue()));
+      } else {
+        base.add(val);
+      }
+    }
+  }
 	
 	@Override
 	public void write(DataOutput out) throws IOException {
 	  out.writeInt(mapString.size());
-	  for (Map.Entry<String,String> entry : mapString.entrySet ()) {
+	  for (Map.Entry<String,String> entry : mapString.entrySet()) {
       out.writeUTF(entry.getKey());
       out.writeUTF(entry.getValue());
     }
 	  out.writeInt(mapBoolean.size());
-    for (Map.Entry<String,Boolean> entry : mapBoolean.entrySet ()) {
+    for (Map.Entry<String,Boolean> entry : mapBoolean.entrySet()) {
       out.writeUTF(entry.getKey());
       out.writeBoolean(entry.getValue());
     }
     out.writeInt(mapInt.size());
-    for (Map.Entry<String,MutableInt> entry : mapInt.entrySet ()) {
+    for (Map.Entry<String,MutableInt> entry : mapInt.entrySet()) {
       out.writeUTF(entry.getKey());
       out.writeInt(entry.getValue().intValue());
     }
     out.writeInt(mapLong.size());
-    for (Map.Entry<String,MutableLong> entry : mapLong.entrySet ()) {
+    for (Map.Entry<String,MutableLong> entry : mapLong.entrySet()) {
       out.writeUTF(entry.getKey());
       out.writeLong(entry.getValue().longValue());
     }
     out.writeInt(mapFloat.size());
-    for (Map.Entry<String,MutableFloat> entry : mapFloat.entrySet ()) {
+    for (Map.Entry<String,MutableFloat> entry : mapFloat.entrySet()) {
       out.writeUTF(entry.getKey());
       out.writeFloat(entry.getValue().floatValue());
     }
