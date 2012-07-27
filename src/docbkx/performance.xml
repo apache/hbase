@@ -230,7 +230,8 @@
         column family + column family qualifier will be added to the bloom on
         each key insert.</para>
     <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> and 
-    <xref linkend="blooms"/> for more information.
+    <xref linkend="blooms"/> for more information or this answer up in quora,
+<link xlink:href="http://www.quora.com/How-are-bloom-filters-used-in-HBase">How are bloom filters used in HBase?</link>.
     </para>
     </section>
     <section xml:id="schema.cf.blocksize"><title>ColumnFamily BlockSize</title>
