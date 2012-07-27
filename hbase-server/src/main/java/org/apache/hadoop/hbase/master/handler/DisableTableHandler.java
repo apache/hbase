@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.BulkAssigner;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 
@@ -124,8 +125,8 @@ public class DisableTableHandler extends EventHandler {
       // already closed will not be included in this list; i.e. the returned
       // list is not ALL regions in a table, its all online regions according
       // to the in-memory state on this master.
-      final List<HRegionInfo> regions =
-        this.assignmentManager.getRegionsOfTable(tableName);
+      final List<HRegionInfo> regions = this.assignmentManager
+        .getRegionStates().getRegionsOfTable(tableName);
       if (regions.size() == 0) {
         done = true;
         break;
@@ -162,8 +163,9 @@ public class DisableTableHandler extends EventHandler {
 
     @Override
     protected void populatePool(ExecutorService pool) {
+      RegionStates regionStates = assignmentManager.getRegionStates();
       for (HRegionInfo region: regions) {
-        if (assignmentManager.isRegionInTransition(region) != null) continue;
+        if (regionStates.isRegionInTransition(region)) continue;
         final HRegionInfo hri = region;
         pool.execute(new Runnable() {
           public void run() {
@@ -181,7 +183,7 @@ public class DisableTableHandler extends EventHandler {
       List<HRegionInfo> regions = null;
       while (!server.isStopped() && remaining > 0) {
         Thread.sleep(waitingTimeForEvents);
-        regions = assignmentManager.getRegionsOfTable(tableName);
+        regions = assignmentManager.getRegionStates().getRegionsOfTable(tableName);
         if (regions.isEmpty()) break;
         remaining = timeout - (System.currentTimeMillis() - startTime);
       }

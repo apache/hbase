@@ -32,7 +32,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
-import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -124,9 +123,12 @@ public class TestOpenedRegionHandler {
       region = HRegion.createHRegion(hri, TEST_UTIL.getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
       assertNotNull(region);
       AssignmentManager am = Mockito.mock(AssignmentManager.class);
-      when(am.isRegionInTransition(hri)).thenReturn(
-          new RegionState(region.getRegionInfo(), RegionState.State.OPEN,
-              System.currentTimeMillis(), server.getServerName()));
+      RegionStates rsm = Mockito.mock(RegionStates.class);
+      Mockito.doReturn(rsm).when(am).getRegionStates();
+      when(rsm.isRegionInTransition(hri)).thenReturn(false);
+      when(rsm.getRegionState(hri)).thenReturn(
+        new RegionState(region.getRegionInfo(), RegionState.State.OPEN,
+          System.currentTimeMillis(), server.getServerName()));
       // create a node with OPENED state
       zkw = HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL,
           region, server.getServerName());

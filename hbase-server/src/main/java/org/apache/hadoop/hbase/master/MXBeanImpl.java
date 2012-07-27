@@ -25,7 +25,6 @@ import java.util.Map.Entry;
 
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 
 /**
  * Impl for exposing HMaster Information through JMX
@@ -99,8 +98,8 @@ public class MXBeanImpl implements MXBean {
   public RegionsInTransitionInfo[] getRegionsInTransition() {
     List<RegionsInTransitionInfo> info =
         new ArrayList<RegionsInTransitionInfo>();
-    for (final Entry<String, RegionState> entry :
-      master.getAssignmentManager().copyRegionsInTransition().entrySet()) {
+    for (final Entry<String, RegionState> entry : master.getAssignmentManager()
+        .getRegionStates().getRegionsInTransition().entrySet()) {
       RegionsInTransitionInfo innerinfo = new RegionsInTransitionInfo() {
 
         @Override

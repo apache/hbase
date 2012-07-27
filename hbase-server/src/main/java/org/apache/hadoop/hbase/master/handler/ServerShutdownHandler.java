@@ -38,9 +38,9 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -289,12 +289,13 @@ public class ServerShutdownHandler extends EventHandler {
       if (hris != null) {
         List<HRegionInfo> toAssignRegions = new ArrayList<HRegionInfo>();
         for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
-          RegionState rit = this.services.getAssignmentManager().isRegionInTransition(e.getKey());
+          RegionState rit = services.getAssignmentManager()
+            .getRegionStates().getRegionTransitionState(e.getKey());
           if (processDeadRegion(e.getKey(), e.getValue(),
               this.services.getAssignmentManager(),
               this.server.getCatalogTracker())) {
             ServerName addressFromAM = this.services.getAssignmentManager()
-                .getRegionServerOfRegion(e.getKey());
+              .getRegionStates().getRegionServerOfRegion(e.getKey());
             if (rit != null && !rit.isClosing() && !rit.isPendingClose() && !rit.isSplitting()) {
               // Skip regions that were in transition unless CLOSING or
               // PENDING_CLOSE

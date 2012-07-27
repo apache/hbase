@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -223,8 +222,8 @@ public class TestDrainingServer {
       Assert.assertEquals("Nothing should have happened here.", regionsOnDrainingServer,
         drainingServer.getNumberOfOnlineRegions());
       Assert.assertFalse("We should not have regions in transition here. List is: "+
-        master.getAssignmentManager().copyRegionsInTransition(),
-        master.getAssignmentManager().isRegionsInTransition() );
+        master.getAssignmentManager().getRegionStates().getRegionsInTransition(),
+        master.getAssignmentManager().getRegionStates().isRegionsInTransition());
 
       // Kill a few regionservers.
       for (int aborted = 0; aborted <= 2; aborted++) {
@@ -274,7 +273,7 @@ public class TestDrainingServer {
     }
 
     while (TEST_UTIL.getMiniHBaseCluster().getMaster().
-        getAssignmentManager().isRegionsInTransition()) {
+      getAssignmentManager().getRegionStates().isRegionsInTransition()) {
     }
   }
 

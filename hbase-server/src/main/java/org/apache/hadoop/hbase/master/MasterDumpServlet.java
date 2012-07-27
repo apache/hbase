@@ -24,17 +24,14 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Map;
-import java.util.NavigableMap;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ServerLoad;
-import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.monitoring.LogMonitoring;
 import org.apache.hadoop.hbase.monitoring.StateDumpServlet;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -104,8 +101,8 @@ public class MasterDumpServlet extends StateDumpServlet {
   
 
   private void dumpRIT(HMaster master, PrintWriter out) {
-    NavigableMap<String, RegionState> regionsInTransition =
-      master.getAssignmentManager().copyRegionsInTransition();
+    Map<String, RegionState> regionsInTransition =
+      master.getAssignmentManager().getRegionStates().getRegionsInTransition();
     for (Map.Entry<String, RegionState> e : regionsInTransition.entrySet()) {
       String rid = e.getKey();
       RegionState rs = e.getValue();

@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -2107,6 +2108,27 @@ public class HBaseTestingUtility {
     HRegionLocation hloc = table.getRegionLocation(Bytes.toBytes(""));
     table.close();
     return hloc.getPort();
+  }
+
+  /**
+   *  Due to async racing issue, a region may not be in
+   *  the online region list of a region server yet, after
+   *  the assignment znode is deleted and the new assignment
+   *  is recorded in master.
+   */
+  public void assertRegionOnServer(
+      final HRegionInfo hri, final ServerName server,
+      final long timeout) throws IOException, InterruptedException {
+    long timeoutTime = System.currentTimeMillis() + timeout;
+    while (true) {
+      List<HRegionInfo> regions = getHBaseAdmin().getOnlineRegions(server);
+      if (regions.contains(hri)) return;
+      long now = System.currentTimeMillis();
+      if (now > timeoutTime) break;
+      Thread.sleep(10);
+    }
+    fail("Could not find region " + hri.getRegionNameAsString()
+      + " on server " + server);
   }
 
   public HRegion createTestRegion(String tableName, HColumnDescriptor hcd)

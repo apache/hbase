@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.RegionState;
 
 /**
  * Handles CLOSED region event on Master.
@@ -99,9 +100,8 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
       return;
     }
     // ZK Node is in CLOSED state, assign it.
-    // TODO: Should we remove the region from RIT too?  We don't?  Makes for
-    // a 'forcing' log message when we go to update state from CLOSED to OFFLINE
-    assignmentManager.setOffline(regionInfo);
+    assignmentManager.getRegionStates().updateRegionState(
+      regionInfo, RegionState.State.CLOSED, null);
     // This below has to do w/ online enable/disable of a table
     assignmentManager.removeClosedRegion(regionInfo);
     assignmentManager.assign(regionInfo, true);

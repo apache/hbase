@@ -167,7 +167,8 @@ public class EnableTableHandler extends EventHandler {
     final List<HRegionInfo> regionsInMeta)
   throws IOException {
     final List<HRegionInfo> onlineRegions =
-      this.assignmentManager.getRegionsOfTable(tableName);
+      this.assignmentManager.getRegionStates()
+        .getRegionsOfTable(tableName);
     regionsInMeta.removeAll(onlineRegions);
     return regionsInMeta;
   }
@@ -194,7 +195,8 @@ public class EnableTableHandler extends EventHandler {
 
       if (!roundRobinAssignment) {
         for (HRegionInfo region : regions) {
-          if (assignmentManager.isRegionInTransition(region) != null) {
+          if (assignmentManager.getRegionStates()
+              .isRegionInTransition(region)) {
             continue;
           }
           final HRegionInfo hri = region;
@@ -223,7 +225,8 @@ public class EnableTableHandler extends EventHandler {
       int lastNumberOfRegions = 0;
       while (!server.isStopped() && remaining > 0) {
         Thread.sleep(waitingTimeForEvents);
-        regions = assignmentManager.getRegionsOfTable(tableName);
+        regions = assignmentManager.getRegionStates()
+          .getRegionsOfTable(tableName);
         if (isDone(regions)) break;
 
         // Punt on the timeout as long we make progress

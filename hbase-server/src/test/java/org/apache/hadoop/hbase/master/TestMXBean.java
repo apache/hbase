@@ -78,7 +78,7 @@ public class TestMXBean {
         info.getCoprocessors().length);
     Assert.assertEquals(master.getServerManager().getOnlineServersList().size(),
         info.getRegionServers().size());
-    Assert.assertEquals(master.getAssignmentManager().isRegionsInTransition(),
+    Assert.assertEquals(master.getAssignmentManager().getRegionStates().isRegionsInTransition(),
         info.getRegionsInTransition().length > 0);
     Assert.assertTrue(info.getRegionServers().size() == 4);
 

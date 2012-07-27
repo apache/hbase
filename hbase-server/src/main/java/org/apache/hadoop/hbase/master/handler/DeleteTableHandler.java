@@ -62,12 +62,12 @@ public class DeleteTableHandler extends TableEventHandler {
     for (HRegionInfo region : regions) {
       long done = System.currentTimeMillis() + waitTime;
       while (System.currentTimeMillis() < done) {
-        AssignmentManager.RegionState rs = am.isRegionInTransition(region);
-        if (rs == null) break;
+        if (!am.getRegionStates().isRegionInTransition(region)) break;
         Threads.sleep(waitingTimeForEvents);
-        LOG.debug("Waiting on  region to clear regions in transition; " + rs);
+        LOG.debug("Waiting on region to clear regions in transition; "
+          + am.getRegionStates().getRegionTransitionState(region));
       }
-      if (am.isRegionInTransition(region) != null) {
+      if (am.getRegionStates().isRegionInTransition(region)) {
         throw new IOException("Waited hbase.master.wait.on.region (" +
           waitTime + "ms) for region to leave region " +
           region.getRegionNameAsString() + " in transitions");

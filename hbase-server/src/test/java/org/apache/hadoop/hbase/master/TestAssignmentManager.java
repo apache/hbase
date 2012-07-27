@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
@@ -49,8 +50,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
-import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
-import org.apache.hadoop.hbase.master.AssignmentManager.RegionState.State;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.DefaultLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
@@ -102,6 +102,7 @@ public class TestAssignmentManager {
   private ServerManager serverManager;
   private ZooKeeperWatcher watcher;
   private LoadBalancer balancer;
+  private HMaster master;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -155,7 +156,10 @@ public class TestAssignmentManager {
     Mockito.when(this.serverManager.sendRegionOpen(SERVERNAME_A, REGIONINFO, -1)).
       thenReturn(RegionOpeningState.OPENED);
     Mockito.when(this.serverManager.sendRegionOpen(SERVERNAME_B, REGIONINFO, -1)).
-    thenReturn(RegionOpeningState.OPENED);
+      thenReturn(RegionOpeningState.OPENED);
+    this.master = Mockito.mock(HMaster.class);
+
+    Mockito.when(this.master.getServerManager()).thenReturn(serverManager);
   }
 
   @After
@@ -299,8 +303,9 @@ public class TestAssignmentManager {
     }
   }
 
-  private void createRegionPlanAndBalance(final AssignmentManager am,
-      final ServerName from, final ServerName to, final HRegionInfo hri) {
+  private void createRegionPlanAndBalance(
+      final AssignmentManager am, final ServerName from,
+      final ServerName to, final HRegionInfo hri) throws RegionException {
     // Call the balance function but fake the region being online first at
     // servername from.
     am.regionOnline(hri, from);
@@ -330,7 +335,7 @@ public class TestAssignmentManager {
         .getConfiguration());
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-        this.serverManager, ct, balancer, executor, null);
+      this.serverManager, ct, balancer, executor, null);
     try {
       // Make sure our new AM gets callbacks; once registered, can't unregister.
       // Thats ok because we make a new zk watcher for each test.
@@ -370,7 +375,7 @@ public class TestAssignmentManager {
         ZKAssign.transitionNodeOpened(this.watcher, REGIONINFO, SERVERNAME_B, versionid);
       assertNotSame(-1, versionid);
       // Wait on the handler removing the OPENED znode.
-      while(am.isRegionInTransition(REGIONINFO) != null) Threads.sleep(1);
+      while(am.getRegionStates().isRegionInTransition(REGIONINFO)) Threads.sleep(1);
     } finally {
       executor.shutdown();
       am.shutdown();
@@ -397,7 +402,7 @@ public class TestAssignmentManager {
         .getConfiguration());
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-        this.serverManager, ct, balancer, executor, null);
+      this.serverManager, ct, balancer, executor, null);
     try {
       processServerShutdownHandler(ct, am, false);
     } finally {
@@ -448,15 +453,14 @@ public class TestAssignmentManager {
 
     // We need a mocked catalog tracker.
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
-    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server.getConfiguration());
     // Create an AM.
-    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(this.server,
-        this.serverManager);
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
+      this.server, this.serverManager);
     // adding region to regions and servers maps.
     am.regionOnline(REGIONINFO, SERVERNAME_A);
     // adding region in pending close.
-    am.regionsInTransition.put(REGIONINFO.getEncodedName(), new RegionState(REGIONINFO,
-        State.SPLITTING, System.currentTimeMillis(), SERVERNAME_A));
+    am.getRegionStates().updateRegionState(
+      REGIONINFO, State.SPLITTING, SERVERNAME_A);
     am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
     RegionTransition data = RegionTransition.createRegionTransition(EventType.RS_ZK_REGION_SPLITTING,
         REGIONINFO.getRegionName(), SERVERNAME_A);
@@ -470,8 +474,8 @@ public class TestAssignmentManager {
       // In both cases the znode should be deleted.
 
       if (regionSplitDone) {
-        assertTrue("Region state of region in SPLITTING should be removed from rit.",
-            am.regionsInTransition.isEmpty());
+        assertFalse("Region state of region in SPLITTING should be removed from rit.",
+            am.getRegionStates().isRegionsInTransition());
       } else {
         while (!am.assignInvoked) {
           Thread.sleep(1);
@@ -497,13 +501,12 @@ public class TestAssignmentManager {
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server.getConfiguration());
     // Create an AM.
-    AssignmentManager am = new AssignmentManager(this.server, this.serverManager, ct, balancer,
-        executor, null);
+    AssignmentManager am = new AssignmentManager(this.server,
+      this.serverManager, ct, balancer, executor, null);
     // adding region to regions and servers maps.
     am.regionOnline(REGIONINFO, SERVERNAME_A);
     // adding region in pending close.
-    am.regionsInTransition.put(REGIONINFO.getEncodedName(), new RegionState(REGIONINFO,
-        State.PENDING_CLOSE));
+    am.getRegionStates().updateRegionState(REGIONINFO, State.PENDING_CLOSE);
     if (state == Table.State.DISABLING) {
       am.getZKTable().setDisablingTable(REGIONINFO.getTableNameAsString());
     } else {
@@ -526,8 +529,8 @@ public class TestAssignmentManager {
       // assert will be true but the piece of code added for HBASE-5927 will not
       // do that.
       if (state == Table.State.DISABLED) {
-        assertTrue("Region state of region in pending close should be removed from rit.",
-            am.regionsInTransition.isEmpty());
+        assertFalse("Region state of region in pending close should be removed from rit.",
+            am.getRegionStates().isRegionsInTransition());
       }
     } finally {
       am.setEnabledTable(REGIONINFO.getTableNameAsString());
@@ -618,7 +621,7 @@ public class TestAssignmentManager {
         .getConfiguration());
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-        this.serverManager, ct, balancer, null, null);
+      this.serverManager, ct, balancer, null, null);
     try {
       // First make sure my mock up basically works.  Unassign a region.
       unassign(am, SERVERNAME_A, hri);
@@ -636,7 +639,7 @@ public class TestAssignmentManager {
       // This transition should fail if the znode has been messed with.
       ZKAssign.transitionNode(this.watcher, hri, SERVERNAME_A,
         EventType.RS_ZK_REGION_SPLITTING, EventType.RS_ZK_REGION_SPLITTING, version);
-      assertTrue(am.isRegionInTransition(hri) == null);
+      assertFalse(am.getRegionStates().isRegionInTransition(hri));
     } finally {
       am.shutdown();
     }
@@ -654,7 +657,7 @@ public class TestAssignmentManager {
     final RecoverableZooKeeper recoverableZk = Mockito
         .mock(RecoverableZooKeeper.class);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
-        this.server, this.serverManager);
+      this.server, this.serverManager);
     Watcher zkw = new ZooKeeperWatcher(HBaseConfiguration.create(), "unittest",
         null) {
       public RecoverableZooKeeper getRecoverableZooKeeper() {
@@ -666,7 +669,7 @@ public class TestAssignmentManager {
         .getChildren("/hbase/unassigned", zkw);
     am.setWatcher((ZooKeeperWatcher) zkw);
     try {
-      am.processDeadServersAndRegionsInTransition();
+      am.processDeadServersAndRegionsInTransition(null);
       fail("Expected to abort");
     } catch (NullPointerException e) {
       fail("Should not throw NPE");
@@ -678,7 +681,7 @@ public class TestAssignmentManager {
    * TestCase verifies that the regionPlan is updated whenever a region fails to open 
    * and the master tries to process RS_ZK_FAILED_OPEN state.(HBASE-5546).
    */
-  @Test
+  @Test(timeout = 5000)
   public void testRegionPlanIsUpdatedWhenRegionFailsToOpen() throws IOException, KeeperException,
       ServiceException, InterruptedException {
     this.server.getConfiguration().setClass(
@@ -700,9 +703,8 @@ public class TestAssignmentManager {
           EventType.M_ZK_REGION_OFFLINE, EventType.RS_ZK_REGION_FAILED_OPEN, v);
       String path = ZKAssign.getNodeName(this.watcher, REGIONINFO
           .getEncodedName());
-      RegionState state = new RegionState(REGIONINFO, State.OPENING, System
-          .currentTimeMillis(), SERVERNAME_A);
-      am.regionsInTransition.put(REGIONINFO.getEncodedName(), state);
+      am.getRegionStates().updateRegionState(
+        REGIONINFO, State.OPENING, SERVERNAME_A);
       // a dummy plan inserted into the regionPlans. This plan is cleared and
       // new one is formed
       am.regionPlans.put(REGIONINFO.getEncodedName(), new RegionPlan(
@@ -777,11 +779,11 @@ public class TestAssignmentManager {
    * region which is in Opening state on a dead RS. Master should immediately
    * assign the region and not wait for Timeout Monitor.(Hbase-5882).
    */
-  @Test
+  @Test(timeout = 5000)
   public void testRegionInOpeningStateOnDeadRSWhileMasterFailover() throws IOException,
       KeeperException, ServiceException, InterruptedException {
-    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(this.server,
-        this.serverManager);
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
+      this.server, this.serverManager);
     ZKAssign.createNodeOffline(this.watcher, REGIONINFO, SERVERNAME_A);
     int version = ZKAssign.getVersion(this.watcher, REGIONINFO);
     ZKAssign.transitionNode(this.watcher, REGIONINFO, SERVERNAME_A, EventType.M_ZK_REGION_OFFLINE,
@@ -810,7 +812,7 @@ public class TestAssignmentManager {
    * @throws IOException
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 5000)
   public void testDisablingTableRegionsAssignmentDuringCleanClusterStartup()
       throws KeeperException, IOException, Exception {
     this.server.getConfiguration().setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
@@ -888,7 +890,7 @@ public class TestAssignmentManager {
   }
 
   private void unassign(final AssignmentManager am, final ServerName sn,
-      final HRegionInfo hri) {
+      final HRegionInfo hri) throws RegionException {
     // Before I can unassign a region, I need to set it online.
     am.regionOnline(hri, sn);
     // Unassign region.
@@ -905,8 +907,7 @@ public class TestAssignmentManager {
    * @throws KeeperException
    */
   private AssignmentManagerWithExtrasForTesting setUpMockedAssignmentManager(final Server server,
-      final ServerManager manager)
-  throws IOException, KeeperException, ServiceException {
+      final ServerManager manager) throws IOException, KeeperException, ServiceException {
     // We need a mocked catalog tracker. Its used by our AM instance.
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     // Make an RS Interface implementation. Make it so a scanner can go against
@@ -938,7 +939,7 @@ public class TestAssignmentManager {
     ExecutorService executor = startupMasterExecutor("mockedAMExecutor");
     this.balancer = LoadBalancerFactory.getLoadBalancer(server.getConfiguration());
     AssignmentManagerWithExtrasForTesting am = new AssignmentManagerWithExtrasForTesting(
-        server, manager, ct, this.balancer, executor);
+      server, manager, ct, this.balancer, executor);
     return am;
   }
 
@@ -954,10 +955,10 @@ public class TestAssignmentManager {
     boolean assignInvoked = false;
     AtomicBoolean gate = new AtomicBoolean(true);
 
-    public AssignmentManagerWithExtrasForTesting(final Server master,
-        final ServerManager serverManager, final CatalogTracker catalogTracker,
-        final LoadBalancer balancer, final ExecutorService service)
-    throws KeeperException, IOException {
+    public AssignmentManagerWithExtrasForTesting(
+        final Server master, final ServerManager serverManager,
+        final CatalogTracker catalogTracker, final LoadBalancer balancer,
+        final ExecutorService service) throws KeeperException, IOException {
       super(master, serverManager, catalogTracker, balancer, service, null);
       this.es = service;
       this.ct = catalogTracker;
@@ -987,12 +988,7 @@ public class TestAssignmentManager {
       super.assign(region, setOfflineInZK, forceNewPlan, hijack);
       this.gate.set(true);
     }
-    
-    @Override
-    public ServerName getRegionServerOfRegion(HRegionInfo hri) {
-      return SERVERNAME_A;
-    }
-    
+
     @Override
     public void assign(java.util.List<HRegionInfo> regions, java.util.List<ServerName> servers) 
     {
@@ -1037,7 +1033,7 @@ public class TestAssignmentManager {
         // the RIT region to our RIT Map in AM at processRegionsInTransition.
         // First clear any inmemory state from AM so it acts like a new master
         // coming on line.
-        am.regionsInTransition.clear();
+        am.getRegionStates().regionsInTransition.clear();
         am.regionPlans.clear();
         try {
           am.joinCluster();

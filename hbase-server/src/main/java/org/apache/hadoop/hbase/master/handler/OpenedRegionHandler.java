@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
@@ -98,7 +98,8 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
   public void process() {
     // Code to defend against case where we get SPLIT before region open
     // processing completes; temporary till we make SPLITs go via zk -- 0.92.
-    RegionState regionState = this.assignmentManager.isRegionInTransition(regionInfo);
+    RegionState regionState = this.assignmentManager.getRegionStates()
+      .getRegionTransitionState(regionInfo.getEncodedName());
     boolean openedNodeDeleted = false;
     if (regionState != null
         && regionState.getState().equals(RegionState.State.OPEN)) {

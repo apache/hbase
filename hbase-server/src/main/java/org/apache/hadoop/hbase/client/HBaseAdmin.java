@@ -1178,6 +1178,16 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
+   * Get all the online regions on a region server.
+   */
+  public List<HRegionInfo> getOnlineRegions(
+      final ServerName sn) throws IOException {
+    AdminProtocol admin =
+      this.connection.getAdmin(sn.getHostname(), sn.getPort());
+    return ProtobufUtil.getOnlineRegions(admin);
+  }
+
+  /**
    * Flush a table or an individual region.
    * Asynchronous operation.
    *

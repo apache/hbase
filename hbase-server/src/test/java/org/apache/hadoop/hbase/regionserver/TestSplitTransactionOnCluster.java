@@ -436,7 +436,7 @@ public class TestSplitTransactionOnCluster {
       hri.setOffline(true);
       hri.setSplit(true);
       ServerName regionServerOfRegion = master.getAssignmentManager()
-          .getRegionServerOfRegion(hri);
+        .getRegionStates().getRegionServerOfRegion(hri);
       assertTrue(regionServerOfRegion != null);
 
     } finally {
@@ -515,7 +515,7 @@ public class TestSplitTransactionOnCluster {
       hri.setOffline(true);
       hri.setSplit(true);
       ServerName regionServerOfRegion = master.getAssignmentManager()
-          .getRegionServerOfRegion(hri);
+        .getRegionStates().getRegionServerOfRegion(hri);
       assertTrue(regionServerOfRegion == null);
     } finally {
       // Set this flag back.

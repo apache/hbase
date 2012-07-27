@@ -33,7 +33,6 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.tmpl.master.AssignmentManagerStatusTmpl;
@@ -66,11 +65,11 @@ public class TestMasterStatusServlet {
   @Before
   public void setupBasicMocks() {
     conf = HBaseConfiguration.create();
-    
+
     master = Mockito.mock(HMaster.class);
     Mockito.doReturn(FAKE_HOST).when(master).getServerName();
     Mockito.doReturn(conf).when(master).getConfiguration();
-    
+
     // Fake serverManager
     ServerManager serverManager = Mockito.mock(ServerManager.class);
     Mockito.doReturn(1.0).when(serverManager).getAverageLoad();
@@ -78,13 +77,15 @@ public class TestMasterStatusServlet {
 
     // Fake AssignmentManager and RIT
     AssignmentManager am = Mockito.mock(AssignmentManager.class);
+    RegionStates rs = Mockito.mock(RegionStates.class);
     NavigableMap<String, RegionState> regionsInTransition =
       Maps.newTreeMap();
     regionsInTransition.put("r1",
-        new RegionState(FAKE_HRI, RegionState.State.CLOSING, 12345L, FAKE_HOST));
-    Mockito.doReturn(regionsInTransition).when(am).copyRegionsInTransition();
+      new RegionState(FAKE_HRI, RegionState.State.CLOSING, 12345L, FAKE_HOST));
+    Mockito.doReturn(rs).when(am).getRegionStates();
+    Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
     Mockito.doReturn(am).when(master).getAssignmentManager();
-    
+
     // Fake ZKW
     ZooKeeperWatcher zkw = Mockito.mock(ZooKeeperWatcher.class);
     Mockito.doReturn("fakequorum").when(zkw).getQuorum();
@@ -93,7 +94,6 @@ public class TestMasterStatusServlet {
     // Mock admin
     admin = Mockito.mock(HBaseAdmin.class); 
   }
-  
 
   private void setupMockTables() throws IOException {
     HTableDescriptor tables[] = new HTableDescriptor[] {
@@ -153,7 +153,8 @@ public class TestMasterStatusServlet {
   @Test
   public void testAssignmentManagerTruncatedList() throws IOException {
     AssignmentManager am = Mockito.mock(AssignmentManager.class);
-    
+    RegionStates rs = Mockito.mock(RegionStates.class);
+
     // Add 100 regions as in-transition
     NavigableMap<String, RegionState> regionsInTransition =
       Maps.newTreeMap();
@@ -161,14 +162,15 @@ public class TestMasterStatusServlet {
       HRegionInfo hri = new HRegionInfo(FAKE_TABLE.getName(),
           new byte[]{i}, new byte[]{(byte) (i+1)});
       regionsInTransition.put(hri.getEncodedName(),
-          new RegionState(hri, RegionState.State.CLOSING, 12345L, FAKE_HOST));
+        new RegionState(hri, RegionState.State.CLOSING, 12345L, FAKE_HOST));
     }
     // Add META in transition as well
     regionsInTransition.put(
         HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(),
         new RegionState(HRegionInfo.FIRST_META_REGIONINFO,
                         RegionState.State.CLOSING, 12345L, FAKE_HOST));
-    Mockito.doReturn(regionsInTransition).when(am).copyRegionsInTransition();
+    Mockito.doReturn(rs).when(am).getRegionStates();
+    Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
 
     // Render to a string
     StringWriter sw = new StringWriter();

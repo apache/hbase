@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
-import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -770,14 +769,14 @@ public class TestMasterFailover {
     // PENDING_OPEN and enabled
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
-    master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
-        new RegionState(region, RegionState.State.PENDING_OPEN, 0, null));
+    master.getAssignmentManager().getRegionStates().updateRegionState(
+      region, RegionState.State.PENDING_OPEN, null);
     ZKAssign.createNodeOffline(zkw, region, master.getServerName());
     // PENDING_OPEN and disabled
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
-    master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
-        new RegionState(region, RegionState.State.PENDING_OPEN, 0, null));
+    master.getAssignmentManager().getRegionStates().updateRegionState(
+      region, RegionState.State.PENDING_OPEN, null);
     ZKAssign.createNodeOffline(zkw, region, master.getServerName());
     // This test is bad.  It puts up a PENDING_CLOSE but doesn't say what
     // server we were PENDING_CLOSE against -- i.e. an entry in
@@ -808,7 +807,7 @@ public class TestMasterFailover {
     final long maxTime = 120000;
     boolean done = master.assignmentManager.waitUntilNoRegionsInTransition(maxTime);
     if (!done) {
-      LOG.info("rit=" + master.assignmentManager.copyRegionsInTransition());
+      LOG.info("rit=" + master.getAssignmentManager().getRegionStates().getRegionsInTransition());
     }
     long elapsed = System.currentTimeMillis() - now;
     assertTrue("Elapsed=" + elapsed + ", maxTime=" + maxTime + ", done=" + done,

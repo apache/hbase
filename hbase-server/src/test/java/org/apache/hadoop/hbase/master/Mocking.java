@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -94,7 +93,8 @@ public class Mocking {
 
     boolean wait = true;
     while (wait) {
-      AssignmentManager.RegionState state = am.getRegionsInTransition().get(encodedName);
+      RegionState state = am.getRegionStates()
+        .getRegionsInTransition().get(encodedName);
       if (state != null && state.isPendingOpen()){
         wait = false;
       } else {

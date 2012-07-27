@@ -3366,8 +3366,8 @@ public class  HRegionServer implements ClientProtocol,
       checkOpen();
       requestCount.incrementAndGet();
       List<HRegionInfo> list = new ArrayList<HRegionInfo>(onlineRegions.size());
-      for (Map.Entry<String,HRegion> e: this.onlineRegions.entrySet()) {
-        list.add(e.getValue().getRegionInfo());
+      for (HRegion region: this.onlineRegions.values()) {
+        list.add(region.getRegionInfo());
       }
       Collections.sort(list);
       return ResponseConverter.buildGetOnlineRegionResponse(list);

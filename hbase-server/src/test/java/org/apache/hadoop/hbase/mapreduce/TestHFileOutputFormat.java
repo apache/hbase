@@ -414,7 +414,7 @@ public class TestHFileOutputFormat  {
         LOG.info("Changing regions in table");
         admin.disableTable(table.getTableName());
         while(util.getMiniHBaseCluster().getMaster().getAssignmentManager().
-            isRegionsInTransition()) {
+            getRegionStates().isRegionsInTransition()) {
           Threads.sleep(200);
           LOG.info("Waiting on table to finish disabling");
         }

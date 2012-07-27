@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -29,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class UnknownRegionException extends IOException {
+public class UnknownRegionException extends RegionException {
   private static final long serialVersionUID = 1968858760475205392L;
 
   public UnknownRegionException(String regionName) {

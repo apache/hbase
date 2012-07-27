@@ -176,8 +176,9 @@ public class CreateTableHandler extends EventHandler {
     // 4. Trigger immediate assignment of the regions in round-robin fashion
     List<ServerName> servers = serverManager.createDestinationServersList();
     try {
-      this.assignmentManager.assignUserRegions(Arrays.asList(newRegions),
-        servers);
+      List<HRegionInfo> regions = Arrays.asList(newRegions);
+      assignmentManager.getRegionStates().createRegionStates(regions);
+      assignmentManager.assignUserRegions(regions, servers);
     } catch (InterruptedException ie) {
       LOG.error("Caught " + ie + " during round-robin assignment");
       throw new IOException(ie);

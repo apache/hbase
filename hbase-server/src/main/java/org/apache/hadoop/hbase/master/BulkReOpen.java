@@ -62,8 +62,7 @@ public class BulkReOpen extends BulkAssigner {
       // add plans for the regions that need to be reopened
       Map<String, RegionPlan> plans = new HashMap<String, RegionPlan>();
       for (HRegionInfo hri : hris) {
-        RegionPlan reOpenPlan = new RegionPlan(hri, null,
-            assignmentManager.getRegionServerOfRegion(hri));
+        RegionPlan reOpenPlan = assignmentManager.getRegionReopenPlan(hri);
         plans.put(hri.getEncodedName(), reOpenPlan);
       }
       assignmentManager.addPlans(plans);

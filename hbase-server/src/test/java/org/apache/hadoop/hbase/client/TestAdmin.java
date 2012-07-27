@@ -1456,10 +1456,10 @@ public class TestAdmin {
     List<HRegionInfo> tableRegions = localAdmin.getTableRegions(tableName);
     HRegionInfo hri = tableRegions.get(0);
     AssignmentManager am = master.getAssignmentManager();
-    ServerName server = am.getRegionServerOfRegion(hri);
+    ServerName server = am.getRegionStates().getRegionServerOfRegion(hri);
     localAdmin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(server.getServerName()));
     assertEquals("Current region server and region server before move should be same.", server,
-        am.getRegionServerOfRegion(hri));
+      am.getRegionStates().getRegionServerOfRegion(hri));
   }
 
 

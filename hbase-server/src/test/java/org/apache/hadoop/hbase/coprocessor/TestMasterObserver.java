@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -963,10 +964,10 @@ public class TestMasterObserver {
   
       // wait for assignments to finish, if any
       AssignmentManager mgr = master.getAssignmentManager();
-      Collection<AssignmentManager.RegionState> transRegions =
-          mgr.copyRegionsInTransition().values();
-      for (AssignmentManager.RegionState state : transRegions) {
-        mgr.waitOnRegionToClearRegionsInTransition(state.getRegion());
+      Collection<RegionState> transRegions =
+        mgr.getRegionStates().getRegionsInTransition().values();
+      for (RegionState state : transRegions) {
+        mgr.getRegionStates().waitOnRegionToClearRegionsInTransition(state.getRegion());
       }
   
       // move half the open regions from RS 0 to RS 1
@@ -983,9 +984,9 @@ public class TestMasterObserver {
       }
   
       // wait for assignments to finish
-      transRegions = mgr.copyRegionsInTransition().values();
-      for (AssignmentManager.RegionState state : transRegions) {
-        mgr.waitOnRegionToClearRegionsInTransition(state.getRegion());
+      transRegions = mgr.getRegionStates().getRegionsInTransition().values();
+      for (RegionState state : transRegions) {
+        mgr.getRegionStates().waitOnRegionToClearRegionsInTransition(state.getRegion());
       }
   
       // now trigger a balance

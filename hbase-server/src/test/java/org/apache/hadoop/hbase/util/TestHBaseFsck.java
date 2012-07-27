@@ -63,12 +63,14 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
+import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -88,7 +90,8 @@ public class TestHBaseFsck {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static Configuration conf = TEST_UTIL.getConfiguration();
   private final static byte[] FAM = Bytes.toBytes("fam");
-  private final static int REGION_ONLINE_TIMEOUT = 300;
+  private final static int REGION_ONLINE_TIMEOUT = 800;
+  private static RegionStates regionStates;
 
   // for the instance, reset every test run
   private HTable tbl;
@@ -103,6 +106,10 @@ public class TestHBaseFsck {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, false);
     TEST_UTIL.startMiniCluster(3);
+
+    AssignmentManager assignmentManager =
+      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+    regionStates = assignmentManager.getRegionStates();
   }
 
   @AfterClass
@@ -406,6 +413,8 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriDupe);
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .waitForAssignment(hriDupe);
+      ServerName server = regionStates.getRegionServerOfRegion(hriDupe);
+      TEST_UTIL.assertRegionOnServer(hriDupe, server, REGION_ONLINE_TIMEOUT);
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.DUPE_STARTKEYS,
@@ -482,6 +491,8 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriDupe);
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .waitForAssignment(hriDupe);
+      ServerName server = regionStates.getRegionServerOfRegion(hriDupe);
+      TEST_UTIL.assertRegionOnServer(hriDupe, server, REGION_ONLINE_TIMEOUT);
 
       // Yikes! The assignment manager can't tell between diff between two
       // different regions with the same start/endkeys since it doesn't
@@ -531,6 +542,8 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriDupe);
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .waitForAssignment(hriDupe);
+      ServerName server = regionStates.getRegionServerOfRegion(hriDupe);
+      TEST_UTIL.assertRegionOnServer(hriDupe, server, REGION_ONLINE_TIMEOUT);
 
       HBaseFsck hbck = doFsck(conf,false);
       assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.DEGENERATE_REGION,
@@ -568,6 +581,8 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriOverlap);
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .waitForAssignment(hriOverlap);
+      ServerName server = regionStates.getRegionServerOfRegion(hriOverlap);
+      TEST_UTIL.assertRegionOnServer(hriOverlap, server, REGION_ONLINE_TIMEOUT);
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new ERROR_CODE[] {
@@ -702,6 +717,8 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriOverlap);
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .waitForAssignment(hriOverlap);
+      ServerName server = regionStates.getRegionServerOfRegion(hriOverlap);
+      TEST_UTIL.assertRegionOnServer(hriOverlap, server, REGION_ONLINE_TIMEOUT);
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new ERROR_CODE[] {
@@ -739,6 +756,8 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriOverlap);
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .waitForAssignment(hriOverlap);
+      ServerName server = regionStates.getRegionServerOfRegion(hriOverlap);
+      TEST_UTIL.assertRegionOnServer(hriOverlap, server, REGION_ONLINE_TIMEOUT);
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new ERROR_CODE[] {
@@ -1038,9 +1057,9 @@ public class TestHBaseFsck {
 
       int iTimes = 0;
       while (true) {
-        RegionTransition rt = RegionTransition.parseFrom(ZKAssign.getData(zkw,
-            region.getEncodedName()));
-        if (rt != null && rt.getEventType() == EventType.RS_ZK_REGION_OPENED) {
+        byte[] data = ZKAssign.getData(zkw, region.getEncodedName());
+        RegionTransition rt = data == null ? null : RegionTransition.parseFrom(data);
+        if (rt == null || rt.getEventType() == EventType.RS_ZK_REGION_OPENED) {
           break;
         }
         Thread.sleep(100);
