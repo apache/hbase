@@ -218,7 +218,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     }
     // delete this file if it passes all the cleaners
     LOG.debug("Removing:" + filePath + " from archive");
-    if (this.fs.delete(filePath, false)) {
+    if (!this.fs.delete(filePath, false)) {
       LOG.warn("Attempted to delete:" + filePath
           + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
     }
