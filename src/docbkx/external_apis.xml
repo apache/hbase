@@ -413,5 +413,11 @@
     
   </section>  <!-- thrift -->
 
+  <section xml:id="c">
+    <title>C/C++ HBase Client</title>
+    <para>FB's Chip Turner wrote a pure C/C++ client.  <link xlink:href="https://github.com/facebook/native-cpp-hbase-client">Check it out</link>.
+    </para>
+  </section>
+
 
 </chapter>
