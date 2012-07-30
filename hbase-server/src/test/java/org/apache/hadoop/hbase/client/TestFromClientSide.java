@@ -90,12 +90,12 @@ import static org.junit.Assert.*;
 @Category(LargeTests.class)
 public class TestFromClientSide {
   final Log LOG = LogFactory.getLog(getClass());
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] ROW = Bytes.toBytes("testRow");
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte [] VALUE = Bytes.toBytes("testValue");
-  private static int SLAVES = 3;
+  protected static int SLAVES = 3;
 
   /**
    * @throws java.lang.Exception

@@ -1216,7 +1216,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param majorCompaction True to force a major compaction regardless of thresholds
    * @throws IOException e
    */
-  void compactStores(final boolean majorCompaction)
+  public void compactStores(final boolean majorCompaction)
   throws IOException {
     if (majorCompaction) {
       this.triggerMajorCompaction();
@@ -3469,7 +3469,7 @@ public class HRegion implements HeapSize { // , Writable{
       for (Map.Entry<byte[], NavigableSet<byte[]>> entry :
           scan.getFamilyMap().entrySet()) {
         Store store = stores.get(entry.getKey());
-        StoreScanner scanner = store.getScanner(scan, entry.getValue());
+        KeyValueScanner scanner = store.getScanner(scan, entry.getValue());
         scanners.add(scanner);
       }
       this.storeHeap = new KeyValueHeap(scanners, comparator);

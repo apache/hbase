@@ -17,7 +17,7 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.util.List;
-import java.util.Map;
+import java.util.NavigableSet;
 
 import com.google.common.collect.ImmutableList;
 
@@ -37,7 +37,9 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -75,11 +77,29 @@ public abstract class BaseRegionObserver implements RegionObserver {
       boolean abortRequested) { }
 
   @Override
+  public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Store store, final KeyValueScanner memstoreScanner, final InternalScanner s)
+      throws IOException {
+    return null;
+  }
+
+  @Override
   public void preFlush(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
   }
 
   @Override
   public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
+  }
+
+  @Override
+  public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
+      InternalScanner scanner) throws IOException {
+    return scanner;
+  }
+
+  @Override
+  public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e, Store store,
+      StoreFile resultFile) throws IOException {
   }
 
   @Override
@@ -103,6 +123,13 @@ public abstract class BaseRegionObserver implements RegionObserver {
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
       final Store store, final InternalScanner scanner) throws IOException {
     return scanner;
+  }
+
+  @Override
+  public InternalScanner preCompactScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Store store, List<? extends KeyValueScanner> scanners, final ScanType scanType,
+      final long earliestPutTs, final InternalScanner s) throws IOException {
+    return null;
   }
 
   @Override
@@ -239,6 +266,13 @@ public abstract class BaseRegionObserver implements RegionObserver {
   public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Scan scan, final RegionScanner s) throws IOException {
     return s;
+  }
+
+  @Override
+  public KeyValueScanner preStoreScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Store store, final Scan scan, final NavigableSet<byte[]> targetCols,
+      final KeyValueScanner s) throws IOException {
+    return null;
   }
 
   @Override

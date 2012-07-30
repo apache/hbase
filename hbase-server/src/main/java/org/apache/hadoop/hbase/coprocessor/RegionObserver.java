@@ -18,6 +18,7 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.NavigableSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -35,9 +36,12 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
@@ -65,18 +69,61 @@ public interface RegionObserver extends Coprocessor {
   void postOpen(final ObserverContext<RegionCoprocessorEnvironment> c);
 
   /**
+   * Called before a memstore is flushed to disk and prior to creating the scanner to read from
+   * the memstore.  To override or modify how a memstore is flushed,
+   * implementing classes can return a new scanner to provide the KeyValues to be
+   * stored into the new {@code StoreFile} or null to perform the default processing.
+   * Calling {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} has no
+   * effect in this hook.
+   * @param c the environment provided by the region server
+   * @param store the store being flushed
+   * @param memstoreScanner the scanner for the memstore that is flushed
+   * @param s the base scanner, if not {@code null}, from previous RegionObserver in the chain
+   * @return the scanner to use during the flush.  {@code null} if the default implementation
+   * is to be used.
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Store store, final KeyValueScanner memstoreScanner, final InternalScanner s)
+      throws IOException;
+
+  /**
    * Called before the memstore is flushed to disk.
    * @param c the environment provided by the region server
    * @throws IOException if an error occurred on the coprocessor
+   * @deprecated use {@link #preFlush(ObserverContext, Store, InternalScanner)} instead
    */
   void preFlush(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
+
+  /**
+   * Called before a Store's memstore is flushed to disk.
+   * @param c the environment provided by the region server
+   * @param store the store where compaction is being requested
+   * @param scanner the scanner over existing data used in the store file
+   * @return the scanner to use during compaction.  Should not be {@code null}
+   * unless the implementation is writing new store files on its own.
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  InternalScanner preFlush(final ObserverContext<RegionCoprocessorEnvironment> c, final Store store,
+      final InternalScanner scanner) throws IOException;
 
   /**
    * Called after the memstore is flushed to disk.
    * @param c the environment provided by the region server
    * @throws IOException if an error occurred on the coprocessor
+   * @deprecated use {@link #preFlush(ObserverContext, Store, InternalScanner)} instead.
    */
   void postFlush(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
+
+  /**
+   * Called after a Store's memstore is flushed to disk.
+   * @param c the environment provided by the region server
+   * @param store the store being flushed
+   * @param resultFile the new store file written out during compaction
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  void postFlush(final ObserverContext<RegionCoprocessorEnvironment> c, final Store store,
+      final StoreFile resultFile) throws IOException;
 
   /**
    * Called prior to selecting the {@link StoreFile}s to compact from the list
@@ -126,6 +173,29 @@ public interface RegionObserver extends Coprocessor {
    */
   InternalScanner preCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Store store, final InternalScanner scanner) throws IOException;
+
+  /**
+   * Called prior to writing the {@link StoreFile}s selected for compaction into
+   * a new {@code StoreFile} and prior to creating the scanner used to read the
+   * input files.  To override or modify the compaction process,
+   * implementing classes can return a new scanner to provide the KeyValues to be
+   * stored into the new {@code StoreFile} or null to perform the default processing.
+   * Calling {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} has no
+   * effect in this hook.
+   * @param c the environment provided by the region server
+   * @param store the store being compacted
+   * @param scanners the list {@link StoreFileScanner}s to be read from
+   * @param scantype the {@link ScanType} indicating whether this is a major or minor compaction
+   * @param earliestPutTs timestamp of the earliest put that was found in any of the involved
+   * store files
+   * @param s the base scanner, if not {@code null}, from previous RegionObserver in the chain
+   * @return the scanner to use during compaction.  {@code null} if the default implementation
+   * is to be used.
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  InternalScanner preCompactScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Store store, List<? extends KeyValueScanner> scanners, final ScanType scanType,
+      final long earliestPutTs, final InternalScanner s) throws IOException;
 
   /**
    * Called after compaction has completed and the new store file has been
@@ -548,6 +618,30 @@ public interface RegionObserver extends Coprocessor {
   RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Scan scan, final RegionScanner s)
     throws IOException;
+
+  /**
+   * Called before a store opens a new scanner.
+   * This hook is called when a "user" scanner is opened.
+   * <p>
+   * See {@link #preFlushScannerOpen(ObserverContext, Store, KeyValueScanner, InternalScanner)}
+   * and {@link #preCompactScannerOpen(ObserverContext, Store, List, ScanType, long, InternalScanner)}
+   * to override scanners created for flushes or compactions, resp.
+   * <p>
+   * Call CoprocessorEnvironment#complete to skip any subsequent chained
+   * coprocessors.
+   * Calling {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} has no
+   * effect in this hook.
+   * @param c the environment provided by the region server
+   * @param store the store being scanned
+   * @param scan the Scan specification
+   * @param targetCols columns to be used in the scanner
+   * @param s the base scanner, if not {@code null}, from previous RegionObserver in the chain
+   * @return a KeyValueScanner instance to use or {@code null} to use the default implementation
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  KeyValueScanner preStoreScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Store store, final Scan scan, final NavigableSet<byte[]> targetCols,
+      final KeyValueScanner s) throws IOException;
 
   /**
    * Called after the client opens a new scanner.

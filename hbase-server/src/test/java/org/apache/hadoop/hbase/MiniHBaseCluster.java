@@ -455,6 +455,34 @@ public class MiniHBaseCluster {
   }
 
   /**
+   * Call flushCache on all regions on all participating regionservers.
+   * @throws IOException
+   */
+  public void compact(boolean major) throws IOException {
+    for (JVMClusterUtil.RegionServerThread t:
+        this.hbaseCluster.getRegionServers()) {
+      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
+        r.compactStores(major);
+      }
+    }
+  }
+
+  /**
+   * Call flushCache on all regions of the specified table.
+   * @throws IOException
+   */
+  public void compact(byte [] tableName, boolean major) throws IOException {
+    for (JVMClusterUtil.RegionServerThread t:
+        this.hbaseCluster.getRegionServers()) {
+      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
+        if(Bytes.equals(r.getTableDesc().getName(), tableName)) {
+          r.compactStores(major);
+        }
+      }
+    }
+  }
+
+  /**
    * @return List of region server threads.
    */
   public List<JVMClusterUtil.RegionServerThread> getRegionServerThreads() {

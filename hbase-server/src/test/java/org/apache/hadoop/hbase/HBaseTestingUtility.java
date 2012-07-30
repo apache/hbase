@@ -788,6 +788,22 @@ public class HBaseTestingUtility {
     this.hbaseCluster.flushcache(tableName);
   }
 
+  /**
+   * Compact all regions in the mini hbase cluster
+   * @throws IOException
+   */
+  public void compact(boolean major) throws IOException {
+    this.hbaseCluster.compact(major);
+  }
+
+  /**
+   * Compact all of a table's reagion in the mini hbase cluster
+   * @throws IOException
+   */
+  public void compact(byte [] tableName, boolean major) throws IOException {
+    this.hbaseCluster.compact(tableName, major);
+  }
+
 
   /**
    * Create a table.

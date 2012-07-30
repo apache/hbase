@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
@@ -127,12 +126,21 @@ class Compactor extends Configured {
     try {
       InternalScanner scanner = null;
       try {
-        Scan scan = new Scan();
-        scan.setMaxVersions(store.getFamily().getMaxVersions());
-        /* Include deletes, unless we are doing a major compaction */
-        scanner = new StoreScanner(store, scan, scanners,
-          majorCompaction? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT,
-          smallestReadPoint, earliestPutTs);
+        if (store.getHRegion().getCoprocessorHost() != null) {
+          scanner = store
+              .getHRegion()
+              .getCoprocessorHost()
+              .preCompactScannerOpen(store, scanners,
+                  majorCompaction ? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT, earliestPutTs);
+        }
+        if (scanner == null) {
+          Scan scan = new Scan();
+          scan.setMaxVersions(store.getFamily().getMaxVersions());
+          /* Include deletes, unless we are doing a major compaction */
+          scanner = new StoreScanner(store, store.scanInfo, scan, scanners,
+            majorCompaction? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT,
+            smallestReadPoint, earliestPutTs);
+        }
         if (store.getHRegion().getCoprocessorHost() != null) {
           InternalScanner cpScanner =
             store.getHRegion().getCoprocessorHost().preCompact(store, scanner);

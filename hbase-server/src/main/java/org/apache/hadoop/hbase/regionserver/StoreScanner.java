@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.regionserver.Store.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -43,7 +44,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  * into List<KeyValue> for a single row.
  */
 @InterfaceAudience.Private
-class StoreScanner extends NonLazyKeyValueScanner
+public class StoreScanner extends NonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner, ChangedReadersObserver {
   static final Log LOG = LogFactory.getLog(StoreScanner.class);
   private Store store;
@@ -106,16 +107,16 @@ class StoreScanner extends NonLazyKeyValueScanner
    * @param columns which columns we are scanning
    * @throws IOException
    */
-  StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns)
+  public StoreScanner(Store store, ScanInfo scanInfo, Scan scan, final NavigableSet<byte[]> columns)
                               throws IOException {
-    this(store, scan.getCacheBlocks(), scan, columns, store.scanInfo.getTtl(),
-        store.scanInfo.getMinVersions());
+    this(store, scan.getCacheBlocks(), scan, columns, scanInfo.getTtl(),
+        scanInfo.getMinVersions());
     initializeMetricNames();
     if (columns != null && scan.isRaw()) {
       throw new DoNotRetryIOException(
           "Cannot specify any column for a raw scan");
     }
-    matcher = new ScanQueryMatcher(scan, store.scanInfo, columns,
+    matcher = new ScanQueryMatcher(scan, scanInfo, columns,
         ScanType.USER_SCAN, Long.MAX_VALUE, HConstants.LATEST_TIMESTAMP,
         oldestUnexpiredTS);
 
@@ -158,13 +159,13 @@ class StoreScanner extends NonLazyKeyValueScanner
    * @param smallestReadPoint the readPoint that we should use for tracking
    *          versions
    */
-  StoreScanner(Store store, Scan scan,
+  public StoreScanner(Store store, ScanInfo scanInfo, Scan scan,
       List<? extends KeyValueScanner> scanners, ScanType scanType,
       long smallestReadPoint, long earliestPutTs) throws IOException {
-    this(store, false, scan, null, store.scanInfo.getTtl(),
-        store.scanInfo.getMinVersions());
+    this(store, false, scan, null, scanInfo.getTtl(),
+        scanInfo.getMinVersions());
     initializeMetricNames();
-    matcher = new ScanQueryMatcher(scan, store.scanInfo, null, scanType,
+    matcher = new ScanQueryMatcher(scan, scanInfo, null, scanType,
         smallestReadPoint, earliestPutTs, oldestUnexpiredTS);
 
     // Filter the list of scanners using Bloom filters, time range, TTL, etc.
@@ -181,7 +182,7 @@ class StoreScanner extends NonLazyKeyValueScanner
 
   /** Constructor for testing. */
   StoreScanner(final Scan scan, Store.ScanInfo scanInfo,
-      StoreScanner.ScanType scanType, final NavigableSet<byte[]> columns,
+      ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners) throws IOException {
     this(scan, scanInfo, scanType, columns, scanners,
         HConstants.LATEST_TIMESTAMP);
@@ -189,7 +190,7 @@ class StoreScanner extends NonLazyKeyValueScanner
 
   // Constructor for testing.
   StoreScanner(final Scan scan, Store.ScanInfo scanInfo,
-      StoreScanner.ScanType scanType, final NavigableSet<byte[]> columns,
+      ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners, long earliestPutTs)
           throws IOException {
     this(null, scan.getCacheBlocks(), scan, columns, scanInfo.getTtl(),
@@ -597,15 +598,6 @@ class StoreScanner extends NonLazyKeyValueScanner
 
   static void enableLazySeekGlobally(boolean enable) {
     lazySeekEnabledGlobally = enable;
-  }
-
-  /**
-   * Enum to distinguish general scan types.
-   */
-  public static enum ScanType {
-    MAJOR_COMPACT,
-    MINOR_COMPACT,
-    USER_SCAN
   }
 }
 
