@@ -26,15 +26,20 @@
  * 
  * As part of setting up a connection to a server, the client needs to send
  * the ConnectionHeader header. At the data level, this looks like
- * <"hrpc"-bytearray><5-byte><length-of-serialized-ConnectionHeader-obj[int32]><ConnectionHeader-object serialized>
+ * <"hrpc"-bytearray><'5'-byte><length-of-serialized-ConnectionHeader-obj[int32]><ConnectionHeader-object serialized>
  *
- * For every RPC that the client makes it needs to send the
- * RpcRequest. At the data level this looks like
- * <length-of-serialized-RpcRequest-obj><RpcRequest-object serialized>
+ * For every RPC that the client makes it needs to send the following
+ * RpcRequestHeader and the RpcRequestBody. At the data level this looks like:
+ *  <length-of-serialized-RpcRequestHeader + length-of-serialized-RpcRequestBody>
+ *  <RpcRequestHeader [serialized using Message.writeDelimitedTo]>
+ *  <RpcRequestBody [serialized using Message.writeTo]>
  *
- * The server sends back a RpcResponse object as response.
- * At the data level this looks like
- * <protobuf-encoded-length-of-serialized-RpcResponse-obj><RpcResponse-object serialized>
+ * On a success, the server's protobuf response looks like
+ *  <RpcResponseHeader-object [serialized using Message.writeDelimitedTo]>
+ *  <RpcResponseBody-object [serialized using Message.writeTo]>
+ * On a failure, the server's protobuf response looks like
+ *  <RpcResponseHeader-object [serialized using Message.writeDelimitedTo]>
+ *  <RpcException-object [serialized using Message.writeTo]>
  *
  * There is one special message that's sent from client to server -
  * the Ping message. At the data level, this is just the bytes corresponding
@@ -63,15 +68,47 @@ message ConnectionHeader {
 
 
 /**
- * The complete RPC request message
+ * The RPC request header
  */
-message RpcRequest {
+message RpcRequestHeader {
   /** Monotonically increasing callId, mostly to keep track of RPCs */
-  required int32 callId = 1;
-  /** The request bytes */
-  optional bytes request = 2;
+  required uint32 callId = 1;
+}
+/**
+ * The RPC request body
+ */
+message RpcRequestBody {
+  /** Name of the RPC method */
+  required string methodName = 1;
+
+  /** protocol version of class declaring the called method */
+  optional uint64 clientProtocolVersion = 2;
+
+  /** Bytes corresponding to the client protobuf request */
+  optional bytes request = 3;
 }
 
+/**
+ * The RPC response header
+ */
+message RpcResponseHeader {
+  /** Echo back the callId the client sent */
+  required int32 callId = 1;
+  /** Did the RPC execution encounter an error at the server */
+  enum Status {
+    SUCCESS = 0;
+    ERROR = 1;
+    FATAL = 2;
+  }
+  required Status status = 2;
+}
+/**
+ * The RPC response body
+ */
+message RpcResponseBody {
+   /** Optional response bytes */
+  optional bytes response = 1;
+}
 /**
  * At the RPC layer, this message is used to indicate
  * the server side exception to the RPC client.
@@ -85,23 +122,4 @@ message RpcException {
 
   /** Exception stack trace from the server side */
   optional string stackTrace = 2;
-}
-
-/**
- * The complete RPC response message
- */
-message RpcResponse {
-  /** Echo back the callId the client sent */
-  required int32 callId = 1;
-  /** Did the RPC execution encounter an error at the server */
-  enum Status {
-    SUCCESS = 0;
-    ERROR = 1;
-    FATAL = 2;
-  }
-  required Status status = 2;
-  /** Optional response bytes */
-  optional bytes response = 3;
-  /** Optional exception when error is true*/
-  optional RpcException exception = 4;
 }

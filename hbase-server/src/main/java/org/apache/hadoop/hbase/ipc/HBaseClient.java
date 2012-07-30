@@ -53,12 +53,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.DataOutputOutputStream;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.AuthMethod;
@@ -82,7 +82,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import com.google.protobuf.ByteString;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -826,17 +825,15 @@ public class HBaseClient {
       try {
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " sending #" + call.id);
-        RpcRequest.Builder builder = RPCProtos.RpcRequest.newBuilder();
+        RpcRequestHeader.Builder builder = RPCProtos.RpcRequestHeader.newBuilder();
         builder.setCallId(call.id);
-        Invocation invocation = (Invocation)call.param;
         DataOutputBuffer d = new DataOutputBuffer();
-        invocation.write(d);
-        builder.setRequest(ByteString.copyFrom(d.getData()));
+        builder.build().writeDelimitedTo(d);
+        call.param.write(d);
         //noinspection SynchronizeOnNonFinalField
         synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
-          RpcRequest obj = builder.build();
-          this.out.writeInt(obj.getSerializedSize());
-          obj.writeTo(DataOutputOutputStream.constructOutputStream(this.out));
+          this.out.writeInt(d.getLength());
+          this.out.write(d.getData(), 0, d.getLength());
           this.out.flush();
         }
       } catch(IOException e) {
@@ -859,7 +856,7 @@ public class HBaseClient {
         // so the exception name/trace), and the response bytes
 
         // Read the call id.
-        RpcResponse response = RpcResponse.parseDelimitedFrom(in);
+        RpcResponseHeader response = RpcResponseHeader.parseDelimitedFrom(in);
         if (response == null) {
           // When the stream is closed, protobuf doesn't raise an EOFException,
           // instead, it returns a null message object. 
@@ -873,11 +870,8 @@ public class HBaseClient {
 
         Status status = response.getStatus();
         if (status == Status.SUCCESS) {
-          ByteString responseObj = response.getResponse();
-          DataInputStream dis =
-              new DataInputStream(responseObj.newInput());
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
-          value.readFields(dis);                 // read value
+          value.readFields(in);                 // read value
           // it's possible that this call may have been cleaned up due to a RPC
           // timeout, so check if it still exists before setting the value.
           if (call != null) {
@@ -885,18 +879,20 @@ public class HBaseClient {
           }
           calls.remove(id);
         } else if (status == Status.ERROR) {
+          RpcException exceptionResponse = RpcException.parseDelimitedFrom(in);
           if (call != null) {
             //noinspection ThrowableInstanceNeverThrown
             call.setException(new RemoteException(
-                response.getException().getExceptionName(),
-                response.getException().getStackTrace()));
+                exceptionResponse.getExceptionName(),
+                exceptionResponse.getStackTrace()));
             calls.remove(id);
           }
         } else if (status == Status.FATAL) {
+          RpcException exceptionResponse = RpcException.parseDelimitedFrom(in);
           // Close the connection
           markClosed(new RemoteException(
-              response.getException().getExceptionName(),
-              response.getException().getStackTrace()));
+              exceptionResponse.getExceptionName(),
+              exceptionResponse.getStackTrace()));
         }
       } catch (IOException e) {
         if (e instanceof SocketTimeoutException && remoteId.rpcTimeout > 0) {

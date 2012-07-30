@@ -73,11 +73,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.security.User;
@@ -381,23 +381,21 @@ public abstract class HBaseServer implements RpcServer {
       }
 
       ByteBufferOutputStream buf = new ByteBufferOutputStream(size);
+      DataOutputStream out = new DataOutputStream(buf);
       try {
-        RpcResponse.Builder builder = RpcResponse.newBuilder();
+        RpcResponseHeader.Builder builder = RpcResponseHeader.newBuilder();
         // Call id.
         builder.setCallId(this.id);
         builder.setStatus(status);
+        builder.build().writeDelimitedTo(out);
         if (error != null) {
           RpcException.Builder b = RpcException.newBuilder();
           b.setExceptionName(errorClass);
           b.setStackTrace(error);
-          builder.setException(b.build());
+          b.build().writeDelimitedTo(out);
         } else {
-          DataOutputBuffer d = new DataOutputBuffer(size);
-          result.write(d);
-          byte[] response = d.getData();
-          builder.setResponse(ByteString.copyFrom(response));
+          result.write(out);
         }
-        builder.build().writeDelimitedTo(buf);
         if (connection.useWrap) {
           wrapWithSasl(buf);
         }
@@ -1616,9 +1614,10 @@ public abstract class HBaseServer implements RpcServer {
     }
 
     protected void processData(byte[] buf) throws  IOException, InterruptedException {
-      RpcRequest request = RpcRequest.parseFrom(buf);
+      DataInputStream dis =
+        new DataInputStream(new ByteArrayInputStream(buf));
+      RpcRequestHeader request = RpcRequestHeader.parseDelimitedFrom(dis);
       int id = request.getCallId();
-      ByteString clientRequest = request.getRequest();
       long callSize = buf.length;
 
       if (LOG.isDebugEnabled()) {
@@ -1639,8 +1638,6 @@ public abstract class HBaseServer implements RpcServer {
 
       Writable param;
       try {
-        DataInputStream dis =
-            new DataInputStream(clientRequest.newInput());
         param = ReflectionUtils.newInstance(paramClass, conf);//read param
         param.readFields(dis);
       } catch (Throwable t) {

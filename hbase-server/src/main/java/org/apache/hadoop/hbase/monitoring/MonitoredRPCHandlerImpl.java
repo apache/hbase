@@ -261,5 +261,4 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
     }
     return super.toString() + ", rpcMethod=" + getRPC();
   }
-
 }

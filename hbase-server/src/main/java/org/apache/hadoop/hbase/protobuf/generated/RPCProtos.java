@@ -1099,47 +1099,43 @@ public final class RPCProtos {
     // @@protoc_insertion_point(class_scope:ConnectionHeader)
   }
   
-  public interface RpcRequestOrBuilder
+  public interface RpcRequestHeaderOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required int32 callId = 1;
+    // required uint32 callId = 1;
     boolean hasCallId();
     int getCallId();
-    
-    // optional bytes request = 2;
-    boolean hasRequest();
-    com.google.protobuf.ByteString getRequest();
   }
-  public static final class RpcRequest extends
+  public static final class RpcRequestHeader extends
       com.google.protobuf.GeneratedMessage
-      implements RpcRequestOrBuilder {
-    // Use RpcRequest.newBuilder() to construct.
-    private RpcRequest(Builder builder) {
+      implements RpcRequestHeaderOrBuilder {
+    // Use RpcRequestHeader.newBuilder() to construct.
+    private RpcRequestHeader(Builder builder) {
       super(builder);
     }
-    private RpcRequest(boolean noInit) {}
+    private RpcRequestHeader(boolean noInit) {}
     
-    private static final RpcRequest defaultInstance;
-    public static RpcRequest getDefaultInstance() {
+    private static final RpcRequestHeader defaultInstance;
+    public static RpcRequestHeader getDefaultInstance() {
       return defaultInstance;
     }
     
-    public RpcRequest getDefaultInstanceForType() {
+    public RpcRequestHeader getDefaultInstanceForType() {
       return defaultInstance;
     }
     
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcRequestHeader_descriptor;
     }
     
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcRequest_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcRequestHeader_fieldAccessorTable;
     }
     
     private int bitField0_;
-    // required int32 callId = 1;
+    // required uint32 callId = 1;
     public static final int CALLID_FIELD_NUMBER = 1;
     private int callId_;
     public boolean hasCallId() {
@@ -1149,19 +1145,8 @@ public final class RPCProtos {
       return callId_;
     }
     
-    // optional bytes request = 2;
-    public static final int REQUEST_FIELD_NUMBER = 2;
-    private com.google.protobuf.ByteString request_;
-    public boolean hasRequest() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    public com.google.protobuf.ByteString getRequest() {
-      return request_;
-    }
-    
     private void initFields() {
       callId_ = 0;
-      request_ = com.google.protobuf.ByteString.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1180,10 +1165,7 @@ public final class RPCProtos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeInt32(1, callId_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeBytes(2, request_);
+        output.writeUInt32(1, callId_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -1196,11 +1178,7 @@ public final class RPCProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt32Size(1, callId_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(2, request_);
+          .computeUInt32Size(1, callId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1219,21 +1197,16 @@ public final class RPCProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest)) {
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest other = (org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest) obj;
+      org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader other = (org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader) obj;
       
       boolean result = true;
       result = result && (hasCallId() == other.hasCallId());
       if (hasCallId()) {
         result = result && (getCallId()
             == other.getCallId());
-      }
-      result = result && (hasRequest() == other.hasRequest());
-      if (hasRequest()) {
-        result = result && getRequest()
-            .equals(other.getRequest());
       }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
@@ -1248,49 +1221,45 @@ public final class RPCProtos {
         hash = (37 * hash) + CALLID_FIELD_NUMBER;
         hash = (53 * hash) + getCallId();
       }
-      if (hasRequest()) {
-        hash = (37 * hash) + REQUEST_FIELD_NUMBER;
-        hash = (53 * hash) + getRequest().hashCode();
-      }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
     }
     
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest parseFrom(byte[] data)
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       Builder builder = newBuilder();
       if (builder.mergeDelimitedFrom(input)) {
@@ -1299,7 +1268,7 @@ public final class RPCProtos {
         return null;
       }
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest parseDelimitedFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -1310,12 +1279,12 @@ public final class RPCProtos {
         return null;
       }
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -1325,7 +1294,7 @@ public final class RPCProtos {
     
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -1338,18 +1307,18 @@ public final class RPCProtos {
     }
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestOrBuilder {
+       implements org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeaderOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcRequestHeader_descriptor;
       }
       
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcRequest_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcRequestHeader_fieldAccessorTable;
       }
       
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest.newBuilder()
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -1370,8 +1339,6 @@ public final class RPCProtos {
         super.clear();
         callId_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
-        request_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
       
@@ -1381,24 +1348,24 @@ public final class RPCProtos {
       
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader.getDescriptor();
       }
       
-      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest.getDefaultInstance();
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader.getDefaultInstance();
       }
       
-      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest build() {
-        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest result = buildPartial();
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader build() {
+        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
       
-      private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest buildParsed()
+      private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest result = buildPartial();
+        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(
             result).asInvalidProtocolBufferException();
@@ -1406,39 +1373,32 @@ public final class RPCProtos {
         return result;
       }
       
-      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest result = new org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest(this);
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader result = new org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
         result.callId_ = callId_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.request_ = request_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
       
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest)other);
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
       
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader.getDefaultInstance()) return this;
         if (other.hasCallId()) {
           setCallId(other.getCallId());
-        }
-        if (other.hasRequest()) {
-          setRequest(other.getRequest());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1477,12 +1437,1068 @@ public final class RPCProtos {
             }
             case 8: {
               bitField0_ |= 0x00000001;
+              callId_ = input.readUInt32();
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // required uint32 callId = 1;
+      private int callId_ ;
+      public boolean hasCallId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public int getCallId() {
+        return callId_;
+      }
+      public Builder setCallId(int value) {
+        bitField0_ |= 0x00000001;
+        callId_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearCallId() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        callId_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:RpcRequestHeader)
+    }
+    
+    static {
+      defaultInstance = new RpcRequestHeader(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:RpcRequestHeader)
+  }
+  
+  public interface RpcRequestBodyOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // required string methodName = 1;
+    boolean hasMethodName();
+    String getMethodName();
+    
+    // optional uint64 clientProtocolVersion = 2;
+    boolean hasClientProtocolVersion();
+    long getClientProtocolVersion();
+    
+    // optional bytes request = 3;
+    boolean hasRequest();
+    com.google.protobuf.ByteString getRequest();
+  }
+  public static final class RpcRequestBody extends
+      com.google.protobuf.GeneratedMessage
+      implements RpcRequestBodyOrBuilder {
+    // Use RpcRequestBody.newBuilder() to construct.
+    private RpcRequestBody(Builder builder) {
+      super(builder);
+    }
+    private RpcRequestBody(boolean noInit) {}
+    
+    private static final RpcRequestBody defaultInstance;
+    public static RpcRequestBody getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public RpcRequestBody getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcRequestBody_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcRequestBody_fieldAccessorTable;
+    }
+    
+    private int bitField0_;
+    // required string methodName = 1;
+    public static final int METHODNAME_FIELD_NUMBER = 1;
+    private java.lang.Object methodName_;
+    public boolean hasMethodName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public String getMethodName() {
+      java.lang.Object ref = methodName_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          methodName_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getMethodNameBytes() {
+      java.lang.Object ref = methodName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        methodName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
+    // optional uint64 clientProtocolVersion = 2;
+    public static final int CLIENTPROTOCOLVERSION_FIELD_NUMBER = 2;
+    private long clientProtocolVersion_;
+    public boolean hasClientProtocolVersion() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public long getClientProtocolVersion() {
+      return clientProtocolVersion_;
+    }
+    
+    // optional bytes request = 3;
+    public static final int REQUEST_FIELD_NUMBER = 3;
+    private com.google.protobuf.ByteString request_;
+    public boolean hasRequest() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public com.google.protobuf.ByteString getRequest() {
+      return request_;
+    }
+    
+    private void initFields() {
+      methodName_ = "";
+      clientProtocolVersion_ = 0L;
+      request_ = com.google.protobuf.ByteString.EMPTY;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      if (!hasMethodName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getMethodNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt64(2, clientProtocolVersion_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, request_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getMethodNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(2, clientProtocolVersion_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, request_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody other = (org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody) obj;
+      
+      boolean result = true;
+      result = result && (hasMethodName() == other.hasMethodName());
+      if (hasMethodName()) {
+        result = result && getMethodName()
+            .equals(other.getMethodName());
+      }
+      result = result && (hasClientProtocolVersion() == other.hasClientProtocolVersion());
+      if (hasClientProtocolVersion()) {
+        result = result && (getClientProtocolVersion()
+            == other.getClientProtocolVersion());
+      }
+      result = result && (hasRequest() == other.hasRequest());
+      if (hasRequest()) {
+        result = result && getRequest()
+            .equals(other.getRequest());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+    
+    @java.lang.Override
+    public int hashCode() {
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasMethodName()) {
+        hash = (37 * hash) + METHODNAME_FIELD_NUMBER;
+        hash = (53 * hash) + getMethodName().hashCode();
+      }
+      if (hasClientProtocolVersion()) {
+        hash = (37 * hash) + CLIENTPROTOCOLVERSION_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getClientProtocolVersion());
+      }
+      if (hasRequest()) {
+        hash = (37 * hash) + REQUEST_FIELD_NUMBER;
+        hash = (53 * hash) + getRequest().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      return hash;
+    }
+    
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBodyOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcRequestBody_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcRequestBody_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        methodName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        clientProtocolVersion_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        request_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody.getDescriptor();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody.getDefaultInstance();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody build() {
+        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody result = new org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.methodName_ = methodName_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.clientProtocolVersion_ = clientProtocolVersion_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.request_ = request_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody.getDefaultInstance()) return this;
+        if (other.hasMethodName()) {
+          setMethodName(other.getMethodName());
+        }
+        if (other.hasClientProtocolVersion()) {
+          setClientProtocolVersion(other.getClientProtocolVersion());
+        }
+        if (other.hasRequest()) {
+          setRequest(other.getRequest());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        if (!hasMethodName()) {
+          
+          return false;
+        }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              methodName_ = input.readBytes();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              clientProtocolVersion_ = input.readUInt64();
+              break;
+            }
+            case 26: {
+              bitField0_ |= 0x00000004;
+              request_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // required string methodName = 1;
+      private java.lang.Object methodName_ = "";
+      public boolean hasMethodName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public String getMethodName() {
+        java.lang.Object ref = methodName_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          methodName_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setMethodName(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        methodName_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearMethodName() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        methodName_ = getDefaultInstance().getMethodName();
+        onChanged();
+        return this;
+      }
+      void setMethodName(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000001;
+        methodName_ = value;
+        onChanged();
+      }
+      
+      // optional uint64 clientProtocolVersion = 2;
+      private long clientProtocolVersion_ ;
+      public boolean hasClientProtocolVersion() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public long getClientProtocolVersion() {
+        return clientProtocolVersion_;
+      }
+      public Builder setClientProtocolVersion(long value) {
+        bitField0_ |= 0x00000002;
+        clientProtocolVersion_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearClientProtocolVersion() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        clientProtocolVersion_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // optional bytes request = 3;
+      private com.google.protobuf.ByteString request_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasRequest() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public com.google.protobuf.ByteString getRequest() {
+        return request_;
+      }
+      public Builder setRequest(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        request_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearRequest() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        request_ = getDefaultInstance().getRequest();
+        onChanged();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:RpcRequestBody)
+    }
+    
+    static {
+      defaultInstance = new RpcRequestBody(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:RpcRequestBody)
+  }
+  
+  public interface RpcResponseHeaderOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // required int32 callId = 1;
+    boolean hasCallId();
+    int getCallId();
+    
+    // required .RpcResponseHeader.Status status = 2;
+    boolean hasStatus();
+    org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status getStatus();
+  }
+  public static final class RpcResponseHeader extends
+      com.google.protobuf.GeneratedMessage
+      implements RpcResponseHeaderOrBuilder {
+    // Use RpcResponseHeader.newBuilder() to construct.
+    private RpcResponseHeader(Builder builder) {
+      super(builder);
+    }
+    private RpcResponseHeader(boolean noInit) {}
+    
+    private static final RpcResponseHeader defaultInstance;
+    public static RpcResponseHeader getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public RpcResponseHeader getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcResponseHeader_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcResponseHeader_fieldAccessorTable;
+    }
+    
+    public enum Status
+        implements com.google.protobuf.ProtocolMessageEnum {
+      SUCCESS(0, 0),
+      ERROR(1, 1),
+      FATAL(2, 2),
+      ;
+      
+      public static final int SUCCESS_VALUE = 0;
+      public static final int ERROR_VALUE = 1;
+      public static final int FATAL_VALUE = 2;
+      
+      
+      public final int getNumber() { return value; }
+      
+      public static Status valueOf(int value) {
+        switch (value) {
+          case 0: return SUCCESS;
+          case 1: return ERROR;
+          case 2: return FATAL;
+          default: return null;
+        }
+      }
+      
+      public static com.google.protobuf.Internal.EnumLiteMap<Status>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<Status>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<Status>() {
+              public Status findValueByNumber(int number) {
+                return Status.valueOf(number);
+              }
+            };
+      
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.getDescriptor().getEnumTypes().get(0);
+      }
+      
+      private static final Status[] VALUES = {
+        SUCCESS, ERROR, FATAL, 
+      };
+      
+      public static Status valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+      
+      private final int index;
+      private final int value;
+      
+      private Status(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+      
+      // @@protoc_insertion_point(enum_scope:RpcResponseHeader.Status)
+    }
+    
+    private int bitField0_;
+    // required int32 callId = 1;
+    public static final int CALLID_FIELD_NUMBER = 1;
+    private int callId_;
+    public boolean hasCallId() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public int getCallId() {
+      return callId_;
+    }
+    
+    // required .RpcResponseHeader.Status status = 2;
+    public static final int STATUS_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status status_;
+    public boolean hasStatus() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status getStatus() {
+      return status_;
+    }
+    
+    private void initFields() {
+      callId_ = 0;
+      status_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status.SUCCESS;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      if (!hasCallId()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasStatus()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeInt32(1, callId_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeEnum(2, status_.getNumber());
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(1, callId_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(2, status_.getNumber());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader other = (org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader) obj;
+      
+      boolean result = true;
+      result = result && (hasCallId() == other.hasCallId());
+      if (hasCallId()) {
+        result = result && (getCallId()
+            == other.getCallId());
+      }
+      result = result && (hasStatus() == other.hasStatus());
+      if (hasStatus()) {
+        result = result &&
+            (getStatus() == other.getStatus());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+    
+    @java.lang.Override
+    public int hashCode() {
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasCallId()) {
+        hash = (37 * hash) + CALLID_FIELD_NUMBER;
+        hash = (53 * hash) + getCallId();
+      }
+      if (hasStatus()) {
+        hash = (37 * hash) + STATUS_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getStatus());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      return hash;
+    }
+    
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeaderOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcResponseHeader_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcResponseHeader_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        callId_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        status_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status.SUCCESS;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.getDescriptor();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.getDefaultInstance();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader build() {
+        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader result = new org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.callId_ = callId_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.status_ = status_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.getDefaultInstance()) return this;
+        if (other.hasCallId()) {
+          setCallId(other.getCallId());
+        }
+        if (other.hasStatus()) {
+          setStatus(other.getStatus());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        if (!hasCallId()) {
+          
+          return false;
+        }
+        if (!hasStatus()) {
+          
+          return false;
+        }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
               callId_ = input.readInt32();
               break;
             }
-            case 18: {
-              bitField0_ |= 0x00000002;
-              request_ = input.readBytes();
+            case 16: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status value = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(2, rawValue);
+              } else {
+                bitField0_ |= 0x00000002;
+                status_ = value;
+              }
               break;
             }
           }
@@ -1512,39 +2528,413 @@ public final class RPCProtos {
         return this;
       }
       
-      // optional bytes request = 2;
-      private com.google.protobuf.ByteString request_ = com.google.protobuf.ByteString.EMPTY;
-      public boolean hasRequest() {
+      // required .RpcResponseHeader.Status status = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status status_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status.SUCCESS;
+      public boolean hasStatus() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public com.google.protobuf.ByteString getRequest() {
-        return request_;
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status getStatus() {
+        return status_;
       }
-      public Builder setRequest(com.google.protobuf.ByteString value) {
+      public Builder setStatus(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status value) {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
-        request_ = value;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
+        status_ = value;
         onChanged();
         return this;
       }
-      public Builder clearRequest() {
+      public Builder clearStatus() {
         bitField0_ = (bitField0_ & ~0x00000002);
-        request_ = getDefaultInstance().getRequest();
+        status_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status.SUCCESS;
         onChanged();
         return this;
       }
       
-      // @@protoc_insertion_point(builder_scope:RpcRequest)
+      // @@protoc_insertion_point(builder_scope:RpcResponseHeader)
     }
     
     static {
-      defaultInstance = new RpcRequest(true);
+      defaultInstance = new RpcResponseHeader(true);
       defaultInstance.initFields();
     }
     
-    // @@protoc_insertion_point(class_scope:RpcRequest)
+    // @@protoc_insertion_point(class_scope:RpcResponseHeader)
+  }
+  
+  public interface RpcResponseBodyOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // optional bytes response = 1;
+    boolean hasResponse();
+    com.google.protobuf.ByteString getResponse();
+  }
+  public static final class RpcResponseBody extends
+      com.google.protobuf.GeneratedMessage
+      implements RpcResponseBodyOrBuilder {
+    // Use RpcResponseBody.newBuilder() to construct.
+    private RpcResponseBody(Builder builder) {
+      super(builder);
+    }
+    private RpcResponseBody(boolean noInit) {}
+    
+    private static final RpcResponseBody defaultInstance;
+    public static RpcResponseBody getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public RpcResponseBody getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcResponseBody_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcResponseBody_fieldAccessorTable;
+    }
+    
+    private int bitField0_;
+    // optional bytes response = 1;
+    public static final int RESPONSE_FIELD_NUMBER = 1;
+    private com.google.protobuf.ByteString response_;
+    public boolean hasResponse() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public com.google.protobuf.ByteString getResponse() {
+      return response_;
+    }
+    
+    private void initFields() {
+      response_ = com.google.protobuf.ByteString.EMPTY;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, response_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, response_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody other = (org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody) obj;
+      
+      boolean result = true;
+      result = result && (hasResponse() == other.hasResponse());
+      if (hasResponse()) {
+        result = result && getResponse()
+            .equals(other.getResponse());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+    
+    @java.lang.Override
+    public int hashCode() {
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasResponse()) {
+        hash = (37 * hash) + RESPONSE_FIELD_NUMBER;
+        hash = (53 * hash) + getResponse().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      return hash;
+    }
+    
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBodyOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcResponseBody_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcResponseBody_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        response_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody.getDescriptor();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody.getDefaultInstance();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody build() {
+        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody result = new org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.response_ = response_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody.getDefaultInstance()) return this;
+        if (other.hasResponse()) {
+          setResponse(other.getResponse());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              response_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // optional bytes response = 1;
+      private com.google.protobuf.ByteString response_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasResponse() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public com.google.protobuf.ByteString getResponse() {
+        return response_;
+      }
+      public Builder setResponse(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        response_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearResponse() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        response_ = getDefaultInstance().getResponse();
+        onChanged();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:RpcResponseBody)
+    }
+    
+    static {
+      defaultInstance = new RpcResponseBody(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:RpcResponseBody)
   }
   
   public interface RpcExceptionOrBuilder
@@ -2066,773 +3456,6 @@ public final class RPCProtos {
     // @@protoc_insertion_point(class_scope:RpcException)
   }
   
-  public interface RpcResponseOrBuilder
-      extends com.google.protobuf.MessageOrBuilder {
-    
-    // required int32 callId = 1;
-    boolean hasCallId();
-    int getCallId();
-    
-    // required .RpcResponse.Status status = 2;
-    boolean hasStatus();
-    org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status getStatus();
-    
-    // optional bytes response = 3;
-    boolean hasResponse();
-    com.google.protobuf.ByteString getResponse();
-    
-    // optional .RpcException exception = 4;
-    boolean hasException();
-    org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException getException();
-    org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcExceptionOrBuilder getExceptionOrBuilder();
-  }
-  public static final class RpcResponse extends
-      com.google.protobuf.GeneratedMessage
-      implements RpcResponseOrBuilder {
-    // Use RpcResponse.newBuilder() to construct.
-    private RpcResponse(Builder builder) {
-      super(builder);
-    }
-    private RpcResponse(boolean noInit) {}
-    
-    private static final RpcResponse defaultInstance;
-    public static RpcResponse getDefaultInstance() {
-      return defaultInstance;
-    }
-    
-    public RpcResponse getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-    
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcResponse_descriptor;
-    }
-    
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcResponse_fieldAccessorTable;
-    }
-    
-    public enum Status
-        implements com.google.protobuf.ProtocolMessageEnum {
-      SUCCESS(0, 0),
-      ERROR(1, 1),
-      FATAL(2, 2),
-      ;
-      
-      public static final int SUCCESS_VALUE = 0;
-      public static final int ERROR_VALUE = 1;
-      public static final int FATAL_VALUE = 2;
-      
-      
-      public final int getNumber() { return value; }
-      
-      public static Status valueOf(int value) {
-        switch (value) {
-          case 0: return SUCCESS;
-          case 1: return ERROR;
-          case 2: return FATAL;
-          default: return null;
-        }
-      }
-      
-      public static com.google.protobuf.Internal.EnumLiteMap<Status>
-          internalGetValueMap() {
-        return internalValueMap;
-      }
-      private static com.google.protobuf.Internal.EnumLiteMap<Status>
-          internalValueMap =
-            new com.google.protobuf.Internal.EnumLiteMap<Status>() {
-              public Status findValueByNumber(int number) {
-                return Status.valueOf(number);
-              }
-            };
-      
-      public final com.google.protobuf.Descriptors.EnumValueDescriptor
-          getValueDescriptor() {
-        return getDescriptor().getValues().get(index);
-      }
-      public final com.google.protobuf.Descriptors.EnumDescriptor
-          getDescriptorForType() {
-        return getDescriptor();
-      }
-      public static final com.google.protobuf.Descriptors.EnumDescriptor
-          getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.getDescriptor().getEnumTypes().get(0);
-      }
-      
-      private static final Status[] VALUES = {
-        SUCCESS, ERROR, FATAL, 
-      };
-      
-      public static Status valueOf(
-          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
-        if (desc.getType() != getDescriptor()) {
-          throw new java.lang.IllegalArgumentException(
-            "EnumValueDescriptor is not for this type.");
-        }
-        return VALUES[desc.getIndex()];
-      }
-      
-      private final int index;
-      private final int value;
-      
-      private Status(int index, int value) {
-        this.index = index;
-        this.value = value;
-      }
-      
-      // @@protoc_insertion_point(enum_scope:RpcResponse.Status)
-    }
-    
-    private int bitField0_;
-    // required int32 callId = 1;
-    public static final int CALLID_FIELD_NUMBER = 1;
-    private int callId_;
-    public boolean hasCallId() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    public int getCallId() {
-      return callId_;
-    }
-    
-    // required .RpcResponse.Status status = 2;
-    public static final int STATUS_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status status_;
-    public boolean hasStatus() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status getStatus() {
-      return status_;
-    }
-    
-    // optional bytes response = 3;
-    public static final int RESPONSE_FIELD_NUMBER = 3;
-    private com.google.protobuf.ByteString response_;
-    public boolean hasResponse() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
-    }
-    public com.google.protobuf.ByteString getResponse() {
-      return response_;
-    }
-    
-    // optional .RpcException exception = 4;
-    public static final int EXCEPTION_FIELD_NUMBER = 4;
-    private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException exception_;
-    public boolean hasException() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
-    }
-    public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException getException() {
-      return exception_;
-    }
-    public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcExceptionOrBuilder getExceptionOrBuilder() {
-      return exception_;
-    }
-    
-    private void initFields() {
-      callId_ = 0;
-      status_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status.SUCCESS;
-      response_ = com.google.protobuf.ByteString.EMPTY;
-      exception_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.getDefaultInstance();
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-      
-      if (!hasCallId()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasStatus()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (hasException()) {
-        if (!getException().isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-    
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeInt32(1, callId_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeEnum(2, status_.getNumber());
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeBytes(3, response_);
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeMessage(4, exception_);
-      }
-      getUnknownFields().writeTo(output);
-    }
-    
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-    
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeInt32Size(1, callId_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(2, status_.getNumber());
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(3, response_);
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(4, exception_);
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-    
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
-    }
-    
-    @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse)) {
-        return super.equals(obj);
-      }
-      org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse other = (org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse) obj;
-      
-      boolean result = true;
-      result = result && (hasCallId() == other.hasCallId());
-      if (hasCallId()) {
-        result = result && (getCallId()
-            == other.getCallId());
-      }
-      result = result && (hasStatus() == other.hasStatus());
-      if (hasStatus()) {
-        result = result &&
-            (getStatus() == other.getStatus());
-      }
-      result = result && (hasResponse() == other.hasResponse());
-      if (hasResponse()) {
-        result = result && getResponse()
-            .equals(other.getResponse());
-      }
-      result = result && (hasException() == other.hasException());
-      if (hasException()) {
-        result = result && getException()
-            .equals(other.getException());
-      }
-      result = result &&
-          getUnknownFields().equals(other.getUnknownFields());
-      return result;
-    }
-    
-    @java.lang.Override
-    public int hashCode() {
-      int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasCallId()) {
-        hash = (37 * hash) + CALLID_FIELD_NUMBER;
-        hash = (53 * hash) + getCallId();
-      }
-      if (hasStatus()) {
-        hash = (37 * hash) + STATUS_FIELD_NUMBER;
-        hash = (53 * hash) + hashEnum(getStatus());
-      }
-      if (hasResponse()) {
-        hash = (37 * hash) + RESPONSE_FIELD_NUMBER;
-        hash = (53 * hash) + getResponse().hashCode();
-      }
-      if (hasException()) {
-        hash = (37 * hash) + EXCEPTION_FIELD_NUMBER;
-        hash = (53 * hash) + getException().hashCode();
-      }
-      hash = (29 * hash) + getUnknownFields().hashCode();
-      return hash;
-    }
-    
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-    
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcResponse_descriptor;
-      }
-      
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RpcResponse_fieldAccessorTable;
-      }
-      
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-      
-      private Builder(BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getExceptionFieldBuilder();
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-      
-      public Builder clear() {
-        super.clear();
-        callId_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000001);
-        status_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status.SUCCESS;
-        bitField0_ = (bitField0_ & ~0x00000002);
-        response_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000004);
-        if (exceptionBuilder_ == null) {
-          exception_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.getDefaultInstance();
-        } else {
-          exceptionBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000008);
-        return this;
-      }
-      
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-      
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.getDescriptor();
-      }
-      
-      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.getDefaultInstance();
-      }
-      
-      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse build() {
-        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
-      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse result = new org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        result.callId_ = callId_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.status_ = status_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
-        }
-        result.response_ = response_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-          to_bitField0_ |= 0x00000008;
-        }
-        if (exceptionBuilder_ == null) {
-          result.exception_ = exception_;
-        } else {
-          result.exception_ = exceptionBuilder_.build();
-        }
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-      
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-      
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.getDefaultInstance()) return this;
-        if (other.hasCallId()) {
-          setCallId(other.getCallId());
-        }
-        if (other.hasStatus()) {
-          setStatus(other.getStatus());
-        }
-        if (other.hasResponse()) {
-          setResponse(other.getResponse());
-        }
-        if (other.hasException()) {
-          mergeException(other.getException());
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-      
-      public final boolean isInitialized() {
-        if (!hasCallId()) {
-          
-          return false;
-        }
-        if (!hasStatus()) {
-          
-          return false;
-        }
-        if (hasException()) {
-          if (!getException().isInitialized()) {
-            
-            return false;
-          }
-        }
-        return true;
-      }
-      
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              callId_ = input.readInt32();
-              break;
-            }
-            case 16: {
-              int rawValue = input.readEnum();
-              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status value = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status.valueOf(rawValue);
-              if (value == null) {
-                unknownFields.mergeVarintField(2, rawValue);
-              } else {
-                bitField0_ |= 0x00000002;
-                status_ = value;
-              }
-              break;
-            }
-            case 26: {
-              bitField0_ |= 0x00000004;
-              response_ = input.readBytes();
-              break;
-            }
-            case 34: {
-              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.newBuilder();
-              if (hasException()) {
-                subBuilder.mergeFrom(getException());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setException(subBuilder.buildPartial());
-              break;
-            }
-          }
-        }
-      }
-      
-      private int bitField0_;
-      
-      // required int32 callId = 1;
-      private int callId_ ;
-      public boolean hasCallId() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      public int getCallId() {
-        return callId_;
-      }
-      public Builder setCallId(int value) {
-        bitField0_ |= 0x00000001;
-        callId_ = value;
-        onChanged();
-        return this;
-      }
-      public Builder clearCallId() {
-        bitField0_ = (bitField0_ & ~0x00000001);
-        callId_ = 0;
-        onChanged();
-        return this;
-      }
-      
-      // required .RpcResponse.Status status = 2;
-      private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status status_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status.SUCCESS;
-      public boolean hasStatus() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
-      }
-      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status getStatus() {
-        return status_;
-      }
-      public Builder setStatus(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status value) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000002;
-        status_ = value;
-        onChanged();
-        return this;
-      }
-      public Builder clearStatus() {
-        bitField0_ = (bitField0_ & ~0x00000002);
-        status_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Status.SUCCESS;
-        onChanged();
-        return this;
-      }
-      
-      // optional bytes response = 3;
-      private com.google.protobuf.ByteString response_ = com.google.protobuf.ByteString.EMPTY;
-      public boolean hasResponse() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
-      }
-      public com.google.protobuf.ByteString getResponse() {
-        return response_;
-      }
-      public Builder setResponse(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
-        response_ = value;
-        onChanged();
-        return this;
-      }
-      public Builder clearResponse() {
-        bitField0_ = (bitField0_ & ~0x00000004);
-        response_ = getDefaultInstance().getResponse();
-        onChanged();
-        return this;
-      }
-      
-      // optional .RpcException exception = 4;
-      private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException exception_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.getDefaultInstance();
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.Builder, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcExceptionOrBuilder> exceptionBuilder_;
-      public boolean hasException() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
-      }
-      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException getException() {
-        if (exceptionBuilder_ == null) {
-          return exception_;
-        } else {
-          return exceptionBuilder_.getMessage();
-        }
-      }
-      public Builder setException(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException value) {
-        if (exceptionBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          exception_ = value;
-          onChanged();
-        } else {
-          exceptionBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000008;
-        return this;
-      }
-      public Builder setException(
-          org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.Builder builderForValue) {
-        if (exceptionBuilder_ == null) {
-          exception_ = builderForValue.build();
-          onChanged();
-        } else {
-          exceptionBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000008;
-        return this;
-      }
-      public Builder mergeException(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException value) {
-        if (exceptionBuilder_ == null) {
-          if (((bitField0_ & 0x00000008) == 0x00000008) &&
-              exception_ != org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.getDefaultInstance()) {
-            exception_ =
-              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.newBuilder(exception_).mergeFrom(value).buildPartial();
-          } else {
-            exception_ = value;
-          }
-          onChanged();
-        } else {
-          exceptionBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000008;
-        return this;
-      }
-      public Builder clearException() {
-        if (exceptionBuilder_ == null) {
-          exception_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.getDefaultInstance();
-          onChanged();
-        } else {
-          exceptionBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000008);
-        return this;
-      }
-      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.Builder getExceptionBuilder() {
-        bitField0_ |= 0x00000008;
-        onChanged();
-        return getExceptionFieldBuilder().getBuilder();
-      }
-      public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcExceptionOrBuilder getExceptionOrBuilder() {
-        if (exceptionBuilder_ != null) {
-          return exceptionBuilder_.getMessageOrBuilder();
-        } else {
-          return exception_;
-        }
-      }
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.Builder, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcExceptionOrBuilder> 
-          getExceptionFieldBuilder() {
-        if (exceptionBuilder_ == null) {
-          exceptionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.Builder, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcExceptionOrBuilder>(
-                  exception_,
-                  getParentForChildren(),
-                  isClean());
-          exception_ = null;
-        }
-        return exceptionBuilder_;
-      }
-      
-      // @@protoc_insertion_point(builder_scope:RpcResponse)
-    }
-    
-    static {
-      defaultInstance = new RpcResponse(true);
-      defaultInstance.initFields();
-    }
-    
-    // @@protoc_insertion_point(class_scope:RpcResponse)
-  }
-  
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_UserInformation_descriptor;
   private static
@@ -2844,20 +3467,30 @@ public final class RPCProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_ConnectionHeader_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RpcRequest_descriptor;
+    internal_static_RpcRequestHeader_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RpcRequest_fieldAccessorTable;
+      internal_static_RpcRequestHeader_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_RpcRequestBody_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_RpcRequestBody_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_RpcResponseHeader_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_RpcResponseHeader_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_RpcResponseBody_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_RpcResponseBody_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_RpcException_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_RpcException_fieldAccessorTable;
-  private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RpcResponse_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RpcResponse_fieldAccessorTable;
   
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -2871,16 +3504,17 @@ public final class RPCProtos {
       "iveUser\030\001 \002(\t\022\020\n\010realUser\030\002 \001(\t\"w\n\020Conne" +
       "ctionHeader\022\"\n\010userInfo\030\001 \001(\0132\020.UserInfo" +
       "rmation\022?\n\010protocol\030\002 \001(\t:-org.apache.ha" +
-      "doop.hbase.client.ClientProtocol\"-\n\nRpcR" +
-      "equest\022\016\n\006callId\030\001 \002(\005\022\017\n\007request\030\002 \001(\014\"" +
-      "9\n\014RpcException\022\025\n\rexceptionName\030\001 \002(\t\022\022" +
-      "\n\nstackTrace\030\002 \001(\t\"\243\001\n\013RpcResponse\022\016\n\006ca" +
-      "llId\030\001 \002(\005\022#\n\006status\030\002 \002(\0162\023.RpcResponse" +
-      ".Status\022\020\n\010response\030\003 \001(\014\022 \n\texception\030\004",
-      " \001(\0132\r.RpcException\"+\n\006Status\022\013\n\007SUCCESS" +
-      "\020\000\022\t\n\005ERROR\020\001\022\t\n\005FATAL\020\002B<\n*org.apache.h" +
-      "adoop.hbase.protobuf.generatedB\tRPCProto" +
-      "sH\001\240\001\001"
+      "doop.hbase.client.ClientProtocol\"\"\n\020RpcR" +
+      "equestHeader\022\016\n\006callId\030\001 \002(\r\"T\n\016RpcReque" +
+      "stBody\022\022\n\nmethodName\030\001 \002(\t\022\035\n\025clientProt" +
+      "ocolVersion\030\002 \001(\004\022\017\n\007request\030\003 \001(\014\"{\n\021Rp" +
+      "cResponseHeader\022\016\n\006callId\030\001 \002(\005\022)\n\006statu" +
+      "s\030\002 \002(\0162\031.RpcResponseHeader.Status\"+\n\006St",
+      "atus\022\013\n\007SUCCESS\020\000\022\t\n\005ERROR\020\001\022\t\n\005FATAL\020\002\"" +
+      "#\n\017RpcResponseBody\022\020\n\010response\030\001 \001(\014\"9\n\014" +
+      "RpcException\022\025\n\rexceptionName\030\001 \002(\t\022\022\n\ns" +
+      "tackTrace\030\002 \001(\tB<\n*org.apache.hadoop.hba" +
+      "se.protobuf.generatedB\tRPCProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -2903,30 +3537,46 @@ public final class RPCProtos {
               new java.lang.String[] { "UserInfo", "Protocol", },
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader.class,
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader.Builder.class);
-          internal_static_RpcRequest_descriptor =
+          internal_static_RpcRequestHeader_descriptor =
             getDescriptor().getMessageTypes().get(2);
-          internal_static_RpcRequest_fieldAccessorTable = new
+          internal_static_RpcRequestHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RpcRequest_descriptor,
-              new java.lang.String[] { "CallId", "Request", },
-              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest.class,
-              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequest.Builder.class);
-          internal_static_RpcException_descriptor =
+              internal_static_RpcRequestHeader_descriptor,
+              new java.lang.String[] { "CallId", },
+              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader.class,
+              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader.Builder.class);
+          internal_static_RpcRequestBody_descriptor =
             getDescriptor().getMessageTypes().get(3);
+          internal_static_RpcRequestBody_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_RpcRequestBody_descriptor,
+              new java.lang.String[] { "MethodName", "ClientProtocolVersion", "Request", },
+              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody.class,
+              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody.Builder.class);
+          internal_static_RpcResponseHeader_descriptor =
+            getDescriptor().getMessageTypes().get(4);
+          internal_static_RpcResponseHeader_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_RpcResponseHeader_descriptor,
+              new java.lang.String[] { "CallId", "Status", },
+              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.class,
+              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Builder.class);
+          internal_static_RpcResponseBody_descriptor =
+            getDescriptor().getMessageTypes().get(5);
+          internal_static_RpcResponseBody_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_RpcResponseBody_descriptor,
+              new java.lang.String[] { "Response", },
+              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody.class,
+              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseBody.Builder.class);
+          internal_static_RpcException_descriptor =
+            getDescriptor().getMessageTypes().get(6);
           internal_static_RpcException_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RpcException_descriptor,
               new java.lang.String[] { "ExceptionName", "StackTrace", },
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.class,
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException.Builder.class);
-          internal_static_RpcResponse_descriptor =
-            getDescriptor().getMessageTypes().get(4);
-          internal_static_RpcResponse_fieldAccessorTable = new
-            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RpcResponse_descriptor,
-              new java.lang.String[] { "CallId", "Status", "Response", "Exception", },
-              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.class,
-              org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponse.Builder.class);
           return null;
         }
       };

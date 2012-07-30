@@ -57,7 +57,7 @@ public class Invocation extends VersionedWritable implements Configurable {
 
   // For generated protocol classes which don't have VERSION field,
   // such as protobuf interfaces.
-  private static final Map<Class<?>, Long>
+  static final Map<Class<?>, Long>
     PROTOCOL_VERSION = new HashMap<Class<?>, Long>();
 
   static {

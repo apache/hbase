@@ -28,18 +28,14 @@ import java.lang.reflect.UndeclaredThrowableException;
 
 import java.net.InetSocketAddress;
 import java.io.*;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
 
 import javax.net.SocketFactory;
 
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.client.AdminProtocol;
-import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
@@ -68,57 +64,6 @@ class WritableRpcEngine implements RpcEngine {
   // LOG is NOT in hbase subpackage intentionally so that the default HBase
   // DEBUG log level does NOT emit RPC-level logging.
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.ipc.RPCEngine");
-
-  /* Cache a client using its socket factory as the hash key */
-  static private class ClientCache {
-    private Map<SocketFactory, HBaseClient> clients =
-      new HashMap<SocketFactory, HBaseClient>();
-
-    protected ClientCache() {}
-
-    /**
-     * Construct & cache an IPC client with the user-provided SocketFactory
-     * if no cached client exists.
-     *
-     * @param conf Configuration
-     * @param factory socket factory
-     * @return an IPC client
-     */
-    protected synchronized HBaseClient getClient(Configuration conf,
-        SocketFactory factory) {
-      // Construct & cache client.  The configuration is only used for timeout,
-      // and Clients have connection pools.  So we can either (a) lose some
-      // connection pooling and leak sockets, or (b) use the same timeout for
-      // all configurations.  Since the IPC is usually intended globally, not
-      // per-job, we choose (a).
-      HBaseClient client = clients.get(factory);
-      if (client == null) {
-        // Make an hbase client instead of hadoop Client.
-        client = new HBaseClient(HbaseObjectWritable.class, conf, factory);
-        clients.put(factory, client);
-      } else {
-        client.incCount();
-      }
-      return client;
-    }
-
-    /**
-     * Stop a RPC client connection
-     * A RPC client is closed only when its reference count becomes zero.
-     * @param client client to stop
-     */
-    protected void stopClient(HBaseClient client) {
-      synchronized (this) {
-        client.decCount();
-        if (client.isZeroReference()) {
-          clients.remove(client.getSocketFactory());
-        }
-      }
-      if (client.isZeroReference()) {
-        client.stop();
-      }
-    }
-  }
 
   protected final static ClientCache CLIENTS = new ClientCache();
 
@@ -150,8 +95,8 @@ class WritableRpcEngine implements RpcEngine {
 
       try {
         HbaseObjectWritable value = (HbaseObjectWritable)
-          client.call(new Invocation(method, args), address,
-                      protocol, ticket, rpcTimeout);
+          client.call(new Invocation(method, args), address, protocol, ticket, 
+                      rpcTimeout);
         if (logDebug) {
           // FIGURE HOW TO TURN THIS OFF!
           long callTime = System.currentTimeMillis() - startTime;
@@ -271,18 +216,23 @@ class WritableRpcEngine implements RpcEngine {
 
     /** Construct an RPC server.
      * @param instance the instance whose methods will be called
+     * @param ifaces the interfaces the server supports
+     * @param paramClass an instance of this class is used to read the RPC requests
      * @param conf the configuration to use
      * @param bindAddress the address to bind on to listen for connection
      * @param port the port to listen for connections on
      * @param numHandlers the number of method handler threads to run
+     * @param metaHandlerCount the number of meta handlers desired
      * @param verbose whether each call should be logged
+     * @param highPriorityLevel the priority level this server treats as high priority RPCs
      * @throws IOException e
      */
     public Server(Object instance, final Class<?>[] ifaces,
+                  Class<? extends Writable> paramClass,
                   Configuration conf, String bindAddress,  int port,
                   int numHandlers, int metaHandlerCount, boolean verbose,
                   int highPriorityLevel) throws IOException {
-      super(bindAddress, port, Invocation.class, numHandlers, metaHandlerCount,
+      super(bindAddress, port, paramClass, numHandlers, metaHandlerCount,
           conf, classNameBase(instance.getClass().getName()),
           highPriorityLevel);
       this.instance = instance;
@@ -299,6 +249,14 @@ class WritableRpcEngine implements RpcEngine {
           DEFAULT_WARN_RESPONSE_TIME);
       this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE,
           DEFAULT_WARN_RESPONSE_SIZE);
+    }
+
+    public Server(Object instance, final Class<?>[] ifaces,
+        Configuration conf, String bindAddress,  int port,
+        int numHandlers, int metaHandlerCount, boolean verbose,
+        int highPriorityLevel) throws IOException {
+      this(instance, ifaces, Invocation.class, conf, bindAddress, port, 
+          numHandlers, metaHandlerCount, verbose, highPriorityLevel);
     }
 
     public AuthenticationTokenSecretManager createSecretManager(){
@@ -341,7 +299,7 @@ class WritableRpcEngine implements RpcEngine {
           throw new IOException("Could not find requested method, the usual " +
               "cause is a version mismatch between client and server.");
         }
-        if (verbose) log("Call: " + call);
+        if (verbose) log("Call: " + call, LOG);
         status.setRPC(call.getMethodName(), call.getParameters(), receivedTime);
         status.setRPCPacket(param);
         status.resume("Servicing call");
@@ -389,7 +347,7 @@ class WritableRpcEngine implements RpcEngine {
         rpcMetrics.rpcQueueTime.inc(qTime);
         rpcMetrics.rpcProcessingTime.inc(processingTime);
         rpcMetrics.inc(call.getMethodName(), processingTime);
-        if (verbose) log("Return: "+value);
+        if (verbose) log("Return: "+value, LOG);
 
         HbaseObjectWritable retVal =
           new HbaseObjectWritable(method.getReturnType(), value);
@@ -403,7 +361,8 @@ class WritableRpcEngine implements RpcEngine {
         if (tooSlow || tooLarge) {
           // when tagging, we let TooLarge trump TooSmall to keep output simple
           // note that large responses will often also be slow.
-          logResponse(call, (tooLarge ? "TooLarge" : "TooSlow"),
+          logResponse(call.getParameters(), call.getMethodName(), 
+              call.toString(), (tooLarge ? "TooLarge" : "TooSlow"),
               status.getClient(), startTime, processingTime, qTime,
               responseSize);
           // provides a count of log-reported slow responses
@@ -444,7 +403,9 @@ class WritableRpcEngine implements RpcEngine {
     /**
      * Logs an RPC response to the LOG file, producing valid JSON objects for
      * client Operations.
-     * @param call The call to log.
+     * @param params The parameters received in the call.
+     * @param methodName The name of the method invoked
+     * @param call The string representation of the call
      * @param tag  The tag that will be used to indicate this event in the log.
      * @param client          The address of the client who made this call.
      * @param startTime       The time that the call was initiated, in ms.
@@ -453,10 +414,10 @@ class WritableRpcEngine implements RpcEngine {
      *                        prior to being initiated, in ms.
      * @param responseSize    The size in bytes of the response buffer.
      */
-    private void logResponse(Invocation call, String tag, String clientAddress,
-        long startTime, int processingTime, int qTime, long responseSize)
+     void logResponse(Object[] params, String methodName, String call, String tag, 
+         String clientAddress, long startTime, int processingTime, int qTime, 
+         long responseSize)
       throws IOException {
-      Object params[] = call.getParameters();
       // for JSON encoding
       ObjectMapper mapper = new ObjectMapper();
       // base information that is reported regardless of type of call
@@ -467,7 +428,7 @@ class WritableRpcEngine implements RpcEngine {
       responseInfo.put("responsesize", responseSize);
       responseInfo.put("client", clientAddress);
       responseInfo.put("class", instance.getClass().getSimpleName());
-      responseInfo.put("method", call.getMethodName());
+      responseInfo.put("method", methodName);
       if (params.length == 2 && instance instanceof HRegionServer &&
           params[0] instanceof byte[] &&
           params[1] instanceof Operation) {
@@ -491,14 +452,14 @@ class WritableRpcEngine implements RpcEngine {
       } else {
         // can't get JSON details, so just report call.toString() along with 
         // a more generic tag.
-        responseInfo.put("call", call.toString());
+        responseInfo.put("call", call);
         LOG.warn("(response" + tag + "): " +
             mapper.writeValueAsString(responseInfo));
       }
     }
   }
 
-  protected static void log(String value) {
+  protected static void log(String value, Log LOG) {
     String v = value;
     if (v != null && v.length() > 55)
       v = v.substring(0, 55)+"...";

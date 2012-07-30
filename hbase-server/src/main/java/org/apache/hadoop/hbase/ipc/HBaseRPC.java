@@ -34,6 +34,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import javax.net.SocketFactory;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -100,6 +101,13 @@ public class HBaseRPC {
         return HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
       }
     };
+
+  static long getProtocolVersion(Class<? extends VersionedProtocol> protocol)
+      throws NoSuchFieldException, IllegalAccessException {
+    Field versionField = protocol.getField("VERSION");
+    versionField.setAccessible(true);
+    return versionField.getLong(protocol);
+  }
 
   // set a protocol to use a non-default RpcEngine
   static void setProtocolEngine(Configuration conf,
@@ -333,16 +341,21 @@ public class HBaseRPC {
       long clientVersion, InetSocketAddress addr, User ticket,
       Configuration conf, SocketFactory factory, int rpcTimeout)
   throws IOException {
-    VersionedProtocol proxy =
-        getProtocolEngine(protocol,conf)
-            .getProxy(protocol, clientVersion, addr, ticket, conf, factory, Math.min(rpcTimeout, HBaseRPC.getRpcTimeout()));
-    long serverVersion = proxy.getProtocolVersion(protocol.getName(),
-                                                  clientVersion);
-    if (serverVersion == clientVersion) {
-      return proxy;
-    }
-    throw new VersionMismatch(protocol.getName(), clientVersion,
+    RpcEngine engine = getProtocolEngine(protocol,conf);
+    VersionedProtocol proxy = engine
+            .getProxy(protocol, clientVersion, addr, ticket, conf, factory,
+                Math.min(rpcTimeout, HBaseRPC.getRpcTimeout()));
+    if (engine instanceof WritableRpcEngine) {
+      long serverVersion = proxy.getProtocolVersion(protocol.getName(),
+          clientVersion);
+      if (serverVersion == clientVersion) {
+        return proxy;
+      }
+
+      throw new VersionMismatch(protocol.getName(), clientVersion,
                               serverVersion);
+    }
+    return proxy;
   }
 
   /**

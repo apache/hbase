@@ -499,7 +499,7 @@ public class  HRegionServer implements ClientProtocol,
       throw new IllegalArgumentException("Failed resolve of " + initialIsa);
     }
 
-    this.rpcServer = HBaseRPC.getServer(this,
+    this.rpcServer = HBaseRPC.getServer(AdminProtocol.class, this,
       new Class<?>[]{ClientProtocol.class,
         AdminProtocol.class, HBaseRPCErrorHandler.class,
         OnlineRegions.class},
