@@ -62,7 +62,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
@@ -225,9 +224,7 @@ public class Store extends SchemaConfigured implements HeapSize {
         Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
     LOG.info("time to purge deletes set to " + timeToPurgeDeletes +
         "ms in store " + this);
-    scanInfo = new ScanInfo(family.getName(), family.getMinVersions(),
-        family.getMaxVersions(), ttl, family.getKeepDeletedCells(),
-        timeToPurgeDeletes, this.comparator);
+    scanInfo = new ScanInfo(family, ttl, timeToPurgeDeletes, this.comparator);
     this.memstore = new MemStore(conf, this.comparator);
     this.storeNameStr = getColumnFamilyName();
 
@@ -698,15 +695,30 @@ public class Store extends SchemaConfigured implements HeapSize {
     if (set.size() == 0) {
       return null;
     }
-    Scan scan = new Scan();
-    scan.setMaxVersions(scanInfo.getMaxVersions());
     // Use a store scanner to find which rows to flush.
     // Note that we need to retain deletes, hence
     // treat this as a minor compaction.
-    InternalScanner scanner = new StoreScanner(this, scan, Collections
-        .singletonList(new CollectionBackedScanner(set, this.comparator)),
-        ScanType.MINOR_COMPACT, this.region.getSmallestReadPoint(),
-        HConstants.OLDEST_TIMESTAMP);
+    InternalScanner scanner = null;
+    KeyValueScanner memstoreScanner = new CollectionBackedScanner(set, this.comparator);
+    if (getHRegion().getCoprocessorHost() != null) {
+      scanner = getHRegion().getCoprocessorHost().preFlushScannerOpen(this, memstoreScanner);
+    }
+    if (scanner == null) {
+      Scan scan = new Scan();
+      scan.setMaxVersions(scanInfo.getMaxVersions());
+      scanner = new StoreScanner(this, scanInfo, scan, Collections.singletonList(new CollectionBackedScanner(
+          set, this.comparator)), ScanType.MINOR_COMPACT, this.region.getSmallestReadPoint(),
+          HConstants.OLDEST_TIMESTAMP);
+    }
+    if (getHRegion().getCoprocessorHost() != null) {
+      InternalScanner cpScanner =
+        getHRegion().getCoprocessorHost().preFlush(this, scanner);
+      // NULL scanner returned from coprocessor hooks means skip normal processing
+      if (cpScanner == null) {
+        return null;
+      }
+      scanner = cpScanner;
+    }
     try {
       // TODO:  We can fail in the below block before we complete adding this
       // flush to list of store files.  Add cleanup of anything put on filesystem
@@ -1543,20 +1555,27 @@ public class Store extends SchemaConfigured implements HeapSize {
     try {
       InternalScanner scanner = null;
       try {
-        Scan scan = new Scan();
-        scan.setMaxVersions(family.getMaxVersions());
-        /* include deletes, unless we are doing a major compaction */
-        scanner = new StoreScanner(this, scan, scanners,
-            majorCompaction ? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT,
+        if (getHRegion().getCoprocessorHost() != null) {
+          scanner = getHRegion()
+              .getCoprocessorHost()
+              .preCompactScannerOpen(this, scanners,
+                  majorCompaction ? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT, earliestPutTs);
+        }
+        if (scanner == null) {
+          Scan scan = new Scan();
+          scan.setMaxVersions(getFamily().getMaxVersions());
+          /* Include deletes, unless we are doing a major compaction */
+          scanner = new StoreScanner(this, getScanInfo(), scan, scanners,
+            majorCompaction? ScanType.MAJOR_COMPACT : ScanType.MINOR_COMPACT,
             smallestReadPoint, earliestPutTs);
-        if (region.getCoprocessorHost() != null) {
-          InternalScanner cpScanner = region.getCoprocessorHost().preCompact(
-              this, scanner);
+        }
+        if (getHRegion().getCoprocessorHost() != null) {
+          InternalScanner cpScanner =
+            getHRegion().getCoprocessorHost().preCompact(this, scanner);
           // NULL scanner returned from coprocessor hooks means skip normal processing
           if (cpScanner == null) {
             return null;
           }
-
           scanner = cpScanner;
         }
 
@@ -2036,11 +2055,18 @@ public class Store extends SchemaConfigured implements HeapSize {
    * are not in a compaction.
    * @throws IOException
    */
-  public StoreScanner getScanner(Scan scan,
+  public KeyValueScanner getScanner(Scan scan,
       final NavigableSet<byte []> targetCols) throws IOException {
     lock.readLock().lock();
     try {
-      return new StoreScanner(this, scan, targetCols);
+      KeyValueScanner scanner = null;
+      if (getHRegion().getCoprocessorHost() != null) {
+        scanner = getHRegion().getCoprocessorHost().preStoreScannerOpen(this, scan, targetCols);
+      }
+      if (scanner == null) {
+        scanner = new StoreScanner(this, getScanInfo(), scan, targetCols);
+      }
+      return scanner;
     } finally {
       lock.readLock().unlock();
     }
@@ -2152,7 +2178,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
   }
 
-  HRegion getHRegion() {
+  public HRegion getHRegion() {
     return this.region;
   }
 
@@ -2255,6 +2281,12 @@ public class Store extends SchemaConfigured implements HeapSize {
       }
       storeFile = Store.this.commitFile(storeFilePath, cacheFlushId,
                                snapshotTimeRangeTracker, flushedSize, status);
+      if (Store.this.getHRegion().getCoprocessorHost() != null) {
+        Store.this.getHRegion()
+            .getCoprocessorHost()
+            .postFlush(Store.this, storeFile);
+      }
+
       // Add new file to store files.  Clear snapshot too while we have
       // the Store write lock.
       return Store.this.updateStorefiles(storeFile, snapshot);
@@ -2297,6 +2329,10 @@ public class Store extends SchemaConfigured implements HeapSize {
     return comparator;
   }
 
+  public ScanInfo getScanInfo() {
+    return scanInfo;
+  }
+
   /**
    * Immutable information for scans over a store.
    */
@@ -2313,6 +2349,17 @@ public class Store extends SchemaConfigured implements HeapSize {
         + (2 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_INT)
         + Bytes.SIZEOF_LONG + Bytes.SIZEOF_BOOLEAN);
 
+    /**
+     * @param family {@link HColumnDescriptor} describing the column family
+     * @param ttl Store's TTL (in ms)
+     * @param timeToPurgeDeletes duration in ms after which a delete marker can
+     *        be purged during a major compaction.
+     * @param comparator The store's comparator
+     */
+    public ScanInfo(HColumnDescriptor family, long ttl, long timeToPurgeDeletes, KVComparator comparator) {
+      this(family.getName(), family.getMinVersions(), family.getMaxVersions(), ttl, family
+          .getKeepDeletedCells(), timeToPurgeDeletes, comparator);
+    }
     /**
      * @param family Name of this store's column family
      * @param minVersions Store's MIN_VERSIONS setting

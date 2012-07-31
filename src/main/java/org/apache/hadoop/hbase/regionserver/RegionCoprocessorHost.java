@@ -304,6 +304,31 @@ public class RegionCoprocessorHost
   }
 
   /**
+   * See
+   * {@link RegionObserver#preCompactScannerOpen(ObserverContext, Store, List, ScanType, long, InternalScanner)}
+   */
+  public InternalScanner preCompactScannerOpen(Store store, List<StoreFileScanner> scanners,
+      ScanType scanType, long earliestPutTs) throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    InternalScanner s = null;
+    for (RegionEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          s = ((RegionObserver) env.getInstance()).preCompactScannerOpen(ctx, store, scanners,
+              scanType, earliestPutTs, s);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env,e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return s;
+  }
+
+  /**
    * Called prior to selecting the {@link StoreFile}s for compaction from
    * the list of currently available candidates.
    * @param store The store where compaction is being requested
@@ -389,7 +414,7 @@ public class RegionCoprocessorHost
    * Called after the store compaction has completed.
    * @param store the store being compacted
    * @param resultFile the new store file written during compaction
-   * @throws IOException 
+   * @throws IOException
    */
   public void postCompact(Store store, StoreFile resultFile) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
@@ -406,6 +431,31 @@ public class RegionCoprocessorHost
         }
       }
     }
+  }
+
+  /**
+   * Invoked before a memstore flush
+   * @throws IOException
+   */
+  public InternalScanner preFlush(Store store, InternalScanner scanner) throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    boolean bypass = false;
+    for (RegionEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          scanner = ((RegionObserver)env.getInstance()).preFlush(
+              ctx, store, scanner);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env,e);
+        }
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return bypass ? null : scanner;
   }
 
   /**
@@ -430,8 +480,31 @@ public class RegionCoprocessorHost
   }
 
   /**
+   * See
+   * {@link RegionObserver#preFlush(ObserverContext, Store, KeyValueScanner)}
+   */
+  public InternalScanner preFlushScannerOpen(Store store, KeyValueScanner memstoreScanner) throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    InternalScanner s = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          s = ((RegionObserver) env.getInstance()).preFlushScannerOpen(ctx, store, memstoreScanner, s);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return s;
+  }
+
+  /**
    * Invoked after a memstore flush
-   * @throws IOException 
+   * @throws IOException
    */
   public void postFlush() throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
@@ -451,8 +524,29 @@ public class RegionCoprocessorHost
   }
 
   /**
+   * Invoked after a memstore flush
+   * @throws IOException
+   */
+  public void postFlush(final Store store, final StoreFile storeFile) throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionObserver)env.getInstance()).postFlush(ctx, store, storeFile);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
+  /**
    * Invoked just before a split
-   * @throws IOException 
+   * @throws IOException
    */
   public void preSplit() throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
@@ -1086,6 +1180,31 @@ public class RegionCoprocessorHost
       }
     }
     return bypass ? s : null;
+  }
+
+  /**
+   * See
+   * {@link RegionObserver#preStoreScannerOpen(ObserverContext, Store, Scan, NavigableSet, KeyValueScanner)}
+   */
+  public KeyValueScanner preStoreScannerOpen(Store store, Scan scan,
+      final NavigableSet<byte[]> targetCols) throws IOException {
+    KeyValueScanner s = null;
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          s = ((RegionObserver) env.getInstance()).preStoreScannerOpen(ctx, store, scan,
+              targetCols, s);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return s;
   }
 
   /**
