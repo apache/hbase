@@ -33,8 +33,6 @@ import org.apache.hadoop.hbase.regionserver.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
-import org.apache.hadoop.hbase.regionserver.StoreScanner.ScanType;
-
 /**
  * A query matcher that is specifically designed for the scan case.
  */
@@ -136,7 +134,7 @@ public class ScanQueryMatcher {
    *  based on TTL
    */
   public ScanQueryMatcher(Scan scan, Store.ScanInfo scanInfo,
-      NavigableSet<byte[]> columns, StoreScanner.ScanType scanType,
+      NavigableSet<byte[]> columns, ScanType scanType,
       long readPointToUse, long earliestPutTs, long oldestUnexpiredTS) {
     this.tr = scan.getTimeRange();
     this.rowComparator = scanInfo.getComparator().getRawComparator();
@@ -183,7 +181,7 @@ public class ScanQueryMatcher {
    */
   ScanQueryMatcher(Scan scan, Store.ScanInfo scanInfo,
       NavigableSet<byte[]> columns, long oldestUnexpiredTS) {
-    this(scan, scanInfo, columns, StoreScanner.ScanType.USER_SCAN,
+    this(scan, scanInfo, columns, ScanType.USER_SCAN,
           Long.MAX_VALUE, /* max Readpoint to track versions */
         HConstants.LATEST_TIMESTAMP, oldestUnexpiredTS);
   }
