@@ -17,12 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-
 /**
  * Enum to distinguish general scan types.
  */
-@InterfaceAudience.Private
 public enum ScanType {
   MAJOR_COMPACT,
   MINOR_COMPACT,
