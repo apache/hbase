@@ -99,16 +99,6 @@ message Condition {
   required bytes qualifier = 3;
   required CompareType compareType = 4;
   required NameBytesPair comparator = 5;
-
-  enum CompareType {
-    LESS = 0;
-    LESS_OR_EQUAL = 1;
-    EQUAL = 2;
-    NOT_EQUAL = 3;
-    GREATER_OR_EQUAL = 4;
-    GREATER = 5;
-    NO_OP = 6;
-  }
 }
 
 /**

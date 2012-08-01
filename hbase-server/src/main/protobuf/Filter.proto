@@ -1,0 +1,129 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// This file contains protocol buffers that are used for filters
+
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "FilterProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
+
+import "hbase.proto";
+
+message ColumnCountGetFilter {
+  required int32 limit = 1;
+}
+
+message ColumnPaginationFilter {
+  required int32 limit = 1;
+  optional int32 offset = 2;
+}
+
+message ColumnPrefixFilter {
+  required bytes prefix = 1;
+}
+
+message ColumnRangeFilter {
+  required bytes minColumn = 1;
+  optional bool minColumnInclusive = 2;
+  required bytes maxColumn = 3;
+  optional bool maxColumnInclusive = 4;
+}
+
+message CompareFilter {
+  required CompareType compareOp = 1;
+  required bytes comparator = 2;
+  
+}
+
+message DependentColumnFilter {
+  required bytes columnFamily = 1;
+  required bytes columnQualifier = 2;
+  optional bool dropDependentColumn = 3;
+}
+
+message FamilyFilter {
+  required CompareFilter compareFilter = 1;
+}
+
+message FirstKeyOnlyFilter {
+}
+
+message InclusiveStopFilter {
+  required bytes stopRowKey = 1;
+}
+
+message KeyOnlyFilter {
+  required bool lenAsVal = 1;
+}
+
+message MultipleColumnPrefixFilter {
+  repeated bytes sortedPrefixes = 1;
+}
+
+message PageFilter {
+  required int64 pageSize = 1;
+}
+
+message PrefixFilter {
+  required bytes prefix = 1;
+}
+
+message QualifierFilter {
+  required CompareFilter compareFilter = 1;
+}
+
+message RandomRowFilter {
+  required float chance = 1;
+}
+
+message RowFilter {
+  required CompareFilter compareFilter = 1;
+}
+
+message SingleColumnValueExcludeFilter {
+  required SingleColumnValueFilter singleColumnValueFilter = 1;
+}
+
+message SingleColumnValueFilter {
+  required bytes columnFamily = 1;
+  required bytes columnQualifier = 2;
+  required CompareType compareOp = 3;
+  required bytes comparator = 4;
+  optional bool foundColumn = 5;
+  optional bool matchedColumn = 6;
+  optional bool filterIfMissing = 7;
+  optional bool latestVersionOnly = 8;
+}
+
+message SkipFilter {
+  required NameBytesPair filter = 1;
+}
+
+message TimestampsFilter {
+  repeated int64 timestamps = 1;
+}
+
+message ValueFilter {
+  required CompareFilter compareFilter = 1;
+}
+
+message WhileMatchFilter {
+  required NameBytesPair filter = 1;
+}

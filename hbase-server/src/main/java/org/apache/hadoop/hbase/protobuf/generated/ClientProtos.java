@@ -549,11 +549,11 @@ public final class ClientProtos {
     // optional bool cacheBlocks = 8 [default = true];
     boolean hasCacheBlocks();
     boolean getCacheBlocks();
-
+    
     // optional uint32 storeLimit = 9;
     boolean hasStoreLimit();
     int getStoreLimit();
-
+    
     // optional uint32 storeOffset = 10;
     boolean hasStoreOffset();
     int getStoreOffset();
@@ -704,7 +704,7 @@ public final class ClientProtos {
     public int getStoreLimit() {
       return storeLimit_;
     }
-
+    
     // optional uint32 storeOffset = 10;
     public static final int STOREOFFSET_FIELD_NUMBER = 10;
     private int storeOffset_;
@@ -714,7 +714,7 @@ public final class ClientProtos {
     public int getStoreOffset() {
       return storeOffset_;
     }
-
+    
     private void initFields() {
       row_ = com.google.protobuf.ByteString.EMPTY;
       column_ = java.util.Collections.emptyList();
@@ -2078,7 +2078,7 @@ public final class ClientProtos {
         onChanged();
         return this;
       }
-
+      
       // optional uint32 storeOffset = 10;
       private int storeOffset_ ;
       public boolean hasStoreOffset() {
@@ -2099,7 +2099,7 @@ public final class ClientProtos {
         onChanged();
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:Get)
     }
     
@@ -3835,9 +3835,9 @@ public final class ClientProtos {
     boolean hasQualifier();
     com.google.protobuf.ByteString getQualifier();
     
-    // required .Condition.CompareType compareType = 4;
+    // required .CompareType compareType = 4;
     boolean hasCompareType();
-    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.CompareType getCompareType();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType getCompareType();
     
     // required .NameBytesPair comparator = 5;
     boolean hasComparator();
@@ -3872,90 +3872,6 @@ public final class ClientProtos {
       return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_Condition_fieldAccessorTable;
     }
     
-    public enum CompareType
-        implements com.google.protobuf.ProtocolMessageEnum {
-      LESS(0, 0),
-      LESS_OR_EQUAL(1, 1),
-      EQUAL(2, 2),
-      NOT_EQUAL(3, 3),
-      GREATER_OR_EQUAL(4, 4),
-      GREATER(5, 5),
-      NO_OP(6, 6),
-      ;
-      
-      public static final int LESS_VALUE = 0;
-      public static final int LESS_OR_EQUAL_VALUE = 1;
-      public static final int EQUAL_VALUE = 2;
-      public static final int NOT_EQUAL_VALUE = 3;
-      public static final int GREATER_OR_EQUAL_VALUE = 4;
-      public static final int GREATER_VALUE = 5;
-      public static final int NO_OP_VALUE = 6;
-      
-      
-      public final int getNumber() { return value; }
-      
-      public static CompareType valueOf(int value) {
-        switch (value) {
-          case 0: return LESS;
-          case 1: return LESS_OR_EQUAL;
-          case 2: return EQUAL;
-          case 3: return NOT_EQUAL;
-          case 4: return GREATER_OR_EQUAL;
-          case 5: return GREATER;
-          case 6: return NO_OP;
-          default: return null;
-        }
-      }
-      
-      public static com.google.protobuf.Internal.EnumLiteMap<CompareType>
-          internalGetValueMap() {
-        return internalValueMap;
-      }
-      private static com.google.protobuf.Internal.EnumLiteMap<CompareType>
-          internalValueMap =
-            new com.google.protobuf.Internal.EnumLiteMap<CompareType>() {
-              public CompareType findValueByNumber(int number) {
-                return CompareType.valueOf(number);
-              }
-            };
-      
-      public final com.google.protobuf.Descriptors.EnumValueDescriptor
-          getValueDescriptor() {
-        return getDescriptor().getValues().get(index);
-      }
-      public final com.google.protobuf.Descriptors.EnumDescriptor
-          getDescriptorForType() {
-        return getDescriptor();
-      }
-      public static final com.google.protobuf.Descriptors.EnumDescriptor
-          getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.getDescriptor().getEnumTypes().get(0);
-      }
-      
-      private static final CompareType[] VALUES = {
-        LESS, LESS_OR_EQUAL, EQUAL, NOT_EQUAL, GREATER_OR_EQUAL, GREATER, NO_OP, 
-      };
-      
-      public static CompareType valueOf(
-          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
-        if (desc.getType() != getDescriptor()) {
-          throw new java.lang.IllegalArgumentException(
-            "EnumValueDescriptor is not for this type.");
-        }
-        return VALUES[desc.getIndex()];
-      }
-      
-      private final int index;
-      private final int value;
-      
-      private CompareType(int index, int value) {
-        this.index = index;
-        this.value = value;
-      }
-      
-      // @@protoc_insertion_point(enum_scope:Condition.CompareType)
-    }
-    
     private int bitField0_;
     // required bytes row = 1;
     public static final int ROW_FIELD_NUMBER = 1;
@@ -3987,13 +3903,13 @@ public final class ClientProtos {
       return qualifier_;
     }
     
-    // required .Condition.CompareType compareType = 4;
+    // required .CompareType compareType = 4;
     public static final int COMPARETYPE_FIELD_NUMBER = 4;
-    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.CompareType compareType_;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType compareType_;
     public boolean hasCompareType() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.CompareType getCompareType() {
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType getCompareType() {
       return compareType_;
     }
     
@@ -4014,7 +3930,7 @@ public final class ClientProtos {
       row_ = com.google.protobuf.ByteString.EMPTY;
       family_ = com.google.protobuf.ByteString.EMPTY;
       qualifier_ = com.google.protobuf.ByteString.EMPTY;
-      compareType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.CompareType.LESS;
+      compareType_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType.LESS;
       comparator_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
@@ -4297,7 +4213,7 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         qualifier_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000004);
-        compareType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.CompareType.LESS;
+        compareType_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType.LESS;
         bitField0_ = (bitField0_ & ~0x00000008);
         if (comparatorBuilder_ == null) {
           comparator_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
@@ -4470,7 +4386,7 @@ public final class ClientProtos {
             }
             case 32: {
               int rawValue = input.readEnum();
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.CompareType value = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.CompareType.valueOf(rawValue);
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType value = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType.valueOf(rawValue);
               if (value == null) {
                 unknownFields.mergeVarintField(4, rawValue);
               } else {
@@ -4566,15 +4482,15 @@ public final class ClientProtos {
         return this;
       }
       
-      // required .Condition.CompareType compareType = 4;
-      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.CompareType compareType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.CompareType.LESS;
+      // required .CompareType compareType = 4;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType compareType_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType.LESS;
       public boolean hasCompareType() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.CompareType getCompareType() {
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType getCompareType() {
         return compareType_;
       }
-      public Builder setCompareType(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.CompareType value) {
+      public Builder setCompareType(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType value) {
         if (value == null) {
           throw new NullPointerException();
         }
@@ -4585,7 +4501,7 @@ public final class ClientProtos {
       }
       public Builder clearCompareType() {
         bitField0_ = (bitField0_ & ~0x00000008);
-        compareType_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.CompareType.LESS;
+        compareType_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType.LESS;
         onChanged();
         return this;
       }
@@ -8864,11 +8780,11 @@ public final class ClientProtos {
     // optional uint64 maxResultSize = 10;
     boolean hasMaxResultSize();
     long getMaxResultSize();
-
+    
     // optional uint32 storeLimit = 11;
     boolean hasStoreLimit();
     int getStoreLimit();
-
+    
     // optional uint32 storeOffset = 12;
     boolean hasStoreOffset();
     int getStoreOffset();
@@ -9039,7 +8955,7 @@ public final class ClientProtos {
     public int getStoreLimit() {
       return storeLimit_;
     }
-
+    
     // optional uint32 storeOffset = 12;
     public static final int STOREOFFSET_FIELD_NUMBER = 12;
     private int storeOffset_;
@@ -9049,7 +8965,7 @@ public final class ClientProtos {
     public int getStoreOffset() {
       return storeOffset_;
     }
-
+    
     private void initFields() {
       column_ = java.util.Collections.emptyList();
       attribute_ = java.util.Collections.emptyList();
@@ -10512,7 +10428,7 @@ public final class ClientProtos {
         onChanged();
         return this;
       }
-
+      
       // optional uint32 storeOffset = 12;
       private int storeOffset_ ;
       public boolean hasStoreOffset() {
@@ -10533,7 +10449,7 @@ public final class ClientProtos {
         onChanged();
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:Scan)
     }
     
@@ -21661,82 +21577,78 @@ public final class ClientProtos {
       "ifier\022\021\n\003get\030\002 \002(\0132\004.Get\022\030\n\020closestRowBe" +
       "fore\030\003 \001(\010\022\025\n\rexistenceOnly\030\004 \001(\010\"6\n\013Get" +
       "Response\022\027\n\006result\030\001 \001(\0132\007.Result\022\016\n\006exi" +
-      "sts\030\002 \001(\010\"\200\002\n\tCondition\022\013\n\003row\030\001 \002(\014\022\016\n\006" +
-      "family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022+\n\013compa" +
-      "reType\030\004 \002(\0162\026.Condition.CompareType\022\"\n\n" +
-      "comparator\030\005 \002(\0132\016.NameBytesPair\"r\n\013Comp" +
-      "areType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005" +
-      "EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQU" +
-      "AL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006\"\306\004\n\006Mutate\022",
-      "\013\n\003row\030\001 \002(\014\022&\n\nmutateType\030\002 \002(\0162\022.Mutat" +
-      "e.MutateType\022(\n\013columnValue\030\003 \003(\0132\023.Muta" +
-      "te.ColumnValue\022!\n\tattribute\030\004 \003(\0132\016.Name" +
-      "BytesPair\022\021\n\ttimestamp\030\005 \001(\004\022\016\n\006lockId\030\006" +
-      " \001(\004\022\030\n\nwriteToWAL\030\007 \001(\010:\004true\022\035\n\ttimeRa" +
-      "nge\030\n \001(\0132\n.TimeRange\032\310\001\n\013ColumnValue\022\016\n" +
-      "\006family\030\001 \002(\014\022:\n\016qualifierValue\030\002 \003(\0132\"." +
-      "Mutate.ColumnValue.QualifierValue\032m\n\016Qua" +
-      "lifierValue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030" +
-      "\002 \001(\014\022\021\n\ttimestamp\030\003 \001(\004\022&\n\ndeleteType\030\004",
-      " \001(\0162\022.Mutate.DeleteType\"<\n\nMutateType\022\n" +
-      "\n\006APPEND\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DE" +
-      "LETE\020\003\"U\n\nDeleteType\022\026\n\022DELETE_ONE_VERSI" +
-      "ON\020\000\022\034\n\030DELETE_MULTIPLE_VERSIONS\020\001\022\021\n\rDE" +
-      "LETE_FAMILY\020\002\"i\n\rMutateRequest\022 \n\006region" +
-      "\030\001 \002(\0132\020.RegionSpecifier\022\027\n\006mutate\030\002 \002(\013" +
-      "2\007.Mutate\022\035\n\tcondition\030\003 \001(\0132\n.Condition" +
-      "\"<\n\016MutateResponse\022\027\n\006result\030\001 \001(\0132\007.Res" +
-      "ult\022\021\n\tprocessed\030\002 \001(\010\"\252\002\n\004Scan\022\027\n\006colum" +
-      "n\030\001 \003(\0132\007.Column\022!\n\tattribute\030\002 \003(\0132\016.Na",
-      "meBytesPair\022\020\n\010startRow\030\003 \001(\014\022\017\n\007stopRow" +
-      "\030\004 \001(\014\022\036\n\006filter\030\005 \001(\0132\016.NameBytesPair\022\035" +
-      "\n\ttimeRange\030\006 \001(\0132\n.TimeRange\022\026\n\013maxVers" +
-      "ions\030\007 \001(\r:\0011\022\031\n\013cacheBlocks\030\010 \001(\010:\004true" +
-      "\022\021\n\tbatchSize\030\t \001(\r\022\025\n\rmaxResultSize\030\n \001" +
-      "(\004\022\022\n\nstoreLimit\030\013 \001(\r\022\023\n\013storeOffset\030\014 " +
-      "\001(\r\"\203\001\n\013ScanRequest\022 \n\006region\030\001 \001(\0132\020.Re" +
-      "gionSpecifier\022\023\n\004scan\030\002 \001(\0132\005.Scan\022\021\n\tsc" +
-      "annerId\030\003 \001(\004\022\024\n\014numberOfRows\030\004 \001(\r\022\024\n\014c" +
-      "loseScanner\030\005 \001(\010\"\\\n\014ScanResponse\022\027\n\006res",
-      "ult\030\001 \003(\0132\007.Result\022\021\n\tscannerId\030\002 \001(\004\022\023\n" +
-      "\013moreResults\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\"?\n\016LockR" +
-      "owRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecif" +
-      "ier\022\013\n\003row\030\002 \003(\014\".\n\017LockRowResponse\022\016\n\006l" +
-      "ockId\030\001 \002(\004\022\013\n\003ttl\030\002 \001(\r\"D\n\020UnlockRowReq" +
-      "uest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\016" +
-      "\n\006lockId\030\002 \002(\004\"\023\n\021UnlockRowResponse\"\232\001\n\024" +
-      "BulkLoadHFileRequest\022 \n\006region\030\001 \002(\0132\020.R" +
-      "egionSpecifier\0224\n\nfamilyPath\030\002 \003(\0132 .Bul" +
-      "kLoadHFileRequest.FamilyPath\032*\n\nFamilyPa",
-      "th\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025Bulk" +
-      "LoadHFileResponse\022\016\n\006loaded\030\001 \002(\010\"\203\001\n\004Ex" +
-      "ec\022\013\n\003row\030\001 \002(\014\022\024\n\014protocolName\030\002 \002(\t\022\022\n" +
-      "\nmethodName\030\003 \002(\t\022!\n\010property\030\004 \003(\0132\017.Na" +
-      "meStringPair\022!\n\tparameter\030\005 \003(\0132\016.NameBy" +
-      "tesPair\"O\n\026ExecCoprocessorRequest\022 \n\006reg" +
-      "ion\030\001 \002(\0132\020.RegionSpecifier\022\023\n\004call\030\002 \002(" +
-      "\0132\005.Exec\"8\n\027ExecCoprocessorResponse\022\035\n\005v" +
-      "alue\030\001 \002(\0132\016.NameBytesPair\"N\n\013MultiActio" +
-      "n\022\027\n\006mutate\030\001 \001(\0132\007.Mutate\022\021\n\003get\030\002 \001(\0132",
-      "\004.Get\022\023\n\004exec\030\003 \001(\0132\005.Exec\"P\n\014ActionResu" +
-      "lt\022\035\n\005value\030\001 \001(\0132\016.NameBytesPair\022!\n\texc" +
-      "eption\030\002 \001(\0132\016.NameBytesPair\"^\n\014MultiReq" +
-      "uest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\034" +
-      "\n\006action\030\002 \003(\0132\014.MultiAction\022\016\n\006atomic\030\003" +
-      " \001(\010\".\n\rMultiResponse\022\035\n\006result\030\001 \003(\0132\r." +
-      "ActionResult2\221\003\n\rClientService\022 \n\003get\022\013." +
-      "GetRequest\032\014.GetResponse\022)\n\006mutate\022\016.Mut" +
-      "ateRequest\032\017.MutateResponse\022#\n\004scan\022\014.Sc" +
-      "anRequest\032\r.ScanResponse\022,\n\007lockRow\022\017.Lo",
-      "ckRowRequest\032\020.LockRowResponse\0222\n\tunlock" +
-      "Row\022\021.UnlockRowRequest\032\022.UnlockRowRespon" +
-      "se\022>\n\rbulkLoadHFile\022\025.BulkLoadHFileReque" +
-      "st\032\026.BulkLoadHFileResponse\022D\n\017execCoproc" +
-      "essor\022\027.ExecCoprocessorRequest\032\030.ExecCop" +
-      "rocessorResponse\022&\n\005multi\022\r.MultiRequest" +
-      "\032\016.MultiResponseBB\n*org.apache.hadoop.hb" +
-      "ase.protobuf.generatedB\014ClientProtosH\001\210\001" +
-      "\001\240\001\001"
+      "sts\030\002 \001(\010\"\202\001\n\tCondition\022\013\n\003row\030\001 \002(\014\022\016\n\006" +
+      "family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022!\n\013compa" +
+      "reType\030\004 \002(\0162\014.CompareType\022\"\n\ncomparator" +
+      "\030\005 \002(\0132\016.NameBytesPair\"\306\004\n\006Mutate\022\013\n\003row" +
+      "\030\001 \002(\014\022&\n\nmutateType\030\002 \002(\0162\022.Mutate.Muta" +
+      "teType\022(\n\013columnValue\030\003 \003(\0132\023.Mutate.Col" +
+      "umnValue\022!\n\tattribute\030\004 \003(\0132\016.NameBytesP",
+      "air\022\021\n\ttimestamp\030\005 \001(\004\022\016\n\006lockId\030\006 \001(\004\022\030" +
+      "\n\nwriteToWAL\030\007 \001(\010:\004true\022\035\n\ttimeRange\030\n " +
+      "\001(\0132\n.TimeRange\032\310\001\n\013ColumnValue\022\016\n\006famil" +
+      "y\030\001 \002(\014\022:\n\016qualifierValue\030\002 \003(\0132\".Mutate" +
+      ".ColumnValue.QualifierValue\032m\n\016Qualifier" +
+      "Value\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002 \001(\014\022" +
+      "\021\n\ttimestamp\030\003 \001(\004\022&\n\ndeleteType\030\004 \001(\0162\022" +
+      ".Mutate.DeleteType\"<\n\nMutateType\022\n\n\006APPE" +
+      "ND\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DELETE\020\003" +
+      "\"U\n\nDeleteType\022\026\n\022DELETE_ONE_VERSION\020\000\022\034",
+      "\n\030DELETE_MULTIPLE_VERSIONS\020\001\022\021\n\rDELETE_F" +
+      "AMILY\020\002\"i\n\rMutateRequest\022 \n\006region\030\001 \002(\013" +
+      "2\020.RegionSpecifier\022\027\n\006mutate\030\002 \002(\0132\007.Mut" +
+      "ate\022\035\n\tcondition\030\003 \001(\0132\n.Condition\"<\n\016Mu" +
+      "tateResponse\022\027\n\006result\030\001 \001(\0132\007.Result\022\021\n" +
+      "\tprocessed\030\002 \001(\010\"\252\002\n\004Scan\022\027\n\006column\030\001 \003(" +
+      "\0132\007.Column\022!\n\tattribute\030\002 \003(\0132\016.NameByte" +
+      "sPair\022\020\n\010startRow\030\003 \001(\014\022\017\n\007stopRow\030\004 \001(\014" +
+      "\022\036\n\006filter\030\005 \001(\0132\016.NameBytesPair\022\035\n\ttime" +
+      "Range\030\006 \001(\0132\n.TimeRange\022\026\n\013maxVersions\030\007",
+      " \001(\r:\0011\022\031\n\013cacheBlocks\030\010 \001(\010:\004true\022\021\n\tba" +
+      "tchSize\030\t \001(\r\022\025\n\rmaxResultSize\030\n \001(\004\022\022\n\n" +
+      "storeLimit\030\013 \001(\r\022\023\n\013storeOffset\030\014 \001(\r\"\203\001" +
+      "\n\013ScanRequest\022 \n\006region\030\001 \001(\0132\020.RegionSp" +
+      "ecifier\022\023\n\004scan\030\002 \001(\0132\005.Scan\022\021\n\tscannerI" +
+      "d\030\003 \001(\004\022\024\n\014numberOfRows\030\004 \001(\r\022\024\n\014closeSc" +
+      "anner\030\005 \001(\010\"\\\n\014ScanResponse\022\027\n\006result\030\001 " +
+      "\003(\0132\007.Result\022\021\n\tscannerId\030\002 \001(\004\022\023\n\013moreR" +
+      "esults\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\"?\n\016LockRowRequ" +
+      "est\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\013\n",
+      "\003row\030\002 \003(\014\".\n\017LockRowResponse\022\016\n\006lockId\030" +
+      "\001 \002(\004\022\013\n\003ttl\030\002 \001(\r\"D\n\020UnlockRowRequest\022 " +
+      "\n\006region\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006lock" +
+      "Id\030\002 \002(\004\"\023\n\021UnlockRowResponse\"\232\001\n\024BulkLo" +
+      "adHFileRequest\022 \n\006region\030\001 \002(\0132\020.RegionS" +
+      "pecifier\0224\n\nfamilyPath\030\002 \003(\0132 .BulkLoadH" +
+      "FileRequest.FamilyPath\032*\n\nFamilyPath\022\016\n\006" +
+      "family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHF" +
+      "ileResponse\022\016\n\006loaded\030\001 \002(\010\"\203\001\n\004Exec\022\013\n\003" +
+      "row\030\001 \002(\014\022\024\n\014protocolName\030\002 \002(\t\022\022\n\nmetho",
+      "dName\030\003 \002(\t\022!\n\010property\030\004 \003(\0132\017.NameStri" +
+      "ngPair\022!\n\tparameter\030\005 \003(\0132\016.NameBytesPai" +
+      "r\"O\n\026ExecCoprocessorRequest\022 \n\006region\030\001 " +
+      "\002(\0132\020.RegionSpecifier\022\023\n\004call\030\002 \002(\0132\005.Ex" +
+      "ec\"8\n\027ExecCoprocessorResponse\022\035\n\005value\030\001" +
+      " \002(\0132\016.NameBytesPair\"N\n\013MultiAction\022\027\n\006m" +
+      "utate\030\001 \001(\0132\007.Mutate\022\021\n\003get\030\002 \001(\0132\004.Get\022" +
+      "\023\n\004exec\030\003 \001(\0132\005.Exec\"P\n\014ActionResult\022\035\n\005" +
+      "value\030\001 \001(\0132\016.NameBytesPair\022!\n\texception" +
+      "\030\002 \001(\0132\016.NameBytesPair\"^\n\014MultiRequest\022 ",
+      "\n\006region\030\001 \002(\0132\020.RegionSpecifier\022\034\n\006acti" +
+      "on\030\002 \003(\0132\014.MultiAction\022\016\n\006atomic\030\003 \001(\010\"." +
+      "\n\rMultiResponse\022\035\n\006result\030\001 \003(\0132\r.Action" +
+      "Result2\221\003\n\rClientService\022 \n\003get\022\013.GetReq" +
+      "uest\032\014.GetResponse\022)\n\006mutate\022\016.MutateReq" +
+      "uest\032\017.MutateResponse\022#\n\004scan\022\014.ScanRequ" +
+      "est\032\r.ScanResponse\022,\n\007lockRow\022\017.LockRowR" +
+      "equest\032\020.LockRowResponse\0222\n\tunlockRow\022\021." +
+      "UnlockRowRequest\032\022.UnlockRowResponse\022>\n\r" +
+      "bulkLoadHFile\022\025.BulkLoadHFileRequest\032\026.B",
+      "ulkLoadHFileResponse\022D\n\017execCoprocessor\022" +
+      "\027.ExecCoprocessorRequest\032\030.ExecCoprocess" +
+      "orResponse\022&\n\005multi\022\r.MultiRequest\032\016.Mul" +
+      "tiResponseBB\n*org.apache.hadoop.hbase.pr" +
+      "otobuf.generatedB\014ClientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

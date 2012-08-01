@@ -8,6 +8,90 @@ public final class HBaseProtos {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
+  public enum CompareType
+      implements com.google.protobuf.ProtocolMessageEnum {
+    LESS(0, 0),
+    LESS_OR_EQUAL(1, 1),
+    EQUAL(2, 2),
+    NOT_EQUAL(3, 3),
+    GREATER_OR_EQUAL(4, 4),
+    GREATER(5, 5),
+    NO_OP(6, 6),
+    ;
+    
+    public static final int LESS_VALUE = 0;
+    public static final int LESS_OR_EQUAL_VALUE = 1;
+    public static final int EQUAL_VALUE = 2;
+    public static final int NOT_EQUAL_VALUE = 3;
+    public static final int GREATER_OR_EQUAL_VALUE = 4;
+    public static final int GREATER_VALUE = 5;
+    public static final int NO_OP_VALUE = 6;
+    
+    
+    public final int getNumber() { return value; }
+    
+    public static CompareType valueOf(int value) {
+      switch (value) {
+        case 0: return LESS;
+        case 1: return LESS_OR_EQUAL;
+        case 2: return EQUAL;
+        case 3: return NOT_EQUAL;
+        case 4: return GREATER_OR_EQUAL;
+        case 5: return GREATER;
+        case 6: return NO_OP;
+        default: return null;
+      }
+    }
+    
+    public static com.google.protobuf.Internal.EnumLiteMap<CompareType>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static com.google.protobuf.Internal.EnumLiteMap<CompareType>
+        internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<CompareType>() {
+            public CompareType findValueByNumber(int number) {
+              return CompareType.valueOf(number);
+            }
+          };
+    
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(index);
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor().getEnumTypes().get(0);
+    }
+    
+    private static final CompareType[] VALUES = {
+      LESS, LESS_OR_EQUAL, EQUAL, NOT_EQUAL, GREATER_OR_EQUAL, GREATER, NO_OP, 
+    };
+    
+    public static CompareType valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+    
+    private final int index;
+    private final int value;
+    
+    private CompareType(int index, int value) {
+      this.index = index;
+      this.value = value;
+    }
+    
+    // @@protoc_insertion_point(enum_scope:CompareType)
+  }
+  
   public enum KeyType
       implements com.google.protobuf.ProtocolMessageEnum {
     MINIMUM(0, 0),
@@ -62,7 +146,7 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor().getEnumTypes().get(0);
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor().getEnumTypes().get(1);
     }
     
     private static final KeyType[] VALUES = {
@@ -10078,11 +10162,14 @@ public final class HBaseProtos {
       "port\030\002 \001(\r\022\021\n\tstartCode\030\003 \001(\004\"\033\n\013Coproce" +
       "ssor\022\014\n\004name\030\001 \002(\t\"-\n\016NameStringPair\022\014\n\004" +
       "name\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\",\n\rNameBytesPa" +
-      "ir\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001(\014*_\n\007KeyTy",
-      "pe\022\013\n\007MINIMUM\020\000\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\r" +
-      "DELETE_COLUMN\020\014\022\021\n\rDELETE_FAMILY\020\016\022\014\n\007MA" +
-      "XIMUM\020\377\001B>\n*org.apache.hadoop.hbase.prot" +
-      "obuf.generatedB\013HBaseProtosH\001\240\001\001"
+      "ir\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001(\014*r\n\013Compa",
+      "reType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005E" +
+      "QUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUA" +
+      "L\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*_\n\007KeyType\022\013" +
+      "\n\007MINIMUM\020\000\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\rDELE" +
+      "TE_COLUMN\020\014\022\021\n\rDELETE_FAMILY\020\016\022\014\n\007MAXIMU" +
+      "M\020\377\001B>\n*org.apache.hadoop.hbase.protobuf" +
+      ".generatedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
