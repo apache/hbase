@@ -65,6 +65,9 @@ message FamilyFilter {
 message FirstKeyOnlyFilter {
 }
 
+message FirstKeyValueMatchingQualifiersFilter {
+}
+
 message InclusiveStopFilter {
   required bytes stopRowKey = 1;
 }

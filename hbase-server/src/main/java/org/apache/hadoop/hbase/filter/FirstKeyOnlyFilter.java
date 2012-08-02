@@ -60,6 +60,21 @@ public class FirstKeyOnlyFilter extends FilterBase {
     return new FirstKeyOnlyFilter();
   }
 
+  /**
+   * @return true if first KV has been found.
+   */
+  protected boolean hasFoundKV() {
+    return this.foundKV;
+  }
+
+  /**
+   *
+   * @param value update {@link #foundKV} flag with value.
+   */
+  protected void setFoundKV(boolean value) {
+    this.foundKV = value;
+  }
+
   public void write(DataOutput out) throws IOException {
   }
 
