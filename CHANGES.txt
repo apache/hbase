@@ -42,6 +42,7 @@ Release 0.90.7 - Unreleased
                possible performance improvement) (Gregory Chanan)
    HBASE-6392  UnknownRegionException blocks hbck from sideline big overlap regions
    HBASE-4470  ServerNotRunningException coming out of assignRootAndMeta kills the Master (Gregory Chanan)  
+   HBASE-6460  hbck "-repairHoles" usage inconsistent with "-fixHdfsOrphans" (Jie Huang)
 
   IMPROVEMENT
    HBASE-5588  Deprecate/remove AssignmentManager#clearRegionFromTransition
