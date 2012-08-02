@@ -16,19 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.replication.regionserver.metrics;
+package org.apache.hadoop.hbase.metrics;
 
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.junit.Test;
+import org.apache.hadoop.metrics2.util.MBeans;
+
+import javax.management.ObjectName;
 
 /**
- *  Test for the CompatibilitySingletonFactory and building ReplicationMetricsSource
+ * Hadoop1 metrics2 implementation of an object that registers MBeans.
  */
-public class ReplicationMetricsSourceFactoryTest {
+public class MBeanSourceImpl implements MBeanSource {
 
-  @Test(expected=RuntimeException.class)
-  public void testGetInstanceNoHadoopCompat() throws Exception {
-    //This should throw an exception because there is no compat lib on the class path.
-    CompatibilitySingletonFactory.getInstance(ReplicationMetricsSource.class);
+  /**
+   * Register an mbean with the underlying metrics system
+   * @param serviceName Metrics service/system name
+   * @param metricsName name of the metrics obejct to expose
+   * @param theMbean the actual MBean
+   * @return ObjectName from jmx
+   */
+  @Override
+  public ObjectName register(String serviceName, String metricsName, Object theMbean) {
+    return MBeans.register(serviceName, metricsName, theMbean);
   }
 }

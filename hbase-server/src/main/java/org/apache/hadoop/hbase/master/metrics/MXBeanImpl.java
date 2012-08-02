@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.metrics;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,6 +25,8 @@ import java.util.Map.Entry;
 
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.HMaster;
 
 /**
  * Impl for exposing HMaster Information through JMX
@@ -76,13 +78,8 @@ public class MXBeanImpl implements MXBean {
   }
 
   @Override
-  public Map<String, ServerLoad> getRegionServers() {
-    Map<String, ServerLoad> data = new HashMap<String, ServerLoad>();
-    for (final Entry<ServerName, ServerLoad> entry:
-        this.master.getServerManager().getOnlineServers().entrySet()) {
-      data.put(entry.getKey().getServerName(), entry.getValue());
-    }
-    return data;
+  public int getRegionServers() {
+    return this.master.getServerManager().getOnlineServers().size();
   }
 
   @Override
@@ -92,48 +89,6 @@ public class MXBeanImpl implements MXBean {
       deadServers.add(name.getHostAndPort());
     }
     return deadServers.toArray(new String[0]);
-  }
-
-  @Override
-  public RegionsInTransitionInfo[] getRegionsInTransition() {
-    List<RegionsInTransitionInfo> info =
-        new ArrayList<RegionsInTransitionInfo>();
-    for (final Entry<String, RegionState> entry : master.getAssignmentManager()
-        .getRegionStates().getRegionsInTransition().entrySet()) {
-      RegionsInTransitionInfo innerinfo = new RegionsInTransitionInfo() {
-
-        @Override
-        public String getRegionState() {
-          return entry.getValue().getState().toString();
-        }
-
-        @Override
-        public String getRegionName() {
-          return entry.getKey();
-        }
-
-        @Override
-        public long getLastUpdateTime() {
-          return entry.getValue().getStamp();
-        }
-
-        @Override
-        public String getRegionServerName() {
-          ServerName serverName = entry.getValue().getServerName();
-          if (serverName != null) {
-            return serverName.getServerName();
-          }
-          else {
-            return "";
-          }
-        }
-      };
-      info.add(innerinfo);
-    }
-    RegionsInTransitionInfo[] data =
-        new RegionsInTransitionInfo[info.size()];
-    info.toArray(data);
-    return data;
   }
 
   @Override

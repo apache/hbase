@@ -15,17 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.metrics;
 
-import java.util.Map;
-
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * This is the JMX management interface for Hbase master information
  */
-@Evolving
+@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface MXBean {
 
   /**
@@ -101,18 +100,11 @@ public interface MXBean {
    * Get the live region servers
    * @return Live region servers
    */
-  public Map<String, ServerLoad> getRegionServers();
+  public int getRegionServers();
 
   /**
    * Get the dead region servers
    * @return Dead region Servers
    */
   public String[] getDeadRegionServers();
-
-  /**
-   * Get information on regions in transition
-   * @return Regions in transition
-   */
-  public RegionsInTransitionInfo[] getRegionsInTransition();
-
 }

@@ -16,19 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.replication.regionserver.metrics;
+package org.apache.hadoop.hbase.master.metrics;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.junit.Test;
 
 /**
- *  Test for the CompatibilitySingletonFactory and building ReplicationMetricsSource
+ *  Test for the CompatibilitySingletonFactory and building MasterMetricsSource
  */
-public class ReplicationMetricsSourceFactoryTest {
+public class MasterMetricsSourceFactoryTest {
 
   @Test(expected=RuntimeException.class)
   public void testGetInstanceNoHadoopCompat() throws Exception {
     //This should throw an exception because there is no compat lib on the class path.
-    CompatibilitySingletonFactory.getInstance(ReplicationMetricsSource.class);
+    CompatibilitySingletonFactory.getInstance(MasterMetricsSource.class);
+
   }
 }

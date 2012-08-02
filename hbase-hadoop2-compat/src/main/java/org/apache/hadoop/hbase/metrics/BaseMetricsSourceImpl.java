@@ -19,45 +19,37 @@
 package org.apache.hadoop.hbase.metrics;
 
 import org.apache.hadoop.metrics2.MetricsCollector;
-import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.apache.hadoop.metrics2.lib.HBaseMetricsFactory;
+import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
-/** Hadoop 2 implementation of BaseMetricsSource for */
+/**
+ * Hadoop 2 implementation of BaseMetricsSource (using metrics2 framework)
+ */
 public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
 
   private static boolean defaultMetricsSystemInited = false;
   public static final String HBASE_METRICS_SYSTEM_NAME = "hbase";
 
-  public ConcurrentMap<String, MutableGaugeLong>
-      gauges = new ConcurrentHashMap<String, MutableGaugeLong>();
-  public ConcurrentMap<String, MutableCounterLong> counters =
-      new ConcurrentHashMap<String, MutableCounterLong>();
+  final DynamicMetricsRegistry metricsRegistry;
 
-  protected String metricsContext;
-  protected String metricsName;
-  protected String metricsDescription;
+  private JvmMetrics jvmMetricsSource;
 
   public BaseMetricsSourceImpl(String metricsName,
                                String metricsDescription,
                                String metricsContext) {
-    this.metricsContext = metricsContext;
-    this.metricsName = metricsName;
-    this.metricsDescription = metricsDescription;
+    metricsRegistry = new DynamicMetricsRegistry(metricsName).setContext(metricsContext);
 
     if (!defaultMetricsSystemInited) {
       //Not too worried about mutlithread here as all it does is spam the logs.
       defaultMetricsSystemInited = true;
       DefaultMetricsSystem.initialize(HBASE_METRICS_SYSTEM_NAME);
+      jvmMetricsSource = JvmMetrics.create(metricsName, "", DefaultMetricsSystem.instance());
     }
-    DefaultMetricsSystem.instance().register(this.metricsContext, this.metricsDescription, this);
+    DefaultMetricsSystem.instance().register(metricsContext, metricsDescription, this);
 
   }
 
@@ -112,7 +104,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param key
    */
   public void removeGauge(String key) {
-    gauges.remove(key);
+    metricsRegistry.removeMetric(key);
   }
 
   /**
@@ -121,21 +113,12 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param key
    */
   public void removeCounter(String key) {
-    counters.remove(key);
+    metricsRegistry.removeMetric(key);
   }
 
   @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
-    MetricsRecordBuilder rb =
-        metricsCollector.addRecord(this.metricsName).setContext(metricsContext);
-
-    for (Map.Entry<String, MutableCounterLong> entry : counters.entrySet()) {
-      entry.getValue().snapshot(rb, all);
-    }
-    for (Map.Entry<String, MutableGaugeLong> entry : gauges.entrySet()) {
-      entry.getValue().snapshot(rb, all);
-    }
-
+    metricsRegistry.snapshot(metricsCollector.addRecord(metricsRegistry.info()), all);
   }
 
   /**
@@ -145,28 +128,8 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param potentialStartingValue value of the new counter if we have to create it.
    * @return
    */
-  private MutableGaugeLong getLongGauge(String gaugeName, long potentialStartingValue) {
-    //Try and get the guage.
-    MutableGaugeLong gaugeInt = gauges.get(gaugeName);
-
-    //If it's not there then try and put a new one in the storage.
-    if (gaugeInt == null) {
-
-      //Create the potential new gauge.
-      MutableGaugeLong newGauge = HBaseMetricsFactory.newGauge(gaugeName,
-          "",
-          potentialStartingValue);
-
-      // Try and put the gauge in.  This is atomic.
-      gaugeInt = gauges.putIfAbsent(gaugeName, newGauge);
-
-      //If the value we get back is null then the put was successful and we will return that.
-      //otherwise gaugeInt should contain the thing that was in before the put could be completed.
-      if (gaugeInt == null) {
-        gaugeInt = newGauge;
-      }
-    }
-    return gaugeInt;
+  protected MutableGaugeLong getLongGauge(String gaugeName, long potentialStartingValue) {
+    return metricsRegistry.getLongGauge(gaugeName, potentialStartingValue);
   }
 
   /**
@@ -176,18 +139,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param potentialStartingValue starting value if we have to create a new counter
    * @return
    */
-  private MutableCounterLong getLongCounter(String counterName, long potentialStartingValue) {
-    //See getLongGauge for description on how this works.
-    MutableCounterLong counter = counters.get(counterName);
-    if (counter == null) {
-      MutableCounterLong newCounter =
-          HBaseMetricsFactory.newCounter(counterName, "", potentialStartingValue);
-      counter = counters.putIfAbsent(counterName, newCounter);
-      if (counter == null) {
-        counter = newCounter;
-      }
-    }
-    return counter;
+  protected MutableCounterLong getLongCounter(String counterName, long potentialStartingValue) {
+    return metricsRegistry.getLongCounter(counterName, potentialStartingValue);
   }
-
 }

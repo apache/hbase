@@ -28,9 +28,7 @@ import org.apache.hadoop.metrics2.MetricsSource;
 public class ReplicationMetricsSourceImpl extends BaseMetricsSourceImpl implements
     ReplicationMetricsSource {
 
-  public static final String METRICS_NAME = "ReplicationMetrics";
-  public static final String METRICS_CONTEXT = "replicationmetrics";
-  public static final String METRICS_DESCRIPTION = "Metrics about HBase replication";
+
 
   public ReplicationMetricsSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT);

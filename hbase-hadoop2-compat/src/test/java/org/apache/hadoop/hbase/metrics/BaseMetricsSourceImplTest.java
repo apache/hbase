@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.metrics;
 
+import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -39,36 +41,36 @@ public class BaseMetricsSourceImplTest {
   @Test
   public void testSetGauge() throws Exception {
     bmsi.setGauge("testset", 100);
-    assertEquals(100, bmsi.gauges.get("testset").value());
+    assertEquals(100, ((MutableGaugeLong) bmsi.metricsRegistry.get("testset")).value());
     bmsi.setGauge("testset", 300);
-    assertEquals(300, bmsi.gauges.get("testset").value());
+    assertEquals(300, ((MutableGaugeLong) bmsi.metricsRegistry.get("testset")).value());
 
   }
 
   @Test
   public void testIncGauge() throws Exception {
     bmsi.incGauge("testincgauge", 100);
-    assertEquals(100, bmsi.gauges.get("testincgauge").value());
+    assertEquals(100, ((MutableGaugeLong) bmsi.metricsRegistry.get("testincgauge")).value());
     bmsi.incGauge("testincgauge", 100);
-    assertEquals(200, bmsi.gauges.get("testincgauge").value());
+    assertEquals(200, ((MutableGaugeLong) bmsi.metricsRegistry.get("testincgauge")).value());
 
   }
 
   @Test
   public void testDecGauge() throws Exception {
     bmsi.decGauge("testdec", 100);
-    assertEquals(-100, bmsi.gauges.get("testdec").value());
+    assertEquals(-100, ((MutableGaugeLong) bmsi.metricsRegistry.get("testdec")).value());
     bmsi.decGauge("testdec", 100);
-    assertEquals(-200, bmsi.gauges.get("testdec").value());
+    assertEquals(-200, ((MutableGaugeLong) bmsi.metricsRegistry.get("testdec")).value());
 
   }
 
   @Test
   public void testIncCounters() throws Exception {
     bmsi.incCounters("testinccounter", 100);
-    assertEquals(100, bmsi.counters.get("testinccounter").value());
+    assertEquals(100, ((MutableCounterLong) bmsi.metricsRegistry.get("testinccounter")).value());
     bmsi.incCounters("testinccounter", 100);
-    assertEquals(200, bmsi.counters.get("testinccounter").value());
+    assertEquals(200, ((MutableCounterLong) bmsi.metricsRegistry.get("testinccounter")).value());
 
   }
 
@@ -76,13 +78,13 @@ public class BaseMetricsSourceImplTest {
   public void testRemoveGauge() throws Exception {
     bmsi.setGauge("testrmgauge", 100);
     bmsi.removeGauge("testrmgauge");
-    assertNull(bmsi.gauges.get("testrmgauge"));
+    assertNull(bmsi.metricsRegistry.get("testrmgauge"));
   }
 
   @Test
   public void testRemoveCounter() throws Exception {
     bmsi.incCounters("testrmcounter", 100);
     bmsi.removeCounter("testrmcounter");
-    assertNull(bmsi.counters.get("testrmcounter"));
+    assertNull(bmsi.metricsRegistry.get("testrmcounter"));
   }
 }

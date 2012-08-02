@@ -43,10 +43,10 @@ public class BaseMetricsSourceImplTest {
   public void testSetGauge() throws Exception {
     String key = "testset";
     bmsi.setGauge(key, 100);
-    MetricMutableGaugeLong g = bmsi.gauges.get(key);
+    MetricMutableGaugeLong g = (MetricMutableGaugeLong) bmsi.metricsRegistry.get(key);
     assertEquals(key, g.name);
     bmsi.setGauge(key, 110);
-    assertSame(g, bmsi.gauges.get(key));
+    assertSame(g, bmsi.metricsRegistry.get(key));
 
   }
 
@@ -54,37 +54,37 @@ public class BaseMetricsSourceImplTest {
   public void testIncGauge() throws Exception {
     String key = "testincgauge";
     bmsi.incGauge(key, 100);
-    MetricMutableGaugeLong g = bmsi.gauges.get(key);
+    MetricMutableGaugeLong g = (MetricMutableGaugeLong) bmsi.metricsRegistry.get(key);
     assertEquals(key, g.name);
     bmsi.incGauge(key, 10);
-    assertSame(g, bmsi.gauges.get(key));
+    assertSame(g, bmsi.metricsRegistry.get(key));
   }
 
   @Test
   public void testDecGauge() throws Exception {
     String key = "testdec";
     bmsi.decGauge(key, 100);
-    MetricMutableGaugeLong g = bmsi.gauges.get(key);
+    MetricMutableGaugeLong g = (MetricMutableGaugeLong) bmsi.metricsRegistry.get(key);
     assertEquals(key, g.name);
     bmsi.decGauge(key, 100);
-    assertSame(g, bmsi.gauges.get(key));
+    assertSame(g, bmsi.metricsRegistry.get(key));
   }
 
   @Test
   public void testIncCounters() throws Exception {
     String key = "testinccounter";
     bmsi.incCounters(key, 100);
-    MetricMutableCounterLong c = bmsi.counters.get(key);
+    MetricMutableCounterLong c = (MetricMutableCounterLong) bmsi.metricsRegistry.get(key);
     assertEquals(key, c.name);
     bmsi.incCounters(key, 100);
-    assertSame(c, bmsi.counters.get(key));
+    assertSame(c, bmsi.metricsRegistry.get(key));
   }
 
   @Test
   public void testRemoveGauge() throws Exception {
     bmsi.setGauge("testrm", 100);
     bmsi.removeGauge("testrm");
-    assertNull(bmsi.gauges.get("testrm"));
+    assertNull(bmsi.metricsRegistry.get("testrm"));
 
   }
 
@@ -92,6 +92,6 @@ public class BaseMetricsSourceImplTest {
   public void testRemoveCounter() throws Exception {
     bmsi.incCounters("testrm", 100);
     bmsi.removeCounter("testrm");
-    assertNull(bmsi.counters.get("testrm"));
+    assertNull(bmsi.metricsRegistry.get("testrm"));
   }
 }

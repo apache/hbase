@@ -58,6 +58,11 @@
     </build>
 
     <dependencies>
+      <!-- General dependencies -->
+      <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+      </dependency>
     </dependencies>
 
 </project>

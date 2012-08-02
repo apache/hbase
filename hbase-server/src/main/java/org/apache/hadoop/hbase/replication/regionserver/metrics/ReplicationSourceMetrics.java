@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.replication.regionserver.metrics;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 
 /**
  * This class is for maintaining the various replication statistics for a source and publishing them
@@ -65,7 +66,7 @@ public class ReplicationSourceMetrics {
     logEditsFilteredKey = "source." + id + ".logEditsFiltered";
     shippedBatchesKey = "source." + this.id + ".shippedBatches";
     shippedOpsKey = "source." + this.id + ".shippedOps";
-    rms = ReplicationMetricsSourceFactory.getInstance();
+    rms = CompatibilitySingletonFactory.getInstance(ReplicationMetricsSource.class);
   }
 
   /**

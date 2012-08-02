@@ -25,6 +25,7 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.master.metrics.MXBeanImpl;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.MediumTests;
 import org.junit.AfterClass;
@@ -48,22 +49,6 @@ public class TestMXBean {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private void verifyRegionServers(Map<String, ServerLoad> regions) {
-    Set<String> expected = new HashSet<String>();
-    for (int i = 0; i < 4; ++i) {
-      HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i);
-      expected.add(rs.getServerName().getServerName());
-    }
-
-    int found = 0;
-    for (java.util.Map.Entry<String, ServerLoad> entry : regions.entrySet()) {
-      if (expected.contains(entry.getKey())) {
-        ++found;
-      }
-    }
-    Assert.assertEquals(4, found);
-  }
-
   @Test
   public void testInfo() {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
@@ -77,20 +62,16 @@ public class TestMXBean {
     Assert.assertEquals(master.getCoprocessors().length,
         info.getCoprocessors().length);
     Assert.assertEquals(master.getServerManager().getOnlineServersList().size(),
-        info.getRegionServers().size());
-    Assert.assertEquals(master.getAssignmentManager().getRegionStates().isRegionsInTransition(),
-        info.getRegionsInTransition().length > 0);
-    Assert.assertTrue(info.getRegionServers().size() == 4);
+        info.getRegionServers());
+    Assert.assertTrue(info.getRegionServers() == 4);
 
     String zkServers = info.getZookeeperQuorum();
     Assert.assertEquals(zkServers.split(",").length,
         TEST_UTIL.getZkCluster().getZooKeeperServerNum());
 
-    verifyRegionServers(info.getRegionServers());
-
     TEST_UTIL.getMiniHBaseCluster().stopRegionServer(3, false);
     TEST_UTIL.getMiniHBaseCluster().waitOnRegionServer(3);
-    Assert.assertTrue(info.getRegionServers().size() == 3);
+    Assert.assertTrue(info.getRegionServers() == 3);
     Assert.assertTrue(info.getDeadRegionServers().length == 1);
 
   }

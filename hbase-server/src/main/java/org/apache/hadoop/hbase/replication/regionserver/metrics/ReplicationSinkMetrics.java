@@ -19,8 +19,7 @@
 package org.apache.hadoop.hbase.replication.regionserver.metrics;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.replication.regionserver.metrics.ReplicationMetricsSource;
-import org.apache.hadoop.hbase.replication.regionserver.metrics.ReplicationMetricsSourceFactory;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 
 /**
  * This class is for maintaining the various replication statistics for a sink and publishing them
@@ -36,7 +35,7 @@ public class ReplicationSinkMetrics {
   private ReplicationMetricsSource rms;
 
   public ReplicationSinkMetrics() {
-    rms = ReplicationMetricsSourceFactory.getInstance();
+    rms = CompatibilitySingletonFactory.getInstance(ReplicationMetricsSource.class);
   }
 
   /**

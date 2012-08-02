@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -80,6 +81,8 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
+import org.apache.hadoop.hbase.master.metrics.MXBeanImpl;
+import org.apache.hadoop.hbase.metrics.MBeanSource;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
@@ -397,6 +400,10 @@ Server {
       Thread.sleep(c.getInt("zookeeper.session.timeout", 180 * 1000));
     }
     
+  }
+
+  MasterMetrics getMetrics() {
+    return metrics;
   }
 
   /**
@@ -2252,7 +2259,8 @@ Server {
    */
   void registerMBean() {
     MXBeanImpl mxBeanInfo = MXBeanImpl.init(this);
-    MBeanUtil.registerMBean("Master", "Master", mxBeanInfo);
+    mxBean = CompatibilitySingletonFactory.getInstance(
+            MBeanSource.class).register("hbase", "HMaster,sub=MXBean", mxBeanInfo);
     LOG.info("Registered HMaster MXBean");
   }
 

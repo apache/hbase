@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.replication.regionserver.metrics;
 
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
@@ -27,7 +28,8 @@ public class ReplicationMetricsSourceImplTest {
 
   @Test
   public void testGetInstance() throws Exception {
-    ReplicationMetricsSource rms = ReplicationMetricsSourceFactory.getInstance();
+    ReplicationMetricsSource rms = CompatibilitySingletonFactory
+        .getInstance(ReplicationMetricsSource.class);
     assertTrue(rms instanceof ReplicationMetricsSourceImpl);
   }
 }

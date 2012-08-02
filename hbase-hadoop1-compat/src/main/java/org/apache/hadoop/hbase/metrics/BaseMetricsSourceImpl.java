@@ -19,49 +19,73 @@
 package org.apache.hadoop.hbase.metrics;
 
 import org.apache.hadoop.metrics2.MetricsBuilder;
+import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MetricMutable;
 import org.apache.hadoop.metrics2.lib.MetricMutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MetricMutableGaugeLong;
+import org.apache.hadoop.metrics2.source.JvmMetricsSource;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * Hadoop 1 implementation of BaseMetricsSource
+ * Hadoop 1 implementation of BaseMetricsSource (using metrics2 framework)
  */
 public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
 
   private static boolean defaultMetricsSystemInited = false;
   public static final String HBASE_METRICS_SYSTEM_NAME = "hbase";
 
-  public ConcurrentMap<String, MetricMutableGaugeLong>
-      gauges = new ConcurrentHashMap<String, MetricMutableGaugeLong>();
-  public ConcurrentMap<String, MetricMutableCounterLong> counters =
-      new ConcurrentHashMap<String, MetricMutableCounterLong>();
+  final DynamicMetricsRegistry metricsRegistry;
 
-  protected String metricsContext;
-  protected String metricsName;
-  protected String metricsDescription;
+  private JvmMetricsSource jvmMetricsSource;
 
   public BaseMetricsSourceImpl(
       String metricsName,
       String metricsDescription,
       String metricsContext) {
-    this.metricsContext = metricsContext;
-    this.metricsName = metricsName;
-    this.metricsDescription = metricsDescription;
+
+    metricsRegistry = new DynamicMetricsRegistry(metricsName).setContext(metricsContext);
 
     if (!defaultMetricsSystemInited) {
       //Not too worried about mutli-threaded here as all it does is spam the logs.
       defaultMetricsSystemInited = true;
       DefaultMetricsSystem.initialize(HBASE_METRICS_SYSTEM_NAME);
+
+      //If this is the first time through register a jvm source.
+      jvmMetricsSource = JvmMetricsSource.create(metricsName, "");
     }
 
     //Register this instance.
-    DefaultMetricsSystem.registerSource(this.metricsContext, this.metricsDescription, this);
+    DefaultMetricsSystem.INSTANCE.registerSource(metricsContext, metricsDescription, this);
+  }
+
+  /**
+   * Get a MetricMutableGaugeLong from the storage.  If it is not there atomically put it.
+   *
+   * @param gaugeName              name of the gauge to create or get.
+   * @param potentialStartingValue value of the new gauge if we have to create it.
+   * @return a metric object
+   */
+  protected MetricMutableGaugeLong getLongGauge(String gaugeName, long potentialStartingValue) {
+    return metricsRegistry.getLongGauge(gaugeName, potentialStartingValue);
+  }
+
+  /**
+   * Get a MetricMutableCounterLong from the storage.  If it is not there atomically put it.
+   *
+   * @param counterName            Name of the counter to get
+   * @param potentialStartingValue starting value if we have to create a new counter
+   * @return a metric object
+   */
+  protected MetricMutableCounterLong getLongCounter(String counterName,
+                                                    long potentialStartingValue) {
+    return metricsRegistry.getLongCounter(counterName, potentialStartingValue);
   }
 
   /**
@@ -71,7 +95,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param value     the new value of the gauge.
    */
   public void setGauge(String gaugeName, long value) {
-    MetricMutableGaugeLong gaugeInt = getLongGauge(gaugeName, value);
+    MetricMutableGaugeLong gaugeInt = metricsRegistry.getLongGauge(gaugeName, value);
     gaugeInt.set(value);
   }
 
@@ -82,7 +106,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param delta     The amount to increment the gauge by.
    */
   public void incGauge(String gaugeName, long delta) {
-    MetricMutableGaugeLong gaugeInt = getLongGauge(gaugeName, 0l);
+    MetricMutableGaugeLong gaugeInt = metricsRegistry.getLongGauge(gaugeName, 0l);
     gaugeInt.incr(delta);
   }
 
@@ -93,7 +117,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param delta     the ammount to subtract from a gauge value.
    */
   public void decGauge(String gaugeName, long delta) {
-    MetricMutableGaugeLong gaugeInt = getLongGauge(gaugeName, 0l);
+    MetricMutableGaugeLong gaugeInt = metricsRegistry.getLongGauge(gaugeName, 0l);
     gaugeInt.decr(delta);
   }
 
@@ -104,7 +128,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param delta the ammount to increment
    */
   public void incCounters(String key, long delta) {
-    MetricMutableCounterLong counter = getLongCounter(key, 0l);
+    MetricMutableCounterLong counter = metricsRegistry.getLongCounter(key, 0l);
     counter.incr(delta);
 
   }
@@ -115,7 +139,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param key
    */
   public void removeGauge(String key) {
-    gauges.remove(key);
+    metricsRegistry.removeMetric(key);
   }
 
   /**
@@ -124,7 +148,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param key
    */
   public void removeCounter(String key) {
-    counters.remove(key);
+    metricsRegistry.removeMetric(key);
   }
 
   /**
@@ -135,67 +159,6 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    */
   @Override
   public void getMetrics(MetricsBuilder metricsBuilder, boolean all) {
-
-    MetricsRecordBuilder rb = metricsBuilder.addRecord(metricsName).setContext(metricsContext);
-
-    for (Map.Entry<String, MetricMutableCounterLong> entry : counters.entrySet()) {
-      entry.getValue().snapshot(rb, all);
-    }
-    for (Map.Entry<String, MetricMutableGaugeLong> entry : gauges.entrySet()) {
-      entry.getValue().snapshot(rb, all);
-    }
-
+    metricsRegistry.snapshot(metricsBuilder.addRecord(metricsRegistry.name()), all);
   }
-
-  /**
-   * Get a MetricMutableGaugeLong from the storage.  If it is not there atomically put it.
-   *
-   * @param gaugeName              name of the gauge to create or get.
-   * @param potentialStartingValue value of the new counter if we have to create it.
-   * @return
-   */
-  private MetricMutableGaugeLong getLongGauge(String gaugeName, long potentialStartingValue) {
-    //Try and get the guage.
-    MetricMutableGaugeLong gauge = gauges.get(gaugeName);
-
-    //If it's not there then try and put a new one in the storage.
-    if (gauge == null) {
-
-      //Create the potential new gauge.
-      MetricMutableGaugeLong newGauge = new MetricMutableGaugeLong(gaugeName, "",
-          potentialStartingValue);
-
-      // Try and put the gauge in.  This is atomic.
-      gauge = gauges.putIfAbsent(gaugeName, newGauge);
-
-      //If the value we get back is null then the put was successful and we will return that.
-      //otherwise gaugeLong should contain the thing that was in before the put could be completed.
-      if (gauge == null) {
-        gauge = newGauge;
-      }
-    }
-    return gauge;
-  }
-
-  /**
-   * Get a MetricMutableCounterLong from the storage.  If it is not there atomically put it.
-   *
-   * @param counterName            Name of the counter to get
-   * @param potentialStartingValue starting value if we have to create a new counter
-   * @return
-   */
-  private MetricMutableCounterLong getLongCounter(String counterName, long potentialStartingValue) {
-    //See getLongGauge for description on how this works.
-    MetricMutableCounterLong counter = counters.get(counterName);
-    if (counter == null) {
-      MetricMutableCounterLong newCounter =
-          new MetricMutableCounterLong(counterName, "", potentialStartingValue);
-      counter = counters.putIfAbsent(counterName, newCounter);
-      if (counter == null) {
-        counter = newCounter;
-      }
-    }
-    return counter;
-  }
-
 }

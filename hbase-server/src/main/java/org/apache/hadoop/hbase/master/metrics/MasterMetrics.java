@@ -17,24 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.metrics;
 
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.metrics.HBaseInfo;
-import org.apache.hadoop.hbase.metrics.MetricsRate;
-import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
-import org.apache.hadoop.metrics.ContextFactory;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.Updater;
-import org.apache.hadoop.metrics.jvm.JvmMetrics;
-import org.apache.hadoop.metrics.util.MetricsIntValue;
-import org.apache.hadoop.metrics.util.MetricsLongValue;
-import org.apache.hadoop.metrics.util.MetricsRegistry;
-
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 
 /**
  * This class is for maintaining the various master statistics
@@ -43,124 +30,38 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
  * This class has a number of metrics variables that are publicly accessible;
  * these variables (objects) have methods to update their values.
  */
+@InterfaceStability.Evolving
 @InterfaceAudience.Private
-public class MasterMetrics implements Updater {
+public class MasterMetrics  {
   private final Log LOG = LogFactory.getLog(this.getClass());
-  private final MetricsRecord metricsRecord;
-  private final MetricsRegistry registry = new MetricsRegistry();
-  private final MasterStatistics masterStatistics;
-
-  private long lastUpdate = System.currentTimeMillis();
-  private long lastExtUpdate = System.currentTimeMillis();
-  private long extendedPeriod = 0;
-/*
-   * Count of requests to the cluster since last call to metrics update
-   */
-  private final MetricsRate cluster_requests =
-    new MetricsRate("cluster_requests", registry);
-
-  /** Time it takes to finish HLog.splitLog() */
-  final MetricsHistogram splitTime = new MetricsHistogram("splitTime", registry);
-
-  /** Size of HLog files being split */
-  final MetricsHistogram splitSize = new MetricsHistogram("splitSize", registry);
-
-  /**
-    * Regions in Transition metrics such as number of RIT regions, oldest
-    * RIT time and number of such regions that are in transition
-    * for more than a specified threshold.
-    */
-  public final MetricsIntValue ritCount =
-    new MetricsIntValue("ritCount", registry);
-  public final MetricsIntValue ritCountOverThreshold =
-    new MetricsIntValue("ritCountOverThreshold", registry);
-  public final MetricsLongValue ritOldestAge =
-    new MetricsLongValue("ritOldestAge", registry);
+  private MasterMetricsSource masterMetricsSource;
 
   public MasterMetrics(final String name) {
-    MetricsContext context = MetricsUtil.getContext("hbase");
-    metricsRecord = MetricsUtil.createRecord(context, "master");
-    metricsRecord.setTag("Master", name);
-    context.registerUpdater(this);
-    JvmMetrics.init("Master", name);
-    HBaseInfo.init();
-
-    // expose the MBean for metrics
-    masterStatistics = new MasterStatistics(this.registry);
-
-    // get custom attributes
-    try {
-      Object m = 
-        ContextFactory.getFactory().getAttribute("hbase.extendedperiod");
-      if (m instanceof String) {
-        this.extendedPeriod = Long.parseLong((String) m)*1000;
-      }
-    } catch (IOException ioe) {
-      LOG.info("Couldn't load ContextFactory for Metrics config info");
-    }
-
-    LOG.info("Initialized");
+    masterMetricsSource = CompatibilitySingletonFactory.getInstance(MasterMetricsSource.class);
   }
 
-  public void shutdown() {
-    if (masterStatistics != null)
-      masterStatistics.shutdown();
+  // for unit-test usage
+  public MasterMetricsSource getMetricsSource() {
+    return masterMetricsSource;
   }
 
-  /**
-   * Since this object is a registered updater, this method will be called
-   * periodically, e.g. every 5 seconds.
-   * @param unused
-   */
-  public void doUpdates(MetricsContext unused) {
-    synchronized (this) {
-      this.lastUpdate = System.currentTimeMillis();
-
-      // has the extended period for long-living stats elapsed?
-      if (this.extendedPeriod > 0 &&
-          this.lastUpdate - this.lastExtUpdate >= this.extendedPeriod) {
-        this.lastExtUpdate = this.lastUpdate;
-        this.splitTime.clear();
-        this.splitSize.clear();
-        this.resetAllMinMax();
-      }
-
-      this.cluster_requests.pushMetric(metricsRecord);
-      this.splitTime.pushMetric(metricsRecord);
-      this.splitSize.pushMetric(metricsRecord);
-      this.ritCount.pushMetric(metricsRecord);
-      this.ritCountOverThreshold.pushMetric(metricsRecord);
-      this.ritOldestAge.pushMetric(metricsRecord);
-    }
-    this.metricsRecord.update();
-  }
-
-  public void resetAllMinMax() {
-    // Nothing to do
-  }
-  
   /**
    * Record a single instance of a split
    * @param time time that the split took
    * @param size length of original HLogs that were split
    */
   public synchronized void addSplit(long time, long size) {
-    splitTime.update(time);
-    splitSize.update(size);
-  }
 
-  /**
-   * @return Count of requests.
-   */
-  public float getRequests() {
-    return this.cluster_requests.getPreviousIntervalValue();
+    //TODO use new metrics histogram
+
   }
 
   /**
    * @param inc How much to add to requests.
    */
   public void incrementRequests(final int inc) {
-    this.cluster_requests.inc(inc);
+    masterMetricsSource.incRequests(inc);
+
   }
 
   /**
@@ -168,7 +69,7 @@ public class MasterMetrics implements Updater {
    * @param ritCount
    */
   public void updateRITCount(int ritCount) {
-    this.ritCount.set(ritCount);
+    masterMetricsSource.setRIT(ritCount);
   }
 
   /**
@@ -177,13 +78,13 @@ public class MasterMetrics implements Updater {
    * @param ritCountOverThreshold
    */
   public void updateRITCountOverThreshold(int ritCountOverThreshold) {
-    this.ritCountOverThreshold.set(ritCountOverThreshold);
+    masterMetricsSource.setRITCountOverThreshold(ritCountOverThreshold);
   }
   /**
    * update the timestamp for oldest region in transition metrics.
    * @param timestamp
    */
   public void updateRITOldestAge(long timestamp) {
-    this.ritOldestAge.set(timestamp);
+    masterMetricsSource.setRITOldestAge(timestamp);
   }
 }
