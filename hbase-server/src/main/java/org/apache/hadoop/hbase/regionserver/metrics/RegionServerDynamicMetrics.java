@@ -75,7 +75,7 @@ public class RegionServerDynamicMetrics implements Updater {
   public final MetricsRegistry registry = new MetricsRegistry();
 
   private RegionServerDynamicMetrics() {
-    this.context = MetricsUtil.getContext("hbase");
+    this.context = MetricsUtil.getContext("hbase-dynamic");
     this.metricsRecord = MetricsUtil.createRecord(
                             this.context,
                             "RegionServerDynamicStatistics");
