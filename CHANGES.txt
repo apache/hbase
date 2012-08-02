@@ -97,7 +97,7 @@ Release 0.92.2 - Unreleased
    HBASE-6447  Common TestZooKeeper failures on jenkins: testMasterSessionExpired and testCreateSilentIsReallySilent
    HBASE-6450  HBase startup should be with MALLOC_MAX_ARENA set
    HBASE-6334  TestImprovement for TestHRegion.testWritesWhileGetting (Gregory Chanan)
-
+   HBASE-4470  ServerNotRunningException coming out of assignRootAndMeta kills the Master (Gregory Chanan) 
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)

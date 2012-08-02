@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.Progressable;
 import org.apache.zookeeper.KeeperException;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -213,14 +214,7 @@ public class TestCatalogTracker {
     }
   }
 
-  /**
-   * Test we survive a connection refused {@link ConnectException}
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws KeeperException
-   */
-  @Test
-  public void testGetMetaServerConnectionFails()
+  private void testVerifyMetaRegionLocationWithException(Exception ex)
   throws IOException, InterruptedException, KeeperException {
     // Mock an HRegionInterface.
     final HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
@@ -228,7 +222,7 @@ public class TestCatalogTracker {
     try {
       // If a 'get' is called on mocked interface, throw connection refused.
       Mockito.when(implementation.get((byte[]) Mockito.any(), (Get) Mockito.any())).
-        thenThrow(new ConnectException("Connection refused"));
+        thenThrow(ex);
       // Now start up the catalogtracker with our doctored Connection.
       final CatalogTracker ct = constructAndStartCatalogTracker(connection);
       try {
@@ -245,6 +239,37 @@ public class TestCatalogTracker {
       // Clear out our doctored connection or could mess up subsequent tests.
       HConnectionManager.deleteConnection(UTIL.getConfiguration(), true);
     }
+  }
+
+  /**
+   * Test we survive a connection refused {@link ConnectException}
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws KeeperException
+   */
+  @Test
+  public void testGetMetaServerConnectionFails()
+  throws IOException, InterruptedException, KeeperException {
+    testVerifyMetaRegionLocationWithException(new ConnectException("Connection refused"));
+  }
+
+  /**
+   * Test that verifyMetaRegionLocation properly handles getting a
+   * ServerNotRunningException. See HBASE-4470.
+   * Note this doesn't check the exact exception thrown in the
+   * HBASE-4470 as there it is thrown from getHConnection() and
+   * here it is thrown from get() -- but those are both called
+   * from the same function anyway, and this way is less invasive than
+   * throwing from getHConnection would be.
+   *
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws KeeperException
+   */
+  @Test
+  public void testVerifyMetaRegionServerNotRunning()
+  throws IOException, InterruptedException, KeeperException {
+    testVerifyMetaRegionLocationWithException(new ServerNotRunningYetException("mock"));
   }
 
   /**
