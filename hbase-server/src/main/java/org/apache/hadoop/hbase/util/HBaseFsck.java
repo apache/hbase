@@ -3096,7 +3096,7 @@ public class HBaseFsck {
     System.err.println("");
     System.err.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles " +
         "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps");
-    System.err.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles -fixHdfsOrphans");
+    System.err.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles");
 
     Runtime.getRuntime().exit(-2);
   }
