@@ -221,7 +221,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
             <tr>
                 <td>Coprocessors</td>
                 <td><% java.util.Arrays.toString(master.getCoprocessors()) %></td>
-                <td>Coprocessors currently loaded loaded by the master</td>
+                <td>Coprocessors currently loaded by the master</td>
             </tr>
             <tr>
                 <td>HMaster Start Time</td>
