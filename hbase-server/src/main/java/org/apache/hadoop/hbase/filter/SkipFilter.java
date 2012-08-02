@@ -88,6 +88,10 @@ public class SkipFilter extends FilterBase {
   public boolean filterRow() {
     return filterRow;
   }
+    
+  public boolean hasFilterRow() {
+    return true;
+  }
 
   public void write(DataOutput out) throws IOException {
     out.writeUTF(this.filter.getClass().getName());

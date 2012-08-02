@@ -143,7 +143,7 @@ public interface Filter extends Writable {
   public void filterRow(List<KeyValue> kvs);
 
   /**
-   * @return True if this filter actively uses filterRow(List).
+   * @return True if this filter actively uses filterRow(List) or filterRow().
    * Primarily used to check for conflicts with scans(such as scans
    * that do not read a full row at a time)
    */

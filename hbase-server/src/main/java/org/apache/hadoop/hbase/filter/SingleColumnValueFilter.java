@@ -202,6 +202,10 @@ public class SingleColumnValueFilter extends FilterBase {
     // If column not found, return true if we filter if missing, false if not
     return this.foundColumn? !this.matchedColumn: this.filterIfMissing;
   }
+  
+  public boolean hasFilterRow() {
+    return true;
+  }
 
   public void reset() {
     foundColumn = false;

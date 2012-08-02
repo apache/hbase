@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -3436,7 +3437,12 @@ public class HRegion implements HeapSize { // , Writable{
       //DebugPrint.println("HRegionScanner.<init>");
 
       this.maxResultSize = scan.getMaxResultSize();
-      this.filter = scan.getFilter();
+      if (scan.hasFilter()) {
+        this.filter = new FilterWrapper(scan.getFilter());
+      } else {
+        this.filter = null;
+      }
+      
       this.batch = scan.getBatch();
       if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
         this.stopRow = null;
@@ -3566,10 +3572,7 @@ public class HRegion implements HeapSize { // , Writable{
           if (filter != null && filter.hasFilterRow()) {
             filter.filterRow(results);
           }
-          if (filter != null && filter.filterRow()) {
-            results.clear();
-          }
-
+          
           return false;
         } else if (filterRowKey(currentRow)) {
           nextRow(currentRow);
@@ -3580,7 +3583,7 @@ public class HRegion implements HeapSize { // , Writable{
             if (limit > 0 && results.size() == limit) {
               if (this.filter != null && filter.hasFilterRow()) {
                 throw new IncompatibleFilterException(
-                  "Filter with filterRow(List<KeyValue>) incompatible with scan with limit!");
+                  "Filter whose hasFilterRow() returns true is incompatible with scan with limit!");
               }
               return true; // we are expecting more yes, but also limited to how many we can return.
             }
@@ -3595,7 +3598,7 @@ public class HRegion implements HeapSize { // , Writable{
             filter.filterRow(results);
           }
 
-          if (results.isEmpty() || filterRow()) {
+          if (results.isEmpty()) {
             // this seems like a redundant step - we already consumed the row
             // there're no left overs.
             // the reasons for calling this method are:

@@ -89,6 +89,10 @@ public class WhileMatchFilter extends FilterBase {
     changeFAR(filterRow);
     return filterRow;
   }
+  
+  public boolean hasFilterRow() {
+    return true;
+  }
 
   public void write(DataOutput out) throws IOException {
     out.writeUTF(this.filter.getClass().getName());

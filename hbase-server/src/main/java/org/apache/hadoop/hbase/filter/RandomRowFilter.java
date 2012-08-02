@@ -89,6 +89,10 @@ public class RandomRowFilter extends FilterBase {
   public boolean filterRow() {
     return filterOutRow;
   }
+  
+  public boolean hasFilterRow() {
+    return true;
+  }
 
   @Override
   public boolean filterRowKey(byte[] buffer, int offset, int length) {

@@ -77,6 +77,10 @@ public class PageFilter extends FilterBase {
     this.rowsAccepted++;
     return this.rowsAccepted > this.pageSize;
   }
+  
+  public boolean hasFilterRow() {
+    return true;
+  }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
     Preconditions.checkArgument(filterArguments.size() == 1,
