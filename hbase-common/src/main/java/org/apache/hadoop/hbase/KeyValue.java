@@ -2562,6 +2562,8 @@ public class KeyValue implements Writable, HeapSize {
     this.rowCache = null;
     this.length = length;
     this.offset = 0;
+    this.timestampCache = -1;
+    this.keyLength = 0;
     this.bytes = new byte[this.length];
     in.readFully(this.bytes, 0, this.length);
   }
