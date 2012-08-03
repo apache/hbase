@@ -40,10 +40,11 @@ import java.util.List;
  * with a {@link ValueFilter}:
  * <p>
  * <pre>
- * scan.setFilter(new SkipFilter(new ValueFilter(CompareOp.EQUAL,
+ * scan.setFilter(new SkipFilter(new ValueFilter(CompareOp.NOT_EQUAL,
  *     new BinaryComparator(Bytes.toBytes(0))));
  * </code>
- * Any row which contained a column whose value was 0 will be filtered out.
+ * Any row which contained a column whose value was 0 will be filtered out
+ * (since ValueFilter will not pass that KeyValue).
  * Without this filter, the other non-zero valued columns in the row would still
  * be emitted.
  */
