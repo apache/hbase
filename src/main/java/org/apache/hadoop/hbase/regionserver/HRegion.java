@@ -281,6 +281,7 @@ public class HRegion implements HeapSize {
     = new ArrayList<Pair<Long,Long>>();
   final FlushRequester flushListener;
   private final long blockingMemStoreSize;
+  private final boolean waitOnMemstoreBlock;
   final long threadWakeFrequency;
   // Used to guard splits and closes
   private final ReentrantReadWriteLock splitsAndClosesLock =
@@ -431,6 +432,7 @@ public class HRegion implements HeapSize {
   public HRegion(){
     this.tableDir = null;
     this.blockingMemStoreSize = 0L;
+    this.waitOnMemstoreBlock = true;
     this.conf = null;
     this.baseConf = null;
     this.flushListener = null;
@@ -525,7 +527,9 @@ public class HRegion implements HeapSize {
     this.disableWAL = regionInfo.getTableDesc().isWALDisabled();
     this.memstoreFlushSize = flushSize;
     this.blockingMemStoreSize = this.memstoreFlushSize *
-      conf.getLong("hbase.hregion.memstore.block.multiplier", 2);
+      conf.getLong(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 2);
+    this.waitOnMemstoreBlock =
+        conf.getBoolean(HConstants.HREGION_MEMSTORE_WAIT_ON_BLOCK, true);
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
 
     this.readRequests =new RequestMetrics();
@@ -1888,7 +1892,6 @@ public class HRegion implements HeapSize {
    */
   public void put(Put put, Integer lockid, boolean writeToWAL)
   throws IOException {
-    this.writeRequests.incrTotalRequstCount();
     checkReadOnly();
 
     // Do a rough check that we have resources to accept a write.  The check is
@@ -1896,6 +1899,7 @@ public class HRegion implements HeapSize {
     // read lock, resources may run out.  For now, the thought is that this
     // will be extremely rare; we'll deal with it when it happens.
     checkResources();
+    this.writeRequests.incrTotalRequstCount();
     splitsAndClosesLock.readLock().lock();
 
     try {
@@ -2254,7 +2258,7 @@ public class HRegion implements HeapSize {
    * this and the synchronize on 'this' inside in internalFlushCache to send
    * the notify.
    */
-  private void checkResources() {
+  private void checkResources() throws RegionOverloadedException {
 
     // If catalog region, do not impose resource constraints or block updates.
     if (this.getRegionInfo().isMetaRegion()) return;
@@ -2262,13 +2266,16 @@ public class HRegion implements HeapSize {
     boolean blocked = false;
     while (this.memstoreSize.get() > this.blockingMemStoreSize) {
       requestFlush();
-      if (!blocked) {
-        LOG.info("Blocking updates for '" + Thread.currentThread().getName() +
-          "' on region " + Bytes.toStringBinary(getRegionName()) +
+      String msg = "Region " + Bytes.toStringBinary(getRegionName()) +
           ": memstore size " +
           StringUtils.humanReadableInt(this.memstoreSize.get()) +
           " is >= than blocking " +
-          StringUtils.humanReadableInt(this.blockingMemStoreSize) + " size");
+          StringUtils.humanReadableInt(this.blockingMemStoreSize) + " size";
+      if (!this.waitOnMemstoreBlock) {
+        throw new RegionOverloadedException("Cannot accept mutations: " + msg, threadWakeFrequency);
+      } else if (!blocked) {
+        LOG.info("Blocking updates for '" + Thread.currentThread().getName()
+            + "'. "+ msg);
       }
       blocked = true;
       synchronized(this) {

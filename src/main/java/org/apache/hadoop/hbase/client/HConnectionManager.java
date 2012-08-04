@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RegionOverloadedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
@@ -386,6 +387,11 @@ public class HConnectionManager {
     // tables whose region cache prefetch are disabled.
     private final Set<Integer> regionCachePrefetchDisabledTables =
       new CopyOnWriteArraySet<Integer>();
+    // The number of times we will retry after receiving a RegionOverloadedException from the
+    // region server. Defaults to 0 (i.e. we will throw the exception and let the client handle retries)
+    // may not always be what you want. But, for the purposes of the HBaseThrift client, that this is
+    // created for, we do not want the thrift layer to hold up IPC threads handling retries.
+    private int maxServerRequestedRetries;
 
     /**
      * constructor
@@ -413,6 +419,8 @@ public class HConnectionManager {
       this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
           HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
       this.numRetries = conf.getInt("hbase.client.retries.number", 10);
+      this.maxServerRequestedRetries =
+          conf.getInt("hbase.client.server.requested.retries.max", 0);
       this.rpcTimeout = conf.getInt(
           HConstants.HBASE_RPC_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
@@ -1289,12 +1297,39 @@ public class HConnectionManager {
       List<Throwable> exceptions = new ArrayList<Throwable>();
 
       long callStartTime;
+      int serverRequestedRetries = 0;
       
       callStartTime = System.currentTimeMillis();
+      long serverRequestedWaitTime = 0;
       // do not retry if region cannot be located. There are enough retries
       // within instantiateRegionLocation.
       callable.instantiateRegionLocation(false /* reload cache? */);
       for(int tries = 0; ; tries++) {
+        // If server requested wait. We will wait for that time, and start
+        // again. Do not count this time/tries against the client retries.
+        if (serverRequestedWaitTime > 0) {
+          serverRequestedRetries++;
+
+          if (serverRequestedRetries > this.maxServerRequestedRetries)
+            throw new RetriesExhaustedException(callable.getServerName(),
+            callable.getRegionName(), callable.getRow(), serverRequestedRetries, exceptions);
+
+          long pauseTime = serverRequestedWaitTime + callStartTime
+              - System.currentTimeMillis();
+          LOG.debug("Got a BlockingWritesRetryLaterException: sleeping for " +
+              pauseTime +"ms. serverRequestedRetries = " + serverRequestedRetries);
+          try {
+            Thread.sleep(pauseTime);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new InterruptedIOException();
+          }
+
+          serverRequestedWaitTime = 0;
+          tries = 0;
+          callStartTime = System.currentTimeMillis();
+        }
+
         try {
           return getRegionServerWithoutRetries(callable, false);
         } catch (DoNotRetryIOException ioe) {
@@ -1312,6 +1347,12 @@ public class HConnectionManager {
           throw ioe;
         } catch (Throwable t) {
           exceptions.add(t);
+
+          if (t instanceof RegionOverloadedException) {
+            serverRequestedWaitTime = ((RegionOverloadedException)t).getBackoffTimeMillis();
+            continue;
+          }
+
           if (tries == numRetries - 1) {
             throw new RetriesExhaustedException(callable.getServerName(),
                 callable.getRegionName(), callable.getRow(), tries, exceptions);
@@ -1330,7 +1371,7 @@ public class HConnectionManager {
               equals(callable.location.getServerAddress())) {
             long pauseTime = getPauseTime(tries);
             if ((System.currentTimeMillis() - callStartTime + pauseTime) >
-                rpcRetryTimeout) {
+                 rpcRetryTimeout) {
               throw new RetriesExhaustedException(callable.getServerName(),
                   callable.getRegionName(), callable.getRow(), tries,
                   exceptions);
@@ -2060,6 +2101,8 @@ public class HConnectionManager {
         futures.add(task);
       }
 
+      RegionOverloadedException toThrow = null;
+      long maxWaitTimeRequested = 0;
       for (int i = 0; i < futures.size(); i++ ) {
         Future<MultiPutResponse> future = futures.get(i);
         MultiPut request = multiPuts.get(i);
@@ -2071,8 +2114,15 @@ public class HConnectionManager {
           throw new InterruptedIOException(e.getMessage());
         } catch (ExecutionException ex) {
           // retry, unless it is not to be retried.
-          if (ex.getCause() instanceof DoNotRetryIOException)
+          if (ex.getCause() instanceof DoNotRetryIOException) {
             throw (DoNotRetryIOException)ex.getCause();
+          } else if (ex.getCause() instanceof RegionOverloadedException) {
+            RegionOverloadedException roe = (RegionOverloadedException)ex.getCause();
+            if (roe.getBackoffTimeMillis() > maxWaitTimeRequested) {
+              maxWaitTimeRequested = roe.getBackoffTimeMillis();
+              toThrow = roe;
+            }
+          }
         }
 
         // For each region
@@ -2108,6 +2158,8 @@ public class HConnectionManager {
           }
         }
       }
+      if (toThrow != null) throw toThrow;
+
       return failed;
     }
 
@@ -2135,10 +2187,42 @@ public class HConnectionManager {
       callStartTime = System.currentTimeMillis();
 
       int tries;
+      long serverRequestedWaitTime = 0;
+      int serverRequestedRetries = 0;
       for ( tries = 0 ; tries < numRetries && !list.isEmpty(); ++tries) {
-        List<Put> failed;
+        // If server requested wait. We will wait for that time, and start
+        // again. Do not count this time/tries against the client retries.
+        if (serverRequestedWaitTime > 0) {
+          serverRequestedRetries++;
+
+          // Only do this for a configurable number of times?
+          if (serverRequestedRetries > this.maxServerRequestedRetries)
+            throw new RetriesExhaustedException("Server Overloaded: Still had "
+                + list.size() + " puts left after server requested " +
+                serverRequestedRetries + " retries.");
+
+          long sleepTimePending = callStartTime + serverRequestedWaitTime
+              - System.currentTimeMillis();
+            try {
+              Thread.sleep(sleepTimePending);
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              throw new InterruptedIOException();
+            }
+            tries = 0;
+            callStartTime = System.currentTimeMillis();
+            serverRequestedWaitTime = 0;
+        }
+
+        List<Put> failed = null;
         List<MultiPut> multiPuts = this.splitPutsIntoMultiPuts(list, tableName, options);
-        failed = this.processListOfMultiPut(multiPuts, tableName, options);
+        try {
+          failed = this.processListOfMultiPut(multiPuts, tableName, options);
+        } catch (RegionOverloadedException ex) {
+            serverRequestedWaitTime = ex.getBackoffTimeMillis();
+            // do not clear the list
+            continue;
+        }
 
         list.clear();
         if (failed != null && !failed.isEmpty()) {
