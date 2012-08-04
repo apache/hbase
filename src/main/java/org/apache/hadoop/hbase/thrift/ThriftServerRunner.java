@@ -1303,7 +1303,7 @@ public class ThriftServerRunner implements Runnable {
           scan.setCaching(tScan.getCaching());
         }
         if (tScan.isSetCachingBlocksEnabled()) {
-          scan.setCacheBlocks(tscan.isCachingBlocksEnabled())
+          scan.setCacheBlocks(tScan.isCachingBlocksEnabled());
         }
         if(tScan.isSetColumns() && tScan.getColumns().size() != 0) {
           for(ByteBuffer column : tScan.getColumns()) {
