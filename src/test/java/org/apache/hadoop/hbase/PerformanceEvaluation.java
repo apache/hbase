@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -165,6 +166,10 @@ public class PerformanceEvaluation {
         "Run random seek scan with both start and stop row (max 10000 rows)");
     addCommandDescriptor(RandomWriteTest.class, "randomWrite",
         "Run random write test");
+    addCommandDescriptor(RandomDeleteTest.class, "randomDelete",
+        "Run random delete test");
+    addCommandDescriptor(RandomBatchedDeleteTest.class, "randomDeleteBatched",
+        "Run random delete (batched) test");
     addCommandDescriptor(SequentialReadTest.class, "sequentialRead",
         "Run sequential read test");
     addCommandDescriptor(SequentialWriteTest.class, "sequentialWrite",
@@ -927,6 +932,51 @@ public class PerformanceEvaluation {
 
   }
 
+  static class RandomDeleteTest extends Test {
+    RandomDeleteTest(Configuration conf, TestOptions options, Status status) {
+      super(conf, options, status);
+    }
+
+    @Override
+    void testRow(final int i) throws IOException {
+      byte [] row = getRandomRow(this.rand, this.totalRows);
+      long ts = this.rand.nextLong();
+      Delete delete = new Delete(row);
+      delete.deleteColumn(FAMILY_NAME, QUALIFIER_NAME, ts);
+      delete.setWriteToWAL(writeToWAL);
+      table.delete(delete);
+    }
+  }
+
+  static class RandomBatchedDeleteTest extends Test {
+    List<Delete> deletes;
+    static int BATCH_SIZE = 1000;
+    RandomBatchedDeleteTest(Configuration conf, TestOptions options, Status status) {
+      super(conf, options, status);
+      deletes = new ArrayList<Delete>();
+    }
+
+    @Override
+    void testRow(final int i) throws IOException {
+      byte [] row = getRandomRow(this.rand, this.totalRows);
+      long ts = this.rand.nextLong();
+      Delete delete = new Delete(row);
+      delete.deleteColumn(FAMILY_NAME, QUALIFIER_NAME, ts);
+      delete.setWriteToWAL(writeToWAL);
+      deletes.add(delete);
+
+      if (deletes.size() % BATCH_SIZE == 0)
+        table.delete(deletes);
+    }
+
+    @Override
+    void testTakedown() throws IOException {
+      if (deletes.size() != 0)
+        table.delete(deletes);
+      super.testTakedown();
+    }
+  }
+
   static class RandomWriteTest extends Test {
     RandomWriteTest(Configuration conf, TestOptions options, Status status) {
       super(conf, options, status);
@@ -940,6 +990,28 @@ public class PerformanceEvaluation {
       put.add(FAMILY_NAME, QUALIFIER_NAME, value);
       put.setWriteToWAL(writeToWAL);
       table.put(put);
+    }
+  }
+
+  static class RandomBatchedWriteTest extends Test {
+    List<Put> puts;
+    static int BATCH_SIZE = 1000;
+    RandomBatchedWriteTest(Configuration conf, TestOptions options, Status status) {
+      super(conf, options, status);
+      puts = new ArrayList<Put>();
+    }
+
+    @Override
+    void testRow(final int i) throws IOException {
+      byte [] row = getRandomRow(this.rand, this.totalRows);
+      Put put = new Put(row);
+      byte[] value = generateValue(this.rand);
+      put.add(FAMILY_NAME, QUALIFIER_NAME, value);
+      put.setWriteToWAL(writeToWAL);
+      puts.add(put);
+
+      if (puts.size() % BATCH_SIZE == 0)
+        table.put(puts);
     }
   }
 
