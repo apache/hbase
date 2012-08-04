@@ -86,7 +86,12 @@ public class RowMutationSortReducer extends
           + "(" + StringUtils.humanReadableInt(curSize) + ")");
       int index = 0;
       for (KeyValue kv : map) {
-        context.write(row, kv);
+        // Set memstore timestamp to zero so that the data is immediately visible to all clients
+        // regardless of the target regionserver's readpoint.
+        KeyValue kvCopy = kv.shallowCopy();
+        kvCopy.setMemstoreTS(0);
+
+        context.write(row, kvCopy);
         if (index > 0 && index % 100 == 0)
           context.setStatus("Wrote " + index);
       }
