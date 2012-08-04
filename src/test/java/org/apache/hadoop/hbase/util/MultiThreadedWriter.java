@@ -173,8 +173,9 @@ public class MultiThreadedWriter extends MultiThreadedAction {
     public void insert(long rowKey, long col, boolean profile) {
       Put put = new Put(longToByteArrayKey(rowKey));
       String colAsStr = String.valueOf(col);
-      put.add(columnFamily, Bytes.toBytes(colAsStr),
-          dataGenerator.generateRandomSizeValue(rowKey, colAsStr));
+      byte [] val = dataGenerator.generateRandomSizeValue(rowKey, colAsStr);
+      numBytes.addAndGet(val.length);
+      put.add(columnFamily, Bytes.toBytes(colAsStr), val);
       table.setProfiling(profile);
       try {
         long start = System.currentTimeMillis();

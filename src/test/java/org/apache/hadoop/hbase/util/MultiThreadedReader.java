@@ -257,6 +257,7 @@ public class MultiThreadedReader extends MultiThreadedAction
       table.setProfiling (profile);
       Result result = table.get(get);
       totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+      numBytes.addAndGet(result.getBytes().getLength());
       numKeys.addAndGet(1);
 
       // if we got no data report error

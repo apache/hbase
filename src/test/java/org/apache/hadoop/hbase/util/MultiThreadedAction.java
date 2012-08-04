@@ -47,6 +47,7 @@ public abstract class MultiThreadedAction {
 
   protected AtomicInteger numThreadsWorking = new AtomicInteger();
   protected AtomicLong numKeys = new AtomicLong();
+  protected AtomicLong numBytes = new AtomicLong();
   protected AtomicLong numCols = new AtomicLong();
   protected AtomicLong totalOpTimeMs = new AtomicLong();
   protected boolean verbose = false;
@@ -101,6 +102,7 @@ public abstract class MultiThreadedAction {
     public void run() {
       long startTime = System.currentTimeMillis();
       long priorNumKeys = 0;
+      long priorNumBytes = 0;
       long priorCumulativeOpTime = 0;
       int priorAverageKeysPerSecond = 0;
 
@@ -114,10 +116,12 @@ public abstract class MultiThreadedAction {
           LOG.info(threadsLeft + "Number of keys = 0");
         } else {
           long numKeys = MultiThreadedAction.this.numKeys.get();
+          long numBytes = MultiThreadedAction.this.numBytes.get();
           long time = System.currentTimeMillis() - startTime;
           long totalOpTime = totalOpTimeMs.get();
 
           long numKeysDelta = numKeys - priorNumKeys;
+          long numBytesDelta = numBytes - priorNumBytes;
           long totalOpTimeDelta = totalOpTime - priorCumulativeOpTime;
 
           double averageKeysPerSecond =
@@ -132,10 +136,13 @@ public abstract class MultiThreadedAction {
               + formatTime(time)
               + ((numKeys > 0 && time > 0) ? (" Overall: [" + "keys/s= "
                   + numKeys * 1000 / time + ", latency=" + totalOpTime
-                  / numKeys + " ms]") : "")
+                  / numKeys + " ms, " + "thoughput="
+                  + numBytes * 1000 / time / 1024 + " kB/s") : "")
               + ((numKeysDelta > 0) ? (" Current: [" + "keys/s="
                   + numKeysDelta * 1000 / REPORTING_INTERVAL_MS + ", latency="
-                  + totalOpTimeDelta / numKeysDelta + " ms]") : "")
+                  + totalOpTimeDelta / numKeysDelta + " ms" + ", throughput="
+                  + numBytesDelta * 1000 / REPORTING_INTERVAL_MS / 1024
+                  + " kB/s]") : "")
               + progressInfo());
 
           if (streamingCounters) {
@@ -144,6 +151,7 @@ public abstract class MultiThreadedAction {
           }
 
           priorNumKeys = numKeys;
+          priorNumBytes = numBytes;
           priorCumulativeOpTime = totalOpTime;
           priorAverageKeysPerSecond = (int) averageKeysPerSecond;
         }
