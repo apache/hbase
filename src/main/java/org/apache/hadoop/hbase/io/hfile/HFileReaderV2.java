@@ -305,7 +305,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
           }
           ProfilingData pData = HRegionServer.threadLocalProfilingData.get();
           if (pData != null) {
-            pData.incInt(ProfilingData.DATA_BLOCK_HIT_CNT);
+            pData.incInt(ProfilingData.blockHitStr(
+                cachedBlock.getBlockType().getCategory(),
+                cachedBlock.getColumnFamilyName()));
           }
           return cachedBlock;
         }
@@ -340,7 +342,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
       ProfilingData pData = HRegionServer.threadLocalProfilingData.get();
       if (pData != null) {
-        pData.incInt(ProfilingData.DATA_BLOCK_MISS_CNT);
+        pData.incInt(ProfilingData.blockMissStr(
+            hfileBlock.getBlockType().getCategory(),
+            hfileBlock.getColumnFamilyName()));
         pData.incLong(ProfilingData.TOTAL_BLOCK_READ_TIME_NS, delta);
       }
       return hfileBlock;

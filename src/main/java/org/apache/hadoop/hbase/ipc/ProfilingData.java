@@ -10,6 +10,7 @@ import org.apache.commons.lang.mutable.MutableFloat;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -31,14 +32,18 @@ public class ProfilingData implements Writable {
   public static final String CLIENT_NETWORK_LATENCY_MS = "client_network_latency.ms";
   
   /**
-   *  number of data block hits on get
+   *  number of block hits on get
    */
-  public static final String DATA_BLOCK_HIT_CNT = "data_block_hit_cnt";
+  public static String blockHitStr(BlockType.BlockCategory cat, String cf) {
+    return "block_hit_cnt." + cat + "." + cf;
+  }
   
   /**
-   *  number of data block misses on get
+   *  number of block misses on get
    */
-  public static final String DATA_BLOCK_MISS_CNT = "data_block_miss_cnt";
+  public static String blockMissStr(BlockType.BlockCategory cat, String cf) {
+    return "block_miss_cnt." + cat + "." + cf;
+  }
   
   /**
    *  total time spent reading data blocks into cache on misses
