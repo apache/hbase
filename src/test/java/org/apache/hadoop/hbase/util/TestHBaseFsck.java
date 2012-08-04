@@ -295,6 +295,18 @@ public class TestHBaseFsck {
     }
     tbl.put(puts);
     tbl.flushCommits();
+    long endTime = System.currentTimeMillis() + 60000;
+    while (!TEST_UTIL.getHBaseAdmin().isTableEnabled(tablename)) {
+      try {
+        if (System.currentTimeMillis() > endTime) {
+          fail("Failed to enable table " + tablename + " after waiting for 60 sec");
+        }
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+        fail("Interrupted when waiting table " + tablename + " to be enabled");
+      }
+    }
     return tbl;
   }
 
