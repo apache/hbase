@@ -1301,7 +1301,10 @@ public class ThriftServerRunner implements Runnable {
         }
         if (tScan.isSetCaching()) {
           scan.setCaching(tScan.getCaching());
-          }
+        }
+        if (tScan.isSetCachingBlocksEnabled()) {
+          scan.setCacheBlocks(tscan.isCachingBlocksEnabled())
+        }
         if(tScan.isSetColumns() && tScan.getColumns().size() != 0) {
           for(ByteBuffer column : tScan.getColumns()) {
             byte [][] famQf = KeyValue.parseColumn(getBytes(column));
