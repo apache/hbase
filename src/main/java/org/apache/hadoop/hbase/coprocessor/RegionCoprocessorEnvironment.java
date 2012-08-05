@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import java.util.concurrent.ConcurrentMap;
+
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -30,5 +32,8 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment {
 
   /** @return reference to the region server services */
   public RegionServerServices getRegionServerServices();
+
+  /** @return shared data between all instances of this coprocessor */
+  public ConcurrentMap<String, Object> getSharedData();
 
 }
