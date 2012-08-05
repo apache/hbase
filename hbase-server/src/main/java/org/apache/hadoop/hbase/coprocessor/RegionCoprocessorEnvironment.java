@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import java.util.concurrent.ConcurrentMap;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -34,5 +36,8 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment {
 
   /** @return reference to the region server services */
   public RegionServerServices getRegionServerServices();
+
+  /** @return shared data between all instances of this coprocessor */
+  public ConcurrentMap<String, Object> getSharedData();
 
 }
