@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
 import java.io.IOException;
@@ -36,7 +37,6 @@ class RootScanner extends BaseScanner {
 
   /**
    * Don't retry if we get an error while scanning. Errors are most often
-   *
    * caused by the server going away. Wait until next rescan interval when
    * things should be back to normal.
    * @return True if successfully scanned.
@@ -50,9 +50,9 @@ class RootScanner extends BaseScanner {
     try {
       // Don't interrupt us while we're working
       synchronized(scannerLock) {
-        if (master.getRegionManager().getRootRegionLocation() != null) {
-          scanRegion(new MetaRegion(master.getRegionManager().getRootRegionLocation(),
-            HRegionInfo.ROOT_REGIONINFO));
+        HServerAddress rootRegionLocation = master.getRegionManager().getRootRegionLocation();
+        if (rootRegionLocation != null) {
+          scanRegion(new MetaRegion(rootRegionLocation, HRegionInfo.ROOT_REGIONINFO));
         }
       }
     } catch (IOException e) {
@@ -73,12 +73,6 @@ class RootScanner extends BaseScanner {
       return false;
     }
     return true;
-  }
-
-  @Override
-  protected boolean initialScan() {
-    this.initialScanComplete = scanRoot();
-    return initialScanComplete;
   }
 
   @Override

@@ -427,7 +427,7 @@
       <description>
           This allows to put non-root multi-level index blocks into the block
           cache at the time the index is being written.
-      </description>
+      </description> 
   </property>
   <property>
       <name>hfile.index.block.max.size</name>
@@ -469,7 +469,7 @@
       <value>false</value>
       <description>
           Whether an HFile block should be added to the block cache when the
-          block is finished.
+          block is finished. 
       </description>
   </property>
   <property>
@@ -530,6 +530,16 @@
       the master and read by clients and region servers. If a relative path is
       given, the parent folder will be ${zookeeper.znode.parent}. By default,
       this means the root location is stored at /hbase/root-region-server.
+      This is the deprecated znode that stores host:port only. It is still
+      populated continuously by the master.
+    </description>
+  </property>
+  <property>
+    <name>zookeeper.znode.rootserver.complete</name>
+    <value>root-region-server-complete</value>
+    <description>
+      This is the new root regionserver znode that stores host:port and start
+      code. 
     </description>
   </property>
 

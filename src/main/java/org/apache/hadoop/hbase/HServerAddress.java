@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -34,6 +35,9 @@ import org.apache.hadoop.io.WritableComparable;
  * HServerAddress is a "label" for a HBase server made of host and port number.
  */
 public class HServerAddress implements WritableComparable<HServerAddress> {
+
+  private static final Log LOG = LogFactory.getLog(HServerAddress.class);
+
   private InetSocketAddress address;
   private String stringValue;
   private String hostAddress;
@@ -108,7 +112,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     stringValue = other.stringValue;
     checkBindAddressCanBeResolved();
   }
-
+  
   /**
    * Get the normalized hostAddress:port as a string format
    * @param address
@@ -134,13 +138,12 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
   public String getBindAddress() {
     if (this.hostAddress != null)
       return hostAddress;
-
+    
     final InetAddress addr = address.getAddress();
     if (addr != null) {
       return addr.getHostAddress();
     } else {
-      LogFactory.getLog(HServerAddress.class).error("Could not resolve the"
-          + " DNS name of " + stringValue);
+      LOG.error("Could not resolve the DNS name of " + stringValue);
       return null;
     }
   }

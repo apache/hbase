@@ -44,7 +44,6 @@ import java.util.NavigableSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -78,6 +77,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
@@ -120,7 +120,7 @@ public class HBaseTestingUtility {
 
   /** The root directory for all mini-cluster test data for this testing utility instance. */
   private File clusterTestBuildDir = null;
-
+  
   /** If there is a mini cluster running for this testing utility instance. */
   private boolean miniClusterRunning;
 
@@ -137,7 +137,7 @@ public class HBaseTestingUtility {
    * Default parent directory for test output.
    */
   public static final String DEFAULT_TEST_DIRECTORY = "target/build/data";
-
+  
   /** Filesystem URI used for map-reduce mini-cluster setup */
   private static String fsURI;
 
@@ -279,7 +279,7 @@ public class HBaseTestingUtility {
   /**
    * Shuts down instance created by call to {@link #startMiniDFSCluster(int)}
    * or does nothing.
-   * @throws IOException
+   * @throws IOException 
    * @throws Exception
    */
   public void shutdownMiniDFSCluster() throws IOException {
@@ -409,9 +409,13 @@ public class HBaseTestingUtility {
 
     // Don't leave here till we've done a successful scan of the .META.
     HTable t = null;
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 10; ++i) { 
       try {
         t = new HTable(this.conf, HConstants.META_TABLE_NAME);
+        for (Result result : t.getScanner(new Scan())) {
+          LOG.debug("Successfully read meta entry: " + result);
+        }
+        break;
       } catch (NoServerForRegionException ex) {
         LOG.error("META is not online, sleeping");
         Threads.sleepWithoutInterrupt(2000);
@@ -447,12 +451,7 @@ public class HBaseTestingUtility {
    */
   public void shutdownMiniCluster() throws IOException {
     LOG.info("Shutting down minicluster");
-    if (this.hbaseCluster != null) {
-      this.hbaseCluster.shutdown();
-      // Wait till hbase is down before going on to shutdown zk.
-      this.hbaseCluster.join();
-      hbaseCluster = null;
-    }
+    shutdownMiniHBaseCluster();
     shutdownMiniZKCluster();
     shutdownMiniDFSCluster();
 
@@ -888,7 +887,7 @@ public class HBaseTestingUtility {
     LOG.info("Starting mini mapreduce cluster...");
     // These are needed for the new and improved Map/Reduce framework
     Configuration c = getConfiguration();
-
+    
     setupClusterTestBuildDir();
     createDirsAndSetProperties();
 
@@ -1412,7 +1411,7 @@ REGION_LOOP:
         + new Random().nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
   }
 
-  /**
+  /** 
    * Returns a random free port and marks that port as taken. Not thread-safe. Expected to be
    * called from single-threaded test setup code/
    */
@@ -1539,15 +1538,35 @@ REGION_LOOP:
     }
   }
 
-  public void setFileSystemURI(String fsURI) {
-    this.fsURI = fsURI;
+  public static void setFileSystemURI(String fsURI) {
+    HBaseTestingUtility.fsURI = fsURI;
+  }
+
+  private static void logMethodEntryAndSetThreadName(String methodName) {
+    LOG.info("\nStarting " + methodName + "\n");
+    Thread.currentThread().setName(methodName);
   }
 
   /**
    * Sets the current thread name to the caller's method name. 
    */
   public static void setThreadNameFromMethod() {
-    String methodName = new Throwable().getStackTrace()[1].getMethodName();
-    Thread.currentThread().setName(methodName);
+    logMethodEntryAndSetThreadName(new Throwable().getStackTrace()[1].getMethodName());
+  }
+
+  /**
+   * Sets the current thread name to the caller's caller's method name. 
+   */
+  public static void setThreadNameFromCallerMethod() {
+    logMethodEntryAndSetThreadName(new Throwable().getStackTrace()[2].getMethodName());
+  }
+
+  public void killMiniHBaseCluster() {
+    for (RegionServerThread rst : hbaseCluster.getRegionServerThreads()) {
+      rst.getRegionServer().kill();
+    }
+    for (HMaster master : hbaseCluster.getMasters()) {
+      master.stop("killMiniHBaseCluster");
+    }
   }
 }

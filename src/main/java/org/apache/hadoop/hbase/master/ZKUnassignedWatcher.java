@@ -20,16 +20,20 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.master.handler.MasterCloseRegionHandler;
 import org.apache.hadoop.hbase.master.handler.MasterOpenRegionHandler;
+import org.apache.hadoop.hbase.util.DrainableQueue;
+import org.apache.hadoop.hbase.util.ParamCallable;
+import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZNodePathAndData;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper.ZNodePathAndData;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -42,51 +46,47 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 public class ZKUnassignedWatcher implements Watcher {
   private static final Log LOG = LogFactory.getLog(ZKUnassignedWatcher.class);
 
-  private ZooKeeperWrapper zkWrapper;
-  String serverName;
-  ServerManager serverManager;
+  private final ZooKeeperWrapper zkWrapper;
+  private final String serverName;
+  private final ServerManager serverManager;
+  private final String unassignedZNode;
 
-  public static void start(Configuration conf, HMaster master)
-  throws IOException {
-    new ZKUnassignedWatcher(conf, master);
-    LOG.debug("Started ZKUnassigned watcher");
-  }
+  private DrainableQueue<ZNodePathAndData> delayedZKEvents =
+      new DrainableQueue<ZNodePathAndData>("delayedZKEvents");
 
-  public ZKUnassignedWatcher(Configuration conf, HMaster master)
-  throws IOException {
-    this.serverName = master.getHServerAddress().toString();
-    this.serverManager = master.getServerManager();
-    zkWrapper = ZooKeeperWrapper.getInstance(conf, master.getZKWrapperName());
-    String unassignedZNode = zkWrapper.getRegionInTransitionZNode();
+  private List<String> unassignedDirSnapshot = new ArrayList<String>();
 
-    // If the UNASSIGNED ZNode exists and this is a fresh cluster start, then
-    // delete it.
-    final boolean unassignedNodeExists =
-        zkWrapper.exists(unassignedZNode, false);
-    LOG.debug(getClass().getSimpleName() + " constructor: " +
-        "unassignedNodeExists=" + unassignedNodeExists + ", " +
-        "isClusterStartup=" + master.isClusterStartup());
-
-    if (master.isClusterStartup() && unassignedNodeExists) {
-      LOG.info("Cluster start, but found " + unassignedZNode + ", deleting it.");
+  private ParamCallable<ZNodePathAndData> processEvent = new ParamCallable<ZNodePathAndData>() {
+    @Override
+    public void call(ZNodePathAndData pathAndData) {
       try {
-        zkWrapper.deleteZNode(unassignedZNode, true);
-      } catch (KeeperException e) {
-        LOG.error("Could not delete znode " + unassignedZNode, e);
-        throw new IOException(e);
-      } catch (InterruptedException e) {
-        LOG.error("Could not delete znode " + unassignedZNode, e);
-        throw new IOException(e);
+        handleRegionStateInZK(pathAndData.getzNodePath(), pathAndData.getData(), false);
+      } catch (IOException e) {
+        LOG.error("Could not process event from ZooKeeper", e);
       }
     }
-
-    // If the UNASSIGNED ZNode does not exist, create it.
-    zkWrapper.createZNodeIfNotExists(unassignedZNode);
-
-    // TODO: get the outstanding changes in UNASSIGNED
+  };
+  
+  ZKUnassignedWatcher(HMaster master) throws IOException {
+    LOG.debug("Started ZKUnassigned watcher");
+    this.serverName = master.getHServerAddress().toString();
+    this.serverManager = master.getServerManager();
+    zkWrapper = ZooKeeperWrapper.getInstance(master.getConfiguration(), master.getZKWrapperName());
+    unassignedZNode = zkWrapper.getRegionInTransitionZNode();
 
     // Set a watch on Zookeeper's UNASSIGNED node if it exists.
     zkWrapper.registerListener(this);
+
+    if (zkWrapper.exists(unassignedZNode, false)) {
+      // The unassigned directory already exists in ZK. Take a snapshot of unassigned regions.
+      try {
+        unassignedDirSnapshot = zkWrapper.listChildrenAndWatchForNewChildren(unassignedZNode);
+      } catch (KeeperException ke) {
+        throw new IOException(ke);
+      }
+    } else {
+      zkWrapper.createZNodeIfNotExists(unassignedZNode);  // create and watch
+    }
   }
 
   /**
@@ -105,9 +105,7 @@ public class ZKUnassignedWatcher implements Watcher {
     }
 
     // check if the path is for the UNASSIGNED directory we care about
-    if(event.getPath() == null ||
-       !event.getPath().startsWith(zkWrapper.getZNodePathForHBase(
-           zkWrapper.getRegionInTransitionZNode()))) {
+    if (event.getPath() == null || !event.getPath().startsWith(unassignedZNode)) {
       return;
     }
 
@@ -142,7 +140,7 @@ public class ZKUnassignedWatcher implements Watcher {
         for(ZNodePathAndData zNodePathAndData : newZNodes) {
           LOG.debug("Handling updates for znode: " + zNodePathAndData.getzNodePath());
           handleRegionStateInZK(zNodePathAndData.getzNodePath(),
-              zNodePathAndData.getData());
+              zNodePathAndData.getData(), true);
         }
       }
     }
@@ -162,19 +160,33 @@ public class ZKUnassignedWatcher implements Watcher {
    */
   private void handleRegionStateInZK(String zNodePath) throws IOException {
     byte[] data = zkWrapper.readZNode(zNodePath, null);
-    handleRegionStateInZK(zNodePath, data);
+    handleRegionStateInZK(zNodePath, data, true);
   }
 
-  private void handleRegionStateInZK(String zNodePath, byte[] data) {
+  void handleRegionStateInZK(String zNodePath, byte[] data, boolean canDefer) throws IOException {
     // a null value is set when a node is created, we don't need to handle this
     if(data == null) {
       return;
     }
-    String rgnInTransitNode = zkWrapper.getRegionInTransitionZNode();
+
     String region = zNodePath.substring(
-        zNodePath.indexOf(rgnInTransitNode) + rgnInTransitNode.length() + 1);
+        zNodePath.indexOf(unassignedZNode) + unassignedZNode.length() + 1);
+
     HBaseEventType rsEvent = HBaseEventType.fromByte(data[0]);
     LOG.debug("Got event type [ " + rsEvent + " ] for region " + region);
+
+    RegionTransitionEventData rt = new RegionTransitionEventData();
+    Writables.getWritable(data, rt);
+
+    if (canDefer) {
+      ZNodePathAndData pathAndData = new ZNodePathAndData(zNodePath, data);
+      if (delayedZKEvents.enqueue(pathAndData)) {
+        // We will process this event after the initial scan of the unassigned directory is done.
+        LOG.debug("ZK-EVENT-PROCESS: deferring processing of event " + rsEvent + ", path "
+            + zNodePath + " until master startup is complete");
+        return;
+      }
+    }
 
     // if the node was CLOSED then handle it
     if(rsEvent == HBaseEventType.RS2ZK_REGION_CLOSED) {
@@ -187,4 +199,16 @@ public class ZKUnassignedWatcher implements Watcher {
           data).submit();
     }
   }
+
+  void drainZKEventQueue() {
+    LOG.info("Draining ZK unassigned event queue");
+    delayedZKEvents.drain(processEvent);
+    LOG.info("Finished draining ZK unassigned event queue");
+  }
+
+  /** @return a snapshot of the ZK unassigned directory taken when we set the watch */
+  List<String> getUnassignedDirSnapshot() {
+    return unassignedDirSnapshot;
+  }
+  
 }

@@ -56,15 +56,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RuntimeExceptionAbortStrategy;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
+import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
+import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 
 /**
@@ -119,42 +119,37 @@ public class ZooKeeperWrapper implements Watcher {
   private final int sessionTimeout;
   private RecoverableZooKeeper recoverableZK;
 
-  /*
-   * All the HBase directories are hosted under this parent
-   */
+  /** All the HBase directories are hosted under this parent */
   public final String parentZNode;
-  /*
-   * Specifies the RS hosting root
-   */
+
+  /** Specifies the RS hosting root (host, port, start code) */
   private final String rootRegionZNode;
-  /*
+  
+  /** A znode containing root regionserver host:port only for compatibility with old clients */ 
+  private final String legacyRootRegionZNode;
+
+  /**
    * This is the directory where the RS's create ephemeral nodes. The master
    * watches these nodes, and their expiry indicates RS death.
    */
   private final String rsZNode;
-  /*
-   * ZNode used for election of the primary master when there are secondaries.
-   */
+
+  /** ZNode used for election of the primary master when there are secondaries. */
   public final String masterElectionZNode;
-  /*
-   * State of the cluster - if up and running or shutting down
-   */
+
+  /** State of the cluster - if up and running or shutting down */
   public final String clusterStateZNode;
-  /*
-   * Regions that are in transition
-   */
+
+  /** Regions that are in transition */
   private final String rgnsInTransitZNode;
-  /*
-   * ZNode used for log splitting work assignment
-   */
+
+  /** ZNode used for log splitting work assignment */
   public final String splitLogZNode;
-  /*
-   * ZNode used for table-level schema modification locks
-   */
+
+  /** ZNode used for table-level schema modification locks */
   public final String tableLockZNode;
-  /*
-   * List of ZNodes in the unassgined region that are already being watched
-   */
+
+  /** List of ZNodes in the unassigned region that are already being watched */
   private Set<String> unassignedZNodesWatched = new HashSet<String>();
 
   private List<Watcher> listeners = Collections.synchronizedList(new ArrayList<Watcher>());
@@ -262,7 +257,10 @@ public class ZooKeeperWrapper implements Watcher {
     parentZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
 
-    String rootServerZNodeName = conf.get("zookeeper.znode.rootserver", "root-region-server");
+    String rootServerZNodeName =
+        conf.get("zookeeper.znode.rootserver.complete", "root-region-server-complete");
+    String legacyRootServerZNodeName = 
+        conf.get("zookeeper.znode.rootserver", "root-region-server");
     String rsZNodeName         = conf.get("zookeeper.znode.rs", "rs");
     String masterAddressZNodeName = conf.get("zookeeper.znode.master", "master");
     String stateZNodeName      = conf.get("zookeeper.znode.state", "shutdown");
@@ -270,6 +268,7 @@ public class ZooKeeperWrapper implements Watcher {
     String splitLogZNodeName   = conf.get("zookeeper.znode.splitlog", "splitlog");
     String tableLockZNodeName  = conf.get("zookeeper.znode.tableLock", "tableLock");
     rootRegionZNode     = getZNode(parentZNode, rootServerZNodeName);
+    legacyRootRegionZNode = getZNode(parentZNode, legacyRootServerZNodeName);
     rsZNode             = getZNode(parentZNode, rsZNodeName);
     rgnsInTransitZNode  = getZNode(parentZNode, regionsInTransitZNodeName);
     masterElectionZNode = getZNode(parentZNode, masterAddressZNodeName);
@@ -574,6 +573,13 @@ public class ZooKeeperWrapper implements Watcher {
    *         there was a problem reading the ZNode.
    */
   public HServerAddress readRootRegionLocation() {
+    return HServerInfo.getAddress(readAddress(rootRegionZNode, null));
+  }
+
+  /**
+   * @return the location of the server serving the root region, including the start code
+   */
+  public HServerInfo readRootRegionServerInfo() {
     return readAddress(rootRegionZNode, null);
   }
 
@@ -584,7 +590,7 @@ public class ZooKeeperWrapper implements Watcher {
    *         ZNode. The watcher is set only if the result is not null.
    */
   public HServerAddress readMasterAddress(Watcher watcher) {
-    return readAddress(masterElectionZNode, watcher);
+    return HServerInfo.getAddress(readAddress(masterElectionZNode, watcher));
   }
 
   /**
@@ -667,7 +673,7 @@ public class ZooKeeperWrapper implements Watcher {
     return checkExistenceOf(masterElectionZNode);
   }
 
-  public HServerAddress readAddress(String znode, Watcher watcher) {
+  public HServerInfo readAddress(String znode, Watcher watcher) {
     try {
       LOG.debug("<" + instanceName + ">" + "Trying to read " + znode);
       return readAddressOrThrow(znode, watcher);
@@ -685,7 +691,7 @@ public class ZooKeeperWrapper implements Watcher {
    * @return
    * @throws KeeperException
    */
-  public HServerAddress readAddressOrThrow(String znode, Watcher watcher)
+  public HServerInfo readAddressOrThrow(String znode, Watcher watcher)
   throws KeeperException {
     byte[] data;
     try {
@@ -699,7 +705,11 @@ public class ZooKeeperWrapper implements Watcher {
 
     String addressString = Bytes.toString(data);
     LOG.debug("<" + instanceName + ">" + "Read ZNode " + znode + " got " + addressString);
-    return new HServerAddress(addressString);
+    if (HServerInfo.isValidServerName(addressString)) {
+      return HServerInfo.fromServerName(addressString);
+    } else {
+      return new HServerInfo(new HServerAddress(addressString));
+    }
   }
 
   /**
@@ -743,20 +753,20 @@ public class ZooKeeperWrapper implements Watcher {
    * Delete ZNode containing root region location.
    * @return true if operation succeeded, false otherwise.
    */
-  public boolean deleteRootRegionLocation()  {
-    if (!ensureParentExists(rootRegionZNode)) {
+  private boolean deleteRootRegionLocation(String znode)  {
+    if (!ensureParentExists(znode)) {
       return false;
     }
 
     try {
-      deleteZNode(rootRegionZNode);
+      deleteZNode(znode);
       return true;
     } catch (KeeperException.NoNodeException e) {
       return true;    // ok, move on.
     } catch (KeeperException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to delete " + rootRegionZNode + ": " + e);
+      LOG.warn("<" + instanceName + ">" + "Failed to delete " + znode + ": " + e);
     } catch (InterruptedException e) {
-      LOG.warn("<" + instanceName + ">" + "Failed to delete " + rootRegionZNode + ": " + e);
+      LOG.warn("<" + instanceName + ">" + "Failed to delete " + znode + ": " + e);
     }
 
     return false;
@@ -774,7 +784,7 @@ public class ZooKeeperWrapper implements Watcher {
   }
 
   /**
-   * Optionnally recursive deletion of specified znode
+   * Optionally recursive deletion of specified znode
    * @param znode
    * @param recursive
    * @throws KeeperException
@@ -811,12 +821,12 @@ public class ZooKeeperWrapper implements Watcher {
     LOG.debug("<" + instanceName + ">" + "Deleted ZNode " + znode);
   }
 
-  private boolean createRootRegionLocation(String address) {
+  private boolean createRootRegionLocation(String znode, String address) {
     byte[] data = Bytes.toBytes(address);
     try {
-      recoverableZK.create(rootRegionZNode, data, Ids.OPEN_ACL_UNSAFE,
+      recoverableZK.create(znode, data, Ids.OPEN_ACL_UNSAFE,
                        CreateMode.PERSISTENT);
-      LOG.debug("<" + instanceName + ">" + "Created ZNode " + rootRegionZNode + " with data " + address);
+      LOG.debug("<" + instanceName + ">" + "Created ZNode " + znode + " with data " + address);
       return true;
     } catch (KeeperException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to create root region in ZooKeeper: " + e);
@@ -827,11 +837,11 @@ public class ZooKeeperWrapper implements Watcher {
     return false;
   }
 
-  private boolean updateRootRegionLocation(String address) {
+  private boolean updateRootRegionLocation(String znode, String address) {
     byte[] data = Bytes.toBytes(address);
     try {
-      recoverableZK.setData(rootRegionZNode, data, -1);
-      LOG.debug("<" + instanceName + ">" + "SetData of ZNode " + rootRegionZNode + " with " + address);
+      recoverableZK.setData(znode, data, -1);
+      LOG.debug("<" + instanceName + ">" + "SetData of ZNode " + znode + " with " + address);
       return true;
     } catch (KeeperException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to set root region location in ZooKeeper: " + e);
@@ -845,25 +855,35 @@ public class ZooKeeperWrapper implements Watcher {
   /**
    * Write root region location to ZooKeeper. If address is null, delete ZNode.
    * containing root region location.
-   * @param address HServerAddress to write to ZK.
+   * @param hsi server info (host/port/start code)
    * @return true if operation succeeded, false otherwise.
    */
-  public boolean writeRootRegionLocation(HServerAddress address) {
-    if (address == null) {
-      return deleteRootRegionLocation();
+  public boolean writeRootRegionLocation(HServerInfo hsi) {
+    return writeRootRegionLocation(hsi, false);
+  }
+
+  boolean writeLegacyRootRegionLocation(HServerInfo hsi) {
+    return writeRootRegionLocation(hsi, true);
+  }
+
+  private boolean writeRootRegionLocation(HServerInfo hsi, boolean isLegacyZNode) {
+    String znode = isLegacyZNode ? legacyRootRegionZNode : rootRegionZNode;
+    if (hsi == null) {
+      return deleteRootRegionLocation(znode);
     }
 
-    if (!ensureParentExists(rootRegionZNode)) {
+    if (!ensureParentExists(znode)) {
       return false;
     }
 
-    String addressString = address.toString();
+    String addressString = isLegacyZNode ? hsi.getServerAddress().toString() :
+        hsi.getServerName();
 
-    if (checkExistenceOf(rootRegionZNode)) {
-      return updateRootRegionLocation(addressString);
+    if (checkExistenceOf(znode)) {
+      return updateRootRegionLocation(znode, addressString);
     }
 
-    return createRootRegionLocation(addressString);
+    return createRootRegionLocation(znode, addressString);
   }
 
   /**
@@ -937,7 +957,8 @@ public class ZooKeeperWrapper implements Watcher {
   }
 
   /**
-   * Set a watch on a region server location node
+   * Set a watch on a region server location node.
+   * @throws IOException if could not set a watch
    */
   public void setRSLocationWatch(HServerInfo info, Watcher watcher) throws IOException {
     String znode = getRSZNode(info);
@@ -1053,7 +1074,7 @@ public class ZooKeeperWrapper implements Watcher {
     }
     for (String node : nodes) {
       String path = joinPath(znode, node);
-      list.add(readAddress(path, watcher));
+      list.add(readAddress(path, watcher).getServerAddress());
     }
     return list;
   }
@@ -1111,10 +1132,7 @@ public class ZooKeeperWrapper implements Watcher {
     byte[] data = null;
     try {
       String path = getZNode(parentZNode, znode);
-      // TODO: ZK-REFACTOR: remove existence check?
-      if (checkExistenceOf(path)) {
-        data = recoverableZK.getData(path, watcher, stat);
-      }
+      data = recoverableZK.getData(path, watcher, stat);
     } catch (KeeperException e) {
       LOG.warn("<" + instanceName + ">" + "Failed to read " + znode
           + " znode in ZooKeeper: " + e);
@@ -1338,6 +1356,19 @@ public class ZooKeeperWrapper implements Watcher {
     return readDataFromFullyQualifiedZNode(fullyQualifiedZNodeName, stat);
   }
 
+  public byte[] readUnassignedZNodeAndSetWatch(String znodeName) throws IOException {
+    String fullyQualifiedZNodeName = getZNode(parentZNode, znodeName);
+    synchronized (unassignedZNodesWatched) {
+      unassignedZNodesWatched.add(znodeName);
+      try {
+        return readDataFromFullyQualifiedZNode(fullyQualifiedZNodeName, null);
+      } catch (IOException ex) {
+        unassignedZNodesWatched.remove(znodeName);
+        throw ex;
+      }
+    }
+  }
+
   public byte[] readDataFromFullyQualifiedZNode(
       String fullyQualifiedZNodeName, Stat stat) throws IOException {
     byte[] data;
@@ -1483,7 +1514,9 @@ public class ZooKeeperWrapper implements Watcher {
       try {
         writeZNode(znode, data, -1, true);
       } catch (IOException e) {
-        LOG.error("Error writing data for " + znode + ", could not update state to " + (HBaseEventType.fromByte(data[0])));
+        unassignedZNodesWatched.remove(znode);
+        LOG.error("Error writing data for " + znode + ", could not update state to "
+            + (HBaseEventType.fromByte(data[0])));
         abort("Error writing data for " + znode, e);
       }
     }
@@ -1857,24 +1890,6 @@ public class ZooKeeperWrapper implements Watcher {
     LOG.error(recoverableZK
         + " Received unexpected KeeperException, re-throwing exception", ke);
     throw ke;
-  }
-
-  public static class ZNodePathAndData {
-    private String zNodePath;
-    private byte[] data;
-
-    public ZNodePathAndData(String zNodePath, byte[] data) {
-      this.zNodePath = zNodePath;
-      this.data = data;
-    }
-
-    public String getzNodePath() {
-      return zNodePath;
-    }
-    public byte[] getData() {
-      return data;
-    }
-
   }
 
   /**

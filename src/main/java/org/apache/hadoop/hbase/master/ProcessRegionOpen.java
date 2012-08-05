@@ -46,10 +46,6 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
   public ProcessRegionOpen(HMaster master, HServerInfo info,
       HRegionInfo regionInfo) {
     super(master, info.getServerName(), regionInfo);
-    if (info == null) {
-      throw new NullPointerException("HServerInfo cannot be null; " +
-        "hbase-958 debugging");
-    }
     this.serverInfo = info;
   }
 
@@ -67,61 +63,55 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
       // is online.
       return RegionServerOperationResult.OPERATION_DELAYED;
     }
-    HRegionInterface server =
-        master.getServerConnection().getHRegionConnection(getMetaRegion().getServer());
-    LOG.info(regionInfo.getRegionNameAsString() + " open on " +
-      serverInfo.getServerName());
-
-    // Register the newly-available Region's location.
-    Put p = new Put(regionInfo.getRegionName());
-    p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-      Bytes.toBytes(serverInfo.getHostnamePort()));
-    p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
-      Bytes.toBytes(serverInfo.getStartCode()));
-    server.put(metaRegionName, p);
-    LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
-      " in region " + Bytes.toString(metaRegionName) + " with startcode=" +
-      serverInfo.getStartCode() + ", server=" + serverInfo.getHostnamePort());
-    synchronized (master.getRegionManager()) {
+    writeToMeta(getMetaRegion());
+    RegionManager regionManager = master.getRegionManager();
+    synchronized (regionManager) {
       if (isMetaTable) {
         // It's a meta region.
         MetaRegion m =
             new MetaRegion(new HServerAddress(serverInfo.getServerAddress()),
                 regionInfo);
-        if (!master.getRegionManager().isInitialMetaScanComplete()) {
-          // Put it on the queue to be scanned for the first time.
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Adding " + m.toString() + " to regions to scan");
-          }
-          master.getRegionManager().addMetaRegionToScan(m);
-        } else {
-          // Add it to the online meta regions
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Adding to onlineMetaRegions: " + m.toString());
-          }
-          master.getRegionManager().putMetaRegionOnline(m);
-          // Interrupting the Meta Scanner sleep so that it can
-          // process regions right away
-          master.getRegionManager().metaScannerThread.triggerNow();
+        // Add it to the online meta regions
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Adding to onlineMetaRegions: " + m.toString());
         }
+        regionManager.putMetaRegionOnline(m);
+        // Interrupting the Meta Scanner sleep so that it can
+        // process regions right away
+        regionManager.metaScannerThread.triggerNow();
       }
       // If updated successfully, remove from pending list if the state
       // is consistent. For example, a disable could be called before the
       // synchronization.
-      if(master.getRegionManager().
-          isOfflined(regionInfo.getRegionNameAsString())) {
+      if (regionManager.isOfflined(regionInfo.getRegionNameAsString())) {
         LOG.warn("We opened a region while it was asked to be closed.");
         ZooKeeperWrapper zkWrapper =
             ZooKeeperWrapper.getInstance(master.getConfiguration(),
                 master.getZKWrapperName());
         zkWrapper.deleteUnassignedRegion(regionInfo.getEncodedName());
       } else {
-        master.getRegionManager().removeRegion(regionInfo);
+        regionManager.removeRegion(regionInfo);
       }
       return RegionServerOperationResult.OPERATION_SUCCEEDED;
     }
   }
 
+  void writeToMeta(MetaRegion region) throws IOException {
+    HRegionInterface server =
+        master.getServerConnection().getHRegionConnection(region.getServer());
+    LOG.info(regionInfo.getRegionNameAsString() + " open on " + serverInfo.getServerName());
+    // Register the newly-available Region's location.
+    Put p = new Put(regionInfo.getRegionName());
+    p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+        Bytes.toBytes(serverInfo.getHostnamePort()));
+    p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
+        Bytes.toBytes(serverInfo.getStartCode()));
+    server.put(region.getRegionName(), p);
+    LOG.info("Updated row " + regionInfo.getRegionNameAsString() + " in region "
+        + Bytes.toString(region.getRegionName()) + " with startcode=" + serverInfo.getStartCode()
+        + ", server=" + serverInfo.getHostnamePort());
+  }
+  
   @Override
   protected int getPriority() {
     return 0; // highest priority

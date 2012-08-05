@@ -60,10 +60,10 @@ import org.apache.hadoop.ipc.RemoteException;
 
 
 /**
- * Provides an interface to manage HBase database table metadata + general
- * administrative functions.  Use HBaseAdmin to create, drop, list, enable and
- * disable tables. Use it also to add and drop table column families.
- *
+ * Provides an interface to manage HBase database table metadata + general 
+ * administrative functions.  Use HBaseAdmin to create, drop, list, enable and 
+ * disable tables. Use it also to add and drop table column families. 
+ * 
  * See {@link HTable} to add, update, and delete data from an individual table.
  */
 public class HBaseAdmin {
@@ -284,14 +284,14 @@ public class HBaseAdmin {
       MetaScanner.metaScan(conf, visitor, desc.getName());
       if (actualRegCount.get() != numRegs) {
         if (tries == numRetries - 1) {
-          throw new RegionOfflineException("Only " + actualRegCount.get() +
+          throw new RegionOfflineException("Only " + actualRegCount.get() + 
               " of " + numRegs + " regions are online; retries exhausted.");
         }
         try { // Sleep
           Thread.sleep(getPauseTime(tries));
         } catch (InterruptedException e) {
           throw new InterruptedIOException("Interrupted when opening" +
-              " regions; " + actualRegCount.get() + " of " + numRegs +
+              " regions; " + actualRegCount.get() + " of " + numRegs + 
               " regions processed so far");
         }
         if (actualRegCount.get() > prevRegCount) { // Making progress
@@ -597,10 +597,10 @@ public class HBaseAdmin {
       List<Pair<String, HColumnDescriptor>> columnModifications,
       List<String> columnDeletions) throws IOException {
     // convert all of the strings to bytes and pass to the bytes method
-    List<Pair<byte [], HColumnDescriptor>> modificationsBytes =
+    List<Pair<byte [], HColumnDescriptor>> modificationsBytes = 
       new ArrayList<Pair<byte [], HColumnDescriptor>>(
           columnModifications.size());
-    List<byte []> deletionsBytes =
+    List<byte []> deletionsBytes = 
       new ArrayList<byte []>(columnDeletions.size());
 
     for(Pair<String, HColumnDescriptor> c : columnModifications) {
@@ -618,7 +618,7 @@ public class HBaseAdmin {
   /**
    * Batch alter a table. Only takes regions offline once and performs a single
    * update to .META.
-   * Any of the three lists can be null, in which case those types of
+   * Any of the three lists can be null, in which case those types of 
    * alterations will be ignored.
    * Asynchronous operation.
    *
@@ -647,7 +647,7 @@ public class HBaseAdmin {
   /**
    * Get the status of alter command - indicates how many regions have received
    * the updated schema Asynchronous operation.
-   *
+   * 
    * @param tableName
    *          name of the table to get the status of
    * @return List indicating the number of regions updated List.get(0) is the
@@ -687,7 +687,7 @@ public class HBaseAdmin {
    * @param column column descriptor of column to be added
    * @throws IOException if a remote or network exception occurs
    */
-  public void addColumn(final byte [] tableName, HColumnDescriptor column)
+  public void addColumn(final byte [] tableName, HColumnDescriptor column) 
   throws IOException {
     alterTable(tableName, Arrays.asList(column), null, null);
   }
@@ -714,7 +714,7 @@ public class HBaseAdmin {
    * @param columnName name of column to be deleted
    * @throws IOException if a remote or network exception occurs
    */
-  public void deleteColumn(final byte [] tableName,
+  public void deleteColumn(final byte [] tableName, 
       final byte [] columnName)
   throws IOException {
     alterTable(tableName, null, null, Arrays.asList(columnName));
@@ -732,7 +732,7 @@ public class HBaseAdmin {
       HColumnDescriptor descriptor)
   throws IOException {
     alterTable(Bytes.toBytes(tableName), null, Arrays.asList(
-          new Pair<byte [], HColumnDescriptor>(Bytes.toBytes(columnName),
+          new Pair<byte [], HColumnDescriptor>(Bytes.toBytes(columnName), 
             descriptor)), null);
   }
 
@@ -981,7 +981,7 @@ public class HBaseAdmin {
   throws IOException {
     modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_MAJOR_COMPACT);
   }
-
+  
   /**
    * Major compacts a column family within a region or table.
    * Asynchronous operation.
@@ -1036,7 +1036,7 @@ public class HBaseAdmin {
   }
 
   /**
-   * Split a table or an individual region.  Implicitly finds an optimal split
+   * Split a table or an individual region.  Implicitly finds an optimal split 
    * point.  Asynchronous operation.
    *
    * @param tableNameOrRegionName table to region to split
@@ -1045,7 +1045,7 @@ public class HBaseAdmin {
   public void split(final byte [] tableNameOrRegionName) throws IOException {
     modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_SPLIT);
   }
-
+  
   public void split(final String tableNameOrRegionName,
     final String splitPoint) throws IOException {
     split(Bytes.toBytes(tableNameOrRegionName), Bytes.toBytes(splitPoint));
@@ -1059,7 +1059,7 @@ public class HBaseAdmin {
    * @param splitPoint the explicit position to split on
    * @throws IOException if a remote or network exception occurs
    */
-  public void split(final byte [] tableNameOrRegionName,
+  public void split(final byte [] tableNameOrRegionName, 
       final byte [] splitPoint) throws IOException {
     if (tableNameOrRegionName == null) {
       throw new IllegalArgumentException("Pass a table name or region name");
@@ -1067,7 +1067,7 @@ public class HBaseAdmin {
     byte [] tableName = tableExists(tableNameOrRegionName)?
       tableNameOrRegionName: null;
     byte [] regionName = tableName == null? tableNameOrRegionName: null;
-    Object [] args = regionName == null?
+    Object [] args = regionName == null? 
       new byte [][] {splitPoint}: new byte [][] {regionName, splitPoint};
     modifyTable(tableName, HConstants.Modify.TABLE_EXPLICIT_SPLIT, args);
   }
@@ -1176,7 +1176,7 @@ public class HBaseAdmin {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
   }
-
+  
   private static Writable toWritable(Object o) {
     if (o == null) {
       return null;
@@ -1204,6 +1204,7 @@ public class HBaseAdmin {
       throw new MasterNotRunningException("master has been shut down");
     }
     try {
+      // Shutdown the whole HBase cluster.
       this.master.shutdown();
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
@@ -1214,7 +1215,7 @@ public class HBaseAdmin {
 
   /**
    * Stop the designated RegionServer for a restart.
-   *
+   * 
    * @param hsa
    *          the address of the RegionServer to stop
    * @throws IOException

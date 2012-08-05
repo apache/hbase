@@ -51,7 +51,7 @@ public class TestHRegionInfo {
                  + id + "." + md5HashInHex + ".",
                  nameStr);
   }
-
+  
   @Test
   public void testContainsRange() {
     HTableDescriptor tableDesc = new HTableDescriptor("testtable");
@@ -71,12 +71,17 @@ public class TestHRegionInfo {
     assertFalse(hri.containsRange(Bytes.toBytes("g"), Bytes.toBytes("g")));
     // Single row range entirely outside
     assertFalse(hri.containsRange(Bytes.toBytes("z"), Bytes.toBytes("z")));
-
+    
     // Degenerate range
     try {
       hri.containsRange(Bytes.toBytes("z"), Bytes.toBytes("a"));
       fail("Invalid range did not throw IAE");
     } catch (IllegalArgumentException iae) {
     }
+  }
+
+  @Test
+  public void testRootRegionName() {
+    assertEquals("70236052", HRegionInfo.ROOT_REGION_ENCODED_NAME_STR);
   }
 }

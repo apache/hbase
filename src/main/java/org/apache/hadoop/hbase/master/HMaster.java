@@ -33,7 +33,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -67,7 +66,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.Modify;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -114,6 +112,7 @@ import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.LegacyRootZNodeUpdater;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -174,7 +173,9 @@ public class HMaster extends HasThread implements HMasterInterface,
   // Metrics is set when we call run.
   private MasterMetrics metrics;
 
+  /** A lock used for serial log splitting */
   final Lock splitLogLock = new ReentrantLock();
+
   final boolean distributedLogSplitting;
   SplitLogManager splitLogManager;
 
@@ -188,7 +189,7 @@ public class HMaster extends HasThread implements HMasterInterface,
   private final Sleeper sleeper;
   // Keep around for convenience.
   private final FileSystem fs;
-  // Is the fileystem ok?
+  // Is the filesystem ok?
   private volatile boolean fsOk = true;
   // The Path to the old logs dir
   private final Path oldLogDir;
@@ -199,12 +200,17 @@ public class HMaster extends HasThread implements HMasterInterface,
   private final ServerConnection connection;
   private ServerManager serverManager;
   private RegionManager regionManager;
+  private ZKUnassignedWatcher unassignedWatcher;
 
   private long lastFragmentationQuery = -1L;
   private Map<String, Integer> fragmentation = null;
   private RegionServerOperationQueue regionServerOperationQueue;
 
-  /** True if this is the master that started the cluster. */
+  /**
+   * True if this is the master that started the cluster. We mostly use this for unit testing, as
+   * our master failover workflow does not depend on this anymore.
+   */
+  @Deprecated
   private boolean isClusterStartup;
 
   private long masterStartupTime = Long.MAX_VALUE;
@@ -220,14 +226,14 @@ public class HMaster extends HasThread implements HMasterInterface,
   private volatile boolean isActiveMaster = false;
 
   public ThreadPoolExecutor logSplitThreadPool;
-
+  
   public RegionPlacementPolicy regionPlacement;
 
   /** Log directories split on startup for testing master failover */
   private List<String> logDirsSplitOnStartup;
 
   private boolean shouldAssignRegionsWithFavoredNodes = false;
-
+  
   /**
    * The number of dead server log split requests received. This is not
    * incremented during log splitting on startup. This field is never
@@ -270,7 +276,6 @@ public class HMaster extends HasThread implements HMasterInterface,
     // the primary master has written the address to ZK. So this has to be done
     // before we race to write our address to zookeeper.
     initializeZooKeeper();
-    detectClusterStartup();
 
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
@@ -338,7 +343,7 @@ public class HMaster extends HasThread implements HMasterInterface,
 
     final String masterName = getServerName();
     // initialize the thread pool for non-distributed log splitting.
-    int maxSplitLogThread =
+    int maxSplitLogThread = 
       conf.getInt("hbase.master.splitLogThread.max", 1000);
     logSplitThreadPool = Threads.getBoundedCachedThreadPool(
         maxSplitLogThread, 30L, TimeUnit.SECONDS,
@@ -354,7 +359,7 @@ public class HMaster extends HasThread implements HMasterInterface,
         });
 
     regionPlacement = new RegionPlacement(this.conf);
-
+    
     // Only read favored nodes if using the assignment-based load balancer.
     this.shouldAssignRegionsWithFavoredNodes = conf.getClass(
         HConstants.LOAD_BALANCER_IMPL, Object.class).equals(
@@ -391,6 +396,18 @@ public class HMaster extends HasThread implements HMasterInterface,
     return shouldAssignRegionsWithFavoredNodes;
   }
 
+  void startZKUnassignedWatcher() throws IOException {
+    if (unassignedWatcher != null) {
+      LOG.error("ZK unassigned watcher already started", new Throwable());
+      return;
+    }
+
+    // Start the unassigned watcher - which will create the unassigned region
+    // in ZK. If ZK unassigned events happen before the initial scan of the ZK unassigned
+    // directory is complete, they will be queued for further processing.
+    unassignedWatcher = new ZKUnassignedWatcher(this);
+  }
+  
   /**
    * @return true if successfully became primary master
    */
@@ -402,8 +419,6 @@ public class HMaster extends HasThread implements HMasterInterface,
       zooKeeperWrapper.close();
       return false;
     }
-
-    detectClusterStartup();
     isActiveMaster = true;
 
     synchronized(this) {
@@ -413,17 +428,6 @@ public class HMaster extends HasThread implements HMasterInterface,
     this.regionServerOperationQueue =
       new RegionServerOperationQueue(this.conf, serverManager,
           getClosedStatus());
-
-
-    // Start the unassigned watcher - which will create the unassigned region
-    // in ZK. This is needed before RegionManager() constructor tries to assign
-    // the root region.
-    try {
-      ZKUnassignedWatcher.start(this.conf, this);
-    } catch (IOException e) {
-      LOG.error("Failed to start ZK unassigned region watcher", e);
-      throw new RuntimeException(e);
-    }
 
     // start the "close region" executor service
     HBaseEventType.RS2ZK_REGION_CLOSED.startMasterExecutorService(
@@ -445,10 +449,6 @@ public class HMaster extends HasThread implements HMasterInterface,
     this.closed.set(false);
     LOG.info("HMaster w/ hbck initialized on " + this.address.toString());
     return true;
-  }
-
-  public void detectClusterStartup() {
-    isClusterStartup = (zooKeeperWrapper.scanRSDirectory().size() == 0);
   }
 
   public ThreadPoolExecutor getLogSplitThreadPool() {
@@ -522,10 +522,11 @@ public class HMaster extends HasThread implements HMasterInterface,
   }
 
   /**
-   * Returns true if this master process was responsible for starting the
-   * cluster.
+   * Returns true if this master process was responsible for starting the cluster. Only used in
+   * unit tests.
    */
-  public boolean isClusterStartup() {
+  @Deprecated
+  boolean isClusterStartup() {
     return isClusterStartup;
   }
 
@@ -747,26 +748,68 @@ public class HMaster extends HasThread implements HMasterInterface,
       return;
     }
 
-    if (closed.get()) {
-      LOG.info("Master is closing, not starting the main loop");
+    if (isStopped()) {
+      LOG.info("Master is shutting down, not starting the main loop");
       return;
     }
+
     MonitoredTask startupStatus =
       TaskMonitor.get().createStatus("Master startup");
     startupStatus.setDescription("Master startup");
     clusterStateRecovery = new ZKClusterStateRecovery(this, connection);
     try {
-      joinCluster();
-      initPreferredAssignment();
-      startupStatus.setStatus("Initializing master service threads");
-      startServiceThreads();
-      masterStartupTime = System.currentTimeMillis();
-      startupStatus.markComplete("Initialization successful");
+      if (!isStopped() && !shouldAssignRegionsWithFavoredNodes()) {
+        // This is only done if we are using the old mechanism for locality-based assignment
+        // not relying on the favored node functionality in HDFS.
+        initPreferredAssignment();
+      }
+
+      if (!isStopped()) {
+        clusterStateRecovery.registerLiveRegionServers();
+        isClusterStartup = clusterStateRecovery.isClusterStartup();  // for testing
+      }
+
+      if (!isStopped() || isClusterShutdownRequested()) {
+        // Start the server so that region servers are running before we start
+        // splitting logs and before we start assigning regions. XXX What will
+        // happen if master starts receiving requests before regions are assigned?
+        // NOTE: If the master bind port is 0 (e.g. in unit tests) we initialize the RPC server
+        // earlier and do nothing here.
+        // TODO: move this to startServiceThreads once we break the dependency of distributed log
+        // splitting on regionserver check-in.
+        initRpcServer(address);
+        rpcServer.start();
+      }
+
+      if (!isStopped()) {
+        splitLogAfterStartup();
+      }
+
+      if (!isStopped()) {
+        startZKUnassignedWatcher();
+      }
+
+      if (!isStopped()) {
+        startupStatus.setStatus("Initializing master service threads");
+        startServiceThreads();
+        masterStartupTime = System.currentTimeMillis();
+        startupStatus.markComplete("Initialization successful");
+      }
     } catch (IOException e) {
       LOG.fatal("Unhandled exception. Master quits.", e);
       startupStatus.cleanup();
+      zooKeeperWrapper.close();
       return;
     }
+
+    if (isStopped()) {
+      startupStatus.markComplete("Initialization aborted, shutting down");
+    }
+
+    if (!isStopped()) {
+      clusterStateRecovery.backgroundRecoverRegionStateFromZK();
+    }
+    
     try {
       /* Main processing loop */
       FINISHED: while (!this.closed.get()) {
@@ -804,6 +847,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     closed.set(true);
 
     startShutdown();
+    startupStatus.cleanup();
 
     if (clusterShutdownRequested.get()) {
       // Wait for all the remaining region servers to report in. Only doing
@@ -812,15 +856,12 @@ public class HMaster extends HasThread implements HMasterInterface,
     }
     serverManager.joinThreads();
 
-    /*
-     * Clean up and close up shop
-     */
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
       try {
         this.infoServer.stop();
       } catch (Exception ex) {
-        ex.printStackTrace();
+        LOG.error("Error stopping info server", ex);
       }
     }
     if (this.rpcServer != null) {
@@ -956,78 +997,29 @@ public class HMaster extends HasThread implements HMasterInterface,
     return regionLocalityMap;
   }
 
-
-  /*
-   * Joins cluster.  Checks to see if this instance of HBase is fresh or the
-   * master was started following a failover. In the second case, it inspects
-   * the region server directory and gets their regions assignment.
-   */
-  private void joinCluster() throws IOException  {
-    LOG.debug("Checking cluster state...");
-
-    clusterStateRecovery.registerLiveRegionServers();
-
-    // Check if this is a fresh start of the cluster
-    if (clusterStateRecovery.liveRegionServersAtStartup().isEmpty()) {
-      LOG.debug("Master fresh start, proceeding with normal startup");
-      return;
+  private void startSplitLogManager() {
+    if (this.distributedLogSplitting) {
+      // splitLogManager must be started before starting rpcServer because
+      // region-servers dying will trigger log splitting
+      this.splitLogManager = new SplitLogManager(zooKeeperWrapper, conf,
+          getStopper(), address.toString());
+      this.splitLogManager.finishInitialization();
     }
-
-    // Failover case.
-    LOG.info("Master failover, ZK inspection begins...");
-    // only read the rootlocation if it is failover
-    HServerAddress rootLocation =
-      this.zooKeeperWrapper.readRootRegionLocation();
-    boolean isRootRegionAssigned = false;
-    Map <byte[], HRegionInfo> assignedRegions =
-      new HashMap<byte[], HRegionInfo>();
-    // We must:
-    // - contact every region server to add them to the regionservers list
-    // - get their current regions assignment
-    // TODO: Run in parallel?
-    for (String serverName : clusterStateRecovery.liveRegionServersAtStartup()) {
-      HServerAddress address = HServerInfo.fromServerName(serverName).getServerAddress();
-      HRegionInfo[] regions = null;
-      try {
-        HRegionInterface hri =
-          this.connection.getHRegionConnection(address, false);
-        HServerInfo info = hri.getHServerInfo();
-        LOG.debug("Inspection found server " + info.getServerName());
-        regions = hri.getRegionsAssignment();
-      } catch (IOException e) {
-        LOG.error("Failed contacting " + address.toString(), e);
-        continue;
-      }
-      for (HRegionInfo r: regions) {
-        if (r.isRootRegion()) {
-          this.connection.setRootRegionLocation(new HRegionLocation(r, rootLocation));
-          this.regionManager.setRootRegionLocation(rootLocation);
-          // Undo the unassign work in the RegionManager constructor
-          this.regionManager.removeRegion(r);
-          isRootRegionAssigned = true;
-        } else if (r.isMetaRegion()) {
-          MetaRegion m = new MetaRegion(new HServerAddress(address), r);
-          this.regionManager.addMetaRegionToScan(m);
-        }
-        assignedRegions.put(r.getRegionName(), r);
-      }
-    }
-    LOG.info("Inspection found " + assignedRegions.size() + " regions, " +
-      (isRootRegionAssigned ? "with -ROOT-" : "but -ROOT- was MIA"));
   }
 
-  /*
-   * Inspect the log directory to recover any log file without
-   * an active region server.
+  /**
+   * Inspect the log directory to recover any log file without an active region
+   * server.
    */
   private void splitLogAfterStartup() {
+    startSplitLogManager();
     boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
         HLog.SPLIT_SKIP_ERRORS_DEFAULT);
     List<String> serverNames = new ArrayList<String>();
     try {
       do {
-        if (this.clusterShutdownRequested.get()) {
-          LOG.warn("Cluster is shutting down, aborting log splitting");
+        if (isStopped()) {
+          LOG.warn("Master is shutting down, aborting log splitting");
           return;
         }
         try {
@@ -1053,7 +1045,7 @@ public class HMaster extends HasThread implements HMasterInterface,
               serverNames.add(serverName);
             } else {
               LOG.info("Log folder " + status.getPath() +
-                  " belongs to an existing region server");
+                  " belongs to an existing region server, not splitting");
             }
           }
           logDirsSplitOnStartup = serverNames;
@@ -1070,7 +1062,7 @@ public class HMaster extends HasThread implements HMasterInterface,
           checkFileSystem(false);
 
           try {
-            if (retrySplitting) {
+            if (retrySplitting && !isStopped()) {
               Thread.sleep(30000); //30s
             }
           } catch (InterruptedException e) {
@@ -1101,6 +1093,10 @@ public class HMaster extends HasThread implements HMasterInterface,
     long splitTime = 0, splitLogSize = 0, splitCount = 0;
     List<Path> logDirs = new ArrayList<Path>();
     for (String serverName : serverNames) {
+      if (isStopped()) {
+        LOG.warn("Master is shutting down, stopping log directory scan");
+        return;
+      }
       Path logDir = new Path(this.rootdir,
           HLog.getHLogDirectoryName(serverName));
       // rename the directory so a rogue RS doesn't create more HLogs
@@ -1135,13 +1131,23 @@ public class HMaster extends HasThread implements HMasterInterface,
       // it is ok to call handleDeadWorkers with "rsname.splitting". These
       // altered names will just get ignored
       for (String serverName : serverNames) {
+        if (isStopped()) {
+          LOG.warn("Master is shutting down, stopping distributed log " +
+              "splitting");
+          return;
+        }
         splitLogManager.handleDeadWorker(serverName);
       }
       splitLogManager.splitLogDistributed(logDirs);
     } else {
+      // Serial log splitting.
       // splitLogLock ensures that dead region servers' logs are processed
       // one at a time
       for (Path logDir : logDirs) {
+        if (isStopped()) {
+          LOG.warn("Master is shutting down, stopping serial log splitting");
+          return;
+        }
         this.splitLogLock.lock();
         try {
           HLog.splitLog(this.rootdir, logDir, oldLogDir, this.fs,
@@ -1189,24 +1195,9 @@ public class HMaster extends HasThread implements HMasterInterface,
         this.infoServer.setAttribute(MASTER, this);
         this.infoServer.start();
       }
-      if (this.distributedLogSplitting) {
-        // splitLogManager must be started before starting rpcServer because
-        // region-servers dying will trigger log splitting
-        this.splitLogManager = new SplitLogManager(zooKeeperWrapper, conf,
-            getStopper(), address.toString());
-        this.splitLogManager.finishInitialization();
-      }
-      // Start the server so that region servers are running before we start
-      // splitting logs and before we start assigning regions. XXX What will
-      // happen if master starts receiving requests before regions are assigned?
-      // NOTE: If the master bind port is 0 (e.g. in unit tests) we initialize the RPC server
-      // earlier and do nothing here.
-      initRpcServer(this.address);
-      this.rpcServer.start();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Started service threads");
       }
-      splitLogAfterStartup();
     } catch (IOException e) {
       if (e instanceof RemoteException) {
         try {
@@ -1215,14 +1206,19 @@ public class HMaster extends HasThread implements HMasterInterface,
           LOG.warn("thread start", ex);
         }
       }
-      // Something happened during startup. Shut things down.
+      // Something happened during startup. Stop the entire HBase cluster
+      // without quiescing region servers.
       this.closed.set(true);
       LOG.error("Failed startup", e);
     }
   }
 
-  /*
+  /**
    * Start shutting down the master. This does NOT trigger a cluster shutdown.
+   * However, if cluster shutdown has been triggered, this will indicate that
+   * it is now OK to stop regionservers, as it sets the master to the "closed"
+   * state. Therefore, only call this on cluster shutdown when all region
+   * servers have been quiesced.
    */
   void startShutdown() {
     this.closed.set(true);
@@ -1317,7 +1313,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     stopped = true;
     stopReason = "cluster shutdown";
   }
-
+  
   /** Shutdown the cluster quickly, don't quiesce regionservers */
   private void shutdownClusterNow() {
     closed.set(true);
@@ -1465,7 +1461,7 @@ public class HMaster extends HasThread implements HMasterInterface,
    * Get the assignment domain for the table.
    * Currently the domain would be generated by shuffling all the online
    * region servers.
-   *
+   * 
    * It would be easy to extend for the multi-tenancy in the future.
    * @param tableName
    * @return the assignment domain for the table.
@@ -1474,18 +1470,18 @@ public class HMaster extends HasThread implements HMasterInterface,
     // Get all the online region servers
     List<HServerAddress> onlineRSList =
       this.serverManager.getOnlineRegionServerList();
-
+    
     // Shuffle the server list based on the tableName
     Random random = new Random(tableName.hashCode());
     Collections.shuffle(onlineRSList, random);
-
+    
     // Add the shuffled server list into the assignment domain
     AssignmentDomain domain = new AssignmentDomain(this.conf);
     domain.addServers(onlineRSList);
-
+    
     return domain;
   }
-
+  
   @Override
   public void deleteTable(final byte [] tableName) throws IOException {
     lockTable(tableName, "delete");
@@ -1906,8 +1902,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     return status;
   }
 
-  // TODO ryan rework this function
-  /*
+  /**
    * Get HRegionInfo from passed META map of row values.
    * Returns null if none found (and logs fact that expected COL_REGIONINFO
    * was missing).  Utility method used by scanners of META tables.
@@ -1924,6 +1919,9 @@ public class HMaster extends HasThread implements HMasterInterface,
       StringBuilder sb =  new StringBuilder();
       NavigableMap<byte[], byte[]> infoMap =
         res.getFamilyMap(HConstants.CATALOG_FAMILY);
+      if (infoMap == null) {
+        return null;
+      }
       for (byte [] e: infoMap.keySet()) {
         if (sb.length() > 0) {
           sb.append(", ");
@@ -2239,7 +2237,7 @@ public class HMaster extends HasThread implements HMasterInterface,
   public StoppableMaster getStopper() {
     return this;
   }
-
+  
   public StopStatus getClosedStatus() {
     return new StopStatus() {
       @Override
@@ -2249,4 +2247,8 @@ public class HMaster extends HasThread implements HMasterInterface,
     };
   }
 
+  ZKUnassignedWatcher getUnassignedWatcher() {
+    return unassignedWatcher;
+  }
 }
+

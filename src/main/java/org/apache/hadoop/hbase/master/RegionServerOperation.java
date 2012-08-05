@@ -81,23 +81,16 @@ abstract class RegionServerOperation implements Delayed {
         - o.getDelay(TimeUnit.MILLISECONDS)).intValue();
   }
 
-  private long whenToExpire() {
-    return System.currentTimeMillis() + this.delay;
-  }
-
   protected boolean rootAvailable() {
-    boolean available = true;
-    if (this.master.getRegionManager().getRootRegionLocation() == null) {
-      available = false;
-    }
-    return available;
+    return master.getRegionManager().getRootRegionLocation() != null;
   }
 
   protected boolean metaTableAvailable() {
     boolean available = true;
-    if ((master.getRegionManager().numMetaRegions() !=
-      master.getRegionManager().numOnlineMetaRegions()) ||
-      master.getRegionManager().metaRegionsInTransition()) {
+    int numMetaRegions = master.getRegionManager().numMetaRegions();
+    if (numMetaRegions == 0 ||
+        numMetaRegions > master.getRegionManager().numOnlineMetaRegions() ||
+        master.getRegionManager().metaRegionsInTransition()) {
       // We can't proceed because not all of the meta regions are online.
       // We can't block either because that would prevent the meta region
       // online message from being processed. In order to prevent spinning

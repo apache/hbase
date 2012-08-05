@@ -42,24 +42,24 @@ import org.junit.After;
 
 /**
  * A base class for unit tests that require multiple masters, e.g. master
- * failover tests.
+ * failover tests. 
  */
 public class MultiMasterTest {
   private static final Log LOG = LogFactory.getLog(MultiMasterTest.class);
   private MiniHBaseCluster cluster;
 
-  protected final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  protected final Configuration conf = TEST_UTIL.getConfiguration();
+  protected final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  protected final Configuration conf = testUtil.getConfiguration();
 
   public void startMiniCluster(int numMasters, int numRS) throws IOException,
       InterruptedException {
-    cluster = TEST_UTIL.startMiniCluster(numMasters, numRS);
+    cluster = testUtil.startMiniCluster(numMasters, numRS);
   }
 
   @After
   public void tearDown() throws IOException {
     header("Starting cluster shutdown");
-    TEST_UTIL.shutdownMiniCluster();
+    testUtil.shutdownMiniCluster();
     assertTrue(
         "Some ZK wrapper instances in the namespace have not been closed."
             + " See error logs above.",

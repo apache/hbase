@@ -18,16 +18,23 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.client.ServerConnection;
+import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 
 /**
@@ -49,11 +56,20 @@ public class ZKClusterStateRecovery {
   private Set<String> liveRSNamesAtStartupUnmodifiable;
 
   private final HMaster master;
+  private final RegionManager regionManager;
+  private final ServerManager serverManager;
   private final ZooKeeperWrapper zkw;
+  private final String unassignedZNode;
+
+  /** A snapshot of the list of unassigned znodes */
+  private List<String> unassignedNodes;
 
   public ZKClusterStateRecovery(HMaster master, ServerConnection connection) {
     this.master = master;
     zkw = master.getZooKeeperWrapper();
+    regionManager = master.getRegionManager();
+    serverManager = master.getServerManager();
+    this.unassignedZNode = zkw.getRegionInTransitionZNode();
   }
 
   /**
@@ -94,7 +110,7 @@ public class ZKClusterStateRecovery {
         }
 
         try {
-          master.getServerManager().recordNewServer(serverInfo);
+          serverManager.recordNewServer(serverInfo);
         } catch (IOException ex) {
           if (ex.getCause() instanceof NoNodeException) {
             // This regionserver has disappeared, don't try to register it. This will also ensure
@@ -116,6 +132,202 @@ public class ZKClusterStateRecovery {
 
   public Set<String> liveRegionServersAtStartup() {
     return liveRSNamesAtStartupUnmodifiable;
+  }
+
+  private HRegionInfo parseUnassignedZNode(String regionName, byte[] nodeData,
+      RegionTransitionEventData hbEventData) throws IOException {
+    String znodePath = zkw.getZNode(unassignedZNode, regionName);
+    if (nodeData == null) {
+      // This znode does not seem to exist anymore.
+      LOG.error("znode for region " + regionName + " disappeared while scanning unassigned " +
+          "directory, skipping");
+      return null;
+    }
+
+    Writables.getWritable(nodeData, hbEventData);
+
+    HMsg msg = hbEventData.getHmsg();
+    if (msg == null) {
+      LOG.warn("HMsg is not present in unassigned znode data, skipping: " + znodePath);
+      return null;
+    }
+
+    HRegionInfo hri = msg.getRegionInfo();
+    if (hri == null) {
+      LOG.warn("Region info read from znode is null, skipping: " + znodePath);
+      return null;
+    }
+
+    if (!hri.getEncodedName().equals(regionName)) {
+      LOG.warn("Region name read from znode data (" + hri.getEncodedName() + ") " +
+          "must be the same as znode name: " + regionName + ". Skipping.");
+      return null;
+    }
+    return hri;
+  }
+
+  /**
+   * Read znode path as part of scanning the unassigned directory.
+   * @param regionName the region name to read the unassigned znode for
+   * @return znode data or null if the znode no longer exists
+   * @throws IOException in case of a ZK error
+   */
+  private byte[] getUnassignedZNodeAndSetWatch(String regionName)
+      throws IOException {
+    final String znodePath = zkw.getZNode(unassignedZNode, regionName);
+    try {
+      return zkw.readUnassignedZNodeAndSetWatch(znodePath);
+    } catch (IOException ex) {
+      if (ex.getCause() instanceof KeeperException) {
+        KeeperException ke = (KeeperException) ex.getCause();
+        if (ke.code() == KeeperException.Code.NONODE) {
+          LOG.warn("Unassigned node is missing: " + znodePath + ", ignoring");
+          return null;
+        }
+      }
+      throw ex;
+    }
+  }
+
+  /**
+   * Goes through the unassigned node directory in ZK.
+   */
+  private void processUnassignedNodes() throws IOException {
+    LOG.info("Processing unassigned znode directory on master startup");
+    for (String unassignedRegion : unassignedNodes) {
+      if (master.isStopped()) {
+        break;
+      }
+
+      final String znodePath = zkw.getZNode(unassignedZNode, unassignedRegion);
+      // Get znode and set watch
+      byte[] nodeData = getUnassignedZNodeAndSetWatch(znodePath);
+      if (nodeData == null) {
+        // The node disappeared.
+        continue;
+      }
+
+      HBaseEventType rsState = HBaseEventType.fromByte(nodeData[0]);
+      RegionTransitionEventData hbEventData = new RegionTransitionEventData();
+      HRegionInfo hri = parseUnassignedZNode(unassignedRegion, nodeData, hbEventData);
+      if (hri == null) {
+        // Could not parse the znode. Error message already logged.
+        continue;
+      }
+
+      LOG.info("Found unassigned znode: state=" + rsState + ", region=" +
+            hri.getRegionNameAsString() + ", rs=" + hbEventData.getRsName());
+      boolean openedOrClosed = rsState == HBaseEventType.RS2ZK_REGION_OPENED ||
+          rsState == HBaseEventType.RS2ZK_REGION_CLOSED;
+
+      if (rsState == HBaseEventType.RS2ZK_REGION_CLOSING ||
+          rsState == HBaseEventType.RS2ZK_REGION_OPENING ||
+          openedOrClosed) {
+        regionManager.setRegionStateOnRecovery(rsState, hri, hbEventData.getRsName());
+        if (openedOrClosed) {
+          master.getUnassignedWatcher().handleRegionStateInZK(znodePath, nodeData, false);
+        }
+      } else if (rsState == HBaseEventType.M2ZK_REGION_OFFLINE) {
+        // Write to ZK = false; override previous state ("force") = true. 
+        regionManager.setUnassignedGeneral(false, hri, true);
+      } else {
+        LOG.warn("Invalid unassigned znode state: " + rsState + " for region " + unassignedRegion);
+      }
+    }
+  }
+
+  /**
+   * Ensures that -ROOT- and .META. are assigned and persists region locations from OPENED and
+   * CLOSED nodes in the ZK unassigned directory in respectively -ROOT- (for .META. regions) and
+   * .META. (for user regions).
+   */
+  private void recoverRegionStateFromZK() throws IOException {
+    if (!isStopped()) {
+      regionManager.recoverRootRegionLocationFromZK();
+    }
+
+    if (!isStopped()) {
+      unassignedNodes = master.getUnassignedWatcher().getUnassignedDirSnapshot();
+    }
+
+    if (!isStopped()) {
+      processUnassignedNodes();
+    }
+
+    if (!isStopped()) {
+      master.getUnassignedWatcher().drainZKEventQueue();
+    }
+
+    if (!isStopped()) {
+      ensureRootAssigned();
+    }
+  }
+
+  private void ensureRootAssigned() {
+    HServerInfo rootServerInfo = regionManager.getRootServerInfo();
+    boolean reassignRoot = true;
+    if (rootServerInfo != null) {
+      // Root appears assigned. Check if it is assigned to an unknown server that we are not
+      // processing as dead. In that case we do need to reassign. This logic is similar to
+      // what is done in BaseScanner.checkAssigned.
+      String serverName = rootServerInfo.getServerName();
+      if (regionManager.regionIsInTransition(
+          HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString())) {
+        // Already in transition, we will wait until it is assigned.
+        reassignRoot = false;
+        LOG.info("Not assigning root because it is already in transition");
+      } else {
+        boolean processingRootServerAsDead;
+        HServerInfo rootRSInfo;
+        synchronized (serverManager.deadServerStatusLock) {
+          // Synchronizing to avoid a race condition with ServerManager.expireServer.
+          processingRootServerAsDead =
+              serverManager.isDeadProcessingPending(serverName);
+          rootRSInfo = serverManager.getServerInfo(serverName);
+        }
+        reassignRoot = !processingRootServerAsDead && rootRSInfo == null;
+        LOG.info("reassignRoot=" + reassignRoot +
+            ", processingRootServerAsDead=" + processingRootServerAsDead +
+            ", rootRSInfo=" + rootRSInfo);
+      }
+    }
+
+    if (reassignRoot) {
+      regionManager.reassignRootRegion();
+    }
+  }
+
+  public void backgroundRecoverRegionStateFromZK() {
+    Thread t = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          recoverRegionStateFromZK();
+        } catch (Throwable ex) {
+          LOG.error(ex);
+          master.stop("Failed to recover region assignment from ZK");
+        }
+      }
+    }, "backgroundRecoverRegionStateFromZK");
+    t.setDaemon(true);
+    t.start();
+  }
+
+  /**
+   * Return true if there are no live regionservers. Assumes that
+   * {@link #registerLiveRegionServers} has been called. Only used for testing. No decisions are
+   * made based on the boolean "is cluster startup" flag.
+   */
+  boolean isClusterStartup() throws IOException {
+    return liveRSNamesAtStartup.isEmpty();
+  }
+
+  private boolean isStopped() {
+    return master.isStopped();
+  }
+
+  public boolean wasLiveRegionServerAtStartup(String serverName) {
+    return liveRSNamesAtStartup.contains(serverName);
   }
 
 }

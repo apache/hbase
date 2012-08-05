@@ -98,7 +98,7 @@ public class JVMClusterUtil {
   /**
    * Creates a {@link HMaster}. Call 'start' on the returned thread to make it
    * run. Modifies the passed configuration -- the caller is responsible for
-   * defensive copying.
+   * defensive copying. 
    * @param masterConf configuration to use
    * @param hmc class to create an instance of
    * @param masterId a unique identifier of a master within a mini-cluster
@@ -171,8 +171,7 @@ public class JVMClusterUtil {
     if (masters != null) {
       for (HMaster t : masters) {
         if (t.isActiveMaster()) {
-          // This will trigger cluster shutdown.
-          t.shutdown();
+          t.requestClusterShutdown();
         } else {
           // This will only stop this particular master.
           t.stop("normal shutdown");
@@ -193,7 +192,7 @@ public class JVMClusterUtil {
           }
         }
       }
-
+  
       if (masters != null) {
         for (HMaster t : masters) {
           while (t.isAlive()) {

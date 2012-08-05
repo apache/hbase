@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -122,9 +121,6 @@ abstract class BaseScanner extends Chore {
   private final boolean rootRegion;
   protected final HMaster master;
 
-  protected boolean initialScanComplete;
-
-  protected abstract boolean initialScan();
   protected abstract void maintenanceScan();
 
   // will use this variable to synchronize and make sure we aren't interrupted
@@ -138,17 +134,6 @@ abstract class BaseScanner extends Chore {
         master);
     this.rootRegion = rootRegion;
     this.master = master;
-    this.initialScanComplete = false;
-  }
-
-  /** @return true if initial scan completed successfully */
-  public boolean isInitialScanComplete() {
-    return initialScanComplete;
-  }
-
-  @Override
-  protected boolean initialChore() {
-    return initialScan();
   }
 
   @Override
@@ -196,19 +181,19 @@ abstract class BaseScanner extends Chore {
               HConstants.FAVOREDNODES_QUALIFIER);
           AssignmentManager assignmentManager =
             this.master.getRegionManager().getAssignmentManager();
-
+          
           if (favoredNodes != null) {
             // compare the update TS
-            long updateTimeStamp =
+            long updateTimeStamp = 
               values.getLastestTimeStamp(HConstants.CATALOG_FAMILY,
                 HConstants.FAVOREDNODES_QUALIFIER);
-            long lastUpdate =
+            long lastUpdate = 
               assignmentManager.getAssignmentPlanUpdateTimeStamp(region);
             if (lastUpdate < updateTimeStamp) {
               // need to update the persistent assignment
               List<HServerAddress> servers =
                 RegionPlacement.getFavoredNodesList(favoredNodes);
-              assignmentManager.updateAssignmentPlan(region,
+              assignmentManager.updateAssignmentPlan(region, 
                   servers, updateTimeStamp);
             }
           } else {
@@ -555,15 +540,18 @@ abstract class BaseScanner extends Chore {
     return result;
   }
 
-  /*
-   * Check the passed region is assigned.  If not, add to unassigned.
-   * @param regionServer
-   * @param meta
-   * @param info
+  /**
+   * Check the passed region ('info') is assigned. This method re-reads the state of the region
+   * from the 'meta' region if it appears unassigned, because this information might be stale. If
+   * not, add to unassigned.
+   *
+   * @param regionServer the regionserver hosting the meta/root region
+   * @param meta the meta/root region of the given region
+   * @param info the region info for the region we are checking
    * @param hostnameAndPort hostname ':' port as it comes out of .META.
-   * @param startCode
-   * @param checkTwice should we check twice before adding a region
-   * to unassigned pool.
+   * @param startCode start code of the regionserver that this region is assigned to acording to
+   *          meta/root
+   * @param checkTwice should we check twice before adding a region to unassigned pool.
    * @throws IOException
    */
   protected void checkAssigned(final HRegionInterface regionServer,
@@ -596,13 +584,20 @@ abstract class BaseScanner extends Chore {
        * a dead server. Regions that were on a dead server will get reassigned
        * by ProcessServerShutdown
        */
+
+      boolean processingServerAsDead = false;
+      if (serverName != null) {
+        synchronized (master.getServerManager().deadServerStatusLock) {
+          processingServerAsDead =
+              this.master.getServerManager().isDeadProcessingPending(serverName);
+          storedInfo = this.master.getServerManager().getServerInfo(serverName);
+        }
+      }
+
       if (info == null || info.isOffline() ||
         this.master.getRegionManager().regionIsInTransition(info.getRegionNameAsString()) ||
-          (serverName != null && this.master.getServerManager().isDead(serverName))) {
+          (serverName != null && processingServerAsDead)) {
         return;
-      }
-      if (serverName != null) {
-        storedInfo = this.master.getServerManager().getServerInfo(serverName);
       }
 
       // If we can't find the HServerInfo, then add it to the list of
@@ -619,6 +614,9 @@ abstract class BaseScanner extends Chore {
           // Now get the region assigned
           this.master.getRegionManager().setUnassigned(info, true);
         }
+      } else if (info.isMetaTable()) {
+        MetaRegion m = new MetaRegion(storedInfo.getServerAddress(), info);
+        master.getRegionManager().putMetaRegionOnline(m);
       }
     }
     if (tryAgain) {
@@ -639,7 +637,7 @@ abstract class BaseScanner extends Chore {
    * Interrupt thread regardless of what it's doing
    */
   public void interruptAndStop() {
-    synchronized(scannerLock){
+    synchronized(scannerLock) {
       if (isAlive()) {
         stopThread();
         super.interrupt();

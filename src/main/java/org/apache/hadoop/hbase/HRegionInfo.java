@@ -52,11 +52,11 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * where,
    *    &lt;encodedName> is a hex version of the MD5 hash of
    *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
-   *
+   * 
    * The old region name format:
    *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
    * For region names in the old format, the encoded name is a 32-bit
-   * JenkinsHash integer value (in its decimal notation, string form).
+   * JenkinsHash integer value (in its decimal notation, string form). 
    *<p>
    * **NOTE**
    *
@@ -66,8 +66,8 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    */
 
   /** Separator used to demarcate the encodedName in a region name
-   * in the new format. See description on new format above.
-   */
+   * in the new format. See description on new format above. 
+   */ 
   private static final int ENC_SEPARATOR = '.';
   public  static final int MD5_HEX_LENGTH   = 32;
 
@@ -82,11 +82,11 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     if ((regionName.length >= 1)
         && (regionName[regionName.length - 1] == ENC_SEPARATOR)) {
       // region name is new format. it contains the encoded name.
-      return true;
+      return true; 
     }
     return false;
   }
-
+  
   /**
    * @param regionName
    * @return the encodedName
@@ -100,7 +100,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
           regionName.length - MD5_HEX_LENGTH - 1,
           MD5_HEX_LENGTH);
     } else {
-      // old format region name. ROOT and first META region also
+      // old format region name. ROOT and first META region also 
       // use this format.EncodedName is the JenkinsHash value.
       int hashVal = Math.abs(JenkinsHash.getInstance().hash(regionName,
                                                             regionName.length,
@@ -116,6 +116,10 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   /** HRegionInfo for root region */
   public static final HRegionInfo ROOT_REGIONINFO =
     new HRegionInfo(0L, HTableDescriptor.ROOT_TABLEDESC);
+
+  /** Encoded name for the root region. This is always the same. */
+  public static final String ROOT_REGION_ENCODED_NAME_STR =
+      HRegionInfo.ROOT_REGIONINFO.getEncodedName();
 
   /** HRegionInfo for first meta region */
   public static final HRegionInfo FIRST_META_REGIONINFO =
@@ -153,8 +157,8 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     super();
     this.regionId = regionId;
     this.tableDesc = tableDesc;
-
-    // Note: Root & First Meta regions names are still in old format
+    
+    // Note: Root & First Meta regions names are still in old format   
     this.regionName = createRegionName(tableDesc.getName(), null,
                                        regionId, false);
     this.regionNameStr = Bytes.toStringBinary(this.regionName);
@@ -303,7 +307,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
 
       if (md5HashBytes.length != MD5_HEX_LENGTH) {
         LOG.error("MD5-hash length mismatch: Expected=" + MD5_HEX_LENGTH +
-                  "; Got=" + md5HashBytes.length);
+                  "; Got=" + md5HashBytes.length); 
       }
 
       // now append the bytes '.<encodedName>.' to the end
@@ -312,7 +316,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
       offset += MD5_HEX_LENGTH;
       b[offset++] = ENC_SEPARATOR;
     }
-
+    
     return b;
   }
 
@@ -331,8 +335,8 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
         break;
       }
     }
-    if(offset == -1) {
-      throw new IOException("Invalid regionName format: " +
+    if(offset == -1) { 
+      throw new IOException("Invalid regionName format: " + 
                             Bytes.toStringBinary(regionName));
     }
     byte [] tableName = new byte[offset];
@@ -344,8 +348,8 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
         break;
       }
     }
-    if(offset == -1) {
-      throw new IOException("Invalid regionName format: " +
+    if(offset == -1) { 
+      throw new IOException("Invalid regionName format: " + 
                             Bytes.toStringBinary(regionName));
     }
     byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
@@ -404,7 +408,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   public byte [] getStartKey(){
     return startKey;
   }
-
+  
   /** @return the endKey */
   public byte [] getEndKey(){
     return endKey;
@@ -430,7 +434,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
       Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY);
     return firstKeyInRange && lastKeyInRange;
   }
-
+  
   /**
    * Return true if the given row falls in this region.
    */
@@ -485,7 +489,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * @return point to explicitly split the region on
    */
   public byte[] getSplitPoint() {
-    return (this.splitPoint != null && this.splitPoint.length > 0)
+    return (this.splitPoint != null && this.splitPoint.length > 0) 
       ? this.splitPoint : null;
   }
 

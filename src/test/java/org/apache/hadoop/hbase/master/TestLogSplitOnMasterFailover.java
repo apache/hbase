@@ -258,7 +258,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     List<HMaster> masters = miniCluster().getMasters();
 
     header("Starting data loader");
-    DataLoader dataLoader = new DataLoader(conf, TEST_UTIL);
+    DataLoader dataLoader = new DataLoader(conf, testUtil);
     Thread inserterThread = new Thread(dataLoader);
     inserterThread.start();
     dataLoader.waitUntilHalfRowsLoaded();

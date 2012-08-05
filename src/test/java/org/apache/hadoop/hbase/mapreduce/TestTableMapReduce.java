@@ -120,7 +120,7 @@ public class TestTableMapReduce extends MultiRegionTable {
   private void runTestOnTable(HTable table)
   throws IOException, InterruptedException, ClassNotFoundException {
     HBaseTestingUtility testUtil = new HBaseTestingUtility();
-    testUtil.setFileSystemURI(fs.getUri().toString());
+    HBaseTestingUtility.setFileSystemURI(fs.getUri().toString());
     MiniMRCluster mrCluster = testUtil.startMiniMapReduceCluster();
     LOG.debug("ZK client port before runing MR job: " +
         ZooKeeperWrapper.getZKClientPort(conf));
@@ -261,7 +261,7 @@ public class TestTableMapReduce extends MultiRegionTable {
     assertFalse(tmpjars.contains("guava"));
 
     System.err.println("appending guava jar");
-    TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), 
         com.google.common.base.Function.class);
     tmpjars = job.getConfiguration().get("tmpjars");
     assertTrue(tmpjars.contains("guava"));

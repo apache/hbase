@@ -52,8 +52,8 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
         available = false;
       }
     } else {
-      if (!master.getRegionManager().isInitialRootScanComplete() ||
-          !metaTableAvailable()) {
+      // This operation is for a user table. 
+      if (!metaTableAvailable()) {
         // The root region has not been scanned or the meta table is not
         // available so we can't proceed.
         available = false;
@@ -74,9 +74,13 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
         this.metaRegionName = this.metaRegion.getRegionName();
       }
     }
+    if (metaRegion == null) {
+      throw new NullPointerException("Could not identify meta region: " +
+          "isMetaTable=" + isMetaTable + ", regionInfo=" + regionInfo);
+    }
     return this.metaRegion;
   }
-
+  
   public HRegionInfo getRegionInfo() {
     return regionInfo;
   }

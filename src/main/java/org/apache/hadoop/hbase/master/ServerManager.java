@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -113,6 +112,13 @@ public class ServerManager {
   private int minimumServerCount;
 
   private final OldLogsCleaner oldLogCleaner;
+
+  /**
+   * A lock that controls simultaneous changes and lookup to the dead server set and the server to
+   * server info map. Required so that we don't reassign the same region both in expireServer
+   * and in the base scanner.
+   */
+  final Object deadServerStatusLock = new Object();
 
   /**
    * A set of host:port pairs representing regionservers that are blacklisted
@@ -247,7 +253,7 @@ public class ServerManager {
    */
   private void checkIsDead(final String serverName, final String what)
   throws YouAreDeadException {
-    if (!isDead(serverName)) return;
+    if (!isDeadProcessingPending(serverName)) return;
     String message = "Server " + what + " rejected; currently processing " +
       serverName + " as dead server";
     LOG.debug(message);
@@ -300,6 +306,7 @@ public class ServerManager {
       // Could not set a watch, undo the above changes and re-throw.
       serversToLoad.updateServerLoad(serverName, oldServerLoad);
       undoMapUpdate(serversToServerInfo, serverName, oldServerInfo);
+      LOG.error("Could not set watch on regionserver znode for " + serverName); 
       throw ex;
     }
   }
@@ -577,20 +584,18 @@ public class ServerManager {
       // currently opening regions, leave it alone till all are open.
       if (openingCount < this.nobalancingCount) {
         if (!blacklistedRSHostPortSetForTest.contains(
-            serverInfo.getHostnamePort())) {
+            serverInfo.getHostnamePort()) || serversToServerInfo.size() <= 1) {
           // Production code path.
           master.getRegionManager().assignRegions(serverInfo,
               mostLoadedRegions, returnMsgs);
-        } else if (mostLoadedRegions.length > 0) {
+        } else {
           // UNIT TESTS ONLY.
           // We just don't assign anything to "blacklisted" regionservers as
           // required by a unit test (for determinism). This is OK because
           // another regionserver will get these regions in response to a
           // heartbeat.
-          LOG.debug("[UNIT TEST ONLY] Not assigning regions "
-              + Arrays.toString(mostLoadedRegions) + " to regionserver "
-              + serverInfo.getHostnamePort()
-              + " because it is blacklisted.");
+          LOG.debug("[UNIT TEST ONLY] Not assigning regions to blacklisted regionserver "
+              + serverInfo.getHostnamePort());
         }
       }
 
@@ -621,8 +626,13 @@ public class ServerManager {
     ArrayList<HMsg> msgsForServer = pendingMsgsToSvrsMap.get(serverInfo);
     
     if (msgsForServer == null) {
-      msgsForServer = pendingMsgsToSvrsMap.putIfAbsent(serverInfo,
-        new ArrayList<HMsg>());
+      msgsForServer = new ArrayList<HMsg>();
+      ArrayList<HMsg> newMsgsForServer =
+          pendingMsgsToSvrsMap.putIfAbsent(serverInfo, msgsForServer);
+      if (newMsgsForServer != null) {
+        // There is already a list of messages for this server, use it.
+        msgsForServer = newMsgsForServer;
+      }
     }
     
     synchronized(msgsForServer) {
@@ -708,13 +718,14 @@ public class ServerManager {
   public void processRegionOpen(HServerInfo serverInfo,
       HRegionInfo region, ArrayList<HMsg> returnMsgs) {
     boolean duplicateAssignment = false;
-    synchronized (master.getRegionManager()) {
-      if (!this.master.getRegionManager().isUnassigned(region) &&
-          !this.master.getRegionManager().isPendingOpen(region.getRegionNameAsString())) {
+    RegionManager regionManager = master.getRegionManager();
+    synchronized (regionManager) {
+      if (!regionManager.isUnassigned(region) &&
+          !regionManager.isPendingOpen(region.getRegionNameAsString())) {
         if (region.isRootRegion()) {
           // Root region
           HServerAddress rootServer =
-            this.master.getRegionManager().getRootRegionLocation();
+            regionManager.getRootRegionLocation();
           if (rootServer != null) {
             if (rootServer.compareTo(serverInfo.getServerAddress()) == 0) {
               // A duplicate open report from the correct server
@@ -728,7 +739,7 @@ public class ServerManager {
           // Not root region. If it is not a pending region, then we are
           // going to treat it as a duplicate assignment, although we can't
           // tell for certain that's the case.
-          if (this.master.getRegionManager().isPendingOpen(
+          if (regionManager.isPendingOpen(
               region.getRegionNameAsString())) {
             // A duplicate report from the correct server
             return;
@@ -751,25 +762,25 @@ public class ServerManager {
         if (region.isRootRegion()) {
           // it was assigned, and it's not a duplicate assignment, so take it out
           // of the unassigned list.
-          this.master.getRegionManager().removeRegion(region);
+          regionManager.removeRegion(region);
 
           // Store the Root Region location (in memory)
           HServerAddress rootServer = serverInfo.getServerAddress();
           this.master.getServerConnection().setRootRegionLocation(
             new HRegionLocation(region, rootServer));
-          this.master.getRegionManager().setRootRegionLocation(rootServer);
+          regionManager.setRootRegionLocation(serverInfo);
           // Increase the region opened counter
           this.master.getMetrics().incRegionsOpened();
         } else {
           // Note that the table has been assigned and is waiting for the
           // meta table to be updated.
-          this.master.getRegionManager().setOpen(region.getRegionNameAsString());
+          regionManager.setOpen(region.getRegionNameAsString());
           RegionServerOperation op =
-            new ProcessRegionOpen(master, serverInfo, region);
-          this.master.getRegionServerOperationQueue().put(op);
+              new ProcessRegionOpen(master, serverInfo, region);
+          master.getRegionServerOperationQueue().put(op);
         }
       }
-      this.master.getRegionManager().notifyRegionReopened(region);
+      regionManager.notifyRegionReopened(region);
     }
   }
 
@@ -980,9 +991,11 @@ public class ServerManager {
       LOG.warn("Already processing shutdown of " + serverName);
       return;
     }
-    // Remove the server from the known servers lists and update load info
-    this.serversToServerInfo.remove(serverName);
-    serversToLoad.removeServerLoad(serverName);
+    synchronized (deadServerStatusLock) {
+      // Remove the server from the known servers lists and update load info
+      this.serversToServerInfo.remove(serverName);
+      serversToLoad.removeServerLoad(serverName);
+    }
     // Add to dead servers and queue a shutdown processing.
     LOG.debug("Added=" + serverName +
       " to dead servers, added shutdown processing operation");
@@ -1006,7 +1019,7 @@ public class ServerManager {
    * @param serverName
    * @return true if server is dead
    */
-  public boolean isDead(final String serverName) {
+  public boolean isDeadProcessingPending(final String serverName) {
     return isDead(serverName, false);
   }
 
@@ -1099,7 +1112,7 @@ public class ServerManager {
     public void run() {
       try {
         while (true) {
-          boolean waitingForMoreServersInRackToTimeOut =
+          boolean waitingForMoreServersInRackToTimeOut = 
               expireTimedOutServers(timeout, maxServersToExpirePerRack);
           if (waitingForMoreServersInRackToTimeOut) {
             sleep(shortTimeout/2);
@@ -1292,7 +1305,7 @@ public class ServerManager {
           continue; //server vanished
         }
         // re-check - just in case the server reported
-        if (curTime > load.expireAfter) {
+        if (curTime > load.expireAfter) {  // debug
           LOG.info("Expiring server " + si.getServerName() +
               " no report for last " + (curTime - load.lastLoadRefreshTime));
           this.expireServer(si);
@@ -1302,4 +1315,11 @@ public class ServerManager {
     return waitingForMoreServersInRackToTimeOut;
   }
 
+  boolean hasBlacklistedServersInTest() {
+    return !blacklistedRSHostPortSetForTest.isEmpty();
+  }
+
+  public static void clearRSBlacklistInTest() {
+    blacklistedRSHostPortSetForTest.clear();
+  }
 }

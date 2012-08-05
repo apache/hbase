@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -33,6 +34,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Delete;
@@ -44,11 +46,14 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventHandlerListener;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
+import org.apache.hadoop.hbase.master.handler.MasterCloseRegionHandler;
 import org.apache.hadoop.hbase.master.handler.MasterOpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.zookeeper.KeeperException;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -73,52 +78,139 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
   private static final int NUM_MASTERS = 2;
   private static final int NUM_RS = 3;
 
-  private Pattern META_AND_ROOT_RE = Pattern.compile(
-      (Bytes.toStringBinary(HConstants.META_TABLE_NAME) + "|" +
+  private static final int TEST_TIMEOUT_MS = 90 * 1000 * 1234567; 
+
+  private static final Pattern META_AND_ROOT_RE = Pattern.compile(
+      (Bytes.toStringBinary(HConstants.META_TABLE_NAME) + "|" + 
       Bytes.toStringBinary(HConstants.ROOT_TABLE_NAME)).replace(".", "\\."));
+
+  private List<HBaseEventHandlerListener> toUnregister =
+      new ArrayList<HBaseEventHandlerListener>();
+
+  @After
+  public void tearDown() throws IOException {
+    for (HBaseEventHandlerListener listener : toUnregister) {
+      HBaseEventHandler.unregisterListener(listener);
+    }
+    toUnregister.clear();
+    super.tearDown();
+  }
 
   private interface WayToCloseRegion {
     void closeRegion(HRegion region) throws IOException;
   }
 
+  private class CloseRegionThroughAdmin implements WayToCloseRegion { 
+    @Override
+    public void closeRegion(HRegion region) throws IOException {
+      header("Closing region " + region.getRegionNameAsString());
+      testUtil.closeRegion(region.getRegionName());
+    }
+  };
+
+  private class KillRegionServerWithRegion implements WayToCloseRegion {
+    public void closeRegion(HRegion region) throws IOException {
+      header("Aborting the region server with the region " +
+          region.getRegionNameAsString());
+      region.getRegionServer().abort("Killing region server holding " +
+          "region " + region);
+    }
+  }
+  
+  /** Kills -ROOT- and .META. regionservers */
+  private class KillRootAndMetaRS implements WayToCloseRegion {
+    public void closeRegion(HRegion ignored) throws IOException {
+      // Copy the list of region server threads because it will be modified as we kill
+      // -ROOT-/.META. regionservers.
+      for (RegionServerThread rst : 
+           new ArrayList<RegionServerThread>(miniCluster().getRegionServerThreads())) {
+        HRegionServer rs = rst.getRegionServer();
+        for (HRegionInfo hri : rs.getRegionsAssignment()) {
+          if (hri.isRootRegion() || hri.isMetaRegion()) {
+            rs.abort("Killing region server holding region " + hri.getRegionNameAsString());
+            break;
+          }
+        }
+      }
+    }
+  }
+
   @Before
   public void setUp() throws IOException, InterruptedException {
+    ServerManager.clearRSBlacklistInTest();
     startMiniCluster(NUM_MASTERS, NUM_RS);
     fillTable();
     shortSleep();
   }
 
-  @Test(timeout=180000)
-  public void testKillingRSAndMaster() throws IOException,
+  @Test(timeout=TEST_TIMEOUT_MS)
+  public void testCloseUserRegionKillMasterOnClosed() throws IOException,
       InterruptedException, KeeperException {
-    header("Starting the test to kill RS and master");
-    closeRegionAndKillMaster(new WayToCloseRegion() {
-      @Override
-      public void closeRegion(HRegion region) throws IOException {
-        header("Aborting the region server with the region " +
-            region.getRegionNameAsString());
-        region.getRegionServer().abort("Killing region server holding " +
-            "region " + region);
-      }
-    });
+    closeRegionAndKillMaster(TABLE_NAME, new CloseRegionThroughAdmin(),
+        HBaseEventType.RS2ZK_REGION_CLOSED);
   }
 
-  @Test(timeout=180000)
-  public void testClosingRegionAndKillingMaster() throws IOException,
+  @Test(timeout=TEST_TIMEOUT_MS)
+  public void testCloseUserRegionKillMasterOnOpened() throws IOException,
       InterruptedException, KeeperException {
-    header("Starting the test to close a region and kill master");
-    closeRegionAndKillMaster(new WayToCloseRegion() {
-      @Override
-      public void closeRegion(HRegion region) throws IOException {
-        header("Closing region " + region.getRegionNameAsString());
-        TEST_UTIL.closeRegion(region.getRegionName());
-      }
-    });
+    closeRegionAndKillMaster(TABLE_NAME, new CloseRegionThroughAdmin(),
+        HBaseEventType.RS2ZK_REGION_OPENED);
   }
 
-  public void closeRegionAndKillMaster(WayToCloseRegion howToClose)
+  @Test(timeout=TEST_TIMEOUT_MS)
+  public void testCloseRootKillMasterOnClosed() throws Exception {
+    closeRegionAndKillMaster(HConstants.ROOT_TABLE_NAME, new CloseRegionThroughAdmin(),
+        HBaseEventType.RS2ZK_REGION_CLOSED);
+  }
+
+  @Test(timeout=TEST_TIMEOUT_MS)
+  public void testCloseRootKillMasterOnOpened() throws Exception {
+    closeRegionAndKillMaster(HConstants.ROOT_TABLE_NAME, new CloseRegionThroughAdmin(),
+        HBaseEventType.RS2ZK_REGION_OPENED);
+  }
+
+  @Test(timeout=TEST_TIMEOUT_MS)
+  public void testCloseMetaKillMasterOnClosed() throws Exception {
+    closeRegionAndKillMaster(HConstants.META_TABLE_NAME, new CloseRegionThroughAdmin(),
+        HBaseEventType.RS2ZK_REGION_CLOSED);
+  }
+
+  @Test(timeout=TEST_TIMEOUT_MS)
+  public void testCloseMetaKillMasterOnOpened() throws Exception {
+    closeRegionAndKillMaster(HConstants.META_TABLE_NAME, new CloseRegionThroughAdmin(),
+        HBaseEventType.RS2ZK_REGION_OPENED);
+  }
+
+  @Test(timeout=TEST_TIMEOUT_MS)
+  public void testKillRSWithUserRegion() throws IOException,
+      InterruptedException, KeeperException {
+    closeRegionAndKillMaster(TABLE_NAME, new KillRegionServerWithRegion(),
+        HBaseEventType.RS2ZK_REGION_OPENED);
+  }
+
+  @Test(timeout=TEST_TIMEOUT_MS)
+  public void testKillRootRS() throws Exception {
+    closeRegionAndKillMaster(HConstants.ROOT_TABLE_NAME, new KillRegionServerWithRegion(),
+        HBaseEventType.RS2ZK_REGION_OPENED);
+  }
+
+  @Test(timeout=TEST_TIMEOUT_MS)
+  public void testKillMetaRS() throws Exception {
+    closeRegionAndKillMaster(HConstants.META_TABLE_NAME, new KillRegionServerWithRegion(),
+        HBaseEventType.RS2ZK_REGION_OPENED);
+  }
+
+  @Test(timeout=TEST_TIMEOUT_MS)
+  public void testKillRootMetaRS() throws Exception {
+    closeRegionAndKillMaster(HConstants.META_TABLE_NAME, new KillRootAndMetaRS(),
+        HBaseEventType.RS2ZK_REGION_OPENED);
+  }
+  
+  public void closeRegionAndKillMaster(byte[] tableName,
+      WayToCloseRegion howToClose, HBaseEventType eventToWatch)
       throws IOException, InterruptedException, KeeperException {
-    final List<HRegion> regions = miniCluster().getRegions(TABLE_NAME);
+    HBaseTestingUtility.setThreadNameFromCallerMethod();
+    final List<HRegion> regions = miniCluster().getRegions(tableName);
     assertEquals(1, regions.size());
     final HRegion region = regions.get(0);
     final String originalRS =
@@ -132,15 +224,16 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
 
     final String targetRegionName = region.getRegionNameAsString();
     MasterKillerListener listener = new MasterKillerListener(
-        targetRegionName);
+        targetRegionName, eventToWatch);
 
     HBaseEventHandler.registerListener(listener);
+    toUnregister.add(listener);
     howToClose.closeRegion(region);
 
     shortSleep();
 
     header("Waiting until all regions are assigned");
-    TEST_UTIL.waitUntilAllRegionsAssigned(1);
+    testUtil.waitUntilAllRegionsAssigned(1);
 
     if (listener.failed()) {
       fail("Fatal error in the event listener -- please check the logs.");
@@ -205,7 +298,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
 
   private Map<String, String> getAssignmentsFromMeta() throws IOException {
     header("Resulting region assignments in .META.:");
-    final HTable metaTable = new HTable(TEST_UTIL.getConfiguration(),
+    final HTable metaTable = new HTable(testUtil.getConfiguration(),
         HConstants.META_TABLE_NAME);
     final Scan scan = new Scan().addFamily(HConstants.CATALOG_FAMILY);
     final ResultScanner scanner = metaTable.getScanner(scan);
@@ -279,17 +372,19 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
   }
 
   /**
-   * A listener that kills the master before it can process the "region opened"
-   * event.
+   * A listener that kills the master before it can process the "region opened" or "region closed"
+   * events.
    */
-  private class MasterKillerListener
-      implements HBaseEventHandlerListener {
+  private class MasterKillerListener implements HBaseEventHandlerListener {
 
     private final String targetRegionName;
+    private HBaseEventType eventToWatch;
+
     private volatile boolean failed;
 
-    public MasterKillerListener(String targetRegionName) {
+    public MasterKillerListener(String targetRegionName, HBaseEventType eventToWatch) {
       this.targetRegionName = targetRegionName;
+      this.eventToWatch = eventToWatch;
     }
 
     public boolean failed() {
@@ -310,22 +405,27 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
       LOG.info(REGION_EVENT_MSG + "Event: " + eventType + ", handler: " +
           event.getClass().getSimpleName());
 
-      if (eventType != HBaseEventType.RS2ZK_REGION_OPENED ||
-          !(event instanceof MasterOpenRegionHandler)) {
+      if (eventType != eventToWatch || 
+         !(event instanceof MasterOpenRegionHandler ||
+           event instanceof MasterCloseRegionHandler)) {
+        LOG.info(REGION_EVENT_MSG + "Unrecognized event type/class: " + eventType + ", " +
+           event.getClass().getSimpleName() + ", ignoring");
         return;
       }
 
-      final MasterOpenRegionHandler regionEvent =
-          (MasterOpenRegionHandler) event;
+      final HBaseEventHandler regionEvent = (HBaseEventHandler) event;
 
       boolean terminateEventThread = false;
       try {
-        final String openedRegion = regionEvent.getRegionName();
-        logMsg("Opened region: " + openedRegion + ", region server name: "
-            + regionEvent.getRegionServerName() + ", target region: "
-            + targetRegionName);
+        final String regionName = regionEvent.getRegionName();
+        logMsg("Event: " + eventType + ", region: " + regionName + ", region server name: "
+            + regionEvent.getRegionServerName() + ", target region: " + targetRegionName);
 
-        if (targetRegionName.endsWith("." + openedRegion + ".")) {
+        // E.g. user table: regionName=01f5858c7919232822dd2525b7748aaf,
+        //     targetRegionName=TestRegionState,,1343862006169.01f5858c7919232822dd2525b7748aaf.
+        // Meta table: regionName=1028785192, targetRegionName=.META.,,1.1028785192
+        if (targetRegionName.endsWith("." + regionName + ".") ||  // user table
+            targetRegionName.endsWith("." + regionName)) {        // meta table
           // Blacklist the new regionserver from being assigned any
           // regions when the new master comes up. Then the master will
           // have to assign to the third regionserver.
@@ -336,12 +436,12 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
           assertHostPort(newRSHostPort);
           ServerManager.blacklistRSHostPortInTest(newRSHostPort);
           logMsg("Killing master right before it can process the event "
-              + eventType + " for region " + openedRegion);
+              + eventType + " for region " + regionName);
           HBaseEventHandler.unregisterListener(this);
           miniCluster().killActiveMaster();
           terminateEventThread = true;
         } else {
-          logMsg("Skipping event for region " + openedRegion
+          logMsg("Skipping event for region " + regionName
               + " (does not match " + targetRegionName + ")");
         }
       } catch (Throwable t) {
@@ -366,7 +466,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
    */
   private void fillTable() throws IOException, InterruptedException {
     Random rand = new Random(19387129L);
-    HTable table = TEST_UTIL.createTable(TABLE_NAME, FAMILIES);
+    HTable table = testUtil.createTable(TABLE_NAME, FAMILIES);
     for (int iStoreFile = 0; iStoreFile < 4; ++iStoreFile) {
       for (int iRow = 0; iRow < 100; ++iRow) {
         final byte[] row = Bytes.toBytes("row" + iRow);
@@ -392,7 +492,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
         table.flushCommits();
       }
     }
-    TEST_UTIL.waitUntilAllRegionsAssigned(1);
+    testUtil.waitUntilAllRegionsAssigned(1);
   }
 
 }

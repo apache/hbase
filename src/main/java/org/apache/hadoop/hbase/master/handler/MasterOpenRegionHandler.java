@@ -19,18 +19,14 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * This is the event handler for all events relating to opening regions on the
@@ -43,33 +39,24 @@ import org.apache.hadoop.hbase.util.Writables;
  */
 public class MasterOpenRegionHandler extends HBaseEventHandler {
   private static final Log LOG = LogFactory.getLog(MasterOpenRegionHandler.class);
-  // other args passed in a byte array form
-  protected byte[] serializedData;
-  private String regionName;
-  private RegionTransitionEventData hbEventData;
-  ServerManager serverManager;
 
-  public MasterOpenRegionHandler(HBaseEventType eventType,
-                                 ServerManager serverManager,
-                                 String serverName,
-                                 String regionName,
+  public MasterOpenRegionHandler(HBaseEventType eventType, 
+                                 ServerManager serverManager, 
+                                 String serverName, 
+                                 String regionName, 
                                  byte[] serData) {
-    super(false, serverName, eventType);
-    this.regionName = regionName;
-
-    this.serializedData = serData;
-    this.serverManager = serverManager;
+    super(false, serverName, eventType, regionName, serData, serverManager);
   }
 
   /**
-   * Handle the various events relating to opening regions. We can get the
+   * Handle the various events relating to opening regions. We can get the 
    * following events here:
-   *   - RS_REGION_OPENING : Keep track to see how long the region open takes.
-   *                         If the RS is taking too long, then revert the
-   *                         region back to closed state so that it can be
+   *   - RS_REGION_OPENING : Keep track to see how long the region open takes. 
+   *                         If the RS is taking too long, then revert the 
+   *                         region back to closed state so that it can be 
    *                         re-assigned.
-   *   - RS_REGION_OPENED  : The region is opened. Add an entry into META for
-   *                         the RS having opened this region. Then delete this
+   *   - RS_REGION_OPENED  : The region is opened. Add an entry into META for  
+   *                         the RS having opened this region. Then delete this 
    *                         entry in ZK.
    */
   @Override
@@ -83,12 +70,12 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
       handleRegionOpenedEvent();
     }
   }
-
+  
   private void handleRegionOpeningEvent() {
-    // TODO: not implemented.
+    // TODO: not implemented. 
     LOG.debug("NO-OP call to handling region opening event");
-    // Keep track to see how long the region open takes. If the RS is taking too
-    // long, then revert the region back to closed state so that it can be
+    // Keep track to see how long the region open takes. If the RS is taking too 
+    // long, then revert the region back to closed state so that it can be 
     // re-assigned.
   }
 
@@ -103,29 +90,6 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
                 " about " + returnMsgs.get(0).getRegionInfo().getRegionNameAsString());
       serverManager.holdMessages(serverInfo, returnMsgs);
     }
-  }
-
-  private void ensureEventDataAvailable() {
-    if (hbEventData != null) {
-      return;
-    }
-
-    try {
-      hbEventData = new RegionTransitionEventData();
-      Writables.getWritable(serializedData, hbEventData);
-    } catch (IOException e) {
-      LOG.error("Could not deserialize additional args for Open region", e);
-      throw new RuntimeException(e);
-    }
-  }
-
-  public String getRegionName() {
-    return regionName;
-  }
-
-  public String getRegionServerName() {
-    ensureEventDataAvailable();
-    return hbEventData.getRsName();
   }
 
 }

@@ -24,13 +24,13 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
 
 /**
  * HServerInfo is meta info about an {@link HRegionServer}.  It is the token
@@ -53,7 +53,12 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
    * its startcode. Servername is formatted as
    * <code>&lt;hostname> '{@ink #SERVERNAME_SEPARATOR"}' &lt;port> '{@ink #SERVERNAME_SEPARATOR"}' &lt;startcode></code>.
    */
-  private static final String SERVERNAME_SEPARATOR = ",";
+  static final String SERVERNAME_SEPARATOR = ",";
+
+  private static final Pattern SERVER_NAME_RE = Pattern.compile(
+      "^[^,]+" + SERVERNAME_SEPARATOR + 
+      "[0-9]{1," + String.valueOf(0xffff).length() + "}" + SERVERNAME_SEPARATOR +
+      "-?[0-9]{1," + String.valueOf(Long.MAX_VALUE).length() + "}");
 
   private HServerAddress serverAddress;
   private long startCode;
@@ -77,6 +82,16 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
    */
   public HServerInfo(HServerAddress serverAddress, final String hostname) {
     this(serverAddress, System.currentTimeMillis(), hostname);
+  }
+
+  /** Initializes from server address and start code. Used in unit tests. */
+  HServerInfo(HServerAddress serverAddress, long startCode) {
+    this(serverAddress, startCode, serverAddress.getHostname());
+  }
+
+  /** Auto-generates a start code. */
+  public HServerInfo(final HServerAddress serverAddress) {
+    this(serverAddress, 0, serverAddress.getHostname());
   }
 
   public HServerInfo(HServerAddress serverAddress, long startCode, String hostname) {
@@ -288,4 +303,13 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
 
     return new HServerInfo(new HServerAddress(hostName, port), startCode, hostName);
   }
+
+  public static boolean isValidServerName(String serverName) {
+    return SERVER_NAME_RE.matcher(serverName).matches();
+  }
+
+  public static HServerAddress getAddress(HServerInfo hsi) {
+    return hsi != null ? hsi.getServerAddress() : null;
+  }
+
 }

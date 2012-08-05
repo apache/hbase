@@ -1295,7 +1295,7 @@ public class KeyValue implements Writable, HeapSize {
       final int offset, final int length, final int delimiter) {
     int index = getDelimiter(b, offset, length, delimiter);
     if (index < 0) {
-      throw new IllegalArgumentException("No " + (char)delimiter + " in <" +
+      throw new IllegalArgumentException("No '" + (char)delimiter + "' in <" +
         Bytes.toString(b) + ">" + ", length=" + length + ", offset=" + offset);
     }
     return index;
@@ -1309,7 +1309,7 @@ public class KeyValue implements Writable, HeapSize {
       final int offset, final int length, final int delimiter) {
     int index = getDelimiterInReverse(b, offset, length, delimiter);
     if (index < 0) {
-      throw new IllegalArgumentException("No " + delimiter + " in <" +
+      throw new IllegalArgumentException("No '" + ((char) delimiter) + "' in <" +
         Bytes.toString(b) + ">" + ", length=" + length + ", offset=" + offset);
     }
     return index;

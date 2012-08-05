@@ -276,7 +276,7 @@ public class RecoverableZooKeeper {
     while (true) {
       try {
         byte[] revData = zk.getData(path, watcher, stat);
-        return this.removeMetaData(revData);
+        return removeMetaData(revData);
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
@@ -466,7 +466,7 @@ public class RecoverableZooKeeper {
               throw e;
             }
             LOG.error("Node " + path + " already exists and this is not a " +
-			"retry");
+            		"retry");
             throw e;
 
           case CONNECTIONLOSS:

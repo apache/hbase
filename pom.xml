@@ -229,7 +229,7 @@
           <version>2.8</version>
           <configuration>
             <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
-            <argLine>-enableassertions -Xmx512m</argLine>
+            <argLine>-enableassertions -Xmx1024m</argLine>
             <redirectTestOutputToFile>true</redirectTestOutputToFile>
           </configuration>
         </plugin>

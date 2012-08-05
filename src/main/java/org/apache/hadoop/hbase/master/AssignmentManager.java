@@ -22,14 +22,14 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.HasThread;
 
 /**
- * Manages the preferences for assigning regions to specific servers.
+ * Manages the preferences for assigning regions to specific servers. 
  * It get the assignment plan from scanning the META region and keep this
  * assignment plan updated.
- *
+ * 
  * The assignment manager executes the assignment plan by adding the regions
  * with its most favored live region server into the transient assignment.
  * Each transient assignment will be only valid for a configurable time
- * before expire. During these valid time, the region will only be assigned
+ * before expire. During these valid time, the region will only be assigned 
  * based on the transient assignment.
  *
  * All access to this class is thread-safe.
@@ -68,12 +68,12 @@ public class AssignmentManager {
    * favored region server list.
    */
   private AssignmentPlan assignmentPlan;
-
+  
   private final HMaster master;
   private final Configuration conf;
   private long millisecondDelay;
   private POSITION[] positions;
-
+  
   public AssignmentManager(HMaster master) {
     this.master = master;
     this.conf = master.getConfiguration();
@@ -142,7 +142,7 @@ public class AssignmentManager {
         // information may indicate that the server is in the process of
         // shutting down.
         if (info != null &&
-            !master.getServerManager().isDead(info.getServerName()) &&
+            !master.getServerManager().isDeadProcessingPending(info.getServerName()) &&
             master.getServerManager().getServersToServerInfo().get(info.getServerName()) != null) {
           LOG.info("Add a transient assignment from the assignment plan: "
               + " region " + region.getRegionNameAsString() + " to the "
@@ -171,7 +171,7 @@ public class AssignmentManager {
         }
         LOG.debug("Remove the transisent assignment: region " +
             region.getRegionNameAsString() + " to " +
-            server.getHostNameWithPort());
+            server.getHostNameWithPort()); 
         return true;
       }
       return false;

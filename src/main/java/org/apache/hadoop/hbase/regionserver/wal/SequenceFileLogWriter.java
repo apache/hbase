@@ -56,11 +56,11 @@ public class SequenceFileLogWriter implements HLog.Writer {
   }
 
   @Override
-  public void init(FileSystem fs, Path path, Configuration conf)
+  public void init(FileSystem fs, Path path, Configuration conf) 
   throws IOException {
     // Create a SF.Writer instance.
     try {
-	this.generateWriter(fs,path,conf);
+    	this.generateWriter(fs,path,conf);
     } catch (InvocationTargetException ite) {
       // function was properly called, but threw it's own exception
       throw new IOException(ite.getCause());
@@ -139,9 +139,13 @@ public class SequenceFileLogWriter implements HLog.Writer {
     this.writer.sync();
     if (this.syncFs != null) {
       try {
-       this.syncFs.invoke(this.writer, HLog.NO_ARGS);
+        this.syncFs.invoke(this.writer, HLog.NO_ARGS);
       } catch (Exception e) {
-        throw new IOException("Reflection", e);
+        if (e.getCause() instanceof IOException) {
+          throw (IOException) e.getCause();
+        }
+        throw new IOException("Reflection: could not call method " + syncFs.getName()
+            + " with no arguments on " + writer.getClass().getName(), e);
       }
     }
   }
@@ -158,20 +162,20 @@ public class SequenceFileLogWriter implements HLog.Writer {
   public OutputStream getDFSCOutputStream() {
     return this.dfsClient_out;
   }
-
-  // To be backward compatible; we still need to call the old sequence file
-  // interface.
-  private void generateWriter(FileSystem fs, Path path, Configuration conf)
+  
+  // To be backward compatible; we still need to call the old sequence file 
+  // interface. 
+  private void generateWriter(FileSystem fs, Path path, Configuration conf) 
   throws InvocationTargetException, Exception {
-	boolean forceSync =
-		conf.getBoolean("hbase.regionserver.hlog.writer.forceSync", false);
-	if (forceSync) {
+  	boolean forceSync = 
+  		conf.getBoolean("hbase.regionserver.hlog.writer.forceSync", false);
+  	if (forceSync) {
       // call the new create api with force sync flag
       this.writer = (SequenceFile.Writer) SequenceFile.class
         .getMethod("createWriter", new Class[] {FileSystem.class,
             Configuration.class, Path.class, Class.class, Class.class,
             Integer.TYPE, Short.TYPE, Long.TYPE, Boolean.TYPE,
-            CompressionType.class, CompressionCodec.class, Metadata.class,
+            CompressionType.class, CompressionCodec.class, Metadata.class, 
             Boolean.TYPE})
         .invoke(null, new Object[] {fs, conf, path, HLog.getKeyClass(conf),
             WALEdit.class,
@@ -187,8 +191,8 @@ public class SequenceFileLogWriter implements HLog.Writer {
             forceSync
             });
 
-	} else {
-		// still need to keep old interface to be backward compatible
+  	} else {
+  		// still need to keep old interface to be backward compatible
       // reflection for a version of SequenceFile.createWriter that doesn't
       // automatically create the parent directory (see HBASE-2312)
       this.writer = (SequenceFile.Writer) SequenceFile.class
@@ -208,6 +212,6 @@ public class SequenceFileLogWriter implements HLog.Writer {
             SequenceFile.CompressionType.NONE, new DefaultCodec(),
             new Metadata()
             });
-	}
+  	}
   }
 }

@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit;
  */
 class MetaScanner extends BaseScanner {
   /** Initial work for the meta scanner is queued up here */
-  private volatile BlockingQueue<MetaRegion> metaRegionsToScan =
+  private final BlockingQueue<MetaRegion> metaRegionsToScan =
     new LinkedBlockingQueue<MetaRegion>();
 
   private final List<MetaRegion> metaRegionsToRescan =
@@ -59,7 +59,6 @@ class MetaScanner extends BaseScanner {
   // things should be back to normal.
   private boolean scanOneMetaRegion(MetaRegion region) {
     while (!this.master.isClosed() &&
-        !this.master.getRegionManager().isInitialRootScanComplete() &&
         this.master.getRegionManager().getRootRegionLocation() == null) {
       sleep();
     }
@@ -98,31 +97,6 @@ class MetaScanner extends BaseScanner {
   }
 
   @Override
-  protected boolean initialScan() {
-    MetaRegion region = null;
-    while (!this.master.isClosed() &&
-        (region == null && metaRegionsToScan.size() > 0) &&
-          !metaRegionsScanned()) {
-      try {
-        region = metaRegionsToScan.poll(this.master.getThreadWakeFrequency(),
-          TimeUnit.MILLISECONDS);
-      } catch (InterruptedException e) {
-        // continue
-      }
-      if (region == null && metaRegionsToRescan.size() != 0) {
-        region = metaRegionsToRescan.remove(0);
-      }
-      if (region != null) {
-        if (!scanOneMetaRegion(region)) {
-          metaRegionsToRescan.add(region);
-        }
-      }
-    }
-    initialScanComplete = true;
-    return true;
-  }
-
-  @Override
   protected void maintenanceScan() {
     List<MetaRegion> regions =
       this.master.getRegionManager().getListOfOnlineMetaRegions();
@@ -132,24 +106,19 @@ class MetaScanner extends BaseScanner {
       regionCount++;
     }
     LOG.info("All " + regionCount + " .META. region(s) scanned");
-    metaRegionsScanned();
+    notfiyAfterScan();
   }
 
   /*
    * Called by the meta scanner when it has completed scanning all meta
    * regions. This wakes up any threads that were waiting for this to happen.
-   * @param totalRows Total rows scanned.
-   * @param regionCount Count of regions in  .META. table.
-   * @return False if number of meta regions matches count of online regions.
    */
-  private synchronized boolean metaRegionsScanned() {
-    if (!this.master.getRegionManager().isInitialRootScanComplete() ||
-        this.master.getRegionManager().numMetaRegions() !=
-          this.master.getRegionManager().numOnlineMetaRegions()) {
-      return false;
+  private synchronized void notfiyAfterScan() {
+    if (this.master.getRegionManager().numMetaRegions() <=
+        this.master.getRegionManager().numOnlineMetaRegions()) {
+      // All meta regions are online.
+      notifyAll();
     }
-    notifyAll();
-    return true;
   }
 
   /**
@@ -159,9 +128,8 @@ class MetaScanner extends BaseScanner {
   synchronized boolean waitForMetaRegionsOrClose() {
     while (!this.master.isClosed()) {
       synchronized (master.getRegionManager()) {
-        if (this.master.getRegionManager().isInitialRootScanComplete() &&
-            this.master.getRegionManager().numMetaRegions() ==
-              this.master.getRegionManager().numOnlineMetaRegions()) {
+        if (this.master.getRegionManager().numMetaRegions() <=
+            this.master.getRegionManager().numOnlineMetaRegions()) {
           break;
         }
       }
@@ -179,5 +147,9 @@ class MetaScanner extends BaseScanner {
    */
   void addMetaRegionToScan(MetaRegion m) {
     metaRegionsToScan.add(m);
+  }
+
+  public int getNumMetaRegionsToScan() {
+    return metaRegionsToScan.size();
   }
 }

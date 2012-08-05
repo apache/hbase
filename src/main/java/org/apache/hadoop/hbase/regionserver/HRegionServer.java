@@ -1617,7 +1617,9 @@ public class HRegionServer implements HRegionInterface,
     Threads.shutdown(this.cacheFlusher);
     Threads.shutdown(this.hlogRoller);
     this.compactSplitThread.join();
-    this.replicationHandler.join();
+    if (replicationHandler != null) {
+      this.replicationHandler.join();
+    }
   }
 
   private boolean getMaster() {
@@ -1655,8 +1657,8 @@ public class HRegionServer implements HRegionInterface,
   private HServerAddress readMasterAddressFromZK() {
     HServerAddress masterAddress = null;
     try {
-      masterAddress = zooKeeperWrapper.readAddressOrThrow(
-          zooKeeperWrapper.masterElectionZNode, zooKeeperWrapper);
+      masterAddress = HServerInfo.getAddress(zooKeeperWrapper.readAddressOrThrow(
+          zooKeeperWrapper.masterElectionZNode, zooKeeperWrapper));
     } catch (KeeperException e) {
       LOG.fatal(UNABLE_TO_READ_MASTER_ADDRESS_ERR_MSG, e);
       forceAbort();

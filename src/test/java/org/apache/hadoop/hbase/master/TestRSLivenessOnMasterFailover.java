@@ -38,7 +38,7 @@ public class TestRSLivenessOnMasterFailover extends MultiMasterTest {
       InterruptedException, KeeperException {
     // Use low RPC timeout because the regionserver will try to talk to a
     // master that is not there.
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 3000);
+    testUtil.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 3000);
     startMiniCluster(1, 1);
 
     HServerAddress killedMasterAddress = killActiveMasterAndWaitToStop();
@@ -48,7 +48,7 @@ public class TestRSLivenessOnMasterFailover extends MultiMasterTest {
     // not reload the master address from ZK, it will get stuck in an infinite
     // loop, which is the bug this unit test is trying to catch.
     ZooKeeperWrapper zkw = ZooKeeperWrapper.createInstance(
-        TEST_UTIL.getConfiguration(), "spoofMasterAddress");
+        testUtil.getConfiguration(), "spoofMasterAddress");
     assertNotNull(zkw);
     zkw.writeMasterAddress(killedMasterAddress);
     miniCluster().startRegionServerNoWait();
