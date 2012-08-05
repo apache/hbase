@@ -1078,8 +1078,11 @@ public abstract class HBaseServer {
           String errorClass = null;
           String error = null;
           Writable value = null;
-          call.profilingData = new ProfilingData ();
-          HRegionServer.threadLocalProfilingData.set (call.profilingData);
+          
+          if (call.shouldProfile) {
+            call.profilingData = new ProfilingData ();
+            HRegionServer.threadLocalProfilingData.set (call.profilingData);
+          }
           
           CurCall.set(call);
           UserGroupInformation previous = UserGroupInformation.getCurrentUGI();
@@ -1094,12 +1097,15 @@ public abstract class HBaseServer {
             error = StringUtils.stringifyException(e);
           }
           long total = System.currentTimeMillis () - start;
-          call.profilingData.addLong(
-              ProfilingData.TOTAL_SERVER_TIME_MS, total);
           UserGroupInformation.setCurrentUser(previous);
           CurCall.set(null);
-          HRegionServer.threadLocalProfilingData.remove ();
-
+          
+          if (call.shouldProfile) {
+            call.profilingData.addLong(
+                ProfilingData.TOTAL_SERVER_TIME_MS, total);
+            HRegionServer.threadLocalProfilingData.remove ();
+          }
+          
           int size = BUFFER_INITIAL_SIZE;
           if (value instanceof WritableWithSize) {
             // get the size hint.
@@ -1152,10 +1158,6 @@ public abstract class HBaseServer {
             		out.writeBoolean(true);
             		call.profilingData.write(out);
             	}
-            	if (call.profilingData != null) {
-                LOG.debug("Profiling info (" + call.getTag () + "): " + 
-                      call.profilingData.toString ());
-              }
             }
           } else {
             WritableUtils.writeString(out, errorClass);

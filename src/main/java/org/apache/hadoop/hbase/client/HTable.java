@@ -550,13 +550,15 @@ public class HTable implements HTableInterface {
   public Result[] get(List<Get> gets) throws IOException {
     return connection.processBatchOfGets(gets, tableName, this.options);
   }
-
-  public ProfilingData getProfilingData() {
-    return this.options.profilingResult;
-  }
   
-  public void clearProfilingData() {
+  /**
+   * Get collected profiling data and clears it from the HTable
+   * @return aggregated profiling data
+   */
+  public ProfilingData getProfilingData() {
+    ProfilingData ret =  this.options.profilingResult;
     this.options.profilingResult = null;
+    return ret;
   }
 
   /**
@@ -1269,10 +1271,15 @@ public class HTable implements HTableInterface {
     return HConnectionManager.getConnection(HBaseConfiguration.create()).
     getRegionCachePrefetch(tableName);
   }
-
+  
+  /**
+   * Set profiling request on/off for every subsequent RPC calls
+   * @param prof profiling true/false
+   */
   @Override
   public void setProfiling(boolean prof) {
     options.setRequestProfiling (prof);
+    options.profilingResult = null;
   }
 
   @Override

@@ -86,7 +86,6 @@ public class TestPerRequestProfiling {
 
     LOG.debug("Testing with profiling off");
     // put some values with profiling off
-    table.clearProfilingData();
     byte [][] ROWS = { Bytes.toBytes("a"), Bytes.toBytes("b") };
     for (int i = 0; i < ROWS.length; i++) {
       Put put = new Put(ROWS[i]);
@@ -124,7 +123,6 @@ public class TestPerRequestProfiling {
       table.put(put);
       // autoflush is on by default, or else move this check after flush
       assertTrue (table.getProfilingData () != null);
-      table.clearProfilingData();
     }
     LOG.debug("Wrote some puts to table " + new String(TABLE));
 
@@ -148,7 +146,6 @@ public class TestPerRequestProfiling {
     // turn profiling back off and repeat test to make sure
     // profiling data gets cleared
     table.setProfiling(false);
-    table.clearProfilingData();
     LOG.debug("Testing with profiling off");
     for (int i = 0; i < ROWS.length; i++) {
       Put put = new Put(ROWS[i]);
