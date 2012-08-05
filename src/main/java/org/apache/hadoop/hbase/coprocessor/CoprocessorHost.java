@@ -209,6 +209,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
           paths.add(file.toURL());
         }
       }
+      jarFile.close();
 
       StringTokenizer st = new StringTokenizer(cp, File.pathSeparator);
       while (st.hasMoreTokens()) {
