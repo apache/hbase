@@ -15,6 +15,7 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -339,9 +340,15 @@ public class AccessController extends BaseRegionObserver
 
   private void logResult(AuthResult result) {
     if (AUDITLOG.isTraceEnabled()) {
+      InetAddress remoteAddr = null;
+      RequestContext ctx = RequestContext.get();
+      if (ctx != null) {
+        remoteAddr = ctx.getRemoteAddress();
+      }
       AUDITLOG.trace("Access " + (result.isAllowed() ? "allowed" : "denied") +
           " for user " + (result.getUser() != null ? result.getUser().getShortName() : "UNKNOWN") +
           "; reason: " + result.getReason() +
+          "; remote address: " + (remoteAddr != null ? remoteAddr : "") +
           "; context: " + result.toContextString());
     }
   }
