@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.metrics.ExactCounterMetric;
 import org.apache.hadoop.hbase.metrics.HBaseInfo;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
 import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
+import org.apache.hadoop.hbase.metrics.PersistentMetricsTimeVaryingRate;
 import com.yammer.metrics.stats.Snapshot;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Pair;
@@ -287,11 +288,11 @@ public class RegionServerMetrics implements Updater {
   public final MetricsTimeVaryingRate slowHLogAppendTime =
       new MetricsTimeVaryingRate("slowHLogAppendTime", registry);
   
-  public final MetricsTimeVaryingLong regionSplitSuccessCount =
-      new MetricsTimeVaryingLong("regionSplitSuccessCount", registry);
+  public final PersistentMetricsTimeVaryingRate regionSplitSuccessCount =
+      new PersistentMetricsTimeVaryingRate("regionSplitSuccessCount", registry);
   
-  public final MetricsTimeVaryingLong regionSplitFailureCount =
-      new MetricsTimeVaryingLong("regionSplitFailureCount", registry);
+  public final MetricsLongValue regionSplitFailureCount =
+      new MetricsLongValue("regionSplitFailureCount", registry);
 
   /**
    * Number of times checksum verification failed.
@@ -496,12 +497,12 @@ public class RegionServerMetrics implements Updater {
     this.requests.inc(inc);
   }
   
-  public void incrementSplitSuccessCount() {
-    this.regionSplitSuccessCount.inc();
+  public void incrementSplitSuccessCount(long time) {
+    this.regionSplitSuccessCount.inc(time);
   }
   
   public void incrementSplitFailureCount() {
-    this.regionSplitFailureCount.inc();
+    this.regionSplitFailureCount.set(this.regionSplitFailureCount.get() + 1);
   }
 
   @Override

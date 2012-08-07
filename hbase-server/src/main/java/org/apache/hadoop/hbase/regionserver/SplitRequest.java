@@ -67,7 +67,7 @@ class SplitRequest implements Runnable {
       if (!st.prepare()) return;
       try {
         st.execute(this.server, this.server);
-        this.server.getMetrics().incrementSplitSuccessCount();
+        this.server.getMetrics().incrementSplitSuccessCount(System.currentTimeMillis() - startTime);
       } catch (Exception e) {
         if (this.server.isStopping() || this.server.isStopped()) {
           LOG.info(
