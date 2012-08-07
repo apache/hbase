@@ -1663,8 +1663,9 @@ public class HConnectionManager {
       if (t instanceof KeeperException) {
         LOG.info("This client just lost it's session with ZooKeeper, will"
             + " automatically reconnect when needed.");
-        if (t instanceof KeeperException.SessionExpiredException) {
-          LOG.info("ZK session expired. This disconnect could have been" +
+        if (t instanceof KeeperException.SessionExpiredException
+            || t instanceof KeeperException.ConnectionLossException) {
+          LOG.info("The ZK connection was or the session expired. This disconnect could have been" +
               " caused by a network partition or a long-running GC pause," +
               " either way it's recommended that you verify your environment.");
           resetZooKeeperTrackers();
