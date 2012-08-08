@@ -248,3 +248,8 @@ message NameBytesPair {
   required string name = 1;
   optional bytes value = 2;
 }
+
+message BytesBytesPair {
+  required bytes first = 1;
+  required bytes second = 2;
+}

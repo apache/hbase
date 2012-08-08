@@ -68,6 +68,10 @@ message FirstKeyOnlyFilter {
 message FirstKeyValueMatchingQualifiersFilter {
 }
 
+message FuzzyRowFilter {
+  repeated BytesBytesPair fuzzyKeysData = 1;
+}
+
 message InclusiveStopFilter {
   required bytes stopRowKey = 1;
 }
