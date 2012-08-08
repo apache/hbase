@@ -4827,7 +4827,7 @@ public class HRegion implements HeapSize { // , Writable{
             if (idx < results.size() &&
                 results.get(idx).matchingQualifier(column.getKey())) {
               KeyValue kv = results.get(idx);
-              amount += Bytes.toLong(kv.getBuffer(), kv.getValueOffset());
+              amount += Bytes.toLong(kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
               idx++;
             }
 

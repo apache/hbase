@@ -2619,6 +2619,38 @@ public class TestHRegion extends HBaseTestCase {
     }
   }
 
+  public void testIncrement_WrongInitialSize() throws IOException {
+    this.region = initHRegion(tableName, getName(), fam1);
+    try {
+      byte[] row1 = Bytes.add(Bytes.toBytes("1234"), Bytes.toBytes(0L));
+      long row1Field1 = 0;
+      int row1Field2 = 1;
+      Put put1 = new Put(row1);
+      put1.add(fam1, qual1, Bytes.toBytes(row1Field1));
+      put1.add(fam1, qual2, Bytes.toBytes(row1Field2));
+      region.put(put1);
+      Increment increment = new Increment(row1);
+      increment.addColumn(fam1, qual1, 1);
+
+      //here we should be successful as normal
+      region.increment(increment, null, true);
+      assertICV(row1, fam1, qual1, row1Field1 + 1);
+
+      //failed to increment
+      increment = new Increment(row1);
+      increment.addColumn(fam1, qual2, 1);
+      try {
+        region.increment(increment, null, true);
+        fail("Expected to fail here");
+      } catch (Exception exception) {
+        // Expected.
+      }
+      assertICV(row1, fam1, qual2, row1Field2);
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
   private void assertICV(byte [] row,
                          byte [] familiy,
                          byte[] qualifier,
