@@ -21,6 +21,9 @@
 package org.apache.hadoop.hbase.rest.client;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
@@ -51,6 +54,8 @@ public class Client {
   private HttpClient httpClient;
   private Cluster cluster;
 
+  private Map<String, String> extraHeaders;
+
   /**
    * Default Constructor
    */
@@ -70,6 +75,7 @@ public class Client {
     managerParams.setConnectionTimeout(2000); // 2 s
     managerParams.setDefaultMaxConnectionsPerHost(10);
     managerParams.setMaxTotalConnections(100);
+    extraHeaders = new ConcurrentHashMap<String, String>();
     this.httpClient = new HttpClient(manager);
     HttpClientParams clientParams = httpClient.getParams();
     clientParams.setVersion(HttpVersion.HTTP_1_1);
@@ -82,6 +88,43 @@ public class Client {
     MultiThreadedHttpConnectionManager manager = 
       (MultiThreadedHttpConnectionManager) httpClient.getHttpConnectionManager();
     manager.shutdown();
+  }
+
+  /**
+   * @return the wrapped HttpClient
+   */
+  public HttpClient getHttpClient() {
+    return httpClient;
+  }
+
+  /**
+   * Add extra headers.  These extra headers will be applied to all http
+   * methods before they are removed. If any header is not used any more,
+   * client needs to remove it explicitly.
+   */
+  public void addExtraHeader(final String name, final String value) {
+    extraHeaders.put(name, value);
+  }
+
+  /**
+   * Get an extra header value.
+   */
+  public String getExtraHeader(final String name) {
+    return extraHeaders.get(name);
+  }
+
+  /**
+   * Get all extra headers (read-only).
+   */
+  public Map<String, String> getExtraHeaders() {
+    return Collections.unmodifiableMap(extraHeaders);
+  }
+
+  /**
+   * Remove an extra header.
+   */
+  public void removeExtraHeader(final String name) {
+    extraHeaders.remove(name);
   }
 
   /**
@@ -132,6 +175,9 @@ public class Client {
   public int executeURI(HttpMethod method, Header[] headers, String uri)
       throws IOException {
     method.setURI(new URI(uri, true));
+    for (Map.Entry<String, String> e: extraHeaders.entrySet()) {
+      method.addRequestHeader(e.getKey(), e.getValue());
+    }
     if (headers != null) {
       for (Header header: headers) {
         method.addRequestHeader(header);
@@ -452,5 +498,4 @@ public class Client {
       method.releaseConnection();
     }
   }
-
 }
