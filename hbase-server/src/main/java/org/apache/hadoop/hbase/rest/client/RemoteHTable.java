@@ -80,7 +80,7 @@ public class RemoteHTable implements HTableInterface {
   final int maxRetries;
   final long sleepTime;
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   protected String buildRowSpec(final byte[] row, final Map familyMap, 
       final long startTime, final long endTime, final int maxVersions) {
     StringBuffer sb = new StringBuffer();
