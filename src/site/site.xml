@@ -44,6 +44,7 @@
       <item name="Team" href="team-list.html" />
       <item name="Sponsors" href="sponsors.html" />
       <item name="Blog" href="http://blogs.apache.org/hbase/" />
+      <item name="Other resources" href="resources.html" />
     </menu>
     <menu name="Documentation">
         <item name="Getting Started" href="book/quickstart.html" />
