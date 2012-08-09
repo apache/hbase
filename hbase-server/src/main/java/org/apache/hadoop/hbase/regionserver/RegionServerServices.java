@@ -86,4 +86,9 @@ public interface RegionServerServices extends OnlineRegions {
    * @return Return the FileSystem object used by the regionserver
    */
   public FileSystem getFileSystem();
+
+  /**
+   * @return The RegionServer's "Leases" service
+   */
+  public Leases getLeases();
 }

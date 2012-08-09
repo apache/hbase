@@ -34,6 +34,7 @@ import java.util.NavigableSet;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -96,6 +98,18 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   boolean hadPostScannerOpen = false;
   boolean hadPreBulkLoadHFile = false;
   boolean hadPostBulkLoadHFile = false;
+
+  @Override
+  public void start(CoprocessorEnvironment e) throws IOException {
+    // this only makes sure that leases and locks are available to coprocessors
+    // from external packages
+    RegionCoprocessorEnvironment re = (RegionCoprocessorEnvironment)e;
+    Leases leases = re.getRegionServerServices().getLeases();
+    leases.createLease("x", 2000, null);
+    leases.cancelLease("x");
+    Integer lid = re.getRegion().getLock(null, Bytes.toBytes("some row"), true);
+    re.getRegion().releaseRowLock(lid);
+  }
 
   @Override
   public void preOpen(ObserverContext<RegionCoprocessorEnvironment> c) {

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -155,5 +156,10 @@ public class MockRegionServerServices implements RegionServerServices {
 
   public void setFileSystem(FileSystem hfs) {
     this.hfs = (HFileSystem)hfs;
+  }
+
+  @Override
+  public Leases getLeases() {
+    return null;
   }
 }

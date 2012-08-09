@@ -2125,10 +2125,8 @@ public class  HRegionServer implements ClientProtocol,
     throw new IOException("Unknown protocol: " + protocol);
   }
 
-  /**
-   * @return Return the leases.
-   */
-  protected Leases getLeases() {
+  @Override
+  public Leases getLeases() {
     return leases;
   }
 

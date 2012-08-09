@@ -3270,7 +3270,7 @@ public class HRegion implements HeapSize { // , Writable{
    * simply return null if it could not acquire the lock.
    * @return lockid or null if waitForLock is false and the lock was unavailable.
    */
-  private Integer getLock(Integer lockid, byte [] row, boolean waitForLock)
+  public Integer getLock(Integer lockid, byte [] row, boolean waitForLock)
   throws IOException {
     Integer lid = null;
     if (lockid == null) {
