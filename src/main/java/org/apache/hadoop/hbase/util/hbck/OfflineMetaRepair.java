@@ -39,7 +39,7 @@ import org.apache.hadoop.io.MultipleIOException;
  * hbase org.apache.hadoop.hbase.util.hbck.OfflineMetaRepair ...
  */
 public class OfflineMetaRepair {
-  private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
+  private static final Log LOG = LogFactory.getLog(OfflineMetaRepair.class.getName());
 
   protected static void printUsageAndExit() {
     System.err.println("Usage: OfflineMetaRepair [opts] ");

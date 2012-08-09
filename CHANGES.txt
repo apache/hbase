@@ -101,6 +101,7 @@ Release 0.92.2 - Unreleased
    HBASE-6460  hbck "-repairHoles" usage inconsistent with "-fixHdfsOrphans" (Jie Huang)
    HBASE-6507 [hbck] TestHBaseFsck ran into TableNotEnabledException
    HBASE-6552 TestAcidGuarantees system test should flush more aggresively (Gregory Chanan)
+   HBASE-6512 Incorrect OfflineMetaRepair log class name (Liang Xie)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
