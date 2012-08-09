@@ -43,7 +43,7 @@ import org.apache.hadoop.io.MultipleIOException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class OfflineMetaRepair {
-  private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
+  private static final Log LOG = LogFactory.getLog(OfflineMetaRepair.class.getName());
 
   protected static void printUsageAndExit() {
     StringBuilder sb = new StringBuilder();
