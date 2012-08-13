@@ -253,9 +253,9 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.1
            </para>
       </section>
     </section> <!--  build -->
-    <section xml:id="hbase.site">
+    <section xml:id="hbase.org">
     <title>Updating hbase.apache.org</title>
-      <section xml:id="hbase.site.contributing">
+      <section xml:id="hbase.org.site.contributing">
       <title>Contributing to hbase.apache.org</title>
       <para>The HBase apache web site (including this reference guide) is maintained as part of the main HBase source tree, under <filename>/src/docbkx</filename> and <filename>/src/site</filename>. The former is this reference guide; the latter, in most cases, are legacy pages that are in the process of being merged into the docbkx tree.</para>
       <para>To contribute to the reference guide, edit these files and submit them as a patch (see <xref linkend="submitting.patches"/>). Your Jira should contain a summary of the changes in each section (see <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6081">HBASE-6081</link> for an example).</para>
@@ -263,7 +263,7 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.1
       <programlisting>mvn site</programlisting>
       Then you can load up the generated HTML files in your browser (file are under <filename>/target/site</filename>).</para>
       </section>
-      <section xml:id="hbase.site.publishing">
+      <section xml:id="hbase.org.site.publishing">
       <title>Publishing hbase.apache.org</title>
       <para>If you're a committer with rights to publish the site artifacts: set up your apache credentials and the target site location locally in a place and
       form that maven can pick it up, in <filename>~/.m2/settings.xml</filename>.  See <xref linked="mvn_repo" /> for an example.
