@@ -72,7 +72,7 @@
       JobTracker:  <filename>$HADOOP_HOME/logs/hadoop-&lt;user&gt;-jobtracker-&lt;hostname&gt;.log</filename>
       </para>
       <para>
-      TaskTracker:  <filename>$HADOOP_HOME/logs/hadoop-&lt;user&gt;-jobtracker-&lt;hostname&gt;.log</filename>
+      TaskTracker:  <filename>$HADOOP_HOME/logs/hadoop-&lt;user&gt;-tasktracker-&lt;hostname&gt;.log</filename>
       </para>
       <para>
       HMaster:  <filename>$HBASE_HOME/logs/hbase-&lt;user&gt;-master-&lt;hostname&gt;.log</filename>
