@@ -45,7 +45,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -161,6 +160,8 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   public E load(Path path, String className, int priority,
       Configuration conf) throws IOException {
     Class<?> implClass = null;
+    LOG.debug("Loading coprocessor class " + className + " with path " + 
+        path + " and priority " + priority);
 
     // Have we already loaded the class, perhaps from an earlier region open
     // for the same table?
@@ -168,12 +169,15 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       implClass = getClass().getClassLoader().loadClass(className);
     } catch (ClassNotFoundException e) {
       LOG.info("Class " + className + " needs to be loaded from a file - " +
-          path.toString() + ".");
+          path + ".");
       // go ahead to load from file system.
     }
 
     // If not, load
     if (implClass == null) {
+      if (path == null) {
+        throw new IOException("No jar path specified for " + className);
+      }
       // copy the jar to the local filesystem
       if (!path.toString().endsWith(".jar")) {
         throw new IOException(path.toString() + ": not a jar file?");
@@ -193,7 +197,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
          aborts runaway user code */
 
       // load the jar and get the implementation main class
-      String cp = System.getProperty("java.class.path");
       // NOTE: Path.toURL is deprecated (toURI instead) but the URLClassLoader
       // unsurprisingly wants URLs, not URIs; so we will use the deprecated
       // method which returns URLs for as long as it is available
@@ -215,11 +218,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       }
       jarFile.close();
 
-      StringTokenizer st = new StringTokenizer(cp, File.pathSeparator);
-      while (st.hasMoreTokens()) {
-        paths.add((new File(st.nextToken())).getCanonicalFile().toURL());
-      }
-      ClassLoader cl = new URLClassLoader(paths.toArray(new URL[]{}),
+      ClassLoader cl = new CoprocessorClassLoader(paths,
         this.getClass().getClassLoader());
       Thread.currentThread().setContextClassLoader(cl);
       try {

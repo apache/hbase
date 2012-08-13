@@ -61,11 +61,12 @@ public class TestClassLoading {
   static final String cpName3 = "TestCP3";
   static final String cpName4 = "TestCP4";
   static final String cpName5 = "TestCP5";
+  static final String cpName6 = "TestCP6";
 
-  private static Class regionCoprocessor1 = ColumnAggregationEndpoint.class;
-  private static Class regionCoprocessor2 = GenericEndpoint.class;
-  private static Class regionServerCoprocessor = SampleRegionWALObserver.class;
-  private static Class masterCoprocessor = BaseMasterObserver.class;
+  private static Class<?> regionCoprocessor1 = ColumnAggregationEndpoint.class;
+  private static Class<?> regionCoprocessor2 = GenericEndpoint.class;
+  private static Class<?> regionServerCoprocessor = SampleRegionWALObserver.class;
+  private static Class<?> masterCoprocessor = BaseMasterObserver.class;
 
   private static final String[] regionServerSystemCoprocessors =
       new String[]{
@@ -297,6 +298,37 @@ public class TestClassLoading {
   }
 
   @Test
+  // HBASE-6308: Test CP classloader is the CoprocessorClassLoader
+  public void testPrivateClassLoader() throws Exception {
+    File jarFile = buildCoprocessorJar(cpName4);
+
+    // create a table that references the jar
+    HTableDescriptor htd = new HTableDescriptor(cpName4);
+    htd.addFamily(new HColumnDescriptor("test"));
+    htd.setValue("COPROCESSOR$1", jarFile.toString() + "|" + cpName4 + "|" +
+      Coprocessor.PRIORITY_USER);
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    admin.createTable(htd);
+    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
+
+    // verify that the coprocessor was loaded correctly
+    boolean found = false;
+    MiniHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
+    for (HRegion region:
+        hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
+      if (region.getRegionNameAsString().startsWith(cpName4)) {
+        Coprocessor cp = region.getCoprocessorHost().findCoprocessor(cpName4);
+        if (cp != null) {
+          found = true;
+          assertEquals("Class " + cpName4 + " was not loaded by CoprocessorClassLoader",
+            cp.getClass().getClassLoader().getClass(), CoprocessorClassLoader.class);
+        }
+      }
+    }
+    assertTrue("Class " + cpName4 + " was missing on a region", found);
+  }
+
+  @Test
   // HBase-3810: Registering a Coprocessor at HTableDescriptor should be
   // less strict
   public void testHBase3810() throws Exception {
@@ -304,8 +336,8 @@ public class TestClassLoading {
 
     File jarFile1 = buildCoprocessorJar(cpName1);
     File jarFile2 = buildCoprocessorJar(cpName2);
-    File jarFile4 = buildCoprocessorJar(cpName4);
     File jarFile5 = buildCoprocessorJar(cpName5);
+    File jarFile6 = buildCoprocessorJar(cpName6);
 
     String cpKey1 = "COPROCESSOR$1";
     String cpKey2 = " Coprocessor$2 ";
@@ -328,13 +360,13 @@ public class TestClassLoading {
     htd.setValue(cpKey3, cpValue3);
 
     // add 2 coprocessor by using new htd.addCoprocessor() api
-    htd.addCoprocessor(cpName4, new Path(jarFile4.getPath()),
+    htd.addCoprocessor(cpName5, new Path(jarFile5.getPath()),
         Coprocessor.PRIORITY_USER, null);
     Map<String, String> kvs = new HashMap<String, String>();
     kvs.put("k1", "v1");
     kvs.put("k2", "v2");
     kvs.put("k3", "v3");
-    htd.addCoprocessor(cpName5, new Path(jarFile5.getPath()),
+    htd.addCoprocessor(cpName6, new Path(jarFile6.getPath()),
         Coprocessor.PRIORITY_USER, kvs);
 
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
@@ -349,9 +381,9 @@ public class TestClassLoading {
 
     // verify that the coprocessor was loaded
     boolean found_2 = false, found_1 = false, found_3 = false,
-        found_4 = false, found_5 = false;
-    boolean found5_k1 = false, found5_k2 = false, found5_k3 = false,
-        found5_k4 = false;
+        found_5 = false, found_6 = false;
+    boolean found6_k1 = false, found6_k2 = false, found6_k3 = false,
+        found6_k4 = false;
 
     MiniHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
     for (HRegion region:
@@ -364,17 +396,17 @@ public class TestClassLoading {
         found_3 = found_3 ||
             (region.getCoprocessorHost().findCoprocessor("SimpleRegionObserver")
                 != null);
-        found_4 = found_4 ||
-            (region.getCoprocessorHost().findCoprocessor(cpName4) != null);
+        found_5 = found_5 ||
+            (region.getCoprocessorHost().findCoprocessor(cpName5) != null);
 
         CoprocessorEnvironment env =
-            region.getCoprocessorHost().findCoprocessorEnvironment(cpName5);
+            region.getCoprocessorHost().findCoprocessorEnvironment(cpName6);
         if (env != null) {
-          found_5 = true;
+          found_6 = true;
           Configuration conf = env.getConfiguration();
-          found5_k1 = conf.get("k1") != null;
-          found5_k2 = conf.get("k2") != null;
-          found5_k3 = conf.get("k3") != null;
+          found6_k1 = conf.get("k1") != null;
+          found6_k2 = conf.get("k2") != null;
+          found6_k3 = conf.get("k3") != null;
         }
       }
     }
@@ -382,13 +414,13 @@ public class TestClassLoading {
     assertTrue("Class " + cpName1 + " was missing on a region", found_1);
     assertTrue("Class " + cpName2 + " was missing on a region", found_2);
     assertTrue("Class SimpleRegionObserver was missing on a region", found_3);
-    assertTrue("Class " + cpName4 + " was missing on a region", found_4);
     assertTrue("Class " + cpName5 + " was missing on a region", found_5);
+    assertTrue("Class " + cpName6 + " was missing on a region", found_6);
 
-    assertTrue("Configuration key 'k1' was missing on a region", found5_k1);
-    assertTrue("Configuration key 'k2' was missing on a region", found5_k2);
-    assertTrue("Configuration key 'k3' was missing on a region", found5_k3);
-    assertFalse("Configuration key 'k4' wasn't configured", found5_k4);
+    assertTrue("Configuration key 'k1' was missing on a region", found6_k1);
+    assertTrue("Configuration key 'k2' was missing on a region", found6_k2);
+    assertTrue("Configuration key 'k3' was missing on a region", found6_k3);
+    assertFalse("Configuration key 'k4' wasn't configured", found6_k4);
   }
 
   @Test
