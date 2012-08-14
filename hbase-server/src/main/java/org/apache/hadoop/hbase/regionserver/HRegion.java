@@ -203,8 +203,8 @@ public class HRegion implements HeapSize { // , Writable{
   private final AtomicInteger lockIdGenerator = new AtomicInteger(1);
   static private Random rand = new Random();
 
-  protected final Map<byte [], Store> stores =
-    new ConcurrentSkipListMap<byte [], Store>(Bytes.BYTES_RAWCOMPARATOR);
+  protected final Map<byte[], HStore> stores = new ConcurrentSkipListMap<byte[], HStore>(
+      Bytes.BYTES_RAWCOMPARATOR);
 
   // Registered region protocol handlers
   private ClassToInstanceMap<CoprocessorProtocol>
@@ -642,7 +642,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return True if this region has references.
    */
   public boolean hasReferences() {
-    for (Store store : this.stores.values()) {
+    for (HStore store : this.stores.values()) {
       for (StoreFile sf : store.getStorefiles()) {
         // Found a reference, return.
         if (sf.isReference()) return true;
@@ -660,7 +660,7 @@ public class HRegion implements HeapSize { // , Writable{
     HDFSBlocksDistribution hdfsBlocksDistribution =
       new HDFSBlocksDistribution();
     synchronized (this.stores) {
-      for (Store store : this.stores.values()) {
+      for (HStore store : this.stores.values()) {
         for (StoreFile sf : store.getStorefiles()) {
           HDFSBlocksDistribution storeFileBlocksDistribution =
             sf.getHDFSBlockDistribution();
@@ -977,7 +977,7 @@ public class HRegion implements HeapSize { // , Writable{
             storeCloserThreadPool);
 
         // close each store in parallel
-        for (final Store store : stores.values()) {
+        for (final HStore store : stores.values()) {
           completionService
               .submit(new Callable<ImmutableList<StoreFile>>() {
                 public ImmutableList<StoreFile> call() throws IOException {
@@ -1173,7 +1173,7 @@ public class HRegion implements HeapSize { // , Writable{
   /** @return returns size of largest HStore. */
   public long getLargestHStoreSize() {
     long size = 0;
-    for (Store h: stores.values()) {
+    for (HStore h : stores.values()) {
       long storeSize = h.getSize();
       if (storeSize > size) {
         size = storeSize;
@@ -1205,7 +1205,7 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   void triggerMajorCompaction() {
-    for (Store h: stores.values()) {
+    for (HStore h : stores.values()) {
       h.triggerMajorCompaction();
     }
   }
@@ -1232,7 +1232,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException e
    */
   public void compactStores() throws IOException {
-    for(Store s : getStores().values()) {
+    for (HStore s : getStores().values()) {
       CompactionRequest cr = s.requestCompaction();
       if(cr != null) {
         try {
@@ -1500,7 +1500,7 @@ public class HRegion implements HeapSize { // , Writable{
         wal.startCacheFlush(this.regionInfo.getEncodedNameAsBytes());
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
 
-      for (Store s : stores.values()) {
+      for (HStore s : stores.values()) {
         storeFlushers.add(s.getStoreFlusher(completeSequenceId));
       }
 
@@ -1658,7 +1658,7 @@ public class HRegion implements HeapSize { // , Writable{
     startRegionOperation();
     this.readRequestsCount.increment();
     try {
-      Store store = getStore(family);
+      HStore store = getStore(family);
       // get the closest key. (HStore.getRowKeyAtOrBefore can return null)
       KeyValue key = store.getRowKeyAtOrBefore(row);
       Result result = null;
@@ -2662,7 +2662,7 @@ public class HRegion implements HeapSize { // , Writable{
         byte[] family = e.getKey();
         List<KeyValue> edits = e.getValue();
 
-        Store store = getStore(family);
+        HStore store = getStore(family);
         for (KeyValue kv: edits) {
           kv.setMemstoreTS(localizedWriteEntry.getWriteNumber());
           size += store.add(kv);
@@ -2702,7 +2702,7 @@ public class HRegion implements HeapSize { // , Writable{
         // Remove those keys from the memstore that matches our
         // key's (row, cf, cq, timestamp, memstoreTS). The interesting part is
         // that even the memstoreTS has to match for keys that will be rolleded-back.
-        Store store = getStore(family);
+        HStore store = getStore(family);
         for (KeyValue kv: edits) {
           store.rollback(kv);
           kvsRolledback++;
@@ -2918,7 +2918,7 @@ public class HRegion implements HeapSize { // , Writable{
       long editsCount = 0;
       long intervalEdits = 0;
       HLog.Entry entry;
-      Store store = null;
+      HStore store = null;
       boolean reported_once = false;
 
       try {
@@ -3056,7 +3056,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param kv KeyValue to add.
    * @return True if we should flush.
    */
-  protected boolean restoreEdit(final Store s, final KeyValue kv) {
+  protected boolean restoreEdit(final HStore s, final KeyValue kv) {
     long kvSize = s.add(kv);
     if (this.rsAccounting != null) {
       rsAccounting.addAndGetRegionReplayEditsSize(this.regionInfo.getRegionName(), kvSize);
@@ -3091,11 +3091,11 @@ public class HRegion implements HeapSize { // , Writable{
    * @return Store that goes with the family on passed <code>column</code>.
    * TODO: Make this lookup faster.
    */
-  public Store getStore(final byte [] column) {
+  public HStore getStore(final byte[] column) {
     return this.stores.get(column);
   }
 
-  public Map<byte[], Store> getStores() {
+  public Map<byte[], HStore> getStores() {
     return this.stores;
   }
 
@@ -3111,7 +3111,7 @@ public class HRegion implements HeapSize { // , Writable{
     List<String> storeFileNames = new ArrayList<String>();
     synchronized(closeLock) {
       for(byte[] column : columns) {
-        Store store = this.stores.get(column);
+        HStore store = this.stores.get(column);
         if (store == null) {
           throw new IllegalArgumentException("No column family : " +
               new String(column) + " available");
@@ -3331,7 +3331,7 @@ public class HRegion implements HeapSize { // , Writable{
         byte[] familyName = p.getFirst();
         String path = p.getSecond();
 
-        Store store = getStore(familyName);
+        HStore store = getStore(familyName);
         if (store == null) {
           IOException ioe = new DoNotRetryIOException(
               "No such column family " + Bytes.toStringBinary(familyName));
@@ -3373,7 +3373,7 @@ public class HRegion implements HeapSize { // , Writable{
       for (Pair<byte[], String> p : familyPaths) {
         byte[] familyName = p.getFirst();
         String path = p.getSecond();
-        Store store = getStore(familyName);
+        HStore store = getStore(familyName);
         try {
           store.bulkLoadHFile(path);
         } catch (IOException ioe) {
@@ -3474,7 +3474,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       for (Map.Entry<byte[], NavigableSet<byte[]>> entry :
           scan.getFamilyMap().entrySet()) {
-        Store store = stores.get(entry.getKey());
+        HStore store = stores.get(entry.getKey());
         KeyValueScanner scanner = store.getScanner(scan, entry.getValue());
         scanners.add(scanner);
       }
@@ -4252,7 +4252,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException
    */
   boolean isMajorCompaction() throws IOException {
-    for (Store store: this.stores.values()) {
+    for (HStore store : this.stores.values()) {
       if (store.isMajorCompaction()) {
         return true;
       }
@@ -4638,7 +4638,7 @@ public class HRegion implements HeapSize { // , Writable{
     boolean flush = false;
     WALEdit walEdits = null;
     List<KeyValue> allKVs = new ArrayList<KeyValue>(append.size());
-    Map<Store, List<KeyValue>> tempMemstore = new HashMap<Store, List<KeyValue>>();
+    Map<HStore, List<KeyValue>> tempMemstore = new HashMap<HStore, List<KeyValue>>();
     long before = EnvironmentEdgeManager.currentTimeMillis();
     long size = 0;
     long txid = 0;
@@ -4655,7 +4655,7 @@ public class HRegion implements HeapSize { // , Writable{
         for (Map.Entry<byte[], List<KeyValue>> family : append.getFamilyMap()
             .entrySet()) {
 
-          Store store = stores.get(family.getKey());
+          HStore store = stores.get(family.getKey());
           List<KeyValue> kvs = new ArrayList<KeyValue>(family.getValue().size());
 
           // Get previous values for all columns in this family
@@ -4738,8 +4738,8 @@ public class HRegion implements HeapSize { // , Writable{
         }
 
         //Actually write to Memstore now
-        for (Map.Entry<Store, List<KeyValue>> entry : tempMemstore.entrySet()) {
-          Store store = entry.getKey();
+        for (Map.Entry<HStore, List<KeyValue>> entry : tempMemstore.entrySet()) {
+          HStore store = entry.getKey();
           size += store.upsert(entry.getValue());
           allKVs.addAll(entry.getValue());
         }
@@ -4791,7 +4791,7 @@ public class HRegion implements HeapSize { // , Writable{
     boolean flush = false;
     WALEdit walEdits = null;
     List<KeyValue> allKVs = new ArrayList<KeyValue>(increment.numColumns());
-    Map<Store, List<KeyValue>> tempMemstore = new HashMap<Store, List<KeyValue>>();
+    Map<HStore, List<KeyValue>> tempMemstore = new HashMap<HStore, List<KeyValue>>();
     long before = EnvironmentEdgeManager.currentTimeMillis();
     long size = 0;
     long txid = 0;
@@ -4808,7 +4808,7 @@ public class HRegion implements HeapSize { // , Writable{
         for (Map.Entry<byte [], NavigableMap<byte [], Long>> family :
           increment.getFamilyMap().entrySet()) {
 
-          Store store = stores.get(family.getKey());
+          HStore store = stores.get(family.getKey());
           List<KeyValue> kvs = new ArrayList<KeyValue>(family.getValue().size());
 
           // Get previous values for all columns in this family
@@ -4860,8 +4860,8 @@ public class HRegion implements HeapSize { // , Writable{
         }
 
         //Actually write to Memstore now
-        for (Map.Entry<Store, List<KeyValue>> entry : tempMemstore.entrySet()) {
-          Store store = entry.getKey();
+        for (Map.Entry<HStore, List<KeyValue>> entry : tempMemstore.entrySet()) {
+          HStore store = entry.getKey();
           size += store.upsert(entry.getValue());
           allKVs.addAll(entry.getValue());
         }
@@ -4918,7 +4918,7 @@ public class HRegion implements HeapSize { // , Writable{
       Integer lid = obtainRowLock(row);
       this.updatesLock.readLock().lock();
       try {
-        Store store = stores.get(family);
+        HStore store = stores.get(family);
 
         // Get the old value:
         Get get = new Get(row);
@@ -5029,7 +5029,7 @@ public class HRegion implements HeapSize { // , Writable{
   @Override
   public long heapSize() {
     long heapSize = DEEP_OVERHEAD;
-    for(Store store : this.stores.values()) {
+    for (HStore store : this.stores.values()) {
       heapSize += store.heapSize();
     }
     // this does not take into account row locks, recent flushes, mvcc entries
@@ -5274,7 +5274,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public int getCompactPriority() {
     int count = Integer.MAX_VALUE;
-    for(Store store : stores.values()) {
+    for (HStore store : stores.values()) {
       count = Math.min(count, store.getCompactPriority());
     }
     return count;
@@ -5286,7 +5286,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return true if any store has too many store files
    */
   public boolean needsCompaction() {
-    for(Store store : stores.values()) {
+    for (HStore store : stores.values()) {
       if(store.needsCompaction()) {
         return true;
       }

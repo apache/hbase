@@ -170,10 +170,10 @@ public class TestCompaction extends HBaseTestCase {
       throws Exception {
     Map<Store, HFileDataBlockEncoder> replaceBlockCache =
         new HashMap<Store, HFileDataBlockEncoder>();
-    for (Entry<byte[], Store> pair : r.getStores().entrySet()) {
-      Store store = pair.getValue();
+    for (Entry<byte[], HStore> pair : r.getStores().entrySet()) {
+      Store store = (Store) pair.getValue();
       HFileDataBlockEncoder blockEncoder = store.getDataBlockEncoder();
-      replaceBlockCache.put(pair.getValue(), blockEncoder);
+      replaceBlockCache.put(store, blockEncoder);
       final DataBlockEncoding inCache = DataBlockEncoding.PREFIX;
       final DataBlockEncoding onDisk = inCacheOnly ? DataBlockEncoding.NONE :
           inCache;
@@ -206,7 +206,7 @@ public class TestCompaction extends HBaseTestCase {
     assertEquals(compactionThreshold, result.size());
 
     // see if CompactionProgress is in place but null
-    for (Store store: this.r.stores.values()) {
+    for (HStore store : this.r.stores.values()) {
       assertNull(store.getCompactionProgress());
     }
 
@@ -215,7 +215,7 @@ public class TestCompaction extends HBaseTestCase {
 
     // see if CompactionProgress has done its thing on at least one store
     int storeCount = 0;
-    for (Store store: this.r.stores.values()) {
+    for (HStore store : this.r.stores.values()) {
       CompactionProgress progress = store.getCompactionProgress();
       if( progress != null ) {
         ++storeCount;
@@ -281,7 +281,8 @@ public class TestCompaction extends HBaseTestCase {
     // Multiple versions allowed for an entry, so the delete isn't enough
     // Lower TTL and expire to ensure that all our entries have been wiped
     final int ttl = 1000;
-    for (Store store: this.r.stores.values()) {
+    for (HStore hstore : this.r.stores.values()) {
+      Store store = ((Store) hstore);
       Store.ScanInfo old = store.scanInfo;
       Store.ScanInfo si = new Store.ScanInfo(old.getFamily(),
           old.getMinVersions(), old.getMaxVersions(), ttl,
@@ -302,7 +303,7 @@ public class TestCompaction extends HBaseTestCase {
     conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, delay);
     conf.setFloat("hbase.hregion.majorcompaction.jitter", jitterPct);
 
-    Store s = r.getStore(COLUMN_FAMILY);
+    Store s = ((Store) r.getStore(COLUMN_FAMILY));
     try {
       createStoreFile(r);
       createStoreFile(r);
@@ -435,7 +436,7 @@ public class TestCompaction extends HBaseTestCase {
     assertEquals(compactionThreshold, result.size());
 
     // do a compaction
-    Store store2 = this.r.stores.get(fam2);
+    HStore store2 = this.r.stores.get(fam2);
     int numFiles1 = store2.getStorefiles().size();
     assertTrue("Was expecting to see 4 store files", numFiles1 > compactionThreshold); // > 3
     store2.compactRecentForTesting(compactionThreshold);   // = 3
@@ -512,7 +513,7 @@ public class TestCompaction extends HBaseTestCase {
       spyR.compactStores();
 
       // ensure that the compaction stopped, all old files are intact,
-      Store s = r.stores.get(COLUMN_FAMILY);
+      HStore s = r.stores.get(COLUMN_FAMILY);
       assertEquals(compactionThreshold, s.getStorefilesCount());
       assertTrue(s.getStorefilesSize() > 15*1000);
       // and no new store files persisted past compactStores()
@@ -536,7 +537,8 @@ public class TestCompaction extends HBaseTestCase {
       // Multiple versions allowed for an entry, so the delete isn't enough
       // Lower TTL and expire to ensure that all our entries have been wiped
       final int ttl = 1000;
-      for (Store store: this.r.stores.values()) {
+      for (HStore hstore: this.r.stores.values()) {
+        Store store = (Store)hstore;
         Store.ScanInfo old = store.scanInfo;
         Store.ScanInfo si = new Store.ScanInfo(old.getFamily(),
             old.getMinVersions(), old.getMaxVersions(), ttl,
@@ -583,7 +585,7 @@ public class TestCompaction extends HBaseTestCase {
     for (int i = 0; i < nfiles; i++) {
       createStoreFile(r);
     }
-    Store store = r.getStore(COLUMN_FAMILY);
+    Store store = (Store) r.getStore(COLUMN_FAMILY);
 
     List<StoreFile> storeFiles = store.getStorefiles();
     long maxId = StoreFile.getMaxSequenceIdInList(storeFiles);
@@ -621,14 +623,14 @@ public class TestCompaction extends HBaseTestCase {
    * Test for HBASE-5920 - Test user requested major compactions always occurring
    */
   public void testNonUserMajorCompactionRequest() throws Exception {
-    Store store = r.getStore(COLUMN_FAMILY);
+    HStore store = r.getStore(COLUMN_FAMILY);
     createStoreFile(r);
     for (int i = 0; i < MAX_FILES_TO_COMPACT + 1; i++) {
       createStoreFile(r);
     }
     store.triggerMajorCompaction();
 
-    CompactionRequest request = store.requestCompaction(Store.NO_PRIORITY);
+    CompactionRequest request = store.requestCompaction(HStore.NO_PRIORITY);
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(
       "System-requested major compaction should not occur if there are too many store files",
@@ -640,13 +642,13 @@ public class TestCompaction extends HBaseTestCase {
    * Test for HBASE-5920
    */
   public void testUserMajorCompactionRequest() throws IOException{
-    Store store = r.getStore(COLUMN_FAMILY);
+    HStore store = r.getStore(COLUMN_FAMILY);
     createStoreFile(r);
     for (int i = 0; i < MAX_FILES_TO_COMPACT + 1; i++) {
       createStoreFile(r);
     }
     store.triggerMajorCompaction();
-    CompactionRequest request = store.requestCompaction(Store.PRIORITY_USER);
+    CompactionRequest request = store.requestCompaction(HStore.PRIORITY_USER);
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(
       "User-requested major compaction should always occur, even if there are too many store files",

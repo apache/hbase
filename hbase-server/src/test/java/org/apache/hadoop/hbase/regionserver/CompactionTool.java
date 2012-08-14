@@ -123,7 +123,7 @@ public class CompactionTool implements Tool {
     // list of files instead of have Store search its home dir.
     return new Store(tmpdir, region, hcd, fs, getConf()) {
       @Override
-      FileStatus[] getStoreFiles() throws IOException {
+      public FileStatus[] getStoreFiles() throws IOException {
         return this.fs.listStatus(getHomedir());
       }
 

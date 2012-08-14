@@ -107,7 +107,7 @@ import com.google.common.collect.Lists;
  * not be called directly but by an HRegion manager.
  */
 @InterfaceAudience.Private
-public class Store extends SchemaConfigured implements HeapSize {
+public class Store extends SchemaConfigured implements HStore {
   static final Log LOG = LogFactory.getLog(Store.class);
 
   protected final MemStore memstore;
@@ -134,12 +134,6 @@ public class Store extends SchemaConfigured implements HeapSize {
   private final Object flushLock = new Object();
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final boolean verifyBulkLoads;
-
-  /* The default priority for user-specified compaction requests.
-   * The user gets top priority unless we have blocking compactions. (Pri <= 0)
-   */
-  public static final int PRIORITY_USER = 1;
-  public static final int NO_PRIORITY = Integer.MIN_VALUE;
 
   // not private for testing
   /* package */ScanInfo scanInfo;
@@ -322,9 +316,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     return StoreFile.getMaxSequenceIdInList(this.getStorefiles());
   }
 
-  /**
-   * @return The maximum memstoreTS in all store files.
-   */
+  @Override
   public long getMaxMemstoreTS() {
     return StoreFile.getMaxMemstoreTSInList(this.getStorefiles());
   }
@@ -349,9 +341,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     return homedir;
   }
 
-  /**
-   * @return the data block encoder
-   */
+  @Override
   public HFileDataBlockEncoder getDataBlockEncoder() {
     return dataBlockEncoder;
   }
@@ -364,7 +354,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     this.dataBlockEncoder = blockEncoder;
   }
 
-  FileStatus [] getStoreFiles() throws IOException {
+  FileStatus[] getStoreFiles() throws IOException {
     return FSUtils.listStatus(this.fs, this.homedir, null);
   }
 
@@ -438,13 +428,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     return results;
   }
 
-  /**
-   * Adds a value to the memstore
-   *
-   * @param kv
-   * @return memstore size delta
-   */
-  protected long add(final KeyValue kv) {
+  @Override
+  public long add(final KeyValue kv) {
     lock.readLock().lock();
     try {
       return this.memstore.add(kv);
@@ -468,14 +453,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
   }
 
-  /**
-   * Removes a kv from the memstore. The KeyValue is removed only
-   * if its key & memstoreTS matches the key & memstoreTS value of the
-   * kv parameter.
-   *
-   * @param kv
-   */
-  protected void rollback(final KeyValue kv) {
+  @Override
+  public void rollback(final KeyValue kv) {
     lock.readLock().lock();
     try {
       this.memstore.rollback(kv);
@@ -487,15 +466,13 @@ public class Store extends SchemaConfigured implements HeapSize {
   /**
    * @return All store files.
    */
+  @Override
   public List<StoreFile> getStorefiles() {
     return this.storefiles;
   }
 
-  /**
-   * This throws a WrongRegionException if the HFile does not fit in this
-   * region, or an InvalidHFileException if the HFile is not valid.
-   */
-  void assertBulkLoadHFileOk(Path srcPath) throws IOException {
+  @Override
+  public void assertBulkLoadHFileOk(Path srcPath) throws IOException {
     HFile.Reader reader  = null;
     try {
       LOG.info("Validating hfile at " + srcPath + " for inclusion in "
@@ -555,12 +532,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
   }
 
-  /**
-   * This method should only be called from HRegion.  It is assumed that the
-   * ranges of values in the HFile fit within the stores assigned region.
-   * (assertBulkLoadHFileOk checks this)
-   */
-  void bulkLoadHFile(String srcPathStr) throws IOException {
+  @Override
+  public void bulkLoadHFile(String srcPathStr) throws IOException {
     Path srcPath = new Path(srcPathStr);
 
     // Copy the file if it's on another filesystem
@@ -619,15 +592,8 @@ public class Store extends SchemaConfigured implements HeapSize {
         fs, region.getTmpDir());
   }
 
-  /**
-   * Close all the readers
-   *
-   * We don't need to worry about subsequent requests because the HRegion holds
-   * a write lock that will prevent any more reads or writes.
-   *
-   * @throws IOException
-   */
-  ImmutableList<StoreFile> close() throws IOException {
+  @Override
+  public ImmutableList<StoreFile> close() throws IOException {
     this.lock.writeLock().lock();
     try {
       ImmutableList<StoreFile> result = storefiles;
@@ -674,8 +640,9 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   /**
-   * Snapshot this stores memstore.  Call before running
-   * {@link #flushCache(long, SortedSet<KeyValue>)} so it has some work to do.
+   * Snapshot this stores memstore. Call before running
+   * {@link #flushCache(long, SortedSet, TimeRangeTracker, AtomicLong, MonitoredTask)} so it has
+   * some work to do.
    */
   void snapshot() {
     this.memstore.snapshot();
@@ -1066,9 +1033,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     return sf;
   }
 
-  /**
-   * Compact the most recent N files. Used in testing.
-   */
+  @Override
   public void compactRecentForTesting(int N) throws IOException {
     List<StoreFile> filesToCompact;
     long maxId;
@@ -1117,7 +1082,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
   }
 
-  boolean hasReferences() {
+  @Override
+  public boolean hasReferences() {
     return hasReferences(this.storefiles);
   }
 
@@ -1152,17 +1118,13 @@ public class Store extends SchemaConfigured implements HeapSize {
     return minTs;
   }
 
-  /** getter for CompactionProgress object
-   * @return CompactionProgress object; can be null
-   */
+  @Override
   public CompactionProgress getCompactionProgress() {
     return this.compactor.getProgress();
   }
 
-  /*
-   * @return True if we should run a major compaction.
-   */
-  boolean isMajorCompaction() throws IOException {
+  @Override
+  public boolean isMajorCompaction() throws IOException {
     for (StoreFile sf : this.storefiles) {
       if (sf.getReader() == null) {
         LOG.debug("StoreFile " + sf + " has null Reader");
@@ -1259,7 +1221,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   public CompactionRequest requestCompaction() throws IOException {
-    return requestCompaction(NO_PRIORITY);
+    return requestCompaction(HStore.NO_PRIORITY);
   }
 
   public CompactionRequest requestCompaction(int priority) throws IOException {
@@ -1350,7 +1312,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    * @throws IOException
    */
   CompactSelection compactSelection(List<StoreFile> candidates) throws IOException {
-    return compactSelection(candidates,NO_PRIORITY);
+    return compactSelection(candidates,HStore.NO_PRIORITY);
   }
 
   /**
@@ -1423,7 +1385,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     // Force a major compaction if this is a user-requested major compaction,
     // or if we do not have too many files to compact and this was requested
     // as a major compaction
-    boolean majorcompaction = (forcemajor && priority == PRIORITY_USER) ||
+    boolean majorcompaction = (forcemajor && priority == HStore.PRIORITY_USER) ||
       (forcemajor || isMajorCompaction(compactSelection.getFilesToCompact())) &&
       (compactSelection.getFilesToCompact().size() < this.maxFilesToCompact
     );
@@ -1515,7 +1477,7 @@ public class Store extends SchemaConfigured implements HeapSize {
         if (compactSelection.getFilesToCompact().size() > this.maxFilesToCompact) {
           LOG.debug("Warning, compacting more than " + this.maxFilesToCompact +
             " files, probably because of a user-requested major compaction");
-          if(priority != PRIORITY_USER) {
+          if(priority != HStore.PRIORITY_USER) {
             LOG.error("Compacting more than max files on a non user-requested compaction");
           }
         }
@@ -1663,9 +1625,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   // Accessors.
   // (This is the only section that is directly useful!)
   //////////////////////////////////////////////////////////////////////////////
-  /**
-   * @return the number of files in this store
-   */
+  @Override
   public int getNumberOfStoreFiles() {
     return this.storefiles.size();
   }
@@ -1687,21 +1647,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     return key.getTimestamp() < oldestTimestamp;
   }
 
-  /**
-   * Find the key that matches <i>row</i> exactly, or the one that immediately
-   * precedes it. WARNING: Only use this method on a table where writes occur
-   * with strictly increasing timestamps. This method assumes this pattern of
-   * writes in order to make it reasonably performant.  Also our search is
-   * dependent on the axiom that deletes are for cells that are in the container
-   * that follows whether a memstore snapshot or a storefile, not for the
-   * current container: i.e. we'll see deletes before we come across cells we
-   * are to delete. Presumption is that the memstore#kvset is processed before
-   * memstore#snapshot and so on.
-   * @param row The row key of the targeted row.
-   * @return Found keyvalue or null if none found.
-   * @throws IOException
-   */
-  KeyValue getRowKeyAtOrBefore(final byte[] row) throws IOException {
+  @Override
+  public KeyValue getRowKeyAtOrBefore(final byte[] row) throws IOException {
     // If minVersions is set, we will not ignore expired KVs.
     // As we're only looking for the latest matches, that should be OK.
     // With minVersions > 0 we guarantee that any KV that has any version
@@ -1855,10 +1802,8 @@ public class Store extends SchemaConfigured implements HeapSize {
       this.lock.readLock().unlock();
     }
   }
-  /**
-   * Determines if Store should be split
-   * @return byte[] if store should be split, null otherwise.
-   */
+
+  @Override
   public byte[] getSplitPoint() {
     this.lock.readLock().lock();
     try {
@@ -1928,12 +1873,12 @@ public class Store extends SchemaConfigured implements HeapSize {
     return null;
   }
 
-  /** @return aggregate size of all HStores used in the last compaction */
+  @Override
   public long getLastCompactSize() {
     return this.lastCompactSize;
   }
 
-  /** @return aggregate size of HStore */
+  @Override
   public long getSize() {
     return storeSize;
   }
@@ -1950,11 +1895,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   // File administration
   //////////////////////////////////////////////////////////////////////////////
 
-  /**
-   * Return a scanner for both the memstore and the HStore files. Assumes we
-   * are not in a compaction.
-   * @throws IOException
-   */
+  @Override
   public KeyValueScanner getScanner(Scan scan,
       final NavigableSet<byte []> targetCols) throws IOException {
     lock.readLock().lock();
@@ -1977,24 +1918,18 @@ public class Store extends SchemaConfigured implements HeapSize {
     return getColumnFamilyName();
   }
 
-  /**
-   * @return Count of store files
-   */
-  int getStorefilesCount() {
+  @Override
+  public int getStorefilesCount() {
     return this.storefiles.size();
   }
 
-  /**
-   * @return The size of the store files, in bytes, uncompressed.
-   */
-  long getStoreSizeUncompressed() {
+  @Override
+  public long getStoreSizeUncompressed() {
     return this.totalUncompressedBytes;
   }
 
-  /**
-   * @return The size of the store files, in bytes.
-   */
-  long getStorefilesSize() {
+  @Override
+  public long getStorefilesSize() {
     long size = 0;
     for (StoreFile s: storefiles) {
       StoreFile.Reader r = s.getReader();
@@ -2007,10 +1942,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     return size;
   }
 
-  /**
-   * @return The size of the store file indexes, in bytes.
-   */
-  long getStorefilesIndexSize() {
+  @Override
+  public long getStorefilesIndexSize() {
     long size = 0;
     for (StoreFile s: storefiles) {
       StoreFile.Reader r = s.getReader();
@@ -2023,14 +1956,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     return size;
   }
 
-  /**
-   * Returns the total size of all index blocks in the data block indexes,
-   * including the root level, intermediate levels, and the leaf level for
-   * multi-level indexes, or just the root level for single-level indexes.
-   *
-   * @return the total size of block indexes in the store
-   */
-  long getTotalStaticIndexSize() {
+  @Override
+  public long getTotalStaticIndexSize() {
     long size = 0;
     for (StoreFile s : storefiles) {
       size += s.getReader().getUncompressedDataIndexSize();
@@ -2038,14 +1965,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     return size;
   }
 
-  /**
-   * Returns the total byte size of all Bloom filter bit arrays. For compound
-   * Bloom filters even the Bloom blocks currently not loaded into the block
-   * cache are counted.
-   *
-   * @return the total size of all Bloom filters in the store
-   */
-  long getTotalStaticBloomSize() {
+  @Override
+  public long getTotalStaticBloomSize() {
     long size = 0;
     for (StoreFile s : storefiles) {
       StoreFile.Reader r = s.getReader();
@@ -2054,31 +1975,27 @@ public class Store extends SchemaConfigured implements HeapSize {
     return size;
   }
 
-  /**
-   * @return The size of this store's memstore, in bytes
-   */
-  long getMemStoreSize() {
+  @Override
+  public long getMemStoreSize() {
     return this.memstore.heapSize();
   }
 
   public int getCompactPriority() {
-    return getCompactPriority(NO_PRIORITY);
+    return getCompactPriority(HStore.NO_PRIORITY);
   }
 
-  /**
-   * @return The priority that this store should have in the compaction queue
-   * @param priority
-   */
+  @Override
   public int getCompactPriority(int priority) {
     // If this is a user-requested compaction, leave this at the highest priority
-    if(priority == PRIORITY_USER) {
-      return PRIORITY_USER;
+    if(priority == HStore.PRIORITY_USER) {
+      return HStore.PRIORITY_USER;
     } else {
       return this.blockingStoreFileCount - this.storefiles.size();
     }
   }
 
-  boolean throttleCompaction(long compactionSize) {
+  @Override
+  public boolean throttleCompaction(long compactionSize) {
     // see HBASE-5867 for discussion on the default
     long throttlePoint = conf.getLong(
         "hbase.regionserver.thread.compaction.throttle",
@@ -2086,6 +2003,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     return compactionSize > throttlePoint;
   }
 
+  @Override
   public HRegion getHRegion() {
     return this.region;
   }
@@ -2094,20 +2012,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     return this.region.regionInfo;
   }
 
-  /**
-   * Increments the value for the given row/family/qualifier.
-   *
-   * This function will always be seen as atomic by other readers
-   * because it only puts a single KV to memstore. Thus no
-   * read/write control necessary.
-   *
-   * @param row
-   * @param f
-   * @param qualifier
-   * @param newValue the new value to set into memstore
-   * @return memstore size delta
-   * @throws IOException
-   */
+  @Override
   public long updateColumnValue(byte [] row, byte [] f,
                                 byte [] qualifier, long newValue)
       throws IOException {
@@ -2127,21 +2032,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
   }
 
-  /**
-   * Adds or replaces the specified KeyValues.
-   * <p>
-   * For each KeyValue specified, if a cell with the same row, family, and
-   * qualifier exists in MemStore, it will be replaced.  Otherwise, it will just
-   * be inserted to MemStore.
-   * <p>
-   * This operation is atomic on each KeyValue (row/family/qualifier) but not
-   * necessarily atomic across all of them.
-   * @param kvs
-   * @return memstore size delta
-   * @throws IOException
-   */
-  public long upsert(List<KeyValue> kvs)
-      throws IOException {
+  @Override
+  public long upsert(Iterable<KeyValue> kvs) throws IOException {
     this.lock.readLock().lock();
     try {
       // TODO: Make this operation atomic w/ MVCC
@@ -2201,18 +2093,12 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
   }
 
-  /**
-   * See if there's too much store files in this store
-   * @return true if number of store files is greater than
-   *  the number defined in minFilesToCompact
-   */
+  @Override
   public boolean needsCompaction() {
     return (storefiles.size() - filesCompacting.size()) > minFilesToCompact;
   }
 
-  /**
-   * Used for tests. Get the cache configuration for this Store.
-   */
+  @Override
   public CacheConfig getCacheConfig() {
     return this.cacheConf;
   }

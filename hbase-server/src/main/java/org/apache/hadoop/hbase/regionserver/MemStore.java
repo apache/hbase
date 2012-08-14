@@ -522,7 +522,7 @@ public class MemStore implements HeapSize {
    * @param kvs
    * @return change in memstore size
    */
-  public long upsert(List<KeyValue> kvs) {
+  public long upsert(Iterable<KeyValue> kvs) {
    this.lock.readLock().lock();
     try {
       long size = 0;

@@ -60,7 +60,7 @@ extends ConstantSizeRegionSplitPolicy {
     // Get size to check
     long sizeToCheck = getSizeToCheck(tableRegionsCount);
 
-    for (Store store : region.getStores().values()) {
+    for (HStore store : region.getStores().values()) {
       // If any of the stores is unable to split (eg they contain reference files)
       // then don't split
       if ((!store.canSplit())) {

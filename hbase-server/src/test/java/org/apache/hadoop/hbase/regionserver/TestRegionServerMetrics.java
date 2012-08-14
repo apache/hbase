@@ -240,7 +240,7 @@ public class TestRegionServerMetrics {
     rs.doMetrics();
     for (HRegion r : TEST_UTIL.getMiniHBaseCluster().getRegions(
         Bytes.toBytes(TABLE_NAME))) {
-      for (Map.Entry<byte[], Store> storeEntry : r.getStores().entrySet()) {
+      for (Map.Entry<byte[], HStore> storeEntry : r.getStores().entrySet()) {
         LOG.info("For region " + r.getRegionNameAsString() + ", CF " +
             Bytes.toStringBinary(storeEntry.getKey()) + " found store files " +
             ": " + storeEntry.getValue().getStorefiles());

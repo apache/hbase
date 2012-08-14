@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -4593,7 +4594,7 @@ public class TestFromClientSide {
     String regionName = table.getRegionLocations().firstKey().getEncodedName();
     HRegion region = TEST_UTIL.getRSForFirstRegionInTable(
         tableName).getFromOnlineRegions(regionName);
-    Store store = region.getStores().values().iterator().next();
+    HStore store = region.getStores().values().iterator().next();
     CacheConfig cacheConf = store.getCacheConfig();
     cacheConf.setCacheDataOnWrite(true);
     cacheConf.setEvictOnClose(true);
@@ -4668,7 +4669,7 @@ public class TestFromClientSide {
     assertEquals(++expectedBlockMiss, cache.getStats().getMissCount());
   }
 
-  private void waitForStoreFileCount(Store store, int count, int timeout)
+  private void waitForStoreFileCount(HStore store, int count, int timeout)
   throws InterruptedException {
     long start = System.currentTimeMillis();
     while (start + timeout > System.currentTimeMillis() &&

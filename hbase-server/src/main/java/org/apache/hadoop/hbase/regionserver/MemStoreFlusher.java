@@ -437,7 +437,7 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
   }
 
   private boolean isTooManyStoreFiles(HRegion region) {
-    for (Store hstore: region.stores.values()) {
+    for (HStore hstore : region.stores.values()) {
       if (hstore.getStorefilesCount() > this.blockingStoreFilesNumber) {
         return true;
       }

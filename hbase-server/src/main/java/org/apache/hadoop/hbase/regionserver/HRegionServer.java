@@ -1142,7 +1142,7 @@ public class  HRegionServer implements ClientProtocol,
     long currentCompactedKVs = 0;
     synchronized (r.stores) {
       stores += r.stores.size();
-      for (Store store : r.stores.values()) {
+      for (HStore store : r.stores.values()) {
         storefiles += store.getStorefilesCount();
         storeUncompressedSizeMB += (int) (store.getStoreSizeUncompressed()
             / 1024 / 1024);
@@ -1228,7 +1228,7 @@ public class  HRegionServer implements ClientProtocol,
       for (HRegion r : this.instance.onlineRegions.values()) {
         if (r == null)
           continue;
-        for (Store s : r.getStores().values()) {
+        for (HStore s : r.getStores().values()) {
           try {
             if (s.needsCompaction()) {
               // Queue a compaction. Will recognize if major is needed.
@@ -1369,8 +1369,8 @@ public class  HRegionServer implements ClientProtocol,
       writeRequestsCount += r.writeRequestsCount.get();
       synchronized (r.stores) {
         stores += r.stores.size();
-        for (Map.Entry<byte[], Store> ee : r.stores.entrySet()) {
-            final Store store = ee.getValue();
+        for (Map.Entry<byte[], HStore> ee : r.stores.entrySet()) {
+          final HStore store = ee.getValue();
             final SchemaMetrics schemaMetrics = store.getSchemaMetrics();
 
             {
@@ -1644,7 +1644,7 @@ public class  HRegionServer implements ClientProtocol,
     LOG.info("Post open deploy tasks for region=" + r.getRegionNameAsString() +
       ", daughter=" + daughter);
     // Do checks to see if we need to compact (references or too many files)
-    for (Store s : r.getStores().values()) {
+    for (HStore s : r.getStores().values()) {
       if (s.hasReferences() || s.needsCompaction()) {
         getCompactionRequester().requestCompaction(r, s, "Opening Region");
       }
@@ -2009,7 +2009,7 @@ public class  HRegionServer implements ClientProtocol,
     int storefileIndexSizeMB = 0;
     synchronized (r.stores) {
       stores += r.stores.size();
-      for (Store store : r.stores.values()) {
+      for (HStore store : r.stores.values()) {
         storefiles += store.getStorefilesCount();
         storefileSizeMB += (int) (store.getStorefilesSize() / 1024 / 1024);
         storefileIndexSizeMB += (int) (store.getStorefilesIndexSize() / 1024 / 1024);
@@ -3590,7 +3590,7 @@ public class  HRegionServer implements ClientProtocol,
         region.getRegionNameAsString());
       compactSplitThread.requestCompaction(region,
         "User-triggered " + (major ? "major " : "") + "compaction",
-          Store.PRIORITY_USER);
+          HStore.PRIORITY_USER);
       return CompactRegionResponse.newBuilder().build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
