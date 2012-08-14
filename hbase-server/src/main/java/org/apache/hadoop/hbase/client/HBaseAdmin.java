@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -399,57 +400,66 @@ public class HBaseAdmin implements Abortable, Closeable {
     }
     int numRegs = splitKeys == null ? 1 : splitKeys.length + 1;
     int prevRegCount = 0;
+    boolean doneWithMetaScan = false;
     for (int tries = 0; tries < this.numRetries * this.retryLongerMultiplier;
       ++tries) {
-      // Wait for new table to come on-line
-      final AtomicInteger actualRegCount = new AtomicInteger(0);
-      MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
-        @Override
-        public boolean processRow(Result rowResult) throws IOException {
-          HRegionInfo info = Writables.getHRegionInfoOrNull(
+      if (!doneWithMetaScan) {
+        // Wait for new table to come on-line
+        final AtomicInteger actualRegCount = new AtomicInteger(0);
+        MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
+          @Override
+          public boolean processRow(Result rowResult) throws IOException {
+            HRegionInfo info = Writables.getHRegionInfoOrNull(
               rowResult.getValue(HConstants.CATALOG_FAMILY,
-                  HConstants.REGIONINFO_QUALIFIER));
-          //If regioninfo is null, skip this row
-          if (null == info) {
+              HConstants.REGIONINFO_QUALIFIER));
+            //If regioninfo is null, skip this row
+            if (null == info) {
+              return true;
+            }
+            if (!(Bytes.equals(info.getTableName(), desc.getName()))) {
+              return false;
+            }
+            String hostAndPort = null;
+            byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.SERVER_QUALIFIER);
+            // Make sure that regions are assigned to server
+            if (value != null && value.length > 0) {
+              hostAndPort = Bytes.toString(value);
+            }
+            if (!(info.isOffline() || info.isSplit()) && hostAndPort != null) {
+              actualRegCount.incrementAndGet();
+            }
             return true;
           }
-          if (!(Bytes.equals(info.getTableName(), desc.getName()))) {
-            return false;
+        };
+        MetaScanner.metaScan(conf, visitor, desc.getName());
+        if (actualRegCount.get() != numRegs) {
+          if (tries == this.numRetries * this.retryLongerMultiplier - 1) {
+            throw new RegionOfflineException("Only " + actualRegCount.get() +
+              " of " + numRegs + " regions are online; retries exhausted.");
           }
-          String hostAndPort = null;
-          byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.SERVER_QUALIFIER);
-          // Make sure that regions are assigned to server
-          if (value != null && value.length > 0) {
-            hostAndPort = Bytes.toString(value);
-          }
-          if (!(info.isOffline() || info.isSplit()) && hostAndPort != null) {
-            actualRegCount.incrementAndGet();
-          }
-          return true;
-        }
-      };
-      MetaScanner.metaScan(conf, visitor, desc.getName());
-      if (actualRegCount.get() != numRegs) {
-        if (tries == this.numRetries * this.retryLongerMultiplier - 1) {
-          throw new RegionOfflineException("Only " + actualRegCount.get() +
-            " of " + numRegs + " regions are online; retries exhausted.");
-        }
-        try { // Sleep
-          Thread.sleep(getPauseTime(tries));
-        } catch (InterruptedException e) {
-          throw new InterruptedIOException("Interrupted when opening" +
-              " regions; " + actualRegCount.get() + " of " + numRegs + 
+          try { // Sleep
+            Thread.sleep(getPauseTime(tries));
+          } catch (InterruptedException e) {
+            throw new InterruptedIOException("Interrupted when opening" +
+              " regions; " + actualRegCount.get() + " of " + numRegs +
               " regions processed so far");
+          }
+          if (actualRegCount.get() > prevRegCount) { // Making progress
+            prevRegCount = actualRegCount.get();
+            tries = -1;
+          }
+        } else {
+          doneWithMetaScan = true;
         }
-        if (actualRegCount.get() > prevRegCount) { // Making progress
-          prevRegCount = actualRegCount.get();
-          tries = -1;
-        }
-      } else {
+      }
+      if (doneWithMetaScan && isTableEnabled(desc.getName())) {
         return;
       }
     }
+    throw new TableNotEnabledException(
+      "Retries exhausted while still waiting for table: "
+      + desc.getNameAsString() + " to be enabled");
   }
 
   /**
