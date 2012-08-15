@@ -477,9 +477,10 @@ htable.put(put);
               tombstones themselves.</para>
             </footnote>. If the version you specified when deleting a row is
           larger than the version of any value in the row, then you can
-          consider the complete row to be deleted<footnote><para>See Lars Hofhansl's blog on
-          <link xlink="http://hadoop-hbase.blogspot.com/2011/12/deletion-in-hbase.html">Deletion in HBase</link>
-          for an update on how deletes work.</para></footnote>.</para>
+          consider the complete row to be deleted.</para>
+          <para>For an informative discussion on how deletes and versioning interact, see
+          the thread <link xlink:href="http://comments.gmane.org/gmane.comp.java.hadoop.hbase.user/28421">Put w/ timestamp -> Deleteall -> Put w/ timestamp fails</link>
+          up on the user mailing list.</para>
           <para>Also see <xref linkend="keyvalue"/> for more information on the internal KeyValue format.
           </para>
         </section>
