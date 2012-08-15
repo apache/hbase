@@ -737,4 +737,24 @@ public class RemoteHTable implements HTableInterface {
   public void mutateRow(RowMutations rm) throws IOException {
     throw new IOException("atomicMutation not supported");
   }
+
+  @Override
+  public void setAutoFlush(boolean autoFlush) {
+    throw new UnsupportedOperationException("setAutoFlush not implemented");
+  }
+
+  @Override
+  public void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail) {
+    throw new UnsupportedOperationException("setAutoFlush not implemented");
+  }
+
+  @Override
+  public long getWriteBufferSize() {
+    throw new UnsupportedOperationException("getWriteBufferSize not implemented");
+  }
+
+  @Override
+  public void setWriteBufferSize(long writeBufferSize) throws IOException {
+    throw new IOException("setWriteBufferSize not supported");
+  }
 }
