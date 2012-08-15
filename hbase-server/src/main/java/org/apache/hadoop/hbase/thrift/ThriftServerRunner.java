@@ -202,11 +202,14 @@ public class ThriftServerRunner implements Runnable {
           ++numChosen;
         }
       }
-      if (numChosen != 1) {
+      if (numChosen < 1) {
+        LOG.info("Using default thrift server type");
+        chosenType = DEFAULT;
+      } else if (numChosen > 1) {
         throw new AssertionError("Exactly one option out of " +
-            Arrays.toString(values()) + " has to be specified");
+          Arrays.toString(values()) + " has to be specified");
       }
-      LOG.info("Setting thrift server to " + chosenType.option);
+      LOG.info("Using thrift server type " + chosenType.option);
       conf.set(SERVER_TYPE_CONF_KEY, chosenType.option);
     }
 
