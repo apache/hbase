@@ -1157,6 +1157,14 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * @return True if this is a "fake" KV created for internal seeking purposes,
+   * which should not be seen by user code
+   */
+  public boolean isInternal() {
+    byte type = getType();
+    return type == Type.Minimum.code || type == Type.Maximum.code;
+  }
+  /**
    * @param now Time to set into <code>this</code> IFF timestamp ==
    * {@link HConstants#LATEST_TIMESTAMP} (else, its a noop).
    * @return True is we modified this.
