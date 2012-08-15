@@ -366,11 +366,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
     LOOP: while((kv = this.heap.peek()) != null) {
       // Check that the heap gives us KVs in an increasing order.
-      if (prevKV != null && comparator != null
-          && comparator.compare(prevKV, kv) > 0) {
-        throw new IOException("Key " + prevKV + " followed by a " +
-            "smaller key " + kv + " in cf " + store);
-      }
+      assert prevKV == null || comparator == null || comparator.compare(prevKV, kv) <= 0 :
+        "Key " + prevKV + " followed by a " + "smaller key " + kv + " in cf " + store;
       prevKV = kv;
       ScanQueryMatcher.MatchCode qcode = matcher.match(kv);
       switch(qcode) {
