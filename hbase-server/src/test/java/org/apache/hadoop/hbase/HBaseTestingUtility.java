@@ -1652,8 +1652,21 @@ public class HBaseTestingUtility {
   throws InterruptedException, IOException {
     long startWait = System.currentTimeMillis();
     while (!getHBaseAdmin().isTableAvailable(table)) {
-      assertTrue("Timed out waiting for table " + Bytes.toStringBinary(table),
-          System.currentTimeMillis() - startWait < timeoutMillis);
+      assertTrue("Timed out waiting for table to become available " +
+        Bytes.toStringBinary(table),
+        System.currentTimeMillis() - startWait < timeoutMillis);
+      Thread.sleep(200);
+    }
+  }
+
+  public void waitTableEnabled(byte[] table, long timeoutMillis)
+  throws InterruptedException, IOException {
+    long startWait = System.currentTimeMillis();
+    while (!getHBaseAdmin().isTableAvailable(table) &&
+           !getHBaseAdmin().isTableEnabled(table)) {
+      assertTrue("Timed out waiting for table to become available and enabled " +
+         Bytes.toStringBinary(table),
+         System.currentTimeMillis() - startWait < timeoutMillis);
       Thread.sleep(200);
     }
   }

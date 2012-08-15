@@ -240,7 +240,7 @@ public class TestClassLoading {
       admin.deleteTable(tableName);
     }
     admin.createTable(htd);
-    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
+    waitForTable(htd.getName());
 
     // verify that the coprocessors were loaded
     boolean found1 = false, found2 = false, found2_k1 = false,
@@ -283,7 +283,7 @@ public class TestClassLoading {
       Coprocessor.PRIORITY_USER);
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(htd);
-    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
+    waitForTable(htd.getName());
 
     // verify that the coprocessor was loaded
     boolean found = false;
@@ -309,7 +309,7 @@ public class TestClassLoading {
       Coprocessor.PRIORITY_USER);
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(htd);
-    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
+    waitForTable(htd.getName());
 
     // verify that the coprocessor was loaded correctly
     boolean found = false;
@@ -377,7 +377,7 @@ public class TestClassLoading {
       admin.deleteTable(tableName);
     }
     admin.createTable(htd);
-    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
+    waitForTable(htd.getName());
 
     // verify that the coprocessor was loaded
     boolean found_2 = false, found_1 = false, found_3 = false,
@@ -482,7 +482,7 @@ public class TestClassLoading {
       admin.deleteTable(tableName);
     }
     admin.createTable(htd);
-    TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
+    waitForTable(htd.getName());
 
     // verify that the coprocessors were loaded
     boolean found1 = false, found2 = false, found2_k1 = false,
@@ -554,7 +554,8 @@ public class TestClassLoading {
     String userTable1 = "userTable1";
     HTableDescriptor userTD1 = new HTableDescriptor(userTable1);
     admin.createTable(userTD1);
-    TEST_UTIL.waitTableAvailable(userTD1.getName(), 5000);
+    waitForTable(userTD1.getName());
+
     // table should be enabled now.
     assertTrue(admin.isTableEnabled(userTable1));
     assertAllRegionServers(regionServerSystemAndUserCoprocessors, userTable1);
@@ -573,7 +574,7 @@ public class TestClassLoading {
     htd2.setValue("COPROCESSOR$1", jarFile1.toString() + "|" + userTableCP +
       "|" + Coprocessor.PRIORITY_USER);
     admin.createTable(htd2);
-    TEST_UTIL.waitTableAvailable(htd2.getName(), 5000);
+    waitForTable(htd2.getName());
     // table should be enabled now.
     assertTrue(admin.isTableEnabled(userTable2));
 
@@ -666,6 +667,13 @@ public class TestClassLoading {
         java.util.Arrays.toString(
             TEST_UTIL.getHBaseCluster().getMaster().getCoprocessors());
     assertEquals(loadedMasterCoprocessorsVerify, loadedMasterCoprocessors);
+  }
+
+  private void waitForTable(byte[] name) throws InterruptedException, IOException {
+    // First wait until all regions are online
+    TEST_UTIL.waitTableEnabled(name, 5000);
+    // Now wait a bit longer for the coprocessor hosts to load the CPs
+    Thread.sleep(1000);
   }
 
   @org.junit.Rule
