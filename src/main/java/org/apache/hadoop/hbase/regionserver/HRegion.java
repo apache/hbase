@@ -3480,7 +3480,7 @@ public class HRegion implements HeapSize { // , Writable{
             // there're no left overs.
             // the reasons for calling this method are:
             // 1. reset the filters.
-            // 2. provide a hook to fast forward the row (used by subclasses)
+            // 2. fast forward the row
             nextRow(currentRow);
 
             // This row was totally filtered out, if this is NOT the last row,
@@ -3503,6 +3503,9 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     protected void nextRow(byte [] currentRow) throws IOException {
+      KeyValue kv = KeyValue.createLastOnRow(currentRow);
+      this.storeHeap.requestSeek(kv, true, true);
+
       while (Bytes.equals(currentRow, peekRow())) {
         this.storeHeap.next(MOCKED_LIST);
       }
