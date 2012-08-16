@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
@@ -1325,8 +1326,8 @@ public class HTable implements HTableInterface {
       Batch.Call<T,R> callable)
       throws IOException, Throwable {
 
-    final Map<byte[],R> results = new TreeMap<byte[],R>(
-        Bytes.BYTES_COMPARATOR);
+    final Map<byte[],R> results =  Collections.synchronizedMap(new TreeMap<byte[],R>(
+        Bytes.BYTES_COMPARATOR));
     coprocessorExec(protocol, startKey, endKey, callable,
         new Batch.Callback<R>(){
       public void update(byte[] region, byte[] row, R value) {
