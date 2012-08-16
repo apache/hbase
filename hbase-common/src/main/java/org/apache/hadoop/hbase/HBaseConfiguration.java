@@ -116,10 +116,13 @@ public class HBaseConfiguration extends Configuration {
   /**
    * Creates a clone of passed configuration.
    * @param that Configuration to clone.
-   * @return a clone of passed configuration.
+   * @return a Configuration created with the hbase-*.xml files plus
+   * the given configuration.
    */
   public static Configuration create(final Configuration that) {
-    return new Configuration(that);
+    Configuration conf = create();
+    merge(conf, that);
+    return conf;
   }
 
   /**
