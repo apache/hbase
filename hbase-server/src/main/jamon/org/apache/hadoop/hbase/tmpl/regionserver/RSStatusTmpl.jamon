@@ -101,10 +101,10 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
     <h2>Server Metrics</h2>
     <& ServerMetricsTmpl; metrics = metrics; &>
 
+    <& ../common/TaskMonitorTmpl; filter = filter &>
+
     <h2>Regions</h2>
     <& RegionListTmpl; regionServer = regionServer; onlineRegions = onlineRegions; &>
-
-    <& ../common/TaskMonitorTmpl; filter = filter &>
 
     <h2>Software Attributes</h2>
     <table id="attributes_table" class="table table-striped">
