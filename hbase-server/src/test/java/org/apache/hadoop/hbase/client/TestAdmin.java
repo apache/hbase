@@ -875,16 +875,19 @@ public class TestAdmin {
       numVersions, blockSize);
     try {
       int rowCount = 0;
+      byte[] q = new byte[0];
 
       // insert rows into column families. The number of rows that have values
       // in a specific column family is decided by rowCounts[familyIndex]
       for (int index = 0; index < familyNames.length; index++) {
+        ArrayList<Put> puts = new ArrayList<Put>(rowCounts[index]);
         for (int i = 0; i < rowCounts[index]; i++) {
           byte[] k = Bytes.toBytes(i);
           Put put = new Put(k);
-          put.add(familyNames[index], new byte[0], k);
-          table.put(put);
+          put.add(familyNames[index], q, k);
+          puts.add(put);
         }
+        table.put(puts);
 
         if ( rowCount < rowCounts[index] ) {
           rowCount = rowCounts[index];
