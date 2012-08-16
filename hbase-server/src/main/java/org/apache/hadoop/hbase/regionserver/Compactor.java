@@ -110,7 +110,7 @@ class Compactor extends Configured {
       .getScannersForStoreFiles(filesToCompact, false, false, true);
 
     // Get some configs
-    int compactionKVMax = getConf().getInt("hbase.hstore.compaction.kv.max", 10);
+    int compactionKVMax = getConf().getInt(HConstants.COMPACTION_KV_MAX, 10);
     Compression.Algorithm compression = store.getFamily().getCompression();
     // Avoid overriding compression setting for major compactions if the user
     // has not specified it separately

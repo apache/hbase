@@ -705,9 +705,9 @@ public class Store extends SchemaConfigured implements HStore {
     if (scanner == null) {
       Scan scan = new Scan();
       scan.setMaxVersions(scanInfo.getMaxVersions());
-      scanner = new StoreScanner(this, scanInfo, scan, Collections.singletonList(new CollectionBackedScanner(
-          set, this.comparator)), ScanType.MINOR_COMPACT, this.region.getSmallestReadPoint(),
-          HConstants.OLDEST_TIMESTAMP);
+      scanner = new StoreScanner(this, scanInfo, scan,
+          Collections.singletonList(memstoreScanner), ScanType.MINOR_COMPACT,
+          this.region.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
     }
     if (getHRegion().getCoprocessorHost() != null) {
       InternalScanner cpScanner =
@@ -719,6 +719,7 @@ public class Store extends SchemaConfigured implements HStore {
       scanner = cpScanner;
     }
     try {
+      int compactionKVMax = conf.getInt(HConstants.COMPACTION_KV_MAX, 10);
       // TODO:  We can fail in the below block before we complete adding this
       // flush to list of store files.  Add cleanup of anything put on filesystem
       // if we fail.
@@ -732,7 +733,7 @@ public class Store extends SchemaConfigured implements HStore {
           List<KeyValue> kvs = new ArrayList<KeyValue>();
           boolean hasMore;
           do {
-            hasMore = scanner.next(kvs);
+            hasMore = scanner.next(kvs, compactionKVMax);
             if (!kvs.isEmpty()) {
               for (KeyValue kv : kvs) {
                 // If we know that this KV is going to be included always, then let us

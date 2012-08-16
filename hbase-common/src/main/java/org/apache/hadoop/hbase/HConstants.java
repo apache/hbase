@@ -202,6 +202,9 @@ public final class HConstants {
   /** Parameter name for how often a region should should perform a major compaction */
   public static final String MAJOR_COMPACTION_PERIOD = "hbase.hregion.majorcompaction";
 
+  /** Parameter name for the maximum batch of KVs to be used in flushes and compactions */
+  public static final String COMPACTION_KV_MAX = "hbase.hstore.compaction.kv.max";
+
   /** Parameter name for HBase instance root directory */
   public static final String HBASE_DIR = "hbase.rootdir";
 
