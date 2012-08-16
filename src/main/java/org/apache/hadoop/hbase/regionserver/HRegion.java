@@ -3441,7 +3441,8 @@ public class HRegion implements HeapSize { // , Writable{
           rpcCall.throwExceptionIfCallerDisconnected();
         }
 
-        byte [] currentRow = peekRow();
+        KeyValue kv = this.storeHeap.peek();
+        byte [] currentRow = kv == null ? null : kv.getRow();
         if (isStopRow(currentRow)) {
           if (filter != null && filter.hasFilterRow()) {
             filter.filterRow(results);
@@ -3451,7 +3452,7 @@ public class HRegion implements HeapSize { // , Writable{
           }
 
           return false;
-        } else if (filterRowKey(currentRow)) {
+        } else if (kv != null && !kv.isInternal() && filterRowKey(currentRow)) {
           nextRow(currentRow);
         } else {
           byte [] nextRow;
