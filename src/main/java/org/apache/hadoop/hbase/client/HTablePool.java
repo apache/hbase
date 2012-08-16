@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap;
@@ -173,11 +174,7 @@ public class HTablePool implements Closeable {
     HTableInterface table = findOrCreateTable(tableName);
     // return a proxy table so when user closes the proxy, the actual table
     // will be returned to the pool
-    try {
-      return new PooledHTable(table);
-    } catch (IOException ioe) {
-      throw new RuntimeException(ioe);
-    }
+    return new PooledHTable(table);
   }
 
   /**
@@ -318,14 +315,13 @@ public class HTablePool implements Closeable {
   /**
    * A proxy class that implements HTableInterface.close method to return the
    * wrapped table back to the table pool
-   * 
+   *
    */
-  class PooledHTable extends HTable {
+  class PooledHTable implements HTableInterface {
 
     private HTableInterface table; // actual table implementation
 
-    public PooledHTable(HTableInterface table) throws IOException {
-      super(table.getConfiguration(), table.getTableName());
+    public PooledHTable(HTableInterface table) {
       this.table = table;
     }
 
@@ -372,6 +368,7 @@ public class HTablePool implements Closeable {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public Result getRowOrBefore(byte[] row, byte[] family) throws IOException {
       return table.getRowOrBefore(row, family);
     }
@@ -504,6 +501,36 @@ public class HTablePool implements Closeable {
      */
     HTableInterface getWrappedTable() {
       return table;
+    }
+
+    @Override
+    public void mutateRow(RowMutations rm) throws IOException {
+      table.mutateRow(rm);
+    }
+
+    @Override
+    public Result append(Append append) throws IOException {
+      return table.append(append);
+    }
+
+    @Override
+    public void setAutoFlush(boolean autoFlush) {
+      table.setAutoFlush(autoFlush);
+    }
+
+    @Override
+    public void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail) {
+      table.setAutoFlush(autoFlush, clearBufferOnFail);
+    }
+
+    @Override
+    public long getWriteBufferSize() {
+      return table.getWriteBufferSize();
+    }
+
+    @Override
+    public void setWriteBufferSize(long writeBufferSize) throws IOException {
+      table.setWriteBufferSize(writeBufferSize);
     }
   }
 }
