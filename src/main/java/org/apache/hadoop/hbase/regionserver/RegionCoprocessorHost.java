@@ -180,7 +180,7 @@ public class RegionCoprocessorHost
             }
             if (cfgSpec != null) {
               cfgSpec = cfgSpec.substring(cfgSpec.indexOf('|') + 1);
-              Configuration newConf = HBaseConfiguration.create(conf);
+              Configuration newConf = new Configuration(conf);
               Matcher m = HConstants.CP_HTD_ATTR_VALUE_PARAM_PATTERN.matcher(cfgSpec);
               while (m.find()) {
                 newConf.set(m.group(1), m.group(2));
