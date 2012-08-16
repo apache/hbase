@@ -21,7 +21,6 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Map;
 
 import javax.ws.rs.GET;
@@ -38,13 +37,12 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.HTablePool;
+import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.rest.model.TableInfoModel;
 import org.apache.hadoop.hbase.rest.model.TableRegionModel;
+import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Private
 public class RegionsResource extends ResourceBase {
@@ -69,17 +67,6 @@ public class RegionsResource extends ResourceBase {
     this.tableResource = tableResource;
   }
 
-  private Map<HRegionInfo,HServerAddress> getTableRegions()
-      throws IOException {
-    HTablePool pool = servlet.getTablePool();
-    HTableInterface table = pool.getTable(tableResource.getName());
-    try {
-      return ((HTable)table).getRegionsInfo();
-    } finally {
-      table.close();
-    }
-  }
-
   @GET
   @Produces({MIMETYPE_TEXT, MIMETYPE_XML, MIMETYPE_JSON, MIMETYPE_PROTOBUF})
   public Response get(final @Context UriInfo uriInfo) {
@@ -90,15 +77,14 @@ public class RegionsResource extends ResourceBase {
     try {
       String tableName = tableResource.getName();
       TableInfoModel model = new TableInfoModel(tableName);
-      Map<HRegionInfo,HServerAddress> regions = getTableRegions();
-      for (Map.Entry<HRegionInfo,HServerAddress> e: regions.entrySet()) {
+      Map<HRegionInfo,ServerName> regions = MetaScanner.allTableRegions(
+        servlet.getConfiguration(), Bytes.toBytes(tableName), false);
+      for (Map.Entry<HRegionInfo,ServerName> e: regions.entrySet()) {
         HRegionInfo hri = e.getKey();
-        HServerAddress addr = e.getValue();
-        InetSocketAddress sa = addr.getInetSocketAddress();
+        ServerName addr = e.getValue();
         model.add(
           new TableRegionModel(tableName, hri.getRegionId(),
-            hri.getStartKey(), hri.getEndKey(),
-            sa.getHostName() + ":" + Integer.valueOf(sa.getPort())));
+            hri.getStartKey(), hri.getEndKey(), addr.getHostAndPort()));
       }
       ResponseBuilder response = Response.ok(model);
       response.cacheControl(cacheControl);
