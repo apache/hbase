@@ -243,7 +243,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       this.region.memstoreFlushSize);
     this.maxCompactSize
       = conf.getLong("hbase.hstore.compaction.max.size", Long.MAX_VALUE);
-    this.compactionKVMax = conf.getInt("hbase.hstore.compaction.kv.max", 10);
+    this.compactionKVMax = conf.getInt(HConstants.COMPACTION_KV_MAX, 10);
 
     this.verifyBulkLoads = conf.getBoolean("hbase.hstore.bulkload.verify",
         false);
@@ -706,9 +706,9 @@ public class Store extends SchemaConfigured implements HeapSize {
     if (scanner == null) {
       Scan scan = new Scan();
       scan.setMaxVersions(scanInfo.getMaxVersions());
-      scanner = new StoreScanner(this, scanInfo, scan, Collections.singletonList(new CollectionBackedScanner(
-          set, this.comparator)), ScanType.MINOR_COMPACT, this.region.getSmallestReadPoint(),
-          HConstants.OLDEST_TIMESTAMP);
+      scanner = new StoreScanner(this, scanInfo, scan,
+          Collections.singletonList(memstoreScanner), ScanType.MINOR_COMPACT,
+          this.region.getSmallestReadPoint(), HConstants.OLDEST_TIMESTAMP);
     }
     if (getHRegion().getCoprocessorHost() != null) {
       InternalScanner cpScanner =
@@ -733,7 +733,7 @@ public class Store extends SchemaConfigured implements HeapSize {
           List<KeyValue> kvs = new ArrayList<KeyValue>();
           boolean hasMore;
           do {
-            hasMore = scanner.next(kvs);
+            hasMore = scanner.next(kvs, this.compactionKVMax);
             if (!kvs.isEmpty()) {
               for (KeyValue kv : kvs) {
                 // If we know that this KV is going to be included always, then let us
