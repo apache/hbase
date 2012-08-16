@@ -2811,11 +2811,19 @@ public class AssignmentManager extends ZooKeeperListener {
       // no lock concurrent access ok: we will be working on a copy, and it's java-valid to do
       //  a copy while another thread is adding/removing items
       for (RegionState regionState : regionStates.getRegionsInTransition().values()) {
-        if (regionState.getStamp() + timeout <= now ||
-          (this.allRegionServersOffline && !noRSAvailable)) {
-          //decide on action upon timeout or, if some RSs just came back online, we can start the
-          // the assignment
+        if (regionState.getStamp() + timeout <= now) {
+          // decide on action upon timeout
           actOnTimeOut(regionState);
+        } else if (this.allRegionServersOffline && !noRSAvailable) {
+          RegionPlan existingPlan = regionPlans.get(regionState.getRegion()
+              .getEncodedName());
+          if (existingPlan == null
+              || !this.serverManager.isServerOnline(existingPlan
+                  .getDestination())) {
+            // if some RSs just came back online, we can start the assignment
+            // right away
+            actOnTimeOut(regionState);
+          }
         }
       }
       setAllRegionServersOffline(noRSAvailable);
