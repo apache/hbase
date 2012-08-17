@@ -31,7 +31,7 @@ public class CheckedArchivingHFileCleaner extends BaseHFileCleanerDelegate {
   private static boolean checked;
 
   @Override
-  public boolean isFileDeleteable(Path file) {
+  public boolean isFileDeletable(Path file) {
     checked = true;
     return true;
   }

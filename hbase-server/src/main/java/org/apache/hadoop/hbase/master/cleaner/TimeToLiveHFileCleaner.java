@@ -50,7 +50,7 @@ public class TimeToLiveHFileCleaner extends BaseHFileCleanerDelegate {
   }
 
   @Override
-  public boolean isFileDeleteable(Path filePath) {
+  public boolean isFileDeletable(Path filePath) {
     if (!instantiateFS()) {
       return false;
     }

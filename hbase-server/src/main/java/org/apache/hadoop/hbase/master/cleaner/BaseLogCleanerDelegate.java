@@ -40,17 +40,19 @@ import org.apache.hadoop.hbase.BaseConfigurable;
 public abstract class BaseLogCleanerDelegate extends BaseConfigurable implements FileCleanerDelegate {
 
   @Override
-  public boolean isFileDeleteable(Path file) {
+  public boolean isFileDeletable(Path file) {
     return isLogDeletable(file);
   }
 
   /**
    * Should the master delete the log or keep it?
    * <p>
-   * Implementing classes should override {@link #isFileDeleteable(Path)} instead.
+   * Implementing classes should override {@link #isFileDeletable(Path)} instead.
    * @param filePath full path to log.
-   * @return true if the log is deletable, false if not
+   * @return true if the log is deletable, false (default) if not
    */
   @Deprecated
-  public abstract boolean isLogDeletable(Path filePath);
+  public boolean isLogDeletable(Path filePath) {
+    return false;
+  }
 }

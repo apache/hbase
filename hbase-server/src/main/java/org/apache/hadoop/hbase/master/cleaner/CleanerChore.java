@@ -210,7 +210,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
         return;
       }
 
-      if (!cleaner.isFileDeleteable(filePath)) {
+      if (!cleaner.isFileDeletable(filePath)) {
         // this file is not deletable, then we are done
         LOG.debug(filePath + " is not deletable according to:" + cleaner);
         return;

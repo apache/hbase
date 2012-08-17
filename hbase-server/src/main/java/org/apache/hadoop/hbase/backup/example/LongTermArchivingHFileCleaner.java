@@ -48,7 +48,7 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
   private FileSystem fs;
 
   @Override
-  public boolean isFileDeleteable(Path file) {
+  public boolean isFileDeletable(Path file) {
     try {
 
       FileStatus[] deleteStatus = FSUtils.listStatus(this.fs, file, null);

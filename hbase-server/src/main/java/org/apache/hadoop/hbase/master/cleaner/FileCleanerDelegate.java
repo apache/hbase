@@ -35,6 +35,6 @@ public interface FileCleanerDelegate extends Configurable, Stoppable {
    * @param file full path to the file to check
    * @return <tt>true</tt> if the file is deletable, <tt>false</tt> if not
    */
-  public boolean isFileDeleteable(Path file);
+  public boolean isFileDeletable(Path file);
 
 }
