@@ -133,13 +133,6 @@ public class RegionStates {
   }
 
   /**
-   * @return the server the specified region assigned to; null if not assigned.
-   */
-  public synchronized ServerName getAssignedServer(final HRegionInfo hri) {
-    return regionAssignments.get(hri);
-  }
-
-  /**
    * Wait for the state map to be updated by assignment manager.
    */
   public synchronized void waitForUpdate(
@@ -526,11 +519,7 @@ public class RegionStates {
     try {
       Pair<HRegionInfo, ServerName> p =
         MetaReader.getRegion(server.getCatalogTracker(), regionName);
-      HRegionInfo hri = p == null ? null : p.getFirst();
-      if (hri != null) {
-        createRegionState(hri);
-      }
-      return hri;
+      return p == null ? null : p.getFirst();
     } catch (IOException e) {
       server.abort("Aborting because error occoured while reading " +
         Bytes.toStringBinary(regionName) + " from .META.", e);

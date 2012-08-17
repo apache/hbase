@@ -2085,13 +2085,8 @@ Server {
         LOG.warn("assignRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
           + " actual: " + type);
       }
-      RegionStates regionStates = assignmentManager.getRegionStates();
-      HRegionInfo regionInfo = regionStates.getRegionInfo(regionName);
+      HRegionInfo regionInfo = assignmentManager.getRegionStates().getRegionInfo(regionName);
       if (regionInfo == null) throw new UnknownRegionException(Bytes.toString(regionName));
-      RegionState regionState = regionStates.getRegionState(regionInfo);
-      if (regionState != null && !regionState.isOffline()) {
-        throw new IOException("Region " + regionInfo + " is not offline");
-      }
       if (cpHost != null) {
         if (cpHost.preAssign(regionInfo)) {
           return arr;
