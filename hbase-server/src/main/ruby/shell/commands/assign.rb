@@ -24,8 +24,7 @@ module Shell
       def help
         return <<-EOF
 Assign a region.Use with caution.If region already assigned,
-this command will just go ahead and reassign
-the region anyways. For experts only.
+this command will throw an exception. For experts only.
 EOF
       end
 
