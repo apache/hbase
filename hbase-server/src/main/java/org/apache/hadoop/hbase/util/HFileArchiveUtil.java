@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 
 /**
  * Helper class for all utilities related to archival/retrieval of HFiles
@@ -64,7 +64,7 @@ public class HFileArchiveUtil {
   public static Path getStoreArchivePath(Configuration conf, HRegionInfo region, Path tabledir,
       byte[] family) {
     Path tableArchiveDir = getTableArchivePath(conf, tabledir);
-    return Store.getStoreHomedir(tableArchiveDir,
+    return HStore.getStoreHomedir(tableArchiveDir,
       HRegionInfo.encodeRegionName(region.getRegionName()), family);
   }
 

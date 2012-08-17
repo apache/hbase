@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.NoServerForRegionException;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 
 import com.google.common.base.Preconditions;
@@ -123,7 +123,7 @@ import com.google.common.collect.Sets;
  * <p>
  * The more complicated answer is that this depends upon the largest storefile
  * in your region. With a growing data size, this will get larger over time. You
- * want the largest region to be just big enough that the {@link Store} compact
+ * want the largest region to be just big enough that the {@link HStore} compact
  * selection algorithm only compacts it due to a timed major. If you don't, your
  * cluster can be prone to compaction storms as the algorithm decides to run
  * major compactions on a large series of regions all at once. Note that
@@ -671,7 +671,7 @@ public class RegionSplitter {
           HTableDescriptor htd = table.getTableDescriptor();
           // check every Column Family for that region
           for (HColumnDescriptor c : htd.getFamilies()) {
-            Path cfDir = Store.getStoreHomedir(tableDir, hri.getEncodedName(),
+            Path cfDir = HStore.getStoreHomedir(tableDir, hri.getEncodedName(),
                 c.getName());
             if (fs.exists(cfDir)) {
               for (FileStatus file : fs.listStatus(cfDir)) {

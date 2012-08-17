@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -84,14 +84,14 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    */
   InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final KeyValueScanner memstoreScanner, final InternalScanner s)
+      final HStore store, final KeyValueScanner memstoreScanner, final InternalScanner s)
       throws IOException;
 
   /**
    * Called before the memstore is flushed to disk.
    * @param c the environment provided by the region server
    * @throws IOException if an error occurred on the coprocessor
-   * @deprecated use {@link #preFlush(ObserverContext, Store, InternalScanner)} instead
+   * @deprecated use {@link #preFlush(ObserverContext, HStore, InternalScanner)} instead
    */
   void preFlush(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
 
@@ -104,14 +104,14 @@ public interface RegionObserver extends Coprocessor {
    * unless the implementation is writing new store files on its own.
    * @throws IOException if an error occurred on the coprocessor
    */
-  InternalScanner preFlush(final ObserverContext<RegionCoprocessorEnvironment> c, final Store store,
+  InternalScanner preFlush(final ObserverContext<RegionCoprocessorEnvironment> c, final HStore store,
       final InternalScanner scanner) throws IOException;
 
   /**
    * Called after the memstore is flushed to disk.
    * @param c the environment provided by the region server
    * @throws IOException if an error occurred on the coprocessor
-   * @deprecated use {@link #preFlush(ObserverContext, Store, InternalScanner)} instead.
+   * @deprecated use {@link #preFlush(ObserverContext, HStore, InternalScanner)} instead.
    */
   void postFlush(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
 
@@ -122,7 +122,7 @@ public interface RegionObserver extends Coprocessor {
    * @param resultFile the new store file written out during compaction
    * @throws IOException if an error occurred on the coprocessor
    */
-  void postFlush(final ObserverContext<RegionCoprocessorEnvironment> c, final Store store,
+  void postFlush(final ObserverContext<RegionCoprocessorEnvironment> c, final HStore store,
       final StoreFile resultFile) throws IOException;
 
   /**
@@ -135,7 +135,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    */
   void preCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final List<StoreFile> candidates) throws IOException;
+      final HStore store, final List<StoreFile> candidates) throws IOException;
 
   /**
    * Called after the {@link StoreFile}s to compact have been selected from the
@@ -145,7 +145,7 @@ public interface RegionObserver extends Coprocessor {
    * @param selected the store files selected to compact
    */
   void postCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final ImmutableList<StoreFile> selected);
+      final HStore store, final ImmutableList<StoreFile> selected);
 
   /**
    * Called prior to writing the {@link StoreFile}s selected for compaction into
@@ -172,7 +172,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    */
   InternalScanner preCompact(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final InternalScanner scanner) throws IOException;
+      final HStore store, final InternalScanner scanner) throws IOException;
 
   /**
    * Called prior to writing the {@link StoreFile}s selected for compaction into
@@ -194,7 +194,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    */
   InternalScanner preCompactScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, List<? extends KeyValueScanner> scanners, final ScanType scanType,
+      final HStore store, List<? extends KeyValueScanner> scanners, final ScanType scanType,
       final long earliestPutTs, final InternalScanner s) throws IOException;
 
   /**
@@ -205,7 +205,7 @@ public interface RegionObserver extends Coprocessor {
    * @param resultFile the new store file written out during compaction
    * @throws IOException if an error occurred on the coprocessor
    */
-  void postCompact(final ObserverContext<RegionCoprocessorEnvironment> c, final Store store,
+  void postCompact(final ObserverContext<RegionCoprocessorEnvironment> c, final HStore store,
       StoreFile resultFile) throws IOException;
 
   /**
@@ -623,8 +623,8 @@ public interface RegionObserver extends Coprocessor {
    * Called before a store opens a new scanner.
    * This hook is called when a "user" scanner is opened.
    * <p>
-   * See {@link #preFlushScannerOpen(ObserverContext, Store, KeyValueScanner, InternalScanner)}
-   * and {@link #preCompactScannerOpen(ObserverContext, Store, List, ScanType, long, InternalScanner)}
+   * See {@link #preFlushScannerOpen(ObserverContext, HStore, KeyValueScanner, InternalScanner)}
+   * and {@link #preCompactScannerOpen(ObserverContext, HStore, List, ScanType, long, InternalScanner)}
    * to override scanners created for flushes or compactions, resp.
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
@@ -640,7 +640,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    */
   KeyValueScanner preStoreScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Store store, final Scan scan, final NavigableSet<byte[]> targetCols,
+      final HStore store, final Scan scan, final NavigableSet<byte[]> targetCols,
       final KeyValueScanner s) throws IOException;
 
   /**

@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.regionserver.Store.ScanInfo;
+import org.apache.hadoop.hbase.regionserver.HStore.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 public class StoreScanner extends NonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner, ChangedReadersObserver {
   static final Log LOG = LogFactory.getLog(StoreScanner.class);
-  private Store store;
+  private HStore store;
   private ScanQueryMatcher matcher;
   private KeyValueHeap heap;
   private boolean cacheBlocks;
@@ -79,7 +79,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
   private KeyValue lastTop = null;
 
   /** An internal constructor. */
-  private StoreScanner(Store store, boolean cacheBlocks, Scan scan,
+  private StoreScanner(HStore store, boolean cacheBlocks, Scan scan,
       final NavigableSet<byte[]> columns, long ttl, int minVersions) {
     this.store = store;
     this.cacheBlocks = cacheBlocks;
@@ -107,7 +107,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
    * @param columns which columns we are scanning
    * @throws IOException
    */
-  public StoreScanner(Store store, ScanInfo scanInfo, Scan scan, final NavigableSet<byte[]> columns)
+  public StoreScanner(HStore store, ScanInfo scanInfo, Scan scan, final NavigableSet<byte[]> columns)
                               throws IOException {
     this(store, scan.getCacheBlocks(), scan, columns, scanInfo.getTtl(),
         scanInfo.getMinVersions());
@@ -159,7 +159,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
    * @param smallestReadPoint the readPoint that we should use for tracking
    *          versions
    */
-  public StoreScanner(Store store, ScanInfo scanInfo, Scan scan,
+  public StoreScanner(HStore store, ScanInfo scanInfo, Scan scan,
       List<? extends KeyValueScanner> scanners, ScanType scanType,
       long smallestReadPoint, long earliestPutTs) throws IOException {
     this(store, false, scan, null, scanInfo.getTtl(),
@@ -181,7 +181,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
   }
 
   /** Constructor for testing. */
-  StoreScanner(final Scan scan, Store.ScanInfo scanInfo,
+  StoreScanner(final Scan scan, HStore.ScanInfo scanInfo,
       ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners) throws IOException {
     this(scan, scanInfo, scanType, columns, scanners,
@@ -189,7 +189,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
   }
 
   // Constructor for testing.
-  StoreScanner(final Scan scan, Store.ScanInfo scanInfo,
+  StoreScanner(final Scan scan, HStore.ScanInfo scanInfo,
       ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners, long earliestPutTs)
           throws IOException {

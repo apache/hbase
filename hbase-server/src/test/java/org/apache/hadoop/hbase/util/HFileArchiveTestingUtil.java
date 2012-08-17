@@ -34,8 +34,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 
 /**
  * Test helper for testing archiving of HFiles
@@ -222,7 +222,7 @@ public class HFileArchiveTestingUtil {
    * @param store store that is archiving files
    * @return {@link Path} to the store archive directory for the given region
    */
-  public static Path getStoreArchivePath(Configuration conf, HRegion region, HStore store) {
+  public static Path getStoreArchivePath(Configuration conf, HRegion region, Store store) {
     return HFileArchiveUtil.getStoreArchivePath(conf, region, store.getFamily().getName());
   }
 
@@ -234,7 +234,7 @@ public class HFileArchiveTestingUtil {
     HRegion region = servingRegions.get(0);
 
     // check that we actually have some store files that were archived
-    HStore store = region.getStore(storeName);
+    Store store = region.getStore(storeName);
     return HFileArchiveTestingUtil.getStoreArchivePath(util.getConfiguration(), region, store);
   }
 }

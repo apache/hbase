@@ -60,7 +60,7 @@ class Compactor extends Configured {
    * nothing made it through the compaction.
    * @throws IOException
    */
-  StoreFile.Writer compact(final Store store,
+  StoreFile.Writer compact(final HStore store,
       final Collection<StoreFile> filesToCompact,
       final boolean majorCompaction, final long maxId)
   throws IOException {
@@ -176,9 +176,9 @@ class Compactor extends Configured {
               ++progress.currentCompactedKVs;
 
               // check periodically to see if a system stop is requested
-              if (Store.closeCheckInterval > 0) {
+              if (HStore.closeCheckInterval > 0) {
                 bytesWritten += kv.getLength();
-                if (bytesWritten > Store.closeCheckInterval) {
+                if (bytesWritten > HStore.closeCheckInterval) {
                   bytesWritten = 0;
                   isInterrupted(store, writer);
                 }
@@ -201,7 +201,7 @@ class Compactor extends Configured {
     return writer;
   }
 
-  void isInterrupted(final Store store, final StoreFile.Writer writer)
+  void isInterrupted(final HStore store, final StoreFile.Writer writer)
   throws IOException {
     if (store.getHRegion().areWritesEnabled()) return;
     // Else cleanup.

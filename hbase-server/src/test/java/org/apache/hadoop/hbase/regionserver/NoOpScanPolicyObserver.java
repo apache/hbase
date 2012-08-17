@@ -25,9 +25,9 @@ public class NoOpScanPolicyObserver extends BaseRegionObserver {
    */
   @Override
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
-    Store.ScanInfo oldSI = store.getScanInfo();
-    Store.ScanInfo scanInfo = new Store.ScanInfo(store.getFamily(), oldSI.getTtl(),
+      HStore store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
+    HStore.ScanInfo oldSI = store.getScanInfo();
+    HStore.ScanInfo scanInfo = new HStore.ScanInfo(store.getFamily(), oldSI.getTtl(),
         oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
     Scan scan = new Scan();
     scan.setMaxVersions(oldSI.getMaxVersions());
@@ -41,11 +41,11 @@ public class NoOpScanPolicyObserver extends BaseRegionObserver {
    */
   @Override
   public InternalScanner preCompactScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
+      HStore store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
       InternalScanner s) throws IOException {
     // this demonstrates how to override the scanners default behavior
-    Store.ScanInfo oldSI = store.getScanInfo();
-    Store.ScanInfo scanInfo = new Store.ScanInfo(store.getFamily(), oldSI.getTtl(),
+    HStore.ScanInfo oldSI = store.getScanInfo();
+    HStore.ScanInfo scanInfo = new HStore.ScanInfo(store.getFamily(), oldSI.getTtl(),
         oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
     Scan scan = new Scan();
     scan.setMaxVersions(oldSI.getMaxVersions());
@@ -55,7 +55,7 @@ public class NoOpScanPolicyObserver extends BaseRegionObserver {
 
   @Override
   public KeyValueScanner preStoreScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, final Scan scan, final NavigableSet<byte[]> targetCols, KeyValueScanner s)
+      HStore store, final Scan scan, final NavigableSet<byte[]> targetCols, KeyValueScanner s)
       throws IOException {
     return new StoreScanner(store, store.getScanInfo(), scan, targetCols);
   }

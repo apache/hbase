@@ -236,7 +236,7 @@ public class TestHRegion extends HBaseTestCase {
       MonitoredTask status = TaskMonitor.get().createStatus(method);
       Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(
           Bytes.BYTES_COMPARATOR);
-      for (HStore store : region.getStores().values()) {
+      for (Store store : region.getStores().values()) {
         maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(),
             minSeqId - 1);
       }
@@ -288,7 +288,7 @@ public class TestHRegion extends HBaseTestCase {
       MonitoredTask status = TaskMonitor.get().createStatus(method);
       Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(
           Bytes.BYTES_COMPARATOR);
-      for (HStore store : region.getStores().values()) {
+      for (Store store : region.getStores().values()) {
         maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(),
             recoverSeqId - 1);
       }
@@ -336,7 +336,7 @@ public class TestHRegion extends HBaseTestCase {
       
       Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(
         Bytes.BYTES_COMPARATOR);
-      for (HStore store : region.getStores().values()) {
+      for (Store store : region.getStores().values()) {
         maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), minSeqId);
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir,
@@ -864,7 +864,7 @@ public class TestHRegion extends HBaseTestCase {
       put.add(kv);
 
       //checkAndPut with wrong value
-      Store store = (Store) region.getStore(fam1);
+      HStore store = (HStore) region.getStore(fam1);
       store.memstore.kvset.size();
 
       boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
@@ -1379,10 +1379,10 @@ public class TestHRegion extends HBaseTestCase {
       // extract the key values out the memstore:
       // This is kinda hacky, but better than nothing...
       long now = System.currentTimeMillis();
-      KeyValue firstKv = ((Store) region.getStore(fam1)).memstore.kvset.first();
+      KeyValue firstKv = ((HStore) region.getStore(fam1)).memstore.kvset.first();
       assertTrue(firstKv.getTimestamp() <= now);
       now = firstKv.getTimestamp();
-      for (KeyValue kv : ((Store) region.getStore(fam1)).memstore.kvset) {
+      for (KeyValue kv : ((HStore) region.getStore(fam1)).memstore.kvset) {
         assertTrue(kv.getTimestamp() <= now);
         now = kv.getTimestamp();
       }
@@ -2320,7 +2320,7 @@ public class TestHRegion extends HBaseTestCase {
 
       assertEquals(value+amount, result);
 
-      Store store = (Store) region.getStore(fam1);
+      HStore store = (HStore) region.getStore(fam1);
       // ICV removes any extra values floating around in there.
       assertEquals(1, store.memstore.kvset.size());
       assertTrue(store.memstore.snapshot.isEmpty());
@@ -2346,7 +2346,7 @@ public class TestHRegion extends HBaseTestCase {
       region.put(put);
 
       // get the store in question:
-      Store s = (Store) region.getStore(fam1);
+      HStore s = (HStore) region.getStore(fam1);
       s.snapshot(); //bam
 
       // now increment:
@@ -2490,7 +2490,7 @@ public class TestHRegion extends HBaseTestCase {
       // flush to disk.
       region.flushcache();
 
-      Store store = (Store) region.getStore(fam1);
+      HStore store = (HStore) region.getStore(fam1);
       assertEquals(0, store.memstore.kvset.size());
 
       long r = region.incrementColumnValue(row, fam1, qual1, amount, true);
@@ -2516,7 +2516,7 @@ public class TestHRegion extends HBaseTestCase {
       region.put(put);
       region.flushcache();
 
-      Store store = (Store) region.getStore(fam1);
+      HStore store = (HStore) region.getStore(fam1);
       assertEquals(0, store.memstore.kvset.size());
 
       long r = region.incrementColumnValue(row, fam1, qual3, amount, true);
@@ -2562,7 +2562,7 @@ public class TestHRegion extends HBaseTestCase {
 
       assertEquals(value+amount, result);
 
-      Store store = (Store) region.getStore(fam1);
+      HStore store = (HStore) region.getStore(fam1);
       // ICV should update the existing Put with the same timestamp
       assertEquals(1, store.memstore.kvset.size());
       assertTrue(store.memstore.snapshot.isEmpty());
@@ -2578,7 +2578,7 @@ public class TestHRegion extends HBaseTestCase {
 
       assertEquals(value+amount, result);
 
-      store = (Store) region.getStore(fam1);
+      store = (HStore) region.getStore(fam1);
       // ICV should update the existing Put with the same timestamp
       assertEquals(2, store.memstore.kvset.size());
       assertTrue(store.memstore.snapshot.isEmpty());
@@ -3397,7 +3397,7 @@ public class TestHRegion extends HBaseTestCase {
         region.flushcache();
       }
       //before compaction
-      Store store = (Store) region.getStore(fam1);
+      HStore store = (HStore) region.getStore(fam1);
       List<StoreFile> storeFiles = store.getStorefiles();
       for (StoreFile storefile : storeFiles) {
         StoreFile.Reader reader = storefile.getReader();

@@ -158,7 +158,7 @@ public class CompactSplitThread implements CompactionRequestor {
 
   public synchronized boolean requestSplit(final HRegion r) {
     // don't split regions that are blocking
-    if (shouldSplitRegion() && r.getCompactPriority() >= HStore.PRIORITY_USER) {
+    if (shouldSplitRegion() && r.getCompactPriority() >= Store.PRIORITY_USER) {
       byte[] midKey = r.checkSplit();
       if (midKey != null) {
         requestSplit(r, midKey);
@@ -186,19 +186,19 @@ public class CompactSplitThread implements CompactionRequestor {
 
   public synchronized void requestCompaction(final HRegion r,
       final String why) throws IOException {
-    for (HStore s : r.getStores().values()) {
-      requestCompaction(r, s, why, HStore.NO_PRIORITY);
+    for (Store s : r.getStores().values()) {
+      requestCompaction(r, s, why, Store.NO_PRIORITY);
     }
   }
 
-  public synchronized void requestCompaction(final HRegion r, final HStore s,
+  public synchronized void requestCompaction(final HRegion r, final Store s,
       final String why) throws IOException {
-    requestCompaction(r, s, why, HStore.NO_PRIORITY);
+    requestCompaction(r, s, why, Store.NO_PRIORITY);
   }
 
   public synchronized void requestCompaction(final HRegion r, final String why,
       int p) throws IOException {
-    for (HStore s : r.getStores().values()) {
+    for (Store s : r.getStores().values()) {
       requestCompaction(r, s, why, p);
     }
   }
@@ -209,7 +209,7 @@ public class CompactSplitThread implements CompactionRequestor {
    * @param why Why compaction requested -- used in debug messages
    * @param priority override the default priority (NO_PRIORITY == decide)
    */
-  public synchronized void requestCompaction(final HRegion r, final HStore s,
+  public synchronized void requestCompaction(final HRegion r, final Store s,
       final String why, int priority) throws IOException {
     if (this.server.isStopped()) {
       return;
@@ -217,7 +217,7 @@ public class CompactSplitThread implements CompactionRequestor {
     CompactionRequest cr = s.requestCompaction(priority);
     if (cr != null) {
       cr.setServer(server);
-      if (priority != HStore.NO_PRIORITY) {
+      if (priority != Store.NO_PRIORITY) {
         cr.setPriority(priority);
       }
       ThreadPoolExecutor pool = s.throttleCompaction(cr.getSize())

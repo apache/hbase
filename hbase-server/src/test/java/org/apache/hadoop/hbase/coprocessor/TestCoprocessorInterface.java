@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -174,13 +174,13 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     }
     @Override
     public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-        Store store, InternalScanner scanner) {
+        HStore store, InternalScanner scanner) {
       preCompactCalled = true;
       return scanner;
     }
     @Override
     public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,
-        Store store, StoreFile resultFile) {
+        HStore store, StoreFile resultFile) {
       postCompactCalled = true;
     }
     @Override

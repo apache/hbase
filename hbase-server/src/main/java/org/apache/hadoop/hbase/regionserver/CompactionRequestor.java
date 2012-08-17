@@ -37,7 +37,7 @@ public interface CompactionRequestor {
    * @param why Why compaction was requested -- used in debug messages
    * @throws IOException
    */
-  public void requestCompaction(final HRegion r, final HStore s, final String why)
+  public void requestCompaction(final HRegion r, final Store s, final String why)
       throws IOException;
 
   /**
@@ -55,7 +55,7 @@ public interface CompactionRequestor {
    * @param pri Priority of this compaction. minHeap. <=0 is critical
    * @throws IOException
    */
-  public void requestCompaction(final HRegion r, final HStore s,
+  public void requestCompaction(final HRegion r, final Store s,
       final String why, int pri) throws IOException;
 
 }

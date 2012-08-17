@@ -72,7 +72,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -551,8 +551,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
               .withCompression(compression)
               .withDataBlockEncoder(dataBlockEncoder)
               .withBloomType(bloomFilterType)
-              .withChecksumType(Store.getChecksumType(conf))
-              .withBytesPerChecksum(Store.getBytesPerChecksum(conf))
+              .withChecksumType(HStore.getChecksumType(conf))
+              .withBytesPerChecksum(HStore.getBytesPerChecksum(conf))
               .build();
       HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();

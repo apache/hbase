@@ -342,9 +342,9 @@ public class RegionCoprocessorHost
 
   /**
    * See
-   * {@link RegionObserver#preCompactScannerOpen(ObserverContext, Store, List, ScanType, long, InternalScanner)}
+   * {@link RegionObserver#preCompactScannerOpen(ObserverContext, HStore, List, ScanType, long, InternalScanner)}
    */
-  public InternalScanner preCompactScannerOpen(Store store, List<StoreFileScanner> scanners,
+  public InternalScanner preCompactScannerOpen(HStore store, List<StoreFileScanner> scanners,
       ScanType scanType, long earliestPutTs) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     InternalScanner s = null;
@@ -373,7 +373,7 @@ public class RegionCoprocessorHost
    * @return If {@code true}, skip the normal selection process and use the current list
    * @throws IOException
    */
-  public boolean preCompactSelection(Store store, List<StoreFile> candidates) throws IOException {
+  public boolean preCompactSelection(HStore store, List<StoreFile> candidates) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
     for (RegionEnvironment env: coprocessors) {
@@ -401,7 +401,7 @@ public class RegionCoprocessorHost
    * @param store The store where compaction is being requested
    * @param selected The store files selected to compact
    */
-  public void postCompactSelection(Store store,
+  public void postCompactSelection(HStore store,
       ImmutableList<StoreFile> selected) {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
@@ -426,7 +426,7 @@ public class RegionCoprocessorHost
    * @param scanner the scanner used to read store data during compaction
    * @throws IOException 
    */
-  public InternalScanner preCompact(Store store, InternalScanner scanner) throws IOException {
+  public InternalScanner preCompact(HStore store, InternalScanner scanner) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
     for (RegionEnvironment env: coprocessors) {
@@ -453,7 +453,7 @@ public class RegionCoprocessorHost
    * @param resultFile the new store file written during compaction
    * @throws IOException
    */
-  public void postCompact(Store store, StoreFile resultFile) throws IOException {
+  public void postCompact(HStore store, StoreFile resultFile) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -474,7 +474,7 @@ public class RegionCoprocessorHost
    * Invoked before a memstore flush
    * @throws IOException
    */
-  public InternalScanner preFlush(Store store, InternalScanner scanner) throws IOException {
+  public InternalScanner preFlush(HStore store, InternalScanner scanner) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     boolean bypass = false;
     for (RegionEnvironment env: coprocessors) {
@@ -518,9 +518,9 @@ public class RegionCoprocessorHost
 
   /**
    * See
-   * {@link RegionObserver#preFlush(ObserverContext, Store, KeyValueScanner)}
+   * {@link RegionObserver#preFlush(ObserverContext, HStore, KeyValueScanner)}
    */
-  public InternalScanner preFlushScannerOpen(Store store, KeyValueScanner memstoreScanner) throws IOException {
+  public InternalScanner preFlushScannerOpen(HStore store, KeyValueScanner memstoreScanner) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     InternalScanner s = null;
     for (RegionEnvironment env : coprocessors) {
@@ -564,7 +564,7 @@ public class RegionCoprocessorHost
    * Invoked after a memstore flush
    * @throws IOException
    */
-  public void postFlush(final Store store, final StoreFile storeFile) throws IOException {
+  public void postFlush(final HStore store, final StoreFile storeFile) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
@@ -1221,9 +1221,9 @@ public class RegionCoprocessorHost
 
   /**
    * See
-   * {@link RegionObserver#preStoreScannerOpen(ObserverContext, Store, Scan, NavigableSet, KeyValueScanner)}
+   * {@link RegionObserver#preStoreScannerOpen(ObserverContext, HStore, Scan, NavigableSet, KeyValueScanner)}
    */
-  public KeyValueScanner preStoreScannerOpen(Store store, Scan scan,
+  public KeyValueScanner preStoreScannerOpen(HStore store, Scan scan,
       final NavigableSet<byte[]> targetCols) throws IOException {
     KeyValueScanner s = null;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;

@@ -73,7 +73,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1815,7 +1815,7 @@ public class HBaseTestingUtility {
    * Do a small get/scan against one store. This is required because store
    * has no actual methods of querying itself, and relies on StoreScanner.
    */
-  public static List<KeyValue> getFromStoreFile(Store store,
+  public static List<KeyValue> getFromStoreFile(HStore store,
                                                 Get get) throws IOException {
     MultiVersionConsistencyControl.resetThreadReadPoint();
     Scan scan = new Scan(get);
@@ -1839,7 +1839,7 @@ public class HBaseTestingUtility {
    * Do a small get/scan against one store. This is required because store
    * has no actual methods of querying itself, and relies on StoreScanner.
    */
-  public static List<KeyValue> getFromStoreFile(Store store,
+  public static List<KeyValue> getFromStoreFile(HStore store,
                                                 byte [] row,
                                                 NavigableSet<byte[]> columns
                                                 ) throws IOException {

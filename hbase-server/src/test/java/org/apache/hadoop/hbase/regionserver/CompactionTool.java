@@ -111,7 +111,7 @@ public class CompactionTool implements Tool {
    * @return
    * @throws IOException
    */
-  private Store getStore(final FileSystem fs, final Path storedir, final Path tmpdir)
+  private HStore getStore(final FileSystem fs, final Path storedir, final Path tmpdir)
   throws IOException {
     // TODO: Let config on table and column family be configurable from
     // command-line setting versions, etc.  For now do defaults
@@ -121,7 +121,7 @@ public class CompactionTool implements Tool {
     HRegion region = createHRegion(hri, tmpdir);
     // Create a Store w/ check of hbase.rootdir blanked out and return our
     // list of files instead of have Store search its home dir.
-    return new Store(tmpdir, region, hcd, fs, getConf()) {
+    return new HStore(tmpdir, region, hcd, fs, getConf()) {
       @Override
       public FileStatus[] getStoreFiles() throws IOException {
         return this.fs.listStatus(getHomedir());
@@ -145,7 +145,7 @@ public class CompactionTool implements Tool {
     errCode = checkdir(fs, tmpdir);
     if (errCode != 0) return errCode;
     // Get a Store that wraps the inputdir of files to compact.
-    Store store = getStore(fs, inputdir, tmpdir);
+    HStore store = getStore(fs, inputdir, tmpdir);
     // Now we have a Store, run a compaction of passed files.
     try {
       CompactionRequest cr = store.requestCompaction();

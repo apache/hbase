@@ -135,7 +135,7 @@ public class ScanQueryMatcher {
    * @param oldestUnexpiredTS the oldest timestamp we are interested in,
    *  based on TTL
    */
-  public ScanQueryMatcher(Scan scan, Store.ScanInfo scanInfo,
+  public ScanQueryMatcher(Scan scan, HStore.ScanInfo scanInfo,
       NavigableSet<byte[]> columns, ScanType scanType,
       long readPointToUse, long earliestPutTs, long oldestUnexpiredTS) {
     this.tr = scan.getTimeRange();
@@ -181,7 +181,7 @@ public class ScanQueryMatcher {
   /*
    * Constructor for tests
    */
-  ScanQueryMatcher(Scan scan, Store.ScanInfo scanInfo,
+  ScanQueryMatcher(Scan scan, HStore.ScanInfo scanInfo,
       NavigableSet<byte[]> columns, long oldestUnexpiredTS) {
     this(scan, scanInfo, columns, ScanType.USER_SCAN,
           Long.MAX_VALUE, /* max Readpoint to track versions */

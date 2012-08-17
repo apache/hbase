@@ -49,7 +49,7 @@ public class TestCompactSelection extends TestCase {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private Configuration conf;
-  private Store store;
+  private HStore store;
   private static final String DIR=
     TEST_UTIL.getDataTestDir("TestCompactSelection").toString();
   private static Path TEST_FILE;
@@ -91,7 +91,7 @@ public class TestCompactSelection extends TestCase {
     Path tableDir = new Path(basedir, Bytes.toString(htd.getName()));
     region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
 
-    store = new Store(basedir, region, hcd, fs, conf);
+    store = new HStore(basedir, region, hcd, fs, conf);
     TEST_FILE = StoreFile.getRandomFilename(fs, store.getHomedir());
     fs.create(TEST_FILE);
   }

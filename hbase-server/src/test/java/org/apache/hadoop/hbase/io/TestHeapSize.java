@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MemStore;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -303,8 +303,8 @@ public class TestHeapSize extends TestCase {
         sc.heapSize());
 
     // Store Overhead
-    cl = Store.class;
-    actual = Store.FIXED_OVERHEAD;
+    cl = HStore.class;
+    actual = HStore.FIXED_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
     if(expected != actual) {
       ClassSize.estimateBase(cl, true);

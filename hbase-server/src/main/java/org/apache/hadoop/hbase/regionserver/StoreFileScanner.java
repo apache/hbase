@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
  */
 @InterfaceAudience.LimitedPrivate("Coprocessor")
 public class StoreFileScanner implements KeyValueScanner {
-  static final Log LOG = LogFactory.getLog(Store.class);
+  static final Log LOG = LogFactory.getLog(HStore.class);
 
   // the reader it comes from:
   private final StoreFile.Reader reader;

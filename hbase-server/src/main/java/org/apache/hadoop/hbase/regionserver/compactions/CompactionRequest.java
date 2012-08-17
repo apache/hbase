@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
@@ -52,7 +52,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     Runnable {
     static final Log LOG = LogFactory.getLog(CompactionRequest.class);
     private final HRegion r;
-    private final Store s;
+    private final HStore s;
     private final CompactSelection compactSelection;
     private final long totalSize;
     private final boolean isMajor;
@@ -68,7 +68,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     private static final ConcurrentHashMap<Long, AtomicInteger>
       minorCompactions = new ConcurrentHashMap<Long, AtomicInteger>();
 
-    public CompactionRequest(HRegion r, Store s,
+    public CompactionRequest(HRegion r, HStore s,
         CompactSelection files, boolean isMajor, int p) {
       Preconditions.checkNotNull(r);
       Preconditions.checkNotNull(files);
@@ -181,7 +181,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     }
 
     /** Gets the Store for the request */
-    public Store getStore() {
+    public HStore getStore() {
       return s;
     }
 

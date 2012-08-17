@@ -73,11 +73,11 @@ public abstract class RegionSplitPolicy extends Configured {
     if (explicitSplitPoint != null) {
       return explicitSplitPoint;
     }
-    Map<byte[], HStore> stores = region.getStores();
+    Map<byte[], Store> stores = region.getStores();
 
     byte[] splitPointFromLargestStore = null;
     long largestStoreSize = 0;
-    for (HStore s : stores.values()) {
+    for (Store s : stores.values()) {
       byte[] splitPoint = s.getSplitPoint();
       long storeSize = s.getSize();
       if (splitPoint != null && largestStoreSize < storeSize) {

@@ -148,7 +148,7 @@ public class TestSplitTransaction {
     when(storeFileMock.isReference()).thenReturn(true);
 
     // add the mock to the parent stores
-    Store storeMock = Mockito.mock(Store.class);
+    HStore storeMock = Mockito.mock(HStore.class);
     List<StoreFile> storeFileList = new ArrayList<StoreFile>(1);
     storeFileList.add(storeFileMock);
     when(storeMock.getStorefiles()).thenReturn(storeFileList);

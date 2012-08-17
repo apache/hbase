@@ -84,7 +84,7 @@ class GetClosestRowBeforeTracker {
    * @return True if this <code>kv</code> is expired.
    */
   boolean isExpired(final KeyValue kv) {
-    return Store.isExpired(kv, this.oldestts);
+    return HStore.isExpired(kv, this.oldestts);
   }
 
   /*

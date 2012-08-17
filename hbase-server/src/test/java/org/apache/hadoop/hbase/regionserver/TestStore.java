@@ -74,7 +74,7 @@ import com.google.common.base.Joiner;
 public class TestStore extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestStore.class);
 
-  Store store;
+  HStore store;
   byte [] table = Bytes.toBytes("table");
   byte [] family = Bytes.toBytes("family");
 
@@ -147,7 +147,7 @@ public class TestStore extends TestCase {
     HLog hlog = new HLog(fs, logdir, oldLogDir, conf);
     HRegion region = new HRegion(basedir, hlog, fs, conf, info, htd, null);
 
-    store = new Store(basedir, region, hcd, fs, conf);
+    store = new HStore(basedir, region, hcd, fs, conf);
   }
 
   public void testDeleteExpiredStoreFiles() throws Exception {
@@ -216,14 +216,14 @@ public class TestStore extends TestCase {
     }
     // after flush; check the lowest time stamp
     long lowestTimeStampFromStore = 
-        Store.getLowestTimestamp(store.getStorefiles());
+        HStore.getLowestTimestamp(store.getStorefiles());
     long lowestTimeStampFromFS = 
       getLowestTimeStampFromFS(fs,store.getStorefiles());
     assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS);
     
     // after compact; check the lowest time stamp
     store.compact(store.requestCompaction());
-    lowestTimeStampFromStore = Store.getLowestTimestamp(store.getStorefiles());
+    lowestTimeStampFromStore = HStore.getLowestTimestamp(store.getStorefiles());
     lowestTimeStampFromFS = getLowestTimeStampFromFS(fs,store.getStorefiles());
     assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS); 
   }
@@ -278,7 +278,7 @@ public class TestStore extends TestCase {
     w.close();
     this.store.close();
     // Reopen it... should pick up two files
-    this.store = new Store(storedir.getParent().getParent(),
+    this.store = new HStore(storedir.getParent().getParent(),
       this.store.getHRegion(),
       this.store.getFamily(), fs, c);
     System.out.println(this.store.getHRegionInfo().getEncodedName());
@@ -688,7 +688,7 @@ public class TestStore extends TestCase {
 
 
 
-  private static void flushStore(Store store, long id) throws IOException {
+  private static void flushStore(HStore store, long id) throws IOException {
     StoreFlusher storeFlusher = store.getStoreFlusher(id);
     storeFlusher.prepare();
     storeFlusher.flushCache(Mockito.mock(MonitoredTask.class));

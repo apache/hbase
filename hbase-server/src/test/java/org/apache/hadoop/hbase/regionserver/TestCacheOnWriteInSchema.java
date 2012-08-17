@@ -121,7 +121,7 @@ public class TestCacheOnWriteInSchema {
   private final CacheOnWriteType cowType;
   private Configuration conf;
   private final String testDescription;
-  private Store store;
+  private HStore store;
   private FileSystem fs;
 
   public TestCacheOnWriteInSchema(CacheOnWriteType cowType) {
@@ -164,7 +164,7 @@ public class TestCacheOnWriteInSchema {
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
     HLog hlog = new HLog(fs, logdir, oldLogDir, conf);
     HRegion region = new HRegion(basedir, hlog, fs, conf, info, htd, null);
-    store = new Store(basedir, region, hcd, fs, conf);
+    store = new HStore(basedir, region, hcd, fs, conf);
   }
 
   @After

@@ -45,7 +45,7 @@ public class TestRegionSplitPolicy {
   private Configuration conf;
   private HTableDescriptor htd;
   private HRegion mockRegion;
-  private TreeMap<byte[], Store> stores;
+  private TreeMap<byte[], HStore> stores;
   private static final byte [] TABLENAME = new byte [] {'t'};
 
   @Before
@@ -57,7 +57,7 @@ public class TestRegionSplitPolicy {
     Mockito.doReturn(htd).when(mockRegion).getTableDesc();
     Mockito.doReturn(hri).when(mockRegion).getRegionInfo();
 
-    stores = new TreeMap<byte[], Store>(Bytes.BYTES_COMPARATOR);
+    stores = new TreeMap<byte[], HStore>(Bytes.BYTES_COMPARATOR);
     Mockito.doReturn(stores).when(mockRegion).getStores();
   }
 
@@ -90,7 +90,7 @@ public class TestRegionSplitPolicy {
     // Add a store in excess of split size.  Because there are "no regions"
     // on this server -- rss.getOnlineRegions is 0 -- then we should split
     // like a constantsizeregionsplitpolicy would
-    Store mockStore = Mockito.mock(Store.class);
+    HStore mockStore = Mockito.mock(HStore.class);
     Mockito.doReturn(2000L).when(mockStore).getSize();
     Mockito.doReturn(true).when(mockStore).canSplit();
     stores.put(new byte[]{1}, mockStore);
@@ -152,7 +152,7 @@ public class TestRegionSplitPolicy {
     Mockito.doReturn(myHtd).when(myMockRegion).getTableDesc();
     Mockito.doReturn(stores).when(myMockRegion).getStores();
 
-    Store mockStore = Mockito.mock(Store.class);
+    HStore mockStore = Mockito.mock(HStore.class);
     Mockito.doReturn(2000L).when(mockStore).getSize();
     Mockito.doReturn(true).when(mockStore).canSplit();
     Mockito.doReturn(Bytes.toBytes("abcd")).when(mockStore).getSplitPoint();
@@ -190,7 +190,7 @@ public class TestRegionSplitPolicy {
     assertFalse(policy.shouldSplit());
 
     // Add a store above the requisite size. Should split.
-    Store mockStore = Mockito.mock(Store.class);
+    HStore mockStore = Mockito.mock(HStore.class);
     Mockito.doReturn(2000L).when(mockStore).getSize();
     Mockito.doReturn(true).when(mockStore).canSplit();
     stores.put(new byte[]{1}, mockStore);
@@ -228,7 +228,7 @@ public class TestRegionSplitPolicy {
     assertNull(policy.getSplitPoint());
 
     // Add a store above the requisite size. Should split.
-    Store mockStore = Mockito.mock(Store.class);
+    HStore mockStore = Mockito.mock(HStore.class);
     Mockito.doReturn(2000L).when(mockStore).getSize();
     Mockito.doReturn(true).when(mockStore).canSplit();
     Mockito.doReturn(Bytes.toBytes("store 1 split"))
@@ -239,7 +239,7 @@ public class TestRegionSplitPolicy {
         Bytes.toString(policy.getSplitPoint()));
 
     // Add a bigger store. The split point should come from that one
-    Store mockStore2 = Mockito.mock(Store.class);
+    HStore mockStore2 = Mockito.mock(HStore.class);
     Mockito.doReturn(4000L).when(mockStore2).getSize();
     Mockito.doReturn(true).when(mockStore2).canSplit();
     Mockito.doReturn(Bytes.toBytes("store 2 split"))

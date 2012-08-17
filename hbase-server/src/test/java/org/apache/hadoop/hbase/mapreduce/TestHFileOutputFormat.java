@@ -64,7 +64,7 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -706,7 +706,7 @@ public class TestHFileOutputFormat  {
       assertEquals("Should start with empty table", 0, util.countRows(table));
 
       // deep inspection: get the StoreFile dir
-      final Path storePath = Store.getStoreHomedir(
+      final Path storePath = HStore.getStoreHomedir(
           HTableDescriptor.getTableDir(FSUtils.getRootDir(conf), TABLE_NAME),
           admin.getTableRegions(TABLE_NAME).get(0).getEncodedName(),
           FAMILIES[0]);

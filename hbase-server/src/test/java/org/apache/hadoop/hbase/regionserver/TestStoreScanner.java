@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.Store.ScanInfo;
+import org.apache.hadoop.hbase.regionserver.HStore.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
@@ -550,7 +550,7 @@ public class TestStoreScanner extends TestCase {
       List<KeyValueScanner> scanners = scanFixture(kvs);
       Scan scan = new Scan();
       scan.setMaxVersions(2);
-      Store.ScanInfo scanInfo = new Store.ScanInfo(Bytes.toBytes("cf"),
+      HStore.ScanInfo scanInfo = new HStore.ScanInfo(Bytes.toBytes("cf"),
         0 /* minVersions */,
         2 /* maxVersions */, 500 /* ttl */,
         false /* keepDeletedCells */,

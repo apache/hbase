@@ -346,7 +346,7 @@ public class HFileReadWriteTest {
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     HRegion region = new HRegion(outputDir, null, fs, conf, regionInfo, htd,
         null);
-    Store store = new Store(outputDir, region, columnDescriptor, fs, conf);
+    HStore store = new HStore(outputDir, region, columnDescriptor, fs, conf);
 
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf,
         new CacheConfig(conf), fs, blockSize)
@@ -400,7 +400,7 @@ public class HFileReadWriteTest {
     return resultPath;
   }
 
-  private void performMerge(List<StoreFileScanner> scanners, Store store,
+  private void performMerge(List<StoreFileScanner> scanners, HStore store,
       StoreFile.Writer writer) throws IOException {
     InternalScanner scanner = null;
     try {

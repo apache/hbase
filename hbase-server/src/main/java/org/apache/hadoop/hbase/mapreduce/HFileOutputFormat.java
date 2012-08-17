@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -205,8 +205,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
             .withCompression(compression)
             .withComparator(KeyValue.KEY_COMPARATOR)
             .withDataBlockEncoder(encoder)
-            .withChecksumType(Store.getChecksumType(conf))
-            .withBytesPerChecksum(Store.getBytesPerChecksum(conf))
+            .withChecksumType(HStore.getChecksumType(conf))
+            .withBytesPerChecksum(HStore.getBytesPerChecksum(conf))
             .create();
         this.writers.put(family, wl);
         return wl;

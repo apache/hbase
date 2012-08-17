@@ -65,7 +65,7 @@ import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -353,7 +353,7 @@ public class TestCatalogJanitor {
       Path rootdir = services.getMasterFileSystem().getRootDir();
       Path tabledir =
         HTableDescriptor.getTableDir(rootdir, htd.getName());
-      Path storedir = Store.getStoreHomedir(tabledir, splita.getEncodedName(),
+      Path storedir = HStore.getStoreHomedir(tabledir, splita.getEncodedName(),
           htd.getColumnFamilies()[0].getName());
       Reference ref = Reference.createTopReference(Bytes.toBytes("ccc"));
       long now = System.currentTimeMillis();
@@ -599,7 +599,7 @@ public class TestCatalogJanitor {
     // the single test passes, but when the full suite is run, things get borked).
     FSUtils.setRootDir(fs.getConf(), rootdir);
     Path tabledir = HTableDescriptor.getTableDir(rootdir, htd.getName());
-    Path storedir = Store.getStoreHomedir(tabledir, parent.getEncodedName(),
+    Path storedir = HStore.getStoreHomedir(tabledir, parent.getEncodedName(),
       htd.getColumnFamilies()[0].getName());
 
     // delete the file and ensure that the files have been archived
@@ -665,7 +665,7 @@ public class TestCatalogJanitor {
     // the single test passes, but when the full suite is run, things get borked).
     FSUtils.setRootDir(fs.getConf(), rootdir);
     Path tabledir = HTableDescriptor.getTableDir(rootdir, parent.getTableName());
-    Path storedir = Store.getStoreHomedir(tabledir, parent.getEncodedName(),
+    Path storedir = HStore.getStoreHomedir(tabledir, parent.getEncodedName(),
       htd.getColumnFamilies()[0].getName());
     System.out.println("Old root:" + rootdir);
     System.out.println("Old table:" + tabledir);
@@ -772,7 +772,7 @@ public class TestCatalogJanitor {
   throws IOException {
     Path rootdir = services.getMasterFileSystem().getRootDir();
     Path tabledir = HTableDescriptor.getTableDir(rootdir, parent.getTableName());
-    Path storedir = Store.getStoreHomedir(tabledir, daughter.getEncodedName(),
+    Path storedir = HStore.getStoreHomedir(tabledir, daughter.getEncodedName(),
       htd.getColumnFamilies()[0].getName());
     Reference ref =
       top? Reference.createTopReference(midkey): Reference.createBottomReference(midkey);

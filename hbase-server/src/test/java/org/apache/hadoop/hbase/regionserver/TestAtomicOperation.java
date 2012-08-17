@@ -127,7 +127,7 @@ public class TestAtomicOperation extends HBaseTestCase {
 
     assertEquals(value+amount, result);
 
-    Store store = (Store) region.getStore(fam1);
+    HStore store = (HStore) region.getStore(fam1);
     // ICV removes any extra values floating around in there.
     assertEquals(1, store.memstore.kvset.size());
     assertTrue(store.memstore.snapshot.isEmpty());

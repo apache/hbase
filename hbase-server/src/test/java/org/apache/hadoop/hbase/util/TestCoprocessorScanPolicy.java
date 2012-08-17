@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -203,15 +203,15 @@ public class TestCoprocessorScanPolicy {
 
     @Override
     public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
+        HStore store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
       Long newTtl = ttls.get(store.getTableName());
       if (newTtl != null) {
         System.out.println("PreFlush:" + newTtl);
       }
       Integer newVersions = versions.get(store.getTableName());
-      Store.ScanInfo oldSI = store.getScanInfo();
+      HStore.ScanInfo oldSI = store.getScanInfo();
       HColumnDescriptor family = store.getFamily();
-      Store.ScanInfo scanInfo = new Store.ScanInfo(family.getName(), family.getMinVersions(),
+      HStore.ScanInfo scanInfo = new HStore.ScanInfo(family.getName(), family.getMinVersions(),
           newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
           oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
@@ -224,13 +224,13 @@ public class TestCoprocessorScanPolicy {
 
     @Override
     public InternalScanner preCompactScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
-        Store store, List<? extends KeyValueScanner> scanners, ScanType scanType,
+        HStore store, List<? extends KeyValueScanner> scanners, ScanType scanType,
         long earliestPutTs, InternalScanner s) throws IOException {
       Long newTtl = ttls.get(store.getTableName());
       Integer newVersions = versions.get(store.getTableName());
-      Store.ScanInfo oldSI = store.getScanInfo();
+      HStore.ScanInfo oldSI = store.getScanInfo();
       HColumnDescriptor family = store.getFamily();
-      Store.ScanInfo scanInfo = new Store.ScanInfo(family.getName(), family.getMinVersions(),
+      HStore.ScanInfo scanInfo = new HStore.ScanInfo(family.getName(), family.getMinVersions(),
           newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
           oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
@@ -242,13 +242,13 @@ public class TestCoprocessorScanPolicy {
 
     @Override
     public KeyValueScanner preStoreScannerOpen(
-        final ObserverContext<RegionCoprocessorEnvironment> c, Store store, final Scan scan,
+        final ObserverContext<RegionCoprocessorEnvironment> c, HStore store, final Scan scan,
         final NavigableSet<byte[]> targetCols, KeyValueScanner s) throws IOException {
       Long newTtl = ttls.get(store.getTableName());
       Integer newVersions = versions.get(store.getTableName());
-      Store.ScanInfo oldSI = store.getScanInfo();
+      HStore.ScanInfo oldSI = store.getScanInfo();
       HColumnDescriptor family = store.getFamily();
-      Store.ScanInfo scanInfo = new Store.ScanInfo(family.getName(), family.getMinVersions(),
+      HStore.ScanInfo scanInfo = new HStore.ScanInfo(family.getName(), family.getMinVersions(),
           newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
           oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
