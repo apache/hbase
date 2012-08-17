@@ -3540,6 +3540,8 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
          </para>
          <para><link xlink:href="http://wiki.apache.org/hadoop/HBase/HBasePresentations">HBase Wiki</link> has a page with a number of presentations.
          </para>
+         <para><link xlink:href="http://refcardz.dzone.com/refcardz/hbase">HBase RefCard</link> from DZone.
+         </para>
        </section>
        <section xml:id="other.info.books"><title>HBase Books</title>
          <para><link xlink:href="http://shop.oreilly.com/product/0636920014348.do">HBase:  The Definitive Guide</link> by Lars George.
