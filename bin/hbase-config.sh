@@ -63,21 +63,6 @@ do
     hosts=$1
     shift
     HBASE_REGIONSERVERS=$hosts
-  elif [ "--mlock" = "$1" ]
-  then
-    shift
-    mlock_opts=$1
-    shift
-    mlock_agent="$HBASE_HOME/native/libmlockall_agent.so"
-    echo $mlock_agent
-    if [ -e $mlock_agent ]; then
-        HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS -agentpath:$mlock_agent=$mlock_opts"
-    else
-        cat 1>&2 <<EOF
-Unable to find mlockall_agent, hbase must be compiled with -Pnative
-EOF
-        exit 1
-    fi
   else
     # Presume we are at end of options and break
     break
@@ -102,6 +87,24 @@ fi
 # Source the hbase-env.sh.  Will have JAVA_HOME defined.
 if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
   . "${HBASE_CONF_DIR}/hbase-env.sh"
+fi
+
+# Set default value for regionserver uid if not present
+if [ -z "$HBASE_REGIONSERVER_UID" ]; then
+  HBASE_REGIONSERVER_UID="hbase"
+fi
+
+# Verify if hbase has the mlock agent
+if [ "$HBASE_REGIONSERVER_MLOCK" = "true" ]; then
+  MLOCK_AGENT="$HBASE_HOME/native/libmlockall_agent.so"
+  if [ ! -f "$MLOCK_AGENT" ]; then
+    cat 1>&2 <<EOF
+Unable to find mlockall_agent, hbase must be compiled with -Pnative
+EOF
+    exit 1
+  fi
+
+  HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS -agentpath:$MLOCK_AGENT=user=$HBASE_REGIONSERVER_UID"
 fi
 
 # Newer versions of glibc use an arena memory allocator that causes virtual
