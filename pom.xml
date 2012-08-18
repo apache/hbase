@@ -360,7 +360,7 @@
             <!--Pass -DskipJavadoc=true or -DskipJavadoc on command-line to skip javadoc building-->
             <skip>${skipJavadoc}</skip>
             <docfilessubdirs>true</docfilessubdirs>
-            <excludePackageNames>org.apache.hadoop.hbase.protobuf.generated.*:org.apache.hadoop.hbase.avro.generated.*:org.apache.hadoop.hbase.thrift.generated:org.apache.hadoop.hbase.rest.generated</excludePackageNames>
+            <excludePackageNames>org.apache.hadoop.hbase.protobuf.generated.*:org.apache.hadoop.hbase.thrift.generated:org.apache.hadoop.hbase.rest.generated</excludePackageNames>
             <debug>true</debug>
             <maxmemory>2g</maxmemory>
             <verbose>true</verbose>
@@ -481,11 +481,6 @@
           </configuration>
         </plugin>
         <!-- Build plugins -->
-        <plugin>
-          <groupId>org.apache.avro</groupId>
-          <artifactId>avro-maven-plugin</artifactId>
-          <version>${avro.version}</version>
-        </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
@@ -797,7 +792,6 @@
     <!-- Dependencies -->
     <hadoop-two.version>2.0.0-alpha</hadoop-two.version>
     <hadoop-one.version>1.0.3</hadoop-one.version>
-    <avro.version>1.5.3</avro.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.4</commons-codec.version>
     <commons-httpclient.version>3.1</commons-httpclient.version>
@@ -1036,7 +1030,7 @@
         <artifactId>servlet-api-2.5</artifactId>
         <version>${jetty.jspapi.version}</version>
       </dependency>
-      <!-- While jackson is also a dependency of both jersey and avro, these
+      <!-- While jackson is also a dependency of jersey it
            can bring in jars from different, incompatible versions. We force
            the same version with these dependencies -->
       <dependency>

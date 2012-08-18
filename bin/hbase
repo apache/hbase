@@ -86,8 +86,7 @@ if [ $# = 0 ]; then
   echo "  zookeeper        run a Zookeeper server"
   echo "  rest             run an HBase REST server" 
   echo "  thrift           run the HBase Thrift server" 
-  echo "  thrift2          run the HBase Thrift2 server" 
-  echo "  avro             run an HBase Avro server" 
+  echo "  thrift2          run the HBase Thrift2 server"
   echo ""
   echo "PACKAGE MANAGEMENT"
   echo "  classpath        dump hbase CLASSPATH"
@@ -312,11 +311,6 @@ elif [ "$COMMAND" = "rest" ] ; then
   CLASS='org.apache.hadoop.hbase.rest.Main'
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_REST_OPTS"
-  fi
-elif [ "$COMMAND" = "avro" ] ; then
-  CLASS='org.apache.hadoop.hbase.avro.AvroServer'
-  if [ "$1" != "stop" ] ; then
-    HBASE_OPTS="$HBASE_OPTS $HBASE_AVRO_OPTS"
   fi
 elif [ "$COMMAND" = "zookeeper" ] ; then
   CLASS='org.apache.hadoop.hbase.zookeeper.HQuorumPeer'
