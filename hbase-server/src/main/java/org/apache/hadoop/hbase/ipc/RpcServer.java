@@ -21,10 +21,12 @@
 package org.apache.hadoop.hbase.ipc;
 
 import com.google.common.base.Function;
-import org.apache.hadoop.io.Writable;
+import com.google.protobuf.Message;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -47,16 +49,16 @@ public interface RpcServer {
   /** Called for each call.
    * @param param writable parameter
    * @param receiveTime time
-   * @return Writable
+   * @return Message
    * @throws java.io.IOException e
    */
-  Writable call(Class<? extends VersionedProtocol> protocol,
-      Writable param, long receiveTime, MonitoredRPCHandler status)
+  Message call(Class<? extends VersionedProtocol> protocol,
+      RpcRequestBody param, long receiveTime, MonitoredRPCHandler status)
       throws IOException;
 
   void setErrorHandler(HBaseRPCErrorHandler handler);
 
-  void setQosFunction(Function<Writable, Integer> newFunc);
+  void setQosFunction(Function<RpcRequestBody, Integer> newFunc);
 
   void openServer();
 

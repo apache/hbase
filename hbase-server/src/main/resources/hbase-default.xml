@@ -523,7 +523,7 @@
   </property>
   <property>
     <name>hbase.rpc.engine</name>
-    <value>org.apache.hadoop.hbase.ipc.WritableRpcEngine</value>
+    <value>org.apache.hadoop.hbase.ipc.ProtobufRpcEngine</value>
     <description>Implementation of org.apache.hadoop.hbase.ipc.RpcEngine to be
     used for client / server RPC call marshalling.
     </description>

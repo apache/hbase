@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.monitoring;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.io.WritableWithSize;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
@@ -46,7 +47,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   private long rpcStartTime;
   private String methodName = "";
   private Object [] params = {};
-  private Writable packet;
+  private RpcRequestBody packet;
 
   public MonitoredRPCHandlerImpl() {
     super();
@@ -141,11 +142,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
       // no RPC is currently running, or we don't have an RPC's packet info
       return -1L;
     }
-    if (!(packet instanceof WritableWithSize)) {
-      // the packet passed to us doesn't expose size information
-      return -1L;
-    }
-    return ((WritableWithSize) packet).getWritableSize();
+    return packet.getSerializedSize();
   }
 
   /**
@@ -201,11 +198,11 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
   }
 
   /**
-   * Gives this instance a reference to the Writable received by the RPC, so 
+   * Gives this instance a reference to the protobuf received by the RPC, so 
    * that it can later compute its size if asked for it.
-   * @param param The Writable received by the RPC for this call
+   * @param param The protobuf received by the RPC for this call
    */
-  public void setRPCPacket(Writable param) {
+  public void setRPCPacket(RpcRequestBody param) {
     this.packet = param;
   }
 

@@ -18,14 +18,13 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -35,14 +34,20 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.io.DataOutputOutputStream;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Objects;
-import org.apache.hadoop.hbase.util.ProtoUtil;
+import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.protobuf.Message;
 import com.google.protobuf.ServiceException;
@@ -80,8 +85,9 @@ class ProtobufRpcEngine implements RpcEngine {
     return new Server(instance, ifaces, conf, bindAddress, port, numHandlers,
         metaHandlerCount, verbose, highPriorityLevel);
   }
-  private static class Invoker implements InvocationHandler {
-    private final Map<String, Message> returnTypes =
+
+  static class Invoker implements InvocationHandler {
+    private static final Map<String, Message> returnTypes =
         new ConcurrentHashMap<String, Message>();
     private Class<? extends VersionedProtocol> protocol;
     private InetSocketAddress address;
@@ -97,7 +103,7 @@ class ProtobufRpcEngine implements RpcEngine {
       this.protocol = protocol;
       this.address = addr;
       this.ticket = ticket;
-      this.client = CLIENTS.getClient(conf, factory, RpcResponseWritable.class);
+      this.client = CLIENTS.getClient(conf, factory);
       this.rpcTimeout = rpcTimeout;
       Long version = Invocation.PROTOCOL_VERSION.get(protocol);
       if (version != null) {
@@ -133,6 +139,7 @@ class ProtobufRpcEngine implements RpcEngine {
             + method.getName() + "]" + ", Expected: 2, Actual: "
             + params.length);
       }
+      builder.setRequestClassName(param.getClass().getName());
       builder.setRequest(param.toByteString());
       builder.setClientProtocolVersion(clientProtocolVersion);
       rpcRequest = builder.build();
@@ -166,24 +173,20 @@ class ProtobufRpcEngine implements RpcEngine {
       }
 
       RpcRequestBody rpcRequest = constructRpcRequest(method, args);
-      RpcResponseWritable val = null;
+      Message val = null;
       try {
-        val = (RpcResponseWritable) client.call(
-            new RpcRequestWritable(rpcRequest), address, protocol, ticket,
-            rpcTimeout);
+        val = client.call(rpcRequest, address, protocol, ticket, rpcTimeout);
 
         if (LOG.isDebugEnabled()) {
           long callTime = System.currentTimeMillis() - startTime;
-          LOG.debug("Call: " + method.getName() + " " + callTime);
+          if (LOG.isTraceEnabled()) LOG.trace("Call: " + method.getName() + " " + callTime);
         }
-
-        Message protoType = null;
-        protoType = getReturnProtoType(method);
-        Message returnMessage;
-        returnMessage = protoType.newBuilderForType()
-            .mergeFrom(val.responseMessage).build();
-        return returnMessage;
+        return val;
       } catch (Throwable e) {
+        if (e instanceof RemoteException) {
+          Throwable cause = ((RemoteException)e).unwrapRemoteException();
+          throw new ServiceException(cause);
+        }
         throw new ServiceException(e);
       }
     }
@@ -195,7 +198,7 @@ class ProtobufRpcEngine implements RpcEngine {
       }
     }
 
-    private Message getReturnProtoType(Method method) throws Exception {
+   static Message getReturnProtoType(Method method) throws Exception {
       if (returnTypes.containsKey(method.getName())) {
         return returnTypes.get(method.getName());
       }
@@ -209,75 +212,7 @@ class ProtobufRpcEngine implements RpcEngine {
     }
   }
 
-  /**
-   * Writable Wrapper for Protocol Buffer Requests
-   */
-  private static class RpcRequestWritable implements Writable {
-    RpcRequestBody message;
-
-    @SuppressWarnings("unused")
-    public RpcRequestWritable() {
-    }
-
-    RpcRequestWritable(RpcRequestBody message) {
-      this.message = message;
-    }
-
-    @Override
-    public void write(DataOutput out) throws IOException {
-      ((Message)message).writeDelimitedTo(
-          DataOutputOutputStream.constructOutputStream(out));
-    }
-
-    @Override
-    public void readFields(DataInput in) throws IOException {
-      int length = ProtoUtil.readRawVarint32(in);
-      byte[] bytes = new byte[length];
-      in.readFully(bytes);
-      message = RpcRequestBody.parseFrom(bytes);
-    }
-    
-    public int getSerializedSize() {
-      return message.getSerializedSize();
-    }
-
-    @Override
-    public String toString() {
-      return " Client Protocol Version: " +
-          message.getClientProtocolVersion() + " MethodName: " +
-          message.getMethodName();
-    }
-  }
-
-  /**
-   * Writable Wrapper for Protocol Buffer Responses
-   */
-  private static class RpcResponseWritable implements Writable {
-    byte[] responseMessage;
-
-    @SuppressWarnings("unused")
-    public RpcResponseWritable() {
-    }
-
-    public RpcResponseWritable(Message message) {
-      this.responseMessage = message.toByteArray();
-    }
-
-    @Override
-    public void write(DataOutput out) throws IOException {
-      out.writeInt(responseMessage.length);
-      out.write(responseMessage);
-    }
-
-    @Override
-    public void readFields(DataInput in) throws IOException {
-      int length = in.readInt();
-      byte[] bytes = new byte[length];
-      in.readFully(bytes);
-      responseMessage = bytes;
-    }
-  }
-  public static class Server extends WritableRpcEngine.Server {
+  public static class Server extends HBaseServer {
     boolean verbose;
     Object instance;
     Class<?> implementation;
@@ -295,16 +230,27 @@ class ProtobufRpcEngine implements RpcEngine {
 
     private final int warnResponseTime;
     private final int warnResponseSize;
+
+    private static String classNameBase(String className) {
+      String[] names = className.split("\\.", -1);
+      if (names == null || names.length == 0) {
+        return className;
+      }
+      return names[names.length-1];
+    }
+
     public Server(Object instance, final Class<?>[] ifaces,
         Configuration conf, String bindAddress,  int port,
         int numHandlers, int metaHandlerCount, boolean verbose,
         int highPriorityLevel)
         throws IOException {
-      super(instance, ifaces, RpcRequestWritable.class, conf, bindAddress, port,
-          numHandlers, metaHandlerCount, verbose, highPriorityLevel);
-      this.verbose = verbose;
+      super(bindAddress, port, numHandlers, metaHandlerCount,
+          conf, classNameBase(instance.getClass().getName()),
+          highPriorityLevel);
       this.instance = instance;
       this.implementation = instance.getClass();
+      this.verbose = verbose;
+
       // create metrics for the advertised interfaces this server implements.
       String [] metricSuffixes = new String [] {ABOVE_ONE_SEC_METRIC};
       this.rpcMetrics.createMetrics(ifaces, false, metricSuffixes);
@@ -313,23 +259,55 @@ class ProtobufRpcEngine implements RpcEngine {
           DEFAULT_WARN_RESPONSE_TIME);
       this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE,
           DEFAULT_WARN_RESPONSE_SIZE);
+      this.verbose = verbose;
+      this.instance = instance;
+      this.implementation = instance.getClass();
     }
-    private final Map<String, Message> methodArg =
+    private static final Map<String, Message> methodArg =
         new ConcurrentHashMap<String, Message>();
-    private final Map<String, Method> methodInstances =
+    private static final Map<String, Method> methodInstances =
         new ConcurrentHashMap<String, Method>();
+
+    private AuthenticationTokenSecretManager createSecretManager(){
+      if (!User.isSecurityEnabled() ||
+          !(instance instanceof org.apache.hadoop.hbase.Server)) {
+        return null;
+      }
+      org.apache.hadoop.hbase.Server server =
+          (org.apache.hadoop.hbase.Server)instance;
+      Configuration conf = server.getConfiguration();
+      long keyUpdateInterval =
+          conf.getLong("hbase.auth.key.update.interval", 24*60*60*1000);
+      long maxAge =
+          conf.getLong("hbase.auth.token.max.lifetime", 7*24*60*60*1000);
+      return new AuthenticationTokenSecretManager(conf, server.getZooKeeper(),
+          server.getServerName().toString(), keyUpdateInterval, maxAge);
+    }
+
+    @Override
+    public void startThreads() {
+      AuthenticationTokenSecretManager mgr = createSecretManager();
+      if (mgr != null) {
+        setSecretManager(mgr);
+        mgr.start();
+      }
+      this.authManager = new ServiceAuthorizationManager();
+      HBasePolicyProvider.init(conf, authManager);
+
+      // continue with base startup
+      super.startThreads();
+    }
+
     @Override
     /**
      * This is a server side method, which is invoked over RPC. On success
      * the return response has protobuf response payload. On failure, the
      * exception name and the stack trace are returned in the protobuf response.
      */
-    public Writable call(Class<? extends VersionedProtocol> protocol,
-        Writable writableRequest, long receiveTime, MonitoredRPCHandler status)
+    public Message call(Class<? extends VersionedProtocol> protocol,
+        RpcRequestBody rpcRequest, long receiveTime, MonitoredRPCHandler status)
         throws IOException {
       try {
-        RpcRequestWritable request = (RpcRequestWritable) writableRequest;
-        RpcRequestBody rpcRequest = request.message;
         String methodName = rpcRequest.getMethodName();
         Method method = getMethod(protocol, methodName);
         if (method == null) {
@@ -358,7 +336,7 @@ class ProtobufRpcEngine implements RpcEngine {
 
         status.setRPC(rpcRequest.getMethodName(), 
             new Object[]{rpcRequest.getRequest()}, receiveTime);
-        status.setRPCPacket(writableRequest);
+        status.setRPCPacket(rpcRequest);
         status.resume("Servicing call");        
         //get an instance of the method arg type
         Message protoType = getMethodArgType(method);
@@ -398,7 +376,7 @@ class ProtobufRpcEngine implements RpcEngine {
         rpcMetrics.rpcProcessingTime.inc(processingTime);
         rpcMetrics.inc(method.getName(), processingTime);
         if (verbose) {
-          WritableRpcEngine.log("Return: "+result, LOG);
+          log("Return: "+result, LOG);
         }
         long responseSize = result.getSerializedSize();
         // log any RPC responses that are slower than the configured warn
@@ -432,7 +410,7 @@ class ProtobufRpcEngine implements RpcEngine {
           rpcMetrics.inc(method.getName() + ABOVE_ONE_SEC_METRIC,
               processingTime);
         }
-        return new RpcResponseWritable(result);
+        return result;
       } catch (InvocationTargetException e) {
         Throwable target = e.getTargetException();
         if (target instanceof IOException) {
@@ -454,7 +432,7 @@ class ProtobufRpcEngine implements RpcEngine {
       }
     }
 
-    private Method getMethod(Class<? extends VersionedProtocol> protocol,
+    static Method getMethod(Class<? extends VersionedProtocol> protocol,
         String methodName) {
       Method method = methodInstances.get(methodName);
       if (method != null) {
@@ -472,7 +450,7 @@ class ProtobufRpcEngine implements RpcEngine {
       return null;
     }
 
-    private Message getMethodArgType(Method method) throws Exception {
+    static Message getMethodArgType(Method method) throws Exception {
       Message protoType = methodArg.get(method.getName());
       if (protoType != null) {
         return protoType;
@@ -496,6 +474,69 @@ class ProtobufRpcEngine implements RpcEngine {
       protoType = (Message) newInstMethod.invoke(null, (Object[]) null);
       methodArg.put(method.getName(), protoType);
       return protoType;
+    }
+    /**
+     * Logs an RPC response to the LOG file, producing valid JSON objects for
+     * client Operations.
+     * @param params The parameters received in the call.
+     * @param methodName The name of the method invoked
+     * @param call The string representation of the call
+     * @param tag  The tag that will be used to indicate this event in the log.
+     * @param client          The address of the client who made this call.
+     * @param startTime       The time that the call was initiated, in ms.
+     * @param processingTime  The duration that the call took to run, in ms.
+     * @param qTime           The duration that the call spent on the queue
+     *                        prior to being initiated, in ms.
+     * @param responseSize    The size in bytes of the response buffer.
+     */
+     void logResponse(Object[] params, String methodName, String call, String tag,
+         String clientAddress, long startTime, int processingTime, int qTime,
+         long responseSize)
+      throws IOException {
+      // for JSON encoding
+      ObjectMapper mapper = new ObjectMapper();
+      // base information that is reported regardless of type of call
+      Map<String, Object> responseInfo = new HashMap<String, Object>();
+      responseInfo.put("starttimems", startTime);
+      responseInfo.put("processingtimems", processingTime);
+      responseInfo.put("queuetimems", qTime);
+      responseInfo.put("responsesize", responseSize);
+      responseInfo.put("client", clientAddress);
+      responseInfo.put("class", instance.getClass().getSimpleName());
+      responseInfo.put("method", methodName);
+      if (params.length == 2 && instance instanceof HRegionServer &&
+          params[0] instanceof byte[] &&
+          params[1] instanceof Operation) {
+        // if the slow process is a query, we want to log its table as well
+        // as its own fingerprint
+        byte [] tableName =
+          HRegionInfo.parseRegionName((byte[]) params[0])[0];
+        responseInfo.put("table", Bytes.toStringBinary(tableName));
+        // annotate the response map with operation details
+        responseInfo.putAll(((Operation) params[1]).toMap());
+        // report to the log file
+        LOG.warn("(operation" + tag + "): " +
+            mapper.writeValueAsString(responseInfo));
+      } else if (params.length == 1 && instance instanceof HRegionServer &&
+          params[0] instanceof Operation) {
+        // annotate the response map with operation details
+        responseInfo.putAll(((Operation) params[0]).toMap());
+        // report to the log file
+        LOG.warn("(operation" + tag + "): " +
+            mapper.writeValueAsString(responseInfo));
+      } else {
+        // can't get JSON details, so just report call.toString() along with
+        // a more generic tag.
+        responseInfo.put("call", call);
+        LOG.warn("(response" + tag + "): " +
+            mapper.writeValueAsString(responseInfo));
+      }
+    }
+    protected static void log(String value, Log LOG) {
+      String v = value;
+      if (v != null && v.length() > 55)
+        v = v.substring(0, 55)+"...";
+      LOG.info(v);
     }
   }
 }

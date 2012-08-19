@@ -20,8 +20,7 @@
 package org.apache.hadoop.hbase.monitoring;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
 
 /**
  * A MonitoredTask implementation optimized for use with RPC Handlers 
@@ -38,9 +37,9 @@ public interface MonitoredRPCHandler extends MonitoredTask {
   public abstract long getRPCQueueTime();
   public abstract boolean isRPCRunning();
   public abstract boolean isOperationRunning();
-  
+
   public abstract void setRPC(String methodName, Object [] params,
       long queueTime);
-  public abstract void setRPCPacket(Writable param);
+  public abstract void setRPCPacket(RpcRequestBody param);
   public abstract void setConnection(String clientAddress, int remotePort);
 }

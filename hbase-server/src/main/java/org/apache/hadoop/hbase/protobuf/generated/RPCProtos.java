@@ -1492,6 +1492,10 @@ public final class RPCProtos {
     // optional bytes request = 3;
     boolean hasRequest();
     com.google.protobuf.ByteString getRequest();
+    
+    // optional string requestClassName = 4;
+    boolean hasRequestClassName();
+    String getRequestClassName();
   }
   public static final class RpcRequestBody extends
       com.google.protobuf.GeneratedMessage
@@ -1574,10 +1578,43 @@ public final class RPCProtos {
       return request_;
     }
     
+    // optional string requestClassName = 4;
+    public static final int REQUESTCLASSNAME_FIELD_NUMBER = 4;
+    private java.lang.Object requestClassName_;
+    public boolean hasRequestClassName() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public String getRequestClassName() {
+      java.lang.Object ref = requestClassName_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          requestClassName_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getRequestClassNameBytes() {
+      java.lang.Object ref = requestClassName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        requestClassName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
     private void initFields() {
       methodName_ = "";
       clientProtocolVersion_ = 0L;
       request_ = com.google.protobuf.ByteString.EMPTY;
+      requestClassName_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1604,6 +1641,9 @@ public final class RPCProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeBytes(3, request_);
       }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBytes(4, getRequestClassNameBytes());
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -1624,6 +1664,10 @@ public final class RPCProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(3, request_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(4, getRequestClassNameBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1663,6 +1707,11 @@ public final class RPCProtos {
         result = result && getRequest()
             .equals(other.getRequest());
       }
+      result = result && (hasRequestClassName() == other.hasRequestClassName());
+      if (hasRequestClassName()) {
+        result = result && getRequestClassName()
+            .equals(other.getRequestClassName());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -1683,6 +1732,10 @@ public final class RPCProtos {
       if (hasRequest()) {
         hash = (37 * hash) + REQUEST_FIELD_NUMBER;
         hash = (53 * hash) + getRequest().hashCode();
+      }
+      if (hasRequestClassName()) {
+        hash = (37 * hash) + REQUESTCLASSNAME_FIELD_NUMBER;
+        hash = (53 * hash) + getRequestClassName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -1806,6 +1859,8 @@ public final class RPCProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         request_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000004);
+        requestClassName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
       
@@ -1856,6 +1911,10 @@ public final class RPCProtos {
           to_bitField0_ |= 0x00000004;
         }
         result.request_ = request_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.requestClassName_ = requestClassName_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1880,6 +1939,9 @@ public final class RPCProtos {
         }
         if (other.hasRequest()) {
           setRequest(other.getRequest());
+        }
+        if (other.hasRequestClassName()) {
+          setRequestClassName(other.getRequestClassName());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1929,6 +1991,11 @@ public final class RPCProtos {
             case 26: {
               bitField0_ |= 0x00000004;
               request_ = input.readBytes();
+              break;
+            }
+            case 34: {
+              bitField0_ |= 0x00000008;
+              requestClassName_ = input.readBytes();
               break;
             }
           }
@@ -2018,6 +2085,42 @@ public final class RPCProtos {
         return this;
       }
       
+      // optional string requestClassName = 4;
+      private java.lang.Object requestClassName_ = "";
+      public boolean hasRequestClassName() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      public String getRequestClassName() {
+        java.lang.Object ref = requestClassName_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          requestClassName_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setRequestClassName(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        requestClassName_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearRequestClassName() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        requestClassName_ = getDefaultInstance().getRequestClassName();
+        onChanged();
+        return this;
+      }
+      void setRequestClassName(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000008;
+        requestClassName_ = value;
+        onChanged();
+      }
+      
       // @@protoc_insertion_point(builder_scope:RpcRequestBody)
     }
     
@@ -2032,7 +2135,7 @@ public final class RPCProtos {
   public interface RpcResponseHeaderOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required int32 callId = 1;
+    // required uint32 callId = 1;
     boolean hasCallId();
     int getCallId();
     
@@ -2141,7 +2244,7 @@ public final class RPCProtos {
     }
     
     private int bitField0_;
-    // required int32 callId = 1;
+    // required uint32 callId = 1;
     public static final int CALLID_FIELD_NUMBER = 1;
     private int callId_;
     public boolean hasCallId() {
@@ -2186,7 +2289,7 @@ public final class RPCProtos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeInt32(1, callId_);
+        output.writeUInt32(1, callId_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeEnum(2, status_.getNumber());
@@ -2202,7 +2305,7 @@ public final class RPCProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt32Size(1, callId_);
+          .computeUInt32Size(1, callId_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
@@ -2487,7 +2590,7 @@ public final class RPCProtos {
             }
             case 8: {
               bitField0_ |= 0x00000001;
-              callId_ = input.readInt32();
+              callId_ = input.readUInt32();
               break;
             }
             case 16: {
@@ -2507,7 +2610,7 @@ public final class RPCProtos {
       
       private int bitField0_;
       
-      // required int32 callId = 1;
+      // required uint32 callId = 1;
       private int callId_ ;
       public boolean hasCallId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -3505,16 +3608,17 @@ public final class RPCProtos {
       "ctionHeader\022\"\n\010userInfo\030\001 \001(\0132\020.UserInfo" +
       "rmation\022?\n\010protocol\030\002 \001(\t:-org.apache.ha" +
       "doop.hbase.client.ClientProtocol\"\"\n\020RpcR" +
-      "equestHeader\022\016\n\006callId\030\001 \002(\r\"T\n\016RpcReque" +
+      "equestHeader\022\016\n\006callId\030\001 \002(\r\"n\n\016RpcReque" +
       "stBody\022\022\n\nmethodName\030\001 \002(\t\022\035\n\025clientProt" +
-      "ocolVersion\030\002 \001(\004\022\017\n\007request\030\003 \001(\014\"{\n\021Rp" +
-      "cResponseHeader\022\016\n\006callId\030\001 \002(\005\022)\n\006statu" +
-      "s\030\002 \002(\0162\031.RpcResponseHeader.Status\"+\n\006St",
-      "atus\022\013\n\007SUCCESS\020\000\022\t\n\005ERROR\020\001\022\t\n\005FATAL\020\002\"" +
-      "#\n\017RpcResponseBody\022\020\n\010response\030\001 \001(\014\"9\n\014" +
-      "RpcException\022\025\n\rexceptionName\030\001 \002(\t\022\022\n\ns" +
-      "tackTrace\030\002 \001(\tB<\n*org.apache.hadoop.hba" +
-      "se.protobuf.generatedB\tRPCProtosH\001\240\001\001"
+      "ocolVersion\030\002 \001(\004\022\017\n\007request\030\003 \001(\014\022\030\n\020re" +
+      "questClassName\030\004 \001(\t\"{\n\021RpcResponseHeade" +
+      "r\022\016\n\006callId\030\001 \002(\r\022)\n\006status\030\002 \002(\0162\031.RpcR",
+      "esponseHeader.Status\"+\n\006Status\022\013\n\007SUCCES" +
+      "S\020\000\022\t\n\005ERROR\020\001\022\t\n\005FATAL\020\002\"#\n\017RpcResponse" +
+      "Body\022\020\n\010response\030\001 \001(\014\"9\n\014RpcException\022\025" +
+      "\n\rexceptionName\030\001 \002(\t\022\022\n\nstackTrace\030\002 \001(" +
+      "\tB<\n*org.apache.hadoop.hbase.protobuf.ge" +
+      "neratedB\tRPCProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -3550,7 +3654,7 @@ public final class RPCProtos {
           internal_static_RpcRequestBody_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RpcRequestBody_descriptor,
-              new java.lang.String[] { "MethodName", "ClientProtocolVersion", "Request", },
+              new java.lang.String[] { "MethodName", "ClientProtocolVersion", "Request", "RequestClassName", },
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody.class,
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody.Builder.class);
           internal_static_RpcResponseHeader_descriptor =

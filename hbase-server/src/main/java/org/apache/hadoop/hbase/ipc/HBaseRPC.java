@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -46,24 +45,13 @@ import java.util.Map;
  *
  * This is a local hbase copy of the hadoop RPC so we can do things like
  * address HADOOP-414 for hbase-only and try other hbase-specific
- * optimizations like using our own version of ObjectWritable.  Class has been
- * renamed to avoid confusing it w/ hadoop versions.
+ * optimizations.  Class has been renamed to avoid confusing it w/ hadoop
+ * versions.
  * <p>
  *
  *
  * A <i>protocol</i> is a Java interface.  All parameters and return types must
- * be one of:
- *
- * <ul> <li>a primitive type, <code>boolean</code>, <code>byte</code>,
- * <code>char</code>, <code>short</code>, <code>int</code>, <code>long</code>,
- * <code>float</code>, <code>double</code>, or <code>void</code>; or</li>
- *
- * <li>a {@link String}; or</li>
- *
- * <li>a {@link Writable}; or</li>
- *
- * <li>an array of the above types</li> </ul>
- *
+ * be Protobuf objects.
  * All methods in the protocol should throw only IOException.  No field data of
  * the protocol instance is transmitted.
  */
@@ -122,7 +110,7 @@ public class HBaseRPC {
     if (engine == null) {
       // check for a configured default engine
       Class<?> defaultEngine =
-          conf.getClass(RPC_ENGINE_PROP, WritableRpcEngine.class);
+          conf.getClass(RPC_ENGINE_PROP, ProtobufRpcEngine.class);
 
       // check for a per interface override
       Class<?> impl = conf.getClass(RPC_ENGINE_PROP+"."+protocol.getName(),
@@ -345,16 +333,6 @@ public class HBaseRPC {
     VersionedProtocol proxy = engine
             .getProxy(protocol, clientVersion, addr, ticket, conf, factory,
                 Math.min(rpcTimeout, HBaseRPC.getRpcTimeout()));
-    if (engine instanceof WritableRpcEngine) {
-      long serverVersion = proxy.getProtocolVersion(protocol.getName(),
-          clientVersion);
-      if (serverVersion == clientVersion) {
-        return proxy;
-      }
-
-      throw new VersionMismatch(protocol.getName(), clientVersion,
-                              serverVersion);
-    }
     return proxy;
   }
 

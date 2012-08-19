@@ -34,12 +34,15 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mortbay.log.Log;
 
 /**
  * Test that delayed RPCs work. Fire up three calls, the first of which should
@@ -163,7 +166,7 @@ public class TestDelayedRpc {
 
   public interface TestRpc extends VersionedProtocol {
     public static final long VERSION = 1L;
-    int test(boolean delay);
+    TestResponse test(TestArg delay);
   }
 
   private static class TestRpcImpl implements TestRpc {
@@ -183,9 +186,12 @@ public class TestDelayedRpc {
     }
 
     @Override
-    public int test(final boolean delay) {
+    public TestResponse test(final TestArg testArg) {
+      boolean delay = testArg.getDelay();
+      TestResponse.Builder responseBuilder = TestResponse.newBuilder();
       if (!delay) {
-        return UNDELAYED;
+        responseBuilder.setResponse(UNDELAYED);
+        return responseBuilder.build();
       }
       final Delayable call = HBaseServer.getCurrentCall();
       call.startDelay(delayReturnValue);
@@ -193,7 +199,9 @@ public class TestDelayedRpc {
         public void run() {
           try {
             Thread.sleep(500);
-            call.endDelay(delayReturnValue ? DELAYED : null);
+            TestResponse.Builder responseBuilder = TestResponse.newBuilder();
+            call.endDelay(delayReturnValue ? 
+                responseBuilder.setResponse(DELAYED).build() : null);
           } catch (Exception e) {
             e.printStackTrace();
           }
@@ -201,7 +209,8 @@ public class TestDelayedRpc {
       }.start();
       // This value should go back to client only if the response is set
       // immediately at delay time.
-      return 0xDEADBEEF;
+      responseBuilder.setResponse(0xDEADBEEF);
+      return responseBuilder.build();
     }
 
     @Override
@@ -235,7 +244,9 @@ public class TestDelayedRpc {
     @Override
     public void run() {
       try {
-        Integer result = new Integer(server.test(delay));
+        Integer result = 
+            new Integer(server.test(TestArg.newBuilder()
+                .setDelay(delay).build()).getResponse());
         if (results != null) {
           synchronized (results) {
             results.add(result);
@@ -263,7 +274,7 @@ public class TestDelayedRpc {
     int result = 0xDEADBEEF;
 
     try {
-      result = client.test(false);
+      result = client.test(TestArg.newBuilder().setDelay(false).build()).getResponse();
     } catch (Exception e) {
       fail("No exception should have been thrown.");
     }
@@ -271,12 +282,13 @@ public class TestDelayedRpc {
 
     boolean caughtException = false;
     try {
-      result = client.test(true);
+      result = client.test(TestArg.newBuilder().setDelay(true).build()).getResponse();
     } catch(Exception e) {
       // Exception thrown by server is enclosed in a RemoteException.
-      if (e.getCause().getMessage().startsWith(
+      if (e.getCause().getMessage().contains(
           "java.lang.Exception: Something went wrong"))
         caughtException = true;
+      Log.warn(e);
     }
     assertTrue(caughtException);
   }
@@ -286,9 +298,9 @@ public class TestDelayedRpc {
    */
   private static class FaultyTestRpc implements TestRpc {
     @Override
-    public int test(boolean delay) {
-      if (!delay)
-        return UNDELAYED;
+    public TestResponse test(TestArg arg) {
+      if (!arg.getDelay())
+        return TestResponse.newBuilder().setResponse(UNDELAYED).build();
       Delayable call = HBaseServer.getCurrentCall();
       call.startDelay(true);
       try {
@@ -297,7 +309,7 @@ public class TestDelayedRpc {
         e.printStackTrace();
       }
       // Client will receive the Exception, not this value.
-      return DELAYED;
+      return TestResponse.newBuilder().setResponse(DELAYED).build();
     }
 
     @Override

@@ -26,20 +26,21 @@
  * 
  * As part of setting up a connection to a server, the client needs to send
  * the ConnectionHeader header. At the data level, this looks like
- * <"hrpc"-bytearray><'5'-byte><length-of-serialized-ConnectionHeader-obj[int32]><ConnectionHeader-object serialized>
+ * <"hrpc"-bytearray><'5'[byte]><length-of-serialized-ConnectionHeader-obj[int32]><ConnectionHeader-object serialized>
  *
  * For every RPC that the client makes it needs to send the following
  * RpcRequestHeader and the RpcRequestBody. At the data level this looks like:
- *  <length-of-serialized-RpcRequestHeader + length-of-serialized-RpcRequestBody>
+ *  <length-of-serialized-RpcRequestHeader + length-of-varint32-of-serialized-RpcRequestHeader + 
+ *   length-of-serialized-RpcRequestBody + length-of-varint32-of-serialized-RpcRequestBody>
  *  <RpcRequestHeader [serialized using Message.writeDelimitedTo]>
- *  <RpcRequestBody [serialized using Message.writeTo]>
+ *  <RpcRequestBody [serialized using Message.writeDelimitedTo]>
  *
  * On a success, the server's protobuf response looks like
  *  <RpcResponseHeader-object [serialized using Message.writeDelimitedTo]>
- *  <RpcResponseBody-object [serialized using Message.writeTo]>
+ *  <RpcResponseBody-object [serialized using Message.writeDelimitedTo]>
  * On a failure, the server's protobuf response looks like
  *  <RpcResponseHeader-object [serialized using Message.writeDelimitedTo]>
- *  <RpcException-object [serialized using Message.writeTo]>
+ *  <RpcException-object [serialized using Message.writeDelimitedTo]>
  *
  * There is one special message that's sent from client to server -
  * the Ping message. At the data level, this is just the bytes corresponding
@@ -84,8 +85,16 @@ message RpcRequestBody {
   /** protocol version of class declaring the called method */
   optional uint64 clientProtocolVersion = 2;
 
-  /** Bytes corresponding to the client protobuf request */
+  /** Bytes corresponding to the client protobuf request. This is the actual
+   *  bytes corresponding to the RPC request argument.
+   */
   optional bytes request = 3;
+
+  /** Some metainfo about the request. Helps us to treat RPCs with
+   *  different priorities. For now this is just the classname of the request
+   *  proto object. 
+   */
+  optional string requestClassName = 4;
 }
 
 /**
@@ -93,7 +102,7 @@ message RpcRequestBody {
  */
 message RpcResponseHeader {
   /** Echo back the callId the client sent */
-  required int32 callId = 1;
+  required uint32 callId = 1;
   /** Did the RPC execution encounter an error at the server */
   enum Status {
     SUCCESS = 0;
@@ -106,7 +115,9 @@ message RpcResponseHeader {
  * The RPC response body
  */
 message RpcResponseBody {
-   /** Optional response bytes */
+   /** Optional response bytes. This is the actual bytes corresponding to the
+    *  return value of the invoked RPC.
+    */
   optional bytes response = 1;
 }
 /**

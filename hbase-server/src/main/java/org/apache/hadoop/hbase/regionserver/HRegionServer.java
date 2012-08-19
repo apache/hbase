@@ -27,10 +27,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -40,11 +43,13 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -168,6 +173,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
@@ -224,6 +230,8 @@ import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 
 import com.google.common.base.Function;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 
 /**
@@ -436,6 +444,11 @@ public class  HRegionServer implements ClientProtocol,
    */
   private final int scannerLeaseTimeoutPeriod;
 
+  /**
+   * The reference to the QosFunction
+   */
+  private final QosFunction qosFunction;
+
 
   /**
    * Starts a HRegionServer at the default location
@@ -513,7 +526,7 @@ public class  HRegionServer implements ClientProtocol,
     this.isa = this.rpcServer.getListenerAddress();
 
     this.rpcServer.setErrorHandler(this);
-    this.rpcServer.setQosFunction(new QosFunction());
+    this.rpcServer.setQosFunction((qosFunction = new QosFunction()));
     this.startcode = System.currentTimeMillis();
 
     // login the server principal (if using secure Hadoop)
@@ -545,12 +558,61 @@ public class  HRegionServer implements ClientProtocol,
     int priority() default 0;
   }
 
+  QosFunction getQosFunction() {
+    return qosFunction;
+  }
+
+  RegionScanner getScanner(long scannerId) {
+    String scannerIdString = Long.toString(scannerId);
+    return scanners.get(scannerIdString);
+  }
+
   /**
    * Utility used ensuring higher quality of service for priority rpcs; e.g.
    * rpcs to .META. and -ROOT-, etc.
    */
-  class QosFunction implements Function<Writable,Integer> {
+  class QosFunction implements Function<RpcRequestBody,Integer> {
     private final Map<String, Integer> annotatedQos;
+    //We need to mock the regionserver instance for some unit tests (set via
+    //setRegionServer method.
+    //The field value is initially set to the enclosing instance of HRegionServer.
+    private HRegionServer hRegionServer = HRegionServer.this;
+
+    //The logic for figuring out high priority RPCs is as follows:
+    //1. if the method is annotated with a QosPriority of QOS_HIGH,
+    //   that is honored
+    //2. parse out the protobuf message and see if the request is for meta
+    //   region, and if so, treat it as a high priority RPC
+    //Some optimizations for (2) are done here -
+    //Clients send the argument classname as part of making the RPC. The server
+    //decides whether to deserialize the proto argument message based on the
+    //pre-established set of argument classes (knownArgumentClasses below).
+    //This prevents the server from having to deserialize all proto argument
+    //messages prematurely.
+    //All the argument classes declare a 'getRegion' method that returns a
+    //RegionSpecifier object. Methods can be invoked on the returned object
+    //to figure out whether it is a meta region or not.
+    @SuppressWarnings("unchecked")
+    private final Class<? extends Message>[] knownArgumentClasses = new Class[]{
+        GetRegionInfoRequest.class,
+        GetStoreFileRequest.class,
+        CloseRegionRequest.class,
+        FlushRegionRequest.class,
+        SplitRegionRequest.class,
+        CompactRegionRequest.class,
+        GetRequest.class,
+        MutateRequest.class,
+        ScanRequest.class,
+        LockRowRequest.class,
+        UnlockRowRequest.class,
+        MultiRequest.class
+    };
+
+    //Some caches for helping performance
+    private final Map<String, Class<? extends Message>> argumentToClassMap =
+        new HashMap<String, Class<? extends Message>>();
+    private final Map<String, Map<Class<? extends Message>, Method>>
+      methodMap = new HashMap<String, Map<Class<? extends Message>, Method>>();
 
     public QosFunction() {
       Map<String, Integer> qosMap = new HashMap<String, Integer>();
@@ -562,12 +624,34 @@ public class  HRegionServer implements ClientProtocol,
       }
 
       annotatedQos = qosMap;
+      if (methodMap.get("parseFrom") == null) {
+        methodMap.put("parseFrom",
+            new HashMap<Class<? extends Message>, Method>());
+      }
+      if (methodMap.get("getRegion") == null) {
+        methodMap.put("getRegion", 
+            new HashMap<Class<? extends Message>, Method>());
+      }
+      for (Class<? extends Message> cls : knownArgumentClasses) {
+        argumentToClassMap.put(cls.getCanonicalName(), cls);
+        try {
+          methodMap.get("parseFrom").put(cls,
+                          cls.getDeclaredMethod("parseFrom",ByteString.class));
+          methodMap.get("getRegion").put(cls, cls.getDeclaredMethod("getRegion"));
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
+
+    void setRegionServer(HRegionServer server) {
+      this.hRegionServer = server;
     }
 
     public boolean isMetaRegion(byte[] regionName) {
       HRegion region;
       try {
-        region = getRegion(regionName);
+        region = hRegionServer.getRegion(regionName);
       } catch (NotServingRegionException ignored) {
         return false;
       }
@@ -575,62 +659,58 @@ public class  HRegionServer implements ClientProtocol,
     }
 
     @Override
-    public Integer apply(Writable from) {
-      if (!(from instanceof Invocation)) return NORMAL_QOS;
-
-      Invocation inv = (Invocation) from;
-      String methodName = inv.getMethodName();
+    public Integer apply(RpcRequestBody from) {
+      String methodName = from.getMethodName();
+      Class<? extends Message> rpcArgClass = null;
+      if (from.hasRequestClassName()) {
+        String cls = from.getRequestClassName();
+        rpcArgClass = argumentToClassMap.get(cls);
+      }
 
       Integer priorityByAnnotation = annotatedQos.get(methodName);
       if (priorityByAnnotation != null) {
         return priorityByAnnotation;
       }
 
-      // scanner methods...
-      if (methodName.equals("next") || methodName.equals("close")) {
-        // translate!
-        Long scannerId;
-        try {
-          scannerId = (Long) inv.getParameters()[0];
-        } catch (ClassCastException ignored) {
-          // LOG.debug("Low priority: " + from);
-          return NORMAL_QOS; // doh.
-        }
-        String scannerIdString = Long.toString(scannerId);
-        RegionScanner scanner = scanners.get(scannerIdString);
-        if (scanner != null && scanner.getRegionInfo().isMetaRegion()) {
-          // LOG.debug("High priority scanner request: " + scannerId);
-          return HIGH_QOS;
-        }
-      } else if (inv.getParameterClasses().length == 0) {
-       // Just let it through.  This is getOnlineRegions, etc.
-      } else if (inv.getParameterClasses()[0] == byte[].class) {
-        // first arg is byte array, so assume this is a regionname:
-        if (isMetaRegion((byte[]) inv.getParameters()[0])) {
-          // LOG.debug("High priority with method: " + methodName +
-          // " and region: "
-          // + Bytes.toString((byte[]) inv.getParameters()[0]));
-          return HIGH_QOS;
-        }
-      } else if (inv.getParameterClasses()[0] == MultiAction.class) {
-        MultiAction<?> ma = (MultiAction<?>) inv.getParameters()[0];
-        Set<byte[]> regions = ma.getRegions();
-        // ok this sucks, but if any single of the actions touches a meta, the
-        // whole
-        // thing gets pingged high priority. This is a dangerous hack because
-        // people
-        // can get their multi action tagged high QOS by tossing a Get(.META.)
-        // AND this
-        // regionserver hosts META/-ROOT-
-        for (byte[] region : regions) {
-          if (isMetaRegion(region)) {
-            // LOG.debug("High priority multi with region: " +
-            // Bytes.toString(region));
-            return HIGH_QOS; // short circuit for the win.
+      if (rpcArgClass == null || from.getRequest().isEmpty()) {
+        return NORMAL_QOS;
+      }
+      Object deserializedRequestObj = null;
+      //check whether the request has reference to Meta region
+      try {
+        Method parseFrom = methodMap.get("parseFrom").get(rpcArgClass);
+        deserializedRequestObj = parseFrom.invoke(null, from.getRequest());
+        Method getRegion = methodMap.get("getRegion").get(rpcArgClass);
+        RegionSpecifier regionSpecifier =
+            (RegionSpecifier)getRegion.invoke(deserializedRequestObj,
+                (Object[])null);
+        HRegion region = hRegionServer.getRegion(regionSpecifier);
+        if (region.getRegionInfo().isMetaRegion()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("High priority: " + from.toString());
           }
+          return HIGH_QOS;
+        }
+      } catch (Exception ex) {
+        throw new RuntimeException(ex);
+      }
+
+      if (methodName.equals("scan")) { // scanner methods...
+        ScanRequest request = (ScanRequest)deserializedRequestObj;
+        if (!request.hasScannerId()) {
+          return NORMAL_QOS;
+        }
+        RegionScanner scanner = hRegionServer.getScanner(request.getScannerId());
+        if (scanner != null && scanner.getRegionInfo().isMetaRegion()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("High priority scanner request: " + request.getScannerId());
+          }
+          return HIGH_QOS;
         }
       }
-      // LOG.debug("Low priority: " + from.toString());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Low priority: " + from.toString());
+      }
       return NORMAL_QOS;
     }
   }

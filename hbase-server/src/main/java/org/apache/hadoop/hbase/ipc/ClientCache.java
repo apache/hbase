@@ -54,14 +54,10 @@ class ClientCache {
    */
   protected synchronized HBaseClient getClient(Configuration conf,
       SocketFactory factory) {
-    return getClient(conf, factory, HbaseObjectWritable.class);
-  }
-  protected synchronized HBaseClient getClient(Configuration conf,
-      SocketFactory factory, Class<? extends Writable> valueClass) {
     HBaseClient client = clients.get(factory);
     if (client == null) {
       // Make an hbase client instead of hadoop Client.
-      client = new HBaseClient(valueClass, conf, factory);
+      client = new HBaseClient(conf, factory);
       clients.put(factory, client);
     } else {
       client.incCount();

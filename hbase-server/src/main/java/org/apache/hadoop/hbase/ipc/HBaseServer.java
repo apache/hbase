@@ -68,12 +68,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.io.DataOutputOutputStream;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
@@ -87,9 +85,7 @@ import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslDigestCallbackHan
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslStatus;
 import org.apache.hadoop.hbase.util.ByteBufferOutputStream;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -104,17 +100,16 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
 
 import org.cliffc.high_scale_lib.Counter;
 
-/** An abstract IPC service.  IPC calls take a single {@link Writable} as a
- * parameter, and return a {@link Writable} as their value.  A service runs on
+/** A client for an IPC service.  IPC calls take a single Protobuf message as a
+ * parameter, and return a single Protobuf message as their value.  A service runs on
  * a port and is defined by a parameter class and a value class.
  *
  *
@@ -193,8 +188,8 @@ public abstract class HBaseServer implements RpcServer {
   }
 
   /** Returns the server instance called under or null.  May be called under
-   * {@link #call(Class, Writable, long, MonitoredRPCHandler)} implementations,
-   * and under {@link Writable} methods of paramters and return values.
+   * {@link #call(Class, RpcRequestBody, long, MonitoredRPCHandler)} implementations,
+   * and under protobuf methods of paramters and return values.
    * Permits applications to access the server context.
    * @return HBaseServer
    */
@@ -235,7 +230,6 @@ public abstract class HBaseServer implements RpcServer {
   private int handlerCount;                       // number of handler threads
   private int priorityHandlerCount;
   private int readThreads;                        // number of read threads
-  protected Class<? extends Writable> paramClass; // class of call parameters
   protected int maxIdleTime;                      // the maximum idle time after
                                                   // which a client may be
                                                   // disconnected
@@ -312,7 +306,7 @@ public abstract class HBaseServer implements RpcServer {
   /** A call queued for handling. */
   protected class Call implements RpcCallContext {
     protected int id;                             // the client's call id
-    protected Writable param;                     // the parameter passed
+    protected RpcRequestBody rpcRequestBody;                     // the parameter passed
     protected Connection connection;              // connection to client
     protected long timestamp;      // the time received when response is null
                                    // the time served when response is not null
@@ -324,10 +318,10 @@ public abstract class HBaseServer implements RpcServer {
     protected long size;                          // size of current call
     protected boolean isError;
 
-    public Call(int id, Writable param, Connection connection,
+    public Call(int id, RpcRequestBody rpcRequestBody, Connection connection,
         Responder responder, long size) {
       this.id = id;
-      this.param = param;
+      this.rpcRequestBody = rpcRequestBody;
       this.connection = connection;
       this.timestamp = System.currentTimeMillis();
       this.response = null;
@@ -339,7 +333,7 @@ public abstract class HBaseServer implements RpcServer {
 
     @Override
     public String toString() {
-      return param.toString() + " from " + connection.toString();
+      return rpcRequestBody.toString() + " from " + connection.toString();
     }
 
     protected synchronized void setSaslTokenResponse(ByteBuffer response) {
@@ -353,34 +347,13 @@ public abstract class HBaseServer implements RpcServer {
       if (errorClass != null) {
         this.isError = true;
       }
-      Writable result = null;
-      if (value instanceof Writable) {
-        result = (Writable) value;
+ 
+      ByteBufferOutputStream buf = null;
+      if (value != null) {
+        buf = new ByteBufferOutputStream(((Message)value).getSerializedSize());
       } else {
-        /* We might have a null value and errors. Avoid creating a
-         * HbaseObjectWritable, because the constructor fails on null. */
-        if (value != null) {
-          result = new HbaseObjectWritable(value);
-        }
+        buf = new ByteBufferOutputStream(BUFFER_INITIAL_SIZE);
       }
-
-      int size = BUFFER_INITIAL_SIZE;
-      if (result instanceof WritableWithSize) {
-        // get the size hint.
-        WritableWithSize ohint = (WritableWithSize) result;
-        long hint = ohint.getWritableSize() + 2*Bytes.SIZEOF_INT;
-        if (hint > Integer.MAX_VALUE) {
-          // oops, new problem.
-          IOException ioe =
-            new IOException("Result buffer size too large: " + hint);
-          errorClass = ioe.getClass().getName();
-          error = StringUtils.stringifyException(ioe);
-        } else {
-          size = (int)hint;
-        }
-      }
-
-      ByteBufferOutputStream buf = new ByteBufferOutputStream(size);
       DataOutputStream out = new DataOutputStream(buf);
       try {
         RpcResponseHeader.Builder builder = RpcResponseHeader.newBuilder();
@@ -394,7 +367,9 @@ public abstract class HBaseServer implements RpcServer {
           b.setStackTrace(error);
           b.build().writeDelimitedTo(out);
         } else {
-          result.write(out);
+          if (value != null) {
+            ((Message)value).writeDelimitedTo(out);
+          }
         }
         if (connection.useWrap) {
           wrapWithSasl(buf);
@@ -709,7 +684,7 @@ public abstract class HBaseServer implements RpcServer {
             closeCurrentConnection(key, e);
             cleanupConnections(true);
             try { Thread.sleep(60000); } catch (Exception ignored) {}
-      }
+          }
         } catch (Exception e) {
           closeCurrentConnection(key, e);
         }
@@ -1418,7 +1393,7 @@ public abstract class HBaseServer implements RpcServer {
             AccessControlException ae = new AccessControlException(
                 "Authentication is required");
             setupResponse(authFailedResponse, authFailedCall, Status.FATAL,
-                null, ae.getClass().getName(), ae.getMessage());
+                ae.getClass().getName(), ae.getMessage());
             responder.doRespond(authFailedCall);
             throw ae;
           }
@@ -1506,7 +1481,7 @@ public abstract class HBaseServer implements RpcServer {
         // Versions 3 and greater can interpret this exception
         // response in the same manner
         setupResponse(buffer, fakeCall, Status.FATAL,
-            null, VersionMismatch.class.getName(), errMsg);
+            VersionMismatch.class.getName(), errMsg);
 
         responder.doRespond(fakeCall);
       }
@@ -1623,23 +1598,21 @@ public abstract class HBaseServer implements RpcServer {
       if (LOG.isDebugEnabled()) {
         LOG.debug(" got call #" + id + ", " + callSize + " bytes");
       }
-
       // Enforcing the call queue size, this triggers a retry in the client
       if ((callSize + callQueueSize.get()) > maxQueueSize) {
         final Call callTooBig =
           new Call(id, null, this, responder, callSize);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
-        setupResponse(responseBuffer, callTooBig, Status.FATAL, null,
+        setupResponse(responseBuffer, callTooBig, Status.FATAL,
             IOException.class.getName(),
             "Call queue is full, is ipc.server.max.callqueue.size too small?");
         responder.doRespond(callTooBig);
         return;
       }
 
-      Writable param;
+      RpcRequestBody rpcRequestBody;
       try {
-        param = ReflectionUtils.newInstance(paramClass, conf);//read param
-        param.readFields(dis);
+        rpcRequestBody = RpcRequestBody.parseDelimitedFrom(dis);
       } catch (Throwable t) {
         LOG.warn("Unable to read call parameters for client " +
                  getHostAddress(), t);
@@ -1647,16 +1620,16 @@ public abstract class HBaseServer implements RpcServer {
           new Call(id, null, this, responder, callSize);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
 
-        setupResponse(responseBuffer, readParamsFailedCall, Status.FATAL, null,
+        setupResponse(responseBuffer, readParamsFailedCall, Status.FATAL,
             t.getClass().getName(),
             "IPC server unable to read call parameters: " + t.getMessage());
         responder.doRespond(readParamsFailedCall);
         return;
       }
-      Call call = new Call(id, param, this, responder, callSize);
+      Call call = new Call(id, rpcRequestBody, this, responder, callSize);
       callQueueSize.add(callSize);
 
-      if (priorityCallQueue != null && getQosLevel(param) > highPriorityLevel) {
+      if (priorityCallQueue != null && getQosLevel(rpcRequestBody) > highPriorityLevel) {
         priorityCallQueue.put(call);
         updateCallQueueLenMetrics(priorityCallQueue);
       } else {
@@ -1683,7 +1656,7 @@ public abstract class HBaseServer implements RpcServer {
       } catch (AuthorizationException ae) {
         LOG.debug("Connection authorization failed: "+ae.getMessage(), ae);
         rpcMetrics.authorizationFailures.inc();
-        setupResponse(authFailedResponse, authFailedCall, Status.FATAL, null,
+        setupResponse(authFailedResponse, authFailedCall, Status.FATAL,
             ae.getClass().getName(), ae.getMessage());
         responder.doRespond(authFailedCall);
         return false;
@@ -1785,7 +1758,7 @@ public abstract class HBaseServer implements RpcServer {
 
           String errorClass = null;
           String error = null;
-          Writable value = null;
+          Message value = null;
 
           CurCall.set(call);
           try {
@@ -1802,7 +1775,7 @@ public abstract class HBaseServer implements RpcServer {
             RequestContext.set(User.create(call.connection.user), getRemoteIp(),
                 call.connection.protocol);
             // make the call
-            value = call(call.connection.protocol, call.param, call.timestamp,
+            value = call(call.connection.protocol, call.rpcRequestBody, call.timestamp,
                 status);
           } catch (Throwable e) {
             LOG.debug(getName()+", call "+call+": error: " + e, e);
@@ -1855,7 +1828,7 @@ public abstract class HBaseServer implements RpcServer {
   }
 
 
-  private Function<Writable,Integer> qosFunction = null;
+  private Function<RpcRequestBody,Integer> qosFunction = null;
 
   /**
    * Gets the QOS level for this call.  If it is higher than the highPriorityLevel and there
@@ -1864,16 +1837,16 @@ public abstract class HBaseServer implements RpcServer {
    * @param newFunc
    */
   @Override
-  public void setQosFunction(Function<Writable, Integer> newFunc) {
+  public void setQosFunction(Function<RpcRequestBody, Integer> newFunc) {
     qosFunction = newFunc;
   }
 
-  protected int getQosLevel(Writable param) {
+  protected int getQosLevel(RpcRequestBody rpcRequestBody) {
     if (qosFunction == null) {
       return 0;
     }
 
-    Integer res = qosFunction.apply(param);
+    Integer res = qosFunction.apply(rpcRequestBody);
     if (res == null) {
       return 0;
     }
@@ -1886,14 +1859,13 @@ public abstract class HBaseServer implements RpcServer {
    *
    */
   protected HBaseServer(String bindAddress, int port,
-                        Class<? extends Writable> paramClass, int handlerCount,
+                        int handlerCount,
                         int priorityHandlerCount, Configuration conf, String serverName,
                         int highPriorityLevel)
     throws IOException {
     this.bindAddress = bindAddress;
     this.conf = conf;
     this.port = port;
-    this.paramClass = paramClass;
     this.handlerCount = handlerCount;
     this.priorityHandlerCount = priorityHandlerCount;
     this.socketSendBufferSize = 0;
@@ -1963,26 +1935,10 @@ public abstract class HBaseServer implements RpcServer {
    */
   private void setupResponse(ByteArrayOutputStream response,
                              Call call, Status status,
-                             Writable rv, String errorClass, String error)
+                             String errorClass, String error)
   throws IOException {
     response.reset();
-    DataOutputStream out = new DataOutputStream(response);
-
-    if (status == Status.SUCCESS) {
-      try {
-        rv.write(out);
-        call.setResponse(rv, status, null, null);
-      } catch (Throwable t) {
-        LOG.warn("Error serializing call response for call " + call, t);
-        // Call back to same function - this is OK since the
-        // buffer is reset at the top, and since status is changed
-        // to ERROR it won't infinite loop.
-        call.setResponse(null, status.ERROR, t.getClass().getName(),
-            StringUtils.stringifyException(t));
-      }
-    } else {
-      call.setResponse(rv, status, errorClass, error);
-    }
+    call.setResponse(null, status, errorClass, error);
   }
 
   protected void closeConnection(Connection connection) {
