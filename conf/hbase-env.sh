@@ -61,6 +61,10 @@ export HBASE_OPTS="-XX:+UseConcMarkSweepGC"
 # File naming hosts on which HRegionServers will run.  $HBASE_HOME/conf/regionservers by default.
 # export HBASE_REGIONSERVERS=${HBASE_HOME}/conf/regionservers
 
+# Uncomment and adjust to keep all the Region Server pages mapped to be memory resident
+#HBASE_REGIONSERVER_MLOCK=true
+#HBASE_REGIONSERVER_UID="hbase"
+
 # Extra ssh options.  Empty by default.
 # export HBASE_SSH_OPTS="-o ConnectTimeout=1 -o SendEnv=HBASE_CONF_DIR"
 
