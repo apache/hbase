@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.DeserializationException;
@@ -58,6 +59,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -1157,7 +1160,44 @@ public abstract class FSUtils {
   }
 
   /**
+   * Throw an exception if an action is not permitted by a user on a file.
+   * 
+   * @param ugi
+   *          the user
+   * @param file
+   *          the file
+   * @param action
+   *          the action
+   */
+  public static void checkAccess(UserGroupInformation ugi, FileStatus file,
+      FsAction action) throws AccessControlException {
+    if (ugi.getUserName().equals(file.getOwner())) {
+      if (file.getPermission().getUserAction().implies(action)) {
+        return;
+      }
+    } else if (contains(ugi.getGroupNames(), file.getGroup())) {
+      if (file.getPermission().getGroupAction().implies(action)) {
+        return;
+      }
+    } else if (file.getPermission().getOtherAction().implies(action)) {
+      return;
+    }
+    throw new AccessControlException("Permission denied:" + " action=" + action
+        + " path=" + file.getPath() + " user=" + ugi.getUserName());
+  }
+
+  private static boolean contains(String[] groups, String user) {
+    for (String group : groups) {
+      if (group.equals(user)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Recursive helper to log the state of the FS
+   * 
    * @see #logFileSystemState(FileSystem, Path, Log)
    */
   private static void logFSTree(Log LOG, final FileSystem fs, final Path root, String prefix)
