@@ -130,6 +130,7 @@ Release 0.92.2 - Unreleased
    HBASE-6173  hbck check specified tables only
    HBASE-5360  [uberhbck] Add options for how to handle offline split parents. 
    HBASE-6283  [region_mover.rb] Add option to exclude list of hosts on unload instead of just assuming the source node
+   HBASE-5714  Add write permissions check before any hbck run that modifies hdfs (Liang Xie)
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems
