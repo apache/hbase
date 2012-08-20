@@ -514,6 +514,7 @@ public class TestCatalogJanitor {
     final Map<HRegionInfo, Result> splitParents =
         new TreeMap<HRegionInfo, Result>(new SplitParentFirstComparator());
     splitParents.put(parent, makeResultFromHRegionInfo(parent, splita, splitb));
+    splita.setOffline(true);//simulate that splita goes offline when it is split
     splitParents.put(splita, makeResultFromHRegionInfo(splita, splitaa, splitab));
 
     CatalogJanitor janitor = spy(new CatalogJanitor(server, services));

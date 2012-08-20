@@ -139,14 +139,16 @@ class CatalogJanitor extends Chore {
 
     // Now work on our list of found parents. See if any we can clean up.
     int cleaned = 0;
-    HashSet<HRegionInfo> parentNotCleaned = new HashSet<HRegionInfo>(); //regions whose parents are still around
+    HashSet<String> parentNotCleaned = new HashSet<String>(); //regions whose parents are still around
     for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
-      if (!parentNotCleaned.contains(e.getKey()) && cleanParent(e.getKey(), e.getValue())) {
+      if (!parentNotCleaned.contains(e.getKey().getEncodedName()) && cleanParent(e.getKey(), e.getValue())) {
         cleaned++;
       } else {
         // We could not clean the parent, so it's daughters should not be cleaned either (HBASE-6160)
-        parentNotCleaned.add(getDaughterRegionInfo(e.getValue(), HConstants.SPLITA_QUALIFIER));
-        parentNotCleaned.add(getDaughterRegionInfo(e.getValue(), HConstants.SPLITB_QUALIFIER));
+        parentNotCleaned.add(getDaughterRegionInfo(
+              e.getValue(), HConstants.SPLITA_QUALIFIER).getEncodedName());
+        parentNotCleaned.add(getDaughterRegionInfo(
+              e.getValue(), HConstants.SPLITB_QUALIFIER).getEncodedName());
       }
     }
     if (cleaned != 0) {
