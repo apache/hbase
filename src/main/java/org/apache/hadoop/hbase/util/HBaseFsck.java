@@ -47,6 +47,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -74,11 +76,14 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.base.Joiner;
@@ -176,6 +181,7 @@ public class HBaseFsck {
   private boolean rerun = false; // if we tried to fix something, rerun hbck
   private static boolean summary = false; // if we want to print less output
   private boolean checkMetaOnly = false;
+  private boolean ignorePreCheckPermission = false; // if pre-check permission
 
   /*********
    * State
@@ -1129,6 +1135,27 @@ public class HBaseFsck {
       setShouldRerun();  // should re-run to verify it is fixed
       for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
         fixTableDescConsistency(e.getKey(), e.getValue());
+      }
+    }
+  }
+
+  private void preCheckPermission() throws IOException, AccessControlException {
+    if (shouldIgnorePreCheckPermission()) {
+      return;
+    }
+
+    Path hbaseDir = new Path(conf.get(HConstants.HBASE_DIR));
+    FileSystem fs = hbaseDir.getFileSystem(conf);
+    UserGroupInformation ugi = User.getCurrent().getUGI();
+    FileStatus[] files = fs.listStatus(hbaseDir);
+    for (FileStatus file : files) {
+      try {
+        FSUtils.checkAccess(ugi, file, FsAction.WRITE);
+      } catch (AccessControlException ace) {
+        LOG.warn("Got AccessControlException when preCheckPermission ", ace);
+        System.err.println("Current user " + ugi.getUserName() + " does not have write perms to " + file.getPath()
+            + ". Please rerun hbck as hdfs user " + file.getOwner());
+        throw new AccessControlException(ace);
       }
     }
   }
@@ -3049,6 +3076,14 @@ public class HBaseFsck {
     return fixSplitParents;
   }
 
+  public boolean shouldIgnorePreCheckPermission() {
+    return ignorePreCheckPermission;
+  }
+
+  public void setIgnorePreCheckPermission(boolean ignorePreCheckPermission) {
+    this.ignorePreCheckPermission = ignorePreCheckPermission;
+  }
+
   /**
    * @param mm maximum number of regions to merge into a single region.
    */
@@ -3114,6 +3149,7 @@ public class HBaseFsck {
     System.err.println("   -sidelineBigOverlaps  When fixing region overlaps, allow to sideline big overlaps");
     System.err.println("   -maxOverlapsToSideline <n>  When fixing region overlaps, allow at most <n> regions to sideline per group. (n=" + DEFAULT_OVERLAPS_TO_SIDELINE +" by default)");
     System.err.println("   -fixSplitParents  Try to force offline split parents to be online.");
+    System.err.println("   -ignorePreCheckPermission  ignore filesystem permission pre-check");
     System.err.println("");
     System.err.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles " +
         "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps");
@@ -3193,6 +3229,8 @@ public class HBaseFsck {
         fsck.setFixTableDesc(true);
       } else if (cmd.equals("-fixSplitParents")) {
         fsck.setFixSplitParents(true);
+      } else if (cmd.equals("-ignorePreCheckPermission")) {
+        fsck.setIgnorePreCheckPermission(true);
       } else if (cmd.equals("-repair")) {
         // this attempts to merge overlapping hdfs regions, needs testing
         // under load
@@ -3248,6 +3286,15 @@ public class HBaseFsck {
         fsck.includeTable(cmd);
         System.out.println("Allow checking/fixes for table: " + cmd);
       }
+    }
+
+    // pre-check current user has FS write permission or not
+    try {
+      fsck.preCheckPermission();
+    } catch (AccessControlException ace) {
+      Runtime.getRuntime().exit(-1);
+    } catch (IOException ioe) {
+      Runtime.getRuntime().exit(-1);
     }
     // do the real work of fsck
     fsck.connect();

@@ -60,6 +60,7 @@ Release 0.90.7 - Unreleased
    HBASE-6283  [region_mover.rb] Add option to exclude list of hosts on unload instead of just assuming the source node
    HBASE-6382  Upgrade Jersey to 1.8 to match Hadoop 1 and 2 (David S. Wang)
    HBASE-6379  [0.90 branch] Backport HBASE-6334 to 0.90 (TestImprovement for TestHRegion.testWritesWhileGetting) (Gregory Chanan)
+   HBASE-5714  Add write permissions check before any hbck run that modifies hdfs (Liang Xie)
 
   NEW FEATURE
    HBASE-5128  [uber hbck] Online automated repair of table integrity and region consistency problems

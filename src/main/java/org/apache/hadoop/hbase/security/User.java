@@ -63,6 +63,10 @@ public abstract class User {
   private static Log LOG = LogFactory.getLog(User.class);
   protected UserGroupInformation ugi;
 
+  public UserGroupInformation getUGI() {
+    return ugi;
+  }
+
   /**
    * Returns the full user name.  For Kerberos principals this will include
    * the host and realm portions of the principal name.
