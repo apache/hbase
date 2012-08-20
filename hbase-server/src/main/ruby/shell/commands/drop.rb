@@ -23,10 +23,7 @@ module Shell
     class Drop < Command
       def help
         return <<-EOF
-Drop the named table. Table must first be disabled. If table has
-more than one region, run a major compaction on .META.:
-
-  hbase> major_compact ".META."
+Drop the named table. Table must first be disabled: e.g. "hbase> drop 't1'"
 EOF
       end
 
