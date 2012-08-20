@@ -340,82 +340,87 @@ public class StoreScanner extends NonLazyKeyValueScanner
     KeyValue.KVComparator comparator =
         store != null ? store.getComparator() : null;
 
-    LOOP: while((kv = this.heap.peek()) != null) {
-      // Check that the heap gives us KVs in an increasing order.
-      assert prevKV == null || comparator == null || comparator.compare(prevKV, kv) <= 0 :
-        "Key " + prevKV + " followed by a " + "smaller key " + kv + " in cf " + store;
-      prevKV = kv;
-      ScanQueryMatcher.MatchCode qcode = matcher.match(kv);
-      switch(qcode) {
-        case INCLUDE:
-        case INCLUDE_AND_SEEK_NEXT_ROW:
-        case INCLUDE_AND_SEEK_NEXT_COL:
+    long cumulativeMetric = 0;
+    try {
+      LOOP: while((kv = this.heap.peek()) != null) {
+        // Check that the heap gives us KVs in an increasing order.
+        assert prevKV == null || comparator == null || comparator.compare(prevKV, kv) <= 0 :
+          "Key " + prevKV + " followed by a " + "smaller key " + kv + " in cf " + store;
+        prevKV = kv;
+        ScanQueryMatcher.MatchCode qcode = matcher.match(kv);
+        switch(qcode) {
+          case INCLUDE:
+          case INCLUDE_AND_SEEK_NEXT_ROW:
+          case INCLUDE_AND_SEEK_NEXT_COL:
 
-          Filter f = matcher.getFilter();
-          results.add(f == null ? kv : f.transform(kv));
+            Filter f = matcher.getFilter();
+            results.add(f == null ? kv : f.transform(kv));
 
-          if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
+            if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
+              if (!matcher.moreRowsMayExistAfter(kv)) {
+                outResult.addAll(results);
+                return false;
+              }
+              reseek(matcher.getKeyForNextRow(kv));
+            } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
+              reseek(matcher.getKeyForNextColumn(kv));
+            } else {
+              this.heap.next();
+            }
+
+            cumulativeMetric += kv.getLength();
+            if (limit > 0 && (results.size() == limit)) {
+              break LOOP;
+            }
+            continue;
+
+          case DONE:
+            // copy jazz
+            outResult.addAll(results);
+            return true;
+
+          case DONE_SCAN:
+            close();
+
+            // copy jazz
+            outResult.addAll(results);
+
+            return false;
+
+          case SEEK_NEXT_ROW:
+            // This is just a relatively simple end of scan fix, to short-cut end
+            // us if there is an endKey in the scan.
             if (!matcher.moreRowsMayExistAfter(kv)) {
               outResult.addAll(results);
               return false;
             }
+
             reseek(matcher.getKeyForNextRow(kv));
-          } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
+            break;
+
+          case SEEK_NEXT_COL:
             reseek(matcher.getKeyForNextColumn(kv));
-          } else {
+            break;
+
+          case SKIP:
             this.heap.next();
-          }
+            break;
 
-          RegionMetricsStorage.incrNumericMetric(metricNameGetSize, kv.getLength());
-          if (limit > 0 && (results.size() == limit)) {
-            break LOOP;
-          }
-          continue;
+          case SEEK_NEXT_USING_HINT:
+            KeyValue nextKV = matcher.getNextKeyHint(kv);
+            if (nextKV != null) {
+              reseek(nextKV);
+            } else {
+              heap.next();
+            }
+            break;
 
-        case DONE:
-          // copy jazz
-          outResult.addAll(results);
-          return true;
-
-        case DONE_SCAN:
-          close();
-
-          // copy jazz
-          outResult.addAll(results);
-
-          return false;
-
-        case SEEK_NEXT_ROW:
-          // This is just a relatively simple end of scan fix, to short-cut end
-          // us if there is an endKey in the scan.
-          if (!matcher.moreRowsMayExistAfter(kv)) {
-            outResult.addAll(results);
-            return false;
-          }
-
-          reseek(matcher.getKeyForNextRow(kv));
-          break;
-
-        case SEEK_NEXT_COL:
-          reseek(matcher.getKeyForNextColumn(kv));
-          break;
-
-        case SKIP:
-          this.heap.next();
-          break;
-
-        case SEEK_NEXT_USING_HINT:
-          KeyValue nextKV = matcher.getNextKeyHint(kv);
-          if (nextKV != null) {
-            reseek(nextKV);
-          } else {
-            heap.next();
-          }
-          break;
-
-        default:
-          throw new RuntimeException("UNEXPECTED");
+          default:
+            throw new RuntimeException("UNEXPECTED");
+        }
       }
+    } finally {
+      RegionMetricsStorage.incrNumericMetric(metricNameGetSize, cumulativeMetric);
     }
 
     if (!results.isEmpty()) {
