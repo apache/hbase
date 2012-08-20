@@ -351,8 +351,8 @@ public class ZKTable {
   }
   
   /**
-   * Sets the ENABLED state in the cache and deletes the zookeeper node. Fails
-   * silently if the node is not in enabled in zookeeper
+   * Sets the ENABLED state in the cache and creates or force updates a node to
+   * ENABLED state for the specified table
    * 
    * @param tableName
    * @throws KeeperException
