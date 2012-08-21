@@ -812,7 +812,7 @@
     <jruby.version>1.6.5</jruby.version>
     <junit.version>4.10-HBASE-1</junit.version>
     <slf4j.version>1.4.3</slf4j.version>
-    <log4j.version>1.2.16</log4j.version>
+    <log4j.version>1.2.17</log4j.version>
     <mockito-all.version>1.8.5</mockito-all.version>
     <protobuf.version>2.4.0a</protobuf.version>
     <stax-api.version>1.0.1</stax-api.version>
