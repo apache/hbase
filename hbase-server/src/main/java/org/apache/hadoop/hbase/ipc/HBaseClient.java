@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.St
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
+import org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.AuthMethod;
 import org.apache.hadoop.hbase.security.KerberosInfo;
@@ -83,6 +84,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.cloudera.htrace.Span;
+import org.cloudera.htrace.Trace;
 
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
@@ -928,8 +932,17 @@ public class HBaseClient {
       try {
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " sending #" + call.id);
+
         RpcRequestHeader.Builder headerBuilder = RPCProtos.RpcRequestHeader.newBuilder();
         headerBuilder.setCallId(call.id);
+
+        if (Trace.isTracing()) {
+          Span s = Trace.currentTrace();
+          headerBuilder.setTinfo(RPCTInfo.newBuilder()
+              .setParentId(s.getSpanId())
+              .setTraceId(s.getTraceId()));
+        }
+
         //noinspection SynchronizeOnNonFinalField
         synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
           RpcRequestHeader header = headerBuilder.build();

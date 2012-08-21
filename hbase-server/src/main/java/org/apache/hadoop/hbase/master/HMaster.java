@@ -182,6 +182,7 @@ import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
+import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -303,6 +304,7 @@ Server {
   //should we check the compression codec type at master side, default true, HBASE-6370
   private final boolean masterCheckCompression;
 
+  private SpanReceiverHost spanReceiverHost;
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -636,7 +638,10 @@ Server {
       // initialize master side coprocessors before we start handling requests
       status.setStatus("Initializing master coprocessors");
       this.cpHost = new MasterCoprocessorHost(this, this.conf);
-      
+
+      spanReceiverHost = new SpanReceiverHost(getConfiguration());
+      spanReceiverHost.loadSpanReceivers();
+
       // start up all service threads.
       status.setStatus("Initializing master service threads");
       startServiceThreads();
@@ -1962,6 +1967,7 @@ Server {
   }
 
   public void shutdown() {
+    spanReceiverHost.closeReceivers();
     if (cpHost != null) {
       try {
         cpHost.preShutdown();
