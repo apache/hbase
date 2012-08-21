@@ -38,6 +38,7 @@ import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -69,6 +70,8 @@ import org.apache.hadoop.hbase.security.TokenInfo;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSelector;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 import org.apache.hadoop.io.IOUtils;
@@ -113,6 +116,7 @@ public class HBaseClient {
   protected final boolean tcpKeepAlive; // if T then use keepalives
   protected int pingInterval; // how often sends ping to the server in msecs
   protected int socketTimeout; // socket timeout
+  protected FailedServers failedServers;
 
   protected final SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
@@ -123,6 +127,68 @@ public class HBaseClient {
   final static int DEFAULT_PING_INTERVAL = 60000;  // 1 min
   final static int DEFAULT_SOCKET_TIMEOUT = 20000; // 20 seconds
   final static int PING_CALL_ID = -1;
+
+  public final static String FAILED_SERVER_EXPIRY_KEY = "hbase.ipc.client.failed.servers.expiry";
+  public final static int FAILED_SERVER_EXPIRY_DEFAULT = 2000;
+
+  /**
+   * A class to manage a list of servers that failed recently.
+   */
+  static class FailedServers {
+    private final LinkedList<Pair<Long, String>> failedServers = new
+        LinkedList<Pair<Long, java.lang.String>>();
+    private final int recheckServersTimeout;
+
+    FailedServers(Configuration conf) {
+      this.recheckServersTimeout = conf.getInt(
+          FAILED_SERVER_EXPIRY_KEY, FAILED_SERVER_EXPIRY_DEFAULT);
+    }
+
+    /**
+     * Add an address to the list of the failed servers list.
+     */
+    public synchronized void addToFailedServers(InetSocketAddress address) {
+      final long expiry = EnvironmentEdgeManager.currentTimeMillis() + recheckServersTimeout;
+      failedServers.addFirst(new Pair<Long, String>(expiry, address.toString()));
+    }
+
+    /**
+     * Check if the server should be considered as bad. Clean the old entries of the list.
+     *
+     * @return true if the server is in the failed servers list
+     */
+    public synchronized boolean isFailedServer(final InetSocketAddress address) {
+      if (failedServers.isEmpty()) {
+        return false;
+      }
+
+      final String lookup = address.toString();
+      final long now = EnvironmentEdgeManager.currentTimeMillis();
+
+      // iterate, looking for the search entry and cleaning expired entries
+      Iterator<Pair<Long, String>> it = failedServers.iterator();
+      while (it.hasNext()) {
+        Pair<Long, String> cur = it.next();
+        if (cur.getFirst() < now) {
+          it.remove();
+        } else {
+          if (lookup.equals(cur.getSecond())) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    }
+
+  }
+
+  public static class FailedServerException extends IOException {
+    public FailedServerException(String s) {
+      super(s);
+    }
+  }
+
 
   /**
    * set the ping interval value in configuration
@@ -240,6 +306,15 @@ public class HBaseClient {
     tokenHandlers.put(AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE.toString(),
         new AuthenticationTokenSelector());
   }
+
+  /**
+   * Creates a connection. Can be overridden by a subclass for testing.
+   * @param remoteId - the ConnectionId to use for the connection creation.
+   */
+  protected Connection createConnection(ConnectionId remoteId) throws IOException {
+    return new Connection(remoteId);
+  }
+
   /** Thread that reads responses and notifies callers.  Each connection owns a
    * socket connected to a remote address.  Calls are multiplexed through this
    * socket: responses may be delivered out of order. */
@@ -263,7 +338,7 @@ public class HBaseClient {
     protected final AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
     protected IOException closeException; // close reason
 
-    public Connection(ConnectionId remoteId) throws IOException {
+    Connection(ConnectionId remoteId) throws IOException {
       if (remoteId.getAddress().isUnresolved()) {
         throw new UnknownHostException("unknown host: " +
                                        remoteId.getAddress().getHostName());
@@ -359,17 +434,30 @@ public class HBaseClient {
 
     /**
      * Add a call to this connection's call queue and notify
-     * a listener; synchronized.
-     * Returns false if called during shutdown.
+     * a listener; synchronized. If the connection is dead, the call is not added, and the
+     * caller is notified.
+     * This function can return a connection that is already marked as 'shouldCloseConnection'
+     *  It is up to the user code to check this status.
      * @param call to add
-     * @return true if the call was added.
      */
-    protected synchronized boolean addCall(Call call) {
-      if (shouldCloseConnection.get())
-        return false;
-      calls.put(call.id, call);
-      notify();
-      return true;
+    protected synchronized void addCall(Call call) {
+      // If the connection is about to close, we manage this as if the call was already added
+      //  to the connection calls list. If not, the connection creations are serialized, as
+      //  mentioned in HBASE-6364
+      if (this.shouldCloseConnection.get()) {
+        if (this.closeException == null) {
+          call.setException(new IOException(
+              "Call " + call.id + " not added as the connection " + remoteId + " is closing"));
+        } else {
+          call.setException(this.closeException);
+        }
+        synchronized (call) {
+          call.notifyAll();
+        }
+      } else {
+        calls.put(call.id, call);
+        notify();
+      }
     }
 
     /** This class sends a ping to the remote side when timeout on
@@ -682,6 +770,18 @@ public class HBaseClient {
         return;
       }
 
+      if (failedServers.isFailedServer(remoteId.getAddress())) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Not trying to connect to " + server +
+              " this server is in the failed servers list");
+        }
+        IOException e = new FailedServerException(
+            "This server is in the failed servers list: " + server);
+        markClosed(e);
+        close();
+        throw e;
+      }
+
       try {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Connecting to "+server);
@@ -698,7 +798,7 @@ public class HBaseClient {
             final InputStream in2 = inStream;
             final OutputStream out2 = outStream;
             UserGroupInformation ticket = remoteId.getTicket().getUGI();
-            if (authMethod == AuthMethod.KERBEROS) {;
+            if (authMethod == AuthMethod.KERBEROS) {
               if (ticket != null && ticket.getRealUser() != null) {
                 ticket = ticket.getRealUser();
               }
@@ -744,6 +844,7 @@ public class HBaseClient {
           return;
         }
       } catch (IOException e) {
+        failedServers.addToFailedServers(remoteId.address);
         markClosed(e);
         close();
 
@@ -1037,7 +1138,6 @@ public class HBaseClient {
   /**
    * Construct an IPC client whose values are of the {@link Message}
    * class.
-   * @param valueClass value class
    * @param conf configuration
    * @param factory socket factory
    */
@@ -1057,6 +1157,7 @@ public class HBaseClient {
     this.clusterId = conf.get(HConstants.CLUSTER_ID, "default");
     this.connections = new PoolMap<ConnectionId, Connection>(
         getPoolType(conf), getPoolSize(conf));
+    this.failedServers = new FailedServers(conf);
   }
 
   /**
@@ -1297,20 +1398,22 @@ public class HBaseClient {
      * refs for keys in HashMap properly. For now its ok.
      */
     ConnectionId remoteId = new ConnectionId(addr, protocol, ticket, rpcTimeout);
-    do {
-      synchronized (connections) {
-        connection = connections.get(remoteId);
-        if (connection == null) {
-          connection = new Connection(remoteId);
-          connections.put(remoteId, connection);
-        }
+    synchronized (connections) {
+      connection = connections.get(remoteId);
+      if (connection == null) {
+        connection = createConnection(remoteId);
+        connections.put(remoteId, connection);
       }
-    } while (!connection.addCall(call));
+    }
+    connection.addCall(call);
 
     //we don't invoke the method below inside "synchronized (connections)"
     //block above. The reason for that is if the server happens to be slow,
     //it will take longer to establish a connection and that will slow the
     //entire system down.
+    //Moreover, if the connection is currently created, there will be many threads
+    // waiting here; as setupIOstreams is synchronized. If the connection fails with a
+    // timeout, they will all fail simultaneously. This is checked in setupIOstreams.
     connection.setupIOstreams();
     return connection;
   }

@@ -35,6 +35,10 @@ public class ManualEnvironmentEdge implements EnvironmentEdge {
     value = newValue;
   }
 
+  public void incValue(long addedValue) {
+    value += addedValue;
+  }
+
   @Override
   public long currentTimeMillis() {
     return this.value;

@@ -187,6 +187,9 @@ public final class HConstants {
   /** Parameter name for what master implementation to use. */
   public static final String MASTER_IMPL= "hbase.master.impl";
 
+  /** Parameter name for what hbase client implementation to use. */
+  public static final String HBASECLIENT_IMPL= "hbase.hbaseclient.impl";
+
   /** Parameter name for how often threads should wake up */
   public static final String THREAD_WAKE_FREQUENCY = "hbase.server.thread.wakefrequency";
 
