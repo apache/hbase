@@ -316,6 +316,21 @@ public class KeyValue implements Writable, HeapSize {
     this.length = length;
   }
 
+  /**
+   * Creates a KeyValue from the specified byte array, starting at offset,
+   * for length <code>length</code>, and a known <code>keyLength</code>.
+   * @param bytes byte array
+   * @param offset offset to start of the KeyValue
+   * @param length length of the KeyValue
+   * @param keyLength length of the key portion of the KeyValue
+   */
+  public KeyValue(final byte [] bytes, final int offset, final int length, final int keyLength) {
+    this.bytes = bytes;
+    this.offset = offset;
+    this.length = length;
+    this.keyLength = keyLength;
+  }
+
   /** Constructors that build a new backing byte array from fields */
 
   /**
