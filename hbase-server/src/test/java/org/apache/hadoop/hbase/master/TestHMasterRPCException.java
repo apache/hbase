@@ -57,7 +57,7 @@ public class TestHMasterRPCException {
     while (i < 20) { 
       try {
         MasterMonitorProtocol inf = (MasterMonitorProtocol) HBaseRPC.getProxy(
-            MasterMonitorProtocol.class,  MasterMonitorProtocol.VERSION, isa, conf, 100);
+            MasterMonitorProtocol.class,  MasterMonitorProtocol.VERSION, isa, conf, 100 * 10);
         inf.isMasterRunning(null, IsMasterRunningRequest.getDefaultInstance());
         fail();
       } catch (ServiceException ex) {
