@@ -76,11 +76,20 @@ public class MiniHBaseCluster {
    * @throws IOException
    */
   public MiniHBaseCluster(Configuration conf, int numMasters,
-      int numRegionServers)
-  throws IOException, InterruptedException {
+                             int numRegionServers)
+      throws IOException, InterruptedException {
     this.conf = conf;
     conf.set(HConstants.MASTER_PORT, "0");
-    init(numMasters, numRegionServers);
+    init(numMasters, numRegionServers, null, null);
+  }
+
+  public MiniHBaseCluster(Configuration conf, int numMasters, int numRegionServers,
+         Class<? extends HMaster> masterClass,
+         Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+      throws IOException, InterruptedException {
+    this.conf = conf;
+    conf.set(HConstants.MASTER_PORT, "0");
+    init(numMasters, numRegionServers, masterClass, regionserverClass);
   }
 
   public Configuration getConfiguration() {
@@ -186,12 +195,21 @@ public class MiniHBaseCluster {
     }
   }
 
-  private void init(final int nMasterNodes, final int nRegionNodes)
+  private void init(final int nMasterNodes, final int nRegionNodes,
+                 Class<? extends HMaster> masterClass,
+                 Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
   throws IOException, InterruptedException {
     try {
+      if (masterClass == null){
+        masterClass =  HMaster.class;
+      }
+      if (regionserverClass == null){
+        regionserverClass = MiniHBaseCluster.MiniHBaseClusterRegionServer.class;
+      }
+
       // start up a LocalHBaseCluster
       hbaseCluster = new LocalHBaseCluster(conf, nMasterNodes, 0,
-        HMaster.class, MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
+          masterClass, regionserverClass);
 
       // manually add the regionservers as other users
       for (int i=0; i<nRegionNodes; i++) {

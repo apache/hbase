@@ -439,6 +439,25 @@ public class HBaseTestingUtility {
     return this.dfsCluster;
   }
 
+
+  public MiniDFSCluster startMiniDFSCluster(int servers, final  String racks[], String hosts[])
+      throws Exception {
+    createDirsAndSetProperties();
+    this.dfsCluster = new MiniDFSCluster(0, this.conf, servers, true, true,
+        true, null, racks, hosts, null);
+
+    // Set this just-started cluster as our filesystem.
+    FileSystem fs = this.dfsCluster.getFileSystem();
+    this.conf.set("fs.defaultFS", fs.getUri().toString());
+    // Do old style too just to be safe.
+    this.conf.set("fs.default.name", fs.getUri().toString());
+
+    // Wait for the cluster to be totally up
+    this.dfsCluster.waitClusterUp();
+
+    return this.dfsCluster;
+  }
+
   public MiniDFSCluster startMiniDFSClusterForTestHLog(int namenodePort) throws IOException {
     createDirsAndSetProperties();
     dfsCluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null,
@@ -637,6 +656,11 @@ public class HBaseTestingUtility {
     return startMiniHBaseCluster(numMasters, numSlaves);
   }
 
+  public MiniHBaseCluster startMiniHBaseCluster(final int numMasters, final int numSlaves)
+      throws IOException, InterruptedException{
+    return startMiniHBaseCluster(numMasters, numSlaves, null, null);
+  }
+
   /**
    * Starts up mini hbase cluster.  Usually used after call to
    * {@link #startMiniCluster(int, int)} when doing stepped startup of clusters.
@@ -649,7 +673,8 @@ public class HBaseTestingUtility {
    * @see {@link #startMiniCluster()}
    */
   public MiniHBaseCluster startMiniHBaseCluster(final int numMasters,
-      final int numSlaves)
+        final int numSlaves, Class<? extends HMaster> masterClass,
+        Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
   throws IOException, InterruptedException {
     // Now do the mini hbase cluster.  Set the hbase.rootdir in config.
     createRootDir();
@@ -660,7 +685,8 @@ public class HBaseTestingUtility {
     conf.setInt("hbase.master.wait.on.regionservers.maxtostart", numSlaves);
 
     Configuration c = new Configuration(this.conf);
-    this.hbaseCluster = new MiniHBaseCluster(c, numMasters, numSlaves);
+    this.hbaseCluster =
+        new MiniHBaseCluster(c, numMasters, numSlaves, masterClass, regionserverClass);
     // Don't leave here till we've done a successful scan of the .META.
     HTable t = new HTable(c, HConstants.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());

@@ -53,6 +53,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -150,6 +151,7 @@ public class HLog implements Syncable {
   private static Class<? extends Reader> logReaderClass;
 
   private WALCoprocessorHost coprocessorHost;
+
 
   static void resetLogReaderClass() {
     HLog.logReaderClass = null;
@@ -1755,6 +1757,62 @@ public class HLog implements Syncable {
     dirName.append("/");
     dirName.append(serverName);
     return dirName.toString();
+  }
+
+
+  /**
+   * @param path - the path to analyze. Expected format, if it's in hlog directory:
+   *  / [base directory for hbase] / hbase / .logs / ServerName / logfile
+   * @return null if it's not a log file. Returns the ServerName of the region server that created
+   *  this log file otherwise.
+   */
+  public static ServerName getServerNameFromHLogDirectoryName(Configuration conf, String path)
+      throws IOException {
+    if (path == null || path.length() <= HConstants.HREGION_LOGDIR_NAME.length()) {
+      return null;
+    }
+
+    if (conf == null) {
+      throw new IllegalArgumentException("parameter conf must be set");
+    }
+
+    final String rootDir = conf.get(HConstants.HBASE_DIR);
+    if (rootDir == null || rootDir.isEmpty()) {
+      throw new IllegalArgumentException(HConstants.HBASE_DIR + " key not found in conf.");
+    }
+
+    final StringBuilder startPathSB = new StringBuilder(rootDir);
+    if (!rootDir.endsWith("/")) startPathSB.append('/');
+    startPathSB.append(HConstants.HREGION_LOGDIR_NAME);
+    if (!HConstants.HREGION_LOGDIR_NAME.endsWith("/")) startPathSB.append('/');
+    final String startPath = startPathSB.toString();
+
+    String fullPath;
+    try {
+      fullPath = FileSystem.get(conf).makeQualified(new Path(path)).toString();
+    } catch (IllegalArgumentException e) {
+      LOG.info("Call to makeQualified failed on " + path + " " + e.getMessage());
+      return null;
+    }
+
+    if (!fullPath.startsWith(startPath)) {
+      return null;
+    }
+
+    final String serverNameAndFile = fullPath.substring(startPath.length());
+
+    if (serverNameAndFile.indexOf('/') < "a,0,0".length()) {
+      // Either it's a file (not a directory) or it's not a ServerName format
+      return null;
+    }
+
+    final String serverName = serverNameAndFile.substring(0, serverNameAndFile.indexOf('/') - 1);
+
+    if (!ServerName.isFullServerName(serverName)) {
+      return null;
+    }
+
+    return ServerName.parseServerName(serverName);
   }
 
   /**

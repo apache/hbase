@@ -53,6 +53,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -718,6 +719,29 @@ public class TestHLog  {
     } finally {
       if (log != null) log.closeAndDelete();
     }
+  }
+
+
+  @Test
+  public void testGetServerNameFromHLogDirectoryName() throws IOException {
+    String hl = conf.get(HConstants.HBASE_DIR) + "/"+
+        HLog.getHLogDirectoryName(new ServerName("hn", 450, 1398).toString());
+
+    // Must not throw exception
+    Assert.assertNull(HLog.getServerNameFromHLogDirectoryName(conf, null));
+    Assert.assertNull(HLog.getServerNameFromHLogDirectoryName(conf,
+        conf.get(HConstants.HBASE_DIR) + "/"));
+    Assert.assertNull( HLog.getServerNameFromHLogDirectoryName(conf, "") );
+    Assert.assertNull( HLog.getServerNameFromHLogDirectoryName(conf, "                  ") );
+    Assert.assertNull( HLog.getServerNameFromHLogDirectoryName(conf, hl) );
+    Assert.assertNull( HLog.getServerNameFromHLogDirectoryName(conf, hl+"qdf") );
+    Assert.assertNull( HLog.getServerNameFromHLogDirectoryName(conf, "sfqf"+hl+"qdf") );
+
+    Assert.assertNotNull( HLog.getServerNameFromHLogDirectoryName(conf, conf.get(
+        HConstants.HBASE_DIR) +
+        "/.logs/localhost,32984,1343316388997/localhost%2C32984%2C1343316388997.1343316390417"
+        ));
+    Assert.assertNotNull( HLog.getServerNameFromHLogDirectoryName(conf, hl+"/qdf") );
   }
 
   /**
