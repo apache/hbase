@@ -49,7 +49,7 @@ public class TestHMasterRPCException {
     InetSocketAddress isa = new InetSocketAddress(sm.getHostname(), sm.getPort());
     try {
       HMasterInterface inf = (HMasterInterface) HBaseRPC.getProxy(
-        HMasterInterface.class,  HMasterInterface.VERSION, isa, conf, 100);
+        HMasterInterface.class,  HMasterInterface.VERSION, isa, conf, 100 x 10);
       inf.isMasterRunning();
       fail();
     } catch (RemoteException ex) {
