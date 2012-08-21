@@ -1207,8 +1207,8 @@ Server {
   @Override
   public IsCatalogJanitorEnabledResponse isCatalogJanitorEnabled(RpcController c,
       IsCatalogJanitorEnabledRequest req) throws ServiceException {
-    return IsCatalogJanitorEnabledResponse.newBuilder().
-        setValue(catalogJanitorChore.getEnabled()).build();
+    boolean isEnabled = catalogJanitorChore != null ? catalogJanitorChore.getEnabled() : false;
+    return IsCatalogJanitorEnabledResponse.newBuilder().setValue(isEnabled).build();
   }
 
   /**

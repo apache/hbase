@@ -120,7 +120,7 @@ org.apache.hadoop.hbase.HBaseConfiguration;
           for details.
           </div>
         </%if>
-        <%if !catalogJanitorEnabled %>
+        <%if master.isInitialized() && !catalogJanitorEnabled %>
           <div class="alert alert-error">
           Please note that your cluster is running with the CatalogJanitor disabled. It can be
           re-enabled from the hbase shell by running the command 'catalogjanitor_switch true'
