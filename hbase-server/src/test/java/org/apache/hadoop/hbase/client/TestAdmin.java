@@ -1113,16 +1113,21 @@ public class TestAdmin {
   @Test
   public void testCreateTableRPCTimeOut() throws Exception {
     String name = "testCreateTableRPCTimeOut";
+    int oldTimeout = TEST_UTIL.getConfiguration().
+      getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
-
-    int expectedRegions = 100;
-    // Use 80 bit numbers to make sure we aren't limited
-    byte [] startKey = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
-    byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
-    HBaseAdmin hbaseadmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-    hbaseadmin.createTable(new HTableDescriptor(name), startKey, endKey,
-      expectedRegions);
-    hbaseadmin.close();
+    try {
+      int expectedRegions = 100;
+      // Use 80 bit numbers to make sure we aren't limited
+      byte [] startKey = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+      byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
+      HBaseAdmin hbaseadmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      hbaseadmin.createTable(new HTableDescriptor(name), startKey, endKey,
+        expectedRegions);
+      hbaseadmin.close();
+    } finally {
+      TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, oldTimeout);
+    }
   }
 
   /**
