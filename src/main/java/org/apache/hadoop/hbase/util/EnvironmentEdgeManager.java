@@ -45,7 +45,7 @@ public class EnvironmentEdgeManager {
    * Resets the managed instance to the default instance: {@link
    * DefaultEnvironmentEdge}.
    */
-  static void reset() {
+  public static void reset() {
     injectEdge(new DefaultEnvironmentEdge());
   }
 
@@ -55,7 +55,7 @@ public class EnvironmentEdgeManager {
    *
    * @param edge the new edge.
    */
-  static void injectEdge(EnvironmentEdge edge) {
+  public static void injectEdge(EnvironmentEdge edge) {
     if (edge == null) {
       reset();
     } else {
