@@ -133,11 +133,11 @@ public class ThriftServerRunner implements Runnable {
 
   /** An enum of server implementation selections */
   enum ImplType {
-    HS_HA("hsha", true, THsHaServer.class, false),
-    NONBLOCKING("nonblocking", true, TNonblockingServer.class, false),
+    HS_HA("hsha", true, THsHaServer.class, true),
+    NONBLOCKING("nonblocking", true, TNonblockingServer.class, true),
     THREAD_POOL("threadpool", false, TBoundedThreadPoolServer.class, true),
     THREADED_SELECTOR(
-        "threadedselector", true, TThreadedSelectorServer.class, false);
+        "threadedselector", true, TThreadedSelectorServer.class, true);
 
     public static final ImplType DEFAULT = THREAD_POOL;
 
@@ -302,8 +302,9 @@ public class ThriftServerRunner implements Runnable {
     if (implType == ImplType.HS_HA || implType == ImplType.NONBLOCKING ||
         implType == ImplType.THREADED_SELECTOR) {
 
-      TNonblockingServerTransport serverTransport =
-          new TNonblockingServerSocket(listenPort);
+      InetAddress listenAddress = getBindAddress(conf); 
+      TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(
+          new InetSocketAddress(listenAddress, listenPort));
 
       if (implType == ImplType.NONBLOCKING) {
         TNonblockingServer.Args serverArgs =

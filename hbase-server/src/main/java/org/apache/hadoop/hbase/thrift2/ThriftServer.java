@@ -87,7 +87,7 @@ public class ThriftServer {
   private static Options getOptions() {
     Options options = new Options();
     options.addOption("b", "bind", true,
-        "Address to bind the Thrift server to. Not supported by the Nonblocking and HsHa server [default: 0.0.0.0]");
+        "Address to bind the Thrift server to. [default: 0.0.0.0]");
     options.addOption("p", "port", true, "Port to bind to [default: " + DEFAULT_LISTEN_PORT + "]");
     options.addOption("f", "framed", false, "Use framed transport");
     options.addOption("c", "compact", false, "Use the compact protocol");
@@ -235,15 +235,6 @@ public class ThriftServer {
 
       boolean framed = cmd.hasOption("framed") || nonblocking || hsha;
       TTransportFactory transportFactory = getTTransportFactory(framed);
-
-      // TODO: Remove once HBASE-2155 is resolved
-      if (cmd.hasOption("bind") && (nonblocking || hsha)) {
-        log.error("The Nonblocking and HsHaServer servers don't support IP address binding at the moment." +
-            " See https://issues.apache.org/jira/browse/HBASE-2155 for details.");
-        printUsage();
-        System.exit(1);
-      }
-
       InetSocketAddress inetSocketAddress = bindToPort(cmd.getOptionValue("bind"), listenPort);
 
       if (nonblocking) {

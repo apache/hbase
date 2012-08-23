@@ -95,8 +95,7 @@ public class ThriftServer {
   private void processOptions(final String[] args) throws Exception {
     Options options = new Options();
     options.addOption("b", BIND_OPTION, true, "Address to bind " +
-        "the Thrift server to. Not supported by the Nonblocking and " +
-        "HsHa server [default: " + DEFAULT_BIND_ADDR + "]");
+        "the Thrift server to. [default: " + DEFAULT_BIND_ADDR + "]");
     options.addOption("p", PORT_OPTION, true, "Port to bind to [default: " +
         DEFAULT_LISTEN_PORT + "]");
     options.addOption("f", FRAMED_OPTION, false, "Use framed transport");
