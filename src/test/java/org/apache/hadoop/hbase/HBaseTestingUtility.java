@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
@@ -84,6 +86,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.ZooKeeper;
 
@@ -1342,7 +1345,7 @@ public class HBaseTestingUtility {
    */
   public void expireMasterSession() throws Exception {
     HMaster master = hbaseCluster.getMaster();
-    expireSession(master.getZooKeeper(), master);
+    expireSession(master.getZooKeeper(), false);
   }
 
   /**
@@ -1352,16 +1355,22 @@ public class HBaseTestingUtility {
    */
   public void expireRegionServerSession(int index) throws Exception {
     HRegionServer rs = hbaseCluster.getRegionServer(index);
-    expireSession(rs.getZooKeeper(), rs);
+    expireSession(rs.getZooKeeper(), false);
   }
 
-  public void expireSession(ZooKeeperWatcher nodeZK, Server server)
+   /**
+    * Expire a ZooKeeper session as recommended in ZooKeeper documentation
+    * http://wiki.apache.org/hadoop/ZooKeeper/FAQ#A4
+    * There are issues when doing this:
+    * [1] http://www.mail-archive.com/dev@zookeeper.apache.org/msg01942.html
+    * [2] https://issues.apache.org/jira/browse/ZOOKEEPER-1105
+    *
+    * @param nodeZK - the ZK to make expiry
+    * @param checkStatus - true to check if the we can create a HTable with the
+    *                    current configuration.
+    */
+  public void expireSession(ZooKeeperWatcher nodeZK, boolean checkStatus)
     throws Exception {
-    expireSession(nodeZK, server, false);
-  }
-
-  public void expireSession(ZooKeeperWatcher nodeZK, Server server,
-      boolean checkStatus) throws Exception {
     Configuration c = new Configuration(this.conf);
     String quorumServers = ZKConfig.getZKQuorumServersString(c);
     int sessionTimeout = 500;
@@ -1369,14 +1378,29 @@ public class HBaseTestingUtility {
     byte[] password = zk.getSessionPasswd();
     long sessionID = zk.getSessionId();
 
+    // Expiry seems to be asynchronous (see comment from P. Hunt in [1]),
+    //  so we create a first watcher to be sure that the
+    //  event was sent. We expect that if our watcher receives the event
+    //  other watchers on the same machine will get is as well.
+    // When we ask to close the connection, ZK does not close it before
+    //  we receive all the events, so don't have to capture the event, just
+    //  closing the connection should be enough.
+    ZooKeeper monitor = new ZooKeeper(quorumServers,
+      1000, new org.apache.zookeeper.Watcher(){
+      @Override
+      public void process(WatchedEvent watchedEvent) {
+        LOG.info("Monitor ZKW received event="+watchedEvent);
+      }
+    } , sessionID, password);
+
+    // Making it expire
     ZooKeeper newZK = new ZooKeeper(quorumServers,
         sessionTimeout, EmptyWatcher.instance, sessionID, password);
     newZK.close();
-    final long sleep = 7000; // 7s seems enough to manage the timeout
-    LOG.info("ZK Closed Session 0x" + Long.toHexString(sessionID) +
-      "; sleeping=" + sleep);
+    LOG.info("ZK Closed Session 0x" + Long.toHexString(sessionID));
 
-    Thread.sleep(sleep);
+     // Now closing & waiting to be sure that the clients get it.
+     monitor.close();
 
     if (checkStatus) {
       new HTable(new Configuration(conf), HConstants.META_TABLE_NAME).close();
@@ -1545,7 +1569,7 @@ public class HBaseTestingUtility {
    * Make sure that at least the specified number of region servers
    * are running
    * @param num minimum number of region servers that should be running
-   * @return True if we started some servers
+   * @return true if we started some servers
    * @throws IOException
    */
   public boolean ensureSomeRegionServersAvailable(final int num)
@@ -1561,6 +1585,31 @@ public class HBaseTestingUtility {
   }
 
 
+  /**
+   * Make sure that at least the specified number of region servers
+   * are running. We don't count the ones that are currently stopping or are
+   * stopped.
+   * @param num minimum number of region servers that should be running
+   * @return true if we started some servers
+   * @throws IOException
+   */
+  public boolean ensureSomeNonStoppedRegionServersAvailable(final int num)
+    throws IOException {
+    boolean startedServer = ensureSomeRegionServersAvailable(num);
+
+    for (JVMClusterUtil.RegionServerThread rst :
+      hbaseCluster.getRegionServerThreads()) {
+
+      HRegionServer hrs = rst.getRegionServer();
+      if (hrs.isStopping() || hrs.isStopped()) {
+        LOG.info("A region server is stopped or stopping:"+hrs);
+        LOG.info("Started new server=" + hbaseCluster.startRegionServer());
+        startedServer = true;
+      }
+    }
+
+    return startedServer;
+  }
 
 
   /**
