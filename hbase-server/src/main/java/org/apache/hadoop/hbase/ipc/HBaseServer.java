@@ -107,11 +107,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.Message;
 
 import org.cliffc.high_scale_lib.Counter;
-import org.cloudera.htrace.Sampler;
-import org.cloudera.htrace.Span;
-import org.cloudera.htrace.TraceInfo;
-import org.cloudera.htrace.impl.NullSpan;
-import org.cloudera.htrace.Trace;
 
 /** A client for an IPC service.  IPC calls take a single Protobuf message as a
  * parameter, and return a single Protobuf message as their value.  A service runs on
@@ -322,10 +317,9 @@ public abstract class HBaseServer implements RpcServer {
                                                   // set at call completion
     protected long size;                          // size of current call
     protected boolean isError;
-    protected TraceInfo tinfo;
 
     public Call(int id, RpcRequestBody rpcRequestBody, Connection connection,
-        Responder responder, long size, TraceInfo tinfo) {
+        Responder responder, long size) {
       this.id = id;
       this.rpcRequestBody = rpcRequestBody;
       this.connection = connection;
@@ -335,7 +329,6 @@ public abstract class HBaseServer implements RpcServer {
       this.responder = responder;
       this.isError = false;
       this.size = size;
-      this.tinfo = tinfo;
     }
 
     @Override
@@ -1130,14 +1123,13 @@ public abstract class HBaseServer implements RpcServer {
     private boolean useWrap = false;
     // Fake 'call' for failed authorization response
     private final int AUTHROIZATION_FAILED_CALLID = -1;
-    private final Call authFailedCall = new Call(AUTHROIZATION_FAILED_CALLID,
-        null, this, null, 0, null);
+    private final Call authFailedCall =
+      new Call(AUTHROIZATION_FAILED_CALLID, null, this, null, 0);
     private ByteArrayOutputStream authFailedResponse =
         new ByteArrayOutputStream();
     // Fake 'call' for SASL context setup
     private static final int SASL_CALLID = -33;
-    private final Call saslCall = new Call(SASL_CALLID, null, this, null, 0,
-        null);
+    private final Call saslCall = new Call(SASL_CALLID, null, this, null, 0);
 
     public UserGroupInformation attemptingUser = null; // user name before auth
     public Connection(SocketChannel channel, long lastContact) {
@@ -1485,7 +1477,7 @@ public abstract class HBaseServer implements RpcServer {
         // we return 0 which will keep the socket up -- bad clients, unless
         // they switch to suit the running server -- will fail later doing
         // getProtocolVersion.
-        Call fakeCall = new Call(0, null, this, responder, 0, null);
+        Call fakeCall =  new Call(0, null, this, responder, 0);
         // Versions 3 and greater can interpret this exception
         // response in the same manner
         setupResponse(buffer, fakeCall, Status.FATAL,
@@ -1600,7 +1592,6 @@ public abstract class HBaseServer implements RpcServer {
       DataInputStream dis =
         new DataInputStream(new ByteArrayInputStream(buf));
       RpcRequestHeader request = RpcRequestHeader.parseDelimitedFrom(dis);
-
       int id = request.getCallId();
       long callSize = buf.length;
 
@@ -1609,8 +1600,8 @@ public abstract class HBaseServer implements RpcServer {
       }
       // Enforcing the call queue size, this triggers a retry in the client
       if ((callSize + callQueueSize.get()) > maxQueueSize) {
-        final Call callTooBig = new Call(id, null, this, responder, callSize,
-            null);
+        final Call callTooBig =
+          new Call(id, null, this, responder, callSize);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         setupResponse(responseBuffer, callTooBig, Status.FATAL,
             IOException.class.getName(),
@@ -1625,8 +1616,8 @@ public abstract class HBaseServer implements RpcServer {
       } catch (Throwable t) {
         LOG.warn("Unable to read call parameters for client " +
                  getHostAddress(), t);
-        final Call readParamsFailedCall = new Call(id, null, this, responder,
-            callSize, null);
+        final Call readParamsFailedCall =
+          new Call(id, null, this, responder, callSize);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
 
         setupResponse(responseBuffer, readParamsFailedCall, Status.FATAL,
@@ -1635,16 +1626,7 @@ public abstract class HBaseServer implements RpcServer {
         responder.doRespond(readParamsFailedCall);
         return;
       }
-
-      Call call;
-      if (request.hasTinfo()) {
-        call = new Call(id, rpcRequestBody, this, responder, callSize,
-            new TraceInfo(request.getTinfo().getTraceId(), request.getTinfo()
-                .getParentId()));
-      } else {
-        call = new Call(id, rpcRequestBody, this, responder, callSize, null);
-      }
-
+      Call call = new Call(id, rpcRequestBody, this, responder, callSize);
       callQueueSize.add(callSize);
 
       if (priorityCallQueue != null && getQosLevel(rpcRequestBody) > highPriorityLevel) {
@@ -1762,7 +1744,6 @@ public abstract class HBaseServer implements RpcServer {
       status.setStatus("starting");
       SERVER.set(HBaseServer.this);
       while (running) {
-
         try {
           status.pause("Waiting for a call");
           Call call = myCallQueue.take(); // pop the queue; maybe blocked here
@@ -1780,15 +1761,9 @@ public abstract class HBaseServer implements RpcServer {
           Message value = null;
 
           CurCall.set(call);
-          Span currentRequestSpan = NullSpan.getInstance();
           try {
             if (!started)
               throw new ServerNotRunningYetException("Server is not running yet");
-
-            if (call.tinfo != null) {
-              currentRequestSpan = Trace.startSpan(
-                  "handling " + call.toString(), call.tinfo, Sampler.ALWAYS);
-            }
 
             if (LOG.isDebugEnabled()) {
               UserGroupInformation remoteUser = call.connection.user;
@@ -1799,7 +1774,6 @@ public abstract class HBaseServer implements RpcServer {
 
             RequestContext.set(User.create(call.connection.user), getRemoteIp(),
                 call.connection.protocol);
-
             // make the call
             value = call(call.connection.protocol, call.rpcRequestBody, call.timestamp,
                 status);
@@ -1808,7 +1782,6 @@ public abstract class HBaseServer implements RpcServer {
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           } finally {
-            currentRequestSpan.stop();
             // Must always clear the request context to avoid leaking
             // credentials between requests.
             RequestContext.clear();

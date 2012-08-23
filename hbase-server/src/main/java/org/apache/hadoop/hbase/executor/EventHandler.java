@@ -27,9 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
-import org.cloudera.htrace.Sampler;
-import org.cloudera.htrace.Span;
-import org.cloudera.htrace.Trace;
 
 
 /**
@@ -78,8 +75,6 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
 
   // Time to wait for events to happen, should be kept short
   protected final int waitingTimeForEvents;
-
-  private final Span parent;
 
   /**
    * This interface provides pre- and post-process hooks for events.
@@ -187,7 +182,6 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
    * Default base class constructor.
    */
   public EventHandler(Server server, EventType eventType) {
-    this.parent = Trace.currentTrace();
     this.server = server;
     this.eventType = eventType;
     seqid = seqids.incrementAndGet();
@@ -196,16 +190,12 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   }
 
   public void run() {
-    Span chunk = Trace.startSpan(Thread.currentThread().getName(), parent,
-          Sampler.ALWAYS);
     try {
       if (getListener() != null) getListener().beforeProcess(this);
       process();
       if (getListener() != null) getListener().afterProcess(this);
     } catch(Throwable t) {
       LOG.error("Caught throwable while processing event " + eventType, t);
-    } finally {
-      chunk.stop();
     }
   }
 

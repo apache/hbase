@@ -451,11 +451,6 @@
       <artifactId>jettison</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.cloudera.htrace</groupId>
-      <artifactId>htrace</artifactId>
-      <version>1.48</version>
-   </dependency>
   </dependencies>
   <profiles>
     <!-- Skip the tests in this module -->

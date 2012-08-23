@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
-import org.cloudera.htrace.Trace;
 
 /**
  * Handler to run disable of a table.
@@ -168,11 +167,11 @@ public class DisableTableHandler extends EventHandler {
       for (HRegionInfo region: regions) {
         if (regionStates.isRegionInTransition(region)) continue;
         final HRegionInfo hri = region;
-        pool.execute(Trace.wrap(new Runnable() {
+        pool.execute(new Runnable() {
           public void run() {
             assignmentManager.unassign(hri);
           }
-        }));
+        });
       }
     }
 
