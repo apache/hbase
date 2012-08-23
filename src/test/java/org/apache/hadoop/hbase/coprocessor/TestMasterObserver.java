@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -689,6 +691,8 @@ public class TestMasterObserver {
     // move half the open regions from RS 0 to RS 1
     HRegionServer rs = cluster.getRegionServer(0);
     byte[] destRS = Bytes.toBytes(cluster.getRegionServer(1).getServerName().toString());
+    //Make sure no regions are in transition now
+    waitForRITtoBeZero(master);
     List<HRegionInfo> openRegions = rs.getOnlineRegions();
     int moveCnt = openRegions.size()/2;
     for (int i=0; i<moveCnt; i++) {
@@ -697,7 +701,16 @@ public class TestMasterObserver {
         master.move(openRegions.get(i).getEncodedNameAsBytes(), destRS);
       }
     }
+    //Make sure no regions are in transition now
+    waitForRITtoBeZero(master);
+    // now trigger a balance
+    master.balanceSwitch(true);
+    boolean balanceRun = master.balance();
+    assertTrue("Coprocessor should be called on region rebalancing",
+        cp.wasBalanceCalled());
+  }
 
+  private void waitForRITtoBeZero(HMaster master) throws IOException {
     // wait for assignments to finish
     AssignmentManager mgr = master.getAssignmentManager();
     Collection<AssignmentManager.RegionState> transRegions =
@@ -705,11 +718,5 @@ public class TestMasterObserver {
     for (AssignmentManager.RegionState state : transRegions) {
       mgr.waitOnRegionToClearRegionsInTransition(state.getRegion());
     }
-
-    // now trigger a balance
-    master.balanceSwitch(true);
-    boolean balanceRun = master.balance();
-    assertTrue("Coprocessor should be called on region rebalancing",
-        cp.wasBalanceCalled());
   }
 }
