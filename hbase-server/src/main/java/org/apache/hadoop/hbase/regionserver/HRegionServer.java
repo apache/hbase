@@ -51,6 +51,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -320,7 +321,7 @@ public class  HRegionServer implements ClientProtocol,
   // Port we put up the webui on.
   protected int webuiport = -1;
 
-  Map<String, Integer> rowlocks = new ConcurrentHashMap<String, Integer>();
+  ConcurrentMap<String, Integer> rowlocks = new ConcurrentHashMap<String, Integer>();
 
   // A state before we go into stopped state.  At this stage we're closing user
   // space regions.
@@ -2753,11 +2754,13 @@ public class  HRegionServer implements ClientProtocol,
     return this.fsOk;
   }
 
-  protected long addRowLock(Integer r, HRegion region)
-      throws LeaseStillHeldException {
-    long lockId = nextLong();
-    String lockName = String.valueOf(lockId);
-    rowlocks.put(lockName, r);
+  protected long addRowLock(Integer r, HRegion region) throws LeaseStillHeldException {
+    String lockName = null;
+    long lockId;
+    do {
+      lockId = nextLong();
+      lockName = String.valueOf(lockId);
+    } while (rowlocks.putIfAbsent(lockName, r) != null);
     this.leases.createLease(lockName, this.rowLockLeaseTimeoutPeriod, new RowLockListener(lockName,
         region));
     return lockId;
