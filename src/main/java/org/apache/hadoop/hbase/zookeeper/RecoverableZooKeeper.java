@@ -69,7 +69,9 @@ public class RecoverableZooKeeper {
   // An identifier of this process in the cluster
   private final String identifier;
   private final byte[] id;
-  private int retryIntervalMillis;
+  private Watcher watcher;
+  private int sessionTimeout;
+  private String quorumServers;
 
   // The metadata attached to each piece of data has the
   // format:
@@ -84,18 +86,31 @@ public class RecoverableZooKeeper {
   private static final int ID_LENGTH_OFFSET = MAGIC_SIZE;
   private static final int ID_LENGTH_SIZE =  Bytes.SIZEOF_INT;
 
-  public RecoverableZooKeeper(String quorumServers, int seesionTimeout,
+  public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
       Watcher watcher, int maxRetries, int retryIntervalMillis) 
   throws IOException {
-    this.zk = new ZooKeeper(quorumServers, seesionTimeout, watcher);
+    this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
     this.retryCounterFactory =
       new RetryCounterFactory(maxRetries, retryIntervalMillis);
-    this.retryIntervalMillis = retryIntervalMillis;
 
     // the identifier = processID@hostName
     this.identifier = ManagementFactory.getRuntimeMXBean().getName();
     LOG.info("The identifier of this process is " + identifier);
     this.id = Bytes.toBytes(identifier);
+    this.watcher = watcher;
+    this.sessionTimeout = sessionTimeout;
+    this.quorumServers = quorumServers;
+  }
+
+  public void reconnectAfterExpiration()
+        throws IOException, InterruptedException {
+    LOG.info("Closing dead ZooKeeper connection, session" +
+      " was: 0x"+Long.toHexString(zk.getSessionId()));
+    zk.close();
+    this.zk = new ZooKeeper(this.quorumServers,
+      this.sessionTimeout, this.watcher);
+    LOG.info("Recreated a ZooKeeper, session" +
+      " is: 0x"+Long.toHexString(zk.getSessionId()));
   }
 
   /**
@@ -124,6 +139,7 @@ public class RecoverableZooKeeper {
             throw e;
 
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             retryOrThrow(retryCounter, e, "delete");
             break;
@@ -151,6 +167,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             retryOrThrow(retryCounter, e, "exists");
             break;
@@ -177,6 +194,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             retryOrThrow(retryCounter, e, "exists");
             break;
@@ -213,6 +231,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             retryOrThrow(retryCounter, e, "getChildren");
             break;
@@ -239,6 +258,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             retryOrThrow(retryCounter, e, "getChildren");
             break;
@@ -266,6 +286,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             retryOrThrow(retryCounter, e, "getData");
             break;
@@ -293,6 +314,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             retryOrThrow(retryCounter, e, "getData");
             break;
@@ -322,6 +344,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             retryOrThrow(retryCounter, e, "setData");
             break;
@@ -418,6 +441,7 @@ public class RecoverableZooKeeper {
             throw e;
 
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             retryOrThrow(retryCounter, e, "create");
             break;
@@ -452,6 +476,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             retryOrThrow(retryCounter, e, "create");
             break;

@@ -26,6 +26,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -40,6 +42,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -97,6 +100,15 @@ public class TestZooKeeper {
     TEST_UTIL.ensureSomeRegionServersAvailable(2);
   }
 
+  private ZooKeeperWatcher getZooKeeperWatcher(HConnection c) throws
+    NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+
+    Method getterZK = c.getClass().getMethod("getKeepAliveZooKeeperWatcher");
+    getterZK.setAccessible(true);
+
+    return (ZooKeeperWatcher) getterZK.invoke(c);
+  }
+
   /**
    * See HBASE-1232 and http://wiki.apache.org/hadoop/ZooKeeper/FAQ#4.
    * @throws IOException
@@ -111,7 +123,7 @@ public class TestZooKeeper {
     new HTable(c, HConstants.META_TABLE_NAME).close();
     HConnection connection = HConnectionManager.getConnection(c);
     ZooKeeperWatcher connectionZK = connection.getZooKeeperWatcher();
-    TEST_UTIL.expireSession(connectionZK, null);
+    TEST_UTIL.expireSession(connectionZK, false);
 
     // provoke session expiration by doing something with ZK
     ZKUtil.dump(connectionZK);
@@ -348,6 +360,21 @@ public class TestZooKeeper {
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
         "testGetChildDataAndWatchForNewChildrenShouldNotThrowNPE", null);
     ZKUtil.getChildDataAndWatchForNewChildren(zkw, "/wrongNode");
+  }
+
+  /**
+   * Master recovery when the znode already exists. Internally, this
+   *  test differs from {@link #testMasterSessionExpired} because here
+   *  the master znode will exist in ZK.
+   */
+  @Test(timeout=20000)
+  public void testMasterZKSessionRecoveryFailure() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HMaster m = cluster.getMaster();
+    m.abort("Test recovery from zk session expired",
+      new KeeperException.SessionExpiredException());
+    assertFalse(m.isStopped());
+    testSanity();
   }
 
   @org.junit.Rule
