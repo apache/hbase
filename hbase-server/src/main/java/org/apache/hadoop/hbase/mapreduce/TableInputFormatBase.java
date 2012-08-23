@@ -32,11 +32,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -158,7 +161,17 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
     if (keys == null || keys.getFirst() == null ||
         keys.getFirst().length == 0) {
-      throw new IOException("Expecting at least one region.");
+      HRegionLocation regLoc = table.getRegionLocation(
+          HConstants.EMPTY_BYTE_ARRAY, false);
+      if (null == regLoc) {
+        throw new IOException("Expecting at least one region.");
+      }
+      List<InputSplit> splits = new ArrayList<InputSplit>(1);
+      InputSplit split = new TableSplit(table.getTableName(),
+          HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, regLoc
+              .getHostnamePort().split(Addressing.HOSTNAME_PORT_SEPARATOR)[0]);
+      splits.add(split);
+      return splits;
     }
     List<InputSplit> splits = new ArrayList<InputSplit>(keys.getFirst().length);
     for (int i = 0; i < keys.getFirst().length; i++) {
