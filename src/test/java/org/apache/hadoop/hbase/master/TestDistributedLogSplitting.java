@@ -87,6 +87,8 @@ public class TestDistributedLogSplitting {
     LOG.info("Starting cluster");
     conf = HBaseConfiguration.create();
     conf.getLong("hbase.splitlog.max.resubmit", 0);
+    // Make the failure test faster
+    conf.setInt("zookeeper.recovery.retry", 0);
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, num_rs);
     cluster = TEST_UTIL.getHBaseCluster();
@@ -244,7 +246,7 @@ public class TestDistributedLogSplitting {
     slm.installTask(logfiles[0].getPath().toString(), batch);
     //waitForCounter but for one of the 2 counters
     long curt = System.currentTimeMillis();
-    long waitTime = 30000;
+    long waitTime = 80000;
     long endt = curt + waitTime;
     while (curt < endt) {
       if ((tot_wkr_task_resigned.get() + tot_wkr_task_err.get() + 

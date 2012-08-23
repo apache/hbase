@@ -1396,8 +1396,7 @@ Server {
   private boolean tryRecoveringExpiredZKSession() throws InterruptedException,
       IOException, KeeperException, ExecutionException {
 
-    this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":"
-      + this.serverName.getPort(), this, true);
+    this.zooKeeper.reconnectAfterExpiration();
 
     Callable<Boolean> callable = new Callable<Boolean> () {
       public Boolean call() throws InterruptedException,

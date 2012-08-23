@@ -243,6 +243,10 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
     return recoverableZooKeeper;
   }
 
+  public void reconnectAfterExpiration() throws IOException, InterruptedException {
+    recoverableZooKeeper.reconnectAfterExpiration();
+  }
+
   /**
    * Get the quorum address of this instance.
    * @return quorum string of this zookeeper connection instance

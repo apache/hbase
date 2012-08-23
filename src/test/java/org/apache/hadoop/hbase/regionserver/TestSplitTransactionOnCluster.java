@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
@@ -90,7 +91,7 @@ public class TestSplitTransactionOnCluster {
   }
 
   @Before public void setup() throws IOException {
-    TESTING_UTIL.ensureSomeRegionServersAvailable(NB_SERVERS);
+    TESTING_UTIL.ensureSomeNonStoppedRegionServersAvailable(NB_SERVERS);
     this.admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
     this.cluster = TESTING_UTIL.getMiniHBaseCluster();
   }
@@ -657,7 +658,10 @@ public class TestSplitTransactionOnCluster {
     HRegionServer tableRegionServer = cluster.getRegionServer(tableRegionIndex);
     if (metaRegionServer.getServerName().equals(tableRegionServer.getServerName())) {
       HRegionServer hrs = getOtherRegionServer(cluster, metaRegionServer);
-      LOG.info("Moving " + hri.getRegionNameAsString() + " to " +
+      assertNotNull(hrs);
+      assertNotNull(hri);
+      LOG.
+        info("Moving " + hri.getRegionNameAsString() + " to " +
         hrs.getServerName() + "; metaServerIndex=" + metaServerIndex);
       admin.move(hri.getEncodedNameAsBytes(),
         Bytes.toBytes(hrs.getServerName().toString()));

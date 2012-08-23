@@ -78,40 +78,6 @@ public class TestMasterZKSessionRecovery {
   }
 
   /**
-   * Negative test of master recovery from zk session expiry.
-   * <p>
-   * Starts with one master. Fakes the master zk session expired.
-   * The master should be able to come up if he is able to create
-   * the node as active master.
-   * @throws Exception
-   */
-  @Test(timeout=10000)
-  public void testMasterZKSessionRecoveryFailure() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    HMaster m = cluster.getMaster();
-    m.abort("Test recovery from zk session expired",
-      new KeeperException.SessionExpiredException());
-    assertFalse(m.isStopped());
-  }
-
-  /**
-   * Positive test of master recovery from zk session expiry.
-   * <p>
-   * Starts with one master. Closes the master zk session.
-   * Ensures the master can recover the expired zk session.
-   * @throws Exception
-   */
-  @Test(timeout=60000)
-  public void testMasterZKSessionRecoverySuccess() throws Exception {
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    HMaster m = cluster.getMaster();
-    m.getZooKeeperWatcher().close();
-    m.abort("Test recovery from zk session expired",
-      new KeeperException.SessionExpiredException());
-    assertFalse(m.isStopped());
-  }
-  
-  /**
    * Tests that the master does not call retainAssignment after recovery from
    * expired zookeeper session. Without the HBASE-6046 fix master always tries
    * to assign all the user regions by calling retainAssignment.

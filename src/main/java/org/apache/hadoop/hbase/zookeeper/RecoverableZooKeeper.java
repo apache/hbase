@@ -69,25 +69,41 @@ public class RecoverableZooKeeper {
   // An identifier of this process in the cluster
   private final String identifier;
   private final byte[] id;
-  private int retryIntervalMillis;
+  private Watcher watcher;
+  private int sessionTimeout;
+  private String quorumServers;
 
   private static final int ID_OFFSET =  Bytes.SIZEOF_INT;
   // the magic number is to be backward compatible
   private static final byte MAGIC =(byte) 0XFF;
   private static final int MAGIC_OFFSET = Bytes.SIZEOF_BYTE;
 
-  public RecoverableZooKeeper(String quorumServers, int seesionTimeout,
+  public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
       Watcher watcher, int maxRetries, int retryIntervalMillis) 
   throws IOException {
-    this.zk = new ZooKeeper(quorumServers, seesionTimeout, watcher);
+    this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
     this.retryCounterFactory =
       new RetryCounterFactory(maxRetries, retryIntervalMillis);
-    this.retryIntervalMillis = retryIntervalMillis;
 
     // the identifier = processID@hostName
     this.identifier = ManagementFactory.getRuntimeMXBean().getName();
     LOG.info("The identifier of this process is " + identifier);
     this.id = Bytes.toBytes(identifier);
+
+    this.watcher = watcher;
+    this.sessionTimeout = sessionTimeout;
+    this.quorumServers = quorumServers;
+  }
+
+  public void reconnectAfterExpiration()
+        throws IOException, InterruptedException {
+    LOG.info("Closing dead ZooKeeper connection, session" +
+      " was: 0x"+Long.toHexString(zk.getSessionId()));
+    zk.close();
+    this.zk = new ZooKeeper(this.quorumServers,
+      this.sessionTimeout, this.watcher);
+    LOG.info("Recreated a ZooKeeper, session" +
+      " is: 0x"+Long.toHexString(zk.getSessionId()));
   }
 
   /**
@@ -119,6 +135,7 @@ public class RecoverableZooKeeper {
             throw e;
 
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             LOG.warn("Possibly transient ZooKeeper exception: " + e);
             if (!retryCounter.shouldRetry()) {
@@ -155,6 +172,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             LOG.warn("Possibly transient ZooKeeper exception: " + e);
             if (!retryCounter.shouldRetry()) {
@@ -190,6 +208,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             LOG.warn("Possibly transient ZooKeeper exception: " + e);
             if (!retryCounter.shouldRetry()) {
@@ -225,6 +244,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             LOG.warn("Possibly transient ZooKeeper exception: " + e);
             if (!retryCounter.shouldRetry()) {
@@ -260,6 +280,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             LOG.warn("Possibly transient ZooKeeper exception: " + e);
             if (!retryCounter.shouldRetry()) {
@@ -297,6 +318,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             LOG.warn("Possibly transient ZooKeeper exception: " + e);
             if (!retryCounter.shouldRetry()) {
@@ -334,6 +356,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             LOG.warn("Possibly transient ZooKeeper exception: " + e);
             if (!retryCounter.shouldRetry()) {
@@ -373,6 +396,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             LOG.warn("Possibly transient ZooKeeper exception: " + e);
             if (!retryCounter.shouldRetry()) {
@@ -480,6 +504,7 @@ public class RecoverableZooKeeper {
             throw e;
 
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             LOG.warn("Possibly transient ZooKeeper exception: " + e);
             if (!retryCounter.shouldRetry()) {
@@ -519,6 +544,7 @@ public class RecoverableZooKeeper {
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
+          case SESSIONEXPIRED:
           case OPERATIONTIMEOUT:
             LOG.warn("Possibly transient ZooKeeper exception: " + e);
             if (!retryCounter.shouldRetry()) {

@@ -98,6 +98,8 @@ public class TestReplication {
     conf1.setLong("replication.source.sleepforretries", 100);
     conf1.setInt("hbase.regionserver.maxlogs", 10);
     conf1.setLong("hbase.master.logcleaner.ttl", 10);
+    conf1.setInt("zookeeper.recovery.retry", 1);
+    conf1.setInt("zookeeper.recovery.retry.intervalmill", 10);
     conf1.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     conf1.setBoolean("dfs.support.append", true);
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
@@ -658,9 +660,11 @@ public class TestReplication {
 
     int lastCount = 0;
 
+    final long start = System.currentTimeMillis();
     for (int i = 0; i < NB_RETRIES; i++) {
       if (i==NB_RETRIES-1) {
-        fail("Waited too much time for queueFailover replication");
+        fail("Waited too much time for queueFailover replication. " +
+          "Waited "+(System.currentTimeMillis() - start)+"ms.");
       }
       Scan scan2 = new Scan();
       ResultScanner scanner2 = htable2.getScanner(scan2);
