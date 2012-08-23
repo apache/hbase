@@ -451,10 +451,17 @@ public class HBaseAdmin implements Abortable, Closeable {
           }
         } else {
           doneWithMetaScan = true;
+          tries = -1;
         }
-      }
-      if (doneWithMetaScan && isTableEnabled(desc.getName())) {
+      } else if (isTableEnabled(desc.getName())) {
         return;
+      } else {
+        try { // Sleep
+          Thread.sleep(getPauseTime(tries));
+        } catch (InterruptedException e) {
+          throw new InterruptedIOException("Interrupted when waiting" +
+            " for table to be enabled; meta scan was done");
+        }
       }
     }
     throw new TableNotEnabledException(
