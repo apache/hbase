@@ -39,6 +39,15 @@ public class MetricsHistogram extends MetricsBase {
   // the bias towards sampling from more recent data. 
   // Per Cormode et al. an alpha of 0.015 strongly biases to the last 5 minutes
   private static final double DEFAULT_ALPHA = 0.015;
+  public static final String NUM_OPS_METRIC_NAME = "_num_ops";
+  public static final String MIN_METRIC_NAME = "_min";
+  public static final String MAX_METRIC_NAME = "_max";
+  public static final String MEAN_METRIC_NAME = "_mean";
+  public static final String STD_DEV_METRIC_NAME = "_std_dev";
+  public static final String MEDIAN_METRIC_NAME = "_median";
+  public static final String SEVENTY_FIFTH_PERCENTILE_METRIC_NAME = "_75th_percentile";
+  public static final String NINETY_FIFTH_PERCENTILE_METRIC_NAME = "_95th_percentile";
+  public static final String NINETY_NINETH_PERCENTILE_METRIC_NAME = "_99th_percentile";
 
   /**
    * Constructor to create a new histogram metric
@@ -212,19 +221,19 @@ public class MetricsHistogram extends MetricsBase {
   @Override
   public void pushMetric(MetricsRecord mr) {
     final Snapshot s = this.getSnapshot();
-    mr.setMetric(getName() + "_num_ops", this.getCount());
-    mr.setMetric(getName() + "_min", this.getMin());
-    mr.setMetric(getName() + "_max", this.getMax());
-    
-    mr.setMetric(getName() + "_mean", (float) this.getMean());
-    mr.setMetric(getName() + "_std_dev", (float) this.getStdDev());
-    
-    mr.setMetric(getName() + "_median", (float) s.getMedian());
-    mr.setMetric(getName() + "_75th_percentile", 
+    mr.setMetric(getName() + NUM_OPS_METRIC_NAME, this.getCount());
+    mr.setMetric(getName() + MIN_METRIC_NAME, this.getMin());
+    mr.setMetric(getName() + MAX_METRIC_NAME, this.getMax());
+
+    mr.setMetric(getName() + MEAN_METRIC_NAME, (float) this.getMean());
+    mr.setMetric(getName() + STD_DEV_METRIC_NAME, (float) this.getStdDev());
+
+    mr.setMetric(getName() + MEDIAN_METRIC_NAME, (float) s.getMedian());
+    mr.setMetric(getName() + SEVENTY_FIFTH_PERCENTILE_METRIC_NAME,
         (float) s.get75thPercentile());
-    mr.setMetric(getName() + "_95th_percentile", 
+    mr.setMetric(getName() + NINETY_FIFTH_PERCENTILE_METRIC_NAME,
         (float) s.get95thPercentile());
-    mr.setMetric(getName() + "_99th_percentile", 
+    mr.setMetric(getName() + NINETY_NINETH_PERCENTILE_METRIC_NAME,
         (float) s.get99thPercentile());
   }
 }
