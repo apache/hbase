@@ -229,6 +229,11 @@ public class SplitTransaction {
     if (this.parent.getCoprocessorHost() != null) {
       this.parent.getCoprocessorHost().preSplit();
     }
+    
+    // Coprocessor callback
+    if (this.parent.getCoprocessorHost() != null) {
+      this.parent.getCoprocessorHost().preSplit(this.splitrow);
+    }
 
     // If true, no cluster to write meta edits to or to update znodes in.
     boolean testing = server == null? true:
@@ -727,6 +732,11 @@ public class SplitTransaction {
    */
   public boolean rollback(final Server server, final RegionServerServices services)
   throws IOException {
+    // Coprocessor callback
+    if (this.parent.getCoprocessorHost() != null) {
+      this.parent.getCoprocessorHost().preRollBackSplit();
+    }
+    
     boolean result = true;
     FileSystem fs = this.parent.getFilesystem();
     ListIterator<JournalEntry> iterator =
@@ -792,6 +802,10 @@ public class SplitTransaction {
       default:
         throw new RuntimeException("Unhandled journal entry: " + je);
       }
+    }
+    // Coprocessor callback
+    if (this.parent.getCoprocessorHost() != null) {
+      this.parent.getCoprocessorHost().postRollBackSplit();
     }
     return result;
   }

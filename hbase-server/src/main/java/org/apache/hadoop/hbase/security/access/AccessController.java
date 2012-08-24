@@ -799,6 +799,12 @@ public class AccessController extends BaseRegionObserver
   public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
     requirePermission(getTableName(e.getEnvironment()), null, null, Action.ADMIN);
   }
+  
+  @Override
+  public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e,
+      byte[] splitRow) throws IOException {
+    requirePermission(getTableName(e.getEnvironment()), null, null, Action.ADMIN);
+  }
 
   @Override
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,

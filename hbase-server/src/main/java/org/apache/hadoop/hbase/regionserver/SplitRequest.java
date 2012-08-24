@@ -105,6 +105,15 @@ class SplitRequest implements Runnable {
           .checkIOException(ex));
       this.server.getMetrics().incrementSplitFailureCount();
       server.checkFileSystem();
+    } finally {
+      if (this.parent.getCoprocessorHost() != null) {
+        try {
+          this.parent.getCoprocessorHost().postCompleteSplit();
+        } catch (IOException io) {
+          LOG.error("Split failed " + this,
+              RemoteExceptionHandler.checkIOException(io));
+        }
+      }
     }
   }
 }

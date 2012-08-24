@@ -213,8 +213,17 @@ public interface RegionObserver extends Coprocessor {
    * @param c the environment provided by the region server
    * (e.getRegion() returns the parent region)
    * @throws IOException if an error occurred on the coprocessor
+   * @deprecated Use preSplit(final ObserverContext<RegionCoprocessorEnvironment> c, byte[] splitRow)
    */
   void preSplit(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
+  
+  /**
+   * Called before the region is split.
+   * @param c the environment provided by the region server
+   * (e.getRegion() returns the parent region)
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  void preSplit(final ObserverContext<RegionCoprocessorEnvironment> c, byte[] splitRow) throws IOException;
 
   /**
    * Called after the region is split.
@@ -223,10 +232,32 @@ public interface RegionObserver extends Coprocessor {
    * @param l the left daughter region
    * @param r the right daughter region
    * @throws IOException if an error occurred on the coprocessor
+   * @deprecated Use postCompleteSplit() instead
    */
   void postSplit(final ObserverContext<RegionCoprocessorEnvironment> c, final HRegion l,
       final HRegion r) throws IOException;
-
+    
+  /**
+   * This will be called before the roll back of the split region is completed 
+   * @param ctx
+   * @throws IOException
+   */
+  void preRollBackSplit(final ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException;
+  
+  /**
+   * This will be called after the roll back of the split region is completed
+   * @param ctx
+   * @throws IOException
+   */
+  void postRollBackSplit(final ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException;
+  
+  /**
+   * Called after any split request is processed.  This will be called irrespective of success or
+   * failure of the split.
+   * @param ctx
+   * @throws IOException
+   */
+  void postCompleteSplit(final ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException;
   /**
    * Called before the region is reported as closed to the master.
    * @param c the environment provided by the region server

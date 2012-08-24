@@ -601,6 +601,27 @@ public class RegionCoprocessorHost
       }
     }
   }
+  
+  /**
+   * Invoked just before a split
+   * @throws IOException
+   */
+  public void preSplit(byte[] splitRow) throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionObserver)env.getInstance()).preSplit(ctx, splitRow);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
 
   /**
    * Invoked just after a split
@@ -624,7 +645,69 @@ public class RegionCoprocessorHost
       }
     }
   }
-
+  
+  /**
+   * Invoked just before the rollback of a failed split is started
+   * @throws IOException
+   */
+  public void preRollBackSplit() throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionObserver) env.getInstance()).preRollBackSplit(ctx);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+  
+  /**
+   * Invoked just after the rollback of a failed split is done
+   * @throws IOException
+   */
+  public void postRollBackSplit() throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionObserver) env.getInstance()).postRollBackSplit(ctx);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+  
+  /**
+   * Invoked after a split is completed irrespective of a failure or success.
+   * @throws IOException
+   */
+  public void postCompleteSplit() throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((RegionObserver) env.getInstance()).postCompleteSplit(ctx);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
   // RegionObserver support
 
   /**

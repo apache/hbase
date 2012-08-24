@@ -35,6 +35,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PairOfSameType;
@@ -63,13 +67,19 @@ public class TestSplitTransaction {
   private static final byte [] GOOD_SPLIT_ROW = new byte [] {'d', 'd', 'd'};
   private static final byte [] CF = HConstants.CATALOG_FAMILY;
   
+  private static boolean preRollBackCalled = false;
+  private static boolean postRollBackCalled = false;
+  
   @Before public void setup() throws IOException {
     this.fs = FileSystem.get(TEST_UTIL.getConfiguration());
+    TEST_UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, CustomObserver.class.getName());
     this.fs.delete(this.testdir, true);
     this.wal = new HLog(fs, new Path(this.testdir, "logs"),
       new Path(this.testdir, "archive"),
       TEST_UTIL.getConfiguration());
     this.parent = createRegion(this.testdir, this.wal);
+    RegionCoprocessorHost host = new RegionCoprocessorHost(this.parent, null, TEST_UTIL.getConfiguration());
+    this.parent.setCoprocessorHost(host);
     TEST_UTIL.getConfiguration().setBoolean("hbase.testing.nocluster", true);
   }
 
@@ -280,6 +290,11 @@ public class TestSplitTransaction {
     assertEquals(rowcount, daughtersRowCount);
     // Assert the write lock is no longer held on parent
     assertTrue(!this.parent.lock.writeLock().isHeldByCurrentThread());
+    assertTrue("Rollback hooks should be called.", wasRollBackHookCalled());
+  }
+  
+  private boolean wasRollBackHookCalled(){
+    return (preRollBackCalled && postRollBackCalled);
   }
 
   /**
@@ -317,6 +332,20 @@ public class TestSplitTransaction {
     HRegion.closeHRegion(r);
     return HRegion.openHRegion(testdir, hri, htd, wal,
       TEST_UTIL.getConfiguration());
+  }
+  
+  public static class CustomObserver extends BaseRegionObserver{
+    @Override
+    public void preRollBackSplit(
+        ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException {
+      preRollBackCalled = true;
+    }
+    
+    @Override
+    public void postRollBackSplit(
+        ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException {
+      postRollBackCalled = true;
+    }
   }
 
   @org.junit.Rule

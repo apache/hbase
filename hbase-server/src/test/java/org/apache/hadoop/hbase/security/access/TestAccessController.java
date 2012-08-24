@@ -460,6 +460,22 @@ public class TestAccessController {
   }
 
   @Test
+  public void testSplitWithSplitRow() throws Exception {
+    PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preSplit(
+            ObserverContext.createAndPrepare(RCP_ENV, null),
+            Bytes.toBytes("row2"));
+        return null;
+      }
+    };
+
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+  }
+
+  
+  @Test
   public void testFlush() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
