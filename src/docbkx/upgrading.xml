@@ -194,7 +194,7 @@ See this blog post for additional information on this new experimental feature: 
 </title>
 <para>0.92.0 stores data in a new format, <xref linkend="hfilev2" />.   As HBase runs, it will move all your data from HFile v1 to HFile v2 format.  This auto-migration will run in the background as flushes and compactions run.
 HFile V2 allows HBase run with larger regions/files.  In fact, we encourage that all HBasers going forward tend toward Facebook axiom #1, run with larger, fewer regions.
-If you have lots of regions now -- more than 100s per host -- you should look into setting your region size up after you move to 0.92.0 (In 0.92.0, default size is not 1G, up from 256M), and then running online merge tool (See “HBASE-1621 merge tool should work on online cluster, but disabled table”).
+If you have lots of regions now -- more than 100s per host -- you should look into setting your region size up after you move to 0.92.0 (In 0.92.0, default size is now 1G, up from 256M), and then running online merge tool (See “HBASE-1621 merge tool should work on online cluster, but disabled table”).
 </para>
 </section>
     </section>
