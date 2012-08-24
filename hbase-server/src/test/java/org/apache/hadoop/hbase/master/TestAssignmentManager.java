@@ -823,6 +823,7 @@ public class TestAssignmentManager {
     destServers.add(SERVERNAME_A);
     Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(destServers);
     // To avoid cast exception in DisableTableHandler process.
+    HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
     Server server = new HMaster(HTU.getConfiguration());
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
