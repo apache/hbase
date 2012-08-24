@@ -86,12 +86,24 @@ public class TablePermission extends Permission {
     this.qualifier = qualifier;
   }
 
+  public boolean hasTable() {
+    return table != null;
+  }
+
   public byte[] getTable() {
     return table;
   }
 
+  public boolean hasFamily() {
+    return family != null;
+  }
+
   public byte[] getFamily() {
     return family;
+  }
+
+  public boolean hasQualifier() {
+    return qualifier != null;
   }
 
   public byte[] getQualifier() {

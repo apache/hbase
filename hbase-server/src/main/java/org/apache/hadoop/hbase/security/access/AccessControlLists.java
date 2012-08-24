@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -44,14 +46,15 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
 
-import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.*;
 
@@ -503,56 +506,45 @@ public class AccessControlLists {
 
   /**
    * Writes a set of permissions as {@link org.apache.hadoop.io.Writable} instances
-   * to the given output stream.
-   * @param out
-   * @param perms
-   * @param conf
-   * @throws IOException
-   */
-  public static void writePermissions(DataOutput out,
-      ListMultimap<String,? extends Permission> perms, Configuration conf)
-  throws IOException {
-    Set<String> keys = perms.keySet();
-    out.writeInt(keys.size());
-    for (String key : keys) {
-      Text.writeString(out, key);
-      HbaseObjectWritable.writeObject(out, perms.get(key), List.class, conf);
-    }
-  }
-
-  /**
-   * Writes a set of permissions as {@link org.apache.hadoop.io.Writable} instances
    * and returns the resulting byte array.
+   *
+   * Writes a set of permission [user: table permission]
    */
-  public static byte[] writePermissionsAsBytes(
-      ListMultimap<String,? extends Permission> perms, Configuration conf) {
-    try {
-      ByteArrayOutputStream bos = new ByteArrayOutputStream();
-      writePermissions(new DataOutputStream(bos), perms, conf);
-      return bos.toByteArray();
-    } catch (IOException ioe) {
-      // shouldn't happen here
-      LOG.error("Error serializing permissions", ioe);
-    }
-    return null;
+  public static byte[] writePermissionsAsBytes(ListMultimap<String, TablePermission> perms, Configuration conf) {
+    return ProtobufUtil.prependPBMagic(ProtobufUtil.toUserTablePermissions(perms).toByteArray());
   }
 
   /**
    * Reads a set of permissions as {@link org.apache.hadoop.io.Writable} instances
    * from the input stream.
    */
-  public static <T extends Permission> ListMultimap<String,T> readPermissions(
-      DataInput in, Configuration conf) throws IOException {
-    ListMultimap<String,T> perms = ArrayListMultimap.create();
-    int length = in.readInt();
-    for (int i=0; i<length; i++) {
-      String user = Text.readString(in);
-      List<T> userPerms =
-          (List)HbaseObjectWritable.readObject(in, conf);
-      perms.putAll(user, userPerms);
+  public static ListMultimap<String, TablePermission> readPermissions(byte[] data,
+      Configuration conf) throws DeserializationException {
+    if (ProtobufUtil.isPBMagicPrefix(data)) {
+      int pblen = ProtobufUtil.lengthOfPBMagic();
+      try {
+        AccessControlProtos.UserTablePermissions perms =
+          AccessControlProtos.UserTablePermissions.newBuilder().mergeFrom(
+            data, pblen, data.length - pblen).build();
+        return ProtobufUtil.toUserTablePermissions(perms);
+      } catch (InvalidProtocolBufferException e) {
+        throw new DeserializationException(e);
+      }
+    } else {
+      ListMultimap<String,TablePermission> perms = ArrayListMultimap.create();
+      try {
+        DataInput in = new DataInputStream(new ByteArrayInputStream(data));
+        int length = in.readInt();
+        for (int i=0; i<length; i++) {
+          String user = Text.readString(in);
+          List<TablePermission> userPerms = (List)HbaseObjectWritable.readObject(in, conf);
+          perms.putAll(user, userPerms);
+        }
+      } catch (IOException e) {
+        throw new DeserializationException(e);
+      }
+      return perms;
     }
-
-    return perms;
   }
 
   /**

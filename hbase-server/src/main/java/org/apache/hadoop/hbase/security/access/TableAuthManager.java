@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -101,8 +102,13 @@ public class TableAuthManager {
 
   public void refreshCacheFromWritable(byte[] table, byte[] data) throws IOException {
     if (data != null && data.length > 0) {
-      DataInput in = new DataInputStream(new ByteArrayInputStream(data));
-      ListMultimap<String,TablePermission> perms = AccessControlLists.readPermissions(in, conf);
+      ListMultimap<String,TablePermission> perms;
+      try {
+        perms = AccessControlLists.readPermissions(data, conf);
+      } catch (DeserializationException e) {
+        throw new IOException(e);
+      }
+
       if (perms != null) {
         if (Bytes.equals(table, AccessControlLists.ACL_GLOBAL_NAME)) {
           updateGlobalCache(perms);
@@ -250,7 +256,7 @@ public class TableAuthManager {
   }
 
   public boolean authorize(User user, byte[] table, KeyValue kv,
-      TablePermission.Action action) {
+      Permission.Action action) {
     List<TablePermission> userPerms = getUserPermissions(
         user.getShortName(), table);
     if (authorize(userPerms, table, kv, action)) {
@@ -271,7 +277,7 @@ public class TableAuthManager {
   }
 
   private boolean authorize(List<TablePermission> perms, byte[] table, KeyValue kv,
-      TablePermission.Action action) {
+      Permission.Action action) {
     if (perms != null) {
       for (TablePermission p : perms) {
         if (p.implies(table, kv, action)) {
@@ -375,7 +381,7 @@ public class TableAuthManager {
    * authorize() on the same column family would return true.
    */
   public boolean matchPermission(User user,
-      byte[] table, byte[] family, TablePermission.Action action) {
+      byte[] table, byte[] family, Permission.Action action) {
     List<TablePermission> userPerms = getUserPermissions(
         user.getShortName(), table);
     if (userPerms != null) {
@@ -405,7 +411,7 @@ public class TableAuthManager {
 
   public boolean matchPermission(User user,
       byte[] table, byte[] family, byte[] qualifier,
-      TablePermission.Action action) {
+      Permission.Action action) {
     List<TablePermission> userPerms = getUserPermissions(
         user.getShortName(), table);
     if (userPerms != null) {

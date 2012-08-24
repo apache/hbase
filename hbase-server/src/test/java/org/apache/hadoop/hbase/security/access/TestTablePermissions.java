@@ -252,13 +252,10 @@ public class TestTablePermissions {
     permissions.put("hubert", new TablePermission(TEST_TABLE2, null,
         TablePermission.Action.READ, TablePermission.Action.WRITE));
 
-    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-    AccessControlLists.writePermissions(new DataOutputStream(bos),
-        permissions, conf);
+    byte[] permsData = AccessControlLists.writePermissionsAsBytes(permissions, conf);
 
-    ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
     ListMultimap<String,TablePermission> copy =
-        AccessControlLists.readPermissions(new DataInputStream(bis), conf);
+        AccessControlLists.readPermissions(permsData, conf);
 
     checkMultimapEqual(permissions, copy);
   }
