@@ -139,8 +139,9 @@ public class TestChangingEncoding {
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         put.add(CF_BYTES, getQualifier(j),
             getValue(batchId, i, j));
-        table.put(put);
       }
+      put.setWriteToWAL(false);
+      table.put(put);
     }
     table.close();
   }
@@ -237,11 +238,19 @@ public class TestChangingEncoding {
 
   private void compactAndWait() throws IOException, InterruptedException {
     LOG.debug("Compacting table " + tableName);
-    admin.majorCompact(tableName);
-    Threads.sleepWithoutInterrupt(500);
     HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+    admin.majorCompact(tableName);
+
+    // Waiting for the compaction to start, at least .5s.
+    final long maxWaitime = System.currentTimeMillis() + 500;
+    boolean cont;
+    do {
+      cont = rs.compactSplitThread.getCompactionQueueSize() == 0;
+      Threads.sleep(1);
+    } while (cont && System.currentTimeMillis() < maxWaitime);
+
     while (rs.compactSplitThread.getCompactionQueueSize() > 0) {
-      Threads.sleep(50);
+      Threads.sleep(1);
     }
     LOG.debug("Compaction queue size reached 0, continuing");
   }
