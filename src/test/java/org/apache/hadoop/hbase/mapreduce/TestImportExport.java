@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
@@ -44,7 +45,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import static org.junit.Assert.assertEquals;
 
 @Category(MediumTests.class)
 public class TestImportExport {
@@ -140,6 +140,26 @@ public class TestImportExport {
     g.setMaxVersions();
     r = t.get(g);
     assertEquals(3, r.size());
+  }
+
+  /**
+   * Test export .META. table
+   * 
+   * @throws Exception
+   */
+  @Test
+  public void testMetaExport() throws Exception {
+    String EXPORT_TABLE = ".META.";
+    String[] args = new String[] { EXPORT_TABLE, OUTPUT_DIR, "1", "0", "0" };
+    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(
+        cluster.getConfiguration()), args);
+    Configuration conf = opts.getConfiguration();
+    args = opts.getRemainingArgs();
+
+    Job job = Export.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
+    job.waitForCompletion(false);
+    assertTrue(job.isSuccessful());
   }
 
   @Test
