@@ -21,11 +21,12 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
+import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import com.google.protobuf.InvalidProtocolBufferException;
+
 
 /**
  * This comparator is for use with SingleColumnValueFilter, for filtering based on
@@ -48,11 +49,6 @@ public class SubstringComparator extends WritableByteArrayComparable {
 
   private String substr;
 
-  /** Nullary constructor for Writable, do not use */
-  public SubstringComparator() {
-    super();
-  }
-
   /**
    * Constructor
    * @param substr the substring
@@ -73,16 +69,45 @@ public class SubstringComparator extends WritableByteArrayComparable {
         : 1;
   }
 
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    String substr = in.readUTF();
-    this.value = Bytes.toBytes(substr);
-    this.substr = substr;
+  /**
+   * @return The comparator serialized using pb
+   */
+  public byte [] toByteArray() {
+    ComparatorProtos.SubstringComparator.Builder builder =
+      ComparatorProtos.SubstringComparator.newBuilder();
+    builder.setSubstr(this.substr);
+    return builder.build().toByteArray();
   }
 
-  @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeUTF(substr);
+  /**
+   * @param pbBytes A pb serialized {@link SubstringComparator} instance
+   * @return An instance of {@link SubstringComparator} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static SubstringComparator parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    ComparatorProtos.SubstringComparator proto;
+    try {
+      proto = ComparatorProtos.SubstringComparator.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return new SubstringComparator(proto.getSubstr());
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the comparator that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(WritableByteArrayComparable other) {
+    if (other == this) return true;
+    if (!(other instanceof SubstringComparator)) return false;
+
+    SubstringComparator comparator = (SubstringComparator)other;
+    return super.areSerializedFieldsEqual(comparator)
+      && this.substr.equals(comparator.substr);
   }
 
 }

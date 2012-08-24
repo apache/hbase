@@ -81,16 +81,10 @@ public class TestRandomRowFilter {
   private RandomRowFilter serializationTest(RandomRowFilter filter)
       throws Exception {
     // Decompose filter to bytes.
-    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-    DataOutputStream out = new DataOutputStream(stream);
-    filter.write(out);
-    out.close();
-    byte[] buffer = stream.toByteArray();
+    byte[] buffer = filter.toByteArray();
 
     // Recompose filter.
-    DataInputStream in = new DataInputStream(new ByteArrayInputStream(buffer));
-    RandomRowFilter newFilter = new RandomRowFilter();
-    newFilter.readFields(in);
+    RandomRowFilter newFilter = RandomRowFilter.parseFrom(buffer);
 
     return newFilter;
   }

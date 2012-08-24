@@ -20,11 +20,18 @@ package org.apache.hadoop.hbase.filter;
 
 import java.util.Collections;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.mapreduce.RowCounter;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * The filter looks for the given columns in KeyValue. Once there is a match for
@@ -41,13 +48,6 @@ import org.apache.hadoop.hbase.mapreduce.RowCounter;
 public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
 
   private Set<byte []> qualifiers;
-
-  /**
-   * This constructor should not be used.
-   */
-  public FirstKeyValueMatchingQualifiersFilter() {
-    qualifiers = Collections.emptySet();
-  }
 
   /**
    * Constructor which takes a set of columns. As soon as first KeyValue
@@ -77,4 +77,50 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
     return false;
   }
 
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.FirstKeyValueMatchingQualifiersFilter.Builder builder =
+      FilterProtos.FirstKeyValueMatchingQualifiersFilter.newBuilder();
+    for (byte[] qualifier : qualifiers) {
+      if (qualifier != null) builder.addQualifiers(ByteString.copyFrom(qualifier));
+    }
+    return builder.build().toByteArray();
+  }
+
+  /**
+   * @param pbBytes A pb serialized {@link FirstKeyValueMatchingQualifiersFilter} instance
+   * @return An instance of {@link FirstKeyValueMatchingQualifiersFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static FirstKeyValueMatchingQualifiersFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.FirstKeyValueMatchingQualifiersFilter proto;
+    try {
+      proto = FilterProtos.FirstKeyValueMatchingQualifiersFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+
+    TreeSet<byte []> qualifiers = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+    for (ByteString qualifier : proto.getQualifiersList()) {
+      qualifiers.add(qualifier.toByteArray());
+    }
+    return new FirstKeyValueMatchingQualifiersFilter(qualifiers);
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof FirstKeyValueMatchingQualifiersFilter)) return false;
+
+    FirstKeyValueMatchingQualifiersFilter other = (FirstKeyValueMatchingQualifiersFilter)o;
+    return this.qualifiers.equals(other.qualifiers);
+  }
 }

@@ -22,8 +22,14 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -42,12 +48,6 @@ import java.util.ArrayList;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class ValueFilter extends CompareFilter {
-
-  /**
-   * Writable constructor, do not use.
-   */
-  public ValueFilter() {
-  }
 
   /**
    * Constructor.
@@ -73,5 +73,54 @@ public class ValueFilter extends CompareFilter {
     CompareOp compareOp = (CompareOp)arguments.get(0);
     WritableByteArrayComparable comparator = (WritableByteArrayComparable)arguments.get(1);
     return new ValueFilter(compareOp, comparator);
-}
+  }
+
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.ValueFilter.Builder builder =
+      FilterProtos.ValueFilter.newBuilder();
+    builder.setCompareFilter(super.convert());
+    return builder.build().toByteArray();
+  }
+
+  /**
+   * @param pbBytes A pb serialized {@link ValueFilter} instance
+   * @return An instance of {@link ValueFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static ValueFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.ValueFilter proto;
+    try {
+      proto = FilterProtos.ValueFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    final CompareOp valueCompareOp =
+      CompareOp.valueOf(proto.getCompareFilter().getCompareOp().name());
+    WritableByteArrayComparable valueComparator = null;
+    try {
+      if (proto.getCompareFilter().hasComparator()) {
+        valueComparator = ProtobufUtil.toComparator(proto.getCompareFilter().getComparator());
+      }
+    } catch (IOException ioe) {
+      throw new DeserializationException(ioe);
+    }
+    return new ValueFilter(valueCompareOp,valueComparator);
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof ValueFilter)) return false;
+
+    return super.areSerializedFieldsEqual(o);
+  }
 }

@@ -185,6 +185,11 @@ message TimeRange {
   optional uint64 to = 2;
 }
 
+message Filter {
+  required string name = 1;
+  optional bytes serializedFilter = 2;
+}
+
 /* Comparison operators */
 enum CompareType {
   LESS = 0;

@@ -17,18 +17,18 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
-import java.util.ArrayList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+
 import com.google.common.base.Preconditions;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Filter that returns only cells whose timestamp (version) is
@@ -49,13 +49,6 @@ public class TimestampsFilter extends FilterBase {
   // Used during scans to hint the scan to stop early
   // once the timestamps fall below the minTimeStamp.
   long minTimeStamp = Long.MAX_VALUE;
-
-  /**
-   * Used during deserialization. Do not use otherwise.
-   */
-  public TimestampsFilter() {
-    super();
-  }
 
   /**
    * Constructor for filter that retains only those
@@ -116,23 +109,44 @@ public class TimestampsFilter extends FilterBase {
     return new TimestampsFilter(timestamps);
   }
 
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    int numTimestamps = in.readInt();
-    this.timestamps = new TreeSet<Long>();
-    for (int idx = 0; idx < numTimestamps; idx++) {
-      this.timestamps.add(in.readLong());
-    }
-    init();
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.TimestampsFilter.Builder builder =
+      FilterProtos.TimestampsFilter.newBuilder();
+    builder.addAllTimestamps(this.timestamps);
+    return builder.build().toByteArray();
   }
 
-  @Override
-  public void write(DataOutput out) throws IOException {
-    int numTimestamps = this.timestamps.size();
-    out.writeInt(numTimestamps);
-    for (Long timestamp : this.timestamps) {
-      out.writeLong(timestamp);
+  /**
+   * @param pbBytes A pb serialized {@link TimestampsFilter} instance
+   * @return An instance of {@link TimestampsFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static TimestampsFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.TimestampsFilter proto;
+    try {
+      proto = FilterProtos.TimestampsFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
     }
+    return new TimestampsFilter(proto.getTimestampsList());
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof TimestampsFilter)) return false;
+
+    TimestampsFilter other = (TimestampsFilter)o;
+    return this.getTimestamps().equals(other.getTimestamps());
   }
 
   @Override

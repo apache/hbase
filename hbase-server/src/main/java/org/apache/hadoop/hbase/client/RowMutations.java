@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,7 +26,6 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -85,30 +82,6 @@ public class RowMutations implements Row {
           Bytes.toStringBinary(this.row));
     }
     mutations.add(m);
-  }
-
-  @Override
-  public void readFields(final DataInput in) throws IOException {
-    int version = in.readByte();
-    if (version > VERSION) {
-      throw new IOException("version not supported");
-    }
-    this.row = Bytes.readByteArray(in);
-    int numMutations = in.readInt();
-    mutations.clear();
-    for(int i = 0; i < numMutations; i++) {
-      mutations.add((Mutation) HbaseObjectWritable.readObject(in, null));
-    }
-  }
-
-  @Override
-  public void write(final DataOutput out) throws IOException {
-    out.writeByte(VERSION);
-    Bytes.writeByteArray(out, this.row);
-    out.writeInt(mutations.size());
-    for (Mutation m : mutations) {
-      HbaseObjectWritable.writeObject(out, m, m.getClass(), null);
-    }
   }
 
   @Override

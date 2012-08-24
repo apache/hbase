@@ -22,16 +22,16 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.List;
 import java.util.ArrayList;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A Filter that stops after the given row.  There is no "RowStopFilter" because
@@ -44,10 +44,6 @@ import com.google.common.base.Preconditions;
 public class InclusiveStopFilter extends FilterBase {
   private byte [] stopRowKey;
   private boolean done = false;
-
-  public InclusiveStopFilter() {
-    super();
-  }
 
   public InclusiveStopFilter(final byte [] stopRowKey) {
     this.stopRowKey = stopRowKey;
@@ -86,12 +82,44 @@ public class InclusiveStopFilter extends FilterBase {
     return new InclusiveStopFilter(stopRowKey);
   }
 
-  public void write(DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, this.stopRowKey);
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.InclusiveStopFilter.Builder builder =
+      FilterProtos.InclusiveStopFilter.newBuilder();
+    if (this.stopRowKey != null) builder.setStopRowKey(ByteString.copyFrom(this.stopRowKey));
+    return builder.build().toByteArray();
   }
 
-  public void readFields(DataInput in) throws IOException {
-    this.stopRowKey = Bytes.readByteArray(in);
+  /**
+   * @param pbBytes A pb serialized {@link InclusiveStopFilter} instance
+   * @return An instance of {@link InclusiveStopFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static InclusiveStopFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.InclusiveStopFilter proto;
+    try {
+      proto = FilterProtos.InclusiveStopFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return new InclusiveStopFilter(proto.hasStopRowKey()?proto.getStopRowKey().toByteArray():null);
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof InclusiveStopFilter)) return false;
+
+    InclusiveStopFilter other = (InclusiveStopFilter)o;
+    return Bytes.equals(this.getStopRowKey(), other.getStopRowKey());
   }
 
   @Override

@@ -21,15 +21,14 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.List;
 import java.util.ArrayList;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.InvalidProtocolBufferException;
 /**
  * Implementation of Filter interface that limits results to a specific page
  * size. It terminates scanning once the number of filter-passed rows is >
@@ -46,14 +45,6 @@ import com.google.common.base.Preconditions;
 public class PageFilter extends FilterBase {
   private long pageSize = Long.MAX_VALUE;
   private int rowsAccepted = 0;
-
-  /**
-   * Default constructor, filters nothing. Required though for RPC
-   * deserialization.
-   */
-  public PageFilter() {
-    super();
-  }
 
   /**
    * Constructor that takes a maximum page size.
@@ -89,12 +80,44 @@ public class PageFilter extends FilterBase {
     return new PageFilter(pageSize);
   }
 
-  public void readFields(final DataInput in) throws IOException {
-    this.pageSize = in.readLong();
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.PageFilter.Builder builder =
+      FilterProtos.PageFilter.newBuilder();
+    builder.setPageSize(this.pageSize);
+    return builder.build().toByteArray();
   }
 
-  public void write(final DataOutput out) throws IOException {
-    out.writeLong(pageSize);
+  /**
+   * @param pbBytes A pb serialized {@link PageFilter} instance
+   * @return An instance of {@link PageFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static PageFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.PageFilter proto;
+    try {
+      proto = FilterProtos.PageFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return new PageFilter(proto.getPageSize());
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof PageFilter)) return false;
+
+    PageFilter other = (PageFilter)o;
+    return this.getPageSize() == other.getPageSize();
   }
 
   @Override

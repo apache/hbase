@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,7 +26,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
 
 /**
  * Performs Append operations on a single row.
@@ -67,9 +63,6 @@ public class Append extends Mutation {
     return v == null ? true : Bytes.toBoolean(v);
   }
 
-  /** Constructor for Writable.  DO NOT USE */
-  public Append() {}
-
   /**
    * Create a Append operation for the specified row.
    * <p>
@@ -98,60 +91,4 @@ public class Append extends Mutation {
     return this;
   }
 
-  @Override
-  public void readFields(final DataInput in)
-  throws IOException {
-    int version = in.readByte();
-    if (version > APPEND_VERSION) {
-      throw new IOException("version not supported: "+version);
-    }
-    this.row = Bytes.readByteArray(in);
-    this.ts = in.readLong();
-    this.lockId = in.readLong();
-    this.writeToWAL = in.readBoolean();
-    int numFamilies = in.readInt();
-    if (!this.familyMap.isEmpty()) this.familyMap.clear();
-    for(int i=0;i<numFamilies;i++) {
-      byte [] family = Bytes.readByteArray(in);
-      int numKeys = in.readInt();
-      List<KeyValue> keys = new ArrayList<KeyValue>(numKeys);
-      int totalLen = in.readInt();
-      byte [] buf = new byte[totalLen];
-      int offset = 0;
-      for (int j = 0; j < numKeys; j++) {
-        int keyLength = in.readInt();
-        in.readFully(buf, offset, keyLength);
-        keys.add(new KeyValue(buf, offset, keyLength));
-        offset += keyLength;
-      }
-      this.familyMap.put(family, keys);
-    }
-    readAttributes(in);
-  }
-
-  @Override
-  public void write(final DataOutput out)
-  throws IOException {
-    out.writeByte(APPEND_VERSION);
-    Bytes.writeByteArray(out, this.row);
-    out.writeLong(this.ts);
-    out.writeLong(this.lockId);
-    out.writeBoolean(this.writeToWAL);
-    out.writeInt(familyMap.size());
-    for (Map.Entry<byte [], List<KeyValue>> entry : familyMap.entrySet()) {
-      Bytes.writeByteArray(out, entry.getKey());
-      List<KeyValue> keys = entry.getValue();
-      out.writeInt(keys.size());
-      int totalLen = 0;
-      for(KeyValue kv : keys) {
-        totalLen += kv.getLength();
-      }
-      out.writeInt(totalLen);
-      for(KeyValue kv : keys) {
-        out.writeInt(kv.getLength());
-        out.write(kv.getBuffer(), kv.getOffset(), kv.getLength());
-      }
-    }
-    writeAttributes(out);
-  }
 }

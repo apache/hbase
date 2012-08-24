@@ -22,9 +22,15 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -43,12 +49,6 @@ import java.util.ArrayList;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class QualifierFilter extends CompareFilter {
-
-  /**
-   * Writable constructor, do not use.
-   */
-  public QualifierFilter() {
-  }
 
   /**
    * Constructor.
@@ -77,5 +77,54 @@ public class QualifierFilter extends CompareFilter {
     CompareOp compareOp = (CompareOp)arguments.get(0);
     WritableByteArrayComparable comparator = (WritableByteArrayComparable)arguments.get(1);
     return new QualifierFilter(compareOp, comparator);
-}
+  }
+
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.QualifierFilter.Builder builder =
+      FilterProtos.QualifierFilter.newBuilder();
+    builder.setCompareFilter(super.convert());
+    return builder.build().toByteArray();
+  }
+
+  /**
+   * @param pbBytes A pb serialized {@link QualifierFilter} instance
+   * @return An instance of {@link QualifierFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static QualifierFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.QualifierFilter proto;
+    try {
+      proto = FilterProtos.QualifierFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    final CompareOp valueCompareOp =
+      CompareOp.valueOf(proto.getCompareFilter().getCompareOp().name());
+    WritableByteArrayComparable valueComparator = null;
+    try {
+      if (proto.getCompareFilter().hasComparator()) {
+        valueComparator = ProtobufUtil.toComparator(proto.getCompareFilter().getComparator());
+      }
+    } catch (IOException ioe) {
+      throw new DeserializationException(ioe);
+    }
+    return new QualifierFilter(valueCompareOp,valueComparator);
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof QualifierFilter)) return false;
+
+    return super.areSerializedFieldsEqual(o);
+  }
 }

@@ -21,15 +21,16 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.util.regex.Pattern;
@@ -74,9 +75,6 @@ public class RegexStringComparator extends WritableByteArrayComparable {
 
   private Pattern pattern;
 
-  /** Nullary constructor for Writable, do not use */
-  public RegexStringComparator() { }
-
   /**
    * Constructor
    * Adds Pattern.DOTALL to the underlying Pattern
@@ -119,27 +117,59 @@ public class RegexStringComparator extends WritableByteArrayComparable {
         : 1;
   }
 
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    final String expr = in.readUTF();
-    this.value = Bytes.toBytes(expr);
-    int flags = in.readInt();
-    this.pattern = Pattern.compile(expr, flags);
-    final String charset = in.readUTF();
+  /**
+   * @return The comparator serialized using pb
+   */
+  public byte [] toByteArray() {
+    ComparatorProtos.RegexStringComparator.Builder builder =
+      ComparatorProtos.RegexStringComparator.newBuilder();
+    builder.setPattern(pattern.toString());
+    builder.setPatternFlags(pattern.flags());
+    builder.setCharset(charset.name());
+    return builder.build().toByteArray();
+  }
+
+  /**
+   * @param pbBytes A pb serialized {@link RegexStringComparator} instance
+   * @return An instance of {@link RegexStringComparator} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static RegexStringComparator parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    ComparatorProtos.RegexStringComparator proto;
+    try {
+      proto = ComparatorProtos.RegexStringComparator.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+
+    RegexStringComparator comparator =
+      new RegexStringComparator(proto.getPattern(), proto.getPatternFlags());
+    final String charset = proto.getCharset();
     if (charset.length() > 0) {
       try {
-        this.charset = Charset.forName(charset);
+        comparator.setCharset(Charset.forName(charset));
       } catch (IllegalCharsetNameException e) {
         LOG.error("invalid charset", e);
       }
     }
+    return comparator;
   }
 
-  @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeUTF(pattern.toString());
-    out.writeInt(pattern.flags());
-    out.writeUTF(charset.name());
-  }
+  /**
+   * @param other
+   * @return true if and only if the fields of the comparator that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(WritableByteArrayComparable other) {
+    if (other == this) return true;
+    if (!(other instanceof RegexStringComparator)) return false;
 
+    RegexStringComparator comparator = (RegexStringComparator)other;
+    return super.areSerializedFieldsEqual(comparator)
+      && this.pattern.toString().equals(comparator.pattern.toString())
+      && this.pattern.flags() == comparator.pattern.flags()
+      && this.charset.equals(comparator.charset);
+  }
 }

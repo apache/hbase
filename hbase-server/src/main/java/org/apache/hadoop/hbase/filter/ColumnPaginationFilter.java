@@ -19,15 +19,16 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+
 import com.google.common.base.Preconditions;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A filter, based on the ColumnCountGetFilter, takes two arguments: limit and offset.
@@ -41,14 +42,6 @@ public class ColumnPaginationFilter extends FilterBase
   private int limit = 0;
   private int offset = 0;
   private int count = 0;
-
-    /**
-     * Used during serialization. Do not use.
-     */
-  public ColumnPaginationFilter()
-  {
-    super();
-  }
 
   public ColumnPaginationFilter(final int limit, final int offset)
   {
@@ -99,16 +92,45 @@ public class ColumnPaginationFilter extends FilterBase
     return new ColumnPaginationFilter(limit, offset);
   }
 
-  public void readFields(DataInput in) throws IOException
-  {
-    this.limit = in.readInt();
-    this.offset = in.readInt();
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.ColumnPaginationFilter.Builder builder =
+      FilterProtos.ColumnPaginationFilter.newBuilder();
+    builder.setLimit(this.limit);
+    builder.setOffset(this.offset);
+    return builder.build().toByteArray();
   }
 
-  public void write(DataOutput out) throws IOException
-  {
-    out.writeInt(this.limit);
-    out.writeInt(this.offset);
+  /**
+   * @param pbBytes A pb serialized {@link ColumnPaginationFilter} instance
+   * @return An instance of {@link ColumnPaginationFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static ColumnPaginationFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.ColumnPaginationFilter proto;
+    try {
+      proto = FilterProtos.ColumnPaginationFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return new ColumnPaginationFilter(proto.getLimit(),proto.getOffset());
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof ColumnPaginationFilter)) return false;
+
+    ColumnPaginationFilter other = (ColumnPaginationFilter)o;
+    return this.getLimit() == other.getLimit() && this.getOffset() == other.getOffset();
   }
 
   @Override

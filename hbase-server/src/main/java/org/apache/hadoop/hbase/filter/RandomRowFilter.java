@@ -20,14 +20,15 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.Random;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A filter that includes rows based on a chance.
@@ -40,12 +41,6 @@ public class RandomRowFilter extends FilterBase {
 
   protected float chance;
   protected boolean filterOutRow;
-
-  /**
-   * Writable constructor, do not use.
-   */
-  public RandomRowFilter() {
-  }
 
   /**
    * Create a new filter with a specified chance for a row to be included.
@@ -114,13 +109,43 @@ public class RandomRowFilter extends FilterBase {
     filterOutRow = false;
   }
 
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    chance = in.readFloat();
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.RandomRowFilter.Builder builder =
+      FilterProtos.RandomRowFilter.newBuilder();
+    builder.setChance(this.chance);
+    return builder.build().toByteArray();
   }
 
-  @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeFloat(chance);
+  /**
+   * @param pbBytes A pb serialized {@link RandomRowFilter} instance
+   * @return An instance of {@link RandomRowFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static RandomRowFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.RandomRowFilter proto;
+    try {
+      proto = FilterProtos.RandomRowFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return new RandomRowFilter(proto.getChance());
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof RandomRowFilter)) return false;
+
+    RandomRowFilter other = (RandomRowFilter)o;
+    return this.getChance() == other.getChance();
   }
 }

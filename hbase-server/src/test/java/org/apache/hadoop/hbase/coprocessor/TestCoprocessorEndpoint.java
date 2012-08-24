@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -46,6 +48,8 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.protobuf.ByteString;
 
 /**
  * TestEndpoint: test cases to verify coprocessor Endpoint
@@ -179,29 +183,6 @@ public class TestCoprocessorEndpoint {
     }
     assertEquals("Invalid result", sumResult, expectedResult);
     table.close();
-  }
-
-  @Test
-  public void testExecDeserialization() throws IOException {
-    DataOutputBuffer dob = new DataOutputBuffer();
-    dob.writeUTF(methodName);
-    dob.writeInt(1);
-    Scan scan = new Scan();
-    HbaseObjectWritable.writeObject(dob, scan, Scan.class, new Configuration());
-    dob.writeUTF("org.apache.hadoop.hbase.client.Scan");
-    Bytes.writeByteArray(dob, new byte[]{'a'});
-    // this is the dynamic protocol name
-    dob.writeUTF(protocolName);
-
-    DataInputBuffer dib = new DataInputBuffer();
-    dib.reset(dob.getData(), dob.getLength());
-
-    Exec after = new Exec();
-    after.setConf(HBaseConfiguration.create());
-    after.readFields(dib);
-    // no error thrown
-    assertEquals(after.getProtocolName(), protocolName);
-    assertEquals(after.getMethodName(), methodName);
   }
 
   private static byte[][] makeN(byte[] base, int n) {

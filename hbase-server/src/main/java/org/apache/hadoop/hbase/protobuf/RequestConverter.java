@@ -868,7 +868,7 @@ public final class RequestConverter {
     builder.setRow(ByteString.copyFrom(row));
     builder.setFamily(ByteString.copyFrom(family));
     builder.setQualifier(ByteString.copyFrom(qualifier));
-    builder.setComparator(ProtobufUtil.toParameter(comparator));
+    builder.setComparator(ProtobufUtil.toComparator(comparator));
     builder.setCompareType(compareType);
     return builder.build();
   }

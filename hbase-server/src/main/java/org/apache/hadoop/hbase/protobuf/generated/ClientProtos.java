@@ -532,10 +532,10 @@ public final class ClientProtos {
     boolean hasLockId();
     long getLockId();
     
-    // optional .NameBytesPair filter = 5;
+    // optional .Filter filter = 5;
     boolean hasFilter();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getFilter();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getFilterOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter getFilter();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder getFilterOrBuilder();
     
     // optional .TimeRange timeRange = 6;
     boolean hasTimeRange();
@@ -649,16 +649,16 @@ public final class ClientProtos {
       return lockId_;
     }
     
-    // optional .NameBytesPair filter = 5;
+    // optional .Filter filter = 5;
     public static final int FILTER_FIELD_NUMBER = 5;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair filter_;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter filter_;
     public boolean hasFilter() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getFilter() {
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter getFilter() {
       return filter_;
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getFilterOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder getFilterOrBuilder() {
       return filter_;
     }
     
@@ -720,7 +720,7 @@ public final class ClientProtos {
       column_ = java.util.Collections.emptyList();
       attribute_ = java.util.Collections.emptyList();
       lockId_ = 0L;
-      filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+      filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
       timeRange_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.getDefaultInstance();
       maxVersions_ = 1;
       cacheBlocks_ = true;
@@ -1093,7 +1093,7 @@ public final class ClientProtos {
         lockId_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000008);
         if (filterBuilder_ == null) {
-          filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+          filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
         } else {
           filterBuilder_.clear();
         }
@@ -1376,7 +1376,7 @@ public final class ClientProtos {
               break;
             }
             case 42: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.newBuilder();
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.newBuilder();
               if (hasFilter()) {
                 subBuilder.mergeFrom(getFilter());
               }
@@ -1836,21 +1836,21 @@ public final class ClientProtos {
         return this;
       }
       
-      // optional .NameBytesPair filter = 5;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+      // optional .Filter filter = 5;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder> filterBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder> filterBuilder_;
       public boolean hasFilter() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getFilter() {
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter getFilter() {
         if (filterBuilder_ == null) {
           return filter_;
         } else {
           return filterBuilder_.getMessage();
         }
       }
-      public Builder setFilter(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair value) {
+      public Builder setFilter(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter value) {
         if (filterBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1864,7 +1864,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder setFilter(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder builderForValue) {
         if (filterBuilder_ == null) {
           filter_ = builderForValue.build();
           onChanged();
@@ -1874,12 +1874,12 @@ public final class ClientProtos {
         bitField0_ |= 0x00000010;
         return this;
       }
-      public Builder mergeFilter(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair value) {
+      public Builder mergeFilter(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter value) {
         if (filterBuilder_ == null) {
           if (((bitField0_ & 0x00000010) == 0x00000010) &&
-              filter_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance()) {
+              filter_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance()) {
             filter_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.newBuilder(filter_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.newBuilder(filter_).mergeFrom(value).buildPartial();
           } else {
             filter_ = value;
           }
@@ -1892,7 +1892,7 @@ public final class ClientProtos {
       }
       public Builder clearFilter() {
         if (filterBuilder_ == null) {
-          filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+          filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
           onChanged();
         } else {
           filterBuilder_.clear();
@@ -1900,12 +1900,12 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder getFilterBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder getFilterBuilder() {
         bitField0_ |= 0x00000010;
         onChanged();
         return getFilterFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getFilterOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder getFilterOrBuilder() {
         if (filterBuilder_ != null) {
           return filterBuilder_.getMessageOrBuilder();
         } else {
@@ -1913,11 +1913,11 @@ public final class ClientProtos {
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder> 
           getFilterFieldBuilder() {
         if (filterBuilder_ == null) {
           filterBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder>(
                   filter_,
                   getParentForChildren(),
                   isClean());
@@ -3839,10 +3839,10 @@ public final class ClientProtos {
     boolean hasCompareType();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType getCompareType();
     
-    // required .NameBytesPair comparator = 5;
+    // required .Comparator comparator = 5;
     boolean hasComparator();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getComparator();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getComparatorOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator getComparator();
+    org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.ComparatorOrBuilder getComparatorOrBuilder();
   }
   public static final class Condition extends
       com.google.protobuf.GeneratedMessage
@@ -3913,16 +3913,16 @@ public final class ClientProtos {
       return compareType_;
     }
     
-    // required .NameBytesPair comparator = 5;
+    // required .Comparator comparator = 5;
     public static final int COMPARATOR_FIELD_NUMBER = 5;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair comparator_;
+    private org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator comparator_;
     public boolean hasComparator() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getComparator() {
+    public org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator getComparator() {
       return comparator_;
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getComparatorOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.ComparatorOrBuilder getComparatorOrBuilder() {
       return comparator_;
     }
     
@@ -3931,7 +3931,7 @@ public final class ClientProtos {
       family_ = com.google.protobuf.ByteString.EMPTY;
       qualifier_ = com.google.protobuf.ByteString.EMPTY;
       compareType_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType.LESS;
-      comparator_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+      comparator_ = org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4216,7 +4216,7 @@ public final class ClientProtos {
         compareType_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType.LESS;
         bitField0_ = (bitField0_ & ~0x00000008);
         if (comparatorBuilder_ == null) {
-          comparator_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+          comparator_ = org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.getDefaultInstance();
         } else {
           comparatorBuilder_.clear();
         }
@@ -4396,7 +4396,7 @@ public final class ClientProtos {
               break;
             }
             case 42: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.newBuilder();
+              org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.newBuilder();
               if (hasComparator()) {
                 subBuilder.mergeFrom(getComparator());
               }
@@ -4506,21 +4506,21 @@ public final class ClientProtos {
         return this;
       }
       
-      // required .NameBytesPair comparator = 5;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair comparator_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+      // required .Comparator comparator = 5;
+      private org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator comparator_ = org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder> comparatorBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator, org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.Builder, org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.ComparatorOrBuilder> comparatorBuilder_;
       public boolean hasComparator() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getComparator() {
+      public org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator getComparator() {
         if (comparatorBuilder_ == null) {
           return comparator_;
         } else {
           return comparatorBuilder_.getMessage();
         }
       }
-      public Builder setComparator(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair value) {
+      public Builder setComparator(org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator value) {
         if (comparatorBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -4534,7 +4534,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder setComparator(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.Builder builderForValue) {
         if (comparatorBuilder_ == null) {
           comparator_ = builderForValue.build();
           onChanged();
@@ -4544,12 +4544,12 @@ public final class ClientProtos {
         bitField0_ |= 0x00000010;
         return this;
       }
-      public Builder mergeComparator(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair value) {
+      public Builder mergeComparator(org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator value) {
         if (comparatorBuilder_ == null) {
           if (((bitField0_ & 0x00000010) == 0x00000010) &&
-              comparator_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance()) {
+              comparator_ != org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.getDefaultInstance()) {
             comparator_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.newBuilder(comparator_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.newBuilder(comparator_).mergeFrom(value).buildPartial();
           } else {
             comparator_ = value;
           }
@@ -4562,7 +4562,7 @@ public final class ClientProtos {
       }
       public Builder clearComparator() {
         if (comparatorBuilder_ == null) {
-          comparator_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+          comparator_ = org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.getDefaultInstance();
           onChanged();
         } else {
           comparatorBuilder_.clear();
@@ -4570,12 +4570,12 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder getComparatorBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.Builder getComparatorBuilder() {
         bitField0_ |= 0x00000010;
         onChanged();
         return getComparatorFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getComparatorOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.ComparatorOrBuilder getComparatorOrBuilder() {
         if (comparatorBuilder_ != null) {
           return comparatorBuilder_.getMessageOrBuilder();
         } else {
@@ -4583,11 +4583,11 @@ public final class ClientProtos {
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator, org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.Builder, org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.ComparatorOrBuilder> 
           getComparatorFieldBuilder() {
         if (comparatorBuilder_ == null) {
           comparatorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator, org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator.Builder, org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.ComparatorOrBuilder>(
                   comparator_,
                   getParentForChildren(),
                   isClean());
@@ -8755,10 +8755,10 @@ public final class ClientProtos {
     boolean hasStopRow();
     com.google.protobuf.ByteString getStopRow();
     
-    // optional .NameBytesPair filter = 5;
+    // optional .Filter filter = 5;
     boolean hasFilter();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getFilter();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getFilterOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter getFilter();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder getFilterOrBuilder();
     
     // optional .TimeRange timeRange = 6;
     boolean hasTimeRange();
@@ -8880,16 +8880,16 @@ public final class ClientProtos {
       return stopRow_;
     }
     
-    // optional .NameBytesPair filter = 5;
+    // optional .Filter filter = 5;
     public static final int FILTER_FIELD_NUMBER = 5;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair filter_;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter filter_;
     public boolean hasFilter() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getFilter() {
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter getFilter() {
       return filter_;
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getFilterOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder getFilterOrBuilder() {
       return filter_;
     }
     
@@ -8971,7 +8971,7 @@ public final class ClientProtos {
       attribute_ = java.util.Collections.emptyList();
       startRow_ = com.google.protobuf.ByteString.EMPTY;
       stopRow_ = com.google.protobuf.ByteString.EMPTY;
-      filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+      filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
       timeRange_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.getDefaultInstance();
       maxVersions_ = 1;
       cacheBlocks_ = true;
@@ -9374,7 +9374,7 @@ public final class ClientProtos {
         stopRow_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000008);
         if (filterBuilder_ == null) {
-          filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+          filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
         } else {
           filterBuilder_.clear();
         }
@@ -9671,7 +9671,7 @@ public final class ClientProtos {
               break;
             }
             case 42: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.newBuilder();
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.newBuilder();
               if (hasFilter()) {
                 subBuilder.mergeFrom(getFilter());
               }
@@ -10144,21 +10144,21 @@ public final class ClientProtos {
         return this;
       }
       
-      // optional .NameBytesPair filter = 5;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+      // optional .Filter filter = 5;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder> filterBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder> filterBuilder_;
       public boolean hasFilter() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getFilter() {
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter getFilter() {
         if (filterBuilder_ == null) {
           return filter_;
         } else {
           return filterBuilder_.getMessage();
         }
       }
-      public Builder setFilter(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair value) {
+      public Builder setFilter(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter value) {
         if (filterBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -10172,7 +10172,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder setFilter(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder builderForValue) {
         if (filterBuilder_ == null) {
           filter_ = builderForValue.build();
           onChanged();
@@ -10182,12 +10182,12 @@ public final class ClientProtos {
         bitField0_ |= 0x00000010;
         return this;
       }
-      public Builder mergeFilter(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair value) {
+      public Builder mergeFilter(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter value) {
         if (filterBuilder_ == null) {
           if (((bitField0_ & 0x00000010) == 0x00000010) &&
-              filter_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance()) {
+              filter_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance()) {
             filter_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.newBuilder(filter_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.newBuilder(filter_).mergeFrom(value).buildPartial();
           } else {
             filter_ = value;
           }
@@ -10200,7 +10200,7 @@ public final class ClientProtos {
       }
       public Builder clearFilter() {
         if (filterBuilder_ == null) {
-          filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.getDefaultInstance();
+          filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
           onChanged();
         } else {
           filterBuilder_.clear();
@@ -10208,12 +10208,12 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder getFilterBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder getFilterBuilder() {
         bitField0_ |= 0x00000010;
         onChanged();
         return getFilterFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder getFilterOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder getFilterOrBuilder() {
         if (filterBuilder_ != null) {
           return filterBuilder_.getMessageOrBuilder();
         } else {
@@ -10221,11 +10221,11 @@ public final class ClientProtos {
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder> 
           getFilterFieldBuilder() {
         if (filterBuilder_ == null) {
           filterBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder>(
                   filter_,
                   getParentForChildren(),
                   isClean());
@@ -21564,45 +21564,45 @@ public final class ClientProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\014Client.proto\032\013hbase.proto\"+\n\006Column\022\016\n" +
-      "\006family\030\001 \002(\014\022\021\n\tqualifier\030\002 \003(\014\"\371\001\n\003Get" +
-      "\022\013\n\003row\030\001 \002(\014\022\027\n\006column\030\002 \003(\0132\007.Column\022!" +
-      "\n\tattribute\030\003 \003(\0132\016.NameBytesPair\022\016\n\006loc" +
-      "kId\030\004 \001(\004\022\036\n\006filter\030\005 \001(\0132\016.NameBytesPai" +
-      "r\022\035\n\ttimeRange\030\006 \001(\0132\n.TimeRange\022\026\n\013maxV" +
-      "ersions\030\007 \001(\r:\0011\022\031\n\013cacheBlocks\030\010 \001(\010:\004t" +
-      "rue\022\022\n\nstoreLimit\030\t \001(\r\022\023\n\013storeOffset\030\n" +
-      " \001(\r\"\037\n\006Result\022\025\n\rkeyValueBytes\030\001 \003(\014\"r\n" +
-      "\nGetRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpec",
-      "ifier\022\021\n\003get\030\002 \002(\0132\004.Get\022\030\n\020closestRowBe" +
-      "fore\030\003 \001(\010\022\025\n\rexistenceOnly\030\004 \001(\010\"6\n\013Get" +
-      "Response\022\027\n\006result\030\001 \001(\0132\007.Result\022\016\n\006exi" +
-      "sts\030\002 \001(\010\"\202\001\n\tCondition\022\013\n\003row\030\001 \002(\014\022\016\n\006" +
-      "family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022!\n\013compa" +
-      "reType\030\004 \002(\0162\014.CompareType\022\"\n\ncomparator" +
-      "\030\005 \002(\0132\016.NameBytesPair\"\306\004\n\006Mutate\022\013\n\003row" +
-      "\030\001 \002(\014\022&\n\nmutateType\030\002 \002(\0162\022.Mutate.Muta" +
-      "teType\022(\n\013columnValue\030\003 \003(\0132\023.Mutate.Col" +
-      "umnValue\022!\n\tattribute\030\004 \003(\0132\016.NameBytesP",
-      "air\022\021\n\ttimestamp\030\005 \001(\004\022\016\n\006lockId\030\006 \001(\004\022\030" +
-      "\n\nwriteToWAL\030\007 \001(\010:\004true\022\035\n\ttimeRange\030\n " +
-      "\001(\0132\n.TimeRange\032\310\001\n\013ColumnValue\022\016\n\006famil" +
-      "y\030\001 \002(\014\022:\n\016qualifierValue\030\002 \003(\0132\".Mutate" +
-      ".ColumnValue.QualifierValue\032m\n\016Qualifier" +
-      "Value\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002 \001(\014\022" +
-      "\021\n\ttimestamp\030\003 \001(\004\022&\n\ndeleteType\030\004 \001(\0162\022" +
-      ".Mutate.DeleteType\"<\n\nMutateType\022\n\n\006APPE" +
-      "ND\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DELETE\020\003" +
-      "\"U\n\nDeleteType\022\026\n\022DELETE_ONE_VERSION\020\000\022\034",
-      "\n\030DELETE_MULTIPLE_VERSIONS\020\001\022\021\n\rDELETE_F" +
-      "AMILY\020\002\"i\n\rMutateRequest\022 \n\006region\030\001 \002(\013" +
-      "2\020.RegionSpecifier\022\027\n\006mutate\030\002 \002(\0132\007.Mut" +
-      "ate\022\035\n\tcondition\030\003 \001(\0132\n.Condition\"<\n\016Mu" +
-      "tateResponse\022\027\n\006result\030\001 \001(\0132\007.Result\022\021\n" +
-      "\tprocessed\030\002 \001(\010\"\252\002\n\004Scan\022\027\n\006column\030\001 \003(" +
-      "\0132\007.Column\022!\n\tattribute\030\002 \003(\0132\016.NameByte" +
-      "sPair\022\020\n\010startRow\030\003 \001(\014\022\017\n\007stopRow\030\004 \001(\014" +
-      "\022\036\n\006filter\030\005 \001(\0132\016.NameBytesPair\022\035\n\ttime" +
+      "\n\014Client.proto\032\013hbase.proto\032\020Comparator." +
+      "proto\"+\n\006Column\022\016\n\006family\030\001 \002(\014\022\021\n\tquali" +
+      "fier\030\002 \003(\014\"\362\001\n\003Get\022\013\n\003row\030\001 \002(\014\022\027\n\006colum" +
+      "n\030\002 \003(\0132\007.Column\022!\n\tattribute\030\003 \003(\0132\016.Na" +
+      "meBytesPair\022\016\n\006lockId\030\004 \001(\004\022\027\n\006filter\030\005 " +
+      "\001(\0132\007.Filter\022\035\n\ttimeRange\030\006 \001(\0132\n.TimeRa" +
+      "nge\022\026\n\013maxVersions\030\007 \001(\r:\0011\022\031\n\013cacheBloc" +
+      "ks\030\010 \001(\010:\004true\022\022\n\nstoreLimit\030\t \001(\r\022\023\n\013st" +
+      "oreOffset\030\n \001(\r\"\037\n\006Result\022\025\n\rkeyValueByt" +
+      "es\030\001 \003(\014\"r\n\nGetRequest\022 \n\006region\030\001 \002(\0132\020",
+      ".RegionSpecifier\022\021\n\003get\030\002 \002(\0132\004.Get\022\030\n\020c" +
+      "losestRowBefore\030\003 \001(\010\022\025\n\rexistenceOnly\030\004" +
+      " \001(\010\"6\n\013GetResponse\022\027\n\006result\030\001 \001(\0132\007.Re" +
+      "sult\022\016\n\006exists\030\002 \001(\010\"\177\n\tCondition\022\013\n\003row" +
+      "\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(" +
+      "\014\022!\n\013compareType\030\004 \002(\0162\014.CompareType\022\037\n\n" +
+      "comparator\030\005 \002(\0132\013.Comparator\"\306\004\n\006Mutate" +
+      "\022\013\n\003row\030\001 \002(\014\022&\n\nmutateType\030\002 \002(\0162\022.Muta" +
+      "te.MutateType\022(\n\013columnValue\030\003 \003(\0132\023.Mut" +
+      "ate.ColumnValue\022!\n\tattribute\030\004 \003(\0132\016.Nam",
+      "eBytesPair\022\021\n\ttimestamp\030\005 \001(\004\022\016\n\006lockId\030" +
+      "\006 \001(\004\022\030\n\nwriteToWAL\030\007 \001(\010:\004true\022\035\n\ttimeR" +
+      "ange\030\n \001(\0132\n.TimeRange\032\310\001\n\013ColumnValue\022\016" +
+      "\n\006family\030\001 \002(\014\022:\n\016qualifierValue\030\002 \003(\0132\"" +
+      ".Mutate.ColumnValue.QualifierValue\032m\n\016Qu" +
+      "alifierValue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value" +
+      "\030\002 \001(\014\022\021\n\ttimestamp\030\003 \001(\004\022&\n\ndeleteType\030" +
+      "\004 \001(\0162\022.Mutate.DeleteType\"<\n\nMutateType\022" +
+      "\n\n\006APPEND\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006D" +
+      "ELETE\020\003\"U\n\nDeleteType\022\026\n\022DELETE_ONE_VERS",
+      "ION\020\000\022\034\n\030DELETE_MULTIPLE_VERSIONS\020\001\022\021\n\rD" +
+      "ELETE_FAMILY\020\002\"i\n\rMutateRequest\022 \n\006regio" +
+      "n\030\001 \002(\0132\020.RegionSpecifier\022\027\n\006mutate\030\002 \002(" +
+      "\0132\007.Mutate\022\035\n\tcondition\030\003 \001(\0132\n.Conditio" +
+      "n\"<\n\016MutateResponse\022\027\n\006result\030\001 \001(\0132\007.Re" +
+      "sult\022\021\n\tprocessed\030\002 \001(\010\"\243\002\n\004Scan\022\027\n\006colu" +
+      "mn\030\001 \003(\0132\007.Column\022!\n\tattribute\030\002 \003(\0132\016.N" +
+      "ameBytesPair\022\020\n\010startRow\030\003 \001(\014\022\017\n\007stopRo" +
+      "w\030\004 \001(\014\022\027\n\006filter\030\005 \001(\0132\007.Filter\022\035\n\ttime" +
       "Range\030\006 \001(\0132\n.TimeRange\022\026\n\013maxVersions\030\007",
       " \001(\r:\0011\022\031\n\013cacheBlocks\030\010 \001(\010:\004true\022\021\n\tba" +
       "tchSize\030\t \001(\r\022\025\n\rmaxResultSize\030\n \001(\004\022\022\n\n" +
@@ -21886,6 +21886,7 @@ public final class ClientProtos {
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
+          org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.getDescriptor(),
         }, assigner);
   }
   

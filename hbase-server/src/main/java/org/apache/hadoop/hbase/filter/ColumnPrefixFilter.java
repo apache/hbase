@@ -22,15 +22,16 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.DataOutput;
-import java.io.IOException;
-import java.io.DataInput;
 import java.util.ArrayList;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * This filter is used for selecting only those keys with columns that matches
@@ -41,10 +42,6 @@ import com.google.common.base.Preconditions;
 @InterfaceStability.Stable
 public class ColumnPrefixFilter extends FilterBase {
   protected byte [] prefix = null;
-
-  public ColumnPrefixFilter() {
-    super();
-  }
 
   public ColumnPrefixFilter(final byte [] prefix) {
     this.prefix = prefix;
@@ -92,12 +89,44 @@ public class ColumnPrefixFilter extends FilterBase {
     return new ColumnPrefixFilter(columnPrefix);
   }
 
-  public void write(DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, this.prefix);
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.ColumnPrefixFilter.Builder builder =
+      FilterProtos.ColumnPrefixFilter.newBuilder();
+    if (this.prefix != null) builder.setPrefix(ByteString.copyFrom(this.prefix));
+    return builder.build().toByteArray();
   }
 
-  public void readFields(DataInput in) throws IOException {
-    this.prefix = Bytes.readByteArray(in);
+  /**
+   * @param pbBytes A pb serialized {@link ColumnPrefixFilter} instance
+   * @return An instance of {@link ColumnPrefixFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static ColumnPrefixFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.ColumnPrefixFilter proto;
+    try {
+      proto = FilterProtos.ColumnPrefixFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return new ColumnPrefixFilter(proto.getPrefix().toByteArray());
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+   if (o == this) return true;
+   if (!(o instanceof ColumnPrefixFilter)) return false;
+
+   ColumnPrefixFilter other = (ColumnPrefixFilter)o;
+    return Bytes.equals(this.getPrefix(), other.getPrefix());
   }
 
   public KeyValue getNextKeyHint(KeyValue kv) {

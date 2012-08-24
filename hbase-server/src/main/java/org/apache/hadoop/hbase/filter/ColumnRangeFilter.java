@@ -22,15 +22,16 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.DataOutput;
-import java.io.IOException;
-import java.io.DataInput;
 import java.util.ArrayList;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * This filter is used for selecting only those keys with columns that are
@@ -52,9 +53,6 @@ public class ColumnRangeFilter extends FilterBase {
   protected byte[] maxColumn = null;
   protected boolean maxColumnInclusive = false;
 
-  public ColumnRangeFilter() {
-    super();
-  }
   /**
    * Create a filter to select those keys with columns that are between minColumn
    * and maxColumn.
@@ -166,38 +164,53 @@ public class ColumnRangeFilter extends FilterBase {
                                  maxColumn, maxColumnInclusive);
   }
 
-  @Override
-  public void write(DataOutput out) throws IOException {
-    // need to write out a flag for null value separately. Otherwise,
-    // we will not be able to differentiate empty string and null
-    out.writeBoolean(this.minColumn == null);
-    Bytes.writeByteArray(out, this.minColumn);
-    out.writeBoolean(this.minColumnInclusive);
-
-    out.writeBoolean(this.maxColumn == null);
-    Bytes.writeByteArray(out, this.maxColumn);
-    out.writeBoolean(this.maxColumnInclusive);
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.ColumnRangeFilter.Builder builder =
+      FilterProtos.ColumnRangeFilter.newBuilder();
+    if (this.minColumn != null) builder.setMinColumn(ByteString.copyFrom(this.minColumn));
+    builder.setMinColumnInclusive(this.minColumnInclusive);
+    if (this.maxColumn != null) builder.setMaxColumn(ByteString.copyFrom(this.maxColumn));
+    builder.setMaxColumnInclusive(this.maxColumnInclusive);
+    return builder.build().toByteArray();
   }
 
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    boolean isMinColumnNull = in.readBoolean();
-    this.minColumn = Bytes.readByteArray(in);
-
-    if (isMinColumnNull) {
-      this.minColumn = null;
+  /**
+   * @param pbBytes A pb serialized {@link ColumnRangeFilter} instance
+   * @return An instance of {@link ColumnRangeFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static ColumnRangeFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.ColumnRangeFilter proto;
+    try {
+      proto = FilterProtos.ColumnRangeFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
     }
-
-    this.minColumnInclusive = in.readBoolean();
-
-    boolean isMaxColumnNull = in.readBoolean();
-    this.maxColumn = Bytes.readByteArray(in);
-    if (isMaxColumnNull) {
-      this.maxColumn = null;
-    }
-    this.maxColumnInclusive = in.readBoolean();
+    return new ColumnRangeFilter(proto.hasMinColumn()?proto.getMinColumn().toByteArray():null,
+      proto.getMinColumnInclusive(),proto.hasMaxColumn()?proto.getMaxColumn().toByteArray():null,
+      proto.getMaxColumnInclusive());
   }
 
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+   if (o == this) return true;
+   if (!(o instanceof ColumnRangeFilter)) return false;
+
+   ColumnRangeFilter other = (ColumnRangeFilter)o;
+   return Bytes.equals(this.getMinColumn(),other.getMinColumn())
+     && this.getMinColumnInclusive() == other.getMinColumnInclusive()
+     && Bytes.equals(this.getMaxColumn(), other.getMaxColumn())
+     && this.getMaxColumnInclusive() == other.getMaxColumnInclusive();
+  }
 
   @Override
   public KeyValue getNextKeyHint(KeyValue kv) {

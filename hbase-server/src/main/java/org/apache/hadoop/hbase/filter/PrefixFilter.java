@@ -22,16 +22,16 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.DataOutput;
-import java.io.IOException;
-import java.io.DataInput;
-import java.util.List;
 import java.util.ArrayList;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Pass results that have same row prefix.
@@ -44,10 +44,6 @@ public class PrefixFilter extends FilterBase {
 
   public PrefixFilter(final byte [] prefix) {
     this.prefix = prefix;
-  }
-
-  public PrefixFilter() {
-    super();
   }
 
   public byte[] getPrefix() {
@@ -81,12 +77,44 @@ public class PrefixFilter extends FilterBase {
     return new PrefixFilter(prefix);
   }
 
-  public void write(DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, this.prefix);
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.PrefixFilter.Builder builder =
+      FilterProtos.PrefixFilter.newBuilder();
+    if (this.prefix != null) builder.setPrefix(ByteString.copyFrom(this.prefix));
+    return builder.build().toByteArray();
   }
 
-  public void readFields(DataInput in) throws IOException {
-    this.prefix = Bytes.readByteArray(in);
+  /**
+   * @param pbBytes A pb serialized {@link PrefixFilter} instance
+   * @return An instance of {@link PrefixFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static PrefixFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.PrefixFilter proto;
+    try {
+      proto = FilterProtos.PrefixFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return new PrefixFilter(proto.hasPrefix()?proto.getPrefix().toByteArray():null);
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof PrefixFilter)) return false;
+
+    PrefixFilter other = (PrefixFilter)o;
+    return Bytes.equals(this.getPrefix(), other.getPrefix());
   }
 
   @Override

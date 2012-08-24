@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -30,10 +28,15 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A filter for adding inter-column timestamp matching
@@ -51,12 +54,6 @@ public class DependentColumnFilter extends CompareFilter {
   protected boolean dropDependentColumn;
 
   protected Set<Long> stampSet = new HashSet<Long>();
-  
-  /**
-   * Should only be used for writable
-   */
-  public DependentColumnFilter() {
-  }
   
   /**
    * Build a dependent column filter with value checking
@@ -217,28 +214,67 @@ public class DependentColumnFilter extends CompareFilter {
     }
   }
 
-  @Override
-  public void readFields(DataInput in) throws IOException {
-	super.readFields(in);
-    this.columnFamily = Bytes.readByteArray(in);
-	if(this.columnFamily.length == 0) {
-	  this.columnFamily = null;
-	}
-    
-    this.columnQualifier = Bytes.readByteArray(in);
-    if(this.columnQualifier.length == 0) {
-      this.columnQualifier = null;
-    }	
-    
-    this.dropDependentColumn = in.readBoolean();
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.DependentColumnFilter.Builder builder =
+      FilterProtos.DependentColumnFilter.newBuilder();
+    builder.setCompareFilter(super.convert());
+    if (this.columnFamily != null) {
+      builder.setColumnFamily(ByteString.copyFrom(this.columnFamily));
+    }
+    if (this.columnQualifier != null) {
+      builder.setColumnQualifier(ByteString.copyFrom(this.columnQualifier));
+    }
+    builder.setDropDependentColumn(this.dropDependentColumn);
+    return builder.build().toByteArray();
   }
 
-  @Override
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    Bytes.writeByteArray(out, this.columnFamily);
-    Bytes.writeByteArray(out, this.columnQualifier);
-    out.writeBoolean(this.dropDependentColumn);    
+  /**
+   * @param pbBytes A pb serialized {@link DependentColumnFilter} instance
+   * @return An instance of {@link DependentColumnFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static DependentColumnFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.DependentColumnFilter proto;
+    try {
+      proto = FilterProtos.DependentColumnFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    final CompareOp valueCompareOp =
+      CompareOp.valueOf(proto.getCompareFilter().getCompareOp().name());
+    WritableByteArrayComparable valueComparator = null;
+    try {
+      if (proto.getCompareFilter().hasComparator()) {
+        valueComparator = ProtobufUtil.toComparator(proto.getCompareFilter().getComparator());
+      }
+    } catch (IOException ioe) {
+      throw new DeserializationException(ioe);
+    }
+    return new DependentColumnFilter(
+      proto.hasColumnFamily()?proto.getColumnFamily().toByteArray():null,
+      proto.hasColumnQualifier()?proto.getColumnQualifier().toByteArray():null,
+      proto.getDropDependentColumn(), valueCompareOp, valueComparator);
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof DependentColumnFilter)) return false;
+
+    DependentColumnFilter other = (DependentColumnFilter)o;
+    return other != null && super.areSerializedFieldsEqual(other)
+      && Bytes.equals(this.getFamily(), other.getFamily())
+      && Bytes.equals(this.getQualifier(), other.getQualifier())
+      && this.dropDependentColumn() == other.dropDependentColumn();
   }
 
   @Override

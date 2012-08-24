@@ -29,6 +29,8 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,20 +41,14 @@ import org.junit.experimental.categories.Category;
 public class TestGet {
   @Test
   public void testAttributesSerialization() throws IOException {
-    Get get = new Get();
+    Get get = new Get(Bytes.toBytes("row"));
     get.setAttribute("attribute1", Bytes.toBytes("value1"));
     get.setAttribute("attribute2", Bytes.toBytes("value2"));
     get.setAttribute("attribute3", Bytes.toBytes("value3"));
 
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    DataOutput out = new DataOutputStream(byteArrayOutputStream);
-    get.write(out);
+    ClientProtos.Get getProto = ProtobufUtil.toGet(get);
 
-    Get get2 = new Get();
-    Assert.assertTrue(get2.getAttributesMap().isEmpty());
-
-    get2.readFields(new DataInputStream(new ByteArrayInputStream(byteArrayOutputStream.toByteArray())));
-
+    Get get2 = ProtobufUtil.toGet(getProto);
     Assert.assertNull(get2.getAttribute("absent"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), get2.getAttribute("attribute1")));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value2"), get2.getAttribute("attribute2")));
@@ -62,7 +58,7 @@ public class TestGet {
 
   @Test
   public void testGetAttributes() {
-    Get get = new Get();
+    Get get = new Get(null);
     Assert.assertTrue(get.getAttributesMap().isEmpty());
     Assert.assertNull(get.getAttribute("absent"));
 

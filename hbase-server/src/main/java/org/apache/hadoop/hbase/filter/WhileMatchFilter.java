@@ -22,7 +22,12 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -42,10 +47,6 @@ import java.util.List;
 public class WhileMatchFilter extends FilterBase {
   private boolean filterAllRemaining = false;
   private Filter filter;
-
-  public WhileMatchFilter() {
-    super();
-  }
 
   public WhileMatchFilter(Filter filter) {
     this.filter = filter;
@@ -94,23 +95,48 @@ public class WhileMatchFilter extends FilterBase {
     return true;
   }
 
-  public void write(DataOutput out) throws IOException {
-    out.writeUTF(this.filter.getClass().getName());
-    this.filter.write(out);
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.WhileMatchFilter.Builder builder =
+      FilterProtos.WhileMatchFilter.newBuilder();
+    builder.setFilter(ProtobufUtil.toFilter(this.filter));
+    return builder.build().toByteArray();
   }
 
-  public void readFields(DataInput in) throws IOException {
-    String className = in.readUTF();
+  /**
+   * @param pbBytes A pb serialized {@link WhileMatchFilter} instance
+   * @return An instance of {@link WhileMatchFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static WhileMatchFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.WhileMatchFilter proto;
     try {
-      this.filter = (Filter)(Class.forName(className).newInstance());
-      this.filter.readFields(in);
-    } catch (InstantiationException e) {
-      throw new RuntimeException("Failed deserialize.", e);
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException("Failed deserialize.", e);
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException("Failed deserialize.", e);
+      proto = FilterProtos.WhileMatchFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
     }
+    try {
+      return new WhileMatchFilter(ProtobufUtil.toFilter(proto.getFilter()));
+    } catch (IOException ioe) {
+      throw new DeserializationException(ioe);
+    }
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof WhileMatchFilter)) return false;
+
+    WhileMatchFilter other = (WhileMatchFilter)o;
+    return getFilter().areSerializedFieldsEqual(other.getFilter());
   }
 
   @Override

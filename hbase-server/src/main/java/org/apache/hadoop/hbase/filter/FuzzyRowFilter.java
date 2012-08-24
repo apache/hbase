@@ -17,18 +17,21 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Filters data based on fuzzy row key. Performs fast-forwards during scanning.
@@ -63,12 +66,6 @@ import org.apache.hadoop.hbase.util.Pair;
 public class FuzzyRowFilter extends FilterBase {
   private List<Pair<byte[], byte[]>> fuzzyKeysData;
   private boolean done = false;
-
-  /**
-   * Used internally for reflection, do NOT use it directly
-   */
-  public FuzzyRowFilter() {
-  }
 
   public FuzzyRowFilter(List<Pair<byte[], byte[]>> fuzzyKeysData) {
     this.fuzzyKeysData = fuzzyKeysData;
@@ -134,24 +131,44 @@ public class FuzzyRowFilter extends FilterBase {
     return done;
   }
 
-  @Override
-  public void write(DataOutput dataOutput) throws IOException {
-    dataOutput.writeInt(this.fuzzyKeysData.size());
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.FuzzyRowFilter.Builder builder =
+      FilterProtos.FuzzyRowFilter.newBuilder();
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
-      Bytes.writeByteArray(dataOutput, fuzzyData.getFirst());
-      Bytes.writeByteArray(dataOutput, fuzzyData.getSecond());
+      BytesBytesPair.Builder bbpBuilder = BytesBytesPair.newBuilder();
+      bbpBuilder.setFirst(ByteString.copyFrom(fuzzyData.getFirst()));
+      bbpBuilder.setSecond(ByteString.copyFrom(fuzzyData.getSecond()));
+      builder.addFuzzyKeysData(bbpBuilder);
     }
+    return builder.build().toByteArray();
   }
 
-  @Override
-  public void readFields(DataInput dataInput) throws IOException {
-    int count = dataInput.readInt();
-    this.fuzzyKeysData = new ArrayList<Pair<byte[], byte[]>>(count);
-    for (int i = 0; i < count; i++) {
-      byte[] keyBytes = Bytes.readByteArray(dataInput);
-      byte[] keyMeta = Bytes.readByteArray(dataInput);
-      this.fuzzyKeysData.add(new Pair<byte[], byte[]>(keyBytes, keyMeta));
+  /**
+   * @param pbBytes A pb serialized {@link FuzzyRowFilter} instance
+   * @return An instance of {@link FuzzyRowFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static FuzzyRowFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.FuzzyRowFilter proto;
+    try {
+      proto = FilterProtos.FuzzyRowFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
     }
+    int count = proto.getFuzzyKeysDataCount();
+    ArrayList<Pair<byte[], byte[]>> fuzzyKeysData= new ArrayList<Pair<byte[], byte[]>>(count);
+    for (int i = 0; i < count; ++i) {
+      BytesBytesPair current = proto.getFuzzyKeysData(i);
+      byte[] keyBytes = current.getFirst().toByteArray();
+      byte[] keyMeta = current.getSecond().toByteArray();
+      fuzzyKeysData.add(new Pair<byte[], byte[]>(keyBytes, keyMeta));
+    }
+    return new FuzzyRowFilter(fuzzyKeysData);
   }
 
   @Override
@@ -289,6 +306,28 @@ public class FuzzyRowFilter extends FilterBase {
     }
 
     return result;
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof FuzzyRowFilter)) return false;
+
+    FuzzyRowFilter other = (FuzzyRowFilter)o;
+    if (this.fuzzyKeysData.size() != other.fuzzyKeysData.size()) return false;
+    for (int i = 0; i < fuzzyKeysData.size(); ++i) {
+      Pair<byte[], byte[]> thisData = this.fuzzyKeysData.get(i);
+      Pair<byte[], byte[]> otherData = other.fuzzyKeysData.get(i);
+      if (!(Bytes.equals(thisData.getFirst(), otherData.getFirst())
+        && Bytes.equals(thisData.getSecond(), otherData.getSecond()))) {
+        return false;
+      }
+    }
+    return true;
   }
 
 }

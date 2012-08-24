@@ -69,16 +69,10 @@ public class TestPrefixFilter {
   @Test
   public void testSerialization() throws Exception {
     // Decompose mainFilter to bytes.
-    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-    DataOutputStream out = new DataOutputStream(stream);
-    mainFilter.write(out);
-    out.close();
-    byte[] buffer = stream.toByteArray();
+    byte[] buffer = mainFilter.toByteArray();
 
     // Recompose filter.
-    DataInputStream in = new DataInputStream(new ByteArrayInputStream(buffer));
-    Filter newFilter = new PrefixFilter();
-    newFilter.readFields(in);
+    Filter newFilter = PrefixFilter.parseFrom(buffer);
 
     // Ensure the serialization preserved the filter by running all test.
     prefixRowTests(newFilter);

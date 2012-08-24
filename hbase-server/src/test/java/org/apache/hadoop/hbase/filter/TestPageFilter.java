@@ -55,15 +55,9 @@ public class TestPageFilter {
   public void testSerialization() throws Exception {
     Filter f = new PageFilter(ROW_LIMIT);
     // Decompose mainFilter to bytes.
-    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-    DataOutputStream out = new DataOutputStream(stream);
-    f.write(out);
-    out.close();
-    byte[] buffer = stream.toByteArray();
+    byte[] buffer = f.toByteArray();
     // Recompose mainFilter.
-    DataInputStream in = new DataInputStream(new ByteArrayInputStream(buffer));
-    Filter newFilter = new PageFilter();
-    newFilter.readFields(in);
+    Filter newFilter = PageFilter.parseFrom(buffer);
 
     // Ensure the serialization preserved the filter by running a full test.
     pageSizeTests(newFilter);

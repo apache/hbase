@@ -156,17 +156,10 @@ public class TestSingleColumnValueFilter {
   private Filter serializationTest(Filter filter)
       throws Exception {
     // Decompose filter to bytes.
-    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-    DataOutputStream out = new DataOutputStream(stream);
-    filter.write(out);
-    out.close();
-    byte[] buffer = stream.toByteArray();
+    byte[] buffer = filter.toByteArray();
 
     // Recompose filter.
-    DataInputStream in =
-      new DataInputStream(new ByteArrayInputStream(buffer));
-    Filter newFilter = new SingleColumnValueFilter();
-    newFilter.readFields(in);
+    Filter newFilter = SingleColumnValueFilter.parseFrom(buffer);
     return newFilter;
   }
 

@@ -20,12 +20,12 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
+import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A bit comparator which performs the specified bitwise operation on each of the bytes
@@ -34,9 +34,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class BitComparator extends WritableByteArrayComparable {
-
-  /** Nullary constructor for Writable, do not use */
-  public BitComparator() {}
 
   /** Bit operators. */
   public enum BitwiseOp {
@@ -66,16 +63,49 @@ public class BitComparator extends WritableByteArrayComparable {
     return bitOperator;
   }
 
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    bitOperator = BitwiseOp.valueOf(in.readUTF());
+  /**
+   * @return The comparator serialized using pb
+   */
+  public byte [] toByteArray() {
+    ComparatorProtos.BitComparator.Builder builder =
+      ComparatorProtos.BitComparator.newBuilder();
+    builder.setComparable(super.convert());
+    ComparatorProtos.BitComparator.BitwiseOp bitwiseOpPb =
+      ComparatorProtos.BitComparator.BitwiseOp.valueOf(bitOperator.name());
+    builder.setBitwiseOp(bitwiseOpPb);
+    return builder.build().toByteArray();
   }
 
-  @Override
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    out.writeUTF(bitOperator.name());
+  /**
+   * @param pbBytes A pb serialized {@link BitComparator} instance
+   * @return An instance of {@link BitComparator} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static BitComparator parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    ComparatorProtos.BitComparator proto;
+    try {
+      proto = ComparatorProtos.BitComparator.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    BitwiseOp bitwiseOp = BitwiseOp.valueOf(proto.getBitwiseOp().name());
+    return new BitComparator(proto.getComparable().getValue().toByteArray(),bitwiseOp);
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the comparator that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(WritableByteArrayComparable other) {
+    if (other == this) return true;
+    if (!(other instanceof BitComparator)) return false;
+
+    BitComparator comparator = (BitComparator)other;
+    return super.areSerializedFieldsEqual(other)
+      && this.getOperator().equals(comparator.getOperator());
   }
 
   @Override

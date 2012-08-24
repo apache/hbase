@@ -156,7 +156,7 @@ public class TestAttributes {
 
   @Test
   public void testGetId() {
-    Get get = new Get();
+    Get get = new Get(null);
     Assert.assertNull("Make sure id is null if unset", get.toMap().get("id"));
     get.setId("myId");
     Assert.assertEquals("myId", get.toMap().get("id"));
@@ -164,7 +164,7 @@ public class TestAttributes {
 
   @Test
   public void testAppendId() {
-    Append append = new Append();
+    Append append = new Append(Bytes.toBytes("testRow"));
     Assert.assertNull("Make sure id is null if unset", append.toMap().get("id"));
     append.setId("myId");
     Assert.assertEquals("myId", append.toMap().get("id"));

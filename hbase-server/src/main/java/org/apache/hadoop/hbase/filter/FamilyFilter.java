@@ -22,8 +22,14 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -42,11 +48,6 @@ import java.util.ArrayList;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FamilyFilter extends CompareFilter {
-  /**
-   * Writable constructor, do not use.
-   */
-  public FamilyFilter() {
-  }
 
   /**
    * Constructor.
@@ -76,5 +77,55 @@ public class FamilyFilter extends CompareFilter {
     CompareOp compareOp = (CompareOp)arguments.get(0);
     WritableByteArrayComparable comparator = (WritableByteArrayComparable)arguments.get(1);
     return new FamilyFilter(compareOp, comparator);
-}
+  }
+
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.FamilyFilter.Builder builder =
+      FilterProtos.FamilyFilter.newBuilder();
+    builder.setCompareFilter(super.convert());
+    return builder.build().toByteArray();
+  }
+
+  /**
+   * @param pbBytes A pb serialized {@link FamilyFilter} instance
+   * @return An instance of {@link FamilyFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static FamilyFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.FamilyFilter proto;
+    try {
+      proto = FilterProtos.FamilyFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    final CompareOp valueCompareOp =
+      CompareOp.valueOf(proto.getCompareFilter().getCompareOp().name());
+    WritableByteArrayComparable valueComparator = null;
+    try {
+      if (proto.getCompareFilter().hasComparator()) {
+        valueComparator = ProtobufUtil.toComparator(proto.getCompareFilter().getComparator());
+      }
+    } catch (IOException ioe) {
+      throw new DeserializationException(ioe);
+    }
+    return new FamilyFilter(valueCompareOp,valueComparator);
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof FamilyFilter)) return false;
+
+    FamilyFilter other = (FamilyFilter)o;
+    return super.areSerializedFieldsEqual(other);
+ }
 }

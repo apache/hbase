@@ -22,6 +22,10 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
+import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A binary comparator which lexicographically compares against the specified
@@ -31,9 +35,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Stable
 public class NullComparator extends WritableByteArrayComparable {
 
-  /** Nullary constructor for Writable, do not use */
   public NullComparator() {
-    value = new byte[0];
+    super(new byte[0]);
   }
 
   @Override
@@ -44,5 +47,43 @@ public class NullComparator extends WritableByteArrayComparable {
   @Override
   public int compareTo(byte[] value, int offset, int length) {
     throw new UnsupportedOperationException();
+  }
+
+  /**
+   * @return The comparator serialized using pb
+   */
+  public byte [] toByteArray() {
+    ComparatorProtos.NullComparator.Builder builder =
+      ComparatorProtos.NullComparator.newBuilder();
+    return builder.build().toByteArray();
+  }
+
+  /**
+   * @param pbBytes A pb serialized {@link NullComparator} instance
+   * @return An instance of {@link NullComparator} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static NullComparator parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    ComparatorProtos.NullComparator proto;
+    try {
+      proto = ComparatorProtos.NullComparator.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return new NullComparator();
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the comparator that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(WritableByteArrayComparable other) {
+    if (other == this) return true;
+    if (!(other instanceof NullComparator)) return false;
+
+    return super.areSerializedFieldsEqual(other);
   }
 }

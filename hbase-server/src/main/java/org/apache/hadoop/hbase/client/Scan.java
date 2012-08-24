@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -87,7 +85,7 @@ import java.util.TreeSet;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Scan extends OperationWithAttributes implements Writable {
+public class Scan extends OperationWithAttributes {
   private static final String RAW_ATTR = "_raw_";
   private static final String ISOLATION_LEVEL = "_isolationlevel_";
 
@@ -628,105 +626,6 @@ public class Scan extends OperationWithAttributes implements Writable {
       map.put("id", getId());
     }
     return map;
-  }
-
-  @SuppressWarnings("unchecked")
-  private Writable createForName(String className) {
-    try {
-      Class<? extends Writable> clazz =
-        (Class<? extends Writable>) Class.forName(className);
-      return WritableFactories.newInstance(clazz, new Configuration());
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException("Can't find class " + className);
-    }
-  }
-
-  //Writable
-  public void readFields(final DataInput in)
-  throws IOException {
-    int version = in.readByte();
-    if (version > (int)SCAN_VERSION) {
-      throw new IOException("version not supported");
-    }
-    this.startRow = Bytes.readByteArray(in);
-    this.stopRow = Bytes.readByteArray(in);
-    this.maxVersions = in.readInt();
-    this.batch = in.readInt();
-    if (version >= VERSION_WITH_PAGINATION) {
-      this.storeLimit = in.readInt();
-      this.storeOffset = in.readInt();
-    }
-    this.caching = in.readInt();
-    this.cacheBlocks = in.readBoolean();
-    if(in.readBoolean()) {
-      this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
-      this.filter.readFields(in);
-    }
-    this.tr = new TimeRange();
-    tr.readFields(in);
-    int numFamilies = in.readInt();
-    this.familyMap =
-      new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
-    for(int i=0; i<numFamilies; i++) {
-      byte [] family = Bytes.readByteArray(in);
-      int numColumns = in.readInt();
-      TreeSet<byte []> set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
-      for(int j=0; j<numColumns; j++) {
-        byte [] qualifier = Bytes.readByteArray(in);
-        set.add(qualifier);
-      }
-      this.familyMap.put(family, set);
-    }
-
-    if (version >= VERSION_WITH_ATTRIBUTES) {
-      readAttributes(in);
-    }
-    if (version >= VERSION_WITH_RESULT_SIZE) {
-      this.maxResultSize = in.readLong();
-    }
-  }
-
-  public void write(final DataOutput out)
-  throws IOException {
-    byte version = getVersion();
-    out.writeByte(version);
-    Bytes.writeByteArray(out, this.startRow);
-    Bytes.writeByteArray(out, this.stopRow);
-    out.writeInt(this.maxVersions);
-    out.writeInt(this.batch);
-    if (version >= VERSION_WITH_PAGINATION) {
-      out.writeInt(this.storeLimit);
-      out.writeInt(this.storeOffset);
-    }
-    out.writeInt(this.caching);
-    out.writeBoolean(this.cacheBlocks);
-    if(this.filter == null) {
-      out.writeBoolean(false);
-    } else {
-      out.writeBoolean(true);
-      Bytes.writeByteArray(out, Bytes.toBytes(filter.getClass().getName()));
-      filter.write(out);
-    }
-    tr.write(out);
-    out.writeInt(familyMap.size());
-    for(Map.Entry<byte [], NavigableSet<byte []>> entry : familyMap.entrySet()) {
-      Bytes.writeByteArray(out, entry.getKey());
-      NavigableSet<byte []> columnSet = entry.getValue();
-      if(columnSet != null){
-        out.writeInt(columnSet.size());
-        for(byte [] qualifier : columnSet) {
-          Bytes.writeByteArray(out, qualifier);
-        }
-      } else {
-        out.writeInt(0);
-      }
-    }
-    if (version >= VERSION_WITH_ATTRIBUTES) {
-      writeAttributes(out);
-    }
-    if (version >= VERSION_WITH_RESULT_SIZE) {
-      out.writeLong(maxResultSize);
-    }
   }
 
   /**

@@ -36,6 +36,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -83,6 +84,9 @@ import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -97,6 +101,7 @@ import org.junit.Assert;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 
@@ -214,8 +219,8 @@ public class TestHbaseObjectWritable extends TestCase {
     assertTrue(obj instanceof ArrayList);
     Assert.assertArrayEquals(list.toArray(), ((ArrayList)obj).toArray() );
     // Check that filters can be serialized
-    obj = doType(conf, new PrefixFilter(HConstants.EMPTY_BYTE_ARRAY),
-      PrefixFilter.class);
+    obj =
+      ProtobufUtil.toFilter(ProtobufUtil.toFilter(new PrefixFilter(HConstants.EMPTY_BYTE_ARRAY)));
     assertTrue(obj instanceof PrefixFilter);
   }
 
@@ -228,12 +233,14 @@ public class TestHbaseObjectWritable extends TestCase {
     assertTrue(obj instanceof Writable);
     assertTrue(obj instanceof CustomWritable);
     assertEquals("test phrase", ((CustomWritable)obj).getValue());
+  }
 
+  public void testCustomFilter() throws Exception {
     // test proper serialization of a custom filter
     CustomFilter filt = new CustomFilter("mykey");
     FilterList filtlist = new FilterList(FilterList.Operator.MUST_PASS_ALL);
     filtlist.addFilter(filt);
-    obj = doType(conf, filtlist, FilterList.class);
+    Filter obj = ProtobufUtil.toFilter(ProtobufUtil.toFilter(filtlist));
     assertTrue(obj instanceof FilterList);
     assertNotNull(((FilterList)obj).getFilters());
     assertEquals(1, ((FilterList)obj).getFilters().size());
@@ -415,6 +422,26 @@ public class TestHbaseObjectWritable extends TestCase {
 
     public void readFields(DataInput in) throws IOException {
       this.key = Text.readString(in);
+    }
+
+    public byte [] toByteArray() {
+      // rather than write a PB definition for this type,
+      // just reuse one that works
+      HBaseProtos.NameBytesPair.Builder builder =
+        HBaseProtos.NameBytesPair.newBuilder();
+      builder.setName(this.key);
+      return builder.build().toByteArray();
+    }
+
+    public static CustomFilter parseFrom(final byte [] pbBytes)
+    throws DeserializationException {
+      HBaseProtos.NameBytesPair proto;
+      try {
+        proto = HBaseProtos.NameBytesPair.parseFrom(pbBytes);
+      } catch (InvalidProtocolBufferException e) {
+        throw new DeserializationException(e);
+      }
+      return new CustomFilter(proto.getName());
     }
   }
 

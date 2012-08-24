@@ -22,9 +22,15 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -36,13 +42,6 @@ import java.util.ArrayList;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
-
-  /**
-   * Writable constructor, do not use.
-   */
-  public SingleColumnValueExcludeFilter() {
-    super();
-  }
 
   /**
    * Constructor for binary compare of the value of a single column. If the
@@ -80,6 +79,24 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
     super(family, qualifier, compareOp, comparator);
   }
 
+  /**
+   * Constructor for protobuf deserialization only.
+   * @param family
+   * @param qualifier
+   * @param compareOp
+   * @param comparator
+   * @param foundColumn
+   * @param matchedColumn
+   * @param filterIfMissing
+   * @param latestVersionOnly
+   */
+  protected SingleColumnValueExcludeFilter(final byte[] family, final byte [] qualifier,
+    final CompareOp compareOp, WritableByteArrayComparable comparator, final boolean foundColumn,
+    final boolean matchedColumn, final boolean filterIfMissing, final boolean latestVersionOnly) {
+    super(family,qualifier,compareOp,comparator,foundColumn,
+      matchedColumn,filterIfMissing,latestVersionOnly);
+  }
+
   public ReturnCode filterKeyValue(KeyValue keyValue) {
     ReturnCode superRetCode = super.filterKeyValue(keyValue);
     if (superRetCode == ReturnCode.INCLUDE) {
@@ -102,7 +119,61 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
     if (filterArguments.size() == 6) {
       filter.setFilterIfMissing(tempFilter.getFilterIfMissing());
       filter.setLatestVersionOnly(tempFilter.getLatestVersionOnly());
-}
+    }
     return filter;
+  }
+
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.SingleColumnValueExcludeFilter.Builder builder =
+      FilterProtos.SingleColumnValueExcludeFilter.newBuilder();
+    builder.setSingleColumnValueFilter(super.convert());
+    return builder.build().toByteArray();
+  }
+
+  /**
+   * @param pbBytes A pb serialized {@link SingleColumnValueExcludeFilter} instance
+   * @return An instance of {@link SingleColumnValueExcludeFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static SingleColumnValueExcludeFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.SingleColumnValueExcludeFilter proto;
+    try {
+      proto = FilterProtos.SingleColumnValueExcludeFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+
+    FilterProtos.SingleColumnValueFilter parentProto = proto.getSingleColumnValueFilter();
+    final CompareOp compareOp =
+      CompareOp.valueOf(parentProto.getCompareOp().name());
+    final WritableByteArrayComparable comparator;
+    try {
+      comparator = ProtobufUtil.toComparator(parentProto.getComparator());
+    } catch (IOException ioe) {
+      throw new DeserializationException(ioe);
+    }
+
+    return new SingleColumnValueExcludeFilter(
+      parentProto.hasColumnFamily()?parentProto.getColumnFamily().toByteArray():null,
+      parentProto.hasColumnQualifier()?parentProto.getColumnQualifier().toByteArray():null,
+      compareOp, comparator, parentProto.getFoundColumn(),parentProto.getMatchedColumn(),
+      parentProto.getFilterIfMissing(),parentProto.getLatestVersionOnly());
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof SingleColumnValueExcludeFilter)) return false;
+
+    return super.areSerializedFieldsEqual(o);
   }
 }

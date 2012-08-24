@@ -29,6 +29,8 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
@@ -44,14 +46,9 @@ public class TestScan {
     scan.setAttribute("attribute2", Bytes.toBytes("value2"));
     scan.setAttribute("attribute3", Bytes.toBytes("value3"));
 
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    DataOutput out = new DataOutputStream(byteArrayOutputStream);
-    scan.write(out);
+    ClientProtos.Scan scanProto = ProtobufUtil.toScan(scan);
 
-    Scan scan2 = new Scan();
-    Assert.assertTrue(scan2.getAttributesMap().isEmpty());
-
-    scan2.readFields(new DataInputStream(new ByteArrayInputStream(byteArrayOutputStream.toByteArray())));
+    Scan scan2 = ProtobufUtil.toScan(scanProto);
 
     Assert.assertNull(scan2.getAttribute("absent"));
     Assert.assertTrue(Arrays.equals(Bytes.toBytes("value1"), scan2.getAttribute("attribute1")));

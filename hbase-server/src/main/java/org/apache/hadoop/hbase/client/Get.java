@@ -26,11 +26,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -68,7 +64,7 @@ import java.util.TreeSet;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Get extends OperationWithAttributes
-  implements Writable, Row, Comparable<Row> {
+  implements Row, Comparable<Row> {
 
   private static final byte VERSION_WITHOUT_PAGINATION = (byte) 2;
   private static final byte VERSION_WITH_PAGINATION = (byte) 3;
@@ -92,9 +88,6 @@ public class Get extends OperationWithAttributes
     }
     return VERSION_WITHOUT_PAGINATION;
   }
-
-  /** Constructor for Writable.  DO NOT USE */
-  public Get() {}
 
   /**
    * Create a Get operation for the specified row.
@@ -440,95 +433,5 @@ public class Get extends OperationWithAttributes
   public int compareTo(Row other) {
     return Bytes.compareTo(this.getRow(), other.getRow());
   }
-  
-  //Writable
-  public void readFields(final DataInput in)
-  throws IOException {
-    int version = in.readByte();
-    if (version > GET_VERSION) {
-      throw new IOException("unsupported version");
-    }
-    this.row = Bytes.readByteArray(in);
-    this.lockId = in.readLong();
-    this.maxVersions = in.readInt();
-    if (version >= VERSION_WITH_PAGINATION) {
-      this.storeLimit = in.readInt();
-      this.storeOffset = in.readInt();
-    }
-    boolean hasFilter = in.readBoolean();
-    if (hasFilter) {
-      this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
-      this.filter.readFields(in);
-    }
-    this.cacheBlocks = in.readBoolean();
-    this.tr = new TimeRange();
-    tr.readFields(in);
-    int numFamilies = in.readInt();
-    this.familyMap =
-      new TreeMap<byte [],NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
-    for(int i=0; i<numFamilies; i++) {
-      byte [] family = Bytes.readByteArray(in);
-      boolean hasColumns = in.readBoolean();
-      NavigableSet<byte []> set = null;
-      if(hasColumns) {
-        int numColumns = in.readInt();
-        set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
-        for(int j=0; j<numColumns; j++) {
-          byte [] qualifier = Bytes.readByteArray(in);
-          set.add(qualifier);
-        }
-      }
-      this.familyMap.put(family, set);
-    }
-    readAttributes(in);
-  }
 
-  public void write(final DataOutput out)
-  throws IOException {
-    byte version = getVersion();
-    out.writeByte(version);
-    Bytes.writeByteArray(out, this.row);
-    out.writeLong(this.lockId);
-    out.writeInt(this.maxVersions);
-    if (version >= VERSION_WITH_PAGINATION) {
-      out.writeInt(this.storeLimit);
-      out.writeInt(this.storeOffset);
-    }
-    if(this.filter == null) {
-      out.writeBoolean(false);
-    } else {
-      out.writeBoolean(true);
-      Bytes.writeByteArray(out, Bytes.toBytes(filter.getClass().getName()));
-      filter.write(out);
-    }
-    out.writeBoolean(this.cacheBlocks);
-    tr.write(out);
-    out.writeInt(familyMap.size());
-    for(Map.Entry<byte [], NavigableSet<byte []>> entry :
-      familyMap.entrySet()) {
-      Bytes.writeByteArray(out, entry.getKey());
-      NavigableSet<byte []> columnSet = entry.getValue();
-      if(columnSet == null) {
-        out.writeBoolean(false);
-      } else {
-        out.writeBoolean(true);
-        out.writeInt(columnSet.size());
-        for(byte [] qualifier : columnSet) {
-          Bytes.writeByteArray(out, qualifier);
-        }
-      }
-    }
-    writeAttributes(out);
-  }
-
-  @SuppressWarnings("unchecked")
-  private Writable createForName(String className) {
-    try {
-      Class<? extends Writable> clazz =
-        (Class<? extends Writable>) Class.forName(className);
-      return WritableFactories.newInstance(clazz, new Configuration());
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException("Can't find class " + className);
-    }
-  }
 }

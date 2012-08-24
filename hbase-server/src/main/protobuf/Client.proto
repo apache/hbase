@@ -25,6 +25,7 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "hbase.proto";
+import "Comparator.proto";
 
 /**
  * Container for a list of column qualifier names of a family.
@@ -42,7 +43,7 @@ message Get {
   repeated Column column = 2;
   repeated NameBytesPair attribute = 3;
   optional uint64 lockId = 4;
-  optional NameBytesPair filter = 5;
+  optional Filter filter = 5;
   optional TimeRange timeRange = 6;
   optional uint32 maxVersions = 7 [default = 1];
   optional bool cacheBlocks = 8 [default = true];
@@ -98,7 +99,7 @@ message Condition {
   required bytes family = 2;
   required bytes qualifier = 3;
   required CompareType compareType = 4;
-  required NameBytesPair comparator = 5;
+  required Comparator comparator = 5;
 }
 
 /**
@@ -181,7 +182,7 @@ message Scan {
   repeated NameBytesPair attribute = 2;
   optional bytes startRow = 3;
   optional bytes stopRow = 4;
-  optional NameBytesPair filter = 5;
+  optional Filter filter = 5;
   optional TimeRange timeRange = 6;
   optional uint32 maxVersions = 7 [default = 1];
   optional bool cacheBlocks = 8 [default = true];

@@ -32,6 +32,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 /**
  * Tests the inclusive stop row filter
@@ -65,16 +66,10 @@ public class TestInclusiveStopFilter {
   @Test
   public void testSerialization() throws Exception {
     // Decompose mainFilter to bytes.
-    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-    DataOutputStream out = new DataOutputStream(stream);
-    mainFilter.write(out);
-    out.close();
-    byte[] buffer = stream.toByteArray();
+    byte[] buffer = mainFilter.toByteArray();
 
     // Recompose mainFilter.
-    DataInputStream in = new DataInputStream(new ByteArrayInputStream(buffer));
-    Filter newFilter = new InclusiveStopFilter();
-    newFilter.readFields(in);
+    Filter newFilter = InclusiveStopFilter.parseFrom(buffer);
 
     // Ensure the serialization preserved the filter by running a full test.
     stopRowTests(newFilter);

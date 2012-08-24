@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
@@ -101,6 +102,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValu
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.ColumnValue.QualifierValue;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.DeleteType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType;
+import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
@@ -371,8 +374,8 @@ public final class ProtobufUtil {
       get.setTimeRange(minStamp, maxStamp);
     }
     if (proto.hasFilter()) {
-      NameBytesPair filter = proto.getFilter();
-      get.setFilter((Filter)toObject(filter));
+      HBaseProtos.Filter filter = proto.getFilter();
+      get.setFilter(ProtobufUtil.toFilter(filter));
     }
     for (NameBytesPair attribute: proto.getAttributeList()) {
       get.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
@@ -608,7 +611,7 @@ public final class ProtobufUtil {
       scanBuilder.setStopRow(ByteString.copyFrom(stopRow));
     }
     if (scan.hasFilter()) {
-      scanBuilder.setFilter(ProtobufUtil.toParameter(scan.getFilter()));
+      scanBuilder.setFilter(ProtobufUtil.toFilter(scan.getFilter()));
     }
     Column.Builder columnBuilder = Column.newBuilder();
     for (Map.Entry<byte[],NavigableSet<byte []>>
@@ -677,8 +680,8 @@ public final class ProtobufUtil {
       scan.setTimeRange(minStamp, maxStamp);
     }
     if (proto.hasFilter()) {
-      NameBytesPair filter = proto.getFilter();
-      scan.setFilter((Filter)toObject(filter));
+      HBaseProtos.Filter filter = proto.getFilter();
+      scan.setFilter(ProtobufUtil.toFilter(filter));
     }
     if (proto.hasBatchSize()) {
       scan.setBatch(proto.getBatchSize());
@@ -759,7 +762,7 @@ public final class ProtobufUtil {
       builder.setLockId(get.getLockId());
     }
     if (get.getFilter() != null) {
-      builder.setFilter(ProtobufUtil.toParameter(get.getFilter()));
+      builder.setFilter(ProtobufUtil.toFilter(get.getFilter()));
     }
     TimeRange timeRange = get.getTimeRange();
     if (!timeRange.isAllTime()) {
@@ -928,6 +931,79 @@ public final class ProtobufUtil {
       keyValues.add(new KeyValue(value.toByteArray()));
     }
     return new Result(keyValues);
+  }
+
+  /**
+   * Convert a WritableByteArrayComparable to a protocol buffer Comparator
+   *
+   * @param comparator the WritableByteArrayComparable to convert
+   * @return the converted protocol buffer Comparator
+   */
+  public static ComparatorProtos.Comparator toComparator(WritableByteArrayComparable comparator) {
+    ComparatorProtos.Comparator.Builder builder = ComparatorProtos.Comparator.newBuilder();
+    builder.setName(comparator.getClass().getName());
+    builder.setSerializedComparator(ByteString.copyFrom(comparator.toByteArray()));
+    return builder.build();
+  }
+
+  /**
+   * Convert a protocol buffer Comparator to a WritableByteArrayComparable
+   *
+   * @param proto the protocol buffer Comparator to convert
+   * @return the converted WritableByteArrayComparable
+   */
+  public static WritableByteArrayComparable toComparator(ComparatorProtos.Comparator proto)
+  throws IOException {
+    String type = proto.getName();
+    String funcName = "parseFrom";
+    byte [] value = proto.getSerializedComparator().toByteArray();
+    try {
+      Class<? extends WritableByteArrayComparable> c =
+        (Class<? extends WritableByteArrayComparable>)(Class.forName(type));
+      Method parseFrom = c.getMethod(funcName, byte[].class);
+      if (parseFrom == null) {
+        throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
+      }
+      return (WritableByteArrayComparable)parseFrom.invoke(null, value);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * Convert a protocol buffer Filter to a client Filter
+   *
+   * @param proto the protocol buffer Filter to convert
+   * @return the converted Filter
+   */
+  public static Filter toFilter(HBaseProtos.Filter proto) throws IOException {
+    String type = proto.getName();
+    final byte [] value = proto.getSerializedFilter().toByteArray();
+    String funcName = "parseFrom";
+    try {
+      Class<? extends Filter> c =
+        (Class<? extends Filter>)Class.forName(type);
+      Method parseFrom = c.getMethod(funcName, byte[].class);
+      if (parseFrom == null) {
+        throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
+      }
+      return (Filter)parseFrom.invoke(c, value);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * Convert a client Filter to a protocol buffer Filter
+   *
+   * @param filter the Filter to convert
+   * @return the converted protocol buffer Filter
+   */
+  public static HBaseProtos.Filter toFilter(Filter filter) {
+    HBaseProtos.Filter.Builder builder = HBaseProtos.Filter.newBuilder();
+    builder.setName(filter.getClass().getName());
+    builder.setSerializedFilter(ByteString.copyFrom(filter.toByteArray()));
+    return builder.build();
   }
 
   /**

@@ -24,20 +24,22 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.ArrayList;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * This filter is used to filter cells based on value. It takes a {@link CompareFilter.CompareOp}
@@ -81,12 +83,6 @@ public class SingleColumnValueFilter extends FilterBase {
   private boolean latestVersionOnly = true;
 
   /**
-   * Writable constructor, do not use.
-   */
-  public SingleColumnValueFilter() {
-  }
-
-  /**
    * Constructor for binary compare of the value of a single column.  If the
    * column is found and the condition passes, all columns of the row will be
    * emitted.  If the condition fails, the row will not be emitted.
@@ -125,6 +121,27 @@ public class SingleColumnValueFilter extends FilterBase {
     this.columnQualifier = qualifier;
     this.compareOp = compareOp;
     this.comparator = comparator;
+  }
+
+  /**
+   * Constructor for protobuf deserialization only.
+   * @param family
+   * @param qualifier
+   * @param compareOp
+   * @param comparator
+   * @param foundColumn
+   * @param matchedColumn
+   * @param filterIfMissing
+   * @param latestVersionOnly
+   */
+  protected SingleColumnValueFilter(final byte[] family, final byte [] qualifier,
+    final CompareOp compareOp, WritableByteArrayComparable comparator, final boolean foundColumn,
+    final boolean matchedColumn, final boolean filterIfMissing, final boolean latestVersionOnly) {
+    this(family,qualifier,compareOp,comparator);
+    this.foundColumn = foundColumn;
+    this.matchedColumn = matchedColumn;
+    this.filterIfMissing = filterIfMissing;
+    this.latestVersionOnly = latestVersionOnly;
   }
 
   /**
@@ -285,34 +302,82 @@ public class SingleColumnValueFilter extends FilterBase {
     return filter;
   }
 
-  public void readFields(final DataInput in) throws IOException {
-    this.columnFamily = Bytes.readByteArray(in);
-    if(this.columnFamily.length == 0) {
-      this.columnFamily = null;
+  FilterProtos.SingleColumnValueFilter convert() {
+    FilterProtos.SingleColumnValueFilter.Builder builder =
+      FilterProtos.SingleColumnValueFilter.newBuilder();
+    if (this.columnFamily != null) {
+      builder.setColumnFamily(ByteString.copyFrom(this.columnFamily));
     }
-    this.columnQualifier = Bytes.readByteArray(in);
-    if(this.columnQualifier.length == 0) {
-      this.columnQualifier = null;
+    if (this.columnQualifier != null) {
+      builder.setColumnQualifier(ByteString.copyFrom(this.columnQualifier));
     }
-    this.compareOp = CompareOp.valueOf(in.readUTF());
-    this.comparator =
-      (WritableByteArrayComparable)HbaseObjectWritable.readObject(in, null);
-    this.foundColumn = in.readBoolean();
-    this.matchedColumn = in.readBoolean();
-    this.filterIfMissing = in.readBoolean();
-    this.latestVersionOnly = in.readBoolean();
+    HBaseProtos.CompareType compareOp = CompareType.valueOf(this.compareOp.name());
+    builder.setCompareOp(compareOp);
+    builder.setComparator(ProtobufUtil.toComparator(this.comparator));
+    builder.setFoundColumn(this.foundColumn);
+    builder.setMatchedColumn(this.matchedColumn);
+    builder.setFilterIfMissing(this.filterIfMissing);
+    builder.setLatestVersionOnly(this.latestVersionOnly);
+
+    return builder.build();
   }
 
-  public void write(final DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, this.columnFamily);
-    Bytes.writeByteArray(out, this.columnQualifier);
-    out.writeUTF(compareOp.name());
-    HbaseObjectWritable.writeObject(out, comparator,
-        WritableByteArrayComparable.class, null);
-    out.writeBoolean(foundColumn);
-    out.writeBoolean(matchedColumn);
-    out.writeBoolean(filterIfMissing);
-    out.writeBoolean(latestVersionOnly);
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    return convert().toByteArray();
+  }
+
+  /**
+   * @param pbBytes A pb serialized {@link SingleColumnValueFilter} instance
+   * @return An instance of {@link SingleColumnValueFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static SingleColumnValueFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.SingleColumnValueFilter proto;
+    try {
+      proto = FilterProtos.SingleColumnValueFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+
+    final CompareOp compareOp =
+      CompareOp.valueOf(proto.getCompareOp().name());
+    final WritableByteArrayComparable comparator;
+    try {
+      comparator = ProtobufUtil.toComparator(proto.getComparator());
+    } catch (IOException ioe) {
+      throw new DeserializationException(ioe);
+    }
+
+    return new SingleColumnValueFilter(
+      proto.hasColumnFamily()?proto.getColumnFamily().toByteArray():null,
+      proto.hasColumnQualifier()?proto.getColumnQualifier().toByteArray():null,
+      compareOp, comparator, proto.getFoundColumn(),proto.getMatchedColumn(),
+      proto.getFilterIfMissing(),proto.getLatestVersionOnly());
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof SingleColumnValueFilter)) return false;
+
+    SingleColumnValueFilter other = (SingleColumnValueFilter)o;
+    return Bytes.equals(this.getFamily(), other.getFamily())
+      && Bytes.equals(this.getQualifier(), other.getQualifier())
+      && this.compareOp.equals(other.compareOp)
+      && this.getComparator().areSerializedFieldsEqual(other.getComparator())
+      && this.foundColumn == other.foundColumn
+      && this.matchedColumn == other.matchedColumn
+      && this.getFilterIfMissing() == other.getFilterIfMissing()
+      && this.getLatestVersionOnly() == other.getLatestVersionOnly();
   }
 
   @Override

@@ -21,15 +21,14 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
-import java.io.DataOutput;
-import java.io.IOException;
-import java.io.DataInput;
-import java.util.List;
 import java.util.ArrayList;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A filter that will only return the first KV from each row.
@@ -75,9 +74,42 @@ public class FirstKeyOnlyFilter extends FilterBase {
     this.foundKV = value;
   }
 
-  public void write(DataOutput out) throws IOException {
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.FirstKeyOnlyFilter.Builder builder =
+      FilterProtos.FirstKeyOnlyFilter.newBuilder();
+    return builder.build().toByteArray();
   }
 
-  public void readFields(DataInput in) throws IOException {
+  /**
+   * @param pbBytes A pb serialized {@link FirstKeyOnlyFilter} instance
+   * @return An instance of {@link FirstKeyOnlyFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static FirstKeyOnlyFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.FirstKeyOnlyFilter proto;
+    try {
+      proto = FilterProtos.FirstKeyOnlyFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+
+    return new FirstKeyOnlyFilter();
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof FirstKeyOnlyFilter)) return false;
+
+    return true;
   }
 }

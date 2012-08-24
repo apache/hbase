@@ -1659,12 +1659,7 @@ public class TestFilter {
     private static Thread ipcHandlerThread = null;
     
     @Override
-    public void readFields(DataInput arg0) throws IOException {
-    }
-
-    @Override
-    public void write(DataOutput arg0) throws IOException {
-    }
+    public byte [] toByteArray() {return null;}
 
     @Override
     public boolean filterRow() {

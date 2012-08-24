@@ -19,18 +19,17 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
 import java.util.ArrayList;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A filter that will only return the key component of each KV (the value will
@@ -58,11 +57,43 @@ public class KeyOnlyFilter extends FilterBase {
     return new KeyOnlyFilter();
   }
 
-  public void write(DataOutput out) throws IOException {
-    out.writeBoolean(this.lenAsVal);
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.KeyOnlyFilter.Builder builder =
+      FilterProtos.KeyOnlyFilter.newBuilder();
+    builder.setLenAsVal(this.lenAsVal);
+    return builder.build().toByteArray();
   }
 
-  public void readFields(DataInput in) throws IOException {
-    this.lenAsVal = in.readBoolean();
+  /**
+   * @param pbBytes A pb serialized {@link KeyOnlyFilter} instance
+   * @return An instance of {@link KeyOnlyFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static KeyOnlyFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.KeyOnlyFilter proto;
+    try {
+      proto = FilterProtos.KeyOnlyFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return new KeyOnlyFilter(proto.getLenAsVal());
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof KeyOnlyFilter)) return false;
+
+    KeyOnlyFilter other = (KeyOnlyFilter)o;
+    return this.lenAsVal == other.lenAsVal;
   }
 }

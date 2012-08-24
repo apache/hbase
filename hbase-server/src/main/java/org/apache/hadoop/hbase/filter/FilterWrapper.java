@@ -19,15 +19,18 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * This is a Filter wrapper class which is used in the server side. Some filter
@@ -38,7 +41,7 @@ import org.apache.hadoop.hbase.KeyValue;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class FilterWrapper implements Filter {
+public class FilterWrapper extends Filter {
   Filter filter = null;
 
   public FilterWrapper( Filter filter ) {
@@ -49,14 +52,35 @@ public class FilterWrapper implements Filter {
     this.filter = filter;
   }
 
-  @Override
-  public void write(DataOutput out) throws IOException {
-    this.filter.write(out);
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.FilterWrapper.Builder builder =
+      FilterProtos.FilterWrapper.newBuilder();
+    builder.setFilter(ProtobufUtil.toFilter(this.filter));
+    return builder.build().toByteArray();
   }
 
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    this.filter.readFields(in);
+  /**
+   * @param pbBytes A pb serialized {@link FilterWrapper} instance
+   * @return An instance of {@link FilterWrapper} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static FilterWrapper parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.FilterWrapper proto;
+    try {
+      proto = FilterProtos.FilterWrapper.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    try {
+      return new FilterWrapper(ProtobufUtil.toFilter(proto.getFilter()));
+    } catch (IOException ioe) {
+      throw new DeserializationException(ioe);
+    }
   }
 
   @Override
@@ -112,4 +136,16 @@ public class FilterWrapper implements Filter {
     }
   }
 
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof FilterWrapper)) return false;
+
+    FilterWrapper other = (FilterWrapper)o;
+    return this.filter.areSerializedFieldsEqual(other.filter);
+  }
 }

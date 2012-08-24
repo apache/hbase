@@ -26,6 +26,8 @@ import java.io.DataOutputStream;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.junit.Before;
@@ -58,18 +60,10 @@ public class TestColumnPaginationFilter
     }
 
     private Filter serializationTest(Filter filter) throws Exception {
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        DataOutputStream out = new DataOutputStream(stream);
-        filter.write(out);
-        out.close();
-        byte[] buffer = stream.toByteArray();
+      HBaseProtos.Filter filterProto = ProtobufUtil.toFilter(filter);
+      Filter newFilter = ProtobufUtil.toFilter(filterProto);
 
-        DataInputStream in =
-            new DataInputStream(new ByteArrayInputStream(buffer));
-        Filter newFilter = new ColumnPaginationFilter();
-        newFilter.readFields(in);
-
-        return newFilter;
+      return newFilter;
     }
 
 

@@ -32,12 +32,15 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -57,20 +60,20 @@ public class TestFilterList {
 
   @Test
   public void testAddFilter() throws Exception {
-    Filter filter1 = new RowFilter();
-    Filter filter2 = new RowFilter();
+    Filter filter1 = new FirstKeyOnlyFilter();
+    Filter filter2 = new FirstKeyOnlyFilter();
 
     FilterList filterList = new FilterList(filter1, filter2);
-    filterList.addFilter(new RowFilter());
+    filterList.addFilter(new FirstKeyOnlyFilter());
 
     filterList = new FilterList(Arrays.asList(filter1, filter2));
-    filterList.addFilter(new RowFilter());
+    filterList.addFilter(new FirstKeyOnlyFilter());
 
     filterList = new FilterList(Operator.MUST_PASS_ALL, filter1, filter2);
-    filterList.addFilter(new RowFilter());
+    filterList.addFilter(new FirstKeyOnlyFilter());
 
     filterList = new FilterList(Operator.MUST_PASS_ALL, Arrays.asList(filter1, filter2));
-    filterList.addFilter(new RowFilter());
+    filterList.addFilter(new FirstKeyOnlyFilter());
 
   }
 
@@ -81,11 +84,19 @@ public class TestFilterList {
    */
   @Test
   public void testMPONE() throws Exception {
+    mpOneTest(getFilterMPONE());
+  }
+
+  private Filter getFilterMPONE() {
     List<Filter> filters = new ArrayList<Filter>();
     filters.add(new PageFilter(MAX_PAGES));
     filters.add(new WhileMatchFilter(new PrefixFilter(Bytes.toBytes("yyy"))));
     Filter filterMPONE =
-        new FilterList(FilterList.Operator.MUST_PASS_ONE, filters);
+      new FilterList(FilterList.Operator.MUST_PASS_ONE, filters);
+    return filterMPONE;
+  }
+
+  private void mpOneTest(Filter filterMPONE) throws Exception {
     /* Filter must do all below steps:
      * <ul>
      * <li>{@link #reset()}</li>
@@ -141,11 +152,19 @@ public class TestFilterList {
    */
   @Test
   public void testMPALL() throws Exception {
+    mpAllTest(getMPALLFilter());
+  }
+
+  private Filter getMPALLFilter() {
     List<Filter> filters = new ArrayList<Filter>();
     filters.add(new PageFilter(MAX_PAGES));
     filters.add(new WhileMatchFilter(new PrefixFilter(Bytes.toBytes("yyy"))));
     Filter filterMPALL =
       new FilterList(FilterList.Operator.MUST_PASS_ALL, filters);
+    return filterMPALL;
+  }
+
+  private void mpAllTest(Filter filterMPALL) throws Exception {
     /* Filter must do all below steps:
      * <ul>
      * <li>{@link #reset()}</li>
@@ -184,11 +203,19 @@ public class TestFilterList {
    */
   @Test
   public void testOrdering() throws Exception {
+    orderingTest(getOrderingFilter());
+  }
+
+  public Filter getOrderingFilter() {
     List<Filter> filters = new ArrayList<Filter>();
     filters.add(new PrefixFilter(Bytes.toBytes("yyy")));
     filters.add(new PageFilter(MAX_PAGES));
     Filter filterMPONE =
-        new FilterList(FilterList.Operator.MUST_PASS_ONE, filters);
+      new FilterList(FilterList.Operator.MUST_PASS_ONE, filters);
+    return filterMPONE;
+  }
+
+  public void orderingTest(Filter filterMPONE) throws Exception {
     /* Filter must do all below steps:
      * <ul>
      * <li>{@link #reset()}</li>
@@ -248,18 +275,15 @@ public class TestFilterList {
       new FilterList(FilterList.Operator.MUST_PASS_ALL, filters);
 
     // Decompose filterMPALL to bytes.
-    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-    DataOutputStream out = new DataOutputStream(stream);
-    filterMPALL.write(out);
-    out.close();
-    byte[] buffer = stream.toByteArray();
+    byte[] buffer = filterMPALL.toByteArray();
 
     // Recompose filterMPALL.
-    DataInputStream in = new DataInputStream(new ByteArrayInputStream(buffer));
-    FilterList newFilter = new FilterList();
-    newFilter.readFields(in);
+    FilterList newFilter = FilterList.parseFrom(buffer);
 
-    // TODO: Run TESTS!!!
+    // Run tests
+    mpOneTest(ProtobufUtil.toFilter(ProtobufUtil.toFilter(getFilterMPONE())));
+    mpAllTest(ProtobufUtil.toFilter(ProtobufUtil.toFilter(getMPALLFilter())));
+    orderingTest(ProtobufUtil.toFilter(ProtobufUtil.toFilter(getOrderingFilter())));
   }
 
   /**
@@ -274,10 +298,7 @@ public class TestFilterList {
 
     Filter filterNoHint = new FilterBase() {
       @Override
-      public void readFields(DataInput arg0) throws IOException {}
-
-      @Override
-      public void write(DataOutput arg0) throws IOException {}
+      public byte [] toByteArray() {return null;}
     };
 
     Filter filterMinHint = new FilterBase() {
@@ -287,10 +308,7 @@ public class TestFilterList {
       }
 
       @Override
-      public void readFields(DataInput arg0) throws IOException {}
-
-      @Override
-      public void write(DataOutput arg0) throws IOException {}
+      public byte [] toByteArray() {return null;}
     };
 
     Filter filterMaxHint = new FilterBase() {
@@ -300,10 +318,7 @@ public class TestFilterList {
       }
 
       @Override
-      public void readFields(DataInput arg0) throws IOException {}
-
-      @Override
-      public void write(DataOutput arg0) throws IOException {}
+      public byte [] toByteArray() {return null;}
     };
 
     // MUST PASS ONE

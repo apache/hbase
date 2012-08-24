@@ -47,6 +47,8 @@ import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -69,8 +71,8 @@ public class TestSerialization {
   @Test public void testCompareFilter() throws Exception {
     Filter f = new RowFilter(CompareOp.EQUAL,
       new BinaryComparator(Bytes.toBytes("testRowOne-2")));
-    byte [] bytes = Writables.getBytes(f);
-    Filter ff = (Filter)Writables.getWritable(bytes, new RowFilter());
+    byte [] bytes = f.toByteArray();
+    Filter ff = RowFilter.parseFrom(bytes);
     assertNotNull(ff);
   }
 
@@ -263,8 +265,8 @@ public class TestSerialization {
     get.setTimeRange(ts, ts+1);
     get.setMaxVersions(maxVersions);
 
-    byte[] sb = Writables.getBytes(get);
-    Get desGet = (Get)Writables.getWritable(sb, new Get());
+    ClientProtos.Get getProto = ProtobufUtil.toGet(get);
+    Get desGet = ProtobufUtil.toGet(getProto);
 
     assertTrue(Bytes.equals(get.getRow(), desGet.getRow()));
     Set<byte[]> set = null;
@@ -304,8 +306,8 @@ public class TestSerialization {
     scan.setTimeRange(ts, ts+1);
     scan.setMaxVersions(maxVersions);
 
-    byte[] sb = Writables.getBytes(scan);
-    Scan desScan = (Scan)Writables.getWritable(sb, new Scan());
+    ClientProtos.Scan scanProto = ProtobufUtil.toScan(scan);
+    Scan desScan = ProtobufUtil.toScan(scanProto);
 
     assertTrue(Bytes.equals(scan.getStartRow(), desScan.getStartRow()));
     assertTrue(Bytes.equals(scan.getStopRow(), desScan.getStopRow()));
@@ -327,8 +329,8 @@ public class TestSerialization {
       final String name = "testScan";
       byte [] prefix = Bytes.toBytes(name);
       scan.setFilter(new PrefixFilter(prefix));
-      sb = Writables.getBytes(scan);
-      desScan = (Scan)Writables.getWritable(sb, new Scan());
+      scanProto = ProtobufUtil.toScan(scan);
+      desScan = ProtobufUtil.toScan(scanProto);
       Filter f = desScan.getFilter();
       assertTrue(f instanceof PrefixFilter);
     }

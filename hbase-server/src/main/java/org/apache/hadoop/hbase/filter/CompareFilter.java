@@ -22,12 +22,12 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.ArrayList;
 
 import com.google.common.base.Preconditions;
@@ -70,12 +70,6 @@ public abstract class CompareFilter extends FilterBase {
 
   protected CompareOp compareOp;
   protected WritableByteArrayComparable comparator;
-
-  /**
-   * Writable constructor, do not use.
-   */
-  public CompareFilter() {
-  }
 
   /**
    * Constructor.
@@ -149,16 +143,32 @@ public abstract class CompareFilter extends FilterBase {
     return arguments;
   }
 
-  public void readFields(DataInput in) throws IOException {
-    compareOp = CompareOp.valueOf(in.readUTF());
-    comparator = (WritableByteArrayComparable)
-      HbaseObjectWritable.readObject(in, null);
+  /**
+   * @return A pb instance to represent this instance.
+   */
+  FilterProtos.CompareFilter convert() {
+    FilterProtos.CompareFilter.Builder builder =
+      FilterProtos.CompareFilter.newBuilder();
+    HBaseProtos.CompareType compareOp = CompareType.valueOf(this.compareOp.name());
+    builder.setCompareOp(compareOp);
+    if (this.comparator != null) builder.setComparator(ProtobufUtil.toComparator(this.comparator));
+    return builder.build();
   }
 
-  public void write(DataOutput out) throws IOException {
-    out.writeUTF(compareOp.name());
-    HbaseObjectWritable.writeObject(out, comparator,
-      WritableByteArrayComparable.class, null);
+  /**
+   *
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof CompareFilter)) return false;
+
+    CompareFilter other = (CompareFilter)o;
+    return this.getOperator().equals(other.getOperator()) &&
+      (this.getComparator() == other.getComparator()
+        || this.getComparator().areSerializedFieldsEqual(other.getComparator()));
   }
 
   @Override

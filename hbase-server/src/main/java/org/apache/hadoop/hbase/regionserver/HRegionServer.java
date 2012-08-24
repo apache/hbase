@@ -2886,7 +2886,7 @@ public class  HRegionServer implements ClientProtocol,
           byte[] qualifier = condition.getQualifier().toByteArray();
           CompareOp compareOp = CompareOp.valueOf(condition.getCompareType().name());
           WritableByteArrayComparable comparator =
-            (WritableByteArrayComparable)ProtobufUtil.toObject(condition.getComparator());
+            ProtobufUtil.toComparator(condition.getComparator());
           if (region.getCoprocessorHost() != null) {
             processed = region.getCoprocessorHost().preCheckAndPut(
               row, family, qualifier, compareOp, comparator, put);
@@ -2915,7 +2915,7 @@ public class  HRegionServer implements ClientProtocol,
           byte[] qualifier = condition.getQualifier().toByteArray();
           CompareOp compareOp = CompareOp.valueOf(condition.getCompareType().name());
           WritableByteArrayComparable comparator =
-            (WritableByteArrayComparable)ProtobufUtil.toObject(condition.getComparator());
+            ProtobufUtil.toComparator(condition.getComparator());
           if (region.getCoprocessorHost() != null) {
             processed = region.getCoprocessorHost().preCheckAndDelete(
               row, family, qualifier, compareOp, comparator, delete);

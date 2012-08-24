@@ -25,6 +25,7 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "hbase.proto";
+import "Comparator.proto";
 
 message ColumnCountGetFilter {
   required int32 limit = 1;
@@ -40,32 +41,47 @@ message ColumnPrefixFilter {
 }
 
 message ColumnRangeFilter {
-  required bytes minColumn = 1;
+  optional bytes minColumn = 1;
   optional bool minColumnInclusive = 2;
-  required bytes maxColumn = 3;
+  optional bytes maxColumn = 3;
   optional bool maxColumnInclusive = 4;
 }
 
 message CompareFilter {
   required CompareType compareOp = 1;
-  required bytes comparator = 2;
-  
+  optional Comparator comparator = 2;
 }
 
 message DependentColumnFilter {
-  required bytes columnFamily = 1;
-  required bytes columnQualifier = 2;
-  optional bool dropDependentColumn = 3;
+  required CompareFilter compareFilter = 1;
+  optional bytes columnFamily = 2;
+  optional bytes columnQualifier = 3;
+  optional bool dropDependentColumn = 4;
 }
 
 message FamilyFilter {
   required CompareFilter compareFilter = 1;
 }
 
+message FilterList {
+  required Operator operator = 1;
+  repeated Filter filters = 2;
+
+  enum Operator {
+    MUST_PASS_ALL = 1;
+    MUST_PASS_ONE = 2;
+  }
+}
+
+message FilterWrapper {
+  required Filter filter = 1;
+}
+
 message FirstKeyOnlyFilter {
 }
 
 message FirstKeyValueMatchingQualifiersFilter {
+  repeated bytes qualifiers = 1;
 }
 
 message FuzzyRowFilter {
@@ -73,7 +89,7 @@ message FuzzyRowFilter {
 }
 
 message InclusiveStopFilter {
-  required bytes stopRowKey = 1;
+  optional bytes stopRowKey = 1;
 }
 
 message KeyOnlyFilter {
@@ -89,7 +105,7 @@ message PageFilter {
 }
 
 message PrefixFilter {
-  required bytes prefix = 1;
+  optional bytes prefix = 1;
 }
 
 message QualifierFilter {
@@ -109,10 +125,10 @@ message SingleColumnValueExcludeFilter {
 }
 
 message SingleColumnValueFilter {
-  required bytes columnFamily = 1;
-  required bytes columnQualifier = 2;
+  optional bytes columnFamily = 1;
+  optional bytes columnQualifier = 2;
   required CompareType compareOp = 3;
-  required bytes comparator = 4;
+  required Comparator comparator = 4;
   optional bool foundColumn = 5;
   optional bool matchedColumn = 6;
   optional bool filterIfMissing = 7;
@@ -120,7 +136,7 @@ message SingleColumnValueFilter {
 }
 
 message SkipFilter {
-  required NameBytesPair filter = 1;
+  required Filter filter = 1;
 }
 
 message TimestampsFilter {
@@ -132,5 +148,5 @@ message ValueFilter {
 }
 
 message WhileMatchFilter {
-  required NameBytesPair filter = 1;
+  required Filter filter = 1;
 }

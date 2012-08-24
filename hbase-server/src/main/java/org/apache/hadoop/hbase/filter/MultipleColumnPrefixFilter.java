@@ -19,12 +19,14 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.DataOutput;
-import java.io.IOException;
-import java.io.DataInput;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.TreeSet;
@@ -41,10 +43,6 @@ public class MultipleColumnPrefixFilter extends FilterBase {
   protected byte [] hint = null;
   protected TreeSet<byte []> sortedPrefixes = createTreeSet();
   private final static int MAX_LOG_PREFIXES = 5;
-
-  public MultipleColumnPrefixFilter() {
-    super();
-  }
 
   public MultipleColumnPrefixFilter(final byte [][] prefixes) {
     if (prefixes != null) {
@@ -107,19 +105,52 @@ public class MultipleColumnPrefixFilter extends FilterBase {
     return new MultipleColumnPrefixFilter(prefixes);
   }
 
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(sortedPrefixes.size());
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.MultipleColumnPrefixFilter.Builder builder =
+      FilterProtos.MultipleColumnPrefixFilter.newBuilder();
     for (byte [] element : sortedPrefixes) {
-      Bytes.writeByteArray(out, element);
+      if (element != null) builder.addSortedPrefixes(ByteString.copyFrom(element));
     }
+    return builder.build().toByteArray();
   }
 
-  public void readFields(DataInput in) throws IOException {
-    int x = in.readInt();
-    this.sortedPrefixes = createTreeSet();
-    for (int j = 0; j < x; j++) {
-      sortedPrefixes.add(Bytes.readByteArray(in));
+  /**
+   * @param pbBytes A pb serialized {@link MultipleColumnPrefixFilter} instance
+   * @return An instance of {@link MultipleColumnPrefixFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static MultipleColumnPrefixFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.MultipleColumnPrefixFilter proto;
+    try {
+      proto = FilterProtos.MultipleColumnPrefixFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
     }
+    int numPrefixes = proto.getSortedPrefixesCount();
+    byte [][] prefixes = new byte[numPrefixes][];
+    for (int i = 0; i < numPrefixes; ++i) {
+      prefixes[i] = proto.getSortedPrefixes(i).toByteArray();
+    }
+
+    return new MultipleColumnPrefixFilter(prefixes);
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof MultipleColumnPrefixFilter)) return false;
+
+    MultipleColumnPrefixFilter other = (MultipleColumnPrefixFilter)o;
+    return this.sortedPrefixes.equals(other.sortedPrefixes);
   }
 
   public KeyValue getNextKeyHint(KeyValue kv) {

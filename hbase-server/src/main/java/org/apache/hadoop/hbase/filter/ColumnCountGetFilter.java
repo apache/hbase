@@ -22,14 +22,14 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.ArrayList;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Simple filter that returns first N columns on row only.
@@ -42,14 +42,6 @@ import com.google.common.base.Preconditions;
 public class ColumnCountGetFilter extends FilterBase {
   private int limit = 0;
   private int count = 0;
-
-  /**
-   * Used during serialization.
-   * Do not use.
-   */
-  public ColumnCountGetFilter() {
-    super();
-  }
 
   public ColumnCountGetFilter(final int n) {
     Preconditions.checkArgument(n >= 0, "limit be positive %s", n);
@@ -83,14 +75,44 @@ public class ColumnCountGetFilter extends FilterBase {
     return new ColumnCountGetFilter(limit);
   }
 
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    this.limit = in.readInt();
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.ColumnCountGetFilter.Builder builder =
+      FilterProtos.ColumnCountGetFilter.newBuilder();
+    builder.setLimit(this.limit);
+    return builder.build().toByteArray();
   }
 
-  @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(this.limit);
+  /**
+   * @param pbBytes A pb serialized {@link ColumnCountGetFilter} instance
+   * @return An instance of {@link ColumnCountGetFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static ColumnCountGetFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.ColumnCountGetFilter proto;
+    try {
+      proto = FilterProtos.ColumnCountGetFilter.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return new ColumnCountGetFilter(proto.getLimit());
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof ColumnCountGetFilter)) return false;
+
+    ColumnCountGetFilter other = (ColumnCountGetFilter)o;
+    return this.getLimit() == other.getLimit();
   }
 
   @Override

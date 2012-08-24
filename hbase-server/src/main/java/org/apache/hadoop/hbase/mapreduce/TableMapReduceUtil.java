@@ -44,6 +44,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -54,6 +56,8 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Utility for {@link TableMapper} and {@link TableReducer}
@@ -239,10 +243,8 @@ public class TableMapReduceUtil {
    * @throws IOException When writing the scan fails.
    */
   static String convertScanToString(Scan scan) throws IOException {
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    DataOutputStream dos = new DataOutputStream(out);
-    scan.write(dos);
-    return Base64.encodeBytes(out.toByteArray());
+    ClientProtos.Scan proto = ProtobufUtil.toScan(scan);
+    return Base64.encodeBytes(proto.toByteArray());
   }
 
   /**
@@ -253,11 +255,15 @@ public class TableMapReduceUtil {
    * @throws IOException When reading the scan instance fails.
    */
   static Scan convertStringToScan(String base64) throws IOException {
-    ByteArrayInputStream bis = new ByteArrayInputStream(Base64.decode(base64));
-    DataInputStream dis = new DataInputStream(bis);
-    Scan scan = new Scan();
-    scan.readFields(dis);
-    return scan;
+    byte [] decoded = Base64.decode(base64);
+    ClientProtos.Scan scan;
+    try {
+      scan = ClientProtos.Scan.parseFrom(decoded);
+    } catch (InvalidProtocolBufferException ipbe) {
+      throw new IOException(ipbe);
+    }
+
+    return ProtobufUtil.toScan(scan);
   }
 
   /**

@@ -22,8 +22,8 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.io.Writable;
 
 import java.util.List;
 
@@ -52,11 +52,11 @@ import java.util.List;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public interface Filter extends Writable {
+public abstract class Filter {
   /**
    * Reset the state of the filter between rows.
    */
-  public void reset();
+  abstract public void reset();
 
   /**
    * Filters a row based on the row key. If this returns true, the entire
@@ -68,14 +68,14 @@ public interface Filter extends Writable {
    * @param length length of the row key
    * @return true, remove entire row, false, include the row (maybe).
    */
-  public boolean filterRowKey(byte [] buffer, int offset, int length);
+  abstract public boolean filterRowKey(byte [] buffer, int offset, int length);
 
   /**
    * If this returns true, the scan will terminate.
    *
    * @return true to end scan, false to continue.
    */
-  public boolean filterAllRemaining();
+  abstract public boolean filterAllRemaining();
 
   /**
    * A way to filter based on the column family, column qualifier and/or the
@@ -91,7 +91,7 @@ public interface Filter extends Writable {
    * @return code as described below
    * @see Filter.ReturnCode
    */
-  public ReturnCode filterKeyValue(final KeyValue v);
+  abstract public ReturnCode filterKeyValue(final KeyValue v);
 
   /**
    * Give the filter a chance to transform the passed KeyValue.
@@ -106,7 +106,7 @@ public interface Filter extends Writable {
    * @param v the KeyValue in question
    * @return the changed KeyValue
    */
-  public KeyValue transform(final KeyValue v);
+  abstract public KeyValue transform(final KeyValue v);
 
   /**
    * Return codes for filterValue().
@@ -140,14 +140,14 @@ public interface Filter extends Writable {
    * Modifications to the list will carry on
    * @param kvs the list of keyvalues to be filtered
    */
-  public void filterRow(List<KeyValue> kvs);
+  abstract public void filterRow(List<KeyValue> kvs);
 
   /**
    * @return True if this filter actively uses filterRow(List) or filterRow().
    * Primarily used to check for conflicts with scans(such as scans
    * that do not read a full row at a time)
    */
-  public boolean hasFilterRow();
+  abstract public boolean hasFilterRow();
 
   /**
    * Last chance to veto row based on previous {@link #filterKeyValue(KeyValue)}
@@ -156,7 +156,7 @@ public interface Filter extends Writable {
    * (for example).
    * @return true to exclude row, false to include row.
    */
-  public boolean filterRow();
+  abstract public boolean filterRow();
 
   /**
    * If the filter returns the match code SEEK_NEXT_USING_HINT, then
@@ -166,5 +166,28 @@ public interface Filter extends Writable {
    * @return KeyValue which must be next seeked. return null if the filter is
    * not sure which key to seek to next.
    */
-  public KeyValue getNextKeyHint(final KeyValue currentKV);
+  abstract public KeyValue getNextKeyHint(final KeyValue currentKV);
+
+  /**
+   * @return The filter serialized using pb
+   */
+  abstract public byte [] toByteArray();
+
+  /**
+   * @param pbBytes A pb serialized {@link Filter} instance
+   * @return An instance of {@link Filter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static Filter parseFrom(final byte [] pbBytes) throws DeserializationException {
+    throw new DeserializationException(
+      "parseFrom called on base Filter, but should be called on derived type");
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  abstract boolean areSerializedFieldsEqual(Filter other);
 }

@@ -22,13 +22,15 @@ package org.apache.hadoop.hbase.filter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,7 +47,7 @@ import java.util.List;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FilterList implements Filter {
+public class FilterList extends Filter {
   /** set operator */
   public static enum Operator {
     /** !AND */
@@ -58,14 +60,6 @@ public class FilterList implements Filter {
   private static final int MAX_LOG_FILTERS = 5;
   private Operator operator = Operator.MUST_PASS_ALL;
   private List<Filter> filters = new ArrayList<Filter>();
-
-  /**
-   * Default constructor, filters nothing. Required though for RPC
-   * deserialization.
-   */
-  public FilterList() {
-    super();
-  }
 
   /**
    * Constructor that takes a set of {@link Filter}s. The default operator
@@ -278,25 +272,58 @@ public class FilterList implements Filter {
     return  operator == Operator.MUST_PASS_ONE;
   }
 
-  public void readFields(final DataInput in) throws IOException {
-    byte opByte = in.readByte();
-    operator = Operator.values()[opByte];
-    int size = in.readInt();
-    if (size > 0) {
-      filters = new ArrayList<Filter>(size);
-      for (int i = 0; i < size; i++) {
-        Filter filter = (Filter)HbaseObjectWritable.readObject(in, conf);
-        filters.add(filter);
-      }
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
+    FilterProtos.FilterList.Builder builder =
+      FilterProtos.FilterList.newBuilder();
+    builder.setOperator(FilterProtos.FilterList.Operator.valueOf(operator.name()));
+    for (Filter filter : filters) {
+      builder.addFilters(ProtobufUtil.toFilter(filter));
     }
+    return builder.build().toByteArray();
   }
 
-  public void write(final DataOutput out) throws IOException {
-    out.writeByte(operator.ordinal());
-    out.writeInt(filters.size());
-    for (Filter filter : filters) {
-      HbaseObjectWritable.writeObject(out, filter, Writable.class, conf);
+  /**
+   * @param pbBytes A pb serialized {@link FilterList} instance
+   * @return An instance of {@link FilterList} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static FilterList parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    FilterProtos.FilterList proto;
+    try {
+      proto = FilterProtos.FilterList.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
     }
+
+    List<Filter> rowFilters = new ArrayList<Filter>(proto.getFiltersCount());
+    try {
+      for (HBaseProtos.Filter filter : proto.getFiltersList()) {
+        rowFilters.add(ProtobufUtil.toFilter(filter));
+      }
+    } catch (IOException ioe) {
+      throw new DeserializationException(ioe);
+    }
+    return new FilterList(Operator.valueOf(proto.getOperator().name()),rowFilters);
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter o) {
+    if (o == this) return true;
+    if (!(o instanceof FilterList)) return false;
+
+    FilterList other = (FilterList)o;
+    return this.getOperator().equals(other.getOperator()) &&
+      ((this.getFilters() == other.getFilters())
+      || this.getFilters().equals(other.getFilters()));
   }
 
   @Override

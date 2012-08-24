@@ -22,9 +22,13 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.FilterBase;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.security.User;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * <strong>NOTE: for internal use only by AccessController implementation</strong>
@@ -68,17 +72,25 @@ class AccessControlFilter extends FilterBase {
     return ReturnCode.NEXT_COL;
   }
 
-  @Override
-  public void write(DataOutput dataOutput) throws IOException {
+  /**
+   * @return The filter serialized using pb
+   */
+  public byte [] toByteArray() {
     // no implementation, server-side use only
     throw new UnsupportedOperationException(
-        "Serialization not supported.  Intended for server-side use only.");
+      "Serialization not supported.  Intended for server-side use only.");
   }
 
-  @Override
-  public void readFields(DataInput dataInput) throws IOException {
+  /**
+   * @param pbBytes A pb serialized {@link AccessControlFilter} instance
+   * @return An instance of {@link AccessControlFilter} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static AccessControlFilter parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
     // no implementation, server-side use only
     throw new UnsupportedOperationException(
-        "Serialization not supported.  Intended for server-side use only.");
+      "Serialization not supported.  Intended for server-side use only.");
   }
 }

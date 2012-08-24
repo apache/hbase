@@ -21,24 +21,19 @@ package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DeserializationException;
+import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import com.google.protobuf.ByteString;
 
-/** Base class, combines Comparable<byte []> and Writable. */
+
+/** Base class for byte array comparators */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public abstract class WritableByteArrayComparable implements Writable, Comparable<byte[]> {
+public abstract class WritableByteArrayComparable implements Comparable<byte[]> {
 
   byte[] value;
-
-  /**
-   * Nullary constructor, for Writable
-   */
-  public WritableByteArrayComparable() { }
 
   /**
    * Constructor.
@@ -52,14 +47,40 @@ public abstract class WritableByteArrayComparable implements Writable, Comparabl
     return value;
   }
 
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    value = Bytes.readByteArray(in);
+  /**
+   * @return The comparator serialized using pb
+   */
+  public abstract byte [] toByteArray();
+
+  ComparatorProtos.ByteArrayComparable convert() {
+    ComparatorProtos.ByteArrayComparable.Builder builder =
+      ComparatorProtos.ByteArrayComparable.newBuilder();
+    if (value != null) builder.setValue(ByteString.copyFrom(value));
+    return builder.build();
   }
 
-  @Override
-  public void write(DataOutput out) throws IOException {
-    Bytes.writeByteArray(out, value);
+  /**
+   * @param pbBytes A pb serialized {@link WritableByteArrayComparable} instance
+   * @return An instance of {@link WritableByteArrayComparable} made from <code>bytes</code>
+   * @throws DeserializationException
+   * @see {@link #toByteArray()}
+   */
+  public static WritableByteArrayComparable parseFrom(final byte [] pbBytes)
+  throws DeserializationException {
+    throw new DeserializationException(
+      "parseFrom called on base WritableByteArrayComparable, but should be called on derived type");
+  }
+
+  /**
+   * @param other
+   * @return true if and only if the fields of the comparator that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(WritableByteArrayComparable o) {
+    if (o == this) return true;
+    if (!(o instanceof WritableByteArrayComparable)) return false;
+
+    return Bytes.equals(this.getValue(), o.getValue());
   }
 
   @Override

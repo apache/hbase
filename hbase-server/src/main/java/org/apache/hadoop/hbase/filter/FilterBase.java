@@ -36,7 +36,7 @@ import java.util.ArrayList;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public abstract class FilterBase implements Filter {
+public abstract class FilterBase extends Filter {
 
   /**
    * Filters that are purely stateless and do nothing in their reset() methods can inherit
@@ -149,5 +149,16 @@ public abstract class FilterBase implements Filter {
    */
   public String toString() {
     return this.getClass().getSimpleName();
+  }
+
+  /**
+   * Default implementation so that writers of custom filters aren't forced to implement.
+   *
+   * @param other
+   * @return true if and only if the fields of the filter that are serialized
+   * are equal to the corresponding fields in other.  Used for testing.
+   */
+  boolean areSerializedFieldsEqual(Filter other) {
+    return true;
   }
 }
