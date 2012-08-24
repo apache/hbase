@@ -129,7 +129,7 @@ extends RetriesExhaustedException {
     for (Throwable t : ths) {
       if (t == null) continue;
       String name = "";
-      if (t instanceof NoSuchColumnFamilyException) {
+      if (t instanceof DoNotRetryIOException) {
         name = t.getMessage();
       } else {
         name = t.getClass().getSimpleName();
