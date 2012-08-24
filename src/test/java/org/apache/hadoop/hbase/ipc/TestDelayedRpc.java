@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
+import org.apache.log4j.Level;
 import org.junit.Test;
 
 /**
@@ -123,6 +124,7 @@ public class TestDelayedRpc {
     ListAppender listAppender = new ListAppender();
     Logger log = Logger.getLogger("org.apache.hadoop.ipc.HBaseServer");
     log.addAppender(listAppender);
+    log.setLevel(Level.WARN);
 
     InetSocketAddress isa = new InetSocketAddress("localhost", 0);
     rpcServer = HBaseRPC.getServer(new TestRpcImpl(true),
