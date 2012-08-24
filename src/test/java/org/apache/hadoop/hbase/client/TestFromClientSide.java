@@ -63,7 +63,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HTable.DaemonThreadFactory;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
@@ -86,6 +85,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -3880,7 +3880,7 @@ public class TestFromClientSide {
     ExecutorService pool = new ThreadPoolExecutor(1, Integer.MAX_VALUE,
         60, TimeUnit.SECONDS,
         new SynchronousQueue<Runnable>(),
-        new DaemonThreadFactory());
+        Threads.newDaemonThreadFactory("test-from-client-table"));
     ((ThreadPoolExecutor)pool).allowCoreThreadTimeOut(true);
     HTable t = new HTable(tableName, conn, pool);
     HBaseAdmin ha = new HBaseAdmin(conn);

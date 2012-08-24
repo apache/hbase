@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * <p>Used to communicate with a single HBase table.
@@ -167,7 +168,7 @@ public class HTable implements HTableInterface {
     this.pool = new ThreadPoolExecutor(1, maxThreads,
         keepAliveTime, TimeUnit.SECONDS,
         new SynchronousQueue<Runnable>(),
-        new DaemonThreadFactory());
+        Threads.newDaemonThreadFactory("hbase-table"));
     ((ThreadPoolExecutor)this.pool).allowCoreThreadTimeOut(true);
 
     this.finishSetup();
@@ -1099,35 +1100,6 @@ public class HTable implements HTableInterface {
    */
   ExecutorService getPool() {
     return this.pool;
-  }
-
-  static class DaemonThreadFactory implements ThreadFactory {
-    static final AtomicInteger poolNumber = new AtomicInteger(1);
-        final ThreadGroup group;
-        final AtomicInteger threadNumber = new AtomicInteger(1);
-        final String namePrefix;
-
-        DaemonThreadFactory() {
-            SecurityManager s = System.getSecurityManager();
-            group = (s != null)? s.getThreadGroup() :
-                                 Thread.currentThread().getThreadGroup();
-            namePrefix = "hbase-table-pool" +
-                          poolNumber.getAndIncrement() +
-                         "-thread-";
-        }
-
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(group, r,
-                                  namePrefix + threadNumber.getAndIncrement(),
-                                  0);
-            if (!t.isDaemon()) {
-              t.setDaemon(true);
-            }
-            if (t.getPriority() != Thread.NORM_PRIORITY) {
-              t.setPriority(Thread.NORM_PRIORITY);
-            }
-            return t;
-        }
   }
 
   /**
