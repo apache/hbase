@@ -1229,6 +1229,11 @@ Server {
   }
 
   public boolean balance() {
+    // if master not initialized, don't run balancer.
+    if (!this.initialized) {
+      LOG.debug("Master has not been initialized, don't run balancer.");
+      return false;
+    }
     // If balance not true, don't run balancer.
     if (!this.balanceSwitch) return false;
     // Do this call outside of synchronized block.
