@@ -24,8 +24,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.management.AttributeNotFoundException;
 import javax.management.MBeanAttributeInfo;
+import javax.management.MBeanException;
 import javax.management.MBeanInfo;
+import javax.management.ReflectionException;
+import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
+import com.yammer.metrics.stats.Snapshot;
 
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -34,6 +39,9 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
@@ -112,6 +120,52 @@ public class TestMetricsMBeanBase extends TestCase {
         "varyRateAvgTime", "java.lang.Long", "test");
     assertAttribute( attributeByName.get("varyRateNumOps"),
         "varyRateNumOps", "java.lang.Integer", "test");
+  }
+
+  public void testMetricsMBeanBaseHistogram()
+      throws ReflectionException, AttributeNotFoundException, MBeanException {
+    MetricsRegistry mr = new MetricsRegistry();
+    MetricsHistogram histo = mock(MetricsHistogram.class);
+    Snapshot snap = mock(Snapshot.class);
+
+    //Set up the mocks
+    String histoName = "MockHisto";
+    when(histo.getName()).thenReturn(histoName);
+    when(histo.getCount()).thenReturn(20l);
+    when(histo.getMin()).thenReturn(1l);
+    when(histo.getMax()).thenReturn(999l);
+    when(histo.getMean()).thenReturn(500.2);
+    when(histo.getStdDev()).thenReturn(1.2);
+    when(histo.getSnapshot()).thenReturn(snap);
+
+    when(snap.getMedian()).thenReturn(490.0);
+    when(snap.get75thPercentile()).thenReturn(550.0);
+    when(snap.get95thPercentile()).thenReturn(900.0);
+    when(snap.get99thPercentile()).thenReturn(990.0);
+
+    mr.add("myTestHisto", histo);
+
+    MetricsMBeanBase mBeanBase = new MetricsMBeanBase(mr, "test");
+
+    assertEquals(new Long(20), mBeanBase
+        .getAttribute(histoName + MetricsHistogram.NUM_OPS_METRIC_NAME));
+    assertEquals(new Long(1), mBeanBase
+        .getAttribute(histoName + MetricsHistogram.MIN_METRIC_NAME));
+    assertEquals(new Long(999), mBeanBase
+        .getAttribute(histoName + MetricsHistogram.MAX_METRIC_NAME));
+    assertEquals(new Float(500.2), mBeanBase
+        .getAttribute(histoName + MetricsHistogram.MEAN_METRIC_NAME));
+    assertEquals(new Float(1.2), mBeanBase
+        .getAttribute(histoName + MetricsHistogram.STD_DEV_METRIC_NAME));
+
+    assertEquals(new Float(490.0), mBeanBase
+        .getAttribute(histoName + MetricsHistogram.MEDIAN_METRIC_NAME));
+    assertEquals(new Float(550.0), mBeanBase
+        .getAttribute(histoName + MetricsHistogram.SEVENTY_FIFTH_PERCENTILE_METRIC_NAME));
+    assertEquals(new Float(900.0), mBeanBase
+        .getAttribute(histoName + MetricsHistogram.NINETY_FIFTH_PERCENTILE_METRIC_NAME));
+    assertEquals(new Float(990.0), mBeanBase
+        .getAttribute(histoName + MetricsHistogram.NINETY_NINETH_PERCENTILE_METRIC_NAME));
   }
 
   protected void assertAttribute(MBeanAttributeInfo attr, String name,

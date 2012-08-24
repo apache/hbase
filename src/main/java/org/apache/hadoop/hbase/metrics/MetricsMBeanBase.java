@@ -29,7 +29,9 @@ import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanException;
 import javax.management.MBeanInfo;
 import javax.management.ReflectionException;
+import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
 
+import com.yammer.metrics.stats.Snapshot;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics.util.MetricsBase;
@@ -104,6 +106,52 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
             "java.lang.String", metric.getDescription(), true, false, false) );
         extendedAttributes.put(metric.getName(), metric);
         LOG.info("MetricsString added: " + metric.getName());
+      } else if (metric instanceof MetricsHistogram) {
+
+        String metricName = metric.getName() + MetricsHistogram.NUM_OPS_METRIC_NAME;
+        attributes.add(new MBeanAttributeInfo(metricName,
+            "java.lang.Long", metric.getDescription(), true, false, false));
+        extendedAttributes.put(metricName, metric);
+
+        metricName = metric.getName() + MetricsHistogram.MIN_METRIC_NAME;
+        attributes.add(new MBeanAttributeInfo(metricName,
+            "java.lang.Long", metric.getDescription(), true, false, false));
+        extendedAttributes.put(metricName, metric);
+
+        metricName = metric.getName() + MetricsHistogram.MAX_METRIC_NAME;
+        attributes.add(new MBeanAttributeInfo(metricName,
+            "java.lang.Long", metric.getDescription(), true, false, false));
+        extendedAttributes.put(metricName, metric);
+
+        metricName = metric.getName() + MetricsHistogram.MEAN_METRIC_NAME;
+        attributes.add(new MBeanAttributeInfo(metricName,
+            "java.lang.Float", metric.getDescription(), true, false, false));
+        extendedAttributes.put(metricName, metric);
+
+        metricName = metric.getName() + MetricsHistogram.STD_DEV_METRIC_NAME;
+        attributes.add(new MBeanAttributeInfo(metricName,
+            "java.lang.Float", metric.getDescription(), true, false, false));
+        extendedAttributes.put(metricName, metric);
+
+        metricName = metric.getName() + MetricsHistogram.MEDIAN_METRIC_NAME;
+        attributes.add(new MBeanAttributeInfo(metricName,
+            "java.lang.Float", metric.getDescription(), true, false, false));
+        extendedAttributes.put(metricName, metric);
+
+        metricName = metric.getName() + MetricsHistogram.SEVENTY_FIFTH_PERCENTILE_METRIC_NAME;
+        attributes.add(new MBeanAttributeInfo(metricName,
+            "java.lang.Float", metric.getDescription(), true, false, false));
+        extendedAttributes.put(metricName, metric);
+
+        metricName = metric.getName() + MetricsHistogram.NINETY_FIFTH_PERCENTILE_METRIC_NAME;
+        attributes.add(new MBeanAttributeInfo(metricName,
+            "java.lang.Float", metric.getDescription(), true, false, false));
+        extendedAttributes.put(metricName, metric);
+
+        metricName = metric.getName() + MetricsHistogram.NINETY_NINETH_PERCENTILE_METRIC_NAME;
+        attributes.add(new MBeanAttributeInfo(metricName,
+            "java.lang.Float", metric.getDescription(), true, false, false));
+        extendedAttributes.put(metricName, metric);
       }
       // else, its probably a hadoop metric already registered. Skip it.
     }
@@ -148,6 +196,32 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
           return ((MetricsRate) metric).getPreviousIntervalValue();
         } else if (metric instanceof MetricsString) {
           return ((MetricsString)metric).getValue();
+        } else if (metric instanceof MetricsHistogram)  {
+          MetricsHistogram hist = (MetricsHistogram) metric;
+          if (name.endsWith(MetricsHistogram.NUM_OPS_METRIC_NAME)) {
+            return hist.getCount();
+          } else if (name.endsWith(MetricsHistogram.MIN_METRIC_NAME)) {
+            return hist.getMin();
+          } else if (name.endsWith(MetricsHistogram.MAX_METRIC_NAME)) {
+            return hist.getMax();
+          } else if (name.endsWith(MetricsHistogram.MEAN_METRIC_NAME)) {
+            return (float) hist.getMean();
+          } else if (name.endsWith(MetricsHistogram.STD_DEV_METRIC_NAME)) {
+            return (float) hist.getStdDev();
+          } else if (name.endsWith(MetricsHistogram.MEDIAN_METRIC_NAME)) {
+            Snapshot s = hist.getSnapshot();
+            return (float) s.getMedian();
+          } else if (name.endsWith(MetricsHistogram.SEVENTY_FIFTH_PERCENTILE_METRIC_NAME)) {
+            Snapshot s = hist.getSnapshot();
+            return (float) s.get75thPercentile();
+          } else if (name.endsWith(MetricsHistogram.NINETY_FIFTH_PERCENTILE_METRIC_NAME)) {
+            Snapshot s = hist.getSnapshot();
+            return (float) s.get95thPercentile();
+          } else if (name.endsWith(MetricsHistogram.NINETY_NINETH_PERCENTILE_METRIC_NAME)) {
+            Snapshot s = hist.getSnapshot();
+            return (float) s.get99thPercentile();
+          }
+
         } else {
           LOG.warn( String.format("unknown metrics type %s for attribute %s",
                         metric.getClass().getName(), name) );
