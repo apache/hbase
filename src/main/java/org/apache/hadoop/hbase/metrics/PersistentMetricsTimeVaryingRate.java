@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.metrics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
@@ -45,7 +46,7 @@ public class PersistentMetricsTimeVaryingRate extends MetricsTimeVaryingRate {
   public PersistentMetricsTimeVaryingRate(final String nam,
       final MetricsRegistry registry,
       final String description) {
-    super(nam, registry, description);
+    super(nam, registry, description, HConstants.RESET_MINMAX);
   }
 
   /**

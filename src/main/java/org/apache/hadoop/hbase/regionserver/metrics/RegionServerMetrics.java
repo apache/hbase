@@ -43,7 +43,6 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
-import java.util.ArrayList;
 import java.util.List;
 
 /**

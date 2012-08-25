@@ -564,6 +564,14 @@ public final class HConstants {
 
   public static final int IPC_CALL_PARAMETER_LENGTH_MAX = 1000;
 
+  /** The metric name for RpcQueueTime */
+  public static final String RPC_QUEUE_TIME = "RpcQueueTime";
+  
+  /** The metric name for RpcProcessingTime */
+  public static final String RPC_PROCESS_TIME = "RpcProcessingTime";
+  
+  public static final boolean RESET_MINMAX = true;
+  
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

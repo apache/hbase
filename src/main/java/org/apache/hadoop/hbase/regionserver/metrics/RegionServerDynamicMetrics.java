@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -111,7 +112,8 @@ public class RegionServerDynamicMetrics implements Updater {
       int numOps) {
     MetricsTimeVaryingRate m = (MetricsTimeVaryingRate)registry.get(name);
     if (m == null) {
-      m = new MetricsTimeVaryingRate(name, this.registry);
+      m = new MetricsTimeVaryingRate(name, this.registry, MetricsBase.NO_DESCRIPTION, 
+          HConstants.RESET_MINMAX);
       try {
         if (updateMbeanInfoIfMetricsListChanged != null) {
           updateMbeanInfoIfMetricsListChanged.invoke(this.rsDynamicStatistics,

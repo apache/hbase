@@ -22,10 +22,12 @@ package org.apache.hadoop.hbase.ipc;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
+import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
@@ -46,21 +48,6 @@ public class HBaseRpcMetrics implements Updater {
   private static Log LOG = LogFactory.getLog(HBaseRpcMetrics.class);
   private final HBaseRPCStatistics rpcStatistics;
 
-  public HBaseRpcMetrics(String hostName, String port) {
-    MetricsContext context = MetricsUtil.getContext("rpc");
-    metricsRecord = MetricsUtil.createRecord(context, "metrics");
-
-    metricsRecord.setTag("port", port);
-
-    LOG.info("Initializing RPC Metrics with hostName="
-        + hostName + ", port=" + port);
-
-    context.registerUpdater(this);
-
-    rpcStatistics = new HBaseRPCStatistics(this.registry, hostName, port);
-  }
-
-
   /**
    * The metrics variables are public:
    *  - they can be set directly by calling their set/inc methods
@@ -68,17 +55,25 @@ public class HBaseRpcMetrics implements Updater {
    */
   public final MetricsRegistry registry = new MetricsRegistry();
 
-  public MetricsTimeVaryingRate rpcQueueTime = new MetricsTimeVaryingRate("RpcQueueTime", registry);
-  public MetricsTimeVaryingRate rpcProcessingTime = new MetricsTimeVaryingRate("RpcProcessingTime", registry);
-
-  //public Map <String, MetricsTimeVaryingRate> metricsList = Collections.synchronizedMap(new HashMap<String, MetricsTimeVaryingRate>());
-
+  public HBaseRpcMetrics(String hostName, String port) {
+    this.create(HConstants.RPC_QUEUE_TIME);
+    this.create(HConstants.RPC_PROCESS_TIME);
+    
+    MetricsContext context = MetricsUtil.getContext("rpc");
+    metricsRecord = MetricsUtil.createRecord(context, "metrics");
+    metricsRecord.setTag("port", port);
+    LOG.info("Initializing RPC Metrics with hostName="  + hostName + ", port=" + port);
+    rpcStatistics = new HBaseRPCStatistics(this.registry, hostName, port);
+    
+    context.registerUpdater(this);
+  }
 
   private MetricsTimeVaryingRate get(String key) {
     return (MetricsTimeVaryingRate) registry.get(key);
   }
   private MetricsTimeVaryingRate create(String key) {
-    return new MetricsTimeVaryingRate(key, this.registry);
+    return new MetricsTimeVaryingRate(key, this.registry, MetricsBase.NO_DESCRIPTION,
+        HConstants.RESET_MINMAX);
   }
 
   public synchronized void inc(String name, int amt) {
@@ -94,15 +89,10 @@ public class HBaseRpcMetrics implements Updater {
    * @param context ctx
    */
   public void doUpdates(MetricsContext context) {
-    rpcQueueTime.pushMetric(metricsRecord);
-    rpcProcessingTime.pushMetric(metricsRecord);
-
     synchronized (registry) {
       // Iterate through the registry to propagate the different rpc metrics.
-
       for (String metricName : registry.getKeyList() ) {
         MetricsTimeVaryingRate value = (MetricsTimeVaryingRate) registry.get(metricName);
-
         value.pushMetric(metricsRecord);
       }
     }
