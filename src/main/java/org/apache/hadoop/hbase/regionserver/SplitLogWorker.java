@@ -27,6 +27,7 @@ import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,6 +35,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -87,7 +90,6 @@ public class SplitLogWorker implements Runnable, Watcher {
   private boolean workerInGrabTask = false;
   protected ZooKeeperWrapper watcher;
 
-
   public SplitLogWorker(ZooKeeperWrapper watcher, Configuration conf,
       String serverName, TaskExecutor executor) {
     this.watcher = watcher;
@@ -97,7 +99,8 @@ public class SplitLogWorker implements Runnable, Watcher {
   }
 
   public SplitLogWorker(ZooKeeperWrapper watcher, final Configuration conf,
-      final String serverName, final ExecutorService logCloseThreadPool) {
+      final String serverName, final ExecutorService logCloseThreadPool,
+      final AtomicReference<HMasterRegionInterface> masterRef) {
     this(watcher, conf, serverName, new TaskExecutor () {
       @Override
       public Status exec(String filename, CancelableProgressable p) {
@@ -128,7 +131,7 @@ public class SplitLogWorker implements Runnable, Watcher {
           String tmpname =
             ZKSplitLog.getSplitLogDirTmpComponent(serverName, filename);
           if (HLogSplitter.splitLogFileToTemp(rootdir, tmpname,
-              st, fs, conf, p, logCloseThreadPool) == false) {
+              st, fs, conf, p, logCloseThreadPool, masterRef.get()) == false) {
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {

@@ -25,10 +25,14 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.SortedMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -68,6 +72,11 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
   // Hostname of the regionserver.
   private String hostname;
   private String cachedHostnamePort = null;
+
+  // For each region, store the last sequence id that was flushed
+  // from MemStore to an HFile
+  private final SortedMap<byte[], Long> flushedSequenceIdByRegion =
+      new ConcurrentSkipListMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
 
   public HServerInfo() {
     this(new HServerAddress(), 0, "default name");
@@ -110,6 +119,7 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.startCode = other.getStartCode();
     this.load = other.getLoad();
     this.hostname = other.hostname;
+    this.flushedSequenceIdByRegion.putAll(other.flushedSequenceIdByRegion);
   }
 
   public HServerLoad getLoad() {
@@ -135,6 +145,18 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
 
   public String getHostname() {
     return this.hostname;
+  }
+
+  public void setFlushedSequenceIdForRegion(byte[] region, long sequenceId) {
+    flushedSequenceIdByRegion.put(region, sequenceId);
+  }
+
+  public long getFlushedSequenceIdForRegion(byte[] region) {
+    return flushedSequenceIdByRegion.get(region);
+  }
+
+  public SortedMap<byte[], Long> getFlushedSequenceIdByRegion() {
+    return flushedSequenceIdByRegion;
   }
 
   /**
@@ -238,6 +260,9 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     this.load.readFields(in);
     in.readInt();
     this.hostname = in.readUTF();
+    HbaseMapWritable<byte[], Long> sequenceIdsWritable =
+        new HbaseMapWritable<byte[], Long>(flushedSequenceIdByRegion);
+    sequenceIdsWritable.readFields(in);
   }
 
   public void write(DataOutput out) throws IOException {
@@ -247,6 +272,9 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
     // Still serializing the info port for backward compatibility but it is not used.
     out.writeInt(HConstants.DEFAULT_REGIONSERVER_INFOPORT);
     out.writeUTF(hostname);
+    HbaseMapWritable<byte[], Long> sequenceIdsWritable =
+      new HbaseMapWritable<byte[], Long>(flushedSequenceIdByRegion);
+    sequenceIdsWritable.write(out);
   }
 
   public int compareTo(HServerInfo o) {

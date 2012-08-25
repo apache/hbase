@@ -59,6 +59,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.cli.CommandLine;
@@ -193,7 +194,7 @@ public class HRegionServer implements HRegionInterface,
   // If false, the file system has become unavailable
   protected volatile boolean fsOk;
 
-  protected HServerInfo serverInfo;
+  protected volatile HServerInfo serverInfo;
   protected final Configuration conf;
 
   private final ServerConnection connection;
@@ -336,6 +337,9 @@ public class HRegionServer implements HRegionInterface,
 
   /** Regionserver launched by the main method. Not used in tests. */
   private static HRegionServer mainRegionServer;
+  /** Keep a reference to the current active master for use by HLogSplitter. */
+  private final AtomicReference<HMasterRegionInterface> masterRef =
+      new AtomicReference<HMasterRegionInterface>();
 
   /**
    * Starts a HRegionServer at the default location
@@ -1466,7 +1470,7 @@ public class HRegionServer implements HRegionInterface,
     // Create the log splitting worker and start it
     this.splitLogWorker = new SplitLogWorker(this.zooKeeperWrapper,
         this.getConfiguration(), this.serverInfo.getServerName(),
-        logCloseThreadPool);
+        logCloseThreadPool, masterRef);
     splitLogWorker.start();
     LOG.info("HRegionServer started at: " +
       this.serverInfo.getServerAddress().toString());
@@ -1651,6 +1655,7 @@ public class HRegionServer implements HRegionInterface,
       }
     }
     this.hbaseMaster = master;
+    masterRef.set(hbaseMaster);
     return true;
   }
 
@@ -2849,10 +2854,12 @@ public class HRegionServer implements HRegionInterface,
    * @return the removed HRegion, or null if the HRegion was not in onlineRegions.
    */
   HRegion removeFromOnlineRegions(HRegionInfo hri) {
+    byte[] regionName = hri.getRegionName();
+    serverInfo.getFlushedSequenceIdByRegion().remove(regionName);
     this.lock.writeLock().lock();
     HRegion toReturn = null;
     try {
-      toReturn = onlineRegions.remove(Bytes.mapKey(hri.getRegionName()));
+      toReturn = onlineRegions.remove(Bytes.mapKey(regionName));
     } finally {
       this.lock.writeLock().unlock();
     }

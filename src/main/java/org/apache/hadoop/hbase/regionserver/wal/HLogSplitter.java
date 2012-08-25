@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.ConnectException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,6 +48,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
@@ -82,11 +85,12 @@ public class HLogSplitter {
 
   // Thread pool for closing LogWriters in parallel
   protected final ExecutorService logCloseThreadPool;
+  // For checking the latest flushed sequence id
+  protected final HMasterRegionInterface master;
 
   // If an exception is thrown by one of the other threads, it will be
   // stored here.
   protected AtomicReference<Throwable> thrown = new AtomicReference<Throwable>();
-
   // Wait/notify for when data has been produced by the reader thread,
   // consumed by the reader thread, or an exception occurred
   Object dataAvailable = new Object();
@@ -136,13 +140,15 @@ public class HLogSplitter {
   }
 
   public HLogSplitter(Configuration conf, Path rootDir, Path srcDir,
-      Path oldLogDir, FileSystem fs, ExecutorService logCloseThreadPool) {
+      Path oldLogDir, FileSystem fs, ExecutorService logCloseThreadPool,
+      HMasterRegionInterface master) {
     this.conf = conf;
     this.rootDir = rootDir;
     this.srcDir = srcDir;
     this.oldLogDir = oldLogDir;
     this.fs = fs;
     this.logCloseThreadPool = logCloseThreadPool;
+    this.master = master;
   }
 
   /**
@@ -166,9 +172,10 @@ public class HLogSplitter {
   static public boolean splitLogFileToTemp(Path rootDir, String tmpname,
       FileStatus logfile, FileSystem fs,
       Configuration conf, CancelableProgressable reporter,
-      ExecutorService logCloseThreadPool) throws IOException {
+      ExecutorService logCloseThreadPool, HMasterRegionInterface master)
+      throws IOException {
     HLogSplitter s = new HLogSplitter(conf, rootDir, null, null /* oldLogDir */,
-        fs, logCloseThreadPool);
+        fs, logCloseThreadPool, master);
     return s.splitLogFileToTemp(logfile, tmpname, reporter);
   }
 
@@ -217,11 +224,32 @@ public class HLogSplitter {
       status.markComplete("Failed: reporter.progress asked us to terminate");
       return false;
     }
+    Map<byte[], Long> lastFlushedSequenceIds =
+        new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
     int editsCount = 0;
+    int editsSkipped = 0;
     Entry entry;
     try {
       while ((entry = getNextLogLine(in,logPath, skipErrors)) != null) {
         byte[] region = entry.getKey().getRegionName();
+        Long lastFlushedSequenceId = -1l;
+        if (master != null) {
+          lastFlushedSequenceId = lastFlushedSequenceIds.get(region);
+          if (lastFlushedSequenceId == null) {
+            try {
+              lastFlushedSequenceId = master.getLastFlushedSequenceId(region);
+              lastFlushedSequenceIds.put(region, lastFlushedSequenceId);
+            } catch (ConnectException e) {
+              lastFlushedSequenceId = -1l;
+              LOG.warn("Unable to connect to the master to check " +
+                  "the last flushed sequence id", e);
+            }
+          }
+        }
+        if (lastFlushedSequenceId >= entry.getKey().getLogSeqNum()) {
+          editsSkipped++;
+          continue;
+        }
         Object o = logWriters.get(region);
         if (o == BAD_WRITER) {
           continue;
@@ -241,7 +269,8 @@ public class HLogSplitter {
         wap.w.append(entry);
         editsCount++;
         if (editsCount % interval == 0) {
-          status.setStatus("Split " + editsCount + " edits");
+          status.setStatus("Split " + (editsCount - editsSkipped) +
+              " edits, skipped " + editsSkipped + " edits.");
           long t1 = EnvironmentEdgeManager.currentTimeMillis();
           if ((t1 - last_report_at) > period) {
             last_report_at = t;

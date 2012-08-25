@@ -35,9 +35,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -163,6 +166,9 @@ public class HMaster extends HasThread implements HMasterInterface,
    */
   private final AtomicBoolean clusterShutdownRequested =
       new AtomicBoolean(false);
+
+  private final SortedMap<byte[], Long> flushedSequenceIdByRegion =
+      new ConcurrentSkipListMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
 
   private final Configuration conf;
   private final Path rootdir;
@@ -1269,6 +1275,27 @@ public class HMaster extends HasThread implements HMasterInterface,
       this.serverManager.regionServerReport(serverInfo, msgs, mostLoadedRegions));
   }
 
+  void updateLastFlushedSequenceIds(HServerInfo serverInfo) {
+    SortedMap<byte[], Long> flushedSequenceIds = serverInfo.getFlushedSequenceIdByRegion();
+    for (Entry<byte[], Long> entry : flushedSequenceIds.entrySet()) {
+      Long existingValue = flushedSequenceIdByRegion.get(entry.getKey());
+      if (existingValue != null) {
+        if (entry.getValue() < existingValue) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("RegionServer " + serverInfo +
+                " indicates a last flushed sequence id (" + entry.getValue() +
+                ") that is less than the previous last flushed sequence id (" +
+                existingValue + ") for region " +
+                Bytes.toString(entry.getKey()) + " Ignoring.");
+          }
+          continue; // Don't let smaller sequence ids override greater
+                    // sequence ids.
+        }
+      }
+      flushedSequenceIdByRegion.put(entry.getKey(), entry.getValue());
+    }
+  }
+
   /**
    * Override if you'd add messages to return to regionserver <code>hsi</code>
    * or to send an exception.
@@ -1539,7 +1566,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     HColumnDescriptor descriptor)
   throws IOException {
     alterTable(tableName, null, Arrays.asList(
-          new Pair<byte [], HColumnDescriptor>(columnName, descriptor)), null);
+        new Pair<byte[], HColumnDescriptor>(columnName, descriptor)), null);
   }
 
   @Override
@@ -2212,6 +2239,14 @@ public class HMaster extends HasThread implements HMasterInterface,
         serverManager.requestShutdown();
       }
     }
+  }
+
+  @Override
+  public long getLastFlushedSequenceId(byte[] regionName) throws IOException {
+    if (flushedSequenceIdByRegion.containsKey(regionName)) {
+      return flushedSequenceIdByRegion.get(regionName);
+    }
+    return -1;
   }
 
   String getZKWrapperName() {

@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -1436,7 +1437,6 @@ public class HRegion implements HeapSize {
       sequenceId = (wal == null)? myseqid :
         wal.startCacheFlush(this.regionInfo.getRegionName());
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
-
       for (Store s : stores.values()) {
         storeFlushers.add(s.getStoreFlusher(completeSequenceId));
       }
@@ -1538,6 +1538,13 @@ public class HRegion implements HeapSize {
       wal.completeCacheFlush(getRegionName(),
         regionInfo.getTableDesc().getName(), completeSequenceId,
         this.getRegionInfo().isMetaRegion());
+    }
+
+    // Update the last flushed sequence id for region
+    if (this.regionServer != null) {
+      this.regionServer.getServerInfo().setFlushedSequenceIdForRegion(
+          getRegionName(),
+          completeSequenceId);
     }
 
     // C. Finally notify anyone waiting on memstore to clear:

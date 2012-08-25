@@ -187,6 +187,8 @@ implements SortedMap<byte[],V>, Configurable, Writable, CodeToClassAndBack{
       Object value = e.getValue();
       if (value instanceof byte []) {
         Bytes.writeByteArray(out, (byte [])value);
+      } else if (value instanceof Long) {
+        out.writeLong((Long)value);
       } else {
         ((Writable)value).write(out);
       }
@@ -209,6 +211,9 @@ implements SortedMap<byte[],V>, Configurable, Writable, CodeToClassAndBack{
       if (clazz.equals(byte [].class)) {
         byte [] bytes = Bytes.readByteArray(in);
         value = (V)bytes;
+      } else if (clazz.equals(Long.class)) {
+        Long val = in.readLong();
+        value = (V)val;
       } else {
         Writable w = (Writable)ReflectionUtils.
           newInstance(clazz, getConf());

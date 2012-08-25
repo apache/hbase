@@ -387,6 +387,7 @@ public class ServerManager {
       // will send us one of these messages after it gets MSG_REGIONSERVER_STOP
       return new HMsg [] {HMsg.REGIONSERVER_STOP};
     }
+    this.master.updateLastFlushedSequenceIds(info);
     return processRegionServerAllsWell(info, mostLoadedRegions, msgs);
   }
 

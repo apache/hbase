@@ -138,10 +138,13 @@ public class TestSerialization extends HBaseTestCase {
    */
   public void testServerInfo() throws Exception {
     HServerInfo hsi = new HServerInfo(new HServerAddress("0.0.0.0:123"), -1, "default name");
+    byte[] region = Bytes.toBytes("region");
+    hsi.setFlushedSequenceIdForRegion(region, 0xfaceb);
     byte [] b = Writables.getBytes(hsi);
     HServerInfo deserializedHsi =
       (HServerInfo)Writables.getWritable(b, new HServerInfo());
     assertTrue(hsi.equals(deserializedHsi));
+    assertEquals(hsi.getFlushedSequenceIdForRegion(region), 0xfaceb);
   }
 
   public void testPut() throws Exception{

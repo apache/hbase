@@ -725,7 +725,7 @@ public class TestHLogSplit {
     FileStatus logfile = fs.listStatus(hlogDir)[0];
     fs.initialize(fs.getUri(), conf);
     HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
-        reporter, logCloseThreadPool);
+        reporter, logCloseThreadPool, null);
     HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
         logfile.getPath().toString(), conf);
 
@@ -751,7 +751,7 @@ public class TestHLogSplit {
     fs.delete(regiondir, true);
 
     HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
-        reporter, logCloseThreadPool);
+        reporter, logCloseThreadPool, null);
     HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
         logfile.getPath().toString(), conf);
     // This test passes if there are no exceptions when
@@ -769,7 +769,7 @@ public class TestHLogSplit {
     fs.initialize(fs.getUri(), conf);
 
     HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
-        reporter, logCloseThreadPool);
+        reporter, logCloseThreadPool, null);
     HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
         logfile.getPath().toString(), conf);
     Path tdir = HTableDescriptor.getTableDir(hbaseDir, TABLE_NAME);
@@ -787,7 +787,7 @@ public class TestHLogSplit {
     fs.initialize(fs.getUri(), conf);
 
     HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
-        reporter, logCloseThreadPool);
+        reporter, logCloseThreadPool, null);
     HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
         logfile.getPath().toString(), conf);
     for (String region : regions) {
@@ -807,7 +807,7 @@ public class TestHLogSplit {
 
     fs.initialize(fs.getUri(), conf);
     HLogSplitter.splitLogFileToTemp(hbaseDir, "tmpdir", logfile, fs, conf,
-        reporter, logCloseThreadPool);
+        reporter, logCloseThreadPool, null);
     HLogSplitter.moveRecoveredEditsFromTemp("tmpdir", hbaseDir, oldLogDir,
         logfile.getPath().toString(), conf);
 

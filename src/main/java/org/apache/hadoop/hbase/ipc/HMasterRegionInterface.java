@@ -61,4 +61,18 @@ public interface HMasterRegionInterface extends HBaseRPCProtocolVersion {
   public HMsg[] regionServerReport(HServerInfo info, HMsg msgs[],
     HRegionInfo mostLoadedRegions[])
   throws IOException;
+
+
+  /**
+   * Get the sequence id of the last MemStore entry flushed to an
+   * HFile for a specified region. Used by the region server to speed up
+   * log splitting
+   *
+   * @param regionName
+   * @return The last HLog sequence id flushed from MemStore to HFile for
+   *         the region
+   * @throws IOException
+   */
+  public long getLastFlushedSequenceId(byte[] regionName)
+  throws IOException;
 }
