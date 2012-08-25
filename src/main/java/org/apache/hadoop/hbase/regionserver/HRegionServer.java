@@ -2086,7 +2086,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
     }
     boolean result = checkAndMutate(regionName, row, family, qualifier,
-      CompareOp.EQUAL, new BinaryComparator(value), put,
+        CompareOp.EQUAL, comparator, put,
       lock);
     if (region.getCoprocessorHost() != null) {
       result = region.getCoprocessorHost().postCheckAndPut(row, family,
