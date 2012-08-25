@@ -778,13 +778,13 @@ public class HConnectionManager {
         // The root region is always enabled
         return online;
       }
-      getZooKeeperWatcher();
+      ZooKeeperWatcher zkw = getZooKeeperWatcher();
       String tableNameStr = Bytes.toString(tableName);
       try {
         if (online) {
-          return ZKTable.isEnabledTable(this.zooKeeper, tableNameStr);
+          return ZKTable.isEnabledTable(zkw, tableNameStr);
         }
-        return ZKTable.isDisabledTable(this.zooKeeper, tableNameStr);
+        return ZKTable.isDisabledTable(zkw, tableNameStr);
       } catch (KeeperException e) {
         throw new IOException("Enable/Disable failed", e);
       }
@@ -1689,11 +1689,11 @@ public class HConnectionManager {
 
     public int getCurrentNrHRS() throws IOException {
       try {
-        getZooKeeperWatcher();
+        ZooKeeperWatcher zkw = getZooKeeperWatcher();
         // We go to zk rather than to master to get count of regions to avoid
         // HTable having a Master dependency.  See HBase-2828
-        return ZKUtil.getNumberOfChildren(this.zooKeeper,
-            this.zooKeeper.rsZNode);
+        return ZKUtil.getNumberOfChildren(zkw,
+            zkw.rsZNode);
       } catch (KeeperException ke) {
         throw new IOException("Unexpected ZooKeeper exception", ke);
       }
