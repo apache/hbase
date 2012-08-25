@@ -32,12 +32,10 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -55,7 +53,6 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Text;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -1018,136 +1015,3 @@ public class FSUtils {
 
 }
 
-/**
- * Thread to be used for
- */
-class FSRegionScanner implements Runnable {
-  static private final Log LOG = LogFactory.getLog(FSRegionScanner.class);
-
-  private Path regionPath;
-
-  /**
-   * The file system used
-   */
-  private FileSystem fs;
-
-  /**
-   * Maps each region to the RS with highest locality for that region.
-   */
-  private MapWritable regionToBestLocalityRSMapping;
-
-  /**
-   * Maps region encoded names to maps of hostnames to fractional locality of
-   * that region on that host.
-   */
-  private Map<String, Map<String, Float>> regionDegreeLocalityMapping;
-
-  FSRegionScanner(FileSystem fs, Path regionPath,
-      MapWritable regionToBestLocalityRSMapping,
-      Map<String, Map<String, Float>> regionDegreeLocalityMapping) {
-    this.fs = fs;
-    this.regionPath = regionPath;
-    this.regionToBestLocalityRSMapping = regionToBestLocalityRSMapping;
-    this.regionDegreeLocalityMapping = regionDegreeLocalityMapping;
-  }
-
-  @Override
-  public void run() {
-    try {
-      // empty the map for each region
-      Map<String, AtomicInteger> blockCountMap = new HashMap<String, AtomicInteger>();
-
-      //get table name
-      String tableName = regionPath.getParent().getName();
-      int totalBlkCount = 0;
-
-      // ignore null
-      FileStatus[] cfList = fs.listStatus(regionPath);
-      if (null == cfList) {
-        return;
-      }
-
-      // for each cf, get all the blocks information
-      for (FileStatus cfStatus : cfList) {
-        if (!cfStatus.isDir()) {
-          // skip because this is not a CF directory
-          continue;
-        }
-        if (cfStatus.getPath().getName().startsWith(".")) {
-          continue;
-        }
-        FileStatus[] storeFileLists = fs.listStatus(cfStatus.getPath());
-        if (null == storeFileLists) {
-          continue;
-        }
-
-        for (FileStatus storeFile : storeFileLists) {
-          BlockLocation[] blkLocations =
-            fs.getFileBlockLocations(storeFile, 0, storeFile.getLen());
-          if (null == blkLocations) {
-            continue;
-          }
-
-          totalBlkCount += blkLocations.length;
-          for(BlockLocation blk: blkLocations) {
-            for (String host: blk.getHosts()) {
-              AtomicInteger count = blockCountMap.get(host);
-              if (count == null) {
-                count = new AtomicInteger(0);
-                blockCountMap.put(host, count);
-              }
-             count.incrementAndGet();
-            }
-          }
-        }
-      }
-
-      if (regionToBestLocalityRSMapping != null) {
-        int largestBlkCount = 0;
-        String hostToRun = null;
-        for (Map.Entry<String, AtomicInteger> entry : blockCountMap.entrySet()) {
-          String host = entry.getKey();
-
-          int tmp = entry.getValue().get();
-          if (tmp > largestBlkCount) {
-            largestBlkCount = tmp;
-            hostToRun = host;
-          }
-        }
-
-        // empty regions could make this null
-        if (null == hostToRun) {
-          return;
-        }
-
-        if (hostToRun.endsWith(".")) {
-          hostToRun = hostToRun.substring(0, hostToRun.length()-1);
-        }
-        String name = tableName + ":" + regionPath.getName();
-        synchronized (regionToBestLocalityRSMapping) {
-          regionToBestLocalityRSMapping.put(new Text(name), new Text(hostToRun));
-        }
-      }
-
-      if (regionDegreeLocalityMapping != null && totalBlkCount > 0) {
-        Map<String, Float> hostLocalityMap = new HashMap<String, Float>();
-        for (Map.Entry<String, AtomicInteger> entry : blockCountMap.entrySet()) {
-          String host = entry.getKey();
-          if (host.endsWith(".")) {
-            host = host.substring(0, host.length() - 1);
-          }
-          // Locality is fraction of blocks local to this host.
-          float locality = ((float)entry.getValue().get()) / totalBlkCount;
-          hostLocalityMap.put(host, locality);
-        }
-        // Put the locality map into the result map, keyed by the encoded name
-        // of the region.
-        regionDegreeLocalityMapping.put(regionPath.getName(), hostLocalityMap);
-      }
-    } catch (IOException e) {
-      LOG.warn("Problem scanning file system", e);
-    } catch (RuntimeException e) {
-      LOG.warn("Problem scanning file system", e);
-    }
-  }
-}
