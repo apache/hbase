@@ -75,7 +75,8 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
   private static MetricsRegistry copyMinusHBaseMetrics(final MetricsRegistry mr) {
     MetricsRegistry copy = new MetricsRegistry();
     for (MetricsBase metric : mr.getMetricsList()) {
-      if (metric instanceof MetricsRate || metric instanceof MetricsString) {
+      if (metric instanceof MetricsRate || metric instanceof MetricsString ||
+          metric instanceof MetricsHistogram || metric instanceof ExactCounterMetric) {
         continue;
       }
       copy.add(metric.getName(), metric);
