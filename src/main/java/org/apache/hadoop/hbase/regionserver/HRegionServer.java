@@ -1612,6 +1612,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private ServerName getMaster() {
     ServerName masterServerName = null;
     HMasterRegionInterface master = null;
+    InetSocketAddress masterIsa = null;
     while (keepLooping() && master == null) {
       masterServerName = this.masterAddressManager.getMasterAddress();
       if (masterServerName == null) {
@@ -1625,7 +1626,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         continue;
       }
 
-      InetSocketAddress isa =
+      masterIsa =
         new InetSocketAddress(masterServerName.getHostname(), masterServerName.getPort());
 
       LOG.info("Attempting connect to Master server at " +
@@ -1635,7 +1636,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         // should retry indefinitely.
         master = (HMasterRegionInterface) HBaseRPC.waitForProxy(
             HMasterRegionInterface.class, HMasterRegionInterface.VERSION,
-            isa, this.conf, -1,
+            masterIsa, this.conf, -1,
             this.rpcTimeout, this.rpcTimeout);
       } catch (IOException e) {
         e = e instanceof RemoteException ?
@@ -1648,7 +1649,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         sleeper.sleep();
       }
     }
-    LOG.info("Connected to master at " + isa);
+    LOG.info("Connected to master at " + masterIsa);
     this.hbaseMaster = master;
     return masterServerName;
   }
@@ -2819,7 +2820,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (r != null) {
       this.metrics.regionAccessCounter.update(encodedRegionName);
     }
-    
+
     return r;
   }
 
