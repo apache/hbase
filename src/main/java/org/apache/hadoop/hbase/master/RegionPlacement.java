@@ -20,6 +20,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -581,7 +582,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
    * @param plan the assignments plan to be updated into .META.
    * @throws IOException if cannot update assignment plan in .META.
    */
-  private void updateAssignmentPlanToMeta(AssignmentPlan plan)
+  public void updateAssignmentPlanToMeta(AssignmentPlan plan)
   throws IOException {
     try {
       LOG.info("Start to update the META with the new assignment plan");
@@ -825,17 +826,22 @@ public class RegionPlacement implements RegionPlacementPolicy{
       InterruptedException {
     // Set all the options
     Options opt = new Options();
-    opt.addOption("w", "write", false,
-        "write assignments to META and update RegionServers");
+    opt.addOption("w", "write", false, "write the assignments to META only");
+    opt.addOption("u", "update", false, 
+        "update the assignments to META and RegionServers together");
     opt.addOption("n", "dry-run", false, "do not write assignments to META");
     opt.addOption("v", "verify", false, "verify current assignments against META");
     opt.addOption("p", "print", false, "print the current assignment plan in META");
     opt.addOption("h", "help", false, "print usage");
     opt.addOption("d", "verification-details", false,
         "print the details of verification report");
-
-    opt.addOption("update", false,
-      "Update the favored nodes for a single region," +
+    
+    opt.addOption("zk", true, "to set the zookeeper quorum");
+    opt.addOption("fs", true, "to set HDFS");
+    opt.addOption("hbase_root", true, "to set hbase_root directory");
+    
+    opt.addOption("overwrite", false,
+      "overwrite the favored nodes for a single region," +
       "for example: -update -r regionName -f server1:port,server2:port,server3:port");
     opt.addOption("r", true, "The region name that needs to be updated");
     opt.addOption("f", true, "The new favored nodes");
@@ -843,9 +849,9 @@ public class RegionPlacement implements RegionPlacementPolicy{
     opt.addOption("tables", true,
         "The list of table names splitted by ',' ;" +
         "For example: -tables: t1,t2,...,tn");
-    opt.addOption("l", "locality", true, "enfoce the maxium locality");
+    opt.addOption("l", "locality", true, "enforce the maxium locality");
     opt.addOption("m", "min-move", true, "enforce minium assignment move");
-
+    
     try {
       // Set the log4j
       Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);
@@ -875,6 +881,21 @@ public class RegionPlacement implements RegionPlacementPolicy{
         enforceMinAssignmentMove = false;
       }
 
+      if (cmd.hasOption("zk")) {
+        conf.set(HConstants.ZOOKEEPER_QUORUM, cmd.getOptionValue("zk"));
+        LOG.info("Setting the zk quorum: " + conf.get(HConstants.ZOOKEEPER_QUORUM));
+      }
+      
+      if (cmd.hasOption("fs")) {
+        conf.set(FileSystem.FS_DEFAULT_NAME_KEY, cmd.getOptionValue("fs"));
+        LOG.info("Setting the HDFS: " + conf.get(FileSystem.FS_DEFAULT_NAME_KEY));
+      }
+      
+      if (cmd.hasOption("hbase_root")) {
+        conf.set(HConstants.HBASE_DIR, cmd.getOptionValue("hbase_root"));
+        LOG.info("Setting the hbase root directory: " + conf.get(HConstants.HBASE_DIR));
+      }
+      
       // Create the region placement obj
       RegionPlacement rp = new RegionPlacement(conf, enforceLocality,
           enforceMinAssignmentMove);
@@ -900,15 +921,21 @@ public class RegionPlacement implements RegionPlacementPolicy{
       } else if (cmd.hasOption("w") || cmd.hasOption("write")) {
         // Generate the new assignment plan
         AssignmentPlan plan = rp.getNewAssignmentPlan();
+        // Print the new assignment plan
+        RegionPlacement.printAssignmentPlan(plan);
+        // Write the new assignment plan to META
+        rp.updateAssignmentPlanToMeta(plan);
+      }  else if (cmd.hasOption("u") || cmd.hasOption("update")) {
+        // Generate the new assignment plan
+        AssignmentPlan plan = rp.getNewAssignmentPlan();
+        // Print the new assignment plan
         RegionPlacement.printAssignmentPlan(plan);
         // Update the assignment to META and Region Servers
-        // TODO: The client may update any customized plan to META/RegionServers
         rp.updateAssignmentPlan(plan);
       } else if (cmd.hasOption("p") || cmd.hasOption("print")) {
         AssignmentPlan plan = rp.getExistingAssignmentPlan();
         RegionPlacement.printAssignmentPlan(plan);
-      } else if (cmd.hasOption("update")) {
-
+      } else if (cmd.hasOption("overwrite")) {
         if (!cmd.hasOption("f") || !cmd.hasOption("r")) {
           throw new IllegalArgumentException("Please specify: " +
 			" -update -r regionName -f server1:port,server2:port,server3:port");
@@ -943,8 +970,9 @@ public class RegionPlacement implements RegionPlacementPolicy{
 
   private static void printHelp(Options opt) {
     new HelpFormatter().printHelp(
-        "RegionPlacement < -w | -n | -v | -t | -h | -update -r regionName -f favoredNodes >" +
-        " [-l false] [-m false] [-d] [-tables t1,t2,...tn]", opt);
+        "RegionPlacement < -w | -u | -n | -v | -t | -h | -overwrite -r regionName -f favoredNodes >" +
+        " [-l false] [-m false] [-d] [-tables t1,t2,...tn] [-zk zk1,zk2,zk3]" +
+        " [-fs hdfs://a.b.c.d:9000] [-hbase_root /HBASE]", opt);
   }
 
   /**
