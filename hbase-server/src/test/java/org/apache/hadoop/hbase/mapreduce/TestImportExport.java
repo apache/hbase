@@ -57,6 +57,7 @@ public class TestImportExport {
   private static final byte[] FAMILYB = Bytes.toBytes(FAMILYB_STRING);
   private static final byte[] QUAL = Bytes.toBytes("q");
   private static final String OUTPUT_DIR = "outputdir";
+  private static final String EXPORT_BATCHING = "100";
 
   private static MiniHBaseCluster cluster;
   private static long now = System.currentTimeMillis();
@@ -102,6 +103,7 @@ public class TestImportExport {
     String[] args = new String[] {
         EXPORT_TABLE,
         OUTPUT_DIR,
+	EXPORT_BATCHING,
         "1000"
     };
 
@@ -191,6 +193,7 @@ public class TestImportExport {
         "-D" + Export.RAW_SCAN + "=true",
         EXPORT_TABLE,
         OUTPUT_DIR,
+	EXPORT_BATCHING,
         "1000"
     };
 
