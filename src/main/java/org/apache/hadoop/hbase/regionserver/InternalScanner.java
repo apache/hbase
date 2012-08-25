@@ -47,6 +47,15 @@ public interface InternalScanner extends Closeable {
    * @throws IOException e
    */
   public boolean next(List<KeyValue> results) throws IOException;
+  
+  /**
+   * Grab the next row's worth of values.
+   * @param results return output array
+   * @param metric the metric name
+   * @return true if more rows exist after this one, false if scanner is done
+   * @throws IOException e
+   */
+  public boolean next(List<KeyValue> results, String metric) throws IOException;
 
   /**
    * Grab the next row's worth of values with a limit on the number of values
@@ -57,6 +66,17 @@ public interface InternalScanner extends Closeable {
    * @throws IOException e
    */
   public boolean next(List<KeyValue> result, int limit) throws IOException;
+  
+  /**
+   * Grab the next row's worth of values with a limit on the number of values
+   * to return.
+   * @param result return output array
+   * @param limit limit on row count to get
+   * @param metric the metric name
+   * @return true if more rows exist after this one, false if scanner is done
+   * @throws IOException e
+   */
+  public boolean next(List<KeyValue> result, int limit, String metric) throws IOException;
 
   /**
    * Closes the scanner and releases any resources it has allocated

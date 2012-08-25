@@ -176,6 +176,9 @@ public class SchemaMetrics {
   /** Use for readability when obtaining non-compaction counters */
   public static final boolean NO_COMPACTION = false;
 
+  public static final String METRIC_GETSIZE = "getsize";
+  public static final String METRIC_NEXTSIZE = "nextsize";
+
   /**
    * A special schema metric value that means "all tables aggregated" or
    * "all column families aggregated" when used as a table name or a column
