@@ -261,7 +261,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   private RegionServerMetrics metrics;
 
-  @SuppressWarnings("unused")
   private RegionServerDynamicMetrics dynamicMetrics;
 
   // Compactions
@@ -308,7 +307,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   // Instance of the hbase executor service.
   private ExecutorService service;
-  @SuppressWarnings("unused")
 
   // Replication services. If no replication, this handler will be null.
   private ReplicationSourceService replicationSourceHandler;
@@ -2390,7 +2388,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           && currentScanResultSize < maxScannerResultSize; i++) {
         requestCount.incrementAndGet();
         // Collect values to be returned here
-        boolean moreRows = s.next(values);
+        boolean moreRows = s.next(values, SchemaMetrics.METRIC_NEXTSIZE);
         if (!values.isEmpty()) {
           for (KeyValue kv : values) {
             currentScanResultSize += kv.heapSize();

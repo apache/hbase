@@ -50,8 +50,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
   private KeyValueHeap heap;
   private boolean cacheBlocks;
 
-  private String metricNameGetSize;
 
+  private String metricNamePrefix;
   // Used to indicate that the scanner has closed (see HBASE-1107)
   // Doesnt need to be volatile because it's always accessed via synchronized methods
   private boolean closing = false;
@@ -198,7 +198,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
   /**
    * Method used internally to initialize metric names throughout the
    * constructors.
-   * 
+   *
    * To be called after the store variable has been initialized!
    */
   private void initializeMetricNames() {
@@ -208,8 +208,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
       tableName = store.getTableName();
       family = Bytes.toString(store.getFamily().getName());
     }
-    metricNameGetSize = SchemaMetrics.generateSchemaMetricsPrefix(
-        tableName, family) + "getsize";
+    this.metricNamePrefix =
+        SchemaMetrics.generateSchemaMetricsPrefix(tableName, family);
   }
 
   /**
@@ -308,6 +308,18 @@ public class StoreScanner extends NonLazyKeyValueScanner
    */
   @Override
   public synchronized boolean next(List<KeyValue> outResult, int limit) throws IOException {
+    return next(outResult, limit, null);
+  }
+
+  /**
+   * Get the next row of values from this Store.
+   * @param outResult
+   * @param limit
+   * @return true if there are more rows, false if scanner is done
+   */
+  @Override
+  public synchronized boolean next(List<KeyValue> outResult, int limit,
+      String metric) throws IOException {
 
     if (checkReseek()) {
       return true;
@@ -420,7 +432,10 @@ public class StoreScanner extends NonLazyKeyValueScanner
         }
       }
     } finally {
-      RegionMetricsStorage.incrNumericMetric(metricNameGetSize, cumulativeMetric);
+      if (cumulativeMetric > 0 && metric != null) {
+        RegionMetricsStorage.incrNumericMetric(this.metricNamePrefix + metric,
+            cumulativeMetric);
+      }
     }
 
     if (!results.isEmpty()) {
@@ -436,7 +451,13 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
   @Override
   public synchronized boolean next(List<KeyValue> outResult) throws IOException {
-    return next(outResult, -1);
+    return next(outResult, -1, null);
+  }
+
+  @Override
+  public synchronized boolean next(List<KeyValue> outResult, String metric)
+      throws IOException {
+    return next(outResult, -1, metric);
   }
 
   // Implementation of ChangedReadersObserver
