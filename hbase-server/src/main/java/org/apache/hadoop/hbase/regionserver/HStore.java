@@ -1698,7 +1698,6 @@ public class HStore extends SchemaConfigured implements Store {
     }
     // TODO: Cache these keys rather than make each time?
     byte [] fk = r.getFirstKey();
-    if (fk == null) return;
     KeyValue firstKV = KeyValue.createKeyValueFromKey(fk, 0, fk.length);
     byte [] lk = r.getLastKey();
     KeyValue lastKV = KeyValue.createKeyValueFromKey(lk, 0, lk.length);
@@ -1712,7 +1711,7 @@ public class HStore extends SchemaConfigured implements Store {
       firstOnRow = new KeyValue(lastKV.getRow(), HConstants.LATEST_TIMESTAMP);
     }
     // Get a scanner that caches blocks and that uses pread.
-    HFileScanner scanner = r.getScanner(true, true, false);
+    HFileScanner scanner = r.getHFileReader().getScanner(true, true, false);
     // Seek scanner.  If can't seek it, return.
     if (!seekToScanner(scanner, firstOnRow, firstKV)) return;
     // If we found candidate on firstOnRow, just return. THIS WILL NEVER HAPPEN!
