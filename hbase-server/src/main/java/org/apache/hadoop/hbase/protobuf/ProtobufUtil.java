@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
@@ -693,16 +694,17 @@ public final class ProtobufUtil {
       scan.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
     if (proto.getColumnCount() > 0) {
+      TreeMap<byte [], NavigableSet<byte[]>> familyMap =
+        new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
       for (Column column: proto.getColumnList()) {
         byte[] family = column.getFamily().toByteArray();
-        if (column.getQualifierCount() > 0) {
-          for (ByteString qualifier: column.getQualifierList()) {
-            scan.addColumn(family, qualifier.toByteArray());
-          }
-        } else {
-          scan.addFamily(family);
+        TreeSet<byte []> set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+        for (ByteString qualifier: column.getQualifierList()) {
+          set.add(qualifier.toByteArray());
         }
+        familyMap.put(family, set);
       }
+      scan.setFamilyMap(familyMap);
     }
     return scan;
   }

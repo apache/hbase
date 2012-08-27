@@ -85,6 +85,8 @@ import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -375,6 +377,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
         code = CLASS_TO_CODE.get(Message.class);
       } else if (Serializable.class.isAssignableFrom(c)){
         code = CLASS_TO_CODE.get(Serializable.class);
+      } else if (Scan.class.isAssignableFrom(c)) {
+        code = CLASS_TO_CODE.get(Scan.class);
       }
     }
     return code;
@@ -543,6 +547,11 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
         if(bos!=null) bos.close();
         if(oos!=null) oos.close();
       }
+    } else if (Scan.class.isAssignableFrom(declClass)) {
+      Scan scan = (Scan)instanceObj;
+      byte [] scanBytes = ProtobufUtil.toScan(scan).toByteArray();
+      out.writeInt(scanBytes.length);
+      out.write(scanBytes);
     } else {
       throw new IOException("Can't write: "+instanceObj+" as "+declClass);
     }
@@ -668,6 +677,12 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
         LOG.error("Can't find class " + className, e);
         throw new IOException("Can't find class " + className, e);
       }
+    } else if (Scan.class.isAssignableFrom(declaredClass)) {
+      int length = in.readInt();
+      byte [] scanBytes = new byte[length];
+      in.readFully(scanBytes);
+      ClientProtos.Scan.Builder scanProto = ClientProtos.Scan.newBuilder();
+      instance = ProtobufUtil.toScan(scanProto.mergeFrom(scanBytes).build());
     } else {                                      // Writable or Serializable
       Class instanceClass = null;
       int b = (byte)WritableUtils.readVInt(in);
