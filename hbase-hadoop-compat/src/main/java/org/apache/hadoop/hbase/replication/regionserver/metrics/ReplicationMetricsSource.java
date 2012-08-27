@@ -36,6 +36,11 @@ public interface ReplicationMetricsSource extends BaseMetricsSource {
   public static final String METRICS_CONTEXT = "replicationmetrics";
 
   /**
+   * The name of the metrics context that metrics will be under.
+   */
+  public static final String METRICS_JMX_CONTEXT = "ReplicationMetrics";
+
+  /**
    * A description.
    */
   public static final String METRICS_DESCRIPTION = "Metrics about HBase replication";

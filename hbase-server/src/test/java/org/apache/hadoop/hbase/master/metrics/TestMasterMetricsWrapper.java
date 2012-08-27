@@ -15,18 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
-
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+package org.apache.hadoop.hbase.master.metrics;
 
 import junit.framework.Assert;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.ServerLoad;
-import org.apache.hadoop.hbase.master.metrics.MXBeanImpl;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.metrics.MasterMetricsWrapperImpl;
 import org.apache.hadoop.hbase.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -34,7 +29,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
-public class TestMXBean {
+public class TestMasterMetricsWrapper {
 
   private static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
@@ -52,7 +47,7 @@ public class TestMXBean {
   @Test
   public void testInfo() {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    MXBeanImpl info = MXBeanImpl.init(master);
+    MasterMetricsWrapperImpl info = new MasterMetricsWrapperImpl(master);
     Assert.assertEquals(master.getAverageLoad(), info.getAverageLoad());
     Assert.assertEquals(master.getClusterId(), info.getClusterId());
     Assert.assertEquals(master.getMasterActiveTime(),
@@ -72,7 +67,7 @@ public class TestMXBean {
     TEST_UTIL.getMiniHBaseCluster().stopRegionServer(3, false);
     TEST_UTIL.getMiniHBaseCluster().waitOnRegionServer(3);
     Assert.assertTrue(info.getRegionServers() == 3);
-    Assert.assertTrue(info.getDeadRegionServers().length == 1);
+    Assert.assertTrue(info.getDeadRegionServers() == 1);
 
   }
 

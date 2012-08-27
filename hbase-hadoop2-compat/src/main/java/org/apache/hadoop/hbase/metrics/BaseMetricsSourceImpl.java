@@ -34,13 +34,25 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
   private static boolean defaultMetricsSystemInited = false;
   public static final String HBASE_METRICS_SYSTEM_NAME = "hbase";
 
-  final DynamicMetricsRegistry metricsRegistry;
+  protected final DynamicMetricsRegistry metricsRegistry;
+  protected final String metricsName;
+  protected final String metricsDescription;
+  protected final String metricsContext;
+  protected final String metricsJmxContext;
 
   private JvmMetrics jvmMetricsSource;
 
-  public BaseMetricsSourceImpl(String metricsName,
-                               String metricsDescription,
-                               String metricsContext) {
+  public BaseMetricsSourceImpl(
+      String metricsName,
+      String metricsDescription,
+      String metricsContext,
+      String metricsJmxContext) {
+
+    this.metricsName = metricsName;
+    this.metricsDescription = metricsDescription;
+    this.metricsContext = metricsContext;
+    this.metricsJmxContext = metricsJmxContext;
+
     metricsRegistry = new DynamicMetricsRegistry(metricsName).setContext(metricsContext);
 
     if (!defaultMetricsSystemInited) {
@@ -49,7 +61,8 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
       DefaultMetricsSystem.initialize(HBASE_METRICS_SYSTEM_NAME);
       jvmMetricsSource = JvmMetrics.create(metricsName, "", DefaultMetricsSystem.instance());
     }
-    DefaultMetricsSystem.instance().register(metricsContext, metricsDescription, this);
+
+    DefaultMetricsSystem.instance().register(metricsJmxContext, metricsDescription, this);
 
   }
 
@@ -116,11 +129,6 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
     metricsRegistry.removeMetric(key);
   }
 
-  @Override
-  public void getMetrics(MetricsCollector metricsCollector, boolean all) {
-    metricsRegistry.snapshot(metricsCollector.addRecord(metricsRegistry.info()), all);
-  }
-
   /**
    * Get a MetricMutableGaugeLong from the storage.  If it is not there atomically put it.
    *
@@ -141,5 +149,10 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    */
   protected MutableCounterLong getLongCounter(String counterName, long potentialStartingValue) {
     return metricsRegistry.getLongCounter(counterName, potentialStartingValue);
+  }
+
+  @Override
+  public void getMetrics(MetricsCollector metricsCollector, boolean all) {
+    metricsRegistry.snapshot(metricsCollector.addRecord(metricsRegistry.info()), all);
   }
 }

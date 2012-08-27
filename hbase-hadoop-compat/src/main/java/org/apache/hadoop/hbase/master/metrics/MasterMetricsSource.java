@@ -31,14 +31,40 @@ public interface MasterMetricsSource extends BaseMetricsSource {
   public static final String METRICS_NAME = "HMaster";
 
   /**
-   * The name of the metrics context that metrics will be under.
+   * The context metrics will be under.
    */
-  public static final String METRICS_CONTEXT = "HMaster,sub=Dynamic";
+  public static final String METRICS_CONTEXT = "hmaster";
+
+  /**
+   * The name of the metrics context that metrics will be under in jmx
+   */
+  public static final String METRICS_JMX_CONTEXT = "HMaster";
 
   /**
    * Description
    */
   public static final String METRICS_DESCRIPTION = "Metrics about HBase master server";
+
+  // Strings used for exporting to metrics system.
+  public static final String MASTER_ACTIVE_TIME_NAME = "masterActiveTime";
+  public static final String MASTER_START_TIME_NAME = "masterStartTime";
+  public static final String AVERAGE_LOAD_NAME = "averageLoad";
+  public static final String NUM_REGION_SERVERS_NAME = "numRegionServers";
+  public static final String NUM_DEAD_REGION_SERVERS_NAME = "numDeadRegionServers";
+  public static final String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
+  public static final String SERVER_NAME_NAME = "serverName";
+  public static final String CLUSTER_ID_NAME = "clusterId";
+  public static final String IS_ACTIVE_MASTER_NAME = "isActiveMaster";
+  public static final String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
+  public static final String MASTER_START_TIME_DESC = "Master Start Time";
+  public static final String AVERAGE_LOAD_DESC = "AverageLoad";
+  public static final String NUMBER_OF_REGION_SERVERS_DESC = "Number of RegionServers";
+  public static final String NUMBER_OF_DEAD_REGION_SERVERS_DESC = "Number of dead RegionServers";
+  public static final String ZOOKEEPER_QUORUM_DESC = "Zookeeper Quorum";
+  public static final String SERVER_NAME_DESC = "Server Name";
+  public static final String CLUSTER_ID_DESC = "Cluster Id";
+  public static final String IS_ACTIVE_MASTER_DESC = "Is Active Master";
+
 
   /**
    * Increment the number of requests the cluster has seen.

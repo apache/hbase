@@ -15,39 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.master.metrics;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 /**
- * This is the JMX management interface for Hbase master information
+ * This is the interface that will expose information to hadoop1/hadoop2 implementations of the
+ * MasterMetricsSource.
  */
-@InterfaceStability.Evolving
-@InterfaceAudience.Private
-public interface MXBean {
-
-  /**
-   * Required for MXBean implementation
-   */
-  public static interface RegionsInTransitionInfo {
-    /**
-     * Name of region in transition
-     */
-    public String getRegionName();
-    /**
-     * Current transition state
-     */
-    public String getRegionState();
-    /**
-     * Get Region Server name
-     */
-    public String getRegionServerName();
-    /**
-     * Get last update time
-     */
-    public long getLastUpdateTime();
-  }
+public interface MasterMetricsWrapper {
 
   /**
    * Get ServerName
@@ -106,5 +81,5 @@ public interface MXBean {
    * Get the dead region servers
    * @return Dead region Servers
    */
-  public String[] getDeadRegionServers();
+  public int getDeadRegionServers();
 }

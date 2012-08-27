@@ -28,12 +28,15 @@ import org.apache.hadoop.metrics2.MetricsSource;
 public class ReplicationMetricsSourceImpl extends BaseMetricsSourceImpl implements
     ReplicationMetricsSource {
 
+
   public ReplicationMetricsSourceImpl() {
-    this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT);
+    this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
   }
 
   ReplicationMetricsSourceImpl(String metricsName,
-                               String metricsDescription, String metricsContext) {
-    super(metricsName, metricsDescription, metricsContext);
+                               String metricsDescription,
+                               String metricsContext,
+                               String metricsJmxContext) {
+    super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
   }
 }

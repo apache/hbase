@@ -31,10 +31,11 @@ public class MasterMetricsSourceImplTest {
 
   @Test
   public void testGetInstance() throws Exception {
-    MasterMetricsSource rms = CompatibilitySingletonFactory
-        .getInstance(MasterMetricsSource.class);
-    assertTrue(rms instanceof MasterMetricsSourceImpl);
-    assertSame(rms, CompatibilitySingletonFactory.getInstance(MasterMetricsSource.class));
+    MasterMetricsSourceFactory masterMetricsSourceFactory = CompatibilitySingletonFactory
+        .getInstance(MasterMetricsSourceFactory.class);
+    MasterMetricsSource masterMetricsSource = masterMetricsSourceFactory.create(null);
+    assertTrue(masterMetricsSource instanceof MasterMetricsSourceImpl);
+    assertSame(masterMetricsSourceFactory, CompatibilitySingletonFactory.getInstance(MasterMetricsSourceFactory.class));
   }
 
 }

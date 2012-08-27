@@ -17,33 +17,16 @@
  */
 package org.apache.hadoop.hbase.master.metrics;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import org.apache.hadoop.hbase.ServerLoad;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.HMaster;
 
 /**
  * Impl for exposing HMaster Information through JMX
  */
-public class MXBeanImpl implements MXBean {
+public class MasterMetricsWrapperImpl implements MasterMetricsWrapper {
 
   private final HMaster master;
 
-  private static MXBeanImpl instance = null;
-  public synchronized static MXBeanImpl init(final HMaster master) {
-    if (instance == null) {
-      instance = new MXBeanImpl(master);
-    }
-    return instance;
-  }
-
-  protected MXBeanImpl(final HMaster master) {
+  public MasterMetricsWrapperImpl(final HMaster master) {
     this.master = master;
   }
 
@@ -83,12 +66,8 @@ public class MXBeanImpl implements MXBean {
   }
 
   @Override
-  public String[] getDeadRegionServers() {
-    List<String> deadServers = new ArrayList<String>();
-    for (ServerName name : master.getServerManager().getDeadServers()) {
-      deadServers.add(name.getHostAndPort());
-    }
-    return deadServers.toArray(new String[0]);
+  public int getDeadRegionServers() {
+    return master.getServerManager().getDeadServers().size();
   }
 
   @Override

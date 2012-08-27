@@ -41,14 +41,26 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
   private static boolean defaultMetricsSystemInited = false;
   public static final String HBASE_METRICS_SYSTEM_NAME = "hbase";
 
-  final DynamicMetricsRegistry metricsRegistry;
+  protected final DynamicMetricsRegistry metricsRegistry;
 
   private JvmMetricsSource jvmMetricsSource;
+
+
+  protected final String metricsName;
+  protected final String metricsDescription;
+  protected final String metricsContext;
+  protected final String metricsJmxContext;
 
   public BaseMetricsSourceImpl(
       String metricsName,
       String metricsDescription,
-      String metricsContext) {
+      String metricsContext,
+      String metricsJmxContext) {
+
+    this.metricsName = metricsName;
+    this.metricsDescription = metricsDescription;
+    this.metricsContext = metricsContext;
+    this.metricsJmxContext = metricsJmxContext;
 
     metricsRegistry = new DynamicMetricsRegistry(metricsName).setContext(metricsContext);
 
@@ -62,7 +74,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
     }
 
     //Register this instance.
-    DefaultMetricsSystem.INSTANCE.registerSource(metricsContext, metricsDescription, this);
+    DefaultMetricsSystem.INSTANCE.registerSource(metricsJmxContext, metricsDescription, this);
   }
 
   /**

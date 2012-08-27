@@ -36,7 +36,7 @@ public class BaseMetricsSourceImplTest {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    bmsi = new BaseMetricsSourceImpl("TestName", "test description", "testcontext");
+    bmsi = new BaseMetricsSourceImpl("TestName", "test description", "testcontext", "TestContext");
   }
 
   @Test

@@ -36,8 +36,8 @@ public class MasterMetrics  {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private MasterMetricsSource masterMetricsSource;
 
-  public MasterMetrics(final String name) {
-    masterMetricsSource = CompatibilitySingletonFactory.getInstance(MasterMetricsSource.class);
+  public MasterMetrics(MasterMetricsWrapper masterWrapper) {
+    masterMetricsSource = CompatibilitySingletonFactory.getInstance(MasterMetricsSourceFactory.class).create(masterWrapper);
   }
 
   // for unit-test usage
@@ -51,7 +51,6 @@ public class MasterMetrics  {
    * @param size length of original HLogs that were split
    */
   public synchronized void addSplit(long time, long size) {
-
     //TODO use new metrics histogram
 
   }

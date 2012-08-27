@@ -16,25 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.replication.regionserver.metrics;
-
-import org.apache.hadoop.hbase.metrics.BaseMetricsSourceImpl;
+package org.apache.hadoop.hbase.master.metrics;
 
 /**
- * Hadoop1 implementation of ReplicationMetricsSource. This provides access to metrics gauges and
- * counters.
+ *  Factory to create MasterMetricsSource when given a  MasterMetricsWrapper
  */
-public class ReplicationMetricsSourceImpl extends BaseMetricsSourceImpl implements
-    ReplicationMetricsSource {
+public class MasterMetricsSourceFactoryImpl implements MasterMetricsSourceFactory {
 
-  public ReplicationMetricsSourceImpl() {
-    this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
-  }
-
-  ReplicationMetricsSourceImpl(String metricsName,
-                               String metricsDescription,
-                               String metricsContext,
-                               String metricsJmxContext) {
-    super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
+  @Override
+  public MasterMetricsSource create(MasterMetricsWrapper beanWrapper) {
+    return new MasterMetricsSourceImpl(beanWrapper);
   }
 }

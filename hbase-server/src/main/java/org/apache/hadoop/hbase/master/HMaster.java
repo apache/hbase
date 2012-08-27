@@ -49,7 +49,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -81,8 +80,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
-import org.apache.hadoop.hbase.master.metrics.MXBeanImpl;
-import org.apache.hadoop.hbase.metrics.MBeanSource;
+import org.apache.hadoop.hbase.master.metrics.MasterMetricsWrapperImpl;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
@@ -367,12 +365,14 @@ Server {
 
     this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":" + isa.getPort(), this, true);
     this.rpcServer.startThreads();
-    this.metrics = new MasterMetrics(getServerName().toString());
+
     // metrics interval: using the same property as region server.
     this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
 
     //should we check the compression codec type at master side, default true, HBASE-6370
     this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
+
+    this.metrics = new MasterMetrics( new MasterMetricsWrapperImpl(this));
   }
 
   /**
@@ -690,8 +690,6 @@ Server {
       this.balancerChore = getAndStartBalancerChore(this);
       this.catalogJanitorChore = new CatalogJanitor(this, this);
       startCatalogJanitorChore();
-     
-      registerMBean();
     }
 
     status.markComplete("Initialization successful");
@@ -2257,16 +2255,6 @@ Server {
   public static void main(String [] args) throws Exception {
 	VersionInfo.logVersion();
     new HMasterCommandLine(HMaster.class).doMain(args);
-  }
-
-  /**
-   * Register bean with platform management server
-   */
-  void registerMBean() {
-    MXBeanImpl mxBeanInfo = MXBeanImpl.init(this);
-    mxBean = CompatibilitySingletonFactory.getInstance(
-            MBeanSource.class).register("hbase", "HMaster,sub=MXBean", mxBeanInfo);
-    LOG.info("Registered HMaster MXBean");
   }
 
   public HFileCleaner getHFileCleaner() {
