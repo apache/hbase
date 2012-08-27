@@ -28,6 +28,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -100,7 +101,6 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
@@ -409,11 +409,13 @@ public class HBaseAdmin implements Abortable, Closeable {
         MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
           @Override
           public boolean processRow(Result rowResult) throws IOException {
-            HRegionInfo info = Writables.getHRegionInfoOrNull(
-              rowResult.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER));
-            //If regioninfo is null, skip this row
-            if (null == info) {
+            if (rowResult == null || rowResult.size() <= 0) {
+              return true;
+            }
+            HRegionInfo info = MetaReader.parseHRegionInfoFromCatalogResult(
+              rowResult, HConstants.REGIONINFO_QUALIFIER);
+            if (info == null) {
+              LOG.warn("No serialized HRegionInfo in " + rowResult);
               return true;
             }
             if (!(Bytes.equals(info.getTableName(), desc.getName()))) {
@@ -1228,16 +1230,15 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void flush(final byte [] tableNameOrRegionName)
   throws IOException, InterruptedException {
     CatalogTracker ct = getCatalogTracker();
-    boolean isRegionName = isRegionName(tableNameOrRegionName, ct);
     try {
-      if (isRegionName) {
-        Pair<HRegionInfo, ServerName> pair =
-          MetaReader.getRegion(ct, tableNameOrRegionName);
-        if (pair == null || pair.getSecond() == null) {
+      Pair<HRegionInfo, ServerName> regionServerPair
+        = getRegion(tableNameOrRegionName, ct);
+      if (regionServerPair != null) {
+        if (regionServerPair.getSecond() == null) {
           LOG.info("No server in .META. for " +
-            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + pair);
+            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + regionServerPair);
         } else {
-          flush(pair.getSecond(), pair.getFirst());
+          flush(regionServerPair.getSecond(), regionServerPair.getFirst());
         }
       } else {
         final String tableName = tableNameString(tableNameOrRegionName, ct);
@@ -1340,14 +1341,14 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException, InterruptedException {
     CatalogTracker ct = getCatalogTracker();
     try {
-      if (isRegionName(tableNameOrRegionName, ct)) {
-        Pair<HRegionInfo, ServerName> pair =
-          MetaReader.getRegion(ct, tableNameOrRegionName);
-        if (pair == null || pair.getSecond() == null) {
+      Pair<HRegionInfo, ServerName> regionServerPair
+        = getRegion(tableNameOrRegionName, ct);
+      if (regionServerPair != null) {
+        if (regionServerPair.getSecond() == null) {
           LOG.info("No server in .META. for " +
-            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + pair);
+            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + regionServerPair);
         } else {
-          compact(pair.getSecond(), pair.getFirst(), major);
+          compact(regionServerPair.getSecond(), regionServerPair.getFirst(), major);
         }
       } else {
         final String tableName = tableNameString(tableNameOrRegionName, ct);
@@ -1622,15 +1623,14 @@ public class HBaseAdmin implements Abortable, Closeable {
       final byte [] splitPoint) throws IOException, InterruptedException {
     CatalogTracker ct = getCatalogTracker();
     try {
-      if (isRegionName(tableNameOrRegionName, ct)) {
-        // Its a possible region name.
-        Pair<HRegionInfo, ServerName> pair =
-          MetaReader.getRegion(ct, tableNameOrRegionName);
-        if (pair == null || pair.getSecond() == null) {
+      Pair<HRegionInfo, ServerName> regionServerPair
+        = getRegion(tableNameOrRegionName, ct);
+      if (regionServerPair != null) {
+        if (regionServerPair.getSecond() == null) {
           LOG.info("No server in .META. for " +
-            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + pair);
+            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + regionServerPair);
         } else {
-          split(pair.getSecond(), pair.getFirst(), splitPoint);
+          split(regionServerPair.getSecond(), regionServerPair.getFirst(), splitPoint);
         }
       } else {
         final String tableName = tableNameString(tableNameOrRegionName, ct);
@@ -1685,19 +1685,45 @@ public class HBaseAdmin implements Abortable, Closeable {
   /**
    * @param tableNameOrRegionName Name of a table or name of a region.
    * @param ct A {@link CatalogTracker} instance (caller of this method usually has one).
-   * @return True if <code>tableNameOrRegionName</code> is a verified region
-   * name (we call {@link  MetaReader#getRegion( CatalogTracker, byte[])}
-   *  else false.
+   * @return a pair of HRegionInfo and ServerName if <code>tableNameOrRegionName</code> is
+   *  a verified region name (we call {@link  MetaReader#getRegion( CatalogTracker, byte[])}
+   *  else null.
    * Throw an exception if <code>tableNameOrRegionName</code> is null.
    * @throws IOException
    */
-  private boolean isRegionName(final byte[] tableNameOrRegionName,
-      CatalogTracker ct)
-  throws IOException {
+  Pair<HRegionInfo, ServerName> getRegion(final byte[] tableNameOrRegionName,
+      final CatalogTracker ct) throws IOException {
     if (tableNameOrRegionName == null) {
       throw new IllegalArgumentException("Pass a table name or region name");
     }
-    return (MetaReader.getRegion(ct, tableNameOrRegionName) != null);
+    Pair<HRegionInfo, ServerName> pair = MetaReader.getRegion(ct, tableNameOrRegionName);
+    if (pair == null) {
+      final AtomicReference<Pair<HRegionInfo, ServerName>> result =
+        new AtomicReference<Pair<HRegionInfo, ServerName>>(null);
+      final String encodedName = Bytes.toString(tableNameOrRegionName);
+      MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
+        @Override
+        public boolean processRow(Result data) throws IOException {
+          if (data == null || data.size() <= 0) {
+            return true;
+          }
+          HRegionInfo info = MetaReader.parseHRegionInfoFromCatalogResult(
+            data, HConstants.REGIONINFO_QUALIFIER);
+          if (info == null) {
+            LOG.warn("No serialized HRegionInfo in " + data);
+            return true;
+          }
+          if (!encodedName.equals(info.getEncodedName())) return true;
+          ServerName sn = MetaReader.getServerNameFromCatalogResult(data);
+          result.set(new Pair<HRegionInfo, ServerName>(info, sn));
+          return false; // found the region, stop
+        }
+      };
+
+      MetaScanner.metaScan(conf, visitor);
+      pair = result.get();
+    }
+    return pair;
   }
 
   /**
@@ -1962,18 +1988,18 @@ public class HBaseAdmin implements Abortable, Closeable {
     CompactionState state = CompactionState.NONE;
     CatalogTracker ct = getCatalogTracker();
     try {
-      if (isRegionName(tableNameOrRegionName, ct)) {
-        Pair<HRegionInfo, ServerName> pair =
-          MetaReader.getRegion(ct, tableNameOrRegionName);
-        if (pair == null || pair.getSecond() == null) {
+      Pair<HRegionInfo, ServerName> regionServerPair
+        = getRegion(tableNameOrRegionName, ct);
+      if (regionServerPair != null) {
+        if (regionServerPair.getSecond() == null) {
           LOG.info("No server in .META. for " +
-            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + pair);
+            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + regionServerPair);
         } else {
-          ServerName sn = pair.getSecond();
+          ServerName sn = regionServerPair.getSecond();
           AdminProtocol admin =
             this.connection.getAdmin(sn.getHostname(), sn.getPort());
           GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
-            pair.getFirst().getRegionName(), true);
+            regionServerPair.getFirst().getRegionName(), true);
           GetRegionInfoResponse response = admin.getRegionInfo(null, request);
           return response.getCompactionState();
         }

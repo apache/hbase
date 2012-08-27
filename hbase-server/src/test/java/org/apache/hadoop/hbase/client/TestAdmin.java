@@ -40,6 +40,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtilsForTests;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.*;
@@ -1610,7 +1612,29 @@ public class TestAdmin {
     htd.addFamily(hcd);
     TEST_UTIL.getHBaseAdmin().createTable(htd);
   }
-  
+
+  @Test
+  public void testGetRegion() throws Exception {
+    final String name = "testGetRegion";
+    LOG.info("Started " + name);
+    final byte [] nameBytes = Bytes.toBytes(name);
+    HTable t = TEST_UTIL.createTable(nameBytes, HConstants.CATALOG_FAMILY);
+    TEST_UTIL.createMultiRegions(t, HConstants.CATALOG_FAMILY);
+    CatalogTracker ct = new CatalogTracker(TEST_UTIL.getConfiguration());
+    ct.start();
+    try {
+      HRegionLocation regionLocation = t.getRegionLocation("mmm");
+      HRegionInfo region = regionLocation.getRegionInfo();
+      byte[] regionName = region.getRegionName();
+      Pair<HRegionInfo, ServerName> pair = admin.getRegion(regionName, ct);
+      assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
+      pair = admin.getRegion(region.getEncodedNameAsBytes(), ct);
+      assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
+    } finally {
+      ct.stop();
+    }
+  }
+
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
