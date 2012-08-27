@@ -132,8 +132,9 @@ public class HTable implements HTableInterface, Closeable {
    * locations; i.e. it will not make use of already-cached region locations if
    * available. Use only when being quick and dirty.
    * @throws IOException if a remote or network exception occurs
-   * @see #HTable(Configuration, String)
+   * @deprecated use {@link #HTable(Configuration, String)}
    */
+  @Deprecated
   public HTable(final String tableName)
   throws IOException {
     this(HBaseConfiguration.create(), Bytes.toBytes(tableName));
@@ -148,8 +149,9 @@ public class HTable implements HTableInterface, Closeable {
    * available. Use only when being quick and dirty.
    * @param tableName Name of the table.
    * @throws IOException if a remote or network exception occurs
-   * @see #HTable(Configuration, String)
+   * @deprecated use {@link #HTable(Configuration, String)}
    */
+  @Deprecated
   public HTable(final byte [] tableName)
   throws IOException {
     this(HBaseConfiguration.create(), tableName);
