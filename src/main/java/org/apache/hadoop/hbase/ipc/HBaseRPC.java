@@ -589,8 +589,8 @@ public class HBaseRPC {
             " queueTime= " + qTime +
             " procesingTime= " + processingTime);
         }
-        rpcMetrics.inc(HConstants.RPC_QUEUE_TIME, qTime);
-        rpcMetrics.inc(HConstants.RPC_PROCESS_TIME, processingTime);
+        rpcMetrics.rpcQueueTime.inc(qTime);
+        rpcMetrics.rpcProcessingTime.inc(processingTime);
         rpcMetrics.inc(call.getMethodName(), processingTime);
         if (verbose) trace("Return: " + value);
 
