@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.ipc.SecureServer;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 
@@ -80,8 +81,7 @@ public class TokenProvider extends BaseEndpointCoprocessor
     }
     if (currentUser == null) {
       throw new AccessDeniedException("No authenticated user for request!");
-    } else if (ugi.getAuthenticationMethod() !=
-        UserGroupInformation.AuthenticationMethod.KERBEROS) {
+    } else if (!isAllowedDelegationTokenOp(ugi)) {
       LOG.warn("Token generation denied for user="+currentUser.getName()
           +", authMethod="+ugi.getAuthenticationMethod());
       throw new AccessDeniedException(
@@ -89,6 +89,23 @@ public class TokenProvider extends BaseEndpointCoprocessor
     }
 
     return secretManager.generateToken(currentUser.getName());
+  }
+
+  /**
+   * @param ugi
+   * @return true if delegation token operation is allowed
+   */
+  private boolean isAllowedDelegationTokenOp(UserGroupInformation ugi) throws IOException {
+    AuthenticationMethod authMethod = ugi.getAuthenticationMethod();
+    if (authMethod == AuthenticationMethod.PROXY) {
+      authMethod = ugi.getRealUser().getAuthenticationMethod();
+    }
+    if (authMethod != AuthenticationMethod.KERBEROS
+        && authMethod != AuthenticationMethod.KERBEROS_SSL
+        && authMethod != AuthenticationMethod.CERTIFICATE) {
+      return false;
+    }
+    return true;
   }
 
   @Override
