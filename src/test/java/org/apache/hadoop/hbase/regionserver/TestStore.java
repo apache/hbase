@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UnixUserGroupInformation;
@@ -196,17 +195,15 @@ public class TestStore extends TestCase {
       flush(i);
     }
     // after flush; check the lowest time stamp
-    long lowestTimeStampFromStore =
-        Store.getLowestTimestamp(store.getStorefiles());
-    long lowestTimeStampFromFS =
-      getLowestTimeStampFromFS(fs,store.getStorefiles());
-    assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS);
+    long lowestTimestampFromManager = CompactionManager.getLowestTimestamp(store.getStorefiles());
+    long lowestTimeStampFromFS = getLowestTimeStampFromFS(fs,store.getStorefiles());
+    assertEquals(lowestTimestampFromManager, lowestTimeStampFromFS);
 
     // after compact; check the lowest time stamp
     store.compact(store.requestCompaction());
-    lowestTimeStampFromStore = Store.getLowestTimestamp(store.getStorefiles());
+    lowestTimestampFromManager = CompactionManager.getLowestTimestamp(store.getStorefiles());
     lowestTimeStampFromFS = getLowestTimeStampFromFS(fs,store.getStorefiles());
-    assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS);
+    assertEquals(lowestTimestampFromManager,lowestTimeStampFromFS);
   }
 
   private static long getLowestTimeStampFromFS(FileSystem fs,

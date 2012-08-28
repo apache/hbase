@@ -3460,4 +3460,11 @@ public class HRegionServer implements HRegionInterface,
     return "RS-" + serverInfo.getServerName();
   }
 
+  public void updateConfiguration() {
+    conf.reloadConfiguration();
+    for (HRegion r : onlineRegions.values()) {
+      r.updateConfiguration();
+    }
+  }
+  
 }

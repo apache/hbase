@@ -41,6 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
@@ -62,6 +63,7 @@ import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
@@ -106,6 +108,9 @@ public class StoreFile extends SchemaConfigured {
 
   /** Max Sequence ID in FileInfo */
   public static final byte [] MAX_SEQ_ID_KEY = Bytes.toBytes("MAX_SEQ_ID_KEY");
+
+  /** Min Flush time in FileInfo */
+  public static final byte [] MIN_FLUSH_TIME = Bytes.toBytes("MIN_FLUSH_TIME");
 
   /** Major compaction flag in FileInfo */
   public static final byte[] MAJOR_COMPACTION_KEY =
@@ -153,6 +158,8 @@ public class StoreFile extends SchemaConfigured {
   // Keys for metadata stored in backing HFile.
   // Set when we obtain a Reader.
   private long sequenceid = -1;
+  // default value is -1, remains -1 if file written without minFlushTime
+  private long minFlushTime = HConstants.NO_MIN_FLUSH_TIME;
 
   // max of the MemstoreTS in the KV's in this store
   // Set when we obtain a Reader.
@@ -343,6 +350,22 @@ public class StoreFile extends SchemaConfigured {
     return this.sequenceid;
   }
 
+  public boolean hasMinFlushTime() {
+    return this.minFlushTime != HConstants.NO_MIN_FLUSH_TIME;
+  }
+
+  public long getMinFlushTime() {
+      // BulkLoad files are assumed to contain very old data, return 0
+      if (isBulkLoadResult() && getMaxSequenceId() <= 0) {
+        return 0;
+      } else if (this.minFlushTime == HConstants.NO_MIN_FLUSH_TIME) {
+          // File written without minFlushTime field assume recent data
+          return EnvironmentEdgeManager.currentTimeMillis();
+      } else {
+        return this.minFlushTime;
+      }
+  }
+
   public long getModificationTimeStamp() {
     return modificationTimeStamp;
   }
@@ -462,7 +485,10 @@ public class StoreFile extends SchemaConfigured {
         }
       }
     }
-    
+    b = metadataMap.get(MIN_FLUSH_TIME);
+    if (b != null) {
+        this.minFlushTime = Bytes.toLong(b);
+    }
     this.reader.setSequenceID(this.sequenceid);
 
     b = metadataMap.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
@@ -891,16 +917,28 @@ public class StoreFile extends SchemaConfigured {
     /**
      * Writes meta data.
      * Call before {@link #close()} since its written as meta data to this file.
+     * @param minFlushTime maximum Flush time among the data present in file.
      * @param maxSequenceId Maximum sequence id.
      * @param majorCompaction True if this file is product of a major compaction
      * @throws IOException problem writing to FS
      */
+    public void appendMetadata(
+      final long minFlushTime, final long maxSequenceId, final boolean majorCompaction)
+      throws IOException {
+      writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
+      writer.appendFileInfo(
+        MAJOR_COMPACTION_KEY,
+        Bytes.toBytes(majorCompaction)
+      );
+      writer.appendFileInfo(MIN_FLUSH_TIME, Bytes.toBytes(minFlushTime));
+      appendTimeRangeMetadata();
+    }
+
+    // Former version that does not include minFlushTime
+    @Deprecated
     public void appendMetadata(final long maxSequenceId, final boolean majorCompaction)
     throws IOException {
-      writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
-      writer.appendFileInfo(MAJOR_COMPACTION_KEY,
-          Bytes.toBytes(majorCompaction));
-      appendTimeRangeMetadata();
+        appendMetadata(HConstants.NO_MIN_FLUSH_TIME, maxSequenceId, majorCompaction);
     }
 
     /**

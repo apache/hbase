@@ -21,14 +21,12 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.Random;
 import java.util.SortedSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -62,8 +60,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -72,8 +68,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -108,16 +102,13 @@ public class Store extends SchemaConfigured implements HeapSize {
   private final Path homedir;
   private final HRegion region;
   private final HColumnDescriptor family;
+  CompactionManager compactionManager;
   final FileSystem fs;
   final Configuration conf;
   final CacheConfig cacheConf;
   // ttl in milliseconds.
   protected long ttl;
   private long timeToPurgeDeletes;
-  private final int minFilesToCompact;
-  private final int maxFilesToCompact;
-  private final long minCompactSize;
-  private final long maxCompactSize;
   private long lastCompactSize = 0;
   volatile boolean forceMajor = false;
   /* how many bytes to write between status checks */
@@ -130,7 +121,6 @@ public class Store extends SchemaConfigured implements HeapSize {
   private final String storeNameStr;
   private int peakStartHour;
   private int peakEndHour;
-  private final static Calendar calendar = new GregorianCalendar();
 
   /*
    * List of store files inside this store. This is an immutable list that
@@ -213,11 +203,6 @@ public class Store extends SchemaConfigured implements HeapSize {
     this.memstore = new MemStore(this.comparator);
     this.storeNameStr = getColumnFamilyName();
 
-    // By default, compact if storefile.count >= minFilesToCompact
-    this.minFilesToCompact = Math.max(2,
-      conf.getInt("hbase.hstore.compaction.min",
-        /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
-
     // Setting up cache configuration for this family
     this.cacheConf = new CacheConfig(conf, family);
 
@@ -230,12 +215,6 @@ public class Store extends SchemaConfigured implements HeapSize {
     this.desiredMaxFileSize = maxFileSize;
     this.blockingStoreFileCount =
       conf.getInt("hbase.hstore.blockingStoreFiles", -1);
-
-    this.maxFilesToCompact = conf.getInt("hbase.hstore.compaction.max", 10);
-    this.minCompactSize = conf.getLong("hbase.hstore.compaction.min.size",
-      this.region.memstoreFlushSize);
-    this.maxCompactSize
-      = conf.getLong("hbase.hstore.compaction.max.size", Long.MAX_VALUE);
 
     if (Store.closeCheckInterval == 0) {
       Store.closeCheckInterval = conf.getInt(
@@ -253,6 +232,50 @@ public class Store extends SchemaConfigured implements HeapSize {
       }
       this.peakStartHour = this.peakEndHour = -1;
     }
+
+    setCompactionPolicy(conf.get(HConstants.COMPACTION_MANAGER_CLASS,
+                                 HConstants.DEFAULT_COMPACTION_MANAGER_CLASS));
+  }
+
+  /**
+   * This setter is used for unit testing
+   * TODO: Fix this for online configuration updating
+   */
+  void setCompactionPolicy(String managerClassName) {
+    try {
+      Class<? extends CompactionManager> managerClass =
+        (Class<? extends CompactionManager>) Class.forName(managerClassName);
+      compactionManager = managerClass.getDeclaredConstructor(
+          new Class[] {Configuration.class, Store.class } ).newInstance(
+          new Object[] { conf, this } );
+    } catch (ClassNotFoundException e) {
+      throw new UnsupportedOperationException(
+          "Unable to find region server interface " + managerClassName, e);
+    } catch (IllegalAccessException e) {
+      throw new UnsupportedOperationException(
+          "Unable to access specified class " + managerClassName, e);
+    } catch (InstantiationException e) {
+      throw new UnsupportedOperationException(
+          "Unable to instantiate specified class " + managerClassName, e);
+    } catch (InvocationTargetException e) {
+      throw new UnsupportedOperationException(
+          "Unable to invoke specified target class constructor " + managerClassName, e);
+    } catch (NoSuchMethodException e) {
+      throw new UnsupportedOperationException(
+          "Unable to find suitable constructor for class " + managerClassName, e);
+    }
+  }
+
+ /**
+  * @return A hash code depending on the state of the current store files.
+  * This is used as seed for deterministic random generator for selecting major compaction time
+  */
+  Integer getDeterministicRandomSeed() {
+    ImmutableList<StoreFile> snapshot = storefiles;
+    if (snapshot != null && !snapshot.isEmpty()) {
+      return snapshot.get(0).getPath().getName().hashCode();
+    }
+    return null;
   }
 
   private boolean isValidHour(int hour) {
@@ -652,9 +675,10 @@ public class Store extends SchemaConfigured implements HeapSize {
           } while (hasMore);
         } finally {
           // Write out the log sequence number that corresponds to this output
+          // Write current time in metadata as minFlushTime
           // hfile.  The hfile is current up to and including logCacheFlushId.
           status.setStatus("Flushing " + this + ": appending metadata");
-          writer.appendMetadata(logCacheFlushId, false);
+          writer.appendMetadata(EnvironmentEdgeManager.currentTimeMillis(), logCacheFlushId, false);
           status.setStatus("Flushing " + this + ": closing flushed file");
           writer.close();
         }
@@ -684,7 +708,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     // the flushing through the StoreFlusherImpl class
     getSchemaMetrics().updatePersistentStoreMetric(
         SchemaMetrics.StoreMetricType.FLUSH_SIZE, flushed);
-    if(LOG.isInfoEnabled()) {
+    if (LOG.isInfoEnabled()) {
       LOG.info("Added " + sf + ", entries=" + r.getEntries() +
         ", sequenceid=" + logCacheFlushId +
         ", memsize=" + StringUtils.humanReadableInt(flushed) +
@@ -867,11 +891,11 @@ public class Store extends SchemaConfigured implements HeapSize {
 
     // Ready to go. Have list of files to compact.
     MonitoredTask status = TaskMonitor.get().createStatus(
-        (cr.isMajor() ? "Major " : "") + "Compaction of "
+        (cr.isMajor() ? "Major " : "") + "Compaction (ID: " + cr.getCompactSelectionID() + ") of "
         + this.storeNameStr + " on "
         + this.region.getRegionInfo().getRegionNameAsString());
-    LOG.info("Starting compaction of " + filesToCompact.size() + " file(s) in "
-        + this.storeNameStr + " of "
+    LOG.info("Starting compaction (ID: " + cr.getCompactSelectionID() + ") of "
+        + filesToCompact.size() + " file(s) in " + this.storeNameStr + " of "
         + this.region.getRegionInfo().getRegionNameAsString()
         + " into " + region.getTmpDir() + ", seqid=" + maxId + ", totalSize="
         + StringUtils.humanReadableInt(cr.getSize()));
@@ -879,18 +903,23 @@ public class Store extends SchemaConfigured implements HeapSize {
     StoreFile sf = null;
     try {
       status.setStatus("Compacting " + filesToCompact.size() + " file(s)");
+      long compactionStartTime = EnvironmentEdgeManager.currentTimeMillis();
       StoreFile.Writer writer = compactStores(filesToCompact, cr.isMajor(), maxId);
       // Move the compaction into place.
       sf = completeCompaction(filesToCompact, writer);
 
       // Report that the compaction is complete.
       status.markComplete("Completed compaction");
-      LOG.info("Completed" + (cr.isMajor() ? " major " : " ") + "compaction of "
+      LOG.info("Completed" + (cr.isMajor() ? " major " : " ")
+          + "compaction (ID: " + cr.getCompactSelectionID() + ") of "
           + filesToCompact.size() + " file(s) in " + this.storeNameStr + " of "
           + this.region.getRegionInfo().getRegionNameAsString()
-          + "; new storefile name=" + (sf == null ? "none" : sf.toString())
-          + ", size=" + (sf == null ? "none" :
-            StringUtils.humanReadableInt(sf.getReader().length()))
+          + "; This selection was in queue for "
+          + StringUtils.formatTimeDiff(compactionStartTime, cr.getSelectionTime()) + ", and took "
+          + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTimeMillis(),
+                                       compactionStartTime)
+          + " to execute. New storefile name=" + (sf == null ? "none" : sf.toString())
+          + ", size=" + (sf == null? "none" : StringUtils.humanReadableInt(sf.getReader().length()))
           + "; total size for store is "
           + StringUtils.humanReadableInt(storeSize));
     } catch (IOException ioe) {
@@ -960,7 +989,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    * @param files
    * @return True if any of the files in <code>files</code> are References.
    */
-  private boolean hasReferences(Collection<StoreFile> files) {
+  boolean hasReferences(Collection<StoreFile> files) {
     if (files != null && files.size() > 0) {
       for (StoreFile hsf: files) {
         if (hsf.isReference()) {
@@ -969,22 +998,6 @@ public class Store extends SchemaConfigured implements HeapSize {
       }
     }
     return false;
-  }
-
-  /*
-   * Gets lowest timestamp from candidate StoreFiles
-   *
-   * @param fs
-   * @param dir
-   * @throws IOException
-   */
-  public static long getLowestTimestamp(final List<StoreFile> candidates)
-      throws IOException {
-    long minTs = Long.MAX_VALUE;
-    for (StoreFile storeFile : candidates) {
-      minTs = Math.min(minTs, storeFile.getModificationTimeStamp());
-    }
-    return minTs;
   }
 
   /*
@@ -999,16 +1012,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
 
     List<StoreFile> candidates = new ArrayList<StoreFile>(this.storefiles);
-
-    // exclude files above the max compaction threshold
-    // except: save all references. we MUST compact them
-    int pos = 0;
-    while (pos < candidates.size() &&
-           candidates.get(pos).getReader().length() > this.maxCompactSize &&
-           !candidates.get(pos).isReference()) ++pos;
-    candidates.subList(0, pos).clear();
-
-    return isMajorCompaction(candidates);
+    return compactionManager.isMajorCompaction(candidates);
   }
 
   boolean isPeakTime(int currentHour) {
@@ -1020,76 +1024,6 @@ public class Store extends SchemaConfigured implements HeapSize {
       return (currentHour >= this.peakStartHour && currentHour < this.peakEndHour);
     }
     return (currentHour >= this.peakStartHour || currentHour < this.peakEndHour);
-  }
-
-  /*
-   * @param filesToCompact Files to compact. Can be null.
-   * @return True if we should run a major compaction.
-   */
-  private boolean isMajorCompaction(final List<StoreFile> filesToCompact) throws IOException {
-    boolean result = false;
-    long mcTime = getNextMajorCompactTime();
-    if (filesToCompact == null || filesToCompact.isEmpty() || mcTime == 0) {
-      return result;
-    }
-    long lowTimestamp = getLowestTimestamp(filesToCompact);
-    long now = System.currentTimeMillis();
-    if (lowTimestamp > 0l && lowTimestamp < (now - mcTime)) {
-      // Major compaction time has elapsed.
-      long elapsedTime = now - lowTimestamp;
-      if (filesToCompact.size() == 1 &&
-          filesToCompact.get(0).isMajorCompaction() &&
-          (this.ttl == HConstants.FOREVER || elapsedTime < this.ttl)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Skipping major compaction of " + this.storeNameStr +
-            " because one (major) compacted file only and elapsedTime " +
-            elapsedTime + "ms is < ttl=" + this.ttl);
-        }
-      } else if (isPeakTime(calendar.get(Calendar.HOUR_OF_DAY))) {
-        LOG.debug("Peak traffic time for HBase, not scheduling any major " +
-            "compactions. Peak hour period is : " + this.peakStartHour + " - " +
-            this.peakEndHour + " current hour is : " +
-            calendar.get(Calendar.HOUR_OF_DAY));
-        result = false;
-      } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Major compaction triggered on store " + this.storeNameStr +
-            "; time since last major compaction " +
-            StringUtils.formatTimeDiff(now, lowTimestamp));
-        }
-        result = true;
-      }
-    }
-    return result;
-  }
-
-  long getNextMajorCompactTime() {
-    // default = 24hrs
-    long ret = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24);
-    if (family.getValue(HConstants.MAJOR_COMPACTION_PERIOD) != null) {
-      String strCompactionTime =
-        family.getValue(HConstants.MAJOR_COMPACTION_PERIOD);
-      ret = (new Long(strCompactionTime)).longValue();
-    }
-
-    if (ret > 0) {
-      // default = 20% = +/- 4.8 hrs
-      double jitterPct =  conf.getFloat("hbase.hregion.majorcompaction.jitter",
-          0.20F);
-      if (jitterPct > 0) {
-        long jitter = Math.round(ret * jitterPct);
-        // deterministic jitter avoids a major compaction storm on restart
-        ImmutableList<StoreFile> snapshot = storefiles;
-        if (snapshot != null && !snapshot.isEmpty()) {
-          String seed = snapshot.get(0).getPath().getName();
-          double curRand = new Random(seed.hashCode()).nextDouble();
-          ret += jitter - Math.round(2L * jitter * curRand);
-        } else {
-          ret = 0; // no storefiles == no major compaction
-        }
-      }
-    }
-    return ret;
   }
 
   public CompactionRequest requestCompaction() {
@@ -1112,7 +1046,9 @@ public class Store extends SchemaConfigured implements HeapSize {
           Preconditions.checkArgument(idx != -1);
           candidates.subList(0, idx + 1).clear();
         }
-        CompactSelection filesToCompact = compactSelection(candidates);
+        CompactSelection filesToCompact;
+        filesToCompact = compactionManager.selectCompaction(candidates,
+          forceMajor && filesCompacting.isEmpty());
 
         // no files to compact
         if (filesToCompact.getFilesToCompact().isEmpty()) {
@@ -1156,170 +1092,6 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   /**
-   * Algorithm to choose which files to compact
-   *
-   * Configuration knobs:
-   *  "hbase.hstore.compaction.ratio"
-   *    normal case: minor compact when file <= sum(smaller_files) * ratio
-   *  "hbase.hstore.compaction.min.size"
-   *    unconditionally compact individual files below this size
-   *  "hbase.hstore.compaction.max.size"
-   *    never compact individual files above this size (unless splitting)
-   *  "hbase.hstore.compaction.min"
-   *    min files needed to minor compact
-   *  "hbase.hstore.compaction.max"
-   *    max files to compact at once (avoids OOM)
-   *
-   * @param candidates candidate files, ordered from oldest to newest
-   * @return subset copy of candidate list that meets compaction criteria
-   * @throws IOException
-   */
-  CompactSelection compactSelection(List<StoreFile> candidates)
-      throws IOException {
-    // ASSUMPTION!!! filesCompacting is locked when calling this function
-
-    /* normal skew:
-     *
-     *         older ----> newer
-     *     _
-     *    | |   _
-     *    | |  | |   _
-     *  --|-|- |-|- |-|---_-------_-------  minCompactSize
-     *    | |  | |  | |  | |  _  | |
-     *    | |  | |  | |  | | | | | |
-     *    | |  | |  | |  | | | | | |
-     */
-    CompactSelection compactSelection = new CompactSelection(conf, candidates);
-
-    boolean forcemajor = this.forceMajor && filesCompacting.isEmpty();
-    if (!forcemajor) {
-      // Delete the expired store files before the compaction selection.
-      if (conf.getBoolean("hbase.store.delete.expired.storefile", true)
-          && (ttl != Long.MAX_VALUE)) {
-        CompactSelection expiredSelection = compactSelection
-            .selectExpiredStoreFilesToCompact(
-                EnvironmentEdgeManager.currentTimeMillis() - this.ttl);
-
-        // If there is any expired store files, delete them  by compaction.
-        if (expiredSelection != null) {
-          return expiredSelection;
-        }
-      }
-      // do not compact old files above a configurable threshold
-      // save all references. we MUST compact them
-      int pos = 0;
-      while (pos < compactSelection.getFilesToCompact().size() &&
-             compactSelection.getFilesToCompact().get(pos).getReader().length()
-               > maxCompactSize &&
-             !compactSelection.getFilesToCompact().get(pos).isReference()) ++pos;
-      compactSelection.clearSubList(0, pos);
-    }
-
-    if (compactSelection.getFilesToCompact().isEmpty()) {
-      LOG.debug(this.storeNameStr + ": no store files to compact");
-      compactSelection.emptyFileList();
-      return compactSelection;
-    }
-
-    // major compact on user action or age (caveat: we have too many files)
-    boolean majorcompaction =
-      (forcemajor || isMajorCompaction(compactSelection.getFilesToCompact()))
-      && compactSelection.getFilesToCompact().size() < this.maxFilesToCompact;
-
-    if (!majorcompaction &&
-        !hasReferences(compactSelection.getFilesToCompact())) {
-      // we're doing a minor compaction, let's see what files are applicable
-      int start = 0;
-      double r = compactSelection.getCompactSelectionRatio();
-
-      // exclude bulk import files from minor compactions, if configured
-      if (conf.getBoolean("hbase.hstore.compaction.exclude.bulk", false)) {
-        int previous = compactSelection.getFilesToCompact().size();
-        compactSelection.getFilesToCompact().removeAll(Collections2.filter(
-            compactSelection.getFilesToCompact(),
-            new Predicate<StoreFile>() {
-              @Override
-              public boolean apply(StoreFile input) {
-                // If we have assigned a sequenceId to the hfile, we won't skip the file.
-                return input.isBulkLoadResult() && input.getMaxSequenceId() <= 0;
-              }
-            }));
-        LOG.debug("Exclude " +
-            (compactSelection.getFilesToCompact().size() - previous) +
-            " store files from compaction");
-      }
-
-      // skip selection algorithm if we don't have enough files
-      if (compactSelection.getFilesToCompact().size() < this.minFilesToCompact) {
-        compactSelection.emptyFileList();
-        return compactSelection;
-      }
-
-      /* TODO: add sorting + unit test back in when HBASE-2856 is fixed
-      //sort files by size to correct when normal skew is altered by bulk load
-      Collections.sort(filesToCompact, StoreFile.Comparators.FILE_SIZE);
-       */
-
-      // get store file sizes for incremental compacting selection.
-      int countOfFiles = compactSelection.getFilesToCompact().size();
-      long [] fileSizes = new long[countOfFiles];
-      long [] sumSize = new long[countOfFiles];
-      for (int i = countOfFiles-1; i >= 0; --i) {
-        StoreFile file = compactSelection.getFilesToCompact().get(i);
-        fileSizes[i] = file.getReader().length();
-        // calculate the sum of fileSizes[i,i+maxFilesToCompact-1) for algo
-        int tooFar = i + this.maxFilesToCompact - 1;
-        sumSize[i] = fileSizes[i]
-                   + ((i+1    < countOfFiles) ? sumSize[i+1]      : 0)
-                   - ((tooFar < countOfFiles) ? fileSizes[tooFar] : 0);
-      }
-
-      /* Start at the oldest file and stop when you find the first file that
-       * meets compaction criteria:
-       *   (1) a recently-flushed, small file (i.e. <= minCompactSize)
-       *      OR
-       *   (2) within the compactRatio of sum(newer_files)
-       * Given normal skew, any newer files will also meet this criteria
-       *
-       * Additional Note:
-       * If fileSizes.size() >> maxFilesToCompact, we will recurse on
-       * compact().  Consider the oldest files first to avoid a
-       * situation where we always compact [end-threshold,end).  Then, the
-       * last file becomes an aggregate of the previous compactions.
-       */
-      while(countOfFiles - start >= this.minFilesToCompact &&
-            fileSizes[start] >
-              Math.max(minCompactSize, (long)(sumSize[start+1] * r))) {
-        ++start;
-      }
-      int end = Math.min(countOfFiles, start + this.maxFilesToCompact);
-      long totalSize = fileSizes[start]
-                     + ((start+1 < countOfFiles) ? sumSize[start+1] : 0);
-      compactSelection = compactSelection.getSubList(start, end);
-
-      // if we don't have enough files to compact, just wait
-      if (compactSelection.getFilesToCompact().size() < this.minFilesToCompact) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Skipped compaction of " + this.storeNameStr
-            + ".  Only " + (end - start) + " file(s) of size "
-            + StringUtils.humanReadableInt(totalSize)
-            + " have met compaction criteria.");
-        }
-        compactSelection.emptyFileList();
-        return compactSelection;
-      }
-    } else {
-      // all files included in this compaction, up to max
-      if (compactSelection.getFilesToCompact().size() > this.maxFilesToCompact) {
-        int pastMax =
-          compactSelection.getFilesToCompact().size() - this.maxFilesToCompact;
-        compactSelection.clearSubList(0, pastMax);
-      }
-    }
-    return compactSelection;
-  }
-
-  /**
    * Do a minor/major compaction on an explicit set of storefiles.
    * Uses the scan infrastructure to make it easy.
    *
@@ -1333,9 +1105,13 @@ public class Store extends SchemaConfigured implements HeapSize {
   StoreFile.Writer compactStores(final Collection<StoreFile> filesToCompact,
                                final boolean majorCompaction, final long maxId)
       throws IOException {
-    // calculate maximum key count after compaction (for blooms)
+    // calculate maximum key count (for blooms), and minFlushTime after compaction
     long maxKeyCount = 0;
+    long minFlushTime = Long.MAX_VALUE;
     for (StoreFile file : filesToCompact) {
+      if (file.hasMinFlushTime() && file.getMinFlushTime() < minFlushTime) {
+          minFlushTime = file.getMinFlushTime();
+      }
       StoreFile.Reader r = file.getReader();
       if (r != null) {
         // NOTE: getFilterEntries could cause under-sized blooms if the user
@@ -1370,8 +1146,9 @@ public class Store extends SchemaConfigured implements HeapSize {
         Scan scan = new Scan();
         scan.setMaxVersions(family.getMaxVersions());
         /* include deletes, unless we are doing a major compaction */
-        long retainDeletesUntil = (majorCompaction)?
-          (this.timeToPurgeDeletes <= 0 ? Long.MAX_VALUE: (System.currentTimeMillis() - this.timeToPurgeDeletes))
+        long retainDeletesUntil = (majorCompaction) ?
+          (this.timeToPurgeDeletes <= 0 ? Long.MAX_VALUE :
+             (System.currentTimeMillis() - this.timeToPurgeDeletes))
           : Long.MIN_VALUE;
         scanner = new StoreScanner(this, scan, scanners, smallestReadPoint,
             retainDeletesUntil);
@@ -1419,7 +1196,10 @@ public class Store extends SchemaConfigured implements HeapSize {
       }
     } finally {
       if (writer != null) {
-        writer.appendMetadata(maxId, majorCompaction);
+        if (minFlushTime == Long.MAX_VALUE) {
+          minFlushTime = HConstants.NO_MIN_FLUSH_TIME;
+        }
+        writer.appendMetadata(minFlushTime, maxId, majorCompaction);
         writer.close();
       }
     }
@@ -1933,10 +1713,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   boolean throttleCompaction(long compactionSize) {
-    long throttlePoint = conf.getLong(
-        "hbase.regionserver.thread.compaction.throttle",
-        2 * this.minFilesToCompact * this.region.memstoreFlushSize);
-    return compactionSize > throttlePoint;
+    return compactionManager.throttleCompaction(compactionSize);
   }
 
   HRegion getHRegion() {
@@ -2025,7 +1802,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    *  the number defined in minFilesToCompact
    */
   public boolean needsCompaction() {
-    return (storefiles.size() - filesCompacting.size()) > minFilesToCompact;
+    return compactionManager.needsCompaction(storefiles.size() - filesCompacting.size());
   }
 
   /**
@@ -2037,8 +1814,8 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   public static final long FIXED_OVERHEAD =
       ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-          + (16 * ClassSize.REFERENCE) + (7 * Bytes.SIZEOF_LONG)
-          + (6 * Bytes.SIZEOF_INT) + 2 * Bytes.SIZEOF_BOOLEAN);
+          + (17 * ClassSize.REFERENCE) + (5 * Bytes.SIZEOF_LONG)
+          + (4 * Bytes.SIZEOF_INT) + 2 * Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +
@@ -2052,6 +1829,11 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   public KeyValue.KVComparator getComparator() {
     return comparator;
+  }
+
+  void updateConfiguration() {
+    setCompactionPolicy(conf.get(HConstants.COMPACTION_MANAGER_CLASS,
+                                 HConstants.DEFAULT_COMPACTION_MANAGER_CLASS));
   }
 
 }

@@ -17,7 +17,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.compactions;
+
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Date;
@@ -28,10 +29,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
@@ -54,9 +51,9 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     private final boolean isMajor;
     private int p;
     private final Date date;
-    private HRegionServer server = null;
+    private HRegionServer server = null;    
 
-    public CompactionRequest(HRegion r, Store s,
+    CompactionRequest(HRegion r, Store s,
         CompactSelection files, boolean isMajor, int p) {
       Preconditions.checkNotNull(r);
       Preconditions.checkNotNull(files);
@@ -74,7 +71,15 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
       this.date = new Date();
     }
 
-    public void finishRequest() {
+    long getCompactSelectionID() {
+      return compactSelection.getCompactSelectionID();
+    }
+
+    long getSelectionTime() {
+      return compactSelection.getSelectionTime();
+    }
+
+    void finishRequest() {
       this.compactSelection.finishRequest();
     }
 
@@ -112,45 +117,45 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
     }
 
     /** Gets the HRegion for the request */
-    public HRegion getHRegion() {
+    HRegion getHRegion() {
       return r;
     }
-
+    
     /** Gets the Store for the request */
-    public Store getStore() {
+    Store getStore() {
       return s;
     }
 
     /** Gets the compact selection object for the request */
-    public CompactSelection getCompactSelection() {
+    CompactSelection getCompactSelection() {
       return compactSelection;
     }
-
+    
     /** Gets the StoreFiles for the request */
-    public List<StoreFile> getFiles() {
+    List<StoreFile> getFiles() {
       return compactSelection.getFilesToCompact();
     }
-
+    
     /** Gets the total size of all StoreFiles in compaction */
-    public long getSize() {
+    long getSize() {
       return totalSize;
     }
-
-    public boolean isMajor() {
+    
+    boolean isMajor() {
       return this.isMajor;
     }
 
-    public void setServer(HRegionServer server) {
+    void setServer(HRegionServer server) {
       this.server = server;
     }
 
     /** Gets the priority for the request */
-    public int getPriority() {
+    int getPriority() {
       return p;
     }
 
     /** Gets the priority for the request */
-    public void setPriority(int p) {
+    void setPriority(int p) {
       this.p = p;
     }
 
@@ -165,14 +170,14 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
             }),
         new Function<StoreFile, String>() {
           public String apply(StoreFile sf) {
-
+            
             return StringUtils.humanReadableInt(sf.getReader().length());
           }
         }));
 
       return "regionName=" + r.getRegionNameAsString() +
         ", storeName=" + new String(s.getFamily().getName()) +
-        ", fileCount=" + compactSelection.getFilesToCompact().size() +
+        ", fileCount=" + compactSelection.getFilesToCompact().size() + 
         ", fileSize=" + StringUtils.humanReadableInt(totalSize) +
           ((fsList.isEmpty()) ? "" : " (" + fsList + ")") +
         ", priority=" + p + ", date=" + date;
@@ -183,7 +188,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
       try {
         if (server.isStopRequested()) {
           return;
-        }
+        } 
         long start = EnvironmentEdgeManager.currentTimeMillis();
         boolean completed = r.compact(this);
         long now = EnvironmentEdgeManager.currentTimeMillis();
@@ -196,7 +201,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
             server.compactSplitThread
               .requestCompaction(r, s, "Recursive enqueue");
           }
-        }
+        } 
       } catch (IOException ex) {
         LOG.error("Compaction failed " + this, RemoteExceptionHandler
             .checkIOException(ex));
@@ -213,14 +218,14 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
         if (server != null) {
           LOG.debug("CompactSplitThread Status: " + server.compactSplitThread);
         }
-      }
+      } 
     }
 
     /**
      * Cleanup class to use when rejecting a compaction request from the queue.
      */
     public static class Rejection implements RejectedExecutionHandler {
-
+  
       @Override
       public void rejectedExecution(Runnable request, ThreadPoolExecutor pool) {
         if (request instanceof CompactionRequest) {

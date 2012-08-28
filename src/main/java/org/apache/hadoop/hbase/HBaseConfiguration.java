@@ -64,6 +64,7 @@ public class HBaseConfiguration extends Configuration {
     conf.addResource("hbase-default.xml");
     conf.addResource("hbase-site.xml");
     conf.addResource("hbase-site-custom.xml");
+    conf.addResource("hbase-compactions.xml");
     return conf;
   }
 

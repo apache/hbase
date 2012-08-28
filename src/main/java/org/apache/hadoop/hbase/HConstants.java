@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.CompactionManager;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -191,6 +192,12 @@ public final class HConstants {
   /** Default region server interface class name. */
   public static final String DEFAULT_REGION_SERVER_CLASS = HRegionInterface.class.getName();
 
+  /** Parameter name for what compaction manager to use. */
+  public static final String COMPACTION_MANAGER_CLASS = "hbase.compactionmanager.class";
+
+  /** Default compaction manager class name. */
+  public static final String DEFAULT_COMPACTION_MANAGER_CLASS = CompactionManager.class.getName();
+
   /** Parameter name for what master implementation to use. */
   public static final String MASTER_IMPL = "hbase.master.impl";
 
@@ -251,6 +258,9 @@ public final class HConstants {
 
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
+
+  /** Default value for files without minFlushTime in metadata */
+  public static final long NO_MIN_FLUSH_TIME = -1;
 
   /** Conf key for the memstore size at which we flush the memstore */
   public static final String HREGION_MEMSTORE_FLUSH_SIZE =

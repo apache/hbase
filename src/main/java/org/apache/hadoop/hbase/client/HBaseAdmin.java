@@ -24,6 +24,7 @@ import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RegionException;
@@ -1285,4 +1287,23 @@ public class HBaseAdmin {
       connection.close();
     }
   }
+
+  // Update configuration for all region servers
+  public void updateConfiguration() throws IOException {
+    Collection<HServerInfo> allRegionServers = this.getClusterStatus().getServerInfo();
+    for (HServerInfo serverInfo : allRegionServers) {
+      updateConfiguration(serverInfo.getServerAddress());
+    }
+  }
+
+  // Update configuration for region server at this address
+  public void updateConfiguration(String hostNameWithPort) throws IOException {
+    updateConfiguration(new HServerAddress(hostNameWithPort));
+  }
+
+  private void updateConfiguration(HServerAddress address) throws IOException {
+    HRegionInterface server = connection.getHRegionConnection(address);
+    server.updateConfiguration();
+  }
+
 }

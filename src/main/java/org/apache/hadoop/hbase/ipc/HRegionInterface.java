@@ -390,5 +390,9 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
   public int updateFavoredNodes(AssignmentPlan plan)
   throws IOException;
 
+  /**
+   * Update the configuration.
+   */
+  public void updateConfiguration()	throws IOException;
 
 }

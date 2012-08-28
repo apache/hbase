@@ -201,10 +201,10 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
 
           /* Set maxSequenceId to be 0 for bulk imported files since
            * these files do not correspond to any edit log items.
-           *
            * Set majorCompaction flag to be false for bulk import file.
+           * For now, bulk load files don't have minFlushTime.
            */
-          w.appendMetadata(0, false);
+          w.appendMetadata(HConstants.NO_MIN_FLUSH_TIME, 0, false);
           w.close();
         }
       }
