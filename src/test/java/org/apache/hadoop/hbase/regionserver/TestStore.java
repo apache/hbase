@@ -491,7 +491,7 @@ public class TestStore extends TestCase {
       new ArrayList<SoftReference<FaultyOutputStream>>();
     private long faultPos = 200;
 
-    public FaultyFileSystem() {
+    public FaultyFileSystem() throws IOException {
       super(new LocalFileSystem());
       System.err.println("Creating faulty!");
     }
