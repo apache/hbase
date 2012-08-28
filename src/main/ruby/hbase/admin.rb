@@ -122,6 +122,26 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # enable_loadbalancer
+    def enable_loadbalancer
+      @admin.enableLoadBalancer
+      get_loadbalancer
+    end
+	
+	#----------------------------------------------------------------------------------------------
+    # disable_loadbalancer
+    def disable_loadbalancer
+      @admin.disableLoadBalancer
+      get_loadbalancer
+    end
+	
+	#----------------------------------------------------------------------------------------------
+    # Shuts hbase down
+    def get_loadbalancer
+      print "LoadBalacner disabled: %s \n " % @admin.isLoadBalancerDisabled
+    end
+	
+	#----------------------------------------------------------------------------------------------
     # Shuts hbase down
     def shutdown
       @admin.shutdown

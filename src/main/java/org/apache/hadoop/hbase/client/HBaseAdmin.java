@@ -90,6 +90,27 @@ public class HBaseAdmin {
     this.master = connection.getMaster();
   }
 
+  public void enableLoadBalancer() throws MasterNotRunningException {
+    if (this.master == null) {
+      throw new MasterNotRunningException("master has been shut down");
+    }
+    master.enableLoadBalancer();
+  }
+  
+  public void disableLoadBalancer() throws MasterNotRunningException {
+    if (this.master == null) {
+      throw new MasterNotRunningException("master has been shut down");
+    }
+    this.master.disableLoadBalancer();
+  }
+  
+  public boolean isLoadBalancerDisabled() throws MasterNotRunningException {
+    if (this.master == null) {
+      throw new MasterNotRunningException("master has been shut down");
+    }
+    return this.master.isLoadBalancerDisabled();
+  }
+  
   /** @return HConnection used by this object. */
   public HConnection getConnection() {
     return connection;

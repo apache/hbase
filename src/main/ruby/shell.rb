@@ -273,6 +273,9 @@ Shell.load_command_group(
     split
     zk
     zk_dump
+    enable_loadbalancer
+    disable_loadbalancer
+    get_loadbalancer
   ]
 )
 

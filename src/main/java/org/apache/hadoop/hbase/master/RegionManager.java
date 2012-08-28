@@ -286,7 +286,8 @@ public class RegionManager {
     Set<RegionState> regionsToAssign = regionsAwaitingAssignment(regionServer);
 
     if (regionsToAssign.isEmpty() &&
-        master.getRegionServerOperationQueue().isEmpty()) {
+        master.getRegionServerOperationQueue().isEmpty() &&
+        !master.isLoadBalancerDisabled()) {
         // There are no regions waiting to be assigned.
         // load balance as before
         this.loadBalancer.loadBalancing(regionServer, mostLoadedRegions, returnMsgs);
@@ -357,7 +358,8 @@ public class RegionManager {
     if (regionsToAssign.isEmpty()) {
       // There are no regions waiting to be assigned.
       if (!assignmentByLocality
-          && master.getRegionServerOperationQueue().isEmpty()) {
+          && master.getRegionServerOperationQueue().isEmpty()
+          && !master.isLoadBalancerDisabled()) {
         // load balance as before
         this.loadBalancer.loadBalancing(info, mostLoadedRegions, returnMsgs);
       }

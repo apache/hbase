@@ -251,7 +251,9 @@ public class HMaster extends HasThread implements HMasterInterface,
   private String stopReason = "not stopping";
 
   private ZKClusterStateRecovery clusterStateRecovery;
-
+  
+  private AtomicBoolean isLoadBalancerDisabled = new AtomicBoolean(false);
+  
   /**
    * Constructor
    * @param conf configuration
@@ -384,6 +386,20 @@ public class HMaster extends HasThread implements HMasterInterface,
     } else {
       tableLockManager = null;
     }
+  }
+  
+  public void enableLoadBalancer() {
+    this.isLoadBalancerDisabled.set(false);
+    LOG.info("Enable the load balancer");
+  }
+  
+  public void disableLoadBalancer() {
+    this.isLoadBalancerDisabled.set(true);
+    LOG.info("Disable the load balancer");
+  }
+  
+  public boolean isLoadBalancerDisabled() {
+    return this.isLoadBalancerDisabled.get();
   }
 
   private void initRpcServer(HServerAddress address) throws IOException {

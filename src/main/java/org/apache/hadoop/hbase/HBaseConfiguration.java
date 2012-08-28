@@ -75,7 +75,6 @@ public class HBaseConfiguration extends Configuration {
     Configuration conf = new Configuration();
     return addHbaseResources(conf);
   }
-
   /**
    * Creates a clone of passed configuration.
    * @param that Configuration to clone.

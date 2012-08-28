@@ -163,4 +163,10 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    */
   public Pair<Integer, Integer> getAlterStatus(byte[] tableName)
       throws IOException;
+  
+  public void enableLoadBalancer();
+  
+  public void disableLoadBalancer();
+  
+  public boolean isLoadBalancerDisabled();
 }

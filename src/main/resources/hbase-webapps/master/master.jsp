@@ -39,7 +39,11 @@
 <body>
 <a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
 <h1 id="page_title">Master: <%=master.getMasterAddress().getHostname()%>:<%=master.getMasterAddress().getPort()%></h1>
-<p id="links_menu"><a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a>, <a href="/taskmonitor">Task Monitor</a>, <a href="/conf">HBase Configuration</a> <a href="assignmentPlan.jsp">HBase Assignment Plan</a></p>
+<p id="links_menu"><a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a>, <a href="/taskmonitor">Task Monitor</a>, <a href="/conf">HBase Configuration</a> <a href="assignmentPlan.jsp">HBase Assignment Plan</a>
+<% if (master.isLoadBalancerDisabled()) { %>
+  <div class="warning"> <b><font color="#FF0000"> The load balancer has been disabled </font></b></div>
+<% } %>
+</p>
 
 <!-- Various warnings that cluster admins should be aware of -->
 <% if (JvmVersion.isBadJvmVersion()) { %>
@@ -74,6 +78,7 @@
         <tr><td>Fragmentation</td><td><%= frags.get("-TOTAL-") != null ? frags.get("-TOTAL-").intValue() + "%" : "n/a" %></td><td>Overall fragmentation of all tables, including .META. and -ROOT-.</td></tr>
 <%  } %>
 <tr><td>Zookeeper Quorum</td><td><%= master.getZooKeeperWrapper().getQuorumServers() %></td><td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td></tr>
+<tr><td>LoadBalancer Status</td><td>Disabled: <%= master.isLoadBalancerDisabled() %></td><td>Whether the load balancer has been disabled</td></tr>
 </table>
 
 <h2>Catalog Tables</h2>
