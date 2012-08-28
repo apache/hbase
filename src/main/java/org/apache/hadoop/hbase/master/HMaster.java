@@ -1923,7 +1923,13 @@ public class HMaster extends HasThread implements HMasterInterface,
   public ClusterStatus getClusterStatus() {
     ClusterStatus status = new ClusterStatus();
     status.setHBaseVersion(VersionInfo.getVersion());
-    status.setServerInfo(serverManager.getServersToServerInfo().values());
+    List<HServerInfo> serverInfoCopy = Lists.newArrayList();
+    for (HServerInfo hsi : serverManager.getServersToServerInfo().values()) {
+      HServerInfo hsiCopy = new HServerInfo(hsi);
+      hsiCopy.setSendSequenceIds(false);
+      serverInfoCopy.add(hsiCopy);
+    }
+    status.setServerInfo(serverInfoCopy);
     status.setDeadServers(serverManager.getDeadServers());
     status.setRegionsInTransition(this.regionManager.getRegionsInTransition());
     return status;

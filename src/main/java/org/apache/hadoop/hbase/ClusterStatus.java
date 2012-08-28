@@ -223,6 +223,7 @@ public class ClusterStatus extends VersionedWritable {
     liveServerInfo = new ArrayList<HServerInfo>(count);
     for (int i = 0; i < count; i++) {
       HServerInfo info = new HServerInfo();
+      info.setSendSequenceIds(false);
       info.readFields(in);
       liveServerInfo.add(info);
     }
