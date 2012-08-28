@@ -130,7 +130,8 @@ struct TScan {
   4:optional list<Text> columns,
   5:optional i32 caching,
   6:optional Text filterString,
-  7:optional bool cachingBlocksEnabled
+  7:optional bool cachingBlocksEnabled,
+  8:optional i32 batchLimit
 }
 
 //

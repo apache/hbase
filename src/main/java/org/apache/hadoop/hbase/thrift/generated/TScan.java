@@ -40,6 +40,7 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
   private static final org.apache.thrift.protocol.TField CACHING_FIELD_DESC = new org.apache.thrift.protocol.TField("caching", org.apache.thrift.protocol.TType.I32, (short)5);
   private static final org.apache.thrift.protocol.TField FILTER_STRING_FIELD_DESC = new org.apache.thrift.protocol.TField("filterString", org.apache.thrift.protocol.TType.STRING, (short)6);
   private static final org.apache.thrift.protocol.TField CACHING_BLOCKS_ENABLED_FIELD_DESC = new org.apache.thrift.protocol.TField("cachingBlocksEnabled", org.apache.thrift.protocol.TType.BOOL, (short)7);
+  private static final org.apache.thrift.protocol.TField BATCH_LIMIT_FIELD_DESC = new org.apache.thrift.protocol.TField("batchLimit", org.apache.thrift.protocol.TType.I32, (short)8);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -54,6 +55,7 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
   public int caching; // optional
   public ByteBuffer filterString; // optional
   public boolean cachingBlocksEnabled; // optional
+  public int batchLimit; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -63,7 +65,8 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
     COLUMNS((short)4, "columns"),
     CACHING((short)5, "caching"),
     FILTER_STRING((short)6, "filterString"),
-    CACHING_BLOCKS_ENABLED((short)7, "cachingBlocksEnabled");
+    CACHING_BLOCKS_ENABLED((short)7, "cachingBlocksEnabled"),
+    BATCH_LIMIT((short)8, "batchLimit");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -92,6 +95,8 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
           return FILTER_STRING;
         case 7: // CACHING_BLOCKS_ENABLED
           return CACHING_BLOCKS_ENABLED;
+        case 8: // BATCH_LIMIT
+          return BATCH_LIMIT;
         default:
           return null;
       }
@@ -135,8 +140,9 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
   private static final int __TIMESTAMP_ISSET_ID = 0;
   private static final int __CACHING_ISSET_ID = 1;
   private static final int __CACHINGBLOCKSENABLED_ISSET_ID = 2;
-  private BitSet __isset_bit_vector = new BitSet(3);
-  private _Fields optionals[] = {_Fields.START_ROW,_Fields.STOP_ROW,_Fields.TIMESTAMP,_Fields.COLUMNS,_Fields.CACHING,_Fields.FILTER_STRING,_Fields.CACHING_BLOCKS_ENABLED};
+  private static final int __BATCHLIMIT_ISSET_ID = 3;
+  private BitSet __isset_bit_vector = new BitSet(4);
+  private _Fields optionals[] = {_Fields.START_ROW,_Fields.STOP_ROW,_Fields.TIMESTAMP,_Fields.COLUMNS,_Fields.CACHING,_Fields.FILTER_STRING,_Fields.CACHING_BLOCKS_ENABLED,_Fields.BATCH_LIMIT};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -155,6 +161,8 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , "Text")));
     tmpMap.put(_Fields.CACHING_BLOCKS_ENABLED, new org.apache.thrift.meta_data.FieldMetaData("cachingBlocksEnabled", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
+    tmpMap.put(_Fields.BATCH_LIMIT, new org.apache.thrift.meta_data.FieldMetaData("batchLimit", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TScan.class, metaDataMap);
   }
@@ -187,6 +195,7 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       this.filterString = other.filterString;
     }
     this.cachingBlocksEnabled = other.cachingBlocksEnabled;
+    this.batchLimit = other.batchLimit;
   }
 
   public TScan deepCopy() {
@@ -205,6 +214,8 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
     this.filterString = null;
     setCachingBlocksEnabledIsSet(false);
     this.cachingBlocksEnabled = false;
+    setBatchLimitIsSet(false);
+    this.batchLimit = 0;
   }
 
   public byte[] getStartRow() {
@@ -417,6 +428,29 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
     __isset_bit_vector.set(__CACHINGBLOCKSENABLED_ISSET_ID, value);
   }
 
+  public int getBatchLimit() {
+    return this.batchLimit;
+  }
+
+  public TScan setBatchLimit(int batchLimit) {
+    this.batchLimit = batchLimit;
+    setBatchLimitIsSet(true);
+    return this;
+  }
+
+  public void unsetBatchLimit() {
+    __isset_bit_vector.clear(__BATCHLIMIT_ISSET_ID);
+  }
+
+  /** Returns true if field batchLimit is set (has been assigned a value) and false otherwise */
+  public boolean isSetBatchLimit() {
+    return __isset_bit_vector.get(__BATCHLIMIT_ISSET_ID);
+  }
+
+  public void setBatchLimitIsSet(boolean value) {
+    __isset_bit_vector.set(__BATCHLIMIT_ISSET_ID, value);
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case START_ROW:
@@ -475,6 +509,14 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       }
       break;
 
+    case BATCH_LIMIT:
+      if (value == null) {
+        unsetBatchLimit();
+      } else {
+        setBatchLimit((Integer)value);
+      }
+      break;
+
     }
   }
 
@@ -501,6 +543,9 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
     case CACHING_BLOCKS_ENABLED:
       return Boolean.valueOf(isCachingBlocksEnabled());
 
+    case BATCH_LIMIT:
+      return Integer.valueOf(getBatchLimit());
+
     }
     throw new IllegalStateException();
   }
@@ -526,6 +571,8 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       return isSetFilterString();
     case CACHING_BLOCKS_ENABLED:
       return isSetCachingBlocksEnabled();
+    case BATCH_LIMIT:
+      return isSetBatchLimit();
     }
     throw new IllegalStateException();
   }
@@ -603,6 +650,15 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       if (!(this_present_cachingBlocksEnabled && that_present_cachingBlocksEnabled))
         return false;
       if (this.cachingBlocksEnabled != that.cachingBlocksEnabled)
+        return false;
+    }
+
+    boolean this_present_batchLimit = true && this.isSetBatchLimit();
+    boolean that_present_batchLimit = true && that.isSetBatchLimit();
+    if (this_present_batchLimit || that_present_batchLimit) {
+      if (!(this_present_batchLimit && that_present_batchLimit))
+        return false;
+      if (this.batchLimit != that.batchLimit)
         return false;
     }
 
@@ -692,6 +748,16 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetBatchLimit()).compareTo(typedOther.isSetBatchLimit());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetBatchLimit()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.batchLimit, typedOther.batchLimit);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -767,6 +833,12 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       if (!first) sb.append(", ");
       sb.append("cachingBlocksEnabled:");
       sb.append(this.cachingBlocksEnabled);
+      first = false;
+    }
+    if (isSetBatchLimit()) {
+      if (!first) sb.append(", ");
+      sb.append("batchLimit:");
+      sb.append(this.batchLimit);
       first = false;
     }
     sb.append(")");
@@ -879,6 +951,14 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
+          case 8: // BATCH_LIMIT
+            if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
+              struct.batchLimit = iprot.readI32();
+              struct.setBatchLimitIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
           default:
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
         }
@@ -944,6 +1024,11 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
         oprot.writeBool(struct.cachingBlocksEnabled);
         oprot.writeFieldEnd();
       }
+      if (struct.isSetBatchLimit()) {
+        oprot.writeFieldBegin(BATCH_LIMIT_FIELD_DESC);
+        oprot.writeI32(struct.batchLimit);
+        oprot.writeFieldEnd();
+      }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
@@ -983,7 +1068,10 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       if (struct.isSetCachingBlocksEnabled()) {
         optionals.set(6);
       }
-      oprot.writeBitSet(optionals, 7);
+      if (struct.isSetBatchLimit()) {
+        optionals.set(7);
+      }
+      oprot.writeBitSet(optionals, 8);
       if (struct.isSetStartRow()) {
         oprot.writeBinary(struct.startRow);
       }
@@ -1011,12 +1099,15 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       if (struct.isSetCachingBlocksEnabled()) {
         oprot.writeBool(struct.cachingBlocksEnabled);
       }
+      if (struct.isSetBatchLimit()) {
+        oprot.writeI32(struct.batchLimit);
+      }
     }
 
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, TScan struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(7);
+      BitSet incoming = iprot.readBitSet(8);
       if (incoming.get(0)) {
         struct.startRow = iprot.readBinary();
         struct.setStartRowIsSet(true);
@@ -1053,6 +1144,10 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
       if (incoming.get(6)) {
         struct.cachingBlocksEnabled = iprot.readBool();
         struct.setCachingBlocksEnabledIsSet(true);
+      }
+      if (incoming.get(7)) {
+        struct.batchLimit = iprot.readI32();
+        struct.setBatchLimitIsSet(true);
       }
     }
   }
