@@ -277,41 +277,21 @@ public class HFileReaderV2 extends AbstractHFileReader {
         new BlockCacheKey(name, dataBlockOffset,
             dataBlockEncoder.getEffectiveEncodingInCache(isCompaction),
             expectedBlockType);
+    
+    // Checking the block cache. 
+    HFileBlock cachedBlock = this.getCachedBlock(cacheKey, cacheBlock, isCompaction,
+        expectedBlockType, true);
+    if (cachedBlock != null) {
+      return cachedBlock;
+    }
+
     IdLock.Entry lockEntry = offsetLock.getLockEntry(dataBlockOffset);
     try {
-      // Check cache for block. If found return.
-      if (cacheConf.isBlockCacheEnabled()) {
-        HFileBlock cachedBlock = (HFileBlock)
-            cacheConf.getBlockCache().getBlock(cacheKey, cacheBlock);
-        if (cachedBlock != null) {
-          BlockCategory blockCategory =
-              cachedBlock.getBlockType().getCategory();
-          getSchemaMetrics().updateOnCacheHit(blockCategory, isCompaction);
-
-          if (cachedBlock.getBlockType() == BlockType.DATA) {
-            HFile.dataBlockReadCnt.incrementAndGet();
-          }
-
-          validateBlockType(cachedBlock, expectedBlockType);
-
-          // Validate encoding type for encoded blocks. We include encoding
-          // type in the cache key, and we expect it to match on a cache hit.
-          if (cachedBlock.getBlockType() == BlockType.ENCODED_DATA &&
-              cachedBlock.getDataBlockEncoding() !=
-              dataBlockEncoder.getEncodingInCache()) {
-            throw new IOException("Cached block under key " + cacheKey + " " +
-                "has wrong encoding: " + cachedBlock.getDataBlockEncoding() +
-                " (expected: " + dataBlockEncoder.getEncodingInCache() + ")");
-          }
-          ProfilingData pData = HRegionServer.threadLocalProfilingData.get();
-          if (pData != null) {
-            pData.incInt(ProfilingData.blockHitStr(
-                cachedBlock.getBlockType().getCategory(),
-                cachedBlock.getColumnFamilyName()));
-          }
-          return cachedBlock;
-        }
-        // Carry on, please load.
+      // Double checking the block cache again within the IdLock
+     cachedBlock = this.getCachedBlock(cacheKey, cacheBlock, isCompaction,
+          expectedBlockType, false);
+      if (cachedBlock != null) {
+        return cachedBlock;
       }
 
       // Load block from filesystem.
@@ -353,6 +333,44 @@ public class HFileReaderV2 extends AbstractHFileReader {
     }
   }
 
+  private HFileBlock getCachedBlock(BlockCacheKey cacheKey, boolean cacheBlock,
+      boolean isCompaction, BlockType expectedBlockType, boolean updateMetrics) throws IOException {
+    // Check cache for block. If found return.
+    if (cacheConf.isBlockCacheEnabled()) {
+      HFileBlock cachedBlock = (HFileBlock)
+          cacheConf.getBlockCache().getBlock(cacheKey, cacheBlock);
+      if (cachedBlock != null) {
+        // Validate the block type first
+        validateBlockType(cachedBlock, expectedBlockType);
+        
+        // Validate encoding type for encoded blocks. We include encoding
+        // type in the cache key, and we expect it to match on a cache hit.
+        if (cachedBlock.getBlockType() == BlockType.ENCODED_DATA &&
+            cachedBlock.getDataBlockEncoding() !=
+            dataBlockEncoder.getEncodingInCache()) {
+          throw new IOException("Cached block under key " + cacheKey + " " +
+              "has wrong encoding: " + cachedBlock.getDataBlockEncoding() +
+              " (expected: " + dataBlockEncoder.getEncodingInCache() + ")");
+        }
+        
+        // Update the metrics if enabled
+        if (updateMetrics) {
+          BlockCategory blockCategory =
+            cachedBlock.getBlockType().getCategory();
+          getSchemaMetrics().updateOnCacheHit(blockCategory, isCompaction);
+
+          ProfilingData pData = HRegionServer.threadLocalProfilingData.get();
+          if (pData != null) {
+            pData.incInt(ProfilingData.blockHitStr(
+                cachedBlock.getBlockType().getCategory(),
+                cachedBlock.getColumnFamilyName()));
+          }
+        }
+        return cachedBlock;
+      }
+    }
+    return null;
+  }
   /**
    * Compares the actual type of a block retrieved from cache or disk with its
    * expected type and throws an exception in case of a mismatch. Expected

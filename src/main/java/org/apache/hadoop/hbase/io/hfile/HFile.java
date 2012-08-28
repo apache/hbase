@@ -170,9 +170,6 @@ public class HFile {
   static final AtomicInteger preadOps = new AtomicInteger();
   static final AtomicLong preadTimeNano = new AtomicLong();
 
-  // for test purpose
-  public static volatile AtomicLong dataBlockReadCnt = new AtomicLong(0);
-
   // number of sequential reads
   public static final int getReadOps() {
     return readOps.getAndSet(0);

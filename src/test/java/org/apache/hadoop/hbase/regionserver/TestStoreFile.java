@@ -761,9 +761,10 @@ public class TestStoreFile extends HBaseTestCase {
     scanner.seek(KeyValue.LOWESTKEY);
     while (scanner.next() != null);
     assertEquals(startHit, cs.getHitCount());
-    assertEquals(startMiss + 3, cs.getMissCount());
+    // since [HBASE-5898], region server will query the block cache twice in the cache miss cases.
+    assertEquals(startMiss + (2 * 3), cs.getMissCount());
     assertEquals(startEvicted, cs.getEvictedCount());
-    startMiss += 3;
+    startMiss += 2 * 3;
     scanner.close();
     reader.close(cacheConf.shouldEvictOnClose());
     CacheTestHelper.forceDelayedEviction(bc);
