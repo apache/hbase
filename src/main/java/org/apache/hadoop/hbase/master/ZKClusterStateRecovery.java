@@ -34,8 +34,11 @@ import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
+
+import static org.apache.zookeeper.Watcher.Event.EventType;
 
 /**
  * A utility to recover previous cluster state from ZK on master startup.
@@ -225,7 +228,8 @@ public class ZKClusterStateRecovery {
           openedOrClosed) {
         regionManager.setRegionStateOnRecovery(rsState, hri, hbEventData.getRsName());
         if (openedOrClosed) {
-          master.getUnassignedWatcher().handleRegionStateInZK(znodePath, nodeData, false);
+          master.getUnassignedWatcher().handleRegionStateInZK(EventType.NodeDataChanged,
+              znodePath, nodeData, false);
         }
       } else if (rsState == HBaseEventType.M2ZK_REGION_OFFLINE) {
         // Write to ZK = false; override previous state ("force") = true. 

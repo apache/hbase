@@ -1566,11 +1566,11 @@ public class ZooKeeperWrapper implements Watcher {
    * UNASSGINED region. This works because the master is the only person
    * deleting nodes.
    * @param znode
-   * @return
+   * @return paths and data for new nodes
    */
-  public List<ZNodePathAndData> watchAndGetNewChildren(String znode) {
+  public List<ZNodeEventData> watchAndGetNewChildren(String znode) {
     List<String> nodes = null;
-    List<ZNodePathAndData> newNodes = new ArrayList<ZNodePathAndData>();
+    List<ZNodeEventData> newNodes = new ArrayList<ZNodeEventData>();
     try {
       if (checkExistenceOf(znode)) {
         synchronized(unassignedZNodesWatched) {
@@ -1579,7 +1579,7 @@ public class ZooKeeperWrapper implements Watcher {
             String znodePath = joinPath(znode, node);
             if(!unassignedZNodesWatched.contains(znodePath)) {
               byte[] data = getDataAndWatch(znode, node, this);
-              newNodes.add(new ZNodePathAndData(znodePath, data));
+              newNodes.add(new ZNodeEventData(EventType.NodeCreated, znodePath, data));
               unassignedZNodesWatched.add(znodePath);
             }
           }

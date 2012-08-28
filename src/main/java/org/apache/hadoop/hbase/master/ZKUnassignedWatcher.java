@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.master.handler.MasterOpenRegionHandler;
 import org.apache.hadoop.hbase.util.DrainableQueue;
 import org.apache.hadoop.hbase.util.ParamCallable;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.zookeeper.ZNodePathAndData;
+import org.apache.hadoop.hbase.zookeeper.ZNodeEventData;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -48,19 +48,21 @@ public class ZKUnassignedWatcher implements Watcher {
 
   private final ZooKeeperWrapper zkWrapper;
   private final String serverName;
+  private final RegionManager regionManager;
   private final ServerManager serverManager;
   private final String unassignedZNode;
 
-  private DrainableQueue<ZNodePathAndData> delayedZKEvents =
-      new DrainableQueue<ZNodePathAndData>("delayedZKEvents");
+  private DrainableQueue<ZNodeEventData> delayedZKEvents =
+      new DrainableQueue<ZNodeEventData>("delayedZKEvents");
 
   private List<String> unassignedDirSnapshot = new ArrayList<String>();
 
-  private ParamCallable<ZNodePathAndData> processEvent = new ParamCallable<ZNodePathAndData>() {
+  private ParamCallable<ZNodeEventData> processEvent = new ParamCallable<ZNodeEventData>() {
     @Override
-    public void call(ZNodePathAndData pathAndData) {
+    public void call(ZNodeEventData pathAndData) {
       try {
-        handleRegionStateInZK(pathAndData.getzNodePath(), pathAndData.getData(), false);
+        handleRegionStateInZK(pathAndData.getEventType(),
+            pathAndData.getzNodePath(), pathAndData.getData(), false);
       } catch (IOException e) {
         LOG.error("Could not process event from ZooKeeper", e);
       }
@@ -70,6 +72,7 @@ public class ZKUnassignedWatcher implements Watcher {
   ZKUnassignedWatcher(HMaster master) throws IOException {
     LOG.debug("Started ZKUnassigned watcher");
     this.serverName = master.getHServerAddress().toString();
+    this.regionManager = master.getRegionManager();
     this.serverManager = master.getServerManager();
     zkWrapper = ZooKeeperWrapper.getInstance(master.getConfiguration(), master.getZKWrapperName());
     unassignedZNode = zkWrapper.getRegionInTransitionZNode();
@@ -97,10 +100,10 @@ public class ZKUnassignedWatcher implements Watcher {
    */
   @Override
   public synchronized void process(WatchedEvent event) {
-    EventType type = event.getType();
+    EventType eventType = event.getType();
     // Handle the ignored events
-    if(type.equals(EventType.None)       ||
-       type.equals(EventType.NodeDeleted)) {
+    if(eventType.equals(EventType.None)       ||
+       eventType.equals(EventType.NodeDeleted)) {
       return;
     }
 
@@ -109,7 +112,7 @@ public class ZKUnassignedWatcher implements Watcher {
       return;
     }
 
-    LOG.debug("ZK-EVENT-PROCESS: Got zkEvent " + type +
+    LOG.debug("ZK-EVENT-PROCESS: Got zkEvent " + eventType +
               " path:" + event.getPath());
 
     try
@@ -120,26 +123,26 @@ public class ZKUnassignedWatcher implements Watcher {
        *   2. read to see what its state is and handle as needed (state may have
        *      changed before we started watching it)
        */
-      if(type.equals(EventType.NodeCreated)) {
+      if(eventType.equals(EventType.NodeCreated)) {
         zkWrapper.watchZNode(event.getPath());
-        handleRegionStateInZK(event.getPath());
+        handleRegionStateInZK(eventType, event.getPath());
       }
       /*
        * Data on some node has changed. Read to see what the state is and handle
        * as needed.
        */
-      else if(type.equals(EventType.NodeDataChanged)) {
-        handleRegionStateInZK(event.getPath());
+      else if(eventType.equals(EventType.NodeDataChanged)) {
+        handleRegionStateInZK(eventType, event.getPath());
       }
       /*
        * If there were some nodes created then watch those nodes
        */
-      else if(type.equals(EventType.NodeChildrenChanged)) {
-        List<ZNodePathAndData> newZNodes =
+      else if(eventType.equals(EventType.NodeChildrenChanged)) {
+        List<ZNodeEventData> newZNodes =
             zkWrapper.watchAndGetNewChildren(event.getPath());
-        for(ZNodePathAndData zNodePathAndData : newZNodes) {
+        for(ZNodeEventData zNodePathAndData : newZNodes) {
           LOG.debug("Handling updates for znode: " + zNodePathAndData.getzNodePath());
-          handleRegionStateInZK(zNodePathAndData.getzNodePath(),
+          handleRegionStateInZK(eventType, zNodePathAndData.getzNodePath(),
               zNodePathAndData.getData(), true);
         }
       }
@@ -155,15 +158,17 @@ public class ZKUnassignedWatcher implements Watcher {
    * following:
    *   1. If region's state is updated as CLOSED, invoke the ClosedRegionHandler.
    *   2. If region's state is updated as OPENED, invoke the OpenRegionHandler.
-   * @param zNodePath
+   * @param eventType ZK event type
+   * @param zNodePath unassigned region znode
    * @throws IOException
    */
-  private void handleRegionStateInZK(String zNodePath) throws IOException {
+  private void handleRegionStateInZK(EventType eventType, String zNodePath) throws IOException {
     byte[] data = zkWrapper.readZNode(zNodePath, null);
-    handleRegionStateInZK(zNodePath, data, true);
+    handleRegionStateInZK(eventType, zNodePath, data, true);
   }
 
-  void handleRegionStateInZK(String zNodePath, byte[] data, boolean canDefer) throws IOException {
+  void handleRegionStateInZK(EventType eventType, String zNodePath, byte[] data, boolean canDefer)
+      throws IOException {
     // a null value is set when a node is created, we don't need to handle this
     if(data == null) {
       return;
@@ -172,14 +177,25 @@ public class ZKUnassignedWatcher implements Watcher {
     String region = zNodePath.substring(
         zNodePath.indexOf(unassignedZNode) + unassignedZNode.length() + 1);
 
+    if (eventType == EventType.NodeCreated && regionManager.regionIsInTransition(region)) {
+      // Since the master is the only one who can create unassigned znodes, we generally don't need
+      // to handle this event. However, there is an unlikely case that the previous incarnation of
+      // the master died after creating the znode and the new master came up quickly enough to
+      // catch the NodeCreated event. We distinguish between these two cases by checking if the
+      // region is in transition.
+      LOG.debug("Ignoring " + eventType + " for " + region + ": already in transition");
+      return;
+    }
+
     HBaseEventType rsEvent = HBaseEventType.fromByte(data[0]);
     LOG.debug("Got event type [ " + rsEvent + " ] for region " + region);
 
     RegionTransitionEventData rt = new RegionTransitionEventData();
     Writables.getWritable(data, rt);
 
-    if (canDefer) {
-      ZNodePathAndData pathAndData = new ZNodePathAndData(zNodePath, data);
+
+    if (canDefer && delayedZKEvents.canEnqueue()) {
+      ZNodeEventData pathAndData = new ZNodeEventData(eventType, zNodePath, data);
       if (delayedZKEvents.enqueue(pathAndData)) {
         // We will process this event after the initial scan of the unassigned directory is done.
         LOG.debug("ZK-EVENT-PROCESS: deferring processing of event " + rsEvent + ", path "

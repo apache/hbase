@@ -60,7 +60,7 @@ public class DrainableQueue<T> {
    * has not completed.
    */
   public synchronized boolean enqueue(T event) throws InterruptedIOException {
-    if (!drained) {
+    if (canEnqueue()) {
       try {
         queue.put(event);
       } catch (InterruptedException ex) {
@@ -121,6 +121,10 @@ public class DrainableQueue<T> {
 
   public void stopDrainIfStopped(StopStatus drainStop) {
     this.drainStop = drainStop;
+  }
+
+  public boolean canEnqueue() {
+    return !drained;
   }
 
 }
