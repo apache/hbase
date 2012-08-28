@@ -1186,7 +1186,7 @@ public class ThriftServerRunner implements Runnable {
       LOG.debug("scannerClose: id=" + id);
       ResultScanner scanner = getScanner(id);
       if (scanner == null) {
-        throw new IllegalArgument("scanner ID is invalid");
+        LOG.warn("scanner ID is invalid");
       }
       scanner.close();
       removeScanner(id);
@@ -1206,7 +1206,9 @@ public class ThriftServerRunner implements Runnable {
                 return new ArrayList<TRowResult>();
             }
         } catch (IOException e) {
-            throw new IOError(e.getMessage());
+          scanner.close();
+          removeScanner(id);
+          throw new IOError(e.getMessage());
         }
         return ThriftUtilities.rowResultFromHBase(results);
     }
