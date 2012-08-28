@@ -160,8 +160,15 @@ public class LoadTestTool extends AbstractHBaseTool {
     HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
     LOG.info("Disabling table " + Bytes.toString(tableName));
     admin.disableTable(tableName);
+    boolean create_cf = false;
     for (byte[] cf : columnFamilies) {
       HColumnDescriptor columnDesc = tableDesc.getFamily(cf);
+      // if the cf is not present, then create a descriptor for it
+      if (columnDesc == null) {
+        create_cf = true;
+        columnDesc = new HColumnDescriptor(cf);
+        LOG.info("CF " + Bytes.toString(cf) + "not found, creating...");
+      }
       if (bloomType != null) {
         columnDesc.setBloomFilterType(bloomType);
       }
@@ -172,7 +179,13 @@ public class LoadTestTool extends AbstractHBaseTool {
         columnDesc.setDataBlockEncoding(dataBlockEncodingAlgo);
         columnDesc.setEncodeOnDisk(!encodeInCacheOnly);
       }
-      admin.modifyColumn(Bytes.toString(tableName), columnDesc);
+      // create the cf if not present
+      if (create_cf) {
+        admin.addColumn(tableName, columnDesc);
+      }
+      else {
+        admin.modifyColumn(Bytes.toString(tableName), columnDesc);
+      }
     }
     LOG.info("Enabling table " + Bytes.toString(tableName));
     admin.enableTable(tableName);
