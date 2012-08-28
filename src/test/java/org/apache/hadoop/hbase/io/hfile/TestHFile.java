@@ -29,6 +29,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -59,6 +61,11 @@ public class TestHFile extends HBaseTestCase {
     ROOT_DIR = this.getUnitTestdir("TestHFile").toString();
   }
 
+  @Override
+  public void tearDown() throws Exception {
+    super.tearDown();
+  }
+
   /**
    * Test empty HFile.
    * Test all features work reasonably when hfile is empty of entries.
@@ -73,6 +80,61 @@ public class TestHFile extends HBaseTestCase {
     r.loadFileInfo();
     assertNull(r.getFirstKey());
     assertNull(r.getLastKey());
+  }
+
+  /**
+   * Create 0-length hfile and show that it fails
+   */
+  public void testCorrupt0LengthHFile() throws IOException {
+    if (cacheConf == null) cacheConf = new CacheConfig(conf);
+    Path f = new Path(ROOT_DIR, getName());
+    FSDataOutputStream fsos = fs.create(f);
+    fsos.close();
+
+    try {
+      Reader r = HFile.createReader(fs, f, cacheConf);
+    } catch (CorruptHFileException che) {
+      // Expected failure
+      return;
+    }
+    fail("Should have thrown exception");
+  }
+
+  public static void truncateFile(FileSystem fs, Path src, Path dst) throws IOException {
+    FileStatus fst = fs.getFileStatus(src);
+    long len = fst.getLen();
+    len = len / 2 ;
+
+    // create a truncated hfile
+    FSDataOutputStream fdos = fs.create(dst);
+    byte[] buf = new byte[(int)len];
+    FSDataInputStream fdis = fs.open(src);
+    fdis.read(buf);
+    fdos.write(buf);
+    fdis.close();
+    fdos.close();
+  }
+
+  /**
+   * Create a truncated hfile and verify that exception thrown.
+   */
+  public void testCorruptTruncatedHFile() throws IOException {
+    if (cacheConf == null) cacheConf = new CacheConfig(conf);
+    Path f = new Path(ROOT_DIR, getName());
+    Writer w = HFile.getWriterFactory(conf, cacheConf).createWriter(this.fs, f);
+    writeSomeRecords(w, 0, 100);
+    w.close();
+
+    Path trunc = new Path(f.getParent(), "trucated");
+    truncateFile(fs, w.getPath(), trunc);
+
+    try {
+      Reader r = HFile.createReader(fs, trunc, cacheConf);
+    } catch (CorruptHFileException che) {
+      // Expected failure
+      return;
+    }
+    fail("Should have thrown exception");
   }
 
   // write some records into the tfile

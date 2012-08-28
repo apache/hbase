@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,6 +37,7 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -80,6 +82,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
+import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
@@ -158,8 +161,10 @@ public class HBaseFsck {
   private HConnection connection;
   private HBaseAdmin admin;
   private HTable meta;
-  private ScheduledThreadPoolExecutor executor; // threads to retrieve data from regionservers
+  protected ExecutorService executor; // threads to retrieve data from regionservers
   private long startMillis = System.currentTimeMillis();
+  private HFileCorruptionChecker hfcc;
+  private int retcode = 0;
 
   /***********
    * Options
@@ -233,6 +238,22 @@ public class HBaseFsck {
 
     int numThreads = conf.getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
     executor = new ScheduledThreadPoolExecutor(numThreads);
+  }
+
+  /**
+   * Constructor
+   *
+   * @param conf
+   *          Configuration object
+   * @throws MasterNotRunningException
+   *           if the master is not running
+   * @throws ZooKeeperConnectionException
+   *           if unable to connect to ZooKeeper
+   */
+  public HBaseFsck(Configuration conf, ExecutorService exec) throws MasterNotRunningException,
+      ZooKeeperConnectionException, IOException {
+    this.conf = conf;
+    this.executor = exec;
   }
 
   /**
@@ -3074,6 +3095,10 @@ public class HBaseFsck {
     tablesIncluded.add(table);
   }
 
+  Set<String> getIncludedTables() {
+    return new HashSet<String>(tablesIncluded);
+  }
+
   /**
    * We are interested in only those tables that have not changed their state in
    * META during the last few seconds specified by hbase.admin.fsck.timelag
@@ -3083,7 +3108,27 @@ public class HBaseFsck {
     timelag = seconds * 1000; // convert to milliseconds
   }
 
-  protected static void printUsageAndExit() {
+  protected HFileCorruptionChecker createHFileCorruptionChecker(boolean sidelineCorruptHFiles) throws IOException {
+    return new HFileCorruptionChecker(conf, executor, sidelineCorruptHFiles);
+  }
+
+  public HFileCorruptionChecker getHFilecorruptionChecker() {
+    return hfcc;
+  }
+
+  public void setHFileCorruptionChecker(HFileCorruptionChecker hfcc) {
+    this.hfcc = hfcc;
+  }
+
+  public void setRetCode(int code) {
+    this.retcode = code;
+  }
+
+  public int getRetCode() {
+    return retcode;
+  }
+
+  protected HBaseFsck printUsageAndExit() {
     System.err.println("Usage: fsck [opts] {only tables}");
     System.err.println(" where [opts] are:");
     System.err.println("   -help Display help options (this)");
@@ -3096,7 +3141,8 @@ public class HBaseFsck {
     System.err.println("   -summary Print only summary of the tables and status.");
     System.err.println("   -metaonly Only check the state of ROOT and META tables.");
 
-    System.err.println("  Repair options: (expert features, use with caution!)");
+    System.err.println("");
+    System.err.println("  Metadata Repair options: (expert features, use with caution!)");
     System.err.println("   -fix              Try to fix region assignments.  This is for backwards compatiblity");
     System.err.println("   -fixAssignments   Try to fix region assignments.  Replaces the old -fix");
     System.err.println("   -fixMeta          Try to fix meta problems.  This assumes HDFS region info is good.");
@@ -3109,16 +3155,25 @@ public class HBaseFsck {
     System.err.println("   -maxOverlapsToSideline <n>  When fixing region overlaps, allow at most <n> regions to sideline per group. (n=" + DEFAULT_OVERLAPS_TO_SIDELINE +" by default)");
     System.err.println("   -fixSplitParents  Try to force offline split parents to be online.");
     System.err.println("   -ignorePreCheckPermission  ignore filesystem permission pre-check");
+
     System.err.println("");
+    System.err.println("  Datafile Repair options: (expert features, use with caution!)");
+    System.err.println("   -checkCorruptHFiles     Check all Hfiles by opening them to make sure they are valid");
+    System.err.println("   -sidelineCorruptHfiles  Quarantine corrupted HFiles.  implies -checkCorruptHfiles");
+
+    System.err.println("");
+    System.err.println("  Metadata Repair shortcuts");
     System.err.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles " +
         "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps");
     System.err.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles");
 
-    Runtime.getRuntime().exit(-2);
+    setRetCode(-2);
+    return this;
   }
 
   /**
    * Main program
+   *
    * @param args
    * @throws Exception
    */
@@ -3130,155 +3185,197 @@ public class HBaseFsck {
     URI defaultFs = hbasedir.getFileSystem(conf).getUri();
     conf.set("fs.defaultFS", defaultFs.toString());     // for hadoop 0.21+
     conf.set("fs.default.name", defaultFs.toString());  // for hadoop 0.20
-    HBaseFsck fsck = new HBaseFsck(conf);
+
+    int numThreads = conf.getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
+    ExecutorService exec = new ScheduledThreadPoolExecutor(numThreads);
+    HBaseFsck hbck = new HBaseFsck(conf, exec);
+    hbck.exec(exec, args);
+    int retcode = hbck.getRetCode();
+    Runtime.getRuntime().exit(retcode);
+  }
+
+  public HBaseFsck exec(ExecutorService exec, String[] args) throws KeeperException, IOException,
+    InterruptedException {
     long sleepBeforeRerun = DEFAULT_SLEEP_BEFORE_RERUN;
+
+    boolean checkCorruptHFiles = false;
+    boolean sidelineCorruptHFiles = false;
 
     // Process command-line args.
     for (int i = 0; i < args.length; i++) {
       String cmd = args[i];
       if (cmd.equals("-help") || cmd.equals("-h")) {
-        printUsageAndExit();
+        return printUsageAndExit();
       } else if (cmd.equals("-details")) {
-        fsck.setDisplayFullReport();
+        setDisplayFullReport();
       } else if (cmd.equals("-timelag")) {
         if (i == args.length - 1) {
           System.err.println("HBaseFsck: -timelag needs a value.");
-          printUsageAndExit();
+          return printUsageAndExit();
         }
         try {
           long timelag = Long.parseLong(args[i+1]);
-          fsck.setTimeLag(timelag);
+          setTimeLag(timelag);
         } catch (NumberFormatException e) {
           System.err.println("-timelag needs a numeric value.");
-          printUsageAndExit();
+          return printUsageAndExit();
         }
         i++;
       } else if (cmd.equals("-sleepBeforeRerun")) {
         if (i == args.length - 1) {
           System.err.println("HBaseFsck: -sleepBeforeRerun needs a value.");
-          printUsageAndExit();
+          return printUsageAndExit();
         }
         try {
           sleepBeforeRerun = Long.parseLong(args[i+1]);
         } catch (NumberFormatException e) {
           System.err.println("-sleepBeforeRerun needs a numeric value.");
-          printUsageAndExit();
+          return printUsageAndExit();
         }
         i++;
       } else if (cmd.equals("-fix")) {
         System.err.println("This option is deprecated, please use " +
           "-fixAssignments instead.");
-        fsck.setFixAssignments(true);
+        setFixAssignments(true);
       } else if (cmd.equals("-fixAssignments")) {
-        fsck.setFixAssignments(true);
+        setFixAssignments(true);
       } else if (cmd.equals("-fixMeta")) {
-        fsck.setFixMeta(true);
+        setFixMeta(true);
       } else if (cmd.equals("-fixHdfsHoles")) {
-        fsck.setFixHdfsHoles(true);
+        setFixHdfsHoles(true);
       } else if (cmd.equals("-fixHdfsOrphans")) {
-        fsck.setFixHdfsOrphans(true);
+        setFixHdfsOrphans(true);
       } else if (cmd.equals("-fixHdfsOverlaps")) {
-        fsck.setFixHdfsOverlaps(true);
+        setFixHdfsOverlaps(true);
       } else if (cmd.equals("-fixVersionFile")) {
-        fsck.setFixVersionFile(true);
+        setFixVersionFile(true);
       } else if (cmd.equals("-sidelineBigOverlaps")) {
-        fsck.setSidelineBigOverlaps(true);
+        setSidelineBigOverlaps(true);
       } else if (cmd.equals("-fixSplitParents")) {
-        fsck.setFixSplitParents(true);
+        setFixSplitParents(true);
       } else if (cmd.equals("-ignorePreCheckPermission")) {
-        fsck.setIgnorePreCheckPermission(true);
+        setIgnorePreCheckPermission(true);
+      } else if (cmd.equals("-checkCorruptHFiles")) {
+        checkCorruptHFiles = true;
+      } else if (cmd.equals("-sidelineCorruptHFiles")) {
+        sidelineCorruptHFiles = true;
       } else if (cmd.equals("-repair")) {
         // this attempts to merge overlapping hdfs regions, needs testing
         // under load
-        fsck.setFixHdfsHoles(true);
-        fsck.setFixHdfsOrphans(true);
-        fsck.setFixMeta(true);
-        fsck.setFixAssignments(true);
-        fsck.setFixHdfsOverlaps(true);
-        fsck.setFixVersionFile(true);
-        fsck.setSidelineBigOverlaps(true);
-        fsck.setFixSplitParents(false);
+        setFixHdfsHoles(true);
+        setFixHdfsOrphans(true);
+        setFixMeta(true);
+        setFixAssignments(true);
+        setFixHdfsOverlaps(true);
+        setFixVersionFile(true);
+        setSidelineBigOverlaps(true);
+        setFixSplitParents(false);
       } else if (cmd.equals("-repairHoles")) {
         // this will make all missing hdfs regions available but may lose data
-        fsck.setFixHdfsHoles(true);
-        fsck.setFixHdfsOrphans(false);
-        fsck.setFixMeta(true);
-        fsck.setFixAssignments(true);
-        fsck.setFixHdfsOverlaps(false);
-        fsck.setSidelineBigOverlaps(false);
-        fsck.setFixSplitParents(false);
+        setFixHdfsHoles(true);
+        setFixHdfsOrphans(false);
+        setFixMeta(true);
+        setFixAssignments(true);
+        setFixHdfsOverlaps(false);
+        setSidelineBigOverlaps(false);
+        setFixSplitParents(false);
       } else if (cmd.equals("-maxOverlapsToSideline")) {
         if (i == args.length - 1) {
           System.err.println("-maxOverlapsToSideline needs a numeric value argument.");
-          printUsageAndExit();
+          return printUsageAndExit();
         }
         try {
           int maxOverlapsToSideline = Integer.parseInt(args[i+1]);
-          fsck.setMaxOverlapsToSideline(maxOverlapsToSideline);
+          setMaxOverlapsToSideline(maxOverlapsToSideline);
         } catch (NumberFormatException e) {
           System.err.println("-maxOverlapsToSideline needs a numeric value argument.");
-          printUsageAndExit();
+          return printUsageAndExit();
         }
         i++;
       } else if (cmd.equals("-maxMerge")) {
         if (i == args.length - 1) {
           System.err.println("-maxMerge needs a numeric value argument.");
-          printUsageAndExit();
+          return printUsageAndExit();
         }
         try {
           int maxMerge = Integer.parseInt(args[i+1]);
-          fsck.setMaxMerge(maxMerge);
+          setMaxMerge(maxMerge);
         } catch (NumberFormatException e) {
           System.err.println("-maxMerge needs a numeric value argument.");
-          printUsageAndExit();
+          return printUsageAndExit();
         }
         i++;
       } else if (cmd.equals("-summary")) {
-        fsck.setSummary();
+        setSummary();
       } else if (cmd.equals("-metaonly")) {
-        fsck.setCheckMetaOnly();
+        setCheckMetaOnly();
       } else if (cmd.startsWith("-")) {
         System.err.println("Unrecognized option:" + cmd);
-        printUsageAndExit();
+        return printUsageAndExit();
       } else {
-        fsck.includeTable(cmd);
+        includeTable(cmd);
         System.out.println("Allow checking/fixes for table: " + cmd);
       }
     }
 
     // pre-check current user has FS write permission or not
     try {
-      fsck.preCheckPermission();
+      preCheckPermission();
     } catch (AccessControlException ace) {
       Runtime.getRuntime().exit(-1);
     } catch (IOException ioe) {
       Runtime.getRuntime().exit(-1);
     }
-    // do the real work of fsck
-    fsck.connect();
-    int code = fsck.onlineHbck();
-    // If we have changed the HBase state it is better to run fsck again
+
+    // do the real work of hbck
+    connect();
+
+    // if corrupt file mode is on, first fix them since they may be opened later
+    if (checkCorruptHFiles || sidelineCorruptHFiles) {
+      LOG.info("Checking all hfiles for corruption");
+      HFileCorruptionChecker hfcc = createHFileCorruptionChecker(sidelineCorruptHFiles);
+      setHFileCorruptionChecker(hfcc); // so we can get result
+      Collection<String> tables = getIncludedTables();
+      Collection<Path> tableDirs = new ArrayList<Path>();
+      Path rootdir = FSUtils.getRootDir(conf);
+      if (tables.size() > 0) {
+        for (String t : tables) {
+          tableDirs.add(FSUtils.getTablePath(rootdir, t));
+        }
+      } else {
+        tableDirs = FSUtils.getTableDirs(FSUtils.getCurrentFileSystem(conf), rootdir);
+      }
+      hfcc.checkTables(tableDirs);
+      PrintWriter out = new PrintWriter(System.out);
+      hfcc.report(out);
+      out.flush();
+    }
+
+    // check and fix table integrity, region consistency.
+    int code = onlineHbck();
+    setRetCode(code);
+    // If we have changed the HBase state it is better to run hbck again
     // to see if we haven't broken something else in the process.
     // We run it only once more because otherwise we can easily fall into
     // an infinite loop.
-    if (fsck.shouldRerun()) {
+    if (shouldRerun()) {
       try {
         LOG.info("Sleeping " + sleepBeforeRerun + "ms before re-checking after fix...");
         Thread.sleep(sleepBeforeRerun);
       } catch (InterruptedException ie) {
-        Runtime.getRuntime().exit(code);
+        return this;
       }
       // Just report
-      fsck.setFixAssignments(false);
-      fsck.setFixMeta(false);
-      fsck.setFixHdfsHoles(false);
-      fsck.setFixHdfsOverlaps(false);
-      fsck.setFixVersionFile(false);
-      fsck.errors.resetErrors();
-      code = fsck.onlineHbck();
+      setFixAssignments(false);
+      setFixMeta(false);
+      setFixHdfsHoles(false);
+      setFixHdfsOverlaps(false);
+      setFixVersionFile(false);
+      errors.resetErrors();
+      code = onlineHbck();
+      setRetCode(code);
     }
-
-    Runtime.getRuntime().exit(code);
+    return this;
   }
 
   /**

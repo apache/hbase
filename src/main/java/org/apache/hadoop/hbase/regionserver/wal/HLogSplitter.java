@@ -628,7 +628,7 @@ public class HLogSplitter {
       final List<Path> processedLogs, final Path oldLogDir,
       final FileSystem fs, final Configuration conf) throws IOException {
     final Path corruptDir = new Path(conf.get(HConstants.HBASE_DIR), conf.get(
-        "hbase.regionserver.hlog.splitlog.corrupt.dir", ".corrupt"));
+        "hbase.regionserver.hlog.splitlog.corrupt.dir",  HConstants.CORRUPT_DIR_NAME));
 
     if (!fs.mkdirs(corruptDir)) {
       LOG.info("Unable to mkdir " + corruptDir);

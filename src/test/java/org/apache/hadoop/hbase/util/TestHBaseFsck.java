@@ -35,10 +35,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -61,18 +64,22 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
+import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
+import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
+import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.rules.TestName;
 
 import com.google.common.collect.Multimap;
 
@@ -83,8 +90,9 @@ public class TestHBaseFsck {
   final static Log LOG = LogFactory.getLog(TestHBaseFsck.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static Configuration conf = TEST_UTIL.getConfiguration();
-  private final static byte[] FAM = Bytes.toBytes("fam");
-  private final static int REGION_ONLINE_TIMEOUT = 300;
+  private final static String FAM_STR = "fam";
+  private final static byte[] FAM = Bytes.toBytes(FAM_STR);
+  private final static int REGION_ONLINE_TIMEOUT = 800;
 
   // for the instance, reset every test run
   private HTable tbl;
@@ -1248,4 +1256,183 @@ public class TestHBaseFsck {
       deleteTable(table);
     }
   }
+
+  /**
+   * We don't have an easy way to verify that a flush completed, so we loop until we find a
+   * legitimate hfile and return it.
+   * @param fs
+   * @param table
+   * @return Path of a flushed hfile.
+   * @throws IOException
+   */
+  Path getFlushedHFile(FileSystem fs, String table) throws IOException {
+    Path tableDir= FSUtils.getTablePath(FSUtils.getRootDir(conf), table);
+    Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
+    Path famDir = new Path(regionDir, FAM_STR);
+
+    // keep doing this until we get a legit hfile
+    while (true) {
+      FileStatus[] hfFss = fs.listStatus(famDir);
+      if (hfFss.length == 0) {
+        continue;
+      }
+      for (FileStatus hfs : hfFss) {
+        if (!hfs.isDir()) {
+          return hfs.getPath();
+        }
+      }
+    }
+  }
+
+  /**
+   * This creates a table and then corrupts an hfile.  Hbck should quarantine the file.
+   */
+  @Test(timeout=120000)
+  public void testQuarantineCorruptHFile() throws Exception {
+    String table = name.getMethodName();
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+      TEST_UTIL.getHBaseAdmin().flush(table); // flush is async.
+
+      FileSystem fs = FileSystem.get(conf);
+      Path hfile = getFlushedHFile(fs, table);
+
+      // Mess it up by leaving a hole in the assignment, meta, and hdfs data
+      TEST_UTIL.getHBaseAdmin().disableTable(table);
+
+      // create new corrupt file called deadbeef (valid hfile name)
+      Path corrupt = new Path(hfile.getParent(), "deadbeef");
+      TestHFile.truncateFile(fs, hfile, corrupt);
+      LOG.info("Created corrupted file " + corrupt);
+      HBaseFsck.debugLsr(conf, FSUtils.getRootDir(conf));
+
+      // we cannot enable here because enable never finished due to the corrupt region.
+      HBaseFsck res = HbckTestingUtil.doHFileQuarantine(conf, table);
+      assertEquals(res.getRetCode(), 0);
+      HFileCorruptionChecker hfcc = res.getHFilecorruptionChecker();
+      assertEquals(hfcc.getHFilesChecked(), 5);
+      assertEquals(hfcc.getCorrupted().size(), 1);
+      assertEquals(hfcc.getFailures().size(), 0);
+      assertEquals(hfcc.getQuarantined().size(), 1);
+      assertEquals(hfcc.getMissing().size(), 0);
+
+      // Its been fixed, verify that we can enable.
+      TEST_UTIL.getHBaseAdmin().enableTable(table);
+    } finally {
+      deleteTable(table);
+    }
+  }
+
+  private void doQuarantineTest(String table, HBaseFsck hbck, int check, int corrupt, int fail,
+      int quar, int missing) throws Exception {
+    try {
+      setupTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+      TEST_UTIL.getHBaseAdmin().flush(table); // flush is async.
+
+      // Mess it up by leaving a hole in the assignment, meta, and hdfs data
+      TEST_UTIL.getHBaseAdmin().disableTable(table);
+
+      String[] args = {"-sidelineCorruptHFiles", "-repairHoles", "-ignorePreCheckPermission", table};
+      ExecutorService exec = new ScheduledThreadPoolExecutor(10);
+      HBaseFsck res = hbck.exec(exec, args);
+
+      HFileCorruptionChecker hfcc = res.getHFilecorruptionChecker();
+      assertEquals(hfcc.getHFilesChecked(), check);
+      assertEquals(hfcc.getCorrupted().size(), corrupt);
+      assertEquals(hfcc.getFailures().size(), fail);
+      assertEquals(hfcc.getQuarantined().size(), quar);
+      assertEquals(hfcc.getMissing().size(), missing);
+
+      // its been fixed, verify that we can enable
+      TEST_UTIL.getHBaseAdmin().enableTable(table);
+    } finally {
+      deleteTable(table);
+    }
+  }
+
+  /**
+   * This creates a table and simulates the race situation where a concurrent compaction or split
+   * has removed an hfile after the corruption checker learned about it.
+   */
+  @Test(timeout=120000)
+  public void testQuarantineMissingHFile() throws Exception {
+    String table = name.getMethodName();
+    ExecutorService exec = new ScheduledThreadPoolExecutor(10);
+    // inject a fault in the hfcc created.
+    final FileSystem fs = FileSystem.get(conf);
+    HBaseFsck hbck = new HBaseFsck(conf, exec) {
+      public HFileCorruptionChecker createHFileCorruptionChecker(boolean sidelineCorruptHFiles) throws IOException {
+        return new HFileCorruptionChecker(conf, executor, sidelineCorruptHFiles) {
+          boolean attemptedFirstHFile = false;
+          protected void checkHFile(Path p) throws IOException {
+            if (!attemptedFirstHFile) {
+              attemptedFirstHFile = true;
+              assertTrue(fs.delete(p, true)); // make sure delete happened.
+            }
+            super.checkHFile(p);
+          }
+        };
+      }
+    };
+    doQuarantineTest(table, hbck, 4, 0, 0, 0, 1); // 4 attempted, but 1 missing.
+  }
+
+  /**
+   * This creates a table and simulates the race situation where a concurrent compaction or split
+   * has removed an colfam dir before the corruption checker got to it.
+   */
+  @Test(timeout=120000)
+  public void testQuarantineMissingFamdir() throws Exception {
+    String table = name.getMethodName();
+    ExecutorService exec = new ScheduledThreadPoolExecutor(10);
+    // inject a fault in the hfcc created.
+    final FileSystem fs = FileSystem.get(conf);
+    HBaseFsck hbck = new HBaseFsck(conf, exec) {
+      public HFileCorruptionChecker createHFileCorruptionChecker(boolean sidelineCorruptHFiles) throws IOException {
+        return new HFileCorruptionChecker(conf, executor, sidelineCorruptHFiles) {
+          boolean attemptedFirstFamDir = false;
+          protected void checkColFamDir(Path p) throws IOException {
+            if (!attemptedFirstFamDir) {
+              attemptedFirstFamDir = true;
+              assertTrue(fs.delete(p, true)); // make sure delete happened.
+            }
+            super.checkColFamDir(p);
+          }
+        };
+      }
+    };
+    doQuarantineTest(table, hbck, 3, 0, 0, 0, 1);
+  }
+
+  /**
+   * This creates a table and simulates the race situation where a concurrent compaction or split
+   * has removed a region dir before the corruption checker got to it.
+   */
+  @Test(timeout=120000)
+  public void testQuarantineMissingRegionDir() throws Exception {
+    String table = name.getMethodName();
+    ExecutorService exec = new ScheduledThreadPoolExecutor(10);
+    // inject a fault in the hfcc created.
+    final FileSystem fs = FileSystem.get(conf);
+    HBaseFsck hbck = new HBaseFsck(conf, exec) {
+      public HFileCorruptionChecker createHFileCorruptionChecker(boolean sidelineCorruptHFiles) throws IOException {
+        return new HFileCorruptionChecker(conf, executor, sidelineCorruptHFiles) {
+          boolean attemptedFirstRegionDir = false;
+          protected void checkRegionDir(Path p) throws IOException {
+            if (!attemptedFirstRegionDir) {
+              attemptedFirstRegionDir = true;
+              assertTrue(fs.delete(p, true)); // make sure delete happened.
+            }
+            super.checkRegionDir(p);
+          }
+        };
+      }
+    };
+    doQuarantineTest(table, hbck, 3, 0, 0, 0, 1);
+  }
+
+  @org.junit.Rule
+  public TestName name = new TestName();
 }

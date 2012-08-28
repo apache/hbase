@@ -138,7 +138,7 @@ public class TestFixedFileTrailer {
         try {
           readTrailer(trailerPath);
           fail("Exception expected");
-        } catch (IOException ex) {
+        } catch (IllegalArgumentException ex) {
           // Make it easy to debug this.
           String msg = ex.getMessage();
           String cleanMsg = msg.replaceAll(

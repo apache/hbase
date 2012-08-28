@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,7 +42,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -889,6 +890,114 @@ public abstract class FSUtils {
       }
     }
     return false;
+  }
+
+  /**
+   * Filter for all dirs that don't start with '.'
+   */
+  public static class RegionDirFilter implements PathFilter {
+    // This pattern will accept 0.90+ style hex region dirs and older numeric region dir names.
+    final public static Pattern regionDirPattern = Pattern.compile("^[0-9a-f]*$");
+    final FileSystem fs;
+
+    public RegionDirFilter(FileSystem fs) {
+      this.fs = fs;
+    }
+
+    @Override
+    public boolean accept(Path rd) {
+      if (!regionDirPattern.matcher(rd.getName()).matches()) {
+        return false;
+      }
+
+      try {
+        return fs.getFileStatus(rd).isDir();
+      } catch (IOException ioe) {
+        // Maybe the file was moved or the fs was disconnected.
+        LOG.warn("Skipping file " + rd +" due to IOException", ioe);
+        return false;
+      }
+    }
+  }
+
+  /**
+   * Given a particular table dir, return all the regiondirs inside it, excluding files such as
+   * .tableinfo
+   * @param fs A file system for the Path
+   * @param tableDir Path to a specific table directory <hbase.rootdir>/<tabledir>
+   * @return List of paths to valid region directories in table dir.
+   * @throws IOException
+   */
+  public static List<Path> getRegionDirs(final FileSystem fs, final Path tableDir) throws IOException {
+    // assumes we are in a table dir.
+    FileStatus[] rds = fs.listStatus(tableDir, new RegionDirFilter(fs));
+    List<Path> regionDirs = new ArrayList<Path>(rds.length);
+    for (FileStatus rdfs: rds) {
+      Path rdPath = rdfs.getPath();
+      regionDirs.add(rdPath);
+    }
+    return regionDirs;
+  }
+
+  /**
+   * Filter for all dirs that are legal column family names.  This is generally used for colfam
+   * dirs <hbase.rootdir>/<tabledir>/<regiondir>/<colfamdir>.
+   */
+  public static class FamilyDirFilter implements PathFilter {
+    final FileSystem fs;
+
+    public FamilyDirFilter(FileSystem fs) {
+      this.fs = fs;
+    }
+
+    @Override
+    public boolean accept(Path rd) {
+      try {
+        // throws IAE if invalid
+        HColumnDescriptor.isLegalFamilyName(Bytes.toBytes(rd.getName()));
+      } catch (IllegalArgumentException iae) {
+        // path name is an invalid family name and thus is excluded.
+        return false;
+      }
+
+      try {
+        return fs.getFileStatus(rd).isDir();
+      } catch (IOException ioe) {
+        // Maybe the file was moved or the fs was disconnected.
+        LOG.warn("Skipping file " + rd +" due to IOException", ioe);
+        return false;
+      }
+    }
+  }
+
+  /**
+   * Filter for HFiles that excludes reference files.
+   */
+  public static class HFileFilter implements PathFilter {
+    // This pattern will accept 0.90+ style hex hfies files but reject reference files
+    final public static Pattern hfilePattern = Pattern.compile("^([0-9a-f]+)$");
+
+    final FileSystem fs;
+
+    public HFileFilter(FileSystem fs) {
+      this.fs = fs;
+    }
+
+    @Override
+    public boolean accept(Path rd) {
+      if (!hfilePattern.matcher(rd.getName()).matches()) {
+        return false;
+      }
+
+      try {
+        // only files
+        return !fs.getFileStatus(rd).isDir();
+      } catch (IOException ioe) {
+        // Maybe the file was moved or the fs was disconnected.
+        LOG.warn("Skipping file " + rd +" due to IOException", ioe);
+        return false;
+      }
+    }
   }
 
   /**

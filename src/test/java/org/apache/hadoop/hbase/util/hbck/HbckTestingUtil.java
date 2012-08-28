@@ -22,6 +22,8 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.HBaseFsck;
@@ -57,6 +59,21 @@ public class HbckTestingUtil {
     }
     fsck.onlineHbck();
     return fsck;
+  }
+
+  /**
+   * Runs hbck with the -sidelineCorruptHFiles option
+   * @param conf
+   * @param table table constraint
+   * @return <returncode, hbckInstance>
+   * @throws Exception
+   */
+  public static HBaseFsck doHFileQuarantine(Configuration conf, String table) throws Exception {
+    String[] args = {"-sidelineCorruptHFiles", "-ignorePreCheckPermission", table};
+    ExecutorService exec = new ScheduledThreadPoolExecutor(10);
+    HBaseFsck hbck = new HBaseFsck(conf, exec);
+    hbck.exec(exec, args);
+    return hbck;
   }
 
   public static void assertNoErrors(HBaseFsck fsck) throws Exception {

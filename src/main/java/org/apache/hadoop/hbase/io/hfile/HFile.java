@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -365,10 +364,30 @@ public class HFile {
     void close(boolean evictOnClose) throws IOException;
   }
 
+  /**
+   * Method returns the reader given the specified arguments.
+   * TODO This is a bad abstraction.  See HBASE-6635.
+   *
+   * @param path hfile's path
+   * @param fsdis an open checksummed stream of path's file
+   * @param fsdisNoFsChecksum an open unchecksummed stream of path's file
+   * @param size max size of the trailer.
+   * @param closeIStream boolean for closing file after the getting the reader version.
+   * @param cacheConf Cache configuation values, cannot be null.
+   * @param preferredEncodingInCache
+   * @param hfs
+   * @return an appropriate instance of HFileReader
+   * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
+   */
   private static Reader pickReaderVersion(Path path, FSDataInputStream fsdis,
       long size, boolean closeIStream, CacheConfig cacheConf)
   throws IOException {
-    FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis, size);
+    FixedFileTrailer trailer = null;
+    try {
+      trailer = FixedFileTrailer.readFromStream(fsdis, size);
+    } catch (IllegalArgumentException iae) {
+      throw new CorruptHFileException("Problem reading HFile Trailer from file " + path, iae);
+    }
     switch (trailer.getVersion()) {
     case 1:
       return new HFileReaderV1(path, trailer, fsdis, size, closeIStream,
@@ -377,8 +396,7 @@ public class HFile {
       return new HFileReaderV2(path, trailer, fsdis, size, closeIStream,
           cacheConf);
     default:
-      throw new IOException("Cannot instantiate reader for HFile version " +
-          trailer.getVersion());
+      throw new CorruptHFileException("Invalid HFile version " + trailer.getVersion());
     }
   }
 

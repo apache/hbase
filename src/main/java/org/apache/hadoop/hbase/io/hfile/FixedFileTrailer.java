@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.io.hfile.HFile.MAX_FORMAT_VERSION;
+import static org.apache.hadoop.hbase.io.hfile.HFile.MIN_FORMAT_VERSION;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -32,9 +35,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.RawComparator;
-
-import static org.apache.hadoop.hbase.io.hfile.HFile.MIN_FORMAT_VERSION;
-import static org.apache.hadoop.hbase.io.hfile.HFile.MAX_FORMAT_VERSION;
 
 import com.google.common.io.NullOutputStream;
 
@@ -299,12 +299,7 @@ public class FixedFileTrailer {
     buf.position(buf.limit() - Bytes.SIZEOF_INT);
     int version = buf.getInt();
 
-    try {
-      HFile.checkFormatVersion(version);
-    } catch (IllegalArgumentException iae) {
-      // In this context, an invalid version might indicate a corrupt HFile.
-      throw new IOException(iae);
-    }
+    HFile.checkFormatVersion(version); // throws IAE if invalid
 
     int trailerSize = getTrailerSize(version);
 
