@@ -1134,9 +1134,15 @@ public class HBaseTestingUtility {
     // Not available in 0.20 hdfs.  Use reflection to make it happen.
 
     // private NameNode nameNode;
-    Field field = this.dfsCluster.getClass().getDeclaredField("nameNode");
-    field.setAccessible(true);
-    NameNode nn = (NameNode)field.get(this.dfsCluster);
+    NameNode nn = null;
+    try {
+      Field field = this.dfsCluster.getClass().getDeclaredField("nameNode");
+      field.setAccessible(true);
+      nn = (NameNode)field.get(this.dfsCluster);
+    } catch (NoSuchFieldException ne) {
+      // The latest version of HDFS has a nice API for this.
+      nn = dfsCluster.getNameNode();
+    }
     nn.namesystem.leaseManager.setLeasePeriod(100, 50000);
   }
 
