@@ -54,6 +54,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -287,6 +288,7 @@ public class HRegionServer implements HRegionInterface,
   private ZooKeeperWrapper zooKeeperWrapper;
 
   private final ExecutorService logCloseThreadPool;
+  private final ExecutorService regionOpenCloseThreadPool;
   
   // Log Splitting Worker
   private SplitLogWorker splitLogWorker;
@@ -413,6 +415,20 @@ public class HRegionServer implements HRegionInterface,
     logCloseThreadPool =
         Executors.newFixedThreadPool(logCloseThreads,
             new DaemonThreadFactory("hregionserver-split-logClose-thread-"));
+
+    int maxRegionOpenCloseThreads = Math.max(1,
+        conf.getInt(HConstants.HREGION_OPEN_AND_CLOSE_THREADS_MAX,
+            HConstants.DEFAULT_HREGION_OPEN_AND_CLOSE_THREADS_MAX));
+    regionOpenCloseThreadPool = Threads
+        .getBoundedCachedThreadPool(maxRegionOpenCloseThreads, 30L, TimeUnit.SECONDS,
+            new ThreadFactory() {
+              private int count = 1;
+
+              public Thread newThread(Runnable r) {
+                Thread t = new Thread(r, "regionOpenCloseThread-" + count++);
+                return t;
+              }
+            });
   }
 
   /**
@@ -1797,11 +1813,12 @@ public class HRegionServer implements HRegionInterface,
                 }
               }
               if (!requeued) {
+                String favouredNodes = null;
                 if (e.msg.getMessage() != null && e.msg.getMessage().length > 0) {
-                  openRegion(info, new String(e.msg.getMessage()));
-                } else {
-                  openRegion(info, null);
+                  favouredNodes = new String(e.msg.getMessage());
                 }
+                regionOpenCloseThreadPool.submit(
+                    createRegionOpenCallable(info, favouredNodes));
               }
               break;
 
@@ -2072,17 +2089,12 @@ public class HRegionServer implements HRegionInterface,
     }
 
     // Then, we close the regions
-    ExecutorService closingPoolExecutor =
-      new ThreadPoolExecutor(1, Integer.MAX_VALUE,
-        60, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(),
-        new DaemonThreadFactory("regionserver-closing-"));
-
     List<Future<Object>> futures =
         new ArrayList<Future<Object>>(regionsToClose.size());
 
     for (int i = 0; i < regionsToClose.size(); i++ ) {
-      futures.add(closingPoolExecutor.submit(createRegionCloseCallable(regionsToClose.get(i))));
+      futures.add(regionOpenCloseThreadPool.submit(
+          createRegionCloseCallable(regionsToClose.get(i))));
     }
 
     ArrayList<HRegion> regionsClosed = new ArrayList<HRegion>();
@@ -2099,6 +2111,16 @@ public class HRegionServer implements HRegionInterface,
     }
 
     return regionsClosed;
+  }
+
+  private Callable<Object> createRegionOpenCallable(final HRegionInfo rinfo,
+      final String favouredNodes) {
+    return new Callable<Object>() {
+      public Object call() throws IOException {
+        openRegion(rinfo, favouredNodes);
+        return null;
+      }
+    };
   }
 
   private Callable<Object> createRegionCloseCallable(final HRegion region) {

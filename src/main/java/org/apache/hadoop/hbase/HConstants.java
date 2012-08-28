@@ -236,6 +236,19 @@ public final class HConstants {
    */
   public static final int DEFAULT_HSTORE_OPEN_AND_CLOSE_THREADS_MAX = 8;
 
+  /**
+   * The max number of threads used for opening and closing regions
+   * in parallel
+   */
+  public static final String HREGION_OPEN_AND_CLOSE_THREADS_MAX =
+    "hbase.region.open.and.close.threads.max";
+
+  /**
+   * The default number for the max number of threads used for opening and
+   * closing regions in parallel
+   */
+  public static final int DEFAULT_HREGION_OPEN_AND_CLOSE_THREADS_MAX = 8;
+
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
 
