@@ -244,9 +244,9 @@ public final class HConstants {
       "hbase.hregion.memstore.flush.size";
 
   public static final String HREGION_MEMSTORE_BLOCK_MULTIPLIER =
-      "hbase.hregion.memstore.flush.size";
+      "hbase.hregion.memstore.block.multiplier";
   public static final String HREGION_MEMSTORE_WAIT_ON_BLOCK =
-      "hbase.hregion.memstore.flush.size";
+      "hbase.hregion.memstore.block.waitonblock";
 
   /** Default size of a reservation block   */
   public static final int DEFAULT_SIZE_RESERVATION_BLOCK = 1024 * 1024 * 5;
