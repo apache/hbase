@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -521,12 +520,32 @@ public class HFile {
     DataBlockEncoding getEncodingOnDisk();
   }
 
+  /**
+   * Method returns the reader given the specified arguments.
+   * TODO This is a bad abstraction.  See HBASE-6635.
+   *
+   * @param path hfile's path
+   * @param fsdis an open checksummed stream of path's file
+   * @param fsdisNoFsChecksum an open unchecksummed stream of path's file
+   * @param size max size of the trailer.
+   * @param closeIStream boolean for closing file after the getting the reader version.
+   * @param cacheConf Cache configuation values, cannot be null.
+   * @param preferredEncodingInCache
+   * @param hfs
+   * @return an appropriate instance of HFileReader
+   * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
+   */
   private static Reader pickReaderVersion(Path path, FSDataInputStream fsdis,
       FSDataInputStream fsdisNoFsChecksum,
       long size, boolean closeIStream, CacheConfig cacheConf,
       DataBlockEncoding preferredEncodingInCache, HFileSystem hfs)
       throws IOException {
-    FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis, size);
+    FixedFileTrailer trailer = null;
+    try {
+      trailer = FixedFileTrailer.readFromStream(fsdis, size);
+    } catch (IllegalArgumentException iae) {
+      throw new CorruptHFileException("Problem reading HFile Trailer from file " + path, iae);
+    }
     switch (trailer.getMajorVersion()) {
     case 1:
       return new HFileReaderV1(path, trailer, fsdis, size, closeIStream,
@@ -536,11 +555,18 @@ public class HFile {
           size, closeIStream,
           cacheConf, preferredEncodingInCache, hfs);
     default:
-      throw new IOException("Cannot instantiate reader for HFile version " +
-          trailer.getMajorVersion());
+      throw new CorruptHFileException("Invalid HFile version " + trailer.getMajorVersion());
     }
   }
 
+  /**
+   * @param fs A file system
+   * @param path Path to HFile
+   * @param cacheConf Cache configuration for hfile's contents
+   * @param preferredEncodingInCache Preferred in-cache data encoding algorithm.
+   * @return A version specific Hfile Reader
+   * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
+   */
   public static Reader createReaderWithEncoding(
       FileSystem fs, Path path, CacheConfig cacheConf,
       DataBlockEncoding preferredEncodingInCache) throws IOException {
@@ -570,7 +596,8 @@ public class HFile {
    * @param fs filesystem
    * @param path Path to file to read
    * @param cacheConf This must not be null.  @see {@link org.apache.hadoop.hbase.io.hfile.CacheConfig#CacheConfig(Configuration)}
-   * @return an active Reader instance.
+   * @return an active Reader instance
+   * @throws IOException Will throw a CorruptHFileException (DoNotRetryIOException subtype) if hfile is corrupt/invalid.
    */
   public static Reader createReader(
       FileSystem fs, Path path, CacheConfig cacheConf) throws IOException {

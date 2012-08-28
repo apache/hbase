@@ -1,6 +1,4 @@
 /**
- * Copyright 2008 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,38 +17,41 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Subclass if exception is not meant to be retried: e.g.
- * {@link UnknownScannerException}
+ * All hbase specific IOExceptions should be subclasses of HBaseIOException
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
-public class DoNotRetryIOException extends HBaseIOException {
+@InterfaceStability.Evolving
+public class HBaseIOException extends IOException {
 
-  private static final long serialVersionUID = 1197446454511704139L;
+  private static final long serialVersionUID = 1L;
 
-  /**
-   * default constructor
-   */
-  public DoNotRetryIOException() {
+  public HBaseIOException() {
     super();
   }
 
   /**
-   * @param message
+   * {@inheritDoc}
    */
-  public DoNotRetryIOException(String message) {
+  public HBaseIOException(String message) {
     super(message);
   }
 
   /**
-   * @param message
-   * @param cause
-   */
-  public DoNotRetryIOException(String message, Throwable cause) {
-    super(message, cause);
+   * {@inheritDoc}
+   **/
+  public HBaseIOException(String message, Throwable cause) {
+      super(message, cause);
   }
-}
+
+  /**
+   * {@inheritDoc}
+   */
+  public HBaseIOException(Throwable cause) {
+      super(cause);
+  }}
