@@ -263,10 +263,6 @@ public class RegionServerMetrics implements Updater {
       if (this.extendedPeriod > 0 &&
           this.lastUpdate - this.lastExtUpdate >= this.extendedPeriod) {
         this.lastExtUpdate = this.lastUpdate;
-        this.compactionTime.resetMinMaxAvg();
-        this.compactionSize.resetMinMaxAvg();
-        this.flushTime.resetMinMaxAvg();
-        this.flushSize.resetMinMaxAvg();
         this.resetAllMinMax();
       }
 
@@ -351,6 +347,10 @@ public class RegionServerMetrics implements Updater {
   }
 
   public void resetAllMinMax() {
+    this.compactionTime.resetMinMaxAvg();
+    this.compactionSize.resetMinMaxAvg();
+    this.flushTime.resetMinMaxAvg();
+    this.flushSize.resetMinMaxAvg();
     this.atomicIncrementTime.resetMinMax();
     this.fsReadLatency.resetMinMax();
     this.fsWriteLatency.resetMinMax();

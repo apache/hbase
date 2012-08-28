@@ -95,15 +95,18 @@ public class HBaseRpcMetrics implements Updater {
    */
   public void doUpdates(MetricsContext context) {
     rpcQueueTime.pushMetric(metricsRecord);
+    rpcQueueTime.resetMinMax();
+    
     rpcProcessingTime.pushMetric(metricsRecord);
-
+    rpcProcessingTime.resetMinMax();
+    
     synchronized (registry) {
       // Iterate through the registry to propagate the different rpc metrics.
 
       for (String metricName : registry.getKeyList() ) {
         MetricsTimeVaryingRate value = (MetricsTimeVaryingRate) registry.get(metricName);
-
         value.pushMetric(metricsRecord);
+        value.resetMinMax();
       }
     }
     metricsRecord.update();
