@@ -1,6 +1,4 @@
 /**
- * Copyright 2008 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,36 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.io.hfile;
 
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 
 /**
- * Subclass if exception is not meant to be retried: e.g.
- * {@link UnknownScannerException}
+ * This exception is thrown when attempts to read an HFile fail due to corruption or truncation
+ * issues.
  */
-public class DoNotRetryIOException extends HBaseIOException {
+public class CorruptHFileException extends DoNotRetryIOException {
+  private static final long serialVersionUID = 1L;
 
-  private static final long serialVersionUID = 1197446454511704139L;
-
-  /**
-   * default constructor
-   */
-  public DoNotRetryIOException() {
-    super();
+  CorruptHFileException(String m, Throwable t) {
+    super(m, t);
   }
 
-  /**
-   * @param message
-   */
-  public DoNotRetryIOException(String message) {
-    super(message);
-  }
-
-  /**
-   * @param message
-   * @param cause
-   */
-  public DoNotRetryIOException(String message, Throwable cause) {
-    super(message, cause);
+  CorruptHFileException(String m) {
+    super(m);
   }
 }
