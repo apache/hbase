@@ -573,7 +573,11 @@ public class ZooKeeperWrapper implements Watcher {
    *         there was a problem reading the ZNode.
    */
   public HServerAddress readRootRegionLocation() {
-    return HServerInfo.getAddress(readAddress(rootRegionZNode, null));
+    HServerInfo rootRSInfo = readAddress(rootRegionZNode, null);
+    if (rootRSInfo == null) {
+      rootRSInfo = readAddress(legacyRootRegionZNode, null);
+    }
+    return HServerInfo.getAddress(rootRSInfo);
   }
 
   /**
