@@ -20,22 +20,24 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.StopStatus;
 import org.apache.hadoop.hbase.util.HasThread;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 /**
- * A background thread that wakes up frequently and writes the legacy root region location znode
- * (host:port only, no server start code).
+ * A background thread that wakes up frequently and writes the legacy root 
+ * region location znode (host:port only, no server start code).
  */
 public class LegacyRootZNodeUpdater extends HasThread {
 
   private static final int WAIT_MS = 1000;
-
+  
   private ZooKeeperWrapper zkw;
   private StopStatus stopped;
-  private Object waitOn;
+  private final AtomicReference<HServerInfo> rootRegionServerInfo;
 
   public LegacyRootZNodeUpdater(ZooKeeperWrapper zkw, StopStatus stopped,
-      Object waitOn) {
+      AtomicReference<HServerInfo> rootRegionServerInfo) {
     this.zkw = zkw;
-    this.waitOn = waitOn;
+    this.rootRegionServerInfo = rootRegionServerInfo;
     this.stopped = stopped;
   }
 
@@ -44,8 +46,8 @@ public class LegacyRootZNodeUpdater extends HasThread {
     Thread.currentThread().setName(LegacyRootZNodeUpdater.class.getName());
     HServerInfo prevRootLocation = null;
     boolean firstUpdate = true;
-    while (!stopped.isStopped()) {
-      HServerInfo rootLocation = zkw.readRootRegionServerInfo();
+    while (!stopped.isStopped()) { 
+      HServerInfo rootLocation = rootRegionServerInfo.get();
       if (firstUpdate ||
           (prevRootLocation != rootLocation &&  // check that they are not both null
            (rootLocation == null ||  // this means prevRootLocation != null, so they are different
@@ -53,11 +55,11 @@ public class LegacyRootZNodeUpdater extends HasThread {
         zkw.writeLegacyRootRegionLocation(rootLocation);
         prevRootLocation = rootLocation;
       }
-      try {
-        synchronized (waitOn) {
-          waitOn.wait(WAIT_MS);
-        }
-      } catch (InterruptedException ex) {
+        try {
+          synchronized (rootRegionServerInfo) {
+            rootRegionServerInfo.wait(WAIT_MS);
+          }
+        } catch (InterruptedException ex) {
         // Ignore. We will only stop if the master is shutting down.
       }
       firstUpdate = false;

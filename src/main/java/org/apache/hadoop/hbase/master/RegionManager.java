@@ -69,7 +69,7 @@ import org.apache.hadoop.io.Text;
 public class RegionManager {
   protected static final Log LOG = LogFactory.getLog(RegionManager.class);
 
-  private AtomicReference<HServerInfo> rootRegionLocation =
+  private final AtomicReference<HServerInfo> rootRegionLocation =
     new AtomicReference<HServerInfo>(null);
 
   private final RootScanner rootScannerThread;
@@ -226,7 +226,10 @@ public class RegionManager {
 
   void unsetRootRegion() {
     synchronized (regionsInTransition) {
-      rootRegionLocation.set(null);
+      synchronized (rootRegionLocation) {
+        rootRegionLocation.set(null);        
+        rootRegionLocation.notifyAll();
+      }
       regionsInTransition.remove(
           HRegionInfo.ROOT_REGIONINFO.getRegionNameAsString());
       LOG.info("-ROOT- region unset (but not set to be reassigned)");
