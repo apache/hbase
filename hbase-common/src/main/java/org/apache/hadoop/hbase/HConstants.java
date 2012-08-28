@@ -347,12 +347,15 @@ public final class HConstants {
 
   /**
    * The current version of the meta table.
-   * Before this the meta had HTableDescriptor serialized into the HRegionInfo;
-   * i.e. pre-hbase 0.92.  There was no META_VERSION column in the root table
-   * in this case.  The presence of a version and its value being zero indicates
-   * meta is up-to-date.
+   * - pre-hbase 0.92.  There is no META_VERSION column in the root table
+   * in this case. The meta has HTableDescriptor serialized into the HRegionInfo;
+   * - version 0 is 0.92 and 0.94. Meta data has serialized HRegionInfo's using
+   * Writable serialization, and HRegionInfo's does not contain HTableDescriptors.
+   * - version 1 for 0.96+ keeps HRegionInfo data structures, but changes the
+   * byte[] serialization from Writables to Protobuf.
+   * See HRegionInfo.VERSION
    */
-  public static final short META_VERSION = 0;
+  public static final short META_VERSION = 1;
 
   // Other constants
 

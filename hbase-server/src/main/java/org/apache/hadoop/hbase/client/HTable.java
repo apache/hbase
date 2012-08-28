@@ -21,15 +21,16 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Collections;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.io.DataInputInputStream;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -77,10 +79,10 @@ import com.google.protobuf.ServiceException;
  * <p>Used to communicate with a single HBase table.
  *
  * <p>This class is not thread safe for reads nor write.
- * 
+ *
  * <p>In case of writes (Put, Delete), the underlying write buffer can
  * be corrupted if multiple threads contend over a single HTable instance.
- * 
+ *
  * <p>In case of reads, some fields used by a Scan are shared among all threads.
  * The HTable implementation can either not contract to be safe in case of a Get
  *
@@ -107,7 +109,7 @@ import com.google.protobuf.ServiceException;
  *
  * <p>Note that this class implements the {@link Closeable} interface. When a
  * HTable instance is no longer required, it *should* be closed in order to ensure
- * that the underlying resources are promptly released. Please note that the close 
+ * that the underlying resources are promptly released. Please note that the close
  * method can throw java.io.IOException that must be handled.
  *
  * @see HBaseAdmin for create, drop, list, enable and disable of tables.
@@ -224,7 +226,7 @@ public class HTable implements HTableInterface {
    * @param pool ExecutorService to be used.
    * @throws IOException if a remote or network exception occurs
    */
-  public HTable(final byte[] tableName, final HConnection connection, 
+  public HTable(final byte[] tableName, final HConnection connection,
       final ExecutorService pool) throws IOException {
     if (pool == null || pool.isShutdown()) {
       throw new IllegalArgumentException("Pool is null or shut down.");
@@ -367,7 +369,7 @@ public class HTable implements HTableInterface {
   throws IOException {
     return connection.getRegionLocation(tableName, row, reload);
   }
-     
+
   /**
    * {@inheritDoc}
    */
@@ -580,13 +582,16 @@ public class HTable implements HTableInterface {
    * </pre>
    * @param out {@link DataOutput} to serialize this object into.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated serializing/deserializing regioninfo's are deprecated
    */
+  @Deprecated
   public void serializeRegionInfo(DataOutput out) throws IOException {
     Map<HRegionInfo, HServerAddress> allRegions = this.getRegionsInfo();
     // first, write number of regions
     out.writeInt(allRegions.size());
     for (Map.Entry<HRegionInfo, HServerAddress> es : allRegions.entrySet()) {
-      es.getKey().write(out);
+      byte[] hriBytes = es.getKey().toDelimitedByteArray();
+      out.write(hriBytes);
       es.getValue().write(out);
     }
   }
@@ -606,19 +611,27 @@ public class HTable implements HTableInterface {
    * @param in {@link DataInput} object.
    * @return A map of HRegionInfo with its server address.
    * @throws IOException if an I/O exception occurs.
+   * @deprecated serializing/deserializing regioninfo's are deprecated
    */
+  @Deprecated
   public Map<HRegionInfo, HServerAddress> deserializeRegionInfo(DataInput in)
   throws IOException {
     final Map<HRegionInfo, HServerAddress> allRegions =
       new TreeMap<HRegionInfo, HServerAddress>();
 
+    DataInputStream is = null;
+    if (in instanceof DataInputStream) {
+      is = (DataInputStream) in;
+    } else {
+      is = new DataInputStream(DataInputInputStream.constructInputStream(in));
+    }
+
     // the first integer is expected to be the size of records
-    int regionsCount = in.readInt();
+    int regionsCount = is.readInt();
     for (int i = 0; i < regionsCount; ++i) {
-      HRegionInfo hri = new HRegionInfo();
-      hri.readFields(in);
+      HRegionInfo hri = HRegionInfo.parseFrom(is);
       HServerAddress hsa = new HServerAddress();
-      hsa.readFields(in);
+      hsa.readFields(is);
       allRegions.put(hri, hsa);
     }
     return allRegions;
@@ -802,7 +815,7 @@ public class HTable implements HTableInterface {
       validatePut(put);
       writeBuffer.add(put);
       currentWriteBufferSize += put.heapSize();
-     
+
       // we need to periodically see if the writebuffer is full instead of waiting until the end of the List
       n++;
       if (n % DOPUT_WB_CHECK == 0 && currentWriteBufferSize > writeBufferSize) {

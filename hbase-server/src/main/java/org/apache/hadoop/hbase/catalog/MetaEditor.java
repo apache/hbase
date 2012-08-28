@@ -32,15 +32,12 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.PairOfSameType;
-import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Writes region and assignment information to <code>.META.</code>.
  * TODO: Put MetaReader and MetaEditor together; doesn't make sense having
- * them distinct.
+ * them distinct. see HBASE-3475.
  */
 @InterfaceAudience.Private
 public class MetaEditor {
@@ -49,11 +46,26 @@ public class MetaEditor {
   // Connection.
   private static final Log LOG = LogFactory.getLog(MetaEditor.class);
 
-  private static Put makePutFromRegionInfo(HRegionInfo regionInfo)
+  /**
+   * Generates and returns a Put containing the region into for the catalog table
+   */
+  public static Put makePutFromRegionInfo(HRegionInfo regionInfo)
   throws IOException {
     Put put = new Put(regionInfo.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(regionInfo));
+    addRegionInfo(put, regionInfo);
+    return put;
+  }
+
+  /**
+   * Adds split daughters to the Put
+   */
+  public static Put addDaughtersToPut(Put put, HRegionInfo splitA, HRegionInfo splitB) {
+    if (splitA != null) {
+      put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER, splitA.toByteArray());
+    }
+    if (splitB != null) {
+      put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER, splitB.toByteArray());
+    }
     return put;
   }
 
@@ -149,6 +161,39 @@ public class MetaEditor {
   }
 
   /**
+   * Adds a META row for the specified new region to the given catalog table. The
+   * HTable is not flushed or closed.
+   * @param meta the HTable for META
+   * @param regionInfo region information
+   * @throws IOException if problem connecting or updating meta
+   */
+  public static void addRegionToMeta(HTable meta, HRegionInfo regionInfo) throws IOException {
+    addRegionToMeta(meta, regionInfo, null, null);
+  }
+
+  /**
+   * Adds a (single) META row for the specified new region and its daughters. Note that this does
+   * not add its daughter's as different rows, but adds information about the daughters
+   * in the same row as the parent. Use
+   * {@link #offlineParentInMeta(CatalogTracker, HRegionInfo, HRegionInfo, HRegionInfo)}
+   * and {@link #addDaughter(CatalogTracker, HRegionInfo, ServerName)}  if you want to do that.
+   * @param meta the HTable for META
+   * @param regionInfo region information
+   * @param splitA first split daughter of the parent regionInfo
+   * @param splitB second split daughter of the parent regionInfo
+   * @throws IOException if problem connecting or updating meta
+   */
+  public static void addRegionToMeta(HTable meta, HRegionInfo regionInfo,
+      HRegionInfo splitA, HRegionInfo splitB) throws IOException {
+    Put put = makePutFromRegionInfo(regionInfo);
+    addDaughtersToPut(put, splitA, splitB);
+    meta.put(put);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Added region " + regionInfo.getRegionNameAsString() + " to META");
+    }
+  }
+
+  /**
    * Adds a META row for each of the specified new regions.
    * @param catalogTracker CatalogTracker
    * @param regionInfos region information list
@@ -181,15 +226,14 @@ public class MetaEditor {
     HRegionInfo copyOfParent = new HRegionInfo(parent);
     copyOfParent.setOffline(true);
     copyOfParent.setSplit(true);
-    Put put = new Put(copyOfParent.getRegionName());
-    addRegionInfo(put, copyOfParent);
-    put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
-      Writables.getBytes(a));
-    put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER,
-      Writables.getBytes(b));
-    putToMetaTable(catalogTracker, put);
-    LOG.info("Offlined parent region " + parent.getRegionNameAsString() +
-      " in META");
+    HTable meta = MetaReader.getMetaHTable(catalogTracker);
+    try {
+      addRegionToMeta(meta, copyOfParent, a, b);
+      LOG.info("Offlined parent region " + parent.getRegionNameAsString() +
+          " in META");
+    } finally {
+      meta.close();
+    }
   }
 
   public static void addDaughter(final CatalogTracker catalogTracker,
@@ -297,32 +341,10 @@ public class MetaEditor {
       ", from parent " + parent.getRegionNameAsString());
   }
 
-  public static HRegionInfo getHRegionInfo(
-      Result data) throws IOException {
-    byte [] bytes =
-      data.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    if (bytes == null) return null;
-    HRegionInfo info = Writables.getHRegionInfo(bytes);
-    LOG.info("Current INFO from scan results = " + info);
-    return info;
-  }
-
-  /**
-   * Returns the daughter regions by reading from the corresponding columns of the .META. table
-   * Result. If the region is not a split parent region, it returns PairOfSameType(null, null).
-   */
-  public static PairOfSameType<HRegionInfo> getDaughterRegions(Result data) throws IOException {
-    HRegionInfo splitA = Writables.getHRegionInfoOrNull(
-        data.getValue(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER));
-    HRegionInfo splitB = Writables.getHRegionInfoOrNull(
-        data.getValue(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER));
-    return new PairOfSameType<HRegionInfo>(splitA, splitB);
-  }
-
   private static Put addRegionInfo(final Put p, final HRegionInfo hri)
   throws IOException {
     p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(hri));
+        hri.toByteArray());
     return p;
   }
 

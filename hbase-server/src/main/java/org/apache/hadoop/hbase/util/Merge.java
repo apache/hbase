@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -32,12 +34,12 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.io.WritableComparator;
@@ -46,9 +48,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.base.Preconditions;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Utility that can merge any two regions in the same table: adjacent,
@@ -153,15 +152,15 @@ public class Merge extends Configured implements Tool {
     HRegion rootRegion = utils.getRootRegion();
     Get get = new Get(region1);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    List<KeyValue> cells1 =  rootRegion.get(get, null).list();
-    Preconditions.checkState(cells1 != null, "First region cells can not be null");
-    HRegionInfo info1 = Writables.getHRegionInfo(cells1.get(0).getValue());
+    Result result1 =  rootRegion.get(get, null);
+    Preconditions.checkState(!result1.isEmpty(), "First region cells can not be null");
+    HRegionInfo info1 = HRegionInfo.getHRegionInfo(result1);
 
     get = new Get(region2);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    List<KeyValue> cells2 =  rootRegion.get(get, null).list();
-    Preconditions.checkState(cells2 != null, "Second region cells can not be null");
-    HRegionInfo info2 = Writables.getHRegionInfo(cells2.get(0).getValue());
+    Result result2 =  rootRegion.get(get, null);
+    Preconditions.checkState(!result2.isEmpty(), "Second region cells can not be null");
+    HRegionInfo info2 = HRegionInfo.getHRegionInfo(result2);
     HRegion merged = merge(HTableDescriptor.META_TABLEDESC, info1, rootRegion, info2, rootRegion);
     LOG.info("Adding " + merged.getRegionInfo() + " to " +
         rootRegion.getRegionInfo());
@@ -224,10 +223,10 @@ public class Merge extends Configured implements Tool {
     HRegion metaRegion1 = this.utils.getMetaRegion(meta1);
     Get get = new Get(region1);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    List<KeyValue> cells1 =  metaRegion1.get(get, null).list();
-    Preconditions.checkState(cells1 != null,
+    Result result1 =  metaRegion1.get(get, null);
+    Preconditions.checkState(!result1.isEmpty(),
         "First region cells can not be null");
-    HRegionInfo info1 = Writables.getHRegionInfo(cells1.get(0).getValue());
+    HRegionInfo info1 = HRegionInfo.getHRegionInfo(result1);
     if (info1 == null) {
       throw new NullPointerException("info1 is null using key " +
           Bytes.toStringBinary(region1) + " in " + meta1);
@@ -241,10 +240,10 @@ public class Merge extends Configured implements Tool {
     }
     get = new Get(region2);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    List<KeyValue> cells2 =  metaRegion2.get(get, null).list();
-    Preconditions.checkState(cells2 != null,
+    Result result2 =  metaRegion2.get(get, null);
+    Preconditions.checkState(!result2.isEmpty(),
         "Second region cells can not be null");
-    HRegionInfo info2 = Writables.getHRegionInfo(cells2.get(0).getValue());
+    HRegionInfo info2 = HRegionInfo.getHRegionInfo(result2);
     if (info2 == null) {
       throw new NullPointerException("info2 is null using key " + meta2);
     }

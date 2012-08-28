@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -128,7 +129,7 @@ public class TestHBaseFsck {
   @Test
   public void testHBaseFsck() throws Exception {
     assertNoErrors(doFsck(conf, false));
-    String table = "tableBadMetaAssign"; 
+    String table = "tableBadMetaAssign";
     TEST_UTIL.createTable(Bytes.toBytes(table), FAM);
 
     // We created 1 table, should be fine
@@ -193,10 +194,8 @@ public class TestHBaseFsck {
       throws IOException {
     HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
     HRegionInfo hri = new HRegionInfo(htd.getName(), startKey, endKey);
-    Put put = new Put(hri.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(hri));
-    meta.put(put);
+    MetaEditor.addRegionToMeta(meta, hri);
+    meta.close();
     return hri;
   }
 
@@ -300,7 +299,7 @@ public class TestHBaseFsck {
 
   /**
    * Setup a clean table before we start mucking with it.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    * @throws KeeperException
@@ -350,7 +349,7 @@ public class TestHBaseFsck {
 
   /**
    * delete table in preparation for next test
-   * 
+   *
    * @param tablename
    * @throws IOException
    */
@@ -406,13 +405,13 @@ public class TestHBaseFsck {
 
       // limit number of threads to 1.
       Configuration newconf = new Configuration(conf);
-      newconf.setInt("hbasefsck.numthreads", 1);  
+      newconf.setInt("hbasefsck.numthreads", 1);
       assertNoErrors(doFsck(newconf, false));
-      
+
       // We should pass without triggering a RejectedExecutionException
     } finally {
       deleteTable(table);
-    }    
+    }
   }
 
   /**
@@ -1174,16 +1173,11 @@ public class TestHBaseFsck {
         Bytes.toBytes("B"), Bytes.toBytes("BM"));
       HRegionInfo b = new HRegionInfo(tbl.getTableName(),
         Bytes.toBytes("BM"), Bytes.toBytes("C"));
-      Put p = new Put(hri.getRegionName());
+
       hri.setOffline(true);
       hri.setSplit(true);
-      p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(hri));
-      p.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
-        Writables.getBytes(a));
-      p.add(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER,
-        Writables.getBytes(b));
-      meta.put(p);
+
+      MetaEditor.addRegionToMeta(meta, hri, a, b);
       meta.flushCommits();
       TEST_UTIL.getHBaseAdmin().flush(HConstants.META_TABLE_NAME);
 
@@ -1255,7 +1249,7 @@ public class TestHBaseFsck {
       deleteTable(table);
     }
   }
-  
+
   /**
    * This creates and fixes a bad table with missing last region -- hole in meta and data missing in
    * the fs.

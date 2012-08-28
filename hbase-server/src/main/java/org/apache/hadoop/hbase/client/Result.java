@@ -94,6 +94,8 @@ public class Result implements Writable, WritableWithSize {
 
   /**
    * Instantiate a Result with the specified array of KeyValues.
+   * <br><strong>Note:</strong> You must ensure that the keyvalues
+   * are already sorted
    * @param kvs array of KeyValues
    */
   public Result(KeyValue [] kvs) {
@@ -104,6 +106,8 @@ public class Result implements Writable, WritableWithSize {
 
   /**
    * Instantiate a Result with the specified List of KeyValues.
+   * <br><strong>Note:</strong> You must ensure that the keyvalues
+   * are already sorted
    * @param kvs List of KeyValues
    */
   public Result(List<KeyValue> kvs) {

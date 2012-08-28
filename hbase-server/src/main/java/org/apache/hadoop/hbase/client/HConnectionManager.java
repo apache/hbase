@@ -90,7 +90,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Triple;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -851,14 +850,11 @@ public class HConnectionManager {
       MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
         @Override
         public boolean processRow(Result row) throws IOException {
-          byte[] value = row.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER);
-          HRegionInfo info = Writables.getHRegionInfoOrNull(value);
+          HRegionInfo info = MetaScanner.getHRegionInfo(row);
           if (info != null) {
             if (Bytes.equals(tableName, info.getTableName())) {
-              value = row.getValue(HConstants.CATALOG_FAMILY,
-                  HConstants.SERVER_QUALIFIER);
-              if (value == null) {
+              ServerName server = HRegionInfo.getServerName(row);
+              if (server == null) {
                 available.set(false);
                 return false;
               }
@@ -973,39 +969,30 @@ public class HConnectionManager {
       MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
         public boolean processRow(Result result) throws IOException {
           try {
-            byte[] value = result.getValue(HConstants.CATALOG_FAMILY,
-                HConstants.REGIONINFO_QUALIFIER);
-            HRegionInfo regionInfo = null;
-
-            if (value != null) {
-              // convert the row result into the HRegionLocation we need!
-              regionInfo = Writables.getHRegionInfo(value);
-
-              // possible we got a region of a different table...
-              if (!Bytes.equals(regionInfo.getTableName(),
-                  tableName)) {
-                return false; // stop scanning
-              }
-              if (regionInfo.isOffline()) {
-                // don't cache offline regions
-                return true;
-              }
-              value = result.getValue(HConstants.CATALOG_FAMILY,
-                  HConstants.SERVER_QUALIFIER);
-              if (value == null) {
-                return true;  // don't cache it
-              }
-              final String hostAndPort = Bytes.toString(value);
-              String hostname = Addressing.parseHostname(hostAndPort);
-              int port = Addressing.parsePort(hostAndPort);
-              value = result.getValue(HConstants.CATALOG_FAMILY,
-                  HConstants.STARTCODE_QUALIFIER);
-              // instantiate the location
-              HRegionLocation loc =
-                new HRegionLocation(regionInfo, hostname, port);
-              // cache this meta entry
-              cacheLocation(tableName, loc);
+            HRegionInfo regionInfo = MetaScanner.getHRegionInfo(result);
+            if (regionInfo == null) {
+              return true;
             }
+
+            // possible we got a region of a different table...
+            if (!Bytes.equals(regionInfo.getTableName(), tableName)) {
+              return false; // stop scanning
+            }
+            if (regionInfo.isOffline()) {
+              // don't cache offline regions
+              return true;
+            }
+
+            ServerName serverName = HRegionInfo.getServerName(result);
+            if (serverName == null) {
+              return true; // don't cache it
+            }
+            // instantiate the location
+            HRegionLocation loc = new HRegionLocation(regionInfo, serverName.getHostname(),
+                serverName.getPort());
+            // cache this meta entry
+            cacheLocation(tableName, loc);
+
             return true;
           } catch (RuntimeException e) {
             throw new IOException(e);
@@ -1092,15 +1079,14 @@ public class HConnectionManager {
           if (regionInfoRow == null) {
             throw new TableNotFoundException(Bytes.toString(tableName));
           }
-          byte [] value = regionInfoRow.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER);
-          if (value == null || value.length == 0) {
+
+          // convert the row result into the HRegionLocation we need!
+          HRegionInfo regionInfo = MetaScanner.getHRegionInfo(regionInfoRow);
+          if (regionInfo == null) {
             throw new IOException("HRegionInfo was null or empty in " +
               Bytes.toString(parentTable) + ", row=" + regionInfoRow);
           }
-          // convert the row result into the HRegionLocation we need!
-          HRegionInfo regionInfo = (HRegionInfo) Writables.getWritable(
-              value, new HRegionInfo());
+
           // possible we got a region of a different table...
           if (!Bytes.equals(regionInfo.getTableName(), tableName)) {
             throw new TableNotFoundException(
@@ -1119,13 +1105,8 @@ public class HConnectionManager {
               regionInfo.getRegionNameAsString());
           }
 
-          value = regionInfoRow.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.SERVER_QUALIFIER);
-          String hostAndPort = "";
-          if (value != null) {
-            hostAndPort = Bytes.toString(value);
-          }
-          if (hostAndPort.equals("")) {
+          ServerName serverName = HRegionInfo.getServerName(regionInfoRow);
+          if (serverName == null) {
             throw new NoServerForRegionException("No server address listed " +
               "in " + Bytes.toString(parentTable) + " for region " +
               regionInfo.getRegionNameAsString() + " containing row " +
@@ -1133,9 +1114,8 @@ public class HConnectionManager {
           }
 
           // Instantiate the location
-          String hostname = Addressing.parseHostname(hostAndPort);
-          int port = Addressing.parsePort(hostAndPort);
-          location = new HRegionLocation(regionInfo, hostname, port);
+          location =
+              new HRegionLocation(regionInfo, serverName.getHostname(), serverName.getPort());
           cacheLocation(tableName, location);
           return location;
         } catch (TableNotFoundException e) {

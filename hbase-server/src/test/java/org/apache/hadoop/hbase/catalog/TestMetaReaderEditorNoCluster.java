@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.catalog;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -26,7 +28,14 @@ import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -36,7 +45,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.Before;
@@ -79,12 +87,41 @@ public class TestMetaReaderEditorNoCluster {
     UTIL.shutdownMiniZKCluster();
   }
 
+  @Test
+  public void testGetHRegionInfo() throws IOException {
+    assertNull(HRegionInfo.getHRegionInfo(new Result()));
+
+    List<KeyValue> kvs = new ArrayList<KeyValue>();
+    Result r = new Result(kvs);
+    assertNull(HRegionInfo.getHRegionInfo(r));
+
+    byte [] f = HConstants.CATALOG_FAMILY;
+    // Make a key value that doesn't have the expected qualifier.
+    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
+      HConstants.SERVER_QUALIFIER, f));
+    r = new Result(kvs);
+    assertNull(HRegionInfo.getHRegionInfo(r));
+    // Make a key that does not have a regioninfo value.
+    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
+      HConstants.REGIONINFO_QUALIFIER, f));
+    HRegionInfo hri = HRegionInfo.getHRegionInfo(new Result(kvs));
+    assertTrue(hri == null);
+    // OK, give it what it expects
+    kvs.clear();
+    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
+      HConstants.REGIONINFO_QUALIFIER,
+      HRegionInfo.FIRST_META_REGIONINFO.toByteArray()));
+    hri = HRegionInfo.getHRegionInfo(new Result(kvs));
+    assertNotNull(hri);
+    assertTrue(hri.equals(HRegionInfo.FIRST_META_REGIONINFO));
+  }
+
   /**
    * Test that MetaReader will ride over server throwing
    * "Server not running" IOEs.
    * @see https://issues.apache.org/jira/browse/HBASE-3446
-   * @throws IOException 
-   * @throws InterruptedException 
+   * @throws IOException
+   * @throws InterruptedException
    */
   @Test
   public void testRideOverServerNotRunning()
@@ -112,7 +149,7 @@ public class TestMetaReaderEditorNoCluster {
       final byte [] rowToVerify = Bytes.toBytes("rowToVerify");
       kvs.add(new KeyValue(rowToVerify,
         HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(HRegionInfo.FIRST_META_REGIONINFO)));
+        HRegionInfo.FIRST_META_REGIONINFO.toByteArray()));
       kvs.add(new KeyValue(rowToVerify,
         HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
         Bytes.toBytes(sn.getHostAndPort())));

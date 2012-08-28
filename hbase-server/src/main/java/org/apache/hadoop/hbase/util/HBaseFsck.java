@@ -62,7 +62,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -724,7 +724,7 @@ public class HBaseFsck {
 
   /**
    * This borrows code from MasterFileSystem.bootstrap()
-   * 
+   *
    * @return an open .META. HRegion
    */
   private HRegion createNewRootAndMeta() throws IOException {
@@ -748,9 +748,9 @@ public class HBaseFsck {
   }
 
   /**
-   * Generate set of puts to add to new meta.  This expects the tables to be 
+   * Generate set of puts to add to new meta.  This expects the tables to be
    * clean with no overlaps or holes.  If there are any problems it returns null.
-   * 
+   *
    * @return An array list of puts to do in bulk, null if tables have problems
    */
   private ArrayList<Put> generatePuts(SortedMap<String, TableInfo> tablesInfo) throws IOException {
@@ -781,9 +781,7 @@ public class HBaseFsck {
         // add the row directly to meta.
         HbckInfo hi = his.iterator().next();
         HRegionInfo hri = hi.getHdfsHRI(); // hi.metaEntry;
-        Put p = new Put(hri.getRegionName());
-        p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-            Writables.getBytes(hri));
+        Put p = MetaEditor.makePutFromRegionInfo(hri);
         puts.add(p);
       }
     }
@@ -803,7 +801,7 @@ public class HBaseFsck {
   /**
    * Rebuilds meta from information in hdfs/fs.  Depends on configuration
    * settings passed into hbck constructor to point to a particular fs/dir.
-   * 
+   *
    * @param fix flag that determines if method should attempt to fix holes
    * @return true if successful, false if attempt failed.
    */
@@ -989,7 +987,7 @@ public class HBaseFsck {
       Path backupTableDir= new Path(backupHbaseDir, tableName);
       boolean success = fs.rename(tableDir, backupTableDir);
       if (!success) {
-        throw new IOException("Failed to move  " + tableName + " from " 
+        throw new IOException("Failed to move  " + tableName + " from "
             +  tableDir.getName() + " to " + backupTableDir.getName());
       }
     } else {
@@ -1020,7 +1018,7 @@ public class HBaseFsck {
       } catch (IOException ioe) {
         LOG.fatal("... failed to sideline root and meta and failed to restore "
             + "prevoius state.  Currently in inconsistent state.  To restore "
-            + "try to rename -ROOT- in " + backupDir.getName() + " to " 
+            + "try to rename -ROOT- in " + backupDir.getName() + " to "
             + hbaseDir.getName() + ".", ioe);
       }
       throw e; // throw original exception
@@ -1194,7 +1192,7 @@ public class HBaseFsck {
     for (ServerName rsinfo: regionServerList) {
       workItems.add(new WorkItemRegion(this, rsinfo, errors, connection));
     }
-    
+
     workFutures = executor.invokeAll(workItems);
 
     for(int i=0; i<workFutures.size(); i++) {
@@ -1260,12 +1258,10 @@ public class HBaseFsck {
     d.deleteColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER);
     mutations.add(d);
 
-    Put p = new Put(hi.metaEntry.getRegionName());
     HRegionInfo hri = new HRegionInfo(hi.metaEntry);
     hri.setOffline(false);
     hri.setSplit(false);
-    p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-      Writables.getBytes(hri));
+    Put p = MetaEditor.makePutFromRegionInfo(hri);
     mutations.add(p);
 
     meta.mutateRow(mutations);
@@ -1335,7 +1331,6 @@ public class HBaseFsck {
    * the offline ipc call exposed on the master (<0.90.5, <0.92.0) a master
    * restart or failover may be required.
    */
-  @SuppressWarnings("deprecation")
   private void closeRegion(HbckInfo hi) throws IOException, InterruptedException {
     if (hi.metaEntry == null && hi.hdfsEntry == null) {
       undeployRegions(hi);
@@ -1348,19 +1343,15 @@ public class HBaseFsck {
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
     Result r = meta.get(get);
-    byte[] value = r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-    byte[] startcodeBytes = r.getValue(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
-    if (value == null || startcodeBytes == null) {
+    ServerName serverName = HRegionInfo.getServerName(r);
+    if (serverName == null) {
       errors.reportError("Unable to close region "
           + hi.getRegionNameAsString() +  " because meta does not "
           + "have handle to reach it.");
       return;
     }
-    long startcode = Bytes.toLong(startcodeBytes);
 
-    ServerName hsa = new ServerName(Bytes.toString(value), startcode);
-    byte[] hriVal = r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    HRegionInfo hri= Writables.getHRegionInfoOrNull(hriVal);
+    HRegionInfo hri = HRegionInfo.getHRegionInfo(r);
     if (hri == null) {
       LOG.warn("Unable to close region " + hi.getRegionNameAsString()
           + " because META had invalid or missing "
@@ -1371,7 +1362,7 @@ public class HBaseFsck {
     }
 
     // close the region -- close files and remove assignment
-    HBaseFsckRepair.closeRegionSilentlyAndWait(admin, hsa, hri);
+    HBaseFsckRepair.closeRegionSilentlyAndWait(admin, serverName, hri);
   }
 
   private void tryAssignmentRepair(HbckInfo hbi, String msg) throws IOException,
@@ -1723,7 +1714,7 @@ public class HBaseFsck {
         return;
       }
 
-      // if not the absolute end key, check for cycle 
+      // if not the absolute end key, check for cycle
       if (Bytes.compareTo(hir.getStartKey(), hir.getEndKey()) > 0) {
         errors.reportError(
             ERROR_CODE.REGION_CYCLE,
@@ -1773,7 +1764,7 @@ public class HBaseFsck {
             "Last region should end with an empty key. You need to "
                 + "create a new region and regioninfo in HDFS to plug the hole.", getTableInfo());
       }
-      
+
       @Override
       public void handleDegenerateRegion(HbckInfo hi) throws IOException{
         errors.reportError(ERROR_CODE.DEGENERATE_REGION,
@@ -1872,7 +1863,7 @@ public class HBaseFsck {
             + " " + region);
         fixes++;
       }
-      
+
       /**
        * There is a hole in the hdfs regions that violates the table integrity
        * rules.  Create a new empty region that patches the hole.
@@ -2131,7 +2122,7 @@ public class HBaseFsck {
       if (prevKey != null) {
         handler.handleRegionEndKeyNotEmpty(prevKey);
       }
-      
+
       for (Collection<HbckInfo> overlap : overlapGroups.asMap().values()) {
         handler.handleOverlapGroup(overlap);
       }
@@ -2159,7 +2150,7 @@ public class HBaseFsck {
 
     /**
      * This dumps data in a visually reasonable way for visual debugging
-     * 
+     *
      * @param splits
      * @param regions
      */
@@ -2348,7 +2339,7 @@ public class HBaseFsck {
 
           // record the latest modification of this META record
           long ts =  Collections.max(result.list(), comp).getTimestamp();
-          Pair<HRegionInfo, ServerName> pair = MetaReader.parseCatalogResult(result);
+          Pair<HRegionInfo, ServerName> pair = HRegionInfo.getHRegionInfoAndServerName(result);
           if (pair == null || pair.getFirst() == null) {
             emptyRegionInfoQualifiers.add(result);
             return true;
@@ -2695,7 +2686,7 @@ public class HBaseFsck {
       errorTables.add(table);
       reportError(errorCode, message);
     }
-    
+
     public synchronized void reportError(ERROR_CODE errorCode, String message, TableInfo table,
                                          HbckInfo info) {
       errorTables.add(table);
@@ -2821,7 +2812,7 @@ public class HBaseFsck {
           HbckInfo hbi = hbck.getOrCreateInfo(r.getEncodedName());
           hbi.addServer(r, rsinfo);
         }
-      } catch (IOException e) {          // unable to connect to the region server. 
+      } catch (IOException e) {          // unable to connect to the region server.
         errors.reportError(ERROR_CODE.RS_CONNECT_FAILURE, "RegionServer: " + rsinfo.getServerName() +
           " Unable to fetch region information. " + e);
         throw e;
@@ -2851,7 +2842,7 @@ public class HBaseFsck {
     private ErrorReporter errors;
     private FileSystem fs;
 
-    WorkItemHdfsDir(HBaseFsck hbck, FileSystem fs, ErrorReporter errors, 
+    WorkItemHdfsDir(HBaseFsck hbck, FileSystem fs, ErrorReporter errors,
                     FileStatus status) {
       this.hbck = hbck;
       this.fs = fs;
@@ -3049,7 +3040,7 @@ public class HBaseFsck {
   public boolean shouldFixVersionFile() {
     return fixVersionFile;
   }
-  
+
   public void setSidelineBigOverlaps(boolean sbo) {
     this.sidelineBigOverlaps = sbo;
   }
@@ -3119,7 +3110,7 @@ public class HBaseFsck {
   }
 
   /**
-   * 
+   *
    * @param sidelineDir - HDFS path to sideline data
    */
   public void setSidelineDir(String sidelineDir) {

@@ -20,6 +20,11 @@
 package org.apache.hadoop.hbase.master;
 
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,7 +32,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -41,7 +51,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.util.Writables;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -50,11 +59,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertFalse;
 
 /**
  * Test open and close of regions using zk.
@@ -265,7 +269,7 @@ public class TestZKBasedOpenCloseRegion {
     // remove the block and reset the boolean
     hr1.getRegionsInTransitionInRS().remove(hri.getEncodedNameAsBytes());
     reopenEventProcessed.set(false);
-    
+
     // now try moving a region when there is no region in transition.
     hri = getNonMetaRegion(ProtobufUtil.getOnlineRegions(hr1));
 
@@ -275,7 +279,7 @@ public class TestZKBasedOpenCloseRegion {
 
     cluster.getMaster().executorService.
       registerListener(EventType.RS_ZK_REGION_OPENED, openListener);
-    
+
     TEST_UTIL.getHBaseAdmin().move(hri.getEncodedNameAsBytes(),
         Bytes.toBytes(hr0.getServerName().toString()));
 
@@ -336,7 +340,7 @@ public class TestZKBasedOpenCloseRegion {
     assertFalse("Region should not be in RIT",
         regionServer.getRegionsInTransitionInRS().containsKey(REGIONINFO.getEncodedNameAsBytes()));
   }
-  
+
   private static void waitUntilAllRegionsAssigned()
   throws IOException {
     HTable meta = new HTable(TEST_UTIL.getConfiguration(),
@@ -381,12 +385,9 @@ public class TestZKBasedOpenCloseRegion {
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     ResultScanner s = meta.getScanner(scan);
     for (Result r = null; (r = s.next()) != null;) {
-      byte [] b =
-        r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-      if (b == null || b.length <= 0) {
-        break;
-      }
-      HRegionInfo hri = Writables.getHRegionInfo(b);
+      HRegionInfo hri = HRegionInfo.getHRegionInfo(r);
+      if (hri == null) break;
+
       // If start key, add 'aaa'.
       byte [] row = getStartKey(hri);
       Put p = new Put(row);

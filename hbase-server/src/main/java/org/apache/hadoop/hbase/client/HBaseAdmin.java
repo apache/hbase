@@ -56,20 +56,18 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.client.AdminProtocol;
-import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
@@ -77,26 +75,24 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest;
-import org.apache.hadoop.hbase.client.MasterAdminKeepAliveConnection;
-import org.apache.hadoop.hbase.client.MasterMonitorKeepAliveConnection;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -201,7 +197,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     this.aborted = true;
     throw new RuntimeException(why, e);
   }
-  
+
   @Override
   public boolean isAborted(){
     return this.aborted;
@@ -409,11 +405,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
           @Override
           public boolean processRow(Result rowResult) throws IOException {
-            if (rowResult == null || rowResult.size() <= 0) {
-              return true;
-            }
-            HRegionInfo info = MetaReader.parseHRegionInfoFromCatalogResult(
-              rowResult, HConstants.REGIONINFO_QUALIFIER);
+            HRegionInfo info = HRegionInfo.getHRegionInfo(rowResult);
             if (info == null) {
               LOG.warn("No serialized HRegionInfo in " + rowResult);
               return true;
@@ -421,14 +413,10 @@ public class HBaseAdmin implements Abortable, Closeable {
             if (!(Bytes.equals(info.getTableName(), desc.getName()))) {
               return false;
             }
-            String hostAndPort = null;
-            byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.SERVER_QUALIFIER);
+            ServerName serverName = HRegionInfo.getServerName(rowResult);
             // Make sure that regions are assigned to server
-            if (value != null && value.length > 0) {
-              hostAndPort = Bytes.toString(value);
-            }
-            if (!(info.isOffline() || info.isSplit()) && hostAndPort != null) {
+            if (!(info.isOffline() || info.isSplit()) && serverName != null
+                && serverName.getHostAndPort() != null) {
               actualRegCount.incrementAndGet();
             }
             return true;
@@ -610,7 +598,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         // continue
       }
     }
-    
+
     if (tableExists) {
       throw new IOException("Retries exhausted, it took too long to wait"+
         " for the table " + Bytes.toString(tableName) + " to be deleted.");
@@ -1142,7 +1130,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * servername is provided then based on the online regions in the specified
    * regionserver the specified region will be closed. The master will not be
    * informed of the close. Note that the regionname is the encoded regionname.
-   * 
+   *
    * @param encodedRegionName
    *          The encoded region name; i.e. the hash that makes up the region
    *          name suffix: e.g. if regionname is
@@ -1704,17 +1692,13 @@ public class HBaseAdmin implements Abortable, Closeable {
       MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
         @Override
         public boolean processRow(Result data) throws IOException {
-          if (data == null || data.size() <= 0) {
-            return true;
-          }
-          HRegionInfo info = MetaReader.parseHRegionInfoFromCatalogResult(
-            data, HConstants.REGIONINFO_QUALIFIER);
+          HRegionInfo info = HRegionInfo.getHRegionInfo(data);
           if (info == null) {
             LOG.warn("No serialized HRegionInfo in " + data);
             return true;
           }
           if (!encodedName.equals(info.getEncodedName())) return true;
-          ServerName sn = MetaReader.getServerNameFromCatalogResult(data);
+          ServerName sn = HRegionInfo.getServerName(data);
           result.set(new Pair<HRegionInfo, ServerName>(info, sn));
           return false; // found the region, stop
         }
@@ -1887,7 +1871,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param tableName the name of the table
    * @return Ordered list of {@link HRegionInfo}.
    * @throws IOException
-   */  
+   */
   public List<HRegionInfo> getTableRegions(final byte[] tableName)
   throws IOException {
     CatalogTracker ct = getCatalogTracker();
@@ -1899,7 +1883,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     }
     return Regions;
   }
-  
+
   @Override
   public void close() throws IOException {
     if (this.connection != null) {
@@ -1920,14 +1904,14 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
-   * 
+   *
    * @param serverName
    *          The servername of the regionserver. A server name is made of host,
    *          port and startcode. This is mandatory. Here is an example:
    *          <code> host187.example.com,60020,1289493121758</code>
    * @return If lots of logs, flush the returned regions so next time through
    * we can clean logs. Returns null if nothing to flush.  Names are actual
-   * region names as returned by {@link HRegionInfo#getEncodedName()}  
+   * region names as returned by {@link HRegionInfo#getEncodedName()}
    * @throws IOException if a remote or network exception occurs
    * @throws FailedLogCloseException
    */

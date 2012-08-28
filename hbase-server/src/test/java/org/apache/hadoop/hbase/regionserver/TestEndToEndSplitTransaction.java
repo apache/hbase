@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -328,10 +327,10 @@ public class TestEndToEndSplitTransaction {
           break;
         }
 
-        HRegionInfo region = MetaEditor.getHRegionInfo(result);
+        HRegionInfo region = HRegionInfo.getHRegionInfo(result);
         if(region.isSplitParent()) {
           log("found parent region: " + region.toString());
-          PairOfSameType<HRegionInfo> pair = MetaEditor.getDaughterRegions(result);
+          PairOfSameType<HRegionInfo> pair = HRegionInfo.getDaughterRegions(result);
           daughterA = pair.getFirst();
           daughterB = pair.getSecond();
           break;
@@ -367,7 +366,7 @@ public class TestEndToEndSplitTransaction {
       while (System.currentTimeMillis() - start < timeout) {
         Result result = getRegionRow(regionName);
         if (result != null) {
-          HRegionInfo info = MetaEditor.getHRegionInfo(result);
+          HRegionInfo info = HRegionInfo.getHRegionInfo(result);
           if (info != null && !info.isOffline()) {
             log("found region in META: " + Bytes.toStringBinary(regionName));
             break;

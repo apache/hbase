@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -257,14 +258,12 @@ class HMerge {
         if (results == null) {
           return null;
         }
-        byte[] regionInfoValue = results.getValue(HConstants.CATALOG_FAMILY,
-            HConstants.REGIONINFO_QUALIFIER);
-        if (regionInfoValue == null || regionInfoValue.length == 0) {
+        HRegionInfo region = HRegionInfo.getHRegionInfo(results);
+        if (region == null) {
           throw new NoSuchElementException("meta region entry missing " +
               Bytes.toString(HConstants.CATALOG_FAMILY) + ":" +
               Bytes.toString(HConstants.REGIONINFO_QUALIFIER));
         }
-        HRegionInfo region = Writables.getHRegionInfo(regionInfoValue);
         if (!Bytes.equals(region.getTableName(), this.tableName)) {
           return null;
         }
@@ -333,10 +332,7 @@ class HMerge {
       }
       newRegion.getRegionInfo().setOffline(true);
 
-      Put put = new Put(newRegion.getRegionName());
-      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(newRegion.getRegionInfo()));
-      table.put(put);
+      MetaEditor.addRegionToMeta(table, newRegion.getRegionInfo());
 
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: "
@@ -376,7 +372,7 @@ class HMerge {
         do {
           hasMore = rootScanner.next(results);
           for(KeyValue kv: results) {
-            HRegionInfo info = Writables.getHRegionInfoOrNull(kv.getValue());
+            HRegionInfo info = HRegionInfo.parseFromOrNull(kv.getValue());
             if (info != null) {
               metaRegions.add(info);
             }
@@ -428,9 +424,8 @@ class HMerge {
       }
       HRegionInfo newInfo = newRegion.getRegionInfo();
       newInfo.setOffline(true);
-      Put put = new Put(newRegion.getRegionName());
-      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-          Writables.getBytes(newInfo));
+
+      Put put = MetaEditor.makePutFromRegionInfo(newInfo);
       root.put(put);
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: " + Bytes.toStringBinary(newRegion.getRegionName()));

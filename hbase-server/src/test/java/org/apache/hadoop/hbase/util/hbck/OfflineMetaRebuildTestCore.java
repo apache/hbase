@@ -31,7 +31,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -42,7 +49,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
@@ -52,10 +58,10 @@ import org.junit.experimental.categories.Category;
  * This testing base class creates a minicluster and testing table table
  * and shuts down the cluster afterwards. It also provides methods wipes out
  * meta and to inject errors into meta and the file system.
- * 
+ *
  * Tests should generally break stuff, then attempt to rebuild the meta table
  * offline, then restart hbase, and finally perform checks.
- * 
+ *
  * NOTE: This is a slow set of tests which takes ~30s each needs to run on a
  * relatively beefy machine. It seems necessary to have each test in a new jvm
  * since minicluster startup and tear downs seem to leak file handles and
@@ -107,7 +113,7 @@ public class OfflineMetaRebuildTestCore {
 
   /**
    * Setup a clean table before we start mucking with it.
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    * @throws KeeperException
@@ -142,7 +148,7 @@ public class OfflineMetaRebuildTestCore {
 
   /**
    * delete table in preparation for next test
-   * 
+   *
    * @param tablename
    * @throws IOException
    */
@@ -211,11 +217,8 @@ public class OfflineMetaRebuildTestCore {
     out.close();
 
     // add to meta.
-    Put put = new Put(hri.getRegionName());
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(hri));
-    meta.put(put);
-    meta.flushCommits();
+    MetaEditor.addRegionToMeta(meta, hri);
+    meta.close();
     return hri;
   }
 
@@ -240,7 +243,7 @@ public class OfflineMetaRebuildTestCore {
   /**
    * Returns the number of rows in a given table. HBase must be up and the table
    * should be present (will wait for timeout for a while otherwise)
-   * 
+   *
    * @return # of rows in the specified table
    */
   protected int tableRowCount(Configuration conf, String table)
@@ -259,7 +262,7 @@ public class OfflineMetaRebuildTestCore {
 
   /**
    * Dumps .META. table info
-   * 
+   *
    * @return # of entries in meta.
    */
   protected int scanMeta() throws IOException {

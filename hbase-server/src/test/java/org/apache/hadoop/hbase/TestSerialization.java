@@ -20,20 +20,18 @@
 package org.apache.hadoop.hbase;
 
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
-import java.util.TreeMap;
 
-import org.apache.hadoop.hbase.HServerLoad092.RegionLoad;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -41,10 +39,10 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.RowFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -115,22 +113,30 @@ public class TestSerialization {
    */
   @Test public void testRegionInfo() throws Exception {
     HRegionInfo hri = createRandomRegion("testRegionInfo");
-    byte [] hrib = Writables.getBytes(hri);
-    HRegionInfo deserializedHri =
-      (HRegionInfo)Writables.getWritable(hrib, new HRegionInfo());
+
+    //test toByteArray()
+    byte [] hrib = hri.toByteArray();
+    HRegionInfo deserializedHri = HRegionInfo.parseFrom(hrib);
     assertEquals(hri.getEncodedName(), deserializedHri.getEncodedName());
-    //assertEquals(hri.getTableDesc().getFamilies().size(),
-    //  deserializedHri.getTableDesc().getFamilies().size());
+    assertEquals(hri, deserializedHri);
+
+    //test toDelimitedByteArray()
+    hrib = hri.toDelimitedByteArray();
+    DataInputBuffer buf = new DataInputBuffer();
+    try {
+      buf.reset(hrib, hrib.length);
+      deserializedHri = HRegionInfo.parseFrom(buf);
+      assertEquals(hri.getEncodedName(), deserializedHri.getEncodedName());
+      assertEquals(hri, deserializedHri);
+    } finally {
+      buf.close();
+    }
   }
 
   @Test public void testRegionInfos() throws Exception {
     HRegionInfo hri = createRandomRegion("testRegionInfos");
-    byte [] hrib = Writables.getBytes(hri);
-    byte [] triple = new byte [3 * hrib.length];
-    System.arraycopy(hrib, 0, triple, 0, hrib.length);
-    System.arraycopy(hrib, 0, triple, hrib.length, hrib.length);
-    System.arraycopy(hrib, 0, triple, hrib.length * 2, hrib.length);
-    List<HRegionInfo> regions = Writables.getHRegionInfos(triple, 0, triple.length);
+    byte[] triple = HRegionInfo.toDelimitedByteArray(hri, hri, hri);
+    List<HRegionInfo> regions = HRegionInfo.parseDelimitedFrom(triple, 0, triple.length);
     assertTrue(regions.size() == 3);
     assertTrue(regions.get(0).equals(regions.get(1)));
     assertTrue(regions.get(0).equals(regions.get(2)));

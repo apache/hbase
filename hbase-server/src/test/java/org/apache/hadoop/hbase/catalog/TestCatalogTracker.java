@@ -23,8 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.ConnectException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -38,7 +36,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
@@ -50,19 +47,18 @@ import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.ServerCallable;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.Progressable;
 import org.apache.zookeeper.KeeperException;
-import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -103,7 +99,7 @@ public class TestCatalogTracker {
       public void abort(String why, Throwable e) {
         LOG.info(why, e);
       }
-      
+
       @Override
       public boolean isAborted()  {
         return false;
@@ -127,9 +123,9 @@ public class TestCatalogTracker {
 
   /**
    * Test that we get notification if .META. moves.
-   * @throws IOException 
-   * @throws InterruptedException 
-   * @throws KeeperException 
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws KeeperException
    */
   @Test public void testThatIfMETAMovesWeAreNotified()
   throws IOException, InterruptedException, KeeperException {
@@ -410,7 +406,7 @@ public class TestCatalogTracker {
 
   /**
    * Test waiting on meta w/ no timeout specified.
-   * @throws Exception 
+   * @throws Exception
    */
   @Ignore // Can't make it work reliably on all platforms; mockito gets confused
   // Throwing: org.mockito.exceptions.misusing.WrongTypeOfReturnValue:
@@ -517,20 +513,10 @@ public class TestCatalogTracker {
   /**
    * @return A mocked up Result that fakes a Get on a row in the
    * <code>.META.</code> table.
-   * @throws IOException 
+   * @throws IOException
    */
   private Result getMetaTableRowResult() throws IOException {
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-      Writables.getBytes(HRegionInfo.FIRST_META_REGIONINFO)));
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-      Bytes.toBytes(SN.getHostAndPort())));
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
-      Bytes.toBytes(SN.getStartcode())));
-    return new Result(kvs);
+    return MetaMockingUtil.getMetaTableRowResult(HRegionInfo.FIRST_META_REGIONINFO, SN);
   }
 
   private void startWaitAliveThenWaitItLives(final Thread t, final int ms) {

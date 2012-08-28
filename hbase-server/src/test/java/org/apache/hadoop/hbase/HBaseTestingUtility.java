@@ -53,6 +53,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -81,7 +82,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -1188,11 +1188,7 @@ public class HBaseTestingUtility {
       int j = (i + 1) % startKeys.length;
       HRegionInfo hri = new HRegionInfo(table.getTableName(),
         startKeys[i], startKeys[j]);
-      Put put = new Put(hri.getRegionName());
-      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(hri));
-      meta.put(put);
-      LOG.info("createMultiRegions: inserted " + hri.toString());
+      MetaEditor.addRegionToMeta(meta, hri);
       newRegions.add(hri);
       count++;
     }
@@ -1238,11 +1234,7 @@ public class HBaseTestingUtility {
       int j = (i + 1) % startKeys.length;
       HRegionInfo hri = new HRegionInfo(htd.getName(), startKeys[i],
           startKeys[j]);
-      Put put = new Put(hri.getRegionName());
-      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(hri));
-      meta.put(put);
-      LOG.info("createMultiRegionsInMeta: inserted " + hri.toString());
+      MetaEditor.addRegionToMeta(meta, hri);
       newRegions.add(hri);
     }
 
@@ -1281,13 +1273,13 @@ public class HBaseTestingUtility {
     List<byte[]> rows = new ArrayList<byte[]>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
-      byte[] val = result.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-      if (val == null) {
+      HRegionInfo info = HRegionInfo.getHRegionInfo(result);
+      if (info == null) {
         LOG.error("No region info for row " + Bytes.toString(result.getRow()));
         // TODO figure out what to do for this new hosed case.
         continue;
       }
-      HRegionInfo info = Writables.getHRegionInfo(val);
+
       if (Bytes.compareTo(info.getTableName(), tableName) == 0) {
         LOG.info("getMetaTableRows: row -> " +
             Bytes.toStringBinary(result.getRow()) + info);
@@ -1390,7 +1382,7 @@ public class HBaseTestingUtility {
 
     // Needed for TestImportTsv.
     conf.set("mapred.job.tracker", jobConf.get("mapred.job.tracker"));
-    // this for mrv2 support; mr1 ignores this 
+    // this for mrv2 support; mr1 ignores this
     conf.set("mapreduce.framework.name", "yarn");
     String rmAdress = jobConf.get("yarn.resourcemanager.address");
     if (rmAdress != null) {

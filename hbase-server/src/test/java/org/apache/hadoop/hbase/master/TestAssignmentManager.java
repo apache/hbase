@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
@@ -554,9 +555,9 @@ public class TestAssignmentManager {
     
     Result r = null;
     if (splitRegion) {
-      r = Mocking.getMetaTableRowResultAsSplitRegion(REGIONINFO, SERVERNAME_A);
+      r = MetaMockingUtil.getMetaTableRowResultAsSplitRegion(REGIONINFO, SERVERNAME_A);
     } else {
-      r = Mocking.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+      r = MetaMockingUtil.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
     }
     
     ScanResponse.Builder builder = ScanResponse.newBuilder();
@@ -918,7 +919,7 @@ public class TestAssignmentManager {
     // with an encoded name by doing a Get on .META.
     ClientProtocol ri = Mockito.mock(ClientProtocol.class);
     // Get a meta row result that has region up on SERVERNAME_A for REGIONINFO
-    Result r = Mocking.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
+    Result r = MetaMockingUtil.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
     ScanResponse.Builder builder = ScanResponse.newBuilder();
     builder.setMoreResults(true);
     builder.addResult(ProtobufUtil.toResult(r));

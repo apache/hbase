@@ -34,11 +34,11 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -174,11 +174,8 @@ public class HBaseFsckRepair {
    */
   public static void fixMetaHoleOnline(Configuration conf,
       HRegionInfo hri) throws IOException {
-    Put p = new Put(hri.getRegionName());
-    p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(hri));
     HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
-    meta.put(p);
+    MetaEditor.addRegionToMeta(meta, hri);
     meta.close();
   }
 

@@ -1,6 +1,4 @@
 /**
- * Copyright 2010 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,19 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.*;
+package org.apache.hadoop.hbase.catalog;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 
 import junit.framework.Assert;
-import junit.framework.AssertionFailedError;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,37 +36,65 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaMigrationRemovingHTD;
-import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.migration.HRegionInfo090x;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test migration that removes HTableDescriptor from HRegionInfo moving the
- * meta version from no version to {@link MetaReader#META_VERSION}.
+ * Test migration that changes HRI serialization into PB. Tests by bringing up a cluster from actual
+ * data from a 0.92 cluster, as well as manually downgrading and then upgrading the META info.
+ * @deprecated Remove after 0.96
  */
 @Category(MediumTests.class)
-public class TestMetaMigrationRemovingHTD {
-  static final Log LOG = LogFactory.getLog(TestMetaMigrationRemovingHTD.class);
+@Deprecated
+public class TestMetaMigrationConvertingToPB {
+  static final Log LOG = LogFactory.getLog(TestMetaMigrationConvertingToPB.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
   private final static String TESTTABLE = "TestTable";
-  private final static int ROWCOUNT = 100;
+
+  private final static int ROW_COUNT = 100;
+  private final static int REGION_COUNT = 9; //initial number of regions of the TestTable
+
+  private static final int META_VERSION_092 = 0;
+
+  /*
+   * This test uses a tgz file named "TestMetaMigrationConvertingToPB.tgz" under
+   * hbase-server/src/test/data which contains file data from a 0.92 cluster.
+   * The cluster has a table named "TestTable", which has 100 rows. 0.94 has same
+   * META structure, so it should be the same.
+   *
+   * hbase(main):001:0> create 'TestTable', 'f1'
+   * hbase(main):002:0> for i in 1..100
+   * hbase(main):003:1> put 'TestTable', "row#{i}", "f1:c1", i
+   * hbase(main):004:1> end
+   *
+   * There are 9 regions in the table
+   */
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    // Start up our mini cluster on top of an 0.90 root.dir that has data from
-    // a 0.90 hbase run -- it has a table with 100 rows in it  -- and see if
-    // we can migrate from 0.90.
+    // Start up our mini cluster on top of an 0.92 root.dir that has data from
+    // a 0.92 hbase run -- it has a table with 100 rows in it  -- and see if
+    // we can migrate from 0.92
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.startMiniDFSCluster(1);
-    Path testdir = TEST_UTIL.getDataTestDir("TestMetaMigrationRemovingHTD");
+    Path testdir = TEST_UTIL.getDataTestDir("TestMetaMigrationConvertToPB");
     // Untar our test dir.
     File untar = untar(new File(testdir.toString()));
     // Now copy the untar up into hdfs so when we start hbase, we'll run from it.
@@ -98,14 +124,14 @@ public class TestMetaMigrationRemovingHTD {
     }
     // Assert that we find all 100 rows that are in the data we loaded.  If
     // so then we must have migrated it from 0.90 to 0.92.
-    Assert.assertEquals(ROWCOUNT, count);
+    Assert.assertEquals(ROW_COUNT, count);
     scanner.close();
     t.close();
   }
 
   private static File untar(final File testdir) throws IOException {
     // Find the src data under src/test/data
-    final String datafile = "hbase-4388-root.dir";
+    final String datafile = "TestMetaMigrationConvertToPB";
     String srcTarFile =
       System.getProperty("project.build.testSourceDirectory", "src/test") +
       File.separator + "data" + File.separator + datafile + ".tgz";
@@ -139,52 +165,55 @@ public class TestMetaMigrationRemovingHTD {
 
   @Test
   public void testMetaUpdatedFlagInROOT() throws Exception {
-    boolean metaUpdated = MetaMigrationRemovingHTD.
-      isMetaHRIUpdated(TEST_UTIL.getMiniHBaseCluster().getMaster());
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    boolean metaUpdated = MetaMigrationConvertingToPB.
+      isMetaHRIUpdated(master.getCatalogTracker());
     assertEquals(true, metaUpdated);
+    verifyMetaRowsAreUpdated(master.getCatalogTracker());
   }
 
   @Test
   public void testMetaMigration() throws Exception {
-    LOG.info("Starting testMetaWithLegacyHRI");
+    LOG.info("Starting testMetaMigration");
     final byte [] FAMILY = Bytes.toBytes("family");
     HTableDescriptor htd = new HTableDescriptor("testMetaMigration");
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
       htd.addFamily(hcd);
     Configuration conf = TEST_UTIL.getConfiguration();
-    createMultiRegionsWithLegacyHRI(conf, htd, FAMILY,
-        new byte[][]{
-            HConstants.EMPTY_START_ROW,
-            Bytes.toBytes("region_a"),
-            Bytes.toBytes("region_b")});
+    byte[][] regionNames = new byte[][]{
+        HConstants.EMPTY_START_ROW,
+        Bytes.toBytes("region_a"),
+        Bytes.toBytes("region_b")};
+    createMultiRegionsWithWritableSerialization(conf, htd.getName(), regionNames);
     CatalogTracker ct =
       TEST_UTIL.getMiniHBaseCluster().getMaster().getCatalogTracker();
     // Erase the current version of root meta for this test.
-    undoVersionInMeta();
+    undoVersionInRoot(ct);
     MetaReader.fullScanMetaAndPrint(ct);
-    LOG.info("Meta Print completed.testUpdatesOnMetaWithLegacyHRI");
+    LOG.info("Meta Print completed.testMetaMigration");
 
-    Set<HTableDescriptor> htds =
-      MetaMigrationRemovingHTD.updateMetaWithNewRegionInfo(
+    long numMigratedRows = MetaMigrationConvertingToPB.updateMeta(
         TEST_UTIL.getHBaseCluster().getMaster());
     MetaReader.fullScanMetaAndPrint(ct);
+
     // Should be one entry only and it should be for the table we just added.
-    assertEquals(1, htds.size());
-    assertTrue(htds.contains(htd));
+    assertEquals(regionNames.length, numMigratedRows);
+
     // Assert that the flag in ROOT is updated to reflect the correct status
     boolean metaUpdated =
-      MetaMigrationRemovingHTD.isMetaHRIUpdated(
-        TEST_UTIL.getMiniHBaseCluster().getMaster());
+        MetaMigrationConvertingToPB.isMetaHRIUpdated(
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getCatalogTracker());
     assertEquals(true, metaUpdated);
+    verifyMetaRowsAreUpdated(ct);
   }
 
   /**
    * This test assumes a master crash/failure during the meta migration process
    * and attempts to continue the meta migration process when a new master takes over.
    * When a master dies during the meta migration we will have some rows of
-   * META.CatalogFamily updated with new HRI, (i.e HRI with out HTD) and some
-   * still hanging with legacy HRI. (i.e HRI with HTD). When the backup master/ or
-   * fresh start of master attempts the migration it will encouter some rows of META
+   * META.CatalogFamily updated with PB serialization and some
+   * still hanging with writable serialization. When the backup master/ or
+   * fresh start of master attempts the migration it will encounter some rows of META
    * already updated with new HRI and some still legacy. This test will simulate this
    * scenario and validates that the migration process can safely skip the updated
    * rows and migrate any pending rows at startup.
@@ -198,72 +227,76 @@ public class TestMetaMigrationRemovingHTD {
       htd.addFamily(hcd);
     Configuration conf = TEST_UTIL.getConfiguration();
     // Create 10 New regions.
-    createMultiRegionsWithNewHRI(conf, htd, FAMILY, 10);
+    createMultiRegionsWithPBSerialization(conf, htd.getName(), 10);
     // Create 10 Legacy regions.
-    createMultiRegionsWithLegacyHRI(conf, htd, FAMILY, 10);
+    createMultiRegionsWithWritableSerialization(conf, htd.getName(), 10);
     CatalogTracker ct =
       TEST_UTIL.getMiniHBaseCluster().getMaster().getCatalogTracker();
     // Erase the current version of root meta for this test.
-    undoVersionInMeta();
-    MetaMigrationRemovingHTD.updateRootWithMetaMigrationStatus(ct);
-    //MetaReader.fullScanMetaAndPrint(ct);
+    undoVersionInRoot(ct);
+
+    MetaReader.fullScanMetaAndPrint(ct);
     LOG.info("Meta Print completed.testUpdatesOnMetaWithLegacyHRI");
 
-    Set<HTableDescriptor> htds =
-      MetaMigrationRemovingHTD.updateMetaWithNewRegionInfo(
-        TEST_UTIL.getHBaseCluster().getMaster());
-    assertEquals(1, htds.size());
-    assertTrue(htds.contains(htd));
+    long numMigratedRows =
+        MetaMigrationConvertingToPB.updateRootAndMetaIfNecessary(
+            TEST_UTIL.getHBaseCluster().getMaster());
+    assertEquals(numMigratedRows, 10);
+
     // Assert that the flag in ROOT is updated to reflect the correct status
-    boolean metaUpdated = MetaMigrationRemovingHTD.
-      isMetaHRIUpdated(TEST_UTIL.getMiniHBaseCluster().getMaster());
+    boolean metaUpdated = MetaMigrationConvertingToPB.
+      isMetaHRIUpdated(TEST_UTIL.getMiniHBaseCluster().getMaster().getCatalogTracker());
     assertEquals(true, metaUpdated);
-    LOG.info("END testMetaWithLegacyHRI");
-  }
 
-  private void undoVersionInMeta() throws IOException {
-    Delete d = new Delete(HRegionInfo.ROOT_REGIONINFO.getRegionName());
-    // Erase the current version of root meta for this test.
-    d.deleteColumn(HConstants.CATALOG_FAMILY, HConstants.META_VERSION_QUALIFIER);
-    HTable rootTable =
-      new HTable(TEST_UTIL.getConfiguration(), HConstants.ROOT_TABLE_NAME);
-    try {
-      rootTable.delete(d);
-    } finally {
-      rootTable.close();
-    }
-  }
+    verifyMetaRowsAreUpdated(ct);
 
-  public static void assertEquals(int expected, int actual) {
-    if (expected != actual) {
-      throw new AssertionFailedError("expected:<" +
-      expected + "> but was:<" +
-      actual + ">");
-    }
+    LOG.info("END testMasterCrashDuringMetaMigration");
   }
-
-  public static void assertEquals(boolean expected, boolean actual) {
-    if (expected != actual) {
-      throw new AssertionFailedError("expected:<" +
-      expected + "> but was:<" +
-      actual + ">");
-    }
-  }
-
 
   /**
-   * @param c
-   * @param htd
-   * @param family
-   * @param numRegions
-   * @return
-   * @throws IOException
-   * @deprecated Just for testing migration of meta from 0.90 to 0.92... will be
-   * removed thereafter
+   * Verify that every META row is updated
    */
-  public int createMultiRegionsWithLegacyHRI(final Configuration c,
-      final HTableDescriptor htd, final byte [] family, int numRegions)
-  throws IOException {
+  void verifyMetaRowsAreUpdated(CatalogTracker catalogTracker)
+      throws IOException {
+    List<Result> results = MetaReader.fullScan(catalogTracker);
+    assertTrue(results.size() >= REGION_COUNT);
+
+    for (Result result : results) {
+      byte[] hriBytes = result.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.REGIONINFO_QUALIFIER);
+      assertTrue(hriBytes != null && hriBytes.length > 0);
+      assertTrue(MetaMigrationConvertingToPB.isMigrated(hriBytes));
+
+      byte[] splitA = result.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.SPLITA_QUALIFIER);
+      if (splitA != null && splitA.length > 0) {
+        assertTrue(MetaMigrationConvertingToPB.isMigrated(splitA));
+      }
+
+      byte[] splitB = result.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.SPLITB_QUALIFIER);
+      if (splitB != null && splitB.length > 0) {
+        assertTrue(MetaMigrationConvertingToPB.isMigrated(splitB));
+      }
+    }
+  }
+
+  /** Changes the version of META to 0 to simulate 0.92 and 0.94 clusters*/
+  private void undoVersionInRoot(CatalogTracker ct) throws IOException {
+    Put p = new Put(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+
+    p.add(HConstants.CATALOG_FAMILY, HConstants.META_VERSION_QUALIFIER,
+        Bytes.toBytes(META_VERSION_092));
+
+    MetaEditor.putToRootTable(ct, p);
+    LOG.info("Downgraded -ROOT- meta version=" + META_VERSION_092);
+  }
+
+  /**
+   * Inserts multiple regions into META using Writable serialization instead of PB
+   */
+  public int createMultiRegionsWithWritableSerialization(final Configuration c,
+      final byte[] tableName, int numRegions) throws IOException {
     if (numRegions < 3) throw new IOException("Must create at least 3 regions");
     byte [] startKey = Bytes.toBytes("aaaaa");
     byte [] endKey = Bytes.toBytes("zzzzz");
@@ -273,41 +306,38 @@ public class TestMetaMigrationRemovingHTD {
       regionStartKeys[i+1] = splitKeys[i];
     }
     regionStartKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
-    return createMultiRegionsWithLegacyHRI(c, htd, family, regionStartKeys);
+    return createMultiRegionsWithWritableSerialization(c, tableName, regionStartKeys);
   }
 
   /**
-   * @param c
-   * @param htd
-   * @param columnFamily
-   * @param startKeys
-   * @return
-   * @throws IOException
-   * @deprecated Just for testing migration of meta from 0.90 to 0.92... will be
-   * removed thereafter
+   * Inserts multiple regions into META using Writable serialization instead of PB
    */
-  public int createMultiRegionsWithLegacyHRI(final Configuration c,
-      final HTableDescriptor htd, final byte[] columnFamily, byte [][] startKeys)
+  public int createMultiRegionsWithWritableSerialization(final Configuration c,
+      final byte[] tableName, byte [][] startKeys)
   throws IOException {
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
     HTable meta = new HTable(c, HConstants.META_TABLE_NAME);
-    if(!htd.hasFamily(columnFamily)) {
-      HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
-      htd.addFamily(hcd);
-    }
-    List<HRegionInfo090x> newRegions
-        = new ArrayList<HRegionInfo090x>(startKeys.length);
+
+    List<HRegionInfo> newRegions
+        = new ArrayList<HRegionInfo>(startKeys.length);
     int count = 0;
     for (int i = 0; i < startKeys.length; i++) {
       int j = (i + 1) % startKeys.length;
-      HRegionInfo090x hri = new HRegionInfo090x(htd,
-        startKeys[i], startKeys[j]);
+      HRegionInfo hri = new HRegionInfo(tableName, startKeys[i], startKeys[j]);
       Put put = new Put(hri.getRegionName());
       put.setWriteToWAL(false);
       put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(hri));
+        getBytes(hri)); //this is the old Writable serialization
+
+      //also add the region as it's daughters
+      put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
+          getBytes(hri)); //this is the old Writable serialization
+
+      put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER,
+          getBytes(hri)); //this is the old Writable serialization
+
       meta.put(put);
-      LOG.info("createMultiRegions: PUT inserted " + hri.toString());
+      LOG.info("createMultiRegionsWithWritableSerialization: PUT inserted " + hri.toString());
 
       newRegions.add(hri);
       count++;
@@ -316,8 +346,24 @@ public class TestMetaMigrationRemovingHTD {
     return count;
   }
 
-  int createMultiRegionsWithNewHRI(final Configuration c,
-      final HTableDescriptor htd, final byte [] family, int numRegions)
+  @Deprecated
+  private byte[] getBytes(HRegionInfo hri) throws IOException {
+    DataOutputBuffer out = new DataOutputBuffer();
+    try {
+      hri.write(out);
+      return out.getData();
+    } finally {
+      if (out != null) {
+        out.close();
+      }
+    }
+  }
+
+  /**
+   * Inserts multiple regions into META using PB serialization
+   */
+  int createMultiRegionsWithPBSerialization(final Configuration c,
+      final byte[] tableName, int numRegions)
   throws IOException {
     if (numRegions < 3) throw new IOException("Must create at least 3 regions");
     byte [] startKey = Bytes.toBytes("aaaaa");
@@ -328,31 +374,27 @@ public class TestMetaMigrationRemovingHTD {
       regionStartKeys[i+1] = splitKeys[i];
     }
     regionStartKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
-    return createMultiRegionsWithNewHRI(c, htd, family, regionStartKeys);
+    return createMultiRegionsWithPBSerialization(c, tableName, regionStartKeys);
   }
 
-  int createMultiRegionsWithNewHRI(final Configuration c, final HTableDescriptor htd,
-      final byte[] columnFamily, byte [][] startKeys)
-  throws IOException {
+  /**
+   * Inserts multiple regions into META using PB serialization
+   */
+  int createMultiRegionsWithPBSerialization(final Configuration c, final byte[] tableName,
+      byte [][] startKeys) throws IOException {
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
     HTable meta = new HTable(c, HConstants.META_TABLE_NAME);
-    if(!htd.hasFamily(columnFamily)) {
-      HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
-      htd.addFamily(hcd);
-    }
+
     List<HRegionInfo> newRegions
         = new ArrayList<HRegionInfo>(startKeys.length);
     int count = 0;
     for (int i = 0; i < startKeys.length; i++) {
       int j = (i + 1) % startKeys.length;
-      HRegionInfo hri = new HRegionInfo(htd.getName(),
-        startKeys[i], startKeys[j]);
-      Put put = new Put(hri.getRegionName());
+      HRegionInfo hri = new HRegionInfo(tableName, startKeys[i], startKeys[j]);
+      Put put = MetaEditor.makePutFromRegionInfo(hri);
       put.setWriteToWAL(false);
-      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(hri));
       meta.put(put);
-      LOG.info("createMultiRegions: PUT inserted " + hri.toString());
+      LOG.info("createMultiRegionsWithPBSerialization: PUT inserted " + hri.toString());
 
       newRegions.add(hri);
       count++;
@@ -364,5 +406,5 @@ public class TestMetaMigrationRemovingHTD {
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
-}
 
+}

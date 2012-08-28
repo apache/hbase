@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Reads region and assignment information from <code>.META.</code>.
@@ -114,7 +113,7 @@ public class MetaReader {
       @Override
       public boolean visit(Result r) throws IOException {
         if (r ==  null || r.isEmpty()) return true;
-        Pair<HRegionInfo, ServerName> region = parseCatalogResult(r);
+        Pair<HRegionInfo, ServerName> region = HRegionInfo.getHRegionInfoAndServerName(r);
         if (region == null) return true;
         HRegionInfo hri = region.getFirst();
         if (hri  == null) return true;
@@ -202,7 +201,7 @@ public class MetaReader {
   /**
    * Callers should call close on the returned {@link HTable} instance.
    * @param catalogTracker
-   * @param row Row we are putting 
+   * @param row Row we are putting
    * @return
    * @throws IOException
    */
@@ -289,59 +288,7 @@ public class MetaReader {
     Get get = new Get(regionName);
     get.addFamily(HConstants.CATALOG_FAMILY);
     Result r = get(getCatalogHTable(catalogTracker, regionName), get);
-    return (r == null || r.isEmpty())? null: parseCatalogResult(r);
-  }
-
-  /**
-   * Extract a {@link ServerName}
-   * For use on catalog table {@link Result}.
-   * @param r Result to pull from
-   * @return A ServerName instance or null if necessary fields not found or empty.
-   */
-  public static ServerName getServerNameFromCatalogResult(final Result r) {
-    byte[] value = r.getValue(HConstants.CATALOG_FAMILY,
-      HConstants.SERVER_QUALIFIER);
-    if (value == null || value.length == 0) return null;
-    String hostAndPort = Bytes.toString(value);
-    value = r.getValue(HConstants.CATALOG_FAMILY,
-      HConstants.STARTCODE_QUALIFIER);
-    if (value == null || value.length == 0) return null;
-    return new ServerName(hostAndPort, Bytes.toLong(value));
-  }
-
-  /**
-   * Extract a HRegionInfo and ServerName.
-   * For use on catalog table {@link Result}.
-   * @param r Result to pull from
-   * @return A pair of the {@link HRegionInfo} and the {@link ServerName}
-   * (or null for server address if no address set in .META.).
-   * @throws IOException
-   */
-  public static Pair<HRegionInfo, ServerName> parseCatalogResult(final Result r)
-  throws IOException {
-    HRegionInfo info =
-      parseHRegionInfoFromCatalogResult(r, HConstants.REGIONINFO_QUALIFIER);
-    ServerName sn = getServerNameFromCatalogResult(r);
-    return new Pair<HRegionInfo, ServerName>(info, sn);
-  }
-
-  /**
-   * Parse the content of the cell at {@link HConstants#CATALOG_FAMILY} and
-   * <code>qualifier</code> as an HRegionInfo and return it, or null.
-   * For use on catalog table {@link Result}.
-   * @param r Result instance to pull from.
-   * @param qualifier Column family qualifier -- either
-   * {@link HConstants#SPLITA_QUALIFIER}, {@link HConstants#SPLITB_QUALIFIER} or
-   * {@link HConstants#REGIONINFO_QUALIFIER}.
-   * @return An HRegionInfo instance or null.
-   * @throws IOException
-   */
-  public static HRegionInfo parseHRegionInfoFromCatalogResult(final Result r,
-      byte [] qualifier)
-  throws IOException {
-    byte [] bytes = r.getValue(HConstants.CATALOG_FAMILY, qualifier);
-    if (bytes == null || bytes.length <= 0) return null;
-    return Writables.getHRegionInfoOrNull(bytes);
+    return (r == null || r.isEmpty())? null: HRegionInfo.getHRegionInfoAndServerName(r);
   }
 
   /**
@@ -368,7 +315,7 @@ public class MetaReader {
       @Override
       public boolean visit(Result r) throws IOException {
         this.current =
-          parseHRegionInfoFromCatalogResult(r, HConstants.REGIONINFO_QUALIFIER);
+          HRegionInfo.getHRegionInfo(r, HConstants.REGIONINFO_QUALIFIER);
         if (this.current == null) {
           LOG.warn("No serialized HRegionInfo in " + r);
           return true;
@@ -522,14 +469,14 @@ public class MetaReader {
       @Override
       public boolean visit(Result r) throws IOException {
         HRegionInfo hri =
-          parseHRegionInfoFromCatalogResult(r, HConstants.REGIONINFO_QUALIFIER);
+          HRegionInfo.getHRegionInfo(r, HConstants.REGIONINFO_QUALIFIER);
         if (hri == null) {
           LOG.warn("No serialized HRegionInfo in " + r);
           return true;
         }
         if (!isInsideTable(hri, tableName)) return false;
         if (excludeOfflinedSplitParents && hri.isSplitParent()) return true;
-        ServerName sn = getServerNameFromCatalogResult(r);
+        ServerName sn = HRegionInfo.getServerName(r);
         // Populate this.current so available when we call #add
         this.current = new Pair<HRegionInfo, ServerName>(hri, sn);
         // Else call super and add this Result to the collection.
@@ -563,8 +510,8 @@ public class MetaReader {
       @Override
       void add(Result r) {
         if (r == null || r.isEmpty()) return;
-        ServerName sn = getServerNameFromCatalogResult(r);
-        if (sn != null && sn.equals(serverName)) this.results.add(r); 
+        ServerName sn = HRegionInfo.getServerName(r);
+        if (sn != null && sn.equals(serverName)) this.results.add(r);
       }
     };
     fullScan(catalogTracker, v);
@@ -572,7 +519,7 @@ public class MetaReader {
     if (results != null && !results.isEmpty()) {
       // Convert results to Map keyed by HRI
       for (Result r: results) {
-        Pair<HRegionInfo, ServerName> p = parseCatalogResult(r);
+        Pair<HRegionInfo, ServerName> p = HRegionInfo.getHRegionInfoAndServerName(r);
         if (p != null && p.getFirst() != null) hris.put(p.getFirst(), r);
       }
     }
@@ -586,7 +533,7 @@ public class MetaReader {
       public boolean visit(Result r) throws IOException {
         if (r ==  null || r.isEmpty()) return true;
         LOG.info("fullScanMetaAndPrint.Current Meta Row: " + r);
-        HRegionInfo hrim = MetaEditor.getHRegionInfo(r);
+        HRegionInfo hrim = HRegionInfo.getHRegionInfo(r);
         LOG.info("fullScanMetaAndPrint.HRI Print= " + hrim);
         return true;
       }

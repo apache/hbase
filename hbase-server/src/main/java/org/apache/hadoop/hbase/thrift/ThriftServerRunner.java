@@ -84,7 +84,6 @@ import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.net.DNS;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -1375,14 +1374,12 @@ public class ThriftServerRunner implements Runnable {
         }
 
         // find region start and end keys
-        byte[] value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
-                                               HConstants.REGIONINFO_QUALIFIER);
-        if (value == null || value.length == 0) {
+        HRegionInfo regionInfo = HRegionInfo.getHRegionInfo(startRowResult);
+        if (regionInfo == null) {
           throw new IOException("HRegionInfo REGIONINFO was null or " +
                                 " empty in Meta for row="
                                 + Bytes.toStringBinary(row));
         }
-        HRegionInfo regionInfo = Writables.getHRegionInfo(value);
         TRegionInfo region = new TRegionInfo();
         region.setStartKey(regionInfo.getStartKey());
         region.setEndKey(regionInfo.getEndKey());
@@ -1391,13 +1388,10 @@ public class ThriftServerRunner implements Runnable {
         region.version = regionInfo.getVersion();
 
         // find region assignment to server
-        value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
-                                        HConstants.SERVER_QUALIFIER);
-        if (value != null && value.length > 0) {
-          String hostAndPort = Bytes.toString(value);
-          region.setServerName(Bytes.toBytes(
-              Addressing.parseHostname(hostAndPort)));
-          region.port = Addressing.parsePort(hostAndPort);
+        ServerName serverName = HRegionInfo.getServerName(startRowResult);
+        if (serverName != null) {
+          region.setServerName(Bytes.toBytes(serverName.getHostname()));
+          region.port = serverName.getPort();
         }
         return region;
       } catch (IOException e) {

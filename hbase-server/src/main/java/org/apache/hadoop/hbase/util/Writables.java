@@ -19,11 +19,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.io.Writable;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -31,6 +26,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Utility class with methods for manipulating Writable objects
@@ -136,58 +135,6 @@ public class Writables {
     } finally {
       in.close();
     }
-  }
-
-  /**
-   * @param bytes serialized bytes
-   * @return A HRegionInfo instance built out of passed <code>bytes</code>.
-   * @throws IOException e
-   * @deprecated Use {@link HRegionInfo#parseFrom(byte[])}
-   */
-  public static HRegionInfo getHRegionInfo(final byte [] bytes)
-  throws IOException {
-    return (HRegionInfo)getWritable(bytes, new HRegionInfo());
-  }
-
-  /**
-   * @param bytes serialized bytes
-   * @return All the hregioninfos that are in the byte array.  Keeps reading
-   * till we hit the end.
-   * @throws IOException e
-   */
-  public static List<HRegionInfo> getHRegionInfos(final byte [] bytes,
-      final int offset, final int length)
-  throws IOException {
-    if (bytes == null) {
-      throw new IllegalArgumentException("Can't build a writable with empty " +
-        "bytes array");
-    }
-    DataInputBuffer in = new DataInputBuffer();
-    List<HRegionInfo> hris = new ArrayList<HRegionInfo>();
-    try {
-      in.reset(bytes, offset, length);
-      while (in.available() > 0) {
-        HRegionInfo hri = new HRegionInfo();
-        hri.readFields(in);
-        hris.add(hri);
-      }
-    } finally {
-      in.close();
-    }
-    return hris;
-  }
-
-  /**
-   * @param bytes serialized bytes
-   * @return A HRegionInfo instance built out of passed <code>bytes</code>
-   * or <code>null</code> if passed bytes are null or an empty array.
-   * @throws IOException e
-   * @deprecated Use {@link HRegionInfo#parseFromOrNull(byte[])}
-   */
-  public static HRegionInfo getHRegionInfoOrNull(final byte [] bytes)
-  throws IOException {
-    return (bytes == null || bytes.length <= 0)?
-        null : getHRegionInfo(bytes);
   }
 
   /**

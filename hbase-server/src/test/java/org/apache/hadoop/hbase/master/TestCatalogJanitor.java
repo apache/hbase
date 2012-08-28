@@ -22,16 +22,12 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.util.HFileArchiveTestingUtil.assertArchiveEqualToOriginal;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -46,13 +42,13 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -70,9 +66,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -146,7 +140,7 @@ public class TestCatalogJanitor {
     public void abort(String why, Throwable e) {
       //no-op
     }
-    
+
     @Override
     public boolean isAborted() {
       return false;
@@ -235,7 +229,7 @@ public class TestCatalogJanitor {
     public void abort(String why, Throwable e) {
       //no-op
     }
-    
+
     @Override
     public boolean isAborted() {
       return false;
@@ -261,29 +255,29 @@ public class TestCatalogJanitor {
           // TODO Auto-generated method stub
           return null;
         }
-        
+
         @Override
         public Map<String, HTableDescriptor> getAll() throws IOException {
           // TODO Auto-generated method stub
           return null;
         }
-        
+
         @Override
         public HTableDescriptor get(byte[] tablename)
         throws FileNotFoundException, IOException {
           return get(Bytes.toString(tablename));
         }
-        
+
         @Override
         public HTableDescriptor get(String tablename)
         throws FileNotFoundException, IOException {
           return createHTableDescriptor();
         }
-        
+
         @Override
         public void add(HTableDescriptor htd) throws IOException {
           // TODO Auto-generated method stub
-          
+
         }
       };
     }
@@ -292,33 +286,6 @@ public class TestCatalogJanitor {
     public boolean isServerShutdownHandlerEnabled() {
       return true;
     }
-  }
-
-  @Test
-  public void testGetHRegionInfo() throws IOException {
-    assertNull(CatalogJanitor.getHRegionInfo(new Result()));
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
-    Result r = new Result(kvs);
-    assertNull(CatalogJanitor.getHRegionInfo(r));
-    byte [] f = HConstants.CATALOG_FAMILY;
-    // Make a key value that doesn't have the expected qualifier.
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
-      HConstants.SERVER_QUALIFIER, f));
-    r = new Result(kvs);
-    assertNull(CatalogJanitor.getHRegionInfo(r));
-    // Make a key that does not have a regioninfo value.
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
-      HConstants.REGIONINFO_QUALIFIER, f));
-    HRegionInfo hri = CatalogJanitor.getHRegionInfo(new Result(kvs));
-    assertTrue(hri == null);
-    // OK, give it what it expects
-    kvs.clear();
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
-      HConstants.REGIONINFO_QUALIFIER,
-      Writables.getBytes(HRegionInfo.FIRST_META_REGIONINFO)));
-    hri = CatalogJanitor.getHRegionInfo(new Result(kvs));
-    assertNotNull(hri);
-    assertTrue(hri.equals(HRegionInfo.FIRST_META_REGIONINFO));
   }
 
   @Test
@@ -343,12 +310,7 @@ public class TestCatalogJanitor {
             Bytes.toBytes("eee"));
       // Test that when both daughter regions are in place, that we do not
       // remove the parent.
-      List<KeyValue> kvs = new ArrayList<KeyValue>();
-      kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
-          HConstants.SPLITA_QUALIFIER, Writables.getBytes(splita)));
-      kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
-          HConstants.SPLITB_QUALIFIER, Writables.getBytes(splitb)));
-      Result r = new Result(kvs);
+      Result r = createResult(parent, splita, splitb);
       // Add a reference under splitA directory so we don't clear out the parent.
       Path rootdir = services.getMasterFileSystem().getRootDir();
       Path tabledir =
@@ -541,9 +503,9 @@ public class TestCatalogJanitor {
 
     final Map<HRegionInfo, Result> splitParents =
         new TreeMap<HRegionInfo, Result>(new SplitParentFirstComparator());
-    splitParents.put(parent, makeResultFromHRegionInfo(parent, splita, splitb));
+    splitParents.put(parent, createResult(parent, splita, splitb));
     splita.setOffline(true); //simulate that splita goes offline when it is split
-    splitParents.put(splita, makeResultFromHRegionInfo(splita, splitaa, splitab));
+    splitParents.put(splita, createResult(splita, splitaa,splitab));
 
     CatalogJanitor janitor = spy(new CatalogJanitor(server, services));
     doReturn(new Pair<Integer, Map<HRegionInfo, Result>>(
@@ -586,12 +548,7 @@ public class TestCatalogJanitor {
     HRegionInfo splitb = new HRegionInfo(htd.getName(), Bytes.toBytes("ccc"), Bytes.toBytes("eee"));
     // Test that when both daughter regions are in place, that we do not
     // remove the parent.
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
-    kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
-        HConstants.SPLITA_QUALIFIER, Writables.getBytes(splita)));
-    kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
-        HConstants.SPLITB_QUALIFIER, Writables.getBytes(splitb)));
-    Result r = new Result(kvs);
+    Result r = createResult(parent, splita, splitb);
 
     FileSystem fs = FileSystem.get(htu.getConfiguration());
     Path rootdir = services.getMasterFileSystem().getRootDir();
@@ -651,12 +608,7 @@ public class TestCatalogJanitor {
     HRegionInfo splitb = new HRegionInfo(htd.getName(), Bytes.toBytes("ccc"), Bytes.toBytes("eee"));
     // Test that when both daughter regions are in place, that we do not
     // remove the parent.
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
-    kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
-        HConstants.SPLITA_QUALIFIER, Writables.getBytes(splita)));
-    kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
-        HConstants.SPLITB_QUALIFIER, Writables.getBytes(splitb)));
-    Result r = new Result(kvs);
+    Result r = createResult(parent, splita, splitb);
 
     FileSystem fs = FileSystem.get(htu.getConfiguration());
 
@@ -722,31 +674,6 @@ public class TestCatalogJanitor {
     assertEquals(count, storeFiles.length);
   }
 
-  private Result makeResultFromHRegionInfo(HRegionInfo region, HRegionInfo splita,
-      HRegionInfo splitb) throws IOException {
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
-    kvs.add(new KeyValue(
-        region.getRegionName(),
-        HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(region)));
-
-    if (splita != null) {
-      kvs.add(new KeyValue(
-          region.getRegionName(),
-          HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
-          Writables.getBytes(splita)));
-    }
-
-    if (splitb != null) {
-      kvs.add(new KeyValue(
-          region.getRegionName(),
-          HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER,
-          Writables.getBytes(splitb)));
-    }
-
-    return new Result(kvs);
-  }
-
   private String setRootDirAndCleanIt(final HBaseTestingUtility htu,
       final String subdir)
   throws IOException {
@@ -788,12 +715,7 @@ public class TestCatalogJanitor {
   private Result createResult(final HRegionInfo parent, final HRegionInfo a,
       final HRegionInfo b)
   throws IOException {
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
-    kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
-      HConstants.SPLITA_QUALIFIER, Writables.getBytes(a)));
-    kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
-      HConstants.SPLITB_QUALIFIER, Writables.getBytes(b)));
-    return new Result(kvs);
+    return MetaMockingUtil.getMetaTableRowResult(parent, null, a, b);
   }
 
   private HTableDescriptor createHTableDescriptor() {

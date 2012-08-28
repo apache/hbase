@@ -459,7 +459,7 @@ EOF
     def to_string(column, kv, maxlength = -1)
       if is_meta_table?
         if column == 'info:regioninfo' or column == 'info:splitA' or column == 'info:splitB'
-          hri = org.apache.hadoop.hbase.util.Writables.getHRegionInfoOrNull(kv.getValue)
+          hri = org.apache.hadoop.hbase.HRegionInfo.parseFromOrNull(kv.getValue)
           return "timestamp=%d, value=%s" % [kv.getTimestamp, hri.toString]
         end
         if column == 'info:serverstartcode'

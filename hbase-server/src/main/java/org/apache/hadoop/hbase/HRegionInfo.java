@@ -19,13 +19,16 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.SequenceInputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,7 +39,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.migration.HRegionInfo090x;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
@@ -44,9 +47,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.VersionedWritable;
-import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hadoop.io.DataInputBuffer;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -57,10 +60,30 @@ import com.google.protobuf.InvalidProtocolBufferException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class HRegionInfo extends VersionedWritable
-implements WritableComparable<HRegionInfo> {
-  // VERSION == 0 when HRegionInfo had an HTableDescriptor inside it.
-  public static final byte VERSION_PRE_092 = 0;
+public class HRegionInfo implements Comparable<HRegionInfo> {
+  /*
+   * There are two versions associated with HRegionInfo: HRegionInfo.VERSION and
+   * HConstants.META_VERSION. HRegionInfo.VERSION indicates the data structure's versioning
+   * while HConstants.META_VERSION indicates the versioning of the serialized HRIs stored in
+   * the META table.
+   *
+   * Pre-0.92:
+   *   HRI.VERSION == 0 and HConstants.META_VERSION does not exist (is not stored at META table)
+   *   HRegionInfo had an HTableDescriptor reference inside it.
+   *   HRegionInfo is serialized as Writable to META table.
+   * For 0.92.x and 0.94.x:
+   *   HRI.VERSION == 1 and HConstants.META_VERSION == 0
+   *   HRI no longer has HTableDescriptor in it.
+   *   HRI is serialized as Writable to META table.
+   * For 0.96.x:
+   *   HRI.VERSION == 1 and HConstants.META_VERSION == 1
+   *   HRI data structure is the same as 0.92 and 0.94
+   *   HRI is serialized as PB to META table.
+   *
+   * Versioning of HRegionInfo is deprecated. HRegionInfo does protobuf
+   * serialization using RegionInfo class, which has it's own versioning.
+   */
+  @Deprecated
   public static final byte VERSION = 1;
   private static final Log LOG = LogFactory.getLog(HRegionInfo.class);
 
@@ -74,11 +97,11 @@ implements WritableComparable<HRegionInfo> {
    * where,
    *    &lt;encodedName> is a hex version of the MD5 hash of
    *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
-   * 
+   *
    * The old region name format:
    *    &lt;tablename>,&lt;startkey>,&lt;regionIdTimestamp>
    * For region names in the old format, the encoded name is a 32-bit
-   * JenkinsHash integer value (in its decimal notation, string form). 
+   * JenkinsHash integer value (in its decimal notation, string form).
    *<p>
    * **NOTE**
    *
@@ -88,8 +111,8 @@ implements WritableComparable<HRegionInfo> {
    */
 
   /** Separator used to demarcate the encodedName in a region name
-   * in the new format. See description on new format above. 
-   */ 
+   * in the new format. See description on new format above.
+   */
   private static final int ENC_SEPARATOR = '.';
   public  static final int MD5_HEX_LENGTH   = 32;
 
@@ -104,11 +127,11 @@ implements WritableComparable<HRegionInfo> {
     if ((regionName.length >= 1)
         && (regionName[regionName.length - 1] == ENC_SEPARATOR)) {
       // region name is new format. it contains the encoded name.
-      return true; 
+      return true;
     }
     return false;
   }
-  
+
   /**
    * @param regionName
    * @return the encodedName
@@ -122,7 +145,7 @@ implements WritableComparable<HRegionInfo> {
           regionName.length - MD5_HEX_LENGTH - 1,
           MD5_HEX_LENGTH);
     } else {
-      // old format region name. ROOT and first META region also 
+      // old format region name. ROOT and first META region also
       // use this format.EncodedName is the JenkinsHash value.
       int hashVal = Math.abs(JenkinsHash.getInstance().hash(regionName,
         regionName.length, 0));
@@ -206,24 +229,6 @@ implements WritableComparable<HRegionInfo> {
   @Deprecated
   public HRegionInfo() {
     super();
-  }
-
-  /**
-   * Used only for migration
-   * @param other HRegionInfoForMigration
-   */
-  public HRegionInfo(HRegionInfo090x other) {
-    super();
-    this.endKey = other.getEndKey();
-    this.offLine = other.isOffline();
-    this.regionId = other.getRegionId();
-    this.regionName = other.getRegionName();
-    this.regionNameStr = Bytes.toStringBinary(this.regionName);
-    this.split = other.isSplit();
-    this.startKey = other.getStartKey();
-    this.hashCode = other.hashCode();
-    this.encodedName = other.getEncodedName();
-    this.tableName = other.getTableDesc().getName();
   }
 
   public HRegionInfo(final byte[] tableName) {
@@ -382,7 +387,7 @@ implements WritableComparable<HRegionInfo> {
 
       if (md5HashBytes.length != MD5_HEX_LENGTH) {
         LOG.error("MD5-hash length mismatch: Expected=" + MD5_HEX_LENGTH +
-                  "; Got=" + md5HashBytes.length); 
+                  "; Got=" + md5HashBytes.length);
       }
 
       // now append the bytes '.<encodedName>.' to the end
@@ -391,7 +396,7 @@ implements WritableComparable<HRegionInfo> {
       offset += MD5_HEX_LENGTH;
       b[offset++] = ENC_SEPARATOR;
     }
-    
+
     return b;
   }
 
@@ -502,7 +507,7 @@ implements WritableComparable<HRegionInfo> {
   public byte [] getStartKey(){
     return startKey;
   }
-  
+
   /** @return the endKey */
   public byte [] getEndKey(){
     return endKey;
@@ -702,8 +707,9 @@ implements WritableComparable<HRegionInfo> {
     return this.hashCode;
   }
 
-  /** @return the object version number */
-  @Override
+  /** @return the object version number
+   * @deprecated HRI is no longer a VersionedWritable */
+  @Deprecated
   public byte getVersion() {
     return VERSION;
   }
@@ -713,9 +719,8 @@ implements WritableComparable<HRegionInfo> {
    * {@link #toDelimitedByteArray()}
    */
   @Deprecated
-  @Override
   public void write(DataOutput out) throws IOException {
-    super.write(out);
+    out.writeByte(getVersion());
     Bytes.writeByteArray(out, endKey);
     out.writeBoolean(offLine);
     out.writeLong(regionId);
@@ -731,7 +736,6 @@ implements WritableComparable<HRegionInfo> {
    * {@link #parseFrom(FSDataInputStream)}
    */
   @Deprecated
-  @Override
   public void readFields(DataInput in) throws IOException {
     // Read the single version byte.  We don't ask the super class do it
     // because freaks out if its not the current classes' version.  This method
@@ -767,6 +771,21 @@ implements WritableComparable<HRegionInfo> {
       this.hashCode = in.readInt();
     } else {
       throw new IOException("Non-migratable/unknown version=" + getVersion());
+    }
+  }
+
+  @Deprecated
+  private void readFields(byte[] bytes) throws IOException {
+    if (bytes == null || bytes.length <= 0) {
+      throw new IllegalArgumentException("Can't build a writable with empty " +
+        "bytes array");
+    }
+    DataInputBuffer in = new DataInputBuffer();
+    try {
+      in.reset(bytes, 0, bytes.length);
+      this.readFields(in);
+    } finally {
+      in.close();
     }
   }
 
@@ -817,7 +836,7 @@ implements WritableComparable<HRegionInfo> {
     if (this.offLine == o.offLine)
       return 0;
     if (this.offLine == true) return -1;
-        
+
     return 1;
   }
 
@@ -919,7 +938,7 @@ implements WritableComparable<HRegionInfo> {
 
   /**
    * @param bytes A pb RegionInfo serialized with a pb magic prefix.
-   * @return
+   * @return A deserialized {@link HRegionInfo}
    * @throws DeserializationException
    * @see {@link #toByteArray()}
    */
@@ -935,7 +954,9 @@ implements WritableComparable<HRegionInfo> {
       }
     } else {
       try {
-        return (HRegionInfo)Writables.getWritable(bytes, new HRegionInfo());
+        HRegionInfo hri = new HRegionInfo();
+        hri.readFields(bytes);
+        return hri;
       } catch (IOException e) {
         throw new DeserializationException(e);
       }
@@ -954,29 +975,172 @@ implements WritableComparable<HRegionInfo> {
   }
 
   /**
+   * Extract a HRegionInfo and ServerName from catalog table {@link Result}.
+   * @param r Result to pull from
+   * @return A pair of the {@link HRegionInfo} and the {@link ServerName}
+   * (or null for server address if no address set in .META.).
+   * @throws IOException
+   */
+  public static Pair<HRegionInfo, ServerName> getHRegionInfoAndServerName(final Result r) {
+    HRegionInfo info =
+      getHRegionInfo(r, HConstants.REGIONINFO_QUALIFIER);
+    ServerName sn = getServerName(r);
+    return new Pair<HRegionInfo, ServerName>(info, sn);
+  }
+
+  /**
+   * Returns HRegionInfo object from the column
+   * HConstants.CATALOG_FAMILY:HConstants.REGIONINFO_QUALIFIER of the catalog
+   * table Result.
+   * @param data a Result object from the catalog table scan
+   * @return HRegionInfo or null
+   */
+  public static HRegionInfo getHRegionInfo(Result data) {
+    byte [] bytes =
+      data.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+    if (bytes == null) return null;
+    HRegionInfo info = parseFromOrNull(bytes);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Current INFO from scan results = " + info);
+    }
+    return info;
+  }
+
+  /**
+   * Returns the daughter regions by reading the corresponding columns of the catalog table
+   * Result.
+   * @param data a Result object from the catalog table scan
+   * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
+   * parent
+   */
+  public static PairOfSameType<HRegionInfo> getDaughterRegions(Result data) throws IOException {
+    HRegionInfo splitA = getHRegionInfo(data, HConstants.SPLITA_QUALIFIER);
+    HRegionInfo splitB = getHRegionInfo(data, HConstants.SPLITB_QUALIFIER);
+
+    return new PairOfSameType<HRegionInfo>(splitA, splitB);
+  }
+
+  /**
+   * Returns the HRegionInfo object from the column {@link HConstants#CATALOG_FAMILY} and
+   * <code>qualifier</code> of the catalog table result.
+   * @param r a Result object from the catalog table scan
+   * @param qualifier Column family qualifier -- either
+   * {@link HConstants#SPLITA_QUALIFIER}, {@link HConstants#SPLITB_QUALIFIER} or
+   * {@link HConstants#REGIONINFO_QUALIFIER}.
+   * @return An HRegionInfo instance or null.
+   * @throws IOException
+   */
+  public static HRegionInfo getHRegionInfo(final Result r, byte [] qualifier) {
+    byte [] bytes = r.getValue(HConstants.CATALOG_FAMILY, qualifier);
+    if (bytes == null || bytes.length <= 0) return null;
+    return parseFromOrNull(bytes);
+  }
+
+  /**
+   * Returns a {@link ServerName} from catalog table {@link Result}.
+   * @param r Result to pull from
+   * @return A ServerName instance or null if necessary fields not found or empty.
+   */
+  public static ServerName getServerName(final Result r) {
+    byte[] value = r.getValue(HConstants.CATALOG_FAMILY,
+      HConstants.SERVER_QUALIFIER);
+    if (value == null || value.length == 0) return null;
+    String hostAndPort = Bytes.toString(value);
+    value = r.getValue(HConstants.CATALOG_FAMILY,
+      HConstants.STARTCODE_QUALIFIER);
+    if (value == null || value.length == 0) return null;
+    return new ServerName(hostAndPort, Bytes.toLong(value));
+  }
+
+  /**
    * Parses an HRegionInfo instance from the passed in stream.  Presumes the HRegionInfo was
    * serialized to the stream with {@link #toDelimitedByteArray()}
    * @param in
    * @return An instance of HRegionInfo.
    * @throws IOException
    */
-  public static HRegionInfo parseFrom(final FSDataInputStream in) throws IOException {
+  public static HRegionInfo parseFrom(final DataInputStream in) throws IOException {
     // I need to be able to move back in the stream if this is not a pb serialization so I can
     // do the Writable decoding instead.
-    InputStream is = in.markSupported()? in: new BufferedInputStream(in);
     int pblen = ProtobufUtil.lengthOfPBMagic();
-    is.mark(pblen);
     byte [] pbuf = new byte[pblen];
-    int read = is.read(pbuf);
+    if (in.markSupported()) { //read it with mark()
+      in.mark(pblen);
+    }
+    int read = in.read(pbuf); //assumption: if Writable serialization, it should be longer than pblen.
     if (read != pblen) throw new IOException("read=" + read + ", wanted=" + pblen);
     if (ProtobufUtil.isPBMagicPrefix(pbuf)) {
-      return convert(HBaseProtos.RegionInfo.parseDelimitedFrom(is));
+      return convert(HBaseProtos.RegionInfo.parseDelimitedFrom(in));
     } else {
-      // Presume Writables.  Need to reset the stream since it didn't start w/ pb.
-      in.reset();
-      HRegionInfo hri = new HRegionInfo();
-      hri.readFields(in);
-      return hri;
+        // Presume Writables.  Need to reset the stream since it didn't start w/ pb.
+      if (in.markSupported()) {
+        in.reset();
+        HRegionInfo hri = new HRegionInfo();
+        hri.readFields(in);
+        return hri;
+      } else {
+        //we cannot use BufferedInputStream, it consumes more than we read from the underlying IS
+        ByteArrayInputStream bais = new ByteArrayInputStream(pbuf);
+        SequenceInputStream sis = new SequenceInputStream(bais, in); //concatenate input streams
+        HRegionInfo hri = new HRegionInfo();
+        hri.readFields(new DataInputStream(sis));
+        return hri;
+      }
     }
   }
+
+  /**
+   * Serializes given HRegionInfo's as a byte array. Use this instead of {@link #toByteArray()} when
+   * writing to a stream and you want to use the pb mergeDelimitedFrom (w/o the delimiter, pb reads
+   * to EOF which may not be what you want). {@link #parseDelimitedFrom(byte[], int, int)} can
+   * be used to read back the instances.
+   * @param infos HRegionInfo objects to serialize
+   * @return This instance serialized as a delimited protobuf w/ a magic pb prefix.
+   * @throws IOException
+   * @see {@link #toByteArray()}
+   */
+  public static byte[] toDelimitedByteArray(HRegionInfo... infos) throws IOException {
+    byte[][] bytes = new byte[infos.length][];
+    int size = 0;
+    for (int i = 0; i < infos.length; i++) {
+      bytes[i] = infos[i].toDelimitedByteArray();
+      size += bytes[i].length;
+    }
+
+    byte[] result = new byte[size];
+    int offset = 0;
+    for (byte[] b : bytes) {
+      System.arraycopy(b, 0, result, offset, b.length);
+      offset += b.length;
+    }
+    return result;
+  }
+
+  /**
+   * Parses all the HRegionInfo instances from the passed in stream until EOF. Presumes the
+   * HRegionInfo's were serialized to the stream with {@link #toDelimitedByteArray()}
+   * @param bytes serialized bytes
+   * @param offset the start offset into the byte[] buffer
+   * @param length how far we should read into the byte[] buffer
+   * @return All the hregioninfos that are in the byte array. Keeps reading till we hit the end.
+   */
+  public static List<HRegionInfo> parseDelimitedFrom(final byte[] bytes, final int offset,
+      final int length) throws IOException {
+    if (bytes == null) {
+      throw new IllegalArgumentException("Can't build an object with empty bytes array");
+    }
+    DataInputBuffer in = new DataInputBuffer();
+    List<HRegionInfo> hris = new ArrayList<HRegionInfo>();
+    try {
+      in.reset(bytes, offset, length);
+      while (in.available() > 0) {
+        HRegionInfo hri = parseFrom(in);
+        hris.add(hri);
+      }
+    } finally {
+      in.close();
+    }
+    return hris;
+  }
+
 }

@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +44,6 @@ import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -241,11 +238,8 @@ public class TestScanner extends HBaseTestCase {
 
       Put put = new Put(ROW_KEY, System.currentTimeMillis(), null);
 
-      ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-      DataOutputStream s = new DataOutputStream(byteStream);
-      REGION_INFO.write(s);
       put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-          byteStream.toByteArray());
+          REGION_INFO.toByteArray());
       region.put(put);
 
       // What we just committed is in the memstore. Verify that we can get
@@ -346,8 +340,7 @@ public class TestScanner extends HBaseTestCase {
 
   /** Compare the HRegionInfo we read from HBase to what we stored */
   private void validateRegionInfo(byte [] regionBytes) throws IOException {
-    HRegionInfo info =
-      (HRegionInfo) Writables.getWritable(regionBytes, new HRegionInfo());
+    HRegionInfo info = HRegionInfo.parseFromOrNull(regionBytes);
 
     assertEquals(REGION_INFO.getRegionId(), info.getRegionId());
     assertEquals(0, info.getStartKey().length);
@@ -489,7 +482,7 @@ public class TestScanner extends HBaseTestCase {
   /**
    * Make sure scanner returns correct result when we run a major compaction
    * with deletes.
-   * 
+   *
    * @throws Exception
    */
   @SuppressWarnings("deprecation")

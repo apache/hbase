@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
@@ -50,7 +49,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 
 /**
  * A janitor for the catalog tables.  Scans the <code>.META.</code> catalog
@@ -124,7 +123,7 @@ class CatalogJanitor extends Chore {
       public boolean visit(Result r) throws IOException {
         if (r == null || r.isEmpty()) return true;
         count.incrementAndGet();
-        HRegionInfo info = getHRegionInfo(r);
+        HRegionInfo info = HRegionInfo.getHRegionInfo(r);
         if (info == null) return true; // Keep scanning
         if (info.isSplitParent()) splitParents.put(info, r);
         // Returning true means "keep scanning"
@@ -160,11 +159,10 @@ class CatalogJanitor extends Chore {
             cleanParent(e.getKey(), e.getValue())) {
           cleaned++;
         } else {
-          // We could not clean the parent, so its daughters should not be cleaned either(HBASE-6160)
-          parentNotCleaned.add(
-              getDaughterRegionInfo(e.getValue(), HConstants.SPLITA_QUALIFIER).getEncodedName());
-          parentNotCleaned.add(
-              getDaughterRegionInfo(e.getValue(), HConstants.SPLITB_QUALIFIER).getEncodedName());
+          // We could not clean the parent, so it's daughters should not be cleaned either (HBASE-6160)
+          PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(e.getValue());
+          parentNotCleaned.add(daughters.getFirst().getEncodedName());
+          parentNotCleaned.add(daughters.getSecond().getEncodedName());
         }
       }
       if (cleaned != 0) {
@@ -216,24 +214,6 @@ class CatalogJanitor extends Chore {
   }
 
   /**
-   * Get HRegionInfo from passed Map of row values.
-   * @param result Map to do lookup in.
-   * @return Null if not found (and logs fact that expected COL_REGIONINFO
-   * was missing) else deserialized {@link HRegionInfo}
-   * @throws IOException
-   */
-  static HRegionInfo getHRegionInfo(final Result result)
-  throws IOException {
-    byte [] bytes =
-      result.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    if (bytes == null) {
-      LOG.warn("REGIONINFO_QUALIFIER is empty in " + result);
-      return null;
-    }
-    return Writables.getHRegionInfo(bytes);
-  }
-
-  /**
    * If daughters no longer hold reference to the parents, delete the parent.
    * @param parent HRegionInfo of split offlined parent
    * @param rowContent Content of <code>parent</code> row in
@@ -246,12 +226,11 @@ class CatalogJanitor extends Chore {
   throws IOException {
     boolean result = false;
     // Run checks on each daughter split.
-    HRegionInfo a_region = getDaughterRegionInfo(rowContent, HConstants.SPLITA_QUALIFIER);
-    HRegionInfo b_region = getDaughterRegionInfo(rowContent, HConstants.SPLITB_QUALIFIER);
+    PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(rowContent);
     Pair<Boolean, Boolean> a =
-      checkDaughterInFs(parent, a_region, HConstants.SPLITA_QUALIFIER);
+      checkDaughterInFs(parent, daughters.getFirst());
     Pair<Boolean, Boolean> b =
-      checkDaughterInFs(parent, b_region, HConstants.SPLITB_QUALIFIER);
+      checkDaughterInFs(parent, daughters.getSecond());
     if (hasNoReferences(a) && hasNoReferences(b)) {
       LOG.debug("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
@@ -284,21 +263,6 @@ class CatalogJanitor extends Chore {
   }
 
   /**
-   * Get daughter HRegionInfo out of parent info:splitA/info:splitB columns.
-   * @param result
-   * @param which Whether "info:splitA" or "info:splitB" column
-   * @return Deserialized content of the info:splitA or info:splitB as a
-   * HRegionInfo
-   * @throws IOException
-   */
-  private HRegionInfo getDaughterRegionInfo(final Result result,
-    final byte [] which)
-  throws IOException {
-    byte [] bytes = result.getValue(HConstants.CATALOG_FAMILY, which);
-    return Writables.getHRegionInfoOrNull(bytes);
-  }
-
-  /**
    * Remove mention of daughters from parent row.
    * @param parent
    * @throws IOException
@@ -311,27 +275,24 @@ class CatalogJanitor extends Chore {
   /**
    * Checks if a daughter region -- either splitA or splitB -- still holds
    * references to parent.
-   * @param parent Parent region name. 
-   * @param split Which column family.
-   * @param qualifier Which of the daughters to look at, splitA or splitB.
+   * @param parent Parent region
+   * @param daughter Daughter region
    * @return A pair where the first boolean says whether or not the daughter
    * region directory exists in the filesystem and then the second boolean says
    * whether the daughter has references to the parent.
    * @throws IOException
    */
-  Pair<Boolean, Boolean> checkDaughterInFs(final HRegionInfo parent,
-    final HRegionInfo split,
-    final byte [] qualifier)
+  Pair<Boolean, Boolean> checkDaughterInFs(final HRegionInfo parent, final HRegionInfo daughter)
   throws IOException {
     boolean references = false;
     boolean exists = false;
-    if (split == null)  {
+    if (daughter == null)  {
       return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
     }
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
-    Path tabledir = new Path(rootdir, split.getTableNameAsString());
-    Path regiondir = new Path(tabledir, split.getEncodedName());
+    Path tabledir = new Path(rootdir, daughter.getTableNameAsString());
+    Path regiondir = new Path(tabledir, daughter.getEncodedName());
     exists = fs.exists(regiondir);
     if (!exists) {
       LOG.warn("Daughter regiondir does not exist: " + regiondir.toString());
@@ -340,7 +301,7 @@ class CatalogJanitor extends Chore {
     HTableDescriptor parentDescriptor = getTableDescriptor(parent.getTableName());
 
     for (HColumnDescriptor family: parentDescriptor.getFamilies()) {
-      Path p = HStore.getStoreHomedir(tabledir, split.getEncodedName(),
+      Path p = HStore.getStoreHomedir(tabledir, daughter.getEncodedName(),
         family.getName());
       if (!fs.exists(p)) continue;
       // Look for reference files.  Call listStatus with anonymous instance of PathFilter.

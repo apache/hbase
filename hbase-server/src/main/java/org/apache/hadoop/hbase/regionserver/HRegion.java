@@ -130,7 +130,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.StringUtils;
@@ -371,7 +370,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.threadWakeFrequency = 0L;
     this.coprocessorHost = null;
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
-    
+
     this.opMetrics = new OperationMetrics();
   }
 
@@ -434,7 +433,7 @@ public class HRegion implements HeapSize { // , Writable{
     setHTableSpecificConf();
     this.regiondir = getRegionDir(this.tableDir, encodedNameStr);
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
-    
+
     this.opMetrics = new OperationMetrics(conf, this.regionInfo);
 
     /*
@@ -785,7 +784,7 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * @param hri
    * @return Content of the file we write out to the filesystem under a region
-   * @throws IOException 
+   * @throws IOException
    */
   private static byte [] getDotRegionInfoFileContent(final HRegionInfo hri) throws IOException {
     return hri.toDelimitedByteArray();
@@ -2031,7 +2030,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       try {
         if (!initialized) {
-          this.writeRequestsCount.increment(); 
+          this.writeRequestsCount.increment();
           doPreMutationHook(batchOp);
           initialized = true;
         }
@@ -2095,9 +2094,9 @@ public class HRegion implements HeapSize { // , Writable{
     boolean deletesCfSetConsistent = true;
     //The set of columnFamilies first seen for Delete.
     Set<byte[]> deletesCfSet = null;
-    
+
     WALEdit walEdit = new WALEdit();
-    
+
     long startTimeMs = EnvironmentEdgeManager.currentTimeMillis();
 
 
@@ -2352,7 +2351,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       // do after lock
       final long netTimeMs = EnvironmentEdgeManager.currentTimeMillis() - startTimeMs;
-      
+
       // See if the column families were consistent through the whole thing.
       // if they were then keep them. If they were not then pass a null.
       // null will be treated as unknown.
@@ -2627,7 +2626,7 @@ public class HRegion implements HeapSize { // , Writable{
     // do after lock
     final long after = EnvironmentEdgeManager.currentTimeMillis();
     this.opMetrics.updatePutMetrics(familyMap.keySet(), after - now);
-    
+
 
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
@@ -3788,7 +3787,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * Convenience method creating new HRegions. Used by createTable.
-   * The {@link HLog} for the created region needs to be closed 
+   * The {@link HLog} for the created region needs to be closed
    * explicitly, if it is not null.
    * Use {@link HRegion#getLog()} to get access.
    *
@@ -3981,7 +3980,7 @@ public class HRegion implements HeapSize { // , Writable{
       final List<KeyValue> edits = new ArrayList<KeyValue>(2);
       edits.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
         HConstants.REGIONINFO_QUALIFIER, now,
-        Writables.getBytes(r.getRegionInfo())));
+        r.getRegionInfo().toByteArray()));
       // Set into the root table the version of the meta table.
       edits.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
         HConstants.META_VERSION_QUALIFIER, now,
@@ -4756,16 +4755,16 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       closeRegionOperation();
     }
-    
+
     long after = EnvironmentEdgeManager.currentTimeMillis();
-    this.opMetrics.updateAppendMetrics(append.getFamilyMap().keySet(), after - before);   
-    
-    
+    this.opMetrics.updateAppendMetrics(append.getFamilyMap().keySet(), after - before);
+
+
     if (flush) {
       // Request a cache flush. Do it outside update lock.
       requestFlush();
     }
-    
+
 
     return append.isReturnResults() ? new Result(allKVs) : null;
   }
@@ -4878,10 +4877,10 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       closeRegionOperation();
     }
-    
+
     long after = EnvironmentEdgeManager.currentTimeMillis();
-    this.opMetrics.updateIncrementMetrics(increment.getFamilyMap().keySet(), after - before);   
-    
+    this.opMetrics.updateIncrementMetrics(increment.getFamilyMap().keySet(), after - before);
+
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
       requestFlush();
@@ -4981,7 +4980,7 @@ public class HRegion implements HeapSize { // , Writable{
     // do after lock
     long after = EnvironmentEdgeManager.currentTimeMillis();
     this.opMetrics.updateIncrementColumnValueMetrics(family, after - before);
-    
+
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
       requestFlush();
@@ -5017,7 +5016,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD +
       ClassSize.OBJECT + // closeLock
       (2 * ClassSize.ATOMIC_BOOLEAN) + // closed, closing
-      (3 * ClassSize.ATOMIC_LONG) + // memStoreSize, numPutsWithoutWAL, dataInMemoryWithoutWAL 
+      (3 * ClassSize.ATOMIC_LONG) + // memStoreSize, numPutsWithoutWAL, dataInMemoryWithoutWAL
       ClassSize.ATOMIC_INTEGER + // lockIdGenerator
       (3 * ClassSize.CONCURRENT_HASHMAP) +  // lockedRows, lockIds, scannerReadPoints
       WriteState.HEAP_SIZE + // writestate
@@ -5371,7 +5370,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private void recordPutWithoutWal(final Map<byte [], List<KeyValue>> familyMap) {
     if (numPutsWithoutWAL.getAndIncrement() == 0) {
-      LOG.info("writing data to region " + this + 
+      LOG.info("writing data to region " + this +
                " with WAL disabled. Data may be lost in the event of a crash.");
     }
 

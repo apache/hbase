@@ -80,9 +80,6 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
-import org.apache.hadoop.hbase.master.metrics.MasterMetricsWrapperImpl;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
@@ -99,9 +96,12 @@ import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableEventHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
+import org.apache.hadoop.hbase.master.metrics.MasterMetricsWrapperImpl;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -252,7 +252,7 @@ Server {
   private CatalogTracker catalogTracker;
   // Cluster status zk tracker and local setter
   private ClusterStatusTracker clusterStatusTracker;
-  
+
   // buffer for "fatal error" notices from region servers
   // in the cluster. This is only used for assisting
   // operations/debugging.
@@ -399,7 +399,7 @@ Server {
         "(Also watching cluster state node)");
       Thread.sleep(c.getInt("zookeeper.session.timeout", 180 * 1000));
     }
-    
+
   }
 
   MasterMetrics getMetrics() {
@@ -441,7 +441,7 @@ Server {
       }
     } catch (Throwable t) {
       // HBASE-5680: Likely hadoop23 vs hadoop 20.x/1.x incompatibility
-      if (t instanceof NoClassDefFoundError && 
+      if (t instanceof NoClassDefFoundError &&
           t.getMessage().contains("org/apache/hadoop/hdfs/protocol/FSConstants$SafeModeAction")) {
           // improved error message for this special case
           abort("HBase is having a problem with its Hadoop jars.  You may need to "
@@ -453,7 +453,7 @@ Server {
       }
     } finally {
       startupStatus.cleanup();
-      
+
       stopChores();
       // Wait for all the remaining region servers to report in IFF we were
       // running a cluster shutdown AND we were NOT aborting.
@@ -475,7 +475,7 @@ Server {
 
   /**
    * Try becoming active master.
-   * @param startupStatus 
+   * @param startupStatus
    * @return True if we could successfully become the active master.
    * @throws InterruptedException
    */
@@ -581,7 +581,7 @@ Server {
 
   /**
    * Finish initialization of HMaster after becoming the primary master.
-   * 
+   *
    * <ol>
    * <li>Initialize master components - file system manager, server manager,
    *     assignment manager, region server tracker, catalog tracker, etc</li>
@@ -593,9 +593,9 @@ Server {
    * <li>Ensure assignment of root and meta regions<li>
    * <li>Handle either fresh cluster start or master failover</li>
    * </ol>
-   * 
+   *
    * @param masterRecovery
-   * 
+   *
    * @throws IOException
    * @throws InterruptedException
    * @throws KeeperException
@@ -636,7 +636,7 @@ Server {
       // initialize master side coprocessors before we start handling requests
       status.setStatus("Initializing master coprocessors");
       this.cpHost = new MasterCoprocessorHost(this, this.conf);
-      
+
       // start up all service threads.
       status.setStatus("Initializing master service threads");
       startServiceThreads();
@@ -665,12 +665,12 @@ Server {
     if (!assignRootAndMeta(status)) return;
     enableServerShutdownHandler();
 
-    // Update meta with new HRI if required. i.e migrate all HRI with HTD to
-    // HRI with out HTD in meta and update the status in ROOT. This must happen
+    // Update meta with new PB serialization if required. i.e migrate all HRI
+    // to PB serialization in meta and update the status in ROOT. This must happen
     // before we assign all user regions or else the assignment will fail.
-    // TODO: Remove this when we do 0.94.
-    org.apache.hadoop.hbase.catalog.MetaMigrationRemovingHTD.
-      updateMetaWithNewHRI(this);
+    // TODO: Remove this after 0.96, when we do 0.98.
+    org.apache.hadoop.hbase.catalog.MetaMigrationConvertingToPB
+      .updateRootAndMetaIfNecessary(this);
 
     this.balancer.setMasterServices(this);
     // Fixup assignment manager status
@@ -683,7 +683,7 @@ Server {
     status.setStatus("Fixing up missing daughters");
     fixupDaughters(status);
 
-    if (!masterRecovery) {      
+    if (!masterRecovery) {
       // Start balancer and meta catalog janitor after meta and regions have
       // been assigned.
       status.setStatus("Starting balancer and catalog janitor");
@@ -699,8 +699,8 @@ Server {
     // removing dead server with same hostname and port of rs which is trying to check in before
     // master initialization. See HBASE-5916.
     this.serverManager.clearDeadServersWithSameHostNameAndPortOfOnlineServer();
-    
-    if (!masterRecovery) {      
+
+    if (!masterRecovery) {
       if (this.cpHost != null) {
         // don't let cp initialization errors kill the master
         try {
@@ -711,7 +711,7 @@ Server {
       }
     }
   }
-  
+
   /**
    * Useful for testing purpose also where we have
    * master restart scenarios.
@@ -879,8 +879,7 @@ Server {
       public boolean visit(Result r) throws IOException {
         if (r == null || r.isEmpty()) return true;
         HRegionInfo info =
-          MetaReader.parseHRegionInfoFromCatalogResult(
-            r, HConstants.REGIONINFO_QUALIFIER);
+          HRegionInfo.getHRegionInfo(r);
         if (info == null) return true; // Keep scanning
         if (info.isOffline() && info.isSplit()) {
           offlineSplitParents.put(info, r);
@@ -992,7 +991,7 @@ Server {
    *  need to install an unexpected exception handler.
    */
   void startServiceThreads() throws IOException{
- 
+
    // Start the executor service pools
    this.executorService.startExecutorService(ExecutorType.MASTER_OPEN_REGION,
       conf.getInt("hbase.master.executor.openregion.threads", 5));
@@ -1002,7 +1001,7 @@ Server {
       conf.getInt("hbase.master.executor.serverops.threads", 3));
    this.executorService.startExecutorService(ExecutorType.MASTER_META_SERVER_OPERATIONS,
       conf.getInt("hbase.master.executor.serverops.threads", 5));
-   
+
    // We depend on there being only one instance of this executor running
    // at a time.  To do concurrency, would need fencing of enable/disable of
    // tables.
@@ -1033,7 +1032,7 @@ Server {
      this.infoServer.setAttribute(MASTER, this);
      this.infoServer.start();
     }
-   
+
     // Start allowing requests to happen.
     this.rpcServer.openServer();
     this.rpcServerOpen = true;
@@ -1118,7 +1117,7 @@ Server {
 
   /**
    * @return Get remote side's InetAddress
-   * @throws UnknownHostException 
+   * @throws UnknownHostException
    */
   InetAddress getRemoteInetAddress(final int port, final long serverStartCode)
   throws UnknownHostException {
@@ -1330,11 +1329,11 @@ Server {
         newValue = this.cpHost.preBalanceSwitch(newValue);
       }
       if (mode == BalanceSwitchMode.SYNC) {
-        synchronized (this.balancer) {        
+        synchronized (this.balancer) {
           this.balanceSwitch = newValue;
         }
       } else {
-        this.balanceSwitch = newValue;        
+        this.balanceSwitch = newValue;
       }
       LOG.info("BalanceSwitch=" + newValue);
       if (this.cpHost != null) {
@@ -1536,7 +1535,7 @@ Server {
    * @return Pair indicating the number of regions updated Pair.getFirst is the
    *         regions that are yet to be updated Pair.getSecond is the total number
    *         of regions of the table
-   * @throws IOException 
+   * @throws IOException
    */
   @Override
   public GetSchemaAlterStatusResponse getSchemaAlterStatus(
@@ -1686,7 +1685,7 @@ Server {
           if (data == null || data.size() <= 0) {
             return true;
           }
-          Pair<HRegionInfo, ServerName> pair = MetaReader.parseCatalogResult(data);
+          Pair<HRegionInfo, ServerName> pair = HRegionInfo.getHRegionInfoAndServerName(data);
           if (pair == null) {
             return false;
           }
@@ -2034,13 +2033,13 @@ Server {
   public boolean isAborted() {
     return this.abort;
   }
-  
+
   void checkInitialized() throws PleaseHoldException {
     if (!this.initialized) {
       throw new PleaseHoldException("Master is initializing");
     }
   }
-  
+
   /**
    * Report whether this master is currently the active master or not.
    * If not active master, we are parked on ZK waiting to become active.

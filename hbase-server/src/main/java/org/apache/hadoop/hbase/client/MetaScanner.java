@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 
 /**
  * Scanner class that contains the <code>.META.</code> table scanning logic
@@ -166,13 +166,11 @@ public class MetaScanner {
           throw new TableNotFoundException("Cannot find row in .META. for table: "
               + Bytes.toString(tableName) + ", row=" + Bytes.toStringBinary(searchRow));
         }
-        byte[] value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
-            HConstants.REGIONINFO_QUALIFIER);
-        if (value == null || value.length == 0) {
+        HRegionInfo regionInfo = getHRegionInfo(startRowResult);
+        if (regionInfo == null) {
           throw new IOException("HRegionInfo was null or empty in Meta for " +
             Bytes.toString(tableName) + ", row=" + Bytes.toStringBinary(searchRow));
         }
-        HRegionInfo regionInfo = Writables.getHRegionInfo(value);
 
         byte[] rowBefore = regionInfo.getStartKey();
         startRow = HRegionInfo.createRegionName(tableName, rowBefore,
@@ -240,6 +238,24 @@ public class MetaScanner {
   }
 
   /**
+   * Returns HRegionInfo object from the column
+   * HConstants.CATALOG_FAMILY:HConstants.REGIONINFO_QUALIFIER of the catalog
+   * table Result.
+   * @param data a Result object from the catalog table scan
+   * @return HRegionInfo or null
+   */
+  public static HRegionInfo getHRegionInfo(Result data) {
+    byte [] bytes =
+      data.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+    if (bytes == null) return null;
+    HRegionInfo info = HRegionInfo.parseFromOrNull(bytes);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Current INFO from scan results = " + info);
+    }
+    return info;
+  }
+
+  /**
    * Lists all of the regions currently in META.
    * @param conf
    * @return List of all user-space regions.
@@ -267,13 +283,13 @@ public class MetaScanner {
           if (result == null || result.isEmpty()) {
             return true;
           }
-          byte [] bytes = result.getValue(HConstants.CATALOG_FAMILY,
-            HConstants.REGIONINFO_QUALIFIER);
-          if (bytes == null) {
+
+          HRegionInfo regionInfo = getHRegionInfo(result);
+          if (regionInfo == null) {
             LOG.warn("Null REGIONINFO_QUALIFIER: " + result);
             return true;
           }
-          HRegionInfo regionInfo = Writables.getHRegionInfo(bytes);
+
           // If region offline AND we are not to include offlined regions, return.
           if (regionInfo.isOffline() && !offlined) return true;
           regions.add(regionInfo);
@@ -299,25 +315,11 @@ public class MetaScanner {
     MetaScannerVisitor visitor = new TableMetaScannerVisitor(conf, tablename) {
       @Override
       public boolean processRowInternal(Result rowResult) throws IOException {
-        HRegionInfo info = Writables.getHRegionInfo(
-            rowResult.getValue(HConstants.CATALOG_FAMILY,
-                HConstants.REGIONINFO_QUALIFIER));
-        byte [] value = rowResult.getValue(HConstants.CATALOG_FAMILY,
-          HConstants.SERVER_QUALIFIER);
-        String hostAndPort = null;
-        if (value != null && value.length > 0) {
-          hostAndPort = Bytes.toString(value);
-        }
-        value = rowResult.getValue(HConstants.CATALOG_FAMILY,
-          HConstants.STARTCODE_QUALIFIER);
-        long startcode = -1L;
-        if (value != null && value.length > 0) startcode = Bytes.toLong(value);
+        HRegionInfo info = getHRegionInfo(rowResult);
+        ServerName serverName = HRegionInfo.getServerName(rowResult);
+
         if (!(info.isOffline() || info.isSplit())) {
-          ServerName sn = null;
-          if (hostAndPort != null && hostAndPort.length() > 0) {
-            sn = new ServerName(hostAndPort, startcode);
-          }
-          regions.put(new UnmodifyableHRegionInfo(info), sn);
+          regions.put(new UnmodifyableHRegionInfo(info), serverName);
         }
         return true;
       }
@@ -389,9 +391,7 @@ public class MetaScanner {
 
     @Override
     public boolean processRow(Result rowResult) throws IOException {
-      HRegionInfo info = Writables.getHRegionInfoOrNull(
-          rowResult.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER));
+      HRegionInfo info = getHRegionInfo(rowResult);
       if (info == null) {
         return true;
       }
@@ -405,10 +405,9 @@ public class MetaScanner {
          * seen by this scanner as well, so we block until they are added to the META table. Even
          * though we are waiting for META entries, ACID semantics in HBase indicates that this
          * scanner might not see the new rows. So we manually query the daughter rows */
-        HRegionInfo splitA = Writables.getHRegionInfo(rowResult.getValue(HConstants.CATALOG_FAMILY,
-            HConstants.SPLITA_QUALIFIER));
-        HRegionInfo splitB = Writables.getHRegionInfo(rowResult.getValue(HConstants.CATALOG_FAMILY,
-            HConstants.SPLITB_QUALIFIER));
+        PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(rowResult);
+        HRegionInfo splitA = daughters.getFirst();
+        HRegionInfo splitB = daughters.getSecond();
 
         HTable metaTable = getMetaTable();
         long start = System.currentTimeMillis();
@@ -446,8 +445,7 @@ public class MetaScanner {
       while (System.currentTimeMillis() - start < timeout) {
         Get get = new Get(regionName);
         Result result = metaTable.get(get);
-        HRegionInfo info = Writables.getHRegionInfoOrNull(
-            result.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
+        HRegionInfo info = getHRegionInfo(result);
         if (info != null) {
           return result;
         }
@@ -478,8 +476,7 @@ public class MetaScanner {
 
     @Override
     public final boolean processRow(Result rowResult) throws IOException {
-      HRegionInfo info = Writables.getHRegionInfoOrNull(
-          rowResult.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
+      HRegionInfo info = getHRegionInfo(rowResult);
       if (info == null) {
         return true;
       }

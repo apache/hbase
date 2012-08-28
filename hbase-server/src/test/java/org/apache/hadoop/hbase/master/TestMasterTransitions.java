@@ -23,14 +23,16 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -97,7 +99,7 @@ public class TestMasterTransitions {
     private int closeCount = 0;
     static final int SERVER_DURATION = 3 * 1000;
     static final int CLOSE_DURATION = 1 * 1000;
- 
+
     HBase2428Listener(final MiniHBaseCluster c, final HServerAddress metaAddress,
         final HRegionInfo closingHRI, final int otherServerIndex) {
       this.cluster = c;
@@ -183,7 +185,7 @@ public class TestMasterTransitions {
   /**
    * In 2428, the meta region has just been set offline and then a close comes
    * in.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2428">HBASE-2428</a> 
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2428">HBASE-2428</a>
    */
   @Ignore @Test  (timeout=300000) public void testRegionCloseWhenNoMetaHBase2428()
   throws Exception {
@@ -205,7 +207,7 @@ public class TestMasterTransitions {
     // Get a region out on the otherServer.
     final HRegionInfo hri =
       otherServer.getOnlineRegions().iterator().next().getRegionInfo();
- 
+
     // Add our RegionServerOperationsListener
     HBase2428Listener listener = new HBase2428Listener(cluster,
       metaHRS.getHServerInfo().getServerAddress(), hri, otherServerIndex);
@@ -312,7 +314,7 @@ public class TestMasterTransitions {
       this.copyOfOnlineRegions =
         this.victim.getCopyOfOnlineRegionsSortedBySize().values();
     }
- 
+
     @Override
     public boolean process(HServerInfo serverInfo, HMsg incomingMsg) {
       if (!victim.getServerInfo().equals(serverInfo) ||
@@ -365,7 +367,7 @@ public class TestMasterTransitions {
    * we kill it.  We then wait on all regions to come back on line.  If bug
    * is fixed, this should happen soon as the processing of the killed server is
    * done.
-   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2482">HBASE-2482</a> 
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2482">HBASE-2482</a>
    */
   @Ignore @Test (timeout=300000) public void testKillRSWithOpeningRegion2482()
   throws Exception {
@@ -483,10 +485,9 @@ public class TestMasterTransitions {
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     ResultScanner s = meta.getScanner(scan);
     for (Result r = null; (r = s.next()) != null;) {
-      byte [] b =
-        r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-      if (b == null || b.length <= 0) break;
-      HRegionInfo hri = Writables.getHRegionInfo(b);
+      HRegionInfo hri = HRegionInfo.getHRegionInfo(r);
+      if (hri == null) break;
+
       // If start key, add 'aaa'.
       byte [] row = getStartKey(hri);
       Put p = new Put(row);

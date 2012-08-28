@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.PairOfSameType;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -207,7 +206,7 @@ public class SplitTransaction {
 
   private static IOException closedByOtherException = new IOException(
       "Failed to close region: already closed by another thread");
-  
+
   /**
    * Prepare the regions and region files.
    * @param server Hosting server instance.  Can be null when testing (won't try
@@ -241,7 +240,7 @@ public class SplitTransaction {
     this.fileSplitTimeout = testing ? this.fileSplitTimeout :
         server.getConfiguration().getLong("hbase.regionserver.fileSplitTimeout",
           this.fileSplitTimeout);
-    
+
     this.journal.add(JournalEntry.STARTED_SPLITTING);
     // Set ephemeral SPLITTING znode up in zk.  Mocked servers sometimes don't
     // have zookeeper so don't do zk stuff if server or zookeeper is null
@@ -258,7 +257,7 @@ public class SplitTransaction {
 
     createSplitDir(this.parent.getFilesystem(), this.splitdir);
     this.journal.add(JournalEntry.CREATE_SPLIT_DIR);
- 
+
     List<StoreFile> hstoreFilesToSplit = null;
     Exception exceptionToThrow = null;
     try{
@@ -319,7 +318,7 @@ public class SplitTransaction {
     // regions.
     // We should add PONR JournalEntry before offlineParentInMeta,so even if
     // OfflineParentInMeta timeout,this will cause regionserver exit,and then
-    // master ServerShutdownHandler will fix daughter & avoid data loss. (See 
+    // master ServerShutdownHandler will fix daughter & avoid data loss. (See
     // HBase-4562).
     this.journal.add(JournalEntry.PONR);
 
@@ -745,13 +744,13 @@ public class SplitTransaction {
     while (iterator.hasPrevious()) {
       JournalEntry je = iterator.previous();
       switch(je) {
-      
+
       case STARTED_SPLITTING:
         if (server != null && server.getZooKeeper() != null) {
           cleanZK(server, this.parent.getRegionInfo(), false);
         }
         break;
-      
+
       case SET_SPLITTING_IN_ZK:
         if (server != null && server.getZooKeeper() != null) {
           cleanZK(server, this.parent.getRegionInfo(), true);
@@ -859,7 +858,7 @@ public class SplitTransaction {
     } catch (KeeperException.NoNodeException nn) {
       if (abort) {
         server.abort("Failed cleanup of " + hri.getRegionNameAsString(), nn);
-      }      
+      }
     } catch (KeeperException e) {
       server.abort("Failed cleanup of " + hri.getRegionNameAsString(), e);
     }
@@ -876,8 +875,8 @@ public class SplitTransaction {
    * @param region region to be created as offline
    * @param serverName server event originates from
    * @return Version of znode created.
-   * @throws KeeperException 
-   * @throws IOException 
+   * @throws KeeperException
+   * @throws IOException
    */
   int createNodeSplitting(final ZooKeeperWatcher zkw, final HRegionInfo region,
       final ServerName serverName) throws KeeperException, IOException {
@@ -925,20 +924,20 @@ public class SplitTransaction {
    * @param serverName server event originates from
    * @return version of node after transition, -1 if unsuccessful transition
    * @throws KeeperException if unexpected zookeeper exception
-   * @throws IOException 
+   * @throws IOException
    */
   private static int transitionNodeSplit(ZooKeeperWatcher zkw,
       HRegionInfo parent, HRegionInfo a, HRegionInfo b, ServerName serverName,
       final int znodeVersion)
   throws KeeperException, IOException {
-    byte [] payload = Writables.getBytes(a, b);
+    byte [] payload = HRegionInfo.toDelimitedByteArray(a, b);
     return ZKAssign.transitionNode(zkw, parent, serverName,
       EventType.RS_ZK_REGION_SPLITTING, EventType.RS_ZK_REGION_SPLIT,
       znodeVersion, payload);
   }
 
   /**
-   * 
+   *
    * @param zkw zk reference
    * @param parent region to be transitioned to splitting
    * @param serverName server event originates from
@@ -957,7 +956,7 @@ public class SplitTransaction {
       HRegionInfo parent, HRegionInfo a, HRegionInfo b, ServerName serverName,
       final int znodeVersion)
   throws KeeperException, IOException {
-    byte [] payload = Writables.getBytes(a, b);
+    byte [] payload = HRegionInfo.toDelimitedByteArray(a, b);
     return ZKAssign.transitionNode(zkw, parent, serverName,
       EventType.RS_ZK_REGION_SPLIT, EventType.RS_ZK_REGION_SPLIT,
       znodeVersion, payload);

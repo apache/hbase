@@ -31,12 +31,11 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -77,10 +76,7 @@ public class TestAssignmentManagerOnCluster {
       HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
-      Put put = new Put(hri.getRegionName());
-      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-          Writables.getBytes(hri));
-      meta.put(put);
+      MetaEditor.addRegionToMeta(meta, hri);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       master.assignRegion(hri);

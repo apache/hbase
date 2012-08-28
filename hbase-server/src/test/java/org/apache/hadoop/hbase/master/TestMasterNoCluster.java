@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
@@ -153,17 +154,17 @@ public class TestMasterNoCluster {
     RootRegionTracker.setRootLocation(rs0.getZooKeeper(), rs0.getServerName());
     byte [] rootregion = Bytes.toBytes("-ROOT-,,0");
     rs0.setGetResult(rootregion, HRegionInfo.FIRST_META_REGIONINFO.getRegionName(),
-      Mocking.getMetaTableRowResult(HRegionInfo.FIRST_META_REGIONINFO,
+      MetaMockingUtil.getMetaTableRowResult(HRegionInfo.FIRST_META_REGIONINFO,
         rs1.getServerName()));
     final byte [] tableName = Bytes.toBytes("t");
     Result [] results = new Result [] {
-      Mocking.getMetaTableRowResult(
+      MetaMockingUtil.getMetaTableRowResult(
         new HRegionInfo(tableName, HConstants.EMPTY_START_ROW, HBaseTestingUtility.KEYS[1]),
         rs2.getServerName()),
-      Mocking.getMetaTableRowResult(
+      MetaMockingUtil.getMetaTableRowResult(
         new HRegionInfo(tableName, HBaseTestingUtility.KEYS[1], HBaseTestingUtility.KEYS[2]),
         rs2.getServerName()),
-      Mocking.getMetaTableRowResult(new HRegionInfo(tableName, HBaseTestingUtility.KEYS[2],
+      MetaMockingUtil.getMetaTableRowResult(new HRegionInfo(tableName, HBaseTestingUtility.KEYS[2],
           HConstants.EMPTY_END_ROW),
         rs2.getServerName())
     };
@@ -349,7 +350,7 @@ public class TestMasterNoCluster {
       // confirm .META. has a server.
       byte [] rootregion = Bytes.toBytes("-ROOT-,,0");
       rs0.setGetResult(rootregion, HRegionInfo.FIRST_META_REGIONINFO.getRegionName(),
-        Mocking.getMetaTableRowResult(HRegionInfo.FIRST_META_REGIONINFO,
+        MetaMockingUtil.getMetaTableRowResult(HRegionInfo.FIRST_META_REGIONINFO,
           rs0.getServerName()));
       // Master should now come up.
       while (!master.isInitialized()) {Threads.sleep(10);}

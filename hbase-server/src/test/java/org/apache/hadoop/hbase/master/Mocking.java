@@ -19,20 +19,11 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertNotSame;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.hadoop.hbase.DeserializationException;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -42,45 +33,6 @@ import org.apache.zookeeper.KeeperException;
  * Package scoped mocking utility.
  */
 public class Mocking {
-  /**
-   * @param sn ServerName to use making startcode and server in meta
-   * @param hri Region to serialize into HRegionInfo
-   * @return A mocked up Result that fakes a Get on a row in the
-   * <code>.META.</code> table.
-   * @throws IOException 
-   */
-  static Result getMetaTableRowResult(final HRegionInfo hri,
-      final ServerName sn)
-  throws IOException {
-    // TODO: Move to a utilities class.  More than one test case can make use
-    // of this facility.
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-      Writables.getBytes(hri)));
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-      Bytes.toBytes(sn.getHostAndPort())));
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
-      Bytes.toBytes(sn.getStartcode())));
-    return new Result(kvs);
-  }
-
-
-  /**
-   * @param sn  ServerName to use making startcode and server in meta
-   * @param hri Region to serialize into HRegionInfo
-   * @return A mocked up Result that fakes a Get on a row in the <code>.META.</code> table.
-   * @throws IOException
-   */
-  static Result getMetaTableRowResultAsSplitRegion(final HRegionInfo hri, final ServerName sn)
-    throws IOException {
-    hri.setOffline(true);
-    hri.setSplit(true);
-    return getMetaTableRowResult(hri, sn);
-  }
-
 
   static void waitForRegionPendingOpenInRIT(AssignmentManager am, String encodedName)
     throws InterruptedException {
@@ -110,7 +62,7 @@ public class Mocking {
    * @param sn Name of the regionserver doing the 'opening'
    * @param hri Region we're 'opening'.
    * @throws KeeperException
-   * @throws DeserializationException 
+   * @throws DeserializationException
    */
   static void fakeRegionServerRegionOpenInZK(HMaster master,  final ZooKeeperWatcher w,
       final ServerName sn, final HRegionInfo hri)
@@ -147,7 +99,7 @@ public class Mocking {
    * @param region
    * @param expectedState
    * @return true if region exists and is in expected state
-   * @throws DeserializationException 
+   * @throws DeserializationException
    */
   static boolean verifyRegionState(ZooKeeperWatcher zkw, HRegionInfo region, EventType expectedState)
   throws KeeperException, DeserializationException {

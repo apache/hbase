@@ -73,7 +73,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
@@ -149,14 +148,14 @@ public class AssignmentManager extends ZooKeeperListener {
    * Contains the server which need to update timer, these servers will be
    * handled by {@link TimerUpdater}
    */
-  private final ConcurrentSkipListSet<ServerName> serversInUpdatingTimer = 
+  private final ConcurrentSkipListSet<ServerName> serversInUpdatingTimer =
     new ConcurrentSkipListSet<ServerName>();
 
   private final ExecutorService executorService;
 
   //Thread pool executor service for timeout monitor
   private java.util.concurrent.ExecutorService threadPoolExecutorService;
-  
+
   private List<EventType> ignoreStatesRSOffline = Arrays.asList(new EventType[]{
       EventType.RS_ZK_REGION_FAILED_OPEN, EventType.RS_ZK_REGION_CLOSED });
 
@@ -166,8 +165,8 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   private volatile boolean failover = false;
 
-  // Set holding all the regions which got processed while RIT was not 
-  // populated during master failover. 
+  // Set holding all the regions which got processed while RIT was not
+  // populated during master failover.
   private Map<String, HRegionInfo> failoverProcessedRegions =
     new HashMap<String, HRegionInfo>();
 
@@ -184,7 +183,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param catalogTracker
    * @param service
    * @throws KeeperException
-   * @throws IOException 
+   * @throws IOException
    */
   public AssignmentManager(Server master, ServerManager serverManager,
       CatalogTracker catalogTracker, final LoadBalancer balancer,
@@ -244,8 +243,8 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * Add a regionPlan for the specified region.
-   * @param encodedName 
-   * @param plan 
+   * @param encodedName
+   * @param plan
    */
   public void addPlan(String encodedName, RegionPlan plan) {
     synchronized (regionPlans) {
@@ -344,7 +343,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * Process all regions that are in transition in zookeeper and also
-   * processes the list of dead servers by scanning the META. 
+   * processes the list of dead servers by scanning the META.
    * Used by master joining an cluster.  If we figure this is a clean cluster
    * startup, will assign all user regions.
    * @param deadServers
@@ -441,7 +440,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * up in zookeeper.
    * @param encodedRegionName Region to process failover for.
    * @param regionInfo If null we'll go get it from meta table.
-   * @param deadServers Can be null 
+   * @param deadServers Can be null
    * @return True if we processed <code>regionInfo</code> as a RIT.
    * @throws KeeperException
    * @throws IOException
@@ -461,7 +460,7 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     HRegionInfo hri = regionInfo;
     if (hri == null) {
-      if ((hri = getHRegionInfo(rt.getRegionName())) == null) return false; 
+      if ((hri = getHRegionInfo(rt.getRegionName())) == null) return false;
     }
     processRegionsInTransition(rt, hri, deadServers, stat.getVersion());
     return true;
@@ -582,7 +581,7 @@ public class AssignmentManager extends ZooKeeperListener {
       lock.unlock();
     }
   }
-  
+
 
   /**
    * Put the region <code>hri</code> into an offline state up in zk.
@@ -728,7 +727,7 @@ public class AssignmentManager extends ZooKeeperListener {
           byte [] payload = rt.getPayload();
           List<HRegionInfo> daughters = null;
           try {
-            daughters = Writables.getHRegionInfos(payload, 0, payload.length);
+            daughters = HRegionInfo.parseDelimitedFrom(payload, 0, payload.length);
           } catch (IOException e) {
             LOG.error("Dropped split! Failed reading split payload for " +
               prettyPrintedRegionName);
@@ -795,7 +794,7 @@ public class AssignmentManager extends ZooKeeperListener {
           this.executorService.submit(new ClosedRegionHandler(master,
             this, regionState.getRegion()));
           break;
-          
+
         case RS_ZK_REGION_FAILED_OPEN:
           hri = checkIfInFailover(regionState, encodedName, regionName);
           if (hri != null) {
@@ -869,7 +868,7 @@ public class AssignmentManager extends ZooKeeperListener {
           this.executorService.submit(
             new OpenedRegionHandler(master, this, regionState.getRegion(), sn, expectedVersion));
           break;
-          
+
         default:
           throw new IllegalStateException("Received event is not valid.");
       }
@@ -901,7 +900,7 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Gets the HRegionInfo from the META table
    * @param  regionName
-   * @return HRegionInfo hri for the region 
+   * @return HRegionInfo hri for the region
    */
   private HRegionInfo getHRegionInfo(final byte [] regionName) {
     Pair<HRegionInfo, ServerName> p = null;
@@ -1234,7 +1233,7 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   public void assign(HRegionInfo region, boolean setOfflineInZK,
       boolean forceNewPlan, boolean hijack) {
-    // If hijack is true do not call disableRegionIfInRIT as 
+    // If hijack is true do not call disableRegionIfInRIT as
     // we have not yet moved the znode to OFFLINE state.
     if (!hijack && isDisabledorDisablingRegionInRIT(region)) {
       return;
@@ -1285,7 +1284,7 @@ public class AssignmentManager extends ZooKeeperListener {
           destination));
     }
     this.addPlans(plans);
-    
+
     // Presumption is that only this thread will be updating the state at this
     // time; i.e. handlers on backend won't be trying to set it to OPEN, etc.
     AtomicInteger counter = new AtomicInteger(0);
@@ -1366,7 +1365,7 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Bulk assign regions to available servers if any with retry, else assign
    * region singly.
-   * 
+   *
    * @param regions all regions to assign
    * @param servers all available servers
    */
@@ -1660,7 +1659,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * Set region as OFFLINED up in zookeeper
-   * 
+   *
    * @param state
    * @param hijack
    *          - true if needs to be hijacked and reassigned, false otherwise.
@@ -1670,7 +1669,7 @@ public class AssignmentManager extends ZooKeeperListener {
   int setOfflineInZooKeeper(final RegionState state,
       boolean hijack) {
     // In case of reassignment the current state in memory need not be
-    // OFFLINE. 
+    // OFFLINE.
     if (!hijack && !state.isClosed() && !state.isOffline()) {
       String msg = "Unexpected state : " + state + " .. Cannot transit it to OFFLINE.";
       this.master.abort(msg, new IllegalStateException(msg));
@@ -1679,13 +1678,13 @@ public class AssignmentManager extends ZooKeeperListener {
     boolean allowZNodeCreation = false;
     // Under reassignment if the current state is PENDING_OPEN
     // or OPENING then refresh the in-memory state to PENDING_OPEN. This is
-    // important because if the region was in 
+    // important because if the region was in
     // RS_OPENING state for a long time the master will try to force the znode
     // to OFFLINE state meanwhile the RS could have opened the corresponding
     // region and the state in znode will be RS_ZK_REGION_OPENED.
     // For all other cases we can change the in-memory state to OFFLINE.
     if (hijack &&
-        (state.getState().equals(RegionState.State.PENDING_OPEN) || 
+        (state.getState().equals(RegionState.State.PENDING_OPEN) ||
             state.getState().equals(RegionState.State.OPENING))) {
       regionStates.updateRegionState(state.getRegion(),
         RegionState.State.PENDING_OPEN);
@@ -1698,7 +1697,7 @@ public class AssignmentManager extends ZooKeeperListener {
     int versionOfOfflineNode = -1;
     try {
       // get the version after setting the znode to OFFLINE
-      versionOfOfflineNode = ZKAssign.createOrForceNodeOffline(master.getZooKeeper(), 
+      versionOfOfflineNode = ZKAssign.createOrForceNodeOffline(master.getZooKeeper(),
           state.getRegion(), this.master.getServerName(),
           hijack, allowZNodeCreation);
       if (versionOfOfflineNode == -1) {
@@ -1734,7 +1733,7 @@ public class AssignmentManager extends ZooKeeperListener {
     } catch (KeeperException e) {
       if (e instanceof NodeExistsException) {
         LOG.warn("Node for " + state.getRegion() + " already exists");
-      } else { 
+      } else {
         master.abort("Unexpected ZK exception creating/setting node OFFLINE", e);
       }
       return false;
@@ -1918,7 +1917,7 @@ public class AssignmentManager extends ZooKeeperListener {
             return;
           }
         } catch (KeeperException ee) {
-          Exception e = ee; 
+          Exception e = ee;
           if (e instanceof NodeExistsException) {
             // Handle race between master initiated close and regionserver
             // orchestrated splitting. See if existing node is in a
@@ -1949,8 +1948,8 @@ public class AssignmentManager extends ZooKeeperListener {
         }
         state = regionStates.updateRegionState(region, RegionState.State.PENDING_CLOSE);
       } else if (force && (state.isPendingClose() || state.isClosing())) {
-        LOG.debug("Attempting to unassign region " + region.getRegionNameAsString() + 
-          " which is already " + state.getState()  + 
+        LOG.debug("Attempting to unassign region " + region.getRegionNameAsString() +
+          " which is already " + state.getState()  +
           " but forcing to send a CLOSE RPC again ");
         state.updateTimestampToNow();
       } else {
@@ -2015,9 +2014,9 @@ public class AssignmentManager extends ZooKeeperListener {
   public void unassign(HRegionInfo region, boolean force){
      unassign(region, force, null);
   }
-  
+
   /**
-   * 
+   *
    * @param region regioninfo of znode to be deleted.
    */
   public void deleteClosingOrClosedNode(HRegionInfo region) {
@@ -2048,7 +2047,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param path
    * @return True if znode is in SPLIT or SPLITTING state.
    * @throws KeeperException Can happen if the znode went away in meantime.
-   * @throws DeserializationException 
+   * @throws DeserializationException
    */
   private boolean isSplitOrSplitting(final String path)
   throws KeeperException, DeserializationException {
@@ -2118,7 +2117,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * Assigns all user regions to online servers. Use round-robin assignment.
-   * 
+   *
    * @param regions
    * @throws IOException
    * @throws InterruptedException
@@ -2177,7 +2176,7 @@ public class AssignmentManager extends ZooKeeperListener {
   public void assignAllUserRegions() throws IOException, InterruptedException {
     // Skip assignment for regions of tables in DISABLING state because during clean cluster startup
     // no RS is alive and regions map also doesn't have any information about the regions.
-    // See HBASE-6281. 
+    // See HBASE-6281.
     Set<String> disablingAndDisabledTables = new HashSet<String>(this.disablingTables);
     disablingAndDisabledTables.addAll(this.zkTable.getDisabledTables());
     // Scan META for all user regions, skipping any disabled tables
@@ -2409,7 +2408,7 @@ public class AssignmentManager extends ZooKeeperListener {
     for (Result result : results) {
       boolean disabled = false;
       boolean disablingOrEnabling = false;
-      Pair<HRegionInfo, ServerName> region = MetaReader.parseCatalogResult(result);
+      Pair<HRegionInfo, ServerName> region = HRegionInfo.getHRegionInfoAndServerName(result);
       if (region == null) continue;
       HRegionInfo regionInfo = region.getFirst();
       ServerName regionLocation = region.getSecond();
@@ -2499,14 +2498,14 @@ public class AssignmentManager extends ZooKeeperListener {
     } else if (checkIfRegionsBelongsToEnabling(regionInfo)) {
       enablingTables.add(disablingTableName);
       return true;
-    } 
+    }
     return false;
   }
 
   /**
    * Recover the tables that were not fully moved to DISABLED state. These
    * tables are in DISABLING state when the master restarted/switched.
-   * 
+   *
    * @param disablingTables
    * @return
    * @throws KeeperException
@@ -2536,7 +2535,7 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Recover the tables that are not fully moved to ENABLED state. These tables
    * are in ENABLING state when the master restarted/switched
-   * 
+   *
    * @param enablingTables
    * @param isWatcherCreated
    * @throws KeeperException
@@ -2583,10 +2582,10 @@ public class AssignmentManager extends ZooKeeperListener {
    * Processes list of dead servers from result of META scan and regions in RIT
    * <p>
    * This is used for failover to recover the lost regions that belonged to
-   * RegionServers which failed while there was no active master or regions 
+   * RegionServers which failed while there was no active master or regions
    * that were in RIT.
    * <p>
-   * 
+   *
    * @param deadServers
    *          The list of dead servers which failed while there was no active
    *          master. Can be null.
@@ -2612,7 +2611,7 @@ public class AssignmentManager extends ZooKeeperListener {
     if (deadServers == null) return;
     Set<ServerName> actualDeadServers = this.serverManager.getDeadServers();
     for (Map.Entry<ServerName, List<Pair<HRegionInfo, Result>>> deadServer: deadServers.entrySet()) {
-      // skip regions of dead servers because SSH will process regions during rs expiration. 
+      // skip regions of dead servers because SSH will process regions during rs expiration.
       // see HBASE-5916
       if (actualDeadServers.contains(deadServer.getKey())) {
         for (Pair<HRegionInfo, Result> deadRegion : deadServer.getValue()) {
@@ -2881,17 +2880,17 @@ public class AssignmentManager extends ZooKeeperListener {
           "expire, send RPC again");
         invokeUnassign(regionInfo);
         break;
-        
+
       case SPLIT:
       case SPLITTING:
         break;
-        
+
       default:
         throw new IllegalStateException("Received event is not valid.");
       }
     }
   }
-  
+
   private void processOpeningState(HRegionInfo regionInfo) {
     LOG.info("Region has been OPENING for too " + "long, reassigning region="
         + regionInfo.getRegionNameAsString());
@@ -2940,7 +2939,7 @@ public class AssignmentManager extends ZooKeeperListener {
   public boolean isCarryingMeta(ServerName serverName) {
     return isCarryingRegion(serverName, HRegionInfo.FIRST_META_REGIONINFO);
   }
-  
+
   /**
    * Check if the shutdown server carries the specific region.
    * We have a bunch of places that store region location
@@ -3044,10 +3043,10 @@ public class AssignmentManager extends ZooKeeperListener {
     this.timeoutMonitor.interrupt();
     this.timerUpdater.interrupt();
   }
-  
+
   /**
    * Check whether the RegionServer is online.
-   * @param serverName 
+   * @param serverName
    * @return True if online.
    */
   public boolean isServerOnline(ServerName serverName) {

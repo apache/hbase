@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
@@ -90,12 +91,12 @@ public class ServerShutdownHandler extends EventHandler {
   }
 
   /**
-   * Before assign the ROOT region, ensure it haven't 
+   * Before assign the ROOT region, ensure it haven't
    *  been assigned by other place
    * <p>
    * Under some scenarios, the ROOT region can be opened twice, so it seemed online
    * in two regionserver at the same time.
-   * If the ROOT region has been assigned, so the operation can be canceled. 
+   * If the ROOT region has been assigned, so the operation can be canceled.
    * @throws InterruptedException
    * @throws IOException
    * @throws KeeperException
@@ -145,7 +146,7 @@ public class ServerShutdownHandler extends EventHandler {
       }
     }
   }
-  
+
   /**
    * @return True if the server we are processing was carrying <code>-ROOT-</code>
    */
@@ -417,9 +418,10 @@ public class ServerShutdownHandler extends EventHandler {
       final AssignmentManager assignmentManager,
       final CatalogTracker catalogTracker)
   throws IOException {
-    int fixedA = fixupDaughter(result, HConstants.SPLITA_QUALIFIER,
+    PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(result);
+    int fixedA = fixupDaughter(result, daughters.getFirst(),
       assignmentManager, catalogTracker);
-    int fixedB = fixupDaughter(result, HConstants.SPLITB_QUALIFIER,
+    int fixedB = fixupDaughter(result, daughters.getSecond(),
       assignmentManager, catalogTracker);
     return fixedA + fixedB;
   }
@@ -431,12 +433,10 @@ public class ServerShutdownHandler extends EventHandler {
    * @return 1 if the daughter is missing and fixed. Otherwise 0
    * @throws IOException
    */
-  static int fixupDaughter(final Result result, final byte [] qualifier,
+  static int fixupDaughter(final Result result, HRegionInfo daughter,
       final AssignmentManager assignmentManager,
       final CatalogTracker catalogTracker)
   throws IOException {
-    HRegionInfo daughter =
-      MetaReader.parseHRegionInfoFromCatalogResult(result, qualifier);
     if (daughter == null) return 0;
     if (isDaughterMissing(catalogTracker, daughter)) {
       LOG.info("Fixup; missing daughter " + daughter.getRegionNameAsString());
@@ -460,7 +460,7 @@ public class ServerShutdownHandler extends EventHandler {
    * Daughter could have been split over on regionserver before a run of the
    * catalogJanitor had chance to clear reference from parent.
    * @param daughter Daughter region to search for.
-   * @throws IOException 
+   * @throws IOException
    */
   private static boolean isDaughterMissing(final CatalogTracker catalogTracker,
       final HRegionInfo daughter) throws IOException {
@@ -498,7 +498,7 @@ public class ServerShutdownHandler extends EventHandler {
     @Override
     public boolean visit(Result r) throws IOException {
       HRegionInfo hri =
-        MetaReader.parseHRegionInfoFromCatalogResult(r, HConstants.REGIONINFO_QUALIFIER);
+        HRegionInfo.getHRegionInfo(r);
       if (hri == null) {
         LOG.warn("No serialized HRegionInfo in " + r);
         return true;
