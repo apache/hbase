@@ -187,7 +187,7 @@ public class StoreFile extends SchemaConfigured {
    * this file's id.  Group 2 the referenced region name, etc.
    */
   private static final Pattern REF_NAME_PARSER =
-    Pattern.compile("^([0-9a-f]+)(?:\\.(.+))?$");
+    Pattern.compile("^([0-9a-f]+(?:_SeqId_[0-9]+_)?)(?:\\.(.+))?$");
 
   // StoreFile.Reader
   private volatile Reader reader;
@@ -374,13 +374,16 @@ public class StoreFile extends SchemaConfigured {
    * the given list. Store files that were created by a mapreduce
    * bulk load are ignored, as they do not correspond to any edit
    * log items.
+   * @param sfs 
+   * @param includeBulkLoadedFiles
    * @return 0 if no non-bulk-load files are provided or, this is Store that
    * does not yet have any store files.
    */
-  public static long getMaxSequenceIdInList(Collection<StoreFile> sfs) {
+  public static long getMaxSequenceIdInList(Collection<StoreFile> sfs,
+      boolean includeBulkLoadedFiles) {
     long max = 0;
     for (StoreFile sf : sfs) {
-      if (!sf.isBulkLoadResult()) {
+      if (includeBulkLoadedFiles || !sf.isBulkLoadResult()) {
         max = Math.max(max, sf.getMaxSequenceId());
       }
     }
@@ -441,7 +444,25 @@ public class StoreFile extends SchemaConfigured {
           this.sequenceid += 1;
         }
       }
+    } 
+    
+    if (isBulkLoadResult()){
+      // generate the sequenceId from the fileName
+      // fileName is of the form <randomName>_SeqId_<id-when-loaded>_
+      String fileName = this.path.getName();
+      int startPos = fileName.indexOf("SeqId_");
+      if (startPos != -1) {
+        this.sequenceid = Long.parseLong(fileName.substring(startPos + 6,
+            fileName.indexOf('_', startPos + 6)));
+        // Handle reference files as done above.
+        if (isReference()) {
+          if (Reference.isTopFileRegion(this.reference.getFileRegion())) {
+            this.sequenceid += 1;
+          }
+        }
+      }
     }
+    
     this.reader.setSequenceID(this.sequenceid);
 
     b = metadataMap.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
@@ -1583,18 +1604,27 @@ public class StoreFile extends SchemaConfigured {
    */
   abstract static class Comparators {
     /**
-     * Comparator that compares based on the flush time of
-     * the StoreFiles. All bulk loads are placed before all non-
-     * bulk loads, and then all files are sorted by sequence ID.
+     * Comparator that compares based on the Sequence Id of the
+     * the StoreFiles. Bulk loads that did not request a seq ID
+     * are given a seq id of -1; thus, they are placed before all non-
+     * bulk loads, and bulk loads with sequence Id. Among these files,
+     * the bulkLoadTime is used to determine the ordering.
      * If there are ties, the path name is used as a tie-breaker.
      */
-    static final Comparator<StoreFile> FLUSH_TIME =
+    static final Comparator<StoreFile> SEQ_ID =
       Ordering.compound(ImmutableList.of(
-          Ordering.natural().onResultOf(new GetBulkTime()),
           Ordering.natural().onResultOf(new GetSeqId()),
+          Ordering.natural().onResultOf(new GetBulkTime()),
           Ordering.natural().onResultOf(new GetPathName())
       ));
 
+    private static class GetSeqId implements Function<StoreFile, Long> {
+      @Override
+      public Long apply(StoreFile sf) {
+        return sf.getMaxSequenceId();
+      }
+    }
+    
     private static class GetBulkTime implements Function<StoreFile, Long> {
       @Override
       public Long apply(StoreFile sf) {
@@ -1602,13 +1632,7 @@ public class StoreFile extends SchemaConfigured {
         return sf.getBulkLoadTimestamp();
       }
     }
-    private static class GetSeqId implements Function<StoreFile, Long> {
-      @Override
-      public Long apply(StoreFile sf) {
-        if (sf.isBulkLoadResult()) return -1L;
-        return sf.getMaxSequenceId();
-      }
-    }
+    
     private static class GetPathName implements Function<StoreFile, String> {
       @Override
       public String apply(StoreFile sf) {

@@ -266,8 +266,8 @@ public class Store extends SchemaConfigured implements HeapSize {
   /**
    * @return The maximum sequence id in all store files.
    */
-  long getMaxSequenceId() {
-    return StoreFile.getMaxSequenceIdInList(this.getStorefiles());
+  long getMaxSequenceId(boolean includeBulkLoadedFiles) {
+    return StoreFile.getMaxSequenceIdInList(this.getStorefiles(), includeBulkLoadedFiles);
   }
 
   /**
@@ -417,7 +417,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     return this.storefiles;
   }
 
-  public void bulkLoadHFile(String srcPathStr) throws IOException {
+  public void bulkLoadHFile(String srcPathStr, long sequenceId) throws IOException {
     Path srcPath = new Path(srcPathStr);
 
     HFile.Reader reader  = null;
@@ -461,7 +461,8 @@ public class Store extends SchemaConfigured implements HeapSize {
       srcPath = tmpPath;
     }
 
-    Path dstPath = StoreFile.getRandomFilename(fs, homedir);
+    Path dstPath = StoreFile.getRandomFilename(fs, homedir, 
+        (sequenceId >= 0) ? ("_SeqId_" + sequenceId + "_") : null);
     LOG.info("Renaming bulk load file " + srcPath + " to " + dstPath);
     StoreFile.rename(fs, srcPath, dstPath);
 
@@ -862,7 +863,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     }
 
     // Max-sequenceID is the last key in the files we're compacting
-    long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact);
+    long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact, true);
 
     // Ready to go. Have list of files to compact.
     MonitoredTask status = TaskMonitor.get().createStatus(
@@ -930,10 +931,10 @@ public class Store extends SchemaConfigured implements HeapSize {
         }
 
         filesToCompact = filesToCompact.subList(count - N, count);
-        maxId = StoreFile.getMaxSequenceIdInList(filesToCompact);
+        maxId = StoreFile.getMaxSequenceIdInList(filesToCompact, true);
         isMajor = (filesToCompact.size() == storefiles.size());
         filesCompacting.addAll(filesToCompact);
-        Collections.sort(filesCompacting, StoreFile.Comparators.FLUSH_TIME);
+        Collections.sort(filesCompacting, StoreFile.Comparators.SEQ_ID);
       }
     } finally {
       this.lock.readLock().unlock();
@@ -1125,7 +1126,7 @@ public class Store extends SchemaConfigured implements HeapSize {
               filesToCompact, filesCompacting);
         }
         filesCompacting.addAll(filesToCompact.getFilesToCompact());
-        Collections.sort(filesCompacting, StoreFile.Comparators.FLUSH_TIME);
+        Collections.sort(filesCompacting, StoreFile.Comparators.SEQ_ID);
 
         // major compaction iff all StoreFiles are included
         boolean isMajor = (filesToCompact.getFilesToCompact().size() == this.storefiles.size());
@@ -1239,7 +1240,8 @@ public class Store extends SchemaConfigured implements HeapSize {
             new Predicate<StoreFile>() {
               @Override
               public boolean apply(StoreFile input) {
-                return input.isBulkLoadResult();
+                // If we have assigned a sequenceId to the hfile, we won't skip the file.
+                return input.isBulkLoadResult() && input.getMaxSequenceId() <= 0;
               }
             }));
         LOG.debug("Exclude " +
@@ -1546,7 +1548,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   public ImmutableList<StoreFile> sortAndClone(List<StoreFile> storeFiles) {
-    Collections.sort(storeFiles, StoreFile.Comparators.FLUSH_TIME);
+    Collections.sort(storeFiles, StoreFile.Comparators.SEQ_ID);
     ImmutableList<StoreFile> newList = ImmutableList.copyOf(storeFiles);
     return newList;
   }

@@ -66,9 +66,13 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   static Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
 
   public static String NAME = "completebulkload";
+  public static String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
+
+  private boolean assignSeqIds;
 
   public LoadIncrementalHFiles(Configuration conf) {
     super(conf);
+    assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
   }
 
   public LoadIncrementalHFiles() {
@@ -239,7 +243,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           }
 
           byte[] regionName = location.getRegionInfo().getRegionName();
-          server.bulkLoadHFile(hfilePath.toString(), regionName, item.family);
+          server.bulkLoadHFile(hfilePath.toString(), regionName, item.family, assignSeqIds);
           return null;
         }
       });

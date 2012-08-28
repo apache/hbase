@@ -2697,8 +2697,15 @@ public class HRegionServer implements HRegionInterface,
   public void bulkLoadHFile(
       String hfilePath, byte[] regionName, byte[] familyName)
   throws IOException {
+    bulkLoadHFile(hfilePath, regionName, familyName, false);
+  }
+  
+  @Override
+  public void bulkLoadHFile(
+      String hfilePath, byte[] regionName, byte[] familyName, 
+      boolean assignSeqNum) throws IOException {
     HRegion region = getRegion(regionName);
-    region.bulkLoadHFile(hfilePath, familyName);
+    region.bulkLoadHFile(hfilePath, familyName, assignSeqNum);
   }
 
   Map<String, Integer> rowlocks =

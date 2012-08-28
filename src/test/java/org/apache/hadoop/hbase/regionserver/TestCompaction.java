@@ -583,7 +583,7 @@ public class TestCompaction extends HBaseTestCase {
     Store store = r.getStore(COLUMN_FAMILY);
 
     List<StoreFile> storeFiles = store.getStorefiles();
-    long maxId = StoreFile.getMaxSequenceIdInList(storeFiles);
+    long maxId = StoreFile.getMaxSequenceIdInList(storeFiles, false);
 
     StoreFile.Writer compactedFile = store.compactStores(storeFiles, false, maxId);
 

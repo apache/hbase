@@ -360,6 +360,8 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
    */
   public void bulkLoadHFile(String hfilePath,
       byte[] regionName, byte[] familyName) throws IOException;
+  public void bulkLoadHFile(String hfilePath,
+      byte[] regionName, byte[] familyName, boolean assignSeqNum) throws IOException;
 
   /**
    * Replicates the given entries. The guarantee is that the given entries
@@ -387,4 +389,6 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
    */
   public int updateFavoredNodes(AssignmentPlan plan)
   throws IOException;
+
+
 }

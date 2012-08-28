@@ -612,12 +612,15 @@ public class HRegion implements HeapSize {
             Store store = future.get();
 
             this.stores.put(store.getColumnFamilyName().getBytes(), store);
-            long storeSeqId = store.getMaxSequenceId();
-            if (minSeqId == -1 || storeSeqId < minSeqId) {
-              minSeqId = storeSeqId;
+            // Do not include bulk loaded files when determining seqIdForReplay
+            long storeSeqIdForReplay = store.getMaxSequenceId(false);
+            if (minSeqId == -1 || storeSeqIdForReplay < minSeqId) {
+              minSeqId = storeSeqIdForReplay;
             }
-            if (maxSeqId == -1 || storeSeqId > maxSeqId) {
-              maxSeqId = storeSeqId;
+            // Include bulk loaded files when determining seqIdForAssignment
+            long storeSeqIdForAssignment = store.getMaxSequenceId(true);
+            if (maxSeqId == -1 || storeSeqIdForAssignment > maxSeqId) {
+              maxSeqId = storeSeqIdForAssignment;
             }
             long maxStoreMemstoreTS = store.getMaxMemstoreTS();
             if (maxStoreMemstoreTS > maxMemstoreTS) {
@@ -2929,8 +2932,10 @@ public class HRegion implements HeapSize {
     }
   }
 
-  public void bulkLoadHFile(String hfilePath, byte[] familyName)
+  public void bulkLoadHFile(String hfilePath, byte[] familyName, boolean assignSeqId)
   throws IOException {
+    long seqId = this.log.obtainSeqNum();
+    
     splitsAndClosesLock.readLock().lock();
     try {
       Store store = getStore(familyName);
@@ -2938,11 +2943,15 @@ public class HRegion implements HeapSize {
         throw new DoNotRetryIOException(
             "No such column family " + Bytes.toStringBinary(familyName));
       }
-      store.bulkLoadHFile(hfilePath);
+      store.bulkLoadHFile(hfilePath, assignSeqId ? seqId : -1);
     } finally {
       splitsAndClosesLock.readLock().unlock();
     }
-
+  }
+  
+  public void bulkLoadHFile(String hfilePath, byte[] familyName)
+  throws IOException {
+    bulkLoadHFile(hfilePath, familyName, false);
   }
 
 

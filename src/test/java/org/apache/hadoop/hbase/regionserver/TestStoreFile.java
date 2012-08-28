@@ -609,7 +609,7 @@ public class TestStoreFile extends HBaseTestCase {
   }
 
   public void testFlushTimeComparator() {
-    assertOrdering(StoreFile.Comparators.FLUSH_TIME,
+    assertOrdering(StoreFile.Comparators.SEQ_ID,
         mockStoreFile(true, 1000, -1, "/foo/123"),
         mockStoreFile(true, 1000, -1, "/foo/126"),
         mockStoreFile(true, 2000, -1, "/foo/126"),
@@ -923,5 +923,9 @@ public class TestStoreFile extends HBaseTestCase {
     byte[] value = fileInfo.get(StoreFile.DATA_BLOCK_ENCODING);
 
     assertEquals(dataBlockEncoderAlgo.getNameInBytes(), value);
+  }
+  
+  public static List<StoreFile> getStoreFiles(Store s) {
+    return s.getStorefiles();
   }
 }
