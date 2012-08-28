@@ -29,6 +29,7 @@ import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -39,12 +40,15 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -376,6 +380,44 @@ public class HConnectionManager {
       cachedRegionLocations =
         new HashMap<Integer, SortedMap<byte [], HRegionLocation>>();
 
+    // amount of time to wait before we consider a server to be in fast fail mode
+    private long fastFailThresholdMilliSec;
+    // Keeps track of failures when we cannot talk to a server. Helps in
+    // fast failing clients if the server is down for a long time.
+    private final ConcurrentMap<HServerAddress, FailureInfo> repeatedFailuresMap =
+      new ConcurrentHashMap<HServerAddress, FailureInfo>();
+    // We populate repeatedFailuresMap every time there is a failure. So, to keep it
+    // from growing unbounded, we garbage collect the failure information
+    // every cleanupInterval.
+    private final long failureMapCleanupIntervalMilliSec;
+    private volatile long lastFailureMapCleanupTimeMilliSec;
+    // Amount of time that has to pass, before we clear region -> regionserver cache
+    // again, when in fast fail mode.
+    private long cacheClearingTimeoutMilliSec;
+
+    /**
+     * Keeps track of repeated failures to any region server.
+     * @author amitanand.s
+     *
+     */
+    private class FailureInfo {
+      // The number of consecutive failures.
+      private final AtomicLong numConsecutiveFailures = new AtomicLong();
+      // The time when the server started to become unresponsive
+      // Once set, this would never be updated.
+      private long timeOfFirstFailureMilliSec;
+      // The time when the client last tried to contact the server.
+      // This is only updated by one client at a time
+      private volatile long timeOfLatestAttemptMilliSec;
+      // The time when the client last cleared cache for regions assigned
+      // to the server. Used to ensure we don't clearCache too often.
+      private volatile long timeOfLatestCacheClearMilliSec;
+      // Used to keep track of concurrent attempts to contact the server.
+      // In Fast fail mode, we want just one client thread to try to connect
+      // the rest of the client threads will fail fast.
+      private final AtomicBoolean
+          exclusivelyRetringInspiteOfFastFail = new AtomicBoolean(false);
+    }
     // The presence of a server in the map implies it's likely that there is an
     // entry in cachedRegionLocations that map to this server; but the absence
     // of a server in this map guarentees that there is no entry in cache that
@@ -426,6 +468,12 @@ public class HConnectionManager {
           HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
       this.rpcRetryTimeout = conf.getLong("hbase.client.rpc.retry.timeout",
           Long.MAX_VALUE);
+      this.cacheClearingTimeoutMilliSec = conf.getLong("hbase.client.fastfail.cache.clear.interval",
+          10000); // 10 sec
+      this.fastFailThresholdMilliSec = conf.getLong("hbase.client.fastfail.threshold",
+          60000); // 1 min
+      this.failureMapCleanupIntervalMilliSec = conf.getLong(
+          "hbase.client.fastfail.cleanup.map.interval.millisec", 600000); // 10 min
 
       this.prefetchRegionLimit = conf.getInt("hbase.client.prefetch.limit",
           10);
@@ -863,10 +911,31 @@ public class HConnectionManager {
             + Bytes.toStringBinary(row) + " after " + numRetries + " tries.");
         }
 
+        FailureInfo fInfo = null;
+        HServerAddress server = null;
+        boolean didTry = false;
+        boolean couldNotCommunicateWithServer = false;
+        boolean retryDespiteFastFailMode = false;
         try {
           // locate the root or meta region
           HRegionLocation metaLocation = locateRegion(parentTable, metaKey);
-          HRegionInterface server =
+
+          server = metaLocation.getServerAddress();
+          // Handle the case where .META. is on an unresponsive server.
+          if (inFastFailMode(server)) {
+            // In Fast-fail mode, all but one thread will fast fail. Check
+            // if we are that one chosen thread.
+            fInfo = repeatedFailuresMap.get(server);
+            retryDespiteFastFailMode = shouldRetryInspiteOfFastFail(fInfo);
+
+            if (retryDespiteFastFailMode == false) { // we don't have to retry
+              throw new PreemptiveFastFailException(fInfo.numConsecutiveFailures.get(),
+                  fInfo.timeOfFirstFailureMilliSec, fInfo.timeOfLatestAttemptMilliSec);
+            }
+          }
+          didTry = true;
+
+          HRegionInterface serverInterface =
             getHRegionConnection(metaLocation.getServerAddress());
 
           Result regionInfoRow = null;
@@ -895,7 +964,7 @@ public class HConnectionManager {
             }
 
           // Query the root or meta region for the location of the meta region
-            regionInfoRow = server.getClosestRowBefore(
+            regionInfoRow = serverInterface.getClosestRowBefore(
             metaLocation.getRegionInfo().getRegionName(), metaKey,
             HConstants.CATALOG_FAMILY);
           }
@@ -948,6 +1017,9 @@ public class HConnectionManager {
           if (e instanceof RemoteException) {
             e = RemoteExceptionHandler.decodeRemoteException(
                 (RemoteException) e);
+          } else if (isNetworkException(e)) {
+            couldNotCommunicateWithServer = true;
+            handleFailureToServer(server);
           }
           if (tries < numRetries - 1) {
             if (LOG.isDebugEnabled()) {
@@ -963,6 +1035,9 @@ public class HConnectionManager {
               e instanceof NoServerForRegionException)) {
             relocateRegion(parentTable, metaKey);
           }
+        } finally {
+          updateFailureInfoForServer(server, fInfo, didTry,
+              couldNotCommunicateWithServer, retryDespiteFastFailMode);
         }
         try{
           Thread.sleep(getPauseTime(tries));
@@ -970,6 +1045,24 @@ public class HConnectionManager {
           // continue
         }
       }
+    }
+
+    /**
+     * Check if the exception is something that indicates that we cannot
+     * contact/communicate with the server.
+     *
+     * @param e
+     * @return
+     */
+    private boolean isNetworkException(Throwable e) {
+      // This list covers most connectivity exceptions but not all.
+      // For example, in SocketOutputStream a plain IOException is thrown
+      // at times when the channel is closed.
+      return (e instanceof SocketTimeoutException ||
+              e instanceof ConnectException ||
+              e instanceof ClosedChannelException ||
+              e instanceof SyncFailedException ||
+              e instanceof EOFException);
     }
 
     /*
@@ -1082,6 +1175,7 @@ public class HConnectionManager {
     private void clearCachedLocationForServer(
         final String server) {
       boolean deletedSomething = false;
+
       synchronized (this.cachedRegionLocations) {
         if (!cachedServers.contains(server)) {
           return;
@@ -1345,13 +1439,15 @@ public class HConnectionManager {
 
           // If we are not supposed to retry; Let it pass through.
           throw ioe;
+        } catch (RegionOverloadedException roe) {
+          exceptions.add(roe);
+          serverRequestedWaitTime = roe.getBackoffTimeMillis();
+          continue;
+        } catch (PreemptiveFastFailException pfe) {
+          // Bail out of the retry loop, if the host has been consistently unreachable.
+          throw pfe;
         } catch (Throwable t) {
           exceptions.add(t);
-
-          if (t instanceof RegionOverloadedException) {
-            serverRequestedWaitTime = ((RegionOverloadedException)t).getBackoffTimeMillis();
-            continue;
-          }
 
           if (tries == numRetries - 1) {
             throw new RetriesExhaustedException(callable.getServerName(),
@@ -1369,6 +1465,7 @@ public class HConnectionManager {
 
           if (prevLoc.getServerAddress().
               equals(callable.location.getServerAddress())) {
+            // Bail out of the retry loop if we have to wait too long
             long pauseTime = getPauseTime(tries);
             if ((System.currentTimeMillis() - callStartTime + pauseTime) >
                  rpcRetryTimeout) {
@@ -1402,6 +1499,7 @@ public class HConnectionManager {
         return getRegionServerWithoutRetries(callable, true);
     }
 
+
     /**
      * Pass in a ServerCallable with your particular bit of logic defined and
      * this method will pass it to the defined region server.
@@ -1410,32 +1508,46 @@ public class HConnectionManager {
      * @return an object of type T
      * @throws IOException if a remote or network exception occurs
      * @throws RuntimeException other unspecified error
+     * @throws PreemptiveFastFailException if the remote host has been known to be
+     *         unreachable for more than this.fastFailThresholdMilliSec.
      */
     private <T> T getRegionServerWithoutRetries(ServerCallable<T> callable,
         boolean instantiateRegionLocation)
-        throws IOException, RuntimeException {
+        throws IOException, RuntimeException, PreemptiveFastFailException {
+      FailureInfo fInfo = null;
+      HServerAddress server = null;
+      boolean didTry = false;
+      boolean couldNotCommunicateWithServer = false;
+      boolean retryDespiteFastFailMode = false;
       try {
         if (instantiateRegionLocation) callable.instantiateRegionLocation(false);
+
+        // Logic to fast fail requests to unreachable servers.
+        server = callable.getServerAddress();
+        if (inFastFailMode(server)) {
+          // In Fast-fail mode, all but one thread will fast fail. Check
+          // if we are that one chosen thread.
+          fInfo = repeatedFailuresMap.get(server);
+          retryDespiteFastFailMode = shouldRetryInspiteOfFastFail(fInfo);
+          if (retryDespiteFastFailMode == false) { // we don't have to retry
+            throw new PreemptiveFastFailException(fInfo.numConsecutiveFailures.get(),
+                fInfo.timeOfFirstFailureMilliSec, fInfo.timeOfLatestAttemptMilliSec);
+          }
+        }
+        didTry = true;
+
         callable.instantiateServer();
         return callable.call();
+      } catch (PreemptiveFastFailException pfe) {
+        throw pfe;
       } catch (Throwable t1) {
         Throwable t2 = translateException(t1);
         boolean isLocalException = !(t2 instanceof RemoteException);
         // translateException throws DoNotRetryException or any
         // non-IOException.
-        if (isLocalException && (t2 instanceof SocketTimeoutException ||
-            t2 instanceof ConnectException ||
-            t2 instanceof ClosedChannelException ||
-            t2 instanceof SyncFailedException ||
-            t2 instanceof EOFException)) {
-          // XXX this list covers most connectivity exceptions but not all.
-          // For example, in SocketOutputStream a plain IOException is thrown
-          // at times when the channel is closed.
-
-          // if thrown these exceptions, we clear all the cache entries that
-          // map to that slow/dead server; otherwise, let cache miss and ask
-          // .META. again to find the new location
-          clearCachedLocationForServer(callable.location.getServerAddress().toString());
+        if (isLocalException && isNetworkException(t2)) {
+          couldNotCommunicateWithServer = true;
+          handleFailureToServer(server);
         }
 
         if (t2 instanceof IOException) {
@@ -1443,7 +1555,140 @@ public class HConnectionManager {
         } else {
           throw new RuntimeException(t2);
         }
+      } finally {
+        updateFailureInfoForServer(server, fInfo, didTry,
+            couldNotCommunicateWithServer, retryDespiteFastFailMode);
       }
+    }
+
+    /**
+     * Handles failures encountered when communicating with a server.
+     *
+     * Updates the FailureInfo in repeatedFailuresMap to reflect the
+     * failure. Throws RepeatedConnectException if the client is in
+     * Fast fail mode.
+     *
+     * @param server
+     * @throws PreemptiveFastFailException
+     */
+    private void handleFailureToServer(HServerAddress server)
+        throws PreemptiveFastFailException {
+      if (server == null) return;
+
+      long currentTime = System.currentTimeMillis();
+      FailureInfo fInfo = repeatedFailuresMap.get(server);
+      if (fInfo == null) {
+        fInfo = new FailureInfo();
+        fInfo.timeOfFirstFailureMilliSec = currentTime;
+        fInfo = repeatedFailuresMap.putIfAbsent(server, fInfo);
+      }
+      fInfo.timeOfLatestAttemptMilliSec = currentTime;
+      fInfo.numConsecutiveFailures.incrementAndGet();
+
+      if (inFastFailMode(server)) {
+          // In FastFail mode, do not clear out the cache if it was done recently.
+          if (currentTime > fInfo.timeOfLatestCacheClearMilliSec + cacheClearingTimeoutMilliSec) {
+            fInfo.timeOfLatestCacheClearMilliSec = currentTime;
+            clearCachedLocationForServer(server.toString());
+          }
+          throw  new PreemptiveFastFailException(fInfo.numConsecutiveFailures.get(),
+            fInfo.timeOfFirstFailureMilliSec, fInfo.timeOfLatestAttemptMilliSec);
+      }
+
+      // if thrown these exceptions, we clear all the cache entries that
+      // map to that slow/dead server; otherwise, let cache miss and ask
+      // .META. again to find the new location
+      fInfo.timeOfLatestCacheClearMilliSec = currentTime;
+      clearCachedLocationForServer(server.toString());
+    }
+
+    /**
+     * Occasionally cleans up unused information in repeatedFailuresMap.
+     *
+     * repeatedFailuresMap stores the failure information for all
+     * remote hosts that had failures. In order to avoid these from growing
+     * indefinitely, occassionallyCleanupFailureInformation() will clear these up once
+     * every cleanupInterval ms.
+     */
+    private void occasionallyCleanupFailureInformation() {
+      long now = System.currentTimeMillis();
+      if (!(now > lastFailureMapCleanupTimeMilliSec + failureMapCleanupIntervalMilliSec))
+        return;
+
+      // remove entries that haven't been attempted in a while
+      // No synchronization needed. It is okay if multiple threads try to
+      // remove the entry again and again from a concurrent hash map.
+      lastFailureMapCleanupTimeMilliSec = now;
+      for(Entry<HServerAddress, FailureInfo> entry : repeatedFailuresMap.entrySet()) {
+        if (now > entry.getValue().timeOfLatestAttemptMilliSec
+            + failureMapCleanupIntervalMilliSec) {
+          repeatedFailuresMap.remove(entry.getKey());
+        }
+      }
+    }
+
+    /**
+     * Checks to see if we are in the Fast fail mode for requests to the server.
+     *
+     * If a client is unable to contact a server for more than fastFailThresholdMilliSec
+     * the client will get into fast fail mode.
+     *
+     * @param server
+     * @return true if the client is in fast fail mode for the server.
+     */
+    private boolean inFastFailMode(HServerAddress server) {
+      FailureInfo fInfo = repeatedFailuresMap.get(server);
+      // if fInfo is null --> The server is considered good.
+      // If the server is bad, wait long enough to believe that the server is down.
+      return  (fInfo != null && System.currentTimeMillis() >
+            fInfo.timeOfFirstFailureMilliSec + this.fastFailThresholdMilliSec);
+    }
+
+    /**
+     * Check to see if the client should try to connnect to the server, inspite of
+     * knowing that it is in the fast fail mode.
+     *
+     * The idea here is that we want just one client thread to be actively trying to
+     * reconnect, while all the other threads trying to reach the server will short circuit.
+     *
+     * @param fInfo
+     * @return true if the client should try to connect to the server.
+     */
+    private boolean shouldRetryInspiteOfFastFail(FailureInfo fInfo) {
+      // We believe that the server is down, But, we want to have just one client
+      // actively trying to connect. If we are the chosen one, we will retry
+      // and not throw an exception.
+      return  (fInfo != null &&
+          fInfo.exclusivelyRetringInspiteOfFastFail.compareAndSet(false, true));
+    }
+
+    /**
+     * updates the failure information for the server.
+     *
+     * @param server
+     * @param fInfo
+     * @param couldNotCommunicate
+     * @param retryDespiteFastFailMode
+     */
+    private void updateFailureInfoForServer(HServerAddress server, FailureInfo fInfo,
+        boolean didTry, boolean couldNotCommunicate, boolean retryDespiteFastFailMode) {
+      if (server == null || fInfo == null || didTry == false) return;
+
+      // If we were able to connect to the server, reset the failure information.
+      if (couldNotCommunicate == false) {
+        repeatedFailuresMap.remove(server);
+      } else {
+        // update time of last attempt
+        long currentTime = System.currentTimeMillis();
+        fInfo.timeOfLatestAttemptMilliSec = currentTime;
+
+        // Release the lock if we were retrying inspite of FastFail
+        if (retryDespiteFastFailMode) {
+          fInfo.exclusivelyRetringInspiteOfFastFail.set(false);
+        }
+      }
+
+      occasionallyCleanupFailureInformation();
     }
 
     private <R> Callable<MultiResponse> createMultiActionCallable(final HServerAddress address,
@@ -2123,6 +2368,11 @@ public class HConnectionManager {
               toThrow = roe;
             }
           }
+
+          if (singleServer &&
+              ex.getCause() instanceof PreemptiveFastFailException) {
+            throw (PreemptiveFastFailException)ex.getCause();
+          }
         }
 
         // For each region
@@ -2222,6 +2472,8 @@ public class HConnectionManager {
             serverRequestedWaitTime = ex.getBackoffTimeMillis();
             // do not clear the list
             continue;
+        } catch (PreemptiveFastFailException pfe) {
+          throw pfe;
         }
 
         list.clear();

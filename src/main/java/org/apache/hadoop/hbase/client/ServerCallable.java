@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -87,6 +88,14 @@ public abstract class ServerCallable<T> implements Callable<T> {
       return null;
     }
     return location.getServerAddress().toString();
+  }
+
+  /** @return the server address */
+  public HServerAddress getServerAddress() {
+    if (location == null) {
+      return null;
+    }
+    return location.getServerAddress();
   }
 
   /** @return the region name */

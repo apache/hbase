@@ -403,7 +403,19 @@ public class HTableMultiplexer {
             }
             
             // Process this multiput request
-            List<Put> failed = connection.processListOfMultiPut(Arrays.asList(mput), null, options);
+            List<Put> failed = null;
+            try {
+              failed = connection.processListOfMultiPut(Arrays.asList(mput), null, options);
+            } catch(PreemptiveFastFailException e) {
+              // Client is not blocking on us. So, let us treat this
+              // as a normal failure, and retry.
+              for (PutStatus putStatus: processingList) {
+                if (!resubmitFailedPut(putStatus, this.addr)) {
+                  failedCount++;
+                }
+              }
+            }
+
             if (failed != null) {
               if (failed.size() == processingList.size()) {
                 // All the puts for this region server are failed. Going to retry it later

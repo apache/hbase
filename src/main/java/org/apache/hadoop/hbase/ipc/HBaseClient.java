@@ -41,6 +41,8 @@ import java.net.UnknownHostException;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -77,8 +79,9 @@ public class HBaseClient {
 
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseClient");
-  protected final Hashtable<ConnectionId, Connection> connections =
-    new Hashtable<ConnectionId, Connection>();
+  // Active connections are stored in connections.
+  protected final ConcurrentMap<ConnectionId, Connection> connections =
+    new ConcurrentHashMap<ConnectionId, Connection>();
 
   protected final Class<? extends Writable> valueClass;   // class of call values
   protected int counter;                            // counter for call ids
@@ -215,9 +218,14 @@ public class HBaseClient {
      * @param call to add
      * @return true if the call was added.
      */
-    protected synchronized boolean addCall(Call call) {
-      if (shouldCloseConnection.get())
+    protected synchronized boolean addCall(Call call) throws IOException {
+      if (shouldCloseConnection.get()) {
+        // If there was something bad. Let not the next thread spend a while
+        // figuring it out.
+        if (closeException != null)
+          throw closeException;
         return false;
+      }
       calls.put(call.id, call);
       notify();
       return true;
@@ -285,8 +293,11 @@ public class HBaseClient {
      * @throws java.io.IOException e
      */
     protected synchronized void setupIOstreams(byte version) throws IOException {
-      if (socket != null || shouldCloseConnection.get()) {
+      if (socket != null) { // somebody already set up the IOStreams
         return;
+      }
+      if (shouldCloseConnection.get()) { // somebody already tried and failed.
+        throw closeException;
       }
 
       short ioFailures = 0;
@@ -301,7 +312,7 @@ public class HBaseClient {
             this.socket.setTcpNoDelay(tcpNoDelay);
             this.socket.setKeepAlive(tcpKeepAlive);
             NetUtils.connect(this.socket, remoteId.getAddress(),
-			connectionTimeOutMillSec);
+                connectionTimeOutMillSec);
             if (remoteId.rpcTimeout > 0) {
               pingInterval = remoteId.rpcTimeout; // overwrite pingInterval
             }
@@ -648,11 +659,7 @@ public class HBaseClient {
 
       // release the resources
       // first thing to do;take the connection out of the connection list
-      synchronized (connections) {
-        if (connections.get(remoteId) == this) {
-          connections.remove(remoteId);
-        }
-      }
+      connections.remove(remoteId, this);
 
       // close the streams and therefore the socket
       IOUtils.closeStream(out);
@@ -759,7 +766,7 @@ public class HBaseClient {
     this.conf = conf;
     this.socketFactory = factory;
     this.connectionTimeOutMillSec =
-	conf.getInt("hbase.client.connection.timeout.millsec", 5000);
+      conf.getInt("hbase.client.connection.timeout.millsec", 5000);
   }
 
   /**
@@ -956,12 +963,13 @@ public class HBaseClient {
     ConnectionId remoteId = new ConnectionId(addr, ticket, rpcTimeout,
         call.getVersion());
     do {
-      synchronized (connections) {
+      connection = connections.get(remoteId);
+      if (connection == null) {
+        // Do not worry about creating a new Connection object if
+        // the hash map was already updated. The unused connection
+        // will be automatically closed after a 10 sec timeout (maxIdleTime).
+        connections.putIfAbsent(remoteId, new Connection(remoteId));
         connection = connections.get(remoteId);
-        if (connection == null) {
-          connection = new Connection(remoteId);
-          connections.put(remoteId, connection);
-        }
       }
     } while (!connection.addCall(call));
 
