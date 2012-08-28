@@ -527,8 +527,8 @@ public class HRegion implements HeapSize {
     }
     this.disableWAL = regionInfo.getTableDesc().isWALDisabled();
     this.memstoreFlushSize = flushSize;
-    this.blockingMemStoreSize = this.memstoreFlushSize *
-      conf.getLong(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 2);
+    this.blockingMemStoreSize = (long)(this.memstoreFlushSize *
+      conf.getFloat(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 2));
     this.waitOnMemstoreBlock =
         conf.getBoolean(HConstants.HREGION_MEMSTORE_WAIT_ON_BLOCK, true);
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
