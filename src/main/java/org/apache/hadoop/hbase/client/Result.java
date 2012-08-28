@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.WritableWithSize;
+import org.apache.hadoop.hbase.ipc.HBaseClient;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
@@ -460,7 +461,7 @@ public class Result implements Writable, WritableWithSize {
       return;
     }
     byte [] raw = new byte[totalBuffer];
-    in.readFully(raw, 0, totalBuffer);
+    HBaseClient.readFromSocket(in, raw, 0, totalBuffer);
     bytes = new ImmutableBytesWritable(raw, 0, totalBuffer);
   }
 

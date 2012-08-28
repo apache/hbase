@@ -32,6 +32,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.ipc.HBaseClient;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.Writable;
@@ -373,7 +374,7 @@ public class Put extends Mutation
       int offset = 0;
       for (int j = 0; j < numKeys; j++) {
         int keyLength = in.readInt();
-        in.readFully(buf, offset, keyLength);
+        HBaseClient.readFromSocket(in, buf, offset, keyLength);
         keys.add(new KeyValue(buf, offset, keyLength));
         offset += keyLength;
       }

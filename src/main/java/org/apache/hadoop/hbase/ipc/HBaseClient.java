@@ -23,7 +23,9 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -102,6 +104,13 @@ public class HBaseClient {
   final static int DEFAULT_PING_INTERVAL = 60000; // 1 min
   final static int PING_CALL_ID = -1;
 
+  // The maximum size of data read/written to the socket in one shot.
+  //
+  // sun.nio.ch.Util caches the direct buffers used for socket read/write on a
+  // per thread basis, up to 8 buffers per thread. If we read/write large chunks,
+  // we will be creating large direct buffers that can hold up memory (multiply
+  // this by a factor of #clientThreads).
+  public static final int MAX_SOCKET_READ_WRITE_LEN = 131072; // 128k
   /**
    * set the ping interval value in configuration
    *
@@ -538,7 +547,7 @@ public class HBaseClient {
           int dataLength = data.length;
           try {
             out.writeInt(dataLength);      //first put the data length
-            out.write(data, 0, dataLength);//write the data
+            writeToSocket(out, data, 0, dataLength);
             out.flush();
           } catch (IOException e) {
             // It is not easy to get an exception here.
@@ -979,6 +988,53 @@ public class HBaseClient {
     //entire system down.
     connection.setupIOstreams(version);
     return connection;
+  }
+
+  /**
+   * Write data to the Socket. If data is long, it is split up and
+   * written up in parts.
+   *
+   * sun.nio.ch.Util caches the direct buffers used for socket read/write on a
+   * per thread basis, up to 8 buffers per thread. If we write large chunks,
+   * we will be creating large direct buffers that can hold up memory (multiply
+   * this by a factor of #clientThreads).
+   *
+   * We avoid this problem by writing small bufffers each time.
+   *
+   */
+  public static void writeToSocket(DataOutput out, byte[] data, int offset, int dataLength)
+      throws IOException {
+    int totalWritten = 0;
+    do {
+      int toWrite = (int) ((dataLength - totalWritten < MAX_SOCKET_READ_WRITE_LEN) ?
+                         dataLength - totalWritten : MAX_SOCKET_READ_WRITE_LEN);
+      out.write(data, offset + totalWritten, toWrite);//write the data
+      totalWritten += toWrite;
+    } while (totalWritten < dataLength);
+  }
+
+  /**
+   * Read data from the Socket. If length is too long, it is split up and
+   * read it in parts.
+   *
+   * sun.nio.ch.Util caches the direct buffers used for socket read/write on a
+   * per thread basis, up to 8 buffers per thread. If we write large chunks,
+   * we will be creating large direct buffers that can hold up memory (multiply
+   * this by a factor of #clientThreads).
+   *
+   * We avoid this problem by reading small bufffers each time.
+   *
+   */
+  public static void readFromSocket(DataInput in, byte[] data, int offset, int dataLength)
+     throws IOException {
+    int totalRead = 0;
+    do {
+      int toRead = (int)
+          ((dataLength - totalRead < HBaseClient.MAX_SOCKET_READ_WRITE_LEN) ?
+             dataLength - totalRead : HBaseClient.MAX_SOCKET_READ_WRITE_LEN);
+      in.readFully(data, offset + totalRead, toRead);
+      totalRead += toRead;
+    } while (totalRead < dataLength);
   }
 
   /**
