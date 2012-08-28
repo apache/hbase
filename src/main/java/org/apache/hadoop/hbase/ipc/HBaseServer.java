@@ -997,8 +997,8 @@ public abstract class HBaseServer {
     private void processData() throws  IOException, InterruptedException {
       DataInputStream uncompressedIs =
         new DataInputStream(new ByteArrayInputStream(data.array()));
-      Compression.Algorithm rxCompression = Algorithm.NONE;
       Compression.Algorithm txCompression = Algorithm.NONE;
+      Compression.Algorithm rxCompression = Algorithm.NONE;
       DataInputStream dis = uncompressedIs;
 
       // 1. read the call id uncompressed
@@ -1007,15 +1007,16 @@ public abstract class HBaseServer {
         LOG.trace(" got #" + id);
       
       HBaseRPCOptions options = new HBaseRPCOptions ();
+      Decompressor decompressor = null;
       if (version >= VERSION_RPCOPTIONS) {
         // 2. read rpc options uncompressed
         options.readFields(dis);
-        rxCompression = options.getRPCCompression();
-        txCompression = options.getRPCCompression();
+        txCompression = options.getTxCompression();   // server receives this
+        rxCompression = options.getRxCompression();   // server responds with
         // 3. set up a decompressor to read the rest of the request
-        if (rxCompression != Compression.Algorithm.NONE) {
-          Decompressor decompressor = rxCompression.getDecompressor();
-          InputStream is = rxCompression.createDecompressionStream(
+        if (txCompression != Compression.Algorithm.NONE) {
+          decompressor = txCompression.getDecompressor();
+          InputStream is = txCompression.createDecompressionStream(
               uncompressedIs, decompressor, 0);
           dis = new DataInputStream(is);
         }
@@ -1027,10 +1028,14 @@ public abstract class HBaseServer {
       Call call = new Call(id, param, this);
       call.shouldProfile = options.getRequestProfiling ();
       
-      call.setRPCCompression(txCompression);
+      call.setRPCCompression(rxCompression);
       call.setVersion(version);
       call.setTag(options.getTag());
       callQueue.put(call);              // queue the call; maybe blocked here
+      
+      if (decompressor != null) {
+        txCompression.returnDecompressor(decompressor);
+      }
     }
 
     protected synchronized void close() {
@@ -1127,6 +1132,7 @@ public abstract class HBaseServer {
           ByteBufferOutputStream buf = new ByteBufferOutputStream(size);
           DataOutputStream rawOS = new DataOutputStream(buf);
           DataOutputStream out = rawOS;
+          Compressor compressor = null;
 
           // 1. write call id uncompressed
           out.writeInt(call.id);
@@ -1140,7 +1146,7 @@ public abstract class HBaseServer {
 
             // 4. create a compressed output stream if compression was enabled
             if (call.getRPCCompression() != Compression.Algorithm.NONE) {
-              Compressor compressor = call.getRPCCompression().getCompressor();
+              compressor = call.getRPCCompression().getCompressor();
               OutputStream compressedOutputStream =
                 call.getRPCCompression().createCompressionStream(rawOS, compressor, 0);
               out = new DataOutputStream(compressedOutputStream);
@@ -1168,6 +1174,9 @@ public abstract class HBaseServer {
           buf.flush();
           call.setResponse(buf.getByteBuffer());
           responder.doRespond(call);
+          if (compressor != null) {
+            call.getRPCCompression().returnCompressor(compressor);
+          }
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it
             LOG.warn(getName() + " caught: " +

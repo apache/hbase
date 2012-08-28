@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 
 /** Creates multiple threads that write key/values into the */
 public class MultiThreadedWriter extends MultiThreadedAction {
@@ -79,15 +80,24 @@ public class MultiThreadedWriter extends MultiThreadedAction {
   /** Enable this if used in conjunction with a concurrent reader. */
   private boolean trackInsertedKeys;
   
+  /** RPC compression */
+  private Compression.Algorithm txCompression;
+  private Compression.Algorithm rxCompression;
+  
   public MultiThreadedWriter(Configuration conf, byte[] tableName,
       byte[] columnFamily) {
-    this (conf, tableName, columnFamily, 0);
+    this (conf, tableName, columnFamily, 0,
+        Compression.Algorithm.NONE, Compression.Algorithm.NONE);
   }
   
   public MultiThreadedWriter(Configuration conf, byte[] tableName,
-      byte[] columnFamily, double profilePercent) {
+      byte[] columnFamily, double profilePercent,
+      Compression.Algorithm txCompression,
+      Compression.Algorithm rxCompression) {
     super(conf, tableName, columnFamily, "W");
     this.profilePercent = profilePercent;
+    this.txCompression = txCompression;
+    this.rxCompression = rxCompression;
   }
 
   /** Use multi-puts vs. separate puts for every column in a row */
@@ -139,6 +149,8 @@ public class MultiThreadedWriter extends MultiThreadedAction {
     public HBaseWriterThread(int writerId) throws IOException {
       setName(getClass().getSimpleName() + "_" + writerId);
       table = new HTable(conf, tableName);
+      table.setTxCompression(txCompression);
+      table.setRxCompression(rxCompression);
     }
 
     public void run() {

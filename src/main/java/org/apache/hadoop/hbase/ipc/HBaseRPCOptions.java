@@ -15,7 +15,8 @@ public class HBaseRPCOptions implements Writable {
   private static final byte VERSION_INITIAL = 1;
 	
   private byte version = VERSION_INITIAL;
-  private Compression.Algorithm compressionAlgo = Compression.Algorithm.NONE;
+  private Compression.Algorithm rxCompression = Compression.Algorithm.NONE;
+  private Compression.Algorithm txCompression = Compression.Algorithm.NONE;
 	private boolean requestProfiling = false;
 	private String tag = null;
 	
@@ -33,12 +34,20 @@ public class HBaseRPCOptions implements Writable {
     return this.version;
   }
 	
-	public void setRPCCompression(Compression.Algorithm compressionAlgo) {
-    this.compressionAlgo = compressionAlgo;
+	public void setRxCompression(Compression.Algorithm compressionAlgo) {
+    this.rxCompression = compressionAlgo;
   }
 
-  public Compression.Algorithm getRPCCompression() {
-    return this.compressionAlgo;
+  public Compression.Algorithm getRxCompression() {
+    return this.rxCompression;
+  }
+  
+  public void setTxCompression(Compression.Algorithm compressionAlgo) {
+    this.txCompression = compressionAlgo;
+  }
+
+  public Compression.Algorithm getTxCompression() {
+    return this.txCompression;
   }
 	
   /**
@@ -75,10 +84,10 @@ public class HBaseRPCOptions implements Writable {
 	  out.writeByte(this.version);
 	  
 	  // 2. write the compression algo used to compress the request being sent
-    out.writeUTF(this.compressionAlgo.getName());
+    out.writeUTF(this.txCompression.getName());
     
     // 3. write the compression algo to use for the response
-    out.writeUTF(this.compressionAlgo.getName());
+    out.writeUTF(this.rxCompression.getName());
     
     // 4. write profiling request flag
 	  out.writeBoolean(this.requestProfiling);
@@ -98,11 +107,10 @@ public class HBaseRPCOptions implements Writable {
       throw new VersionMismatch("HBaseRPCOptions", this.version,
           VERSION_INITIAL);
     }
-    String compressionName;
-    compressionName = in.readUTF ();
-    compressionName = in.readUTF ();          // dummy read
-    this.compressionAlgo = Compression.
-        getCompressionAlgorithmByName(compressionName);
+    this.txCompression = Compression.
+        getCompressionAlgorithmByName(in.readUTF());
+    this.rxCompression = Compression.
+        getCompressionAlgorithmByName(in.readUTF());
     this.requestProfiling = in.readBoolean();
     this.tag = null;
     if (in.readBoolean()) {

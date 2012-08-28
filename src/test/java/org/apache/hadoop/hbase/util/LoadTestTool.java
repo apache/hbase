@@ -96,6 +96,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   private static final String OPT_TABLE_NAME = "tn";
   private static final String OPT_ZK_QUORUM = "zk";
   private static final String OPT_PROFILING = "profiling";
+  private static final String OPT_RPC_COMPRESSION = "rpc_compression";
 
   private static final long DEFAULT_START_KEY = 0;
 
@@ -114,7 +115,11 @@ public class LoadTestTool extends AbstractHBaseTool {
   private boolean encodeInCacheOnly;
   private Compression.Algorithm compressAlgo;
   private StoreFile.BloomType bloomType;
-
+  
+  // RPC options
+  private Compression.Algorithm txCompression = Compression.Algorithm.NONE;
+  private Compression.Algorithm rxCompression = Compression.Algorithm.NONE;
+  
   // Writer options
   private int numWriterThreads = DEFAULT_NUM_THREADS;
   private long minColsPerKey, maxColsPerKey;
@@ -200,6 +205,8 @@ public class LoadTestTool extends AbstractHBaseTool {
         DEFAULT_START_KEY + ".");
     addOptWithArg(OPT_PROFILING, "Percent of reads/writes to request " +
         "profiling data");
+    addOptWithArg(OPT_RPC_COMPRESSION, "RPC compression to use " +
+        "<tx_compression>:<rx_compression>");
   }
 
   @Override
@@ -278,6 +285,17 @@ public class LoadTestTool extends AbstractHBaseTool {
       System.out.println ("Requesting profiling data on " + profilePercent +
           "% of reads/writes");
     }
+    
+    if (cmd.hasOption(OPT_RPC_COMPRESSION)) {
+      String [] comp = this.splitColonSeparated(OPT_RPC_COMPRESSION, 2, 2);
+      this.txCompression = Compression.Algorithm.
+          valueOf(comp[0]);
+      this.rxCompression = Compression.Algorithm.
+          valueOf(comp[1]);
+      
+      System.out.println ("txCompression: " + comp[0]);
+      System.out.println ("rxCompression: " + comp[1]);
+    }
 
     System.out.println("Key range: [" + startKey + ".." + (endKey - 1) + "]");
   }
@@ -312,7 +330,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     if (isWrite) {
       writerThreads = new MultiThreadedWriter(conf, tableName, COLUMN_FAMILY, 
-          profilePercent);
+          profilePercent, this.txCompression, this.rxCompression);
       writerThreads.setMultiPut(isMultiPut);
       writerThreads.setColumnsPerKey(minColsPerKey, maxColsPerKey);
       writerThreads.setDataSize(minColDataSize, maxColDataSize);
@@ -320,7 +338,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     if (isRead) {
       readerThreads = new MultiThreadedReader(conf, tableName, COLUMN_FAMILY,
-          verifyPercent, profilePercent);
+          verifyPercent, profilePercent, this.txCompression, this.rxCompression);
       readerThreads.setMaxErrors(maxReadErrors);
       readerThreads.setKeyWindow(keyWindow);
     }

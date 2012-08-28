@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 
 /** Creates multiple threads that read and verify previously written data */
 public class MultiThreadedReader extends MultiThreadedAction
@@ -71,17 +72,26 @@ public class MultiThreadedReader extends MultiThreadedAction
 
   private int maxErrors = DEFAULT_MAX_ERRORS;
   private int keyWindow = DEFAULT_KEY_WINDOW;
+  
+  /** RPC compression */
+  private Compression.Algorithm txCompression;
+  private Compression.Algorithm rxCompression;
 
   public MultiThreadedReader(Configuration conf, byte[] tableName,
       byte[] columnFamily, double verifyPercent) {
-    this (conf, tableName, columnFamily, verifyPercent, 0);
+    this (conf, tableName, columnFamily, verifyPercent, 0,
+        Compression.Algorithm.NONE, Compression.Algorithm.NONE);
   }
   
   public MultiThreadedReader(Configuration conf, byte[] tableName,
-      byte[] columnFamily, double verifyPercent, double profilePercent) {
+      byte[] columnFamily, double verifyPercent, double profilePercent,
+      Compression.Algorithm txCompression, 
+      Compression.Algorithm rxCompression) {
     super(conf, tableName, columnFamily, "R");
     this.verifyPercent = verifyPercent;
     this.profilePercent = profilePercent;
+    this.txCompression = txCompression;
+    this.rxCompression = rxCompression;
   }
 
   public void linkToWriter(MultiThreadedWriter writer) {
@@ -133,6 +143,8 @@ public class MultiThreadedReader extends MultiThreadedAction
     public HBaseReaderThread(int readerId) throws IOException {
       this.readerId = readerId;
       table = new HTable(conf, tableName);
+      table.setTxCompression(txCompression);
+      table.setRxCompression(rxCompression);
       setName(getClass().getSimpleName() + "_" + readerId);
     }
 

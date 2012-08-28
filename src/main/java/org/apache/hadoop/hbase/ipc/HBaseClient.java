@@ -488,6 +488,7 @@ public class HBaseClient {
       }
       DataOutputStream uncompressedOS = null;
       DataOutputStream outOS = null;
+      Compressor compressor = null;
       try {
         //noinspection SynchronizeOnNonFinalField
         synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
@@ -500,22 +501,19 @@ public class HBaseClient {
           try {
             // 1. write the call id uncompressed
             uncompressedOS.writeInt(call.id);
-         
             // 2. write RPC options uncompressed
             if (call.version >= HBaseServer.VERSION_RPCOPTIONS) {
               call.options.write(outOS);
             }
-
             // preserve backwards compatibility
-            if (call.options.getRPCCompression() != Compression.Algorithm.NONE) {
+            if (call.options.getTxCompression() != Compression.Algorithm.NONE) {
               // 3. setup the compressor
-              Compressor compressor = call.options.getRPCCompression().getCompressor();
+              compressor = call.options.getTxCompression().getCompressor();
               OutputStream compressedOutputStream =
-                call.options.getRPCCompression().createCompressionStream(
+                call.options.getTxCompression().createCompressionStream(
                   uncompressedOS, compressor, 0);
               outOS = new DataOutputStream(compressedOutputStream);
             }
-
             // 4. write the output params with the correct compression type
             call.param.write(outOS);
             outOS.flush();
@@ -549,6 +547,9 @@ public class HBaseClient {
           IOUtils.closeStream(outOS);
         }
         IOUtils.closeStream(uncompressedOS);
+        if (compressor != null) {
+          call.options.getTxCompression().returnCompressor(compressor);
+        }
       }
     }
 
@@ -560,6 +561,8 @@ public class HBaseClient {
         return;
       }
       touch();
+      Compression.Algorithm rpcCompression = null;
+      Decompressor decompressor = null;
       try {
         DataInputStream localIn = in;
 
@@ -571,16 +574,16 @@ public class HBaseClient {
         long totalTime = System.currentTimeMillis() - call.startTime;
         // 2. read the error boolean uncompressed
         boolean isError = localIn.readBoolean();
-
+        
         if (call.getVersion() >= HBaseServer.VERSION_RPCOPTIONS) {
           // 3. read the compression type used for the rest of the response
           String compressionAlgoName = localIn.readUTF();
-          Compression.Algorithm rpcCompression =
+          rpcCompression =  
             Compression.getCompressionAlgorithmByName(compressionAlgoName);
 
           // 4. setup the correct decompressor (if any)
           if (rpcCompression != Compression.Algorithm.NONE) {
-            Decompressor decompressor = rpcCompression.getDecompressor();
+            decompressor = rpcCompression.getDecompressor();
             InputStream is = rpcCompression.createDecompressionStream(
                   in, decompressor, 0);
             localIn = new DataInputStream(is);
@@ -622,6 +625,10 @@ public class HBaseClient {
         markClosed(e);
       } catch (Throwable te) {
         markClosed((IOException)new IOException().initCause(te));
+      } finally {
+        if (decompressor != null) {
+          rpcCompression.returnDecompressor(decompressor);
+        }
       }
     }
 
@@ -934,7 +941,8 @@ public class HBaseClient {
     }
     // RPC compression is only supported from version 4, so make backward compatible
     byte version = HBaseServer.CURRENT_VERSION;
-    if (call.options.getRPCCompression() == Compression.Algorithm.NONE
+    if (call.options.getTxCompression() == Compression.Algorithm.NONE
+        && call.options.getRxCompression() == Compression.Algorithm.NONE
         && !call.options.getRequestProfiling ()
         && call.options.getTag () == null) {
       version = HBaseServer.VERSION_3;

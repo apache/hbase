@@ -169,7 +169,9 @@ public class HTable implements HTableInterface {
     this.options = new HBaseRPCOptions ();
     String compressionAlgo = conf.get(HConstants.HBASE_RPC_COMPRESSION_KEY);
     if (compressionAlgo != null) {
-      this.options.setRPCCompression(
+      this.options.setTxCompression(
+          Compression.getCompressionAlgorithmByName(compressionAlgo));
+      this.options.setRxCompression(
           Compression.getCompressionAlgorithmByName(compressionAlgo));
     }
   }
@@ -1295,5 +1297,29 @@ public class HTable implements HTableInterface {
   @Override
   public String getTag () {
     return this.options.getTag ();
+  }
+  
+  /**
+   * set compression used to send RPC calls to the server
+   * @param alg compression algorithm
+   */
+  public void setTxCompression(Compression.Algorithm alg) {
+    this.options.setTxCompression(alg);
+  }
+  
+  public Compression.Algorithm getTxCompression() {
+    return this.options.getTxCompression();
+  }
+  
+  /**
+   * set compression used to receive RPC responses from the server
+   * @param alg compression algorithm
+   */
+  public void setRxCompression(Compression.Algorithm alg) {
+    this.options.setRxCompression(alg);
+  }
+  
+  public Compression.Algorithm getRxCompression() {
+    return this.options.getRxCompression();
   }
 }
