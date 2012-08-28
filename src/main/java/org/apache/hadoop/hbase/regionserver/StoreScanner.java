@@ -332,105 +332,113 @@ class StoreScanner extends NonLazyKeyValueScanner
     KeyValue.KVComparator comparator =
         store != null ? store.getComparator() : null;
 
-    LOOP: while((kv = this.heap.peek()) != null) {
-      // kv is no longer immutable due to KeyOnlyFilter! use copy for safety
-      KeyValue copyKv = kv.shallowCopy();
-      // Check that the heap gives us KVs in an increasing order.
-      if (prevKV != null && comparator != null
-          && comparator.compare(prevKV, kv) > 0) {
-        throw new IOException("Key " + prevKV + " followed by a " +
-            "smaller key " + kv + " in cf " + store);
-      }
-      prevKV = copyKv;
-      ScanQueryMatcher.MatchCode qcode = matcher.match(copyKv);
+    long cumulativeMetric = 0;
+    try {
+      LOOP: while((kv = this.heap.peek()) != null) {
+        // kv is no longer immutable due to KeyOnlyFilter! use copy for safety
+        KeyValue copyKv = kv.shallowCopy();
+        // Check that the heap gives us KVs in an increasing order.
+        if (prevKV != null && comparator != null
+            && comparator.compare(prevKV, kv) > 0) {
+          throw new IOException("Key " + prevKV + " followed by a " +
+              "smaller key " + kv + " in cf " + store);
+        }
+        prevKV = copyKv;
+        ScanQueryMatcher.MatchCode qcode = matcher.match(copyKv);
 
-      switch(qcode) {
-        case INCLUDE:
-        case INCLUDE_AND_SEEK_NEXT_ROW:
-        case INCLUDE_AND_SEEK_NEXT_COL:
-          this.countPerRow++;
-          if (storeLimit > -1 &&
-              this.countPerRow > (storeLimit + storeOffset)) {
-            // do what SEEK_NEXT_ROW does.
-            if (!matcher.moreRowsMayExistAfter(kv)) {
-              outResult.addAll(results);
-              return false;
+        switch(qcode) {
+          case INCLUDE:
+          case INCLUDE_AND_SEEK_NEXT_ROW:
+          case INCLUDE_AND_SEEK_NEXT_COL:
+            this.countPerRow++;
+            if (storeLimit > -1 &&
+                this.countPerRow > (storeLimit + storeOffset)) {
+              // do what SEEK_NEXT_ROW does.
+              if (!matcher.moreRowsMayExistAfter(kv)) {
+                outResult.addAll(results);
+                return false;
+              }
+              reseek(matcher.getKeyForNextRow(kv));
+              break LOOP;
             }
-            reseek(matcher.getKeyForNextRow(kv));
-            break LOOP;
-          }
 
-          // add to results only if we have skipped #rowOffset kvs
-          // also update metric accordingly
-          if (this.countPerRow > storeOffset) {
-            if (metric != null) {
-              HRegion.incrNumericMetric(this.metricNamePrefix + metric,
-                copyKv.getLength());
+            // add to results only if we have skipped #rowOffset kvs
+            // also update metric accordingly
+            if (this.countPerRow > storeOffset) {
+              if (metric != null) {
+                cumulativeMetric += copyKv.getLength();
+              }
+              results.add(copyKv);
             }
-            results.add(copyKv);
-          }
 
-          if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
-            if (!matcher.moreRowsMayExistAfter(kv)) {
-              outResult.addAll(results);
-              return false;
+            if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
+              if (!matcher.moreRowsMayExistAfter(kv)) {
+                outResult.addAll(results);
+                return false;
+              }
+              reseek(matcher.getKeyForNextRow(kv));
+            } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
+              reseek(matcher.getKeyForNextColumn(kv));
+            } else {
+              this.heap.next();
             }
-            reseek(matcher.getKeyForNextRow(kv));
-          } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
-            reseek(matcher.getKeyForNextColumn(kv));
-          } else {
-            this.heap.next();
-          }
 
-          if (limit > 0 && (results.size() == limit)) {
-            break LOOP;
-          }
-          continue;
+            if (limit > 0 && (results.size() == limit)) {
+              break LOOP;
+            }
+            continue;
 
-        case DONE:
-          // copy jazz
-          outResult.addAll(results);
-          return true;
-
-        case DONE_SCAN:
-          close();
-
-          // copy jazz
-          outResult.addAll(results);
-
-          return false;
-
-        case SEEK_NEXT_ROW:
-          // This is just a relatively simple end of scan fix, to short-cut end
-          // us if there is an endKey in the scan.
-          if (!matcher.moreRowsMayExistAfter(kv)) {
+          case DONE:
+            // copy jazz
             outResult.addAll(results);
+            return true;
+
+          case DONE_SCAN:
+            close();
+
+            // copy jazz
+            outResult.addAll(results);
+
             return false;
-          }
 
-          reseek(matcher.getKeyForNextRow(kv));
-          break;
+          case SEEK_NEXT_ROW:
+            // This is just a relatively simple end of scan fix, to short-cut end
+            // us if there is an endKey in the scan.
+            if (!matcher.moreRowsMayExistAfter(kv)) {
+              outResult.addAll(results);
+              return false;
+            }
 
-        case SEEK_NEXT_COL:
-          reseek(matcher.getKeyForNextColumn(kv));
-          break;
+            reseek(matcher.getKeyForNextRow(kv));
+            break;
 
-        case SKIP:
-          this.heap.next();
-          break;
+          case SEEK_NEXT_COL:
+            reseek(matcher.getKeyForNextColumn(kv));
+            break;
 
-        case SEEK_NEXT_USING_HINT:
-          KeyValue nextKV = matcher.getNextKeyHint(kv);
-          if (nextKV != null) {
-            reseek(nextKV);
-          } else {
-            heap.next();
-          }
-          break;
+          case SKIP:
+            this.heap.next();
+            break;
 
-        default:
-          throw new RuntimeException("UNEXPECTED");
+          case SEEK_NEXT_USING_HINT:
+            KeyValue nextKV = matcher.getNextKeyHint(kv);
+            if (nextKV != null) {
+              reseek(nextKV);
+            } else {
+              heap.next();
+            }
+            break;
+
+          default:
+            throw new RuntimeException("UNEXPECTED");
+        }
       }
+    } finally { 
+      // update the counter 
+      if (cumulativeMetric > 0 && metric != null) { 
+        HRegion.incrNumericMetric(this.metricNamePrefix + metric, 
+            cumulativeMetric);  
+      } 
     }
 
     if (!results.isEmpty()) {
