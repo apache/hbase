@@ -103,6 +103,7 @@ Release 0.92.2 - Unreleased
    HBASE-6552 TestAcidGuarantees system test should flush more aggresively (Gregory Chanan)
    HBASE-6512 Incorrect OfflineMetaRepair log class name (Liang Xie)
    HBASE-6565 Coprocessor exec result Map is not thread safe (Yuan Kang)
+   HBASE-6686 HFile Quarantine fails with missing dirs in hadoop 2.0
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
