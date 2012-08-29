@@ -87,8 +87,8 @@ public class TestThriftServerCmdLine {
             continue;
           }
           for (boolean specifyCompact : new boolean[] {false, true}) {
-            parameters.add(new Object[]{implType, new Boolean(specifyFramed),
-                new Boolean(specifyBindIP), new Boolean(specifyCompact)});
+            parameters.add(new Object[]{implType, specifyFramed,
+                specifyBindIP, specifyCompact});
           }
         }
       }
@@ -167,7 +167,10 @@ public class TestThriftServerCmdLine {
 
     thriftServer = new ThriftServer(TEST_UTIL.getConfiguration());
     startCmdLineThread(args.toArray(new String[0]));
-    Threads.sleepWithoutInterrupt(2000);
+
+    while ( thriftServer.serverRunner == null || thriftServer.serverRunner.tserver == null ){
+      Thread.sleep(1);
+    }
 
     Class<? extends TServer> expectedClass = implType != null ?
         implType.serverClass : TBoundedThreadPoolServer.class;
@@ -189,6 +192,8 @@ public class TestThriftServerCmdLine {
     }
   }
 
+  private static volatile boolean tableCreated = false;
+
   private void talkToThriftServer() throws Exception {
     TSocket sock = new TSocket(InetAddress.getLocalHost().getHostName(),
         port);
@@ -206,10 +211,12 @@ public class TestThriftServerCmdLine {
         prot = new TBinaryProtocol(transport);
       }
       Hbase.Client client = new Hbase.Client(prot);
-      TestThriftServer.doTestTableCreateDrop(client);
-      TestThriftServer.doTestGetRegionInfo(client);
-      TestThriftServer.doTestGetTableRegions(client);
-      TestThriftServer.doTestTableMutations(client);
+      if (!tableCreated){
+        TestThriftServer.createTestTables(client);
+        tableCreated = true;
+      }
+      TestThriftServer.checkTableList(client);
+
     } finally {
       sock.close();
     }
