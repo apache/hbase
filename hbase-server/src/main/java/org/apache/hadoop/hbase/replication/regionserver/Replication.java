@@ -93,8 +93,8 @@ public class Replication implements WALActionsListener,
         throw new IOException("Failed replication handler create " +
            "(replicating=" + this.replicating, ke);
       }
-      this.replicationManager = new ReplicationSourceManager(zkHelper, conf,
-          this.server, fs, this.replicating, logDir, oldLogDir) ;
+      this.replicationManager = new ReplicationSourceManager(zkHelper, conf, this.server, fs,
+          this.replicating, logDir, oldLogDir);
     } else {
       this.replicationManager = null;
       this.zkHelper = null;

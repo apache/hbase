@@ -112,9 +112,9 @@ public class TestReplicationSourceManager {
             + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT) + ":/1"));
     ZKUtil.createWithParents(zkw, "/hbase/replication/peers/1/peer-state");
     ZKUtil.setData(zkw, "/hbase/replication/peers/1/peer-state",
-        Bytes.toBytes(ReplicationZookeeper.PeerState.ENABLED.name()));
+      ReplicationZookeeper.ENABLED_ZNODE_BYTES);
     ZKUtil.createWithParents(zkw, "/hbase/replication/state");
-    ZKUtil.setData(zkw, "/hbase/replication/state", Bytes.toBytes("true"));
+    ZKUtil.setData(zkw, "/hbase/replication/state", ReplicationZookeeper.ENABLED_ZNODE_BYTES);
 
     replication = new Replication(new DummyServer(), fs, logDir, oldLogDir);
     manager = replication.getReplicationManager();
@@ -135,8 +135,6 @@ public class TestReplicationSourceManager {
     htd.addFamily(col);
 
     hri = new HRegionInfo(htd.getName(), r1, r2);
-
-
   }
 
   @AfterClass

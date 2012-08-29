@@ -164,20 +164,6 @@ public class ReplicationAdmin implements Closeable {
   }
 
   /**
-   * Get state of the peer
-   *
-   * @param id peer's identifier
-   * @return current state of the peer
-   */
-  public String getPeerState(String id) throws IOException {
-    try {
-      return this.replicationZk.getPeerState(id).name();
-    } catch (KeeperException e) {
-      throw new IOException("Couldn't get the state of the peer " + id, e);
-    }
-  }
-
-  /**
    * Get the current status of the kill switch, if the cluster is replicating
    * or not.
    * @return true if the cluster is replicated, otherwise false

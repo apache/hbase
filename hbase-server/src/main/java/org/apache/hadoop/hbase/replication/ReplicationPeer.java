@@ -30,9 +30,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeper.PeerState;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -81,20 +80,18 @@ public class ReplicationPeer implements Abortable, Closeable {
    */
   public void startStateTracker(ZooKeeperWatcher zookeeper, String peerStateNode)
       throws KeeperException {
-    if (ZKUtil.checkExists(zookeeper, peerStateNode) == -1) {
-      ZKUtil.createAndWatch(zookeeper, peerStateNode,
-          Bytes.toBytes(PeerState.ENABLED.name())); // enabled by default
-    }
-    this.peerStateTracker = new PeerStateTracker(peerStateNode, zookeeper,
-        this);
+    ReplicationZookeeper.ensurePeerEnabled(zookeeper, peerStateNode);
+    this.peerStateTracker = new PeerStateTracker(peerStateNode, zookeeper, this);
     this.peerStateTracker.start();
-    this.readPeerStateZnode();
+    try {
+      this.readPeerStateZnode();
+    } catch (DeserializationException e) {
+      throw ZKUtil.convert(e);
+    }
   }
 
-  private void readPeerStateZnode() {
-    String currentState = Bytes.toString(peerStateTracker.getData(false));
-    this.peerEnabled.set(PeerState.ENABLED.equals(PeerState
-        .valueOf(currentState)));
+  private void readPeerStateZnode() throws DeserializationException {
+    this.peerEnabled.set(ReplicationZookeeper.isPeerEnabled(this.peerStateTracker.getData(false)));
   }
 
   /**
@@ -199,7 +196,11 @@ public class ReplicationPeer implements Abortable, Closeable {
     public synchronized void nodeDataChanged(String path) {
       if (path.equals(node)) {
         super.nodeDataChanged(path);
-        readPeerStateZnode();
+        try {
+          readPeerStateZnode();
+        } catch (DeserializationException e) {
+          LOG.warn("Failed deserializing the content of " + path, e);
+        }
       }
     }
   }
