@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.util.StringUtils;
 
@@ -239,14 +238,4 @@ public final class ResponseConverter {
   }
 
 // End utilities for Admin
-
-  /**
-   * Creates a response for the last flushed sequence Id request
-   * @return A GetLastFlushedSequenceIdResponse
-   */
-  public static GetLastFlushedSequenceIdResponse buildGetLastFlushedSequenceIdResponse(
-      long seqId) {
-    return GetLastFlushedSequenceIdResponse.newBuilder().setLastFlushedSequenceId(seqId).build();
-  }
-
 }

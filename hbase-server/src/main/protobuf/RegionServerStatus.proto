@@ -67,16 +67,6 @@ message ReportRSFatalErrorRequest {
 message ReportRSFatalErrorResponse {
 }
 
-message GetLastFlushedSequenceIdRequest {
-  /** region name */
-  required bytes regionName = 1;
-}
-
-message GetLastFlushedSequenceIdResponse {
-  /** the last HLog sequence id flushed from MemStore to HFile for the region */
-  required uint64 lastFlushedSequenceId = 1;
-}
-
 service RegionServerStatusService {
   /** Called when a region server first starts. */
   rpc regionServerStartup(RegionServerStartupRequest)
@@ -92,10 +82,4 @@ service RegionServerStatusService {
    */
   rpc reportRSFatalError(ReportRSFatalErrorRequest)
     returns(ReportRSFatalErrorResponse);
-
-  /** Called to get the sequence id of the last MemStore entry flushed to an
-   * HFile for a specified region. Used by the region server to speed up
-   * log splitting. */
-  rpc getLastFlushedSequenceId(GetLastFlushedSequenceIdRequest)
-    returns(GetLastFlushedSequenceIdResponse);
 }

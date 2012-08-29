@@ -55,7 +55,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.ObjectName;
@@ -1263,8 +1262,7 @@ public class  HRegionServer implements ClientProtocol,
       .setReadRequestsCount((int) r.readRequestsCount.get())
       .setWriteRequestsCount((int) r.writeRequestsCount.get())
       .setTotalCompactingKVs(totalCompactingKVs)
-      .setCurrentCompactedKVs(currentCompactedKVs)
-      .setCompleteSequenceId(r.completeSequenceId);
+      .setCurrentCompactedKVs(currentCompactedKVs);
     Set<String> coprocessors = r.getCoprocessorHost().getCoprocessors();
     for (String coprocessor : coprocessors) {
       regionLoad.addCoprocessors(
@@ -1638,7 +1636,7 @@ public class  HRegionServer implements ClientProtocol,
 
     // Create the log splitting worker and start it
     this.splitLogWorker = new SplitLogWorker(this.zooKeeper,
-        this.getConfiguration(), this.getServerName(), this.hbaseMaster);
+        this.getConfiguration(), this.getServerName());
     splitLogWorker.start();
   }
 
@@ -2194,14 +2192,6 @@ public class  HRegionServer implements ClientProtocol,
       return new ProtocolSignature(AdminProtocol.VERSION, null);
     }
     throw new IOException("Unknown protocol: " + protocol);
-  }
-
-  @QosPriority(priority=HIGH_QOS)
-  public void flushRegion(byte[] regionName)
-      throws NotServingRegionException, IOException {
-    checkOpen();
-    HRegion region = getRegion(regionName);
-    region.flushcache();
   }
 
   @Override

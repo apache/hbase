@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -175,10 +174,6 @@ public class TestCatalogJanitor {
       this.asm = Mockito.mock(AssignmentManager.class);
     }
 
-    @Override
-    public void updateLastFlushedSequenceIds(ServerName sn, ServerLoad hsl) {
-      // no-op
-    }
     @Override
     public void checkTableModifiable(byte[] tableName) throws IOException {
       //no-op

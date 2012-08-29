@@ -80,7 +80,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -191,8 +190,6 @@ public class HRegion implements HeapSize { // , Writable{
    * Once set, it is never cleared.
    */
   final AtomicBoolean closing = new AtomicBoolean(false);
-
-  protected long completeSequenceId = -1L;
 
   //////////////////////////////////////////////////////////////////////////////
   // Members
@@ -1482,6 +1479,7 @@ public class HRegion implements HeapSize { // , Writable{
     // again so its value will represent the size of the updates received
     // during the flush
     long sequenceId = -1L;
+    long completeSequenceId = -1L;
     MultiVersionConsistencyControl.WriteEntry w = null;
 
     // We have to take a write lock during snapshot, or else a write could
@@ -1492,7 +1490,6 @@ public class HRegion implements HeapSize { // , Writable{
     long flushsize = this.memstoreSize.get();
     status.setStatus("Preparing to flush by snapshotting stores");
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(stores.size());
-    long completeSeqId = -1L;
     try {
       // Record the mvcc for all transactions in progress.
       w = mvcc.beginMemstoreInsert();
@@ -1500,9 +1497,10 @@ public class HRegion implements HeapSize { // , Writable{
 
       sequenceId = (wal == null)? myseqid:
         wal.startCacheFlush(this.regionInfo.getEncodedNameAsBytes());
-      completeSeqId = this.getCompleteCacheFlushSequenceId(sequenceId);
+      completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
+
       for (Store s : stores.values()) {
-        storeFlushers.add(s.getStoreFlusher(completeSeqId));
+        storeFlushers.add(s.getStoreFlusher(completeSequenceId));
       }
 
       // prepare flush (take a snapshot)
@@ -1580,13 +1578,8 @@ public class HRegion implements HeapSize { // , Writable{
     //     log-sequence-ids can be safely ignored.
     if (wal != null) {
       wal.completeCacheFlush(this.regionInfo.getEncodedNameAsBytes(),
-        regionInfo.getTableName(), completeSeqId,
+        regionInfo.getTableName(), completeSequenceId,
         this.getRegionInfo().isMetaRegion());
-    }
-
-    // Update the last flushed sequence id for region
-    if (this.rsServices != null) {
-      completeSequenceId = completeSeqId;
     }
 
     // C. Finally notify anyone waiting on memstore to clear:
@@ -5017,7 +5010,7 @@ public class HRegion implements HeapSize { // , Writable{
       ClassSize.OBJECT +
       ClassSize.ARRAY +
       36 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
-      (7 * Bytes.SIZEOF_LONG) +
+      (6 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD +

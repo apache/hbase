@@ -132,9 +132,6 @@ message RegionLoad {
 
   /** Region-level coprocessors. */
   repeated Coprocessor coprocessors = 15;
-
-  /** the most recent sequence Id from cache flush */
-  optional uint64 completeSequenceId = 16;
 }
 
 /* Server-level protobufs */
