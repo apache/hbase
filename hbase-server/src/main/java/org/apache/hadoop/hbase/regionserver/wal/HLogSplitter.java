@@ -52,11 +52,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
@@ -72,6 +75,7 @@ import org.apache.hadoop.io.MultipleIOException;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.protobuf.ServiceException;
 
 /**
  * This class is responsible for splitting up a bunch of regionserver commit log
@@ -121,6 +125,8 @@ public class HLogSplitter {
   // Used in distributed log splitting
   private DistributedLogSplittingHelper distributedLogSplittingHelper = null;
 
+  // For checking the latest flushed sequence id
+  protected final RegionServerStatusProtocol master;
 
   /**
    * Create a new HLogSplitter using the given {@link Configuration} and the
@@ -148,8 +154,9 @@ public class HLogSplitter {
           Path.class, // rootDir
           Path.class, // srcDir
           Path.class, // oldLogDir
-          FileSystem.class); // fs
-      return constructor.newInstance(conf, rootDir, srcDir, oldLogDir, fs);
+          FileSystem.class, // fs
+          RegionServerStatusProtocol.class);
+      return constructor.newInstance(conf, rootDir, srcDir, oldLogDir, fs, null);
     } catch (IllegalArgumentException e) {
       throw new RuntimeException(e);
     } catch (InstantiationException e) {
@@ -166,12 +173,13 @@ public class HLogSplitter {
   }
 
   public HLogSplitter(Configuration conf, Path rootDir, Path srcDir,
-      Path oldLogDir, FileSystem fs) {
+      Path oldLogDir, FileSystem fs, RegionServerStatusProtocol master) {
     this.conf = conf;
     this.rootDir = rootDir;
     this.srcDir = srcDir;
     this.oldLogDir = oldLogDir;
     this.fs = fs;
+    this.master = master;
 
     entryBuffers = new EntryBuffers(
         conf.getInt("hbase.regionserver.hlog.splitlog.buffersize",
@@ -360,9 +368,10 @@ public class HLogSplitter {
    * @throws IOException
    */
   static public boolean splitLogFile(Path rootDir, FileStatus logfile,
-      FileSystem fs, Configuration conf, CancelableProgressable reporter)
+      FileSystem fs, Configuration conf, CancelableProgressable reporter,
+      RegionServerStatusProtocol master)
       throws IOException {
-    HLogSplitter s = new HLogSplitter(conf, rootDir, null, null /* oldLogDir */, fs);
+    HLogSplitter s = new HLogSplitter(conf, rootDir, null, null /* oldLogDir */, fs, master);
     return s.splitLogFile(logfile, reporter);
   }
 
@@ -403,17 +412,43 @@ public class HLogSplitter {
     outputSink.startWriterThreads();
     // Report progress every so many edits and/or files opened (opening a file
     // takes a bit of time).
-    int editsCount = 0;
+    Map<byte[], Long> lastFlushedSequenceIds =
+      new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
     Entry entry;
+    int editsCount = 0;
+    int editsSkipped = 0;
     try {
       while ((entry = getNextLogLine(in,logPath, skipErrors)) != null) {
+        byte[] region = entry.getKey().getEncodedRegionName();
+        Long lastFlushedSequenceId = -1l;
+        if (master != null) {
+          lastFlushedSequenceId = lastFlushedSequenceIds.get(region);
+          if (lastFlushedSequenceId == null) {
+            try {
+              GetLastFlushedSequenceIdRequest req =
+                RequestConverter.buildGetLastFlushedSequenceIdRequest(region);
+              lastFlushedSequenceId = master.getLastFlushedSequenceId(null, req)
+              .getLastFlushedSequenceId();
+              lastFlushedSequenceIds.put(region, lastFlushedSequenceId);
+            } catch (ServiceException e) {
+              lastFlushedSequenceId = -1l;
+              LOG.warn("Unable to connect to the master to check " +
+                  "the last flushed sequence id", e);
+            }
+          }
+        }
+        if (lastFlushedSequenceId >= entry.getKey().getLogSeqNum()) {
+          editsSkipped++;
+          continue;
+        }
         entryBuffers.appendEntry(entry);
         editsCount++;
         // If sufficient edits have passed, check if we should report progress.
         if (editsCount % interval == 0
             || (outputSink.logWriters.size() - numOpenedFilesLastCheck) > numOpenedFilesBeforeReporting) {
           numOpenedFilesLastCheck = outputSink.logWriters.size();
-          String countsStr = "edits=" + editsCount;
+          String countsStr = (editsCount - editsSkipped) +
+            " edits, skipped " + editsSkipped + " edits.";
           status.setStatus("Split " + countsStr);
           if (!reportProgressIfIsDistributedLogSplitting()) {
             return false;

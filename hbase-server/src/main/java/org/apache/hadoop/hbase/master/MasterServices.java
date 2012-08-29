@@ -24,7 +24,11 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerLoad;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 
 /**
@@ -78,4 +82,11 @@ public interface MasterServices extends Server {
    * @return true if master enables ServerShutdownHandler;
    */
   public boolean isServerShutdownHandlerEnabled();
+
+  /**
+   * Updates last flushed sequence Ids for the regions on server sn
+   * @param sn
+   * @param hsl
+   */
+  void updateLastFlushedSequenceIds(ServerName sn, ServerLoad hsl);
 }

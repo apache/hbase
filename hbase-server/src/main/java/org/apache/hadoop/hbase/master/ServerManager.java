@@ -38,14 +38,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
-import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -56,6 +51,11 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 
 import com.google.protobuf.ServiceException;
@@ -179,6 +179,7 @@ public class ServerManager {
     } else {
       this.onlineServers.put(sn, sl);
     }
+    this.services.updateLastFlushedSequenceIds(sn, sl);
   }
 
   /**

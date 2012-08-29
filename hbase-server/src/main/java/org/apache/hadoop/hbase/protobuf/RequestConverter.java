@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceReque
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -1137,5 +1138,16 @@ public final class RequestConverter {
    */
   public static IsCatalogJanitorEnabledRequest buildIsCatalogJanitorEnabledRequest() {
     return IsCatalogJanitorEnabledRequest.newBuilder().build();
+  }
+
+  /**
+   * Creates a request for querying the master the last flushed sequence Id for a region
+   * @param regionName
+   * @return A {@link GetLastFlushedSequenceIdRequest}
+   */
+  public static GetLastFlushedSequenceIdRequest buildGetLastFlushedSequenceIdRequest(
+      byte[] regionName) {
+    return GetLastFlushedSequenceIdRequest.newBuilder().setRegionName(
+        ByteString.copyFrom(regionName)).build();
   }
 }
