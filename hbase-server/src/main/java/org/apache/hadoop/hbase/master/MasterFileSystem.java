@@ -461,6 +461,19 @@ public class MasterFileSystem {
     //      @see HRegion.checkRegioninfoOnFilesystem()
   }
 
+  public void deleteFamilyFromFS(HRegionInfo region, byte[] familyName)
+      throws IOException {
+    Path delDir = new Path(rootdir,
+        new Path(region.getTableNameAsString(), new Path(
+            region.getEncodedName(), new Path(Bytes.toString(familyName)))));
+    if (fs.delete(delDir, true) == false) {
+      throw new IOException("Could not delete family "
+          + Bytes.toString(familyName) + " from FileSystem for region "
+          + region.getRegionNameAsString() + "(" + region.getEncodedName()
+          + ")");
+    }
+  }
+
   public void stop() {
     if (splitLogManager != null) {
       this.splitLogManager.stop();
