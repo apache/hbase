@@ -4591,7 +4591,13 @@ public class HRegion implements HeapSize { // , Writable{
             if (idx < results.size() &&
                 results.get(idx).matchingQualifier(column.getKey())) {
               KeyValue kv = results.get(idx);
-              amount += Bytes.toLong(kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
+              if(kv.getValueLength() == Bytes.SIZEOF_LONG) {
+                amount += Bytes.toLong(kv.getBuffer(), kv.getValueOffset(), Bytes.SIZEOF_LONG);
+              } else {
+                // throw DoNotRetryIOException instead of IllegalArgumentException
+                throw new DoNotRetryIOException(
+                    "Attempted to increment field that isn't 64 bits wide");
+              }
               idx++;
             }
 
@@ -4640,11 +4646,10 @@ public class HRegion implements HeapSize { // , Writable{
       }
     } finally {
       closeRegionOperation();
+      long after = EnvironmentEdgeManager.currentTimeMillis();
+      this.opMetrics.updateIncrementMetrics(increment.getFamilyMap().keySet(), after - before);
     }
     
-    long after = EnvironmentEdgeManager.currentTimeMillis();
-    this.opMetrics.updateIncrementMetrics(increment.getFamilyMap().keySet(), after - before);
-
     if (flush) {
       // Request a cache flush.  Do it outside update lock.
       requestFlush();
@@ -4692,7 +4697,7 @@ public class HRegion implements HeapSize { // , Writable{
 
         if (!results.isEmpty()) {
           KeyValue kv = results.get(0);
-          if(kv.getValueLength() == 8){
+          if(kv.getValueLength() == Bytes.SIZEOF_LONG){
             byte [] buffer = kv.getBuffer();
             int valueOffset = kv.getValueOffset();
             result += Bytes.toLong(buffer, valueOffset, Bytes.SIZEOF_LONG);
@@ -4748,7 +4753,8 @@ public class HRegion implements HeapSize { // , Writable{
       requestFlush();
     }
     if(wrongLength){
-    	throw new IOException("Attempted to increment field that isn't 64 bits wide");
+      throw new DoNotRetryIOException(
+          "Attempted to increment field that isn't 64 bits wide");
     }
     return result;
   }
