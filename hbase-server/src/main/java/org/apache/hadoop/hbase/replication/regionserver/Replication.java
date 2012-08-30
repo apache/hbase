@@ -128,6 +128,7 @@ public class Replication implements WALActionsListener,
   public void join() {
     if (this.replication) {
       this.replicationManager.join();
+      this.replicationSink.stopReplicationSinkServices();
     }
   }
 
