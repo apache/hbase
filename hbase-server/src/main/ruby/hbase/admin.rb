@@ -162,8 +162,6 @@ module Hbase
       raise ArgumentError, "Table #{table_name} is enabled. Disable it first.'" if enabled?(table_name)
 
       @admin.deleteTable(table_name)
-      flush(org.apache.hadoop.hbase.HConstants::META_TABLE_NAME)
-      major_compact(org.apache.hadoop.hbase.HConstants::META_TABLE_NAME)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -171,8 +169,6 @@ module Hbase
     def drop_all(regex)
       regex = regex.to_s
       failed  = @admin.deleteTables(regex).map { |t| t.getNameAsString }
-      flush(org.apache.hadoop.hbase.HConstants::META_TABLE_NAME)
-      major_compact(org.apache.hadoop.hbase.HConstants::META_TABLE_NAME)
       return failed
     end
 
