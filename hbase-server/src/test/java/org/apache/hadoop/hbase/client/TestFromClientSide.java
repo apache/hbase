@@ -4230,7 +4230,7 @@ public class TestFromClientSide {
  
   @Test
   public void testIncrementWithDeletes() throws Exception {
-    LOG.info("Starting testIncrement");
+    LOG.info("Starting testIncrementWithDeletes");
     final byte [] TABLENAME = Bytes.toBytes("testIncrementWithDeletes");
     HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
     final byte[] COLUMN = Bytes.toBytes("column");
@@ -4247,6 +4247,32 @@ public class TestFromClientSide {
     Result r = ht.get(get);
     assertEquals(1, r.size());
     assertEquals(5, Bytes.toLong(r.getValue(FAMILY, COLUMN)));
+  }
+
+  @Test
+  public void testIncrementingInvalidValue() throws Exception {
+    LOG.info("Starting testIncrementingInvalidValue");
+    final byte [] TABLENAME = Bytes.toBytes("testIncrementingInvalidValue");
+    HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    final byte[] COLUMN = Bytes.toBytes("column");
+    Put p = new Put(ROW);
+    // write an integer here (not a Long)
+    p.add(FAMILY, COLUMN, Bytes.toBytes(5));
+    ht.put(p);
+    try {
+      ht.incrementColumnValue(ROW, FAMILY, COLUMN, 5);
+      fail("Should have thrown DoNotRetryIOException");
+    } catch (DoNotRetryIOException iox) {
+      // success
+    }
+    Increment inc = new Increment(ROW);
+    inc.addColumn(FAMILY, COLUMN, 5);
+    try {
+      ht.increment(inc);
+      fail("Should have thrown DoNotRetryIOException");
+    } catch (DoNotRetryIOException iox) {
+      // success
+    }
   }
 
   @Test
