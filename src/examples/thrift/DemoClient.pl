@@ -141,7 +141,6 @@ $client->mutateRow ( $demo_table, $key, $mutations );
 
 # this row name is valid utf8
 $key = "foo";
-# $mutations = [ Hbase::Mutation->new ( column => "entry:$key", value => $valid ) ];
 # This is another way to use the Mutation class
 my $mutation = Hbase::Mutation->new ();
 $mutation->{column} = "entry:$key";
@@ -151,7 +150,7 @@ $client->mutateRow ( $demo_table, $key, $mutations );
 
 # non-utf8 is not allowed in row names
 eval {
-	$mutations = [ Hbase::Mutation->new ( column => "entry:$key", value => $invalid ) ];
+	$mutations = [ Hbase::Mutation->new ( { column => "entry:$key", value => $invalid } ) ];
 	# this can throw a TApplicationException (HASH) error
 	$client->mutateRow ($demo_table, $key, $mutations);
 	die ("shouldn't get here!");
