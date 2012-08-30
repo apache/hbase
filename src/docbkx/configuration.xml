@@ -1658,7 +1658,7 @@ of all regions.
 
       <section xml:id="other_configuration"><title>Other Configurations</title>
          <section xml:id="balancer_config"><title>Balancer</title>
-           <para>The balancer is periodic operation run on the master to redistribute regions on the cluster.  It is configured via
+           <para>The balancer is a periodic operation which is run on the master to redistribute regions on the cluster.  It is configured via
            <varname>hbase.balancer.period</varname> and defaults to 300000 (5 minutes). </para>
            <para>See <xref linkend="master.processes.loadbalancer" /> for more information on the LoadBalancer.
            </para>

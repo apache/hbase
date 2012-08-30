@@ -1722,8 +1722,8 @@ rs.close();
          <para>The Master runs several background threads:
          </para>
          <section xml:id="master.processes.loadbalancer"><title>LoadBalancer</title>
-           <para>Periodically, and when there are not any regions in transition,
-             a load balancer will run and move regions around to balance cluster load.
+           <para>Periodically, and when there are no regions in transition,
+             a load balancer will run and move regions around to balance the cluster's load.
              See <xref linkend="balancer_config" /> for configuring this property.</para>
              <para>See <xref linkend="regions.arch.assignment"/> for more information on region assignment.
              </para>
