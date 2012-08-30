@@ -439,7 +439,6 @@ class ProtobufRpcEngine implements RpcEngine {
         return method;
       }
       Method[] methods = protocol.getMethods();
-      LOG.warn("Methods length : " + methods.length);
       for (Method m : methods) {
         if (m.getName().equals(methodName)) {
           m.setAccessible(true);
@@ -482,7 +481,7 @@ class ProtobufRpcEngine implements RpcEngine {
      * @param methodName The name of the method invoked
      * @param call The string representation of the call
      * @param tag  The tag that will be used to indicate this event in the log.
-     * @param client          The address of the client who made this call.
+     * @param clientAddress   The address of the client who made this call.
      * @param startTime       The time that the call was initiated, in ms.
      * @param processingTime  The duration that the call took to run, in ms.
      * @param qTime           The duration that the call spent on the queue
