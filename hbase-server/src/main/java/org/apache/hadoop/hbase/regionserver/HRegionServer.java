@@ -766,7 +766,7 @@ public class  HRegionServer implements ClientProtocol,
 
     // Create the catalog tracker and start it;
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.conf,
-      this, this.conf.getInt("hbase.regionserver.catalog.timeout", Integer.MAX_VALUE));
+      this, this.conf.getInt("hbase.regionserver.catalog.timeout", 1800000));
     catalogTracker.start();
   }
 
