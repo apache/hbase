@@ -831,7 +831,7 @@ System.out.println("md5 digest as string length: " + sbDigest.length);    // ret
   Secondary Indexes and Alternate Query Paths
   </title>
   <para>This section could also be titled "what if my table rowkey looks like <emphasis>this</emphasis> but I also want to query my table like <emphasis>that</emphasis>."
-  A common example on the dist-list is where a row-key is of the format "user-timestamp" but there are are reporting requirements on activity across users for certain 
+  A common example on the dist-list is where a row-key is of the format "user-timestamp" but there are reporting requirements on activity across users for certain 
   time ranges.  Thus, selecting by user is easy because it is in the lead position of the key, but time is not.
   </para>
   <para>There is no single answer on the best way to handle this because it depends on...
@@ -1330,7 +1330,7 @@ if (!b) {
 
 	<section xml:id="arch.catalog">
 	 <title>Catalog Tables</title>
-	  <para>The catalog tables -ROOT- and .META. exist as HBase tables.  They are are filtered out 
+	  <para>The catalog tables -ROOT- and .META. exist as HBase tables.  They are filtered out 
 	  of the HBase shell's <code>list</code> command, but they are in fact tables just like any other.
      </para>
 	  <section xml:id="arch.catalog.root">
