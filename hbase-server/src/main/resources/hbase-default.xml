@@ -895,14 +895,4 @@
     default log cleaners in the list as they will be overwritten in hbase-site.xml.
     </description>
   </property>
-  <property>
-    <name>hbase.regionserver.catalog.timeout</name>
-    <value>1800000</value>
-    <description>Timeout value for the Catalog Janitor from the regionserver to META.</description>
-  </property>
-  <property>
-    <name>hbase.master.catalog.timeout</name>
-    <value>1800000</value>
-    <description>Timeout value for the Catalog Janitor from the master to META.</description>
-  </property>
 </configuration>
