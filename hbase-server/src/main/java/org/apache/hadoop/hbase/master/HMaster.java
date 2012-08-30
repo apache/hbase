@@ -507,7 +507,7 @@ Server {
   private void initializeZKBasedSystemTrackers() throws IOException,
       InterruptedException, KeeperException {
     this.catalogTracker = createCatalogTracker(this.zooKeeper, this.conf,
-        this, conf.getInt("hbase.master.catalog.timeout", Integer.MAX_VALUE));
+        this, conf.getInt("hbase.master.catalog.timeout", 600000));
     this.catalogTracker.start();
 
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
