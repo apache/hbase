@@ -1,6 +1,4 @@
 /**
- * Copyright 2010 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,8 +25,12 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * This is a hammer test that verifies MultiVersionConsistencyControl in a
+ * multiple writer single reader scenario.
+ */
 @Category(SmallTests.class)
-public class TestReadWriteConsistencyControl extends TestCase {
+public class TestMultiVersionConsistencyControl extends TestCase {
   static class Writer implements Runnable {
     final AtomicBoolean finished;
     final MultiVersionConsistencyControl mvcc;
@@ -39,20 +41,20 @@ public class TestReadWriteConsistencyControl extends TestCase {
       this.mvcc = mvcc;
       this.status = status;
     }
+
     private Random rnd = new Random();
     public boolean failed = false;
 
     public void run() {
       while (!finished.get()) {
         MultiVersionConsistencyControl.WriteEntry e = mvcc.beginMemstoreInsert();
-//        System.out.println("Begin write: " + e.getWriteNumber());
+        // System.out.println("Begin write: " + e.getWriteNumber());
         // 10 usec - 500usec (including 0)
         int sleepTime = rnd.nextInt(500);
         // 500 * 1000 = 500,000ns = 500 usec
         // 1 * 100 = 100ns = 1usec
         try {
-          if (sleepTime > 0)
-            Thread.sleep(0, sleepTime * 1000);
+          if (sleepTime > 0) Thread.sleep(0, sleepTime * 1000);
         } catch (InterruptedException e1) {
         }
         try {
@@ -84,8 +86,7 @@ public class TestReadWriteConsistencyControl extends TestCase {
           long newPrev = mvcc.memstoreReadPoint();
           if (newPrev < prev) {
             // serious problem.
-            System.out.println("Reader got out of order, prev: " +
-            prev + " next was: " + newPrev);
+            System.out.println("Reader got out of order, prev: " + prev + " next was: " + newPrev);
             readerFailed.set(true);
             // might as well give up
             failedAt.set(newPrev);
@@ -97,11 +98,11 @@ public class TestReadWriteConsistencyControl extends TestCase {
 
     // writer thread parallelism.
     int n = 20;
-    Thread [] writers = new Thread[n];
-    AtomicBoolean [] statuses = new AtomicBoolean[n];
+    Thread[] writers = new Thread[n];
+    AtomicBoolean[] statuses = new AtomicBoolean[n];
     Thread readThread = new Thread(reader);
 
-    for (int i = 0 ; i < n ; ++i ) {
+    for (int i = 0; i < n; ++i) {
       statuses[i] = new AtomicBoolean(true);
       writers[i] = new Thread(new Writer(finished, mvcc, statuses[i]));
       writers[i].start();
@@ -126,11 +127,8 @@ public class TestReadWriteConsistencyControl extends TestCase {
       assertTrue(statuses[i].get());
     }
 
-
   }
 
   @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
+  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu = new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
-
