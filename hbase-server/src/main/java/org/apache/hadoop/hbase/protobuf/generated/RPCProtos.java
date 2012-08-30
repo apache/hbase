@@ -1105,6 +1105,11 @@ public final class RPCProtos {
     // required uint32 callId = 1;
     boolean hasCallId();
     int getCallId();
+    
+    // optional .RPCTInfo tinfo = 2;
+    boolean hasTinfo();
+    org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo getTinfo();
+    org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder getTinfoOrBuilder();
   }
   public static final class RpcRequestHeader extends
       com.google.protobuf.GeneratedMessage
@@ -1145,8 +1150,22 @@ public final class RPCProtos {
       return callId_;
     }
     
+    // optional .RPCTInfo tinfo = 2;
+    public static final int TINFO_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo tinfo_;
+    public boolean hasTinfo() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo getTinfo() {
+      return tinfo_;
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder getTinfoOrBuilder() {
+      return tinfo_;
+    }
+    
     private void initFields() {
       callId_ = 0;
+      tinfo_ = org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1167,6 +1186,9 @@ public final class RPCProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeUInt32(1, callId_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeMessage(2, tinfo_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -1179,6 +1201,10 @@ public final class RPCProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(1, callId_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, tinfo_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1208,6 +1234,11 @@ public final class RPCProtos {
         result = result && (getCallId()
             == other.getCallId());
       }
+      result = result && (hasTinfo() == other.hasTinfo());
+      if (hasTinfo()) {
+        result = result && getTinfo()
+            .equals(other.getTinfo());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -1220,6 +1251,10 @@ public final class RPCProtos {
       if (hasCallId()) {
         hash = (37 * hash) + CALLID_FIELD_NUMBER;
         hash = (53 * hash) + getCallId();
+      }
+      if (hasTinfo()) {
+        hash = (37 * hash) + TINFO_FIELD_NUMBER;
+        hash = (53 * hash) + getTinfo().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -1329,6 +1364,7 @@ public final class RPCProtos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getTinfoFieldBuilder();
         }
       }
       private static Builder create() {
@@ -1339,6 +1375,12 @@ public final class RPCProtos {
         super.clear();
         callId_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
+        if (tinfoBuilder_ == null) {
+          tinfo_ = org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.getDefaultInstance();
+        } else {
+          tinfoBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
       
@@ -1381,6 +1423,14 @@ public final class RPCProtos {
           to_bitField0_ |= 0x00000001;
         }
         result.callId_ = callId_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        if (tinfoBuilder_ == null) {
+          result.tinfo_ = tinfo_;
+        } else {
+          result.tinfo_ = tinfoBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1399,6 +1449,9 @@ public final class RPCProtos {
         if (other == org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader.getDefaultInstance()) return this;
         if (other.hasCallId()) {
           setCallId(other.getCallId());
+        }
+        if (other.hasTinfo()) {
+          mergeTinfo(other.getTinfo());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1440,6 +1493,15 @@ public final class RPCProtos {
               callId_ = input.readUInt32();
               break;
             }
+            case 18: {
+              org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.newBuilder();
+              if (hasTinfo()) {
+                subBuilder.mergeFrom(getTinfo());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setTinfo(subBuilder.buildPartial());
+              break;
+            }
           }
         }
       }
@@ -1465,6 +1527,96 @@ public final class RPCProtos {
         callId_ = 0;
         onChanged();
         return this;
+      }
+      
+      // optional .RPCTInfo tinfo = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo tinfo_ = org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder> tinfoBuilder_;
+      public boolean hasTinfo() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo getTinfo() {
+        if (tinfoBuilder_ == null) {
+          return tinfo_;
+        } else {
+          return tinfoBuilder_.getMessage();
+        }
+      }
+      public Builder setTinfo(org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo value) {
+        if (tinfoBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          tinfo_ = value;
+          onChanged();
+        } else {
+          tinfoBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      public Builder setTinfo(
+          org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.Builder builderForValue) {
+        if (tinfoBuilder_ == null) {
+          tinfo_ = builderForValue.build();
+          onChanged();
+        } else {
+          tinfoBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      public Builder mergeTinfo(org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo value) {
+        if (tinfoBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
+              tinfo_ != org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.getDefaultInstance()) {
+            tinfo_ =
+              org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.newBuilder(tinfo_).mergeFrom(value).buildPartial();
+          } else {
+            tinfo_ = value;
+          }
+          onChanged();
+        } else {
+          tinfoBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      public Builder clearTinfo() {
+        if (tinfoBuilder_ == null) {
+          tinfo_ = org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.getDefaultInstance();
+          onChanged();
+        } else {
+          tinfoBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.Builder getTinfoBuilder() {
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return getTinfoFieldBuilder().getBuilder();
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder getTinfoOrBuilder() {
+        if (tinfoBuilder_ != null) {
+          return tinfoBuilder_.getMessageOrBuilder();
+        } else {
+          return tinfo_;
+        }
+      }
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder> 
+          getTinfoFieldBuilder() {
+        if (tinfoBuilder_ == null) {
+          tinfoBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder>(
+                  tinfo_,
+                  getParentForChildren(),
+                  isClean());
+          tinfo_ = null;
+        }
+        return tinfoBuilder_;
       }
       
       // @@protoc_insertion_point(builder_scope:RpcRequestHeader)
@@ -3603,22 +3755,23 @@ public final class RPCProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\tRPC.proto\":\n\017UserInformation\022\025\n\reffect" +
-      "iveUser\030\001 \002(\t\022\020\n\010realUser\030\002 \001(\t\"w\n\020Conne" +
-      "ctionHeader\022\"\n\010userInfo\030\001 \001(\0132\020.UserInfo" +
-      "rmation\022?\n\010protocol\030\002 \001(\t:-org.apache.ha" +
-      "doop.hbase.client.ClientProtocol\"\"\n\020RpcR" +
-      "equestHeader\022\016\n\006callId\030\001 \002(\r\"n\n\016RpcReque" +
-      "stBody\022\022\n\nmethodName\030\001 \002(\t\022\035\n\025clientProt" +
-      "ocolVersion\030\002 \001(\004\022\017\n\007request\030\003 \001(\014\022\030\n\020re" +
-      "questClassName\030\004 \001(\t\"{\n\021RpcResponseHeade" +
-      "r\022\016\n\006callId\030\001 \002(\r\022)\n\006status\030\002 \002(\0162\031.RpcR",
-      "esponseHeader.Status\"+\n\006Status\022\013\n\007SUCCES" +
-      "S\020\000\022\t\n\005ERROR\020\001\022\t\n\005FATAL\020\002\"#\n\017RpcResponse" +
-      "Body\022\020\n\010response\030\001 \001(\014\"9\n\014RpcException\022\025" +
-      "\n\rexceptionName\030\001 \002(\t\022\022\n\nstackTrace\030\002 \001(" +
-      "\tB<\n*org.apache.hadoop.hbase.protobuf.ge" +
-      "neratedB\tRPCProtosH\001\240\001\001"
+      "\n\tRPC.proto\032\rTracing.proto\":\n\017UserInform" +
+      "ation\022\025\n\reffectiveUser\030\001 \002(\t\022\020\n\010realUser" +
+      "\030\002 \001(\t\"w\n\020ConnectionHeader\022\"\n\010userInfo\030\001" +
+      " \001(\0132\020.UserInformation\022?\n\010protocol\030\002 \001(\t" +
+      ":-org.apache.hadoop.hbase.client.ClientP" +
+      "rotocol\"<\n\020RpcRequestHeader\022\016\n\006callId\030\001 " +
+      "\002(\r\022\030\n\005tinfo\030\002 \001(\0132\t.RPCTInfo\"n\n\016RpcRequ" +
+      "estBody\022\022\n\nmethodName\030\001 \002(\t\022\035\n\025clientPro" +
+      "tocolVersion\030\002 \001(\004\022\017\n\007request\030\003 \001(\014\022\030\n\020r" +
+      "equestClassName\030\004 \001(\t\"{\n\021RpcResponseHead",
+      "er\022\016\n\006callId\030\001 \002(\r\022)\n\006status\030\002 \002(\0162\031.Rpc" +
+      "ResponseHeader.Status\"+\n\006Status\022\013\n\007SUCCE" +
+      "SS\020\000\022\t\n\005ERROR\020\001\022\t\n\005FATAL\020\002\"#\n\017RpcRespons" +
+      "eBody\022\020\n\010response\030\001 \001(\014\"9\n\014RpcException\022" +
+      "\025\n\rexceptionName\030\001 \002(\t\022\022\n\nstackTrace\030\002 \001" +
+      "(\tB<\n*org.apache.hadoop.hbase.protobuf.g" +
+      "eneratedB\tRPCProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -3646,7 +3799,7 @@ public final class RPCProtos {
           internal_static_RpcRequestHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RpcRequestHeader_descriptor,
-              new java.lang.String[] { "CallId", },
+              new java.lang.String[] { "CallId", "Tinfo", },
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader.class,
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader.Builder.class);
           internal_static_RpcRequestBody_descriptor =
@@ -3687,6 +3840,7 @@ public final class RPCProtos {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
+          org.apache.hadoop.hbase.protobuf.generated.Tracing.getDescriptor(),
         }, assigner);
   }
   
