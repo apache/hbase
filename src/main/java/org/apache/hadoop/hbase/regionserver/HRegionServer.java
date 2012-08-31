@@ -415,7 +415,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         conf.getInt("hbase.regionserver.handler.count", 10),
         conf.getInt("hbase.regionserver.metahandler.count", 10),
         conf.getBoolean("hbase.rpc.verbose", false),
-        conf, QOS_THRESHOLD);
+        conf, HConstants.QOS_THRESHOLD);
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
 
@@ -447,9 +447,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
-  private static final int NORMAL_QOS = 0;
-  private static final int QOS_THRESHOLD = 10;  // the line between low and high qos
-  private static final int HIGH_QOS = 100;
 
   @Retention(RetentionPolicy.RUNTIME)
   private @interface QosPriority {
@@ -487,7 +484,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     @Override
     public Integer apply(Writable from) {
-      if (!(from instanceof Invocation)) return NORMAL_QOS;
+      if (!(from instanceof Invocation)) return HConstants.NORMAL_QOS;
 
       Invocation inv = (Invocation) from;
       String methodName = inv.getMethodName();
@@ -505,13 +502,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           scannerId = (Long) inv.getParameters()[0];
         } catch (ClassCastException ignored) {
           // LOG.debug("Low priority: " + from);
-          return NORMAL_QOS; // doh.
+          return HConstants.NORMAL_QOS;
         }
         String scannerIdString = Long.toString(scannerId);
         RegionScanner scanner = scanners.get(scannerIdString);
         if (scanner != null && scanner.getRegionInfo().isMetaRegion()) {
           // LOG.debug("High priority scanner request: " + scannerId);
-          return HIGH_QOS;
+          return HConstants.HIGH_QOS;
         }
       } else if (inv.getParameterClasses().length == 0) {
        // Just let it through.  This is getOnlineRegions, etc.
@@ -521,7 +518,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           // LOG.debug("High priority with method: " + methodName +
           // " and region: "
           // + Bytes.toString((byte[]) inv.getParameters()[0]));
-          return HIGH_QOS;
+          return HConstants.HIGH_QOS;
         }
       } else if (inv.getParameterClasses()[0] == MultiAction.class) {
         MultiAction<?> ma = (MultiAction<?>) inv.getParameters()[0];
@@ -537,12 +534,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           if (isMetaRegion(region)) {
             // LOG.debug("High priority multi with region: " +
             // Bytes.toString(region));
-            return HIGH_QOS; // short circuit for the win.
+            return HConstants.HIGH_QOS; // short circuit for the win.
           }
         }
       }
       // LOG.debug("Low priority: " + from.toString());
-      return NORMAL_QOS;
+      return HConstants.NORMAL_QOS;
     }
   }
 
@@ -1924,7 +1921,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public HRegionInfo getRegionInfo(final byte[] regionName)
   throws NotServingRegionException, IOException {
     checkOpen();
@@ -2604,7 +2601,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public void unlockRow(byte[] regionName, long lockId) throws IOException {
     checkOpen();
     NullPointerException npe = null;
@@ -2686,14 +2683,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // Region open/close direct RPCs
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public RegionOpeningState openRegion(HRegionInfo region)
   throws IOException {
     return openRegion(region, -1);
   }
 
   @Override
-  @QosPriority(priority = HIGH_QOS)
+  @QosPriority(priority = HConstants.HIGH_QOS)
   public RegionOpeningState openRegion(HRegionInfo region, int versionOfOfflineNode)
       throws IOException {
     return openRegion(region, versionOfOfflineNode, null);
@@ -2761,7 +2758,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public void openRegions(List<HRegionInfo> regions)
   throws IOException {
     checkOpen();
@@ -2771,14 +2768,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public boolean closeRegion(HRegionInfo region)
   throws IOException {
     return closeRegion(region, true, -1);
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public boolean closeRegion(final HRegionInfo region,
     final int versionOfClosingNode)
   throws IOException {
@@ -2786,13 +2783,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public boolean closeRegion(HRegionInfo region, final boolean zk)
   throws IOException {
     return closeRegion(region, zk, -1);
   }
 
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   protected boolean closeRegion(HRegionInfo region, final boolean zk,
     final int versionOfClosingNode)
   throws IOException {
@@ -2811,7 +2808,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public boolean closeRegion(byte[] encodedRegionName, boolean zk)
     throws IOException {
     return closeRegion(encodedRegionName, false, zk);
@@ -2891,7 +2888,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // Manual remote region administration RPCs
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public void flushRegion(HRegionInfo regionInfo)
       throws NotServingRegionException, IOException {
     checkOpen();
@@ -2901,7 +2898,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public void splitRegion(HRegionInfo regionInfo)
       throws NotServingRegionException, IOException {
     splitRegion(regionInfo, null);
@@ -2918,7 +2915,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public void compactRegion(HRegionInfo regionInfo, boolean major)
       throws NotServingRegionException, IOException {
     checkOpen();
@@ -2964,7 +2961,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public List<HRegionInfo> getOnlineRegions() throws IOException {
     checkOpen();
     List<HRegionInfo> list = new ArrayList<HRegionInfo>(onlineRegions.size());
@@ -3161,7 +3158,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public ProtocolSignature getProtocolSignature(
       String protocol, long version, int clientMethodsHashCode)
   throws IOException {
@@ -3172,7 +3169,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public long getProtocolVersion(final String protocol, final long clientVersion)
   throws IOException {
     if (protocol.equals(HRegionInterface.class.getName())) {
@@ -3334,7 +3331,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * @deprecated Use {@link #getServerName()} instead.
    */
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public HServerInfo getHServerInfo() throws IOException {
     checkOpen();
     return new HServerInfo(new HServerAddress(this.isa),
@@ -3632,7 +3629,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.REPLICATION_QOS)
   public void replicateLogEntries(final HLog.Entry[] entries)
   throws IOException {
     checkOpen();
