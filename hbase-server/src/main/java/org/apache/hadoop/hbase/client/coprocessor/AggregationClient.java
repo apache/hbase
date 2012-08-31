@@ -187,7 +187,7 @@ public class AggregationClient {
 
   /**
    * It gives the row count, by summing up the individual results obtained from
-   * regions. In case the qualifier is null, FirstKEyValueFilter is used to
+   * regions. In case the qualifier is null, FirstKeyValueFilter is used to
    * optimised the operation. In case qualifier is provided, I can't use the
    * filter as it may set the flag to skip to next row, but the value read is
    * not of the given filter: in this case, this particular row will not be
