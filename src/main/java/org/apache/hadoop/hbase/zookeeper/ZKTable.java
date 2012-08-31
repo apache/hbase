@@ -283,7 +283,8 @@ public class ZKTable {
   public static boolean isEnabledTable(final ZooKeeperWatcher zkw,
       final String tableName)
   throws KeeperException {
-    return getTableState(zkw, tableName) == null;
+    TableState state = getTableState(zkw, tableName);
+    return state == null || state == TableState.ENABLED;
   }
 
   public boolean isDisablingOrDisabledTable(final String tableName) {
