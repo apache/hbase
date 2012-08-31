@@ -27,13 +27,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -43,13 +40,11 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -96,7 +91,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -117,7 +111,6 @@ import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
-import org.apache.hadoop.hbase.ipc.Invocation;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -209,7 +202,6 @@ import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.DNS;
@@ -231,7 +223,6 @@ import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 
 import com.google.common.base.Function;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 
@@ -304,10 +295,6 @@ public class  HRegionServer implements ClientProtocol,
   // If false, the file system has become unavailable
   protected volatile boolean fsOk;
   protected HFileSystem fs;
-
-  protected static final int NORMAL_QOS = 0;
-  protected static final int QOS_THRESHOLD = 10;  // the line between low and high qos
-  protected static final int HIGH_QOS = 100;
 
   // Set when a report to the master comes back with a message asking us to
   // shutdown. Also set by call to stop when debugging or running unit tests
@@ -522,7 +509,7 @@ public class  HRegionServer implements ClientProtocol,
         conf.getInt("hbase.regionserver.handler.count", 10),
         conf.getInt("hbase.regionserver.metahandler.count", 10),
         conf.getBoolean("hbase.rpc.verbose", false),
-        conf, QOS_THRESHOLD);
+        conf, HConstants.QOS_THRESHOLD);
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
 
@@ -674,7 +661,7 @@ public class  HRegionServer implements ClientProtocol,
       }
 
       if (rpcArgClass == null || from.getRequest().isEmpty()) {
-        return NORMAL_QOS;
+        return HConstants.NORMAL_QOS;
       }
       Object deserializedRequestObj = null;
       //check whether the request has reference to Meta region
@@ -690,7 +677,7 @@ public class  HRegionServer implements ClientProtocol,
           if (LOG.isDebugEnabled()) {
             LOG.debug("High priority: " + from.toString());
           }
-          return HIGH_QOS;
+          return HConstants.HIGH_QOS;
         }
       } catch (Exception ex) {
         throw new RuntimeException(ex);
@@ -699,20 +686,20 @@ public class  HRegionServer implements ClientProtocol,
       if (methodName.equals("scan")) { // scanner methods...
         ScanRequest request = (ScanRequest)deserializedRequestObj;
         if (!request.hasScannerId()) {
-          return NORMAL_QOS;
+          return HConstants.NORMAL_QOS;
         }
         RegionScanner scanner = hRegionServer.getScanner(request.getScannerId());
         if (scanner != null && scanner.getRegionInfo().isMetaRegion()) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("High priority scanner request: " + request.getScannerId());
           }
-          return HIGH_QOS;
+          return HConstants.HIGH_QOS;
         }
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Low priority: " + from.toString());
       }
-      return NORMAL_QOS;
+      return HConstants.NORMAL_QOS;
     }
   }
 
@@ -2182,7 +2169,7 @@ public class  HRegionServer implements ClientProtocol,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public ProtocolSignature getProtocolSignature(
       String protocol, long version, int clientMethodsHashCode)
   throws IOException {
@@ -2195,7 +2182,7 @@ public class  HRegionServer implements ClientProtocol,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public long getProtocolVersion(final String protocol, final long clientVersion)
   throws IOException {
     if (protocol.equals(ClientProtocol.class.getName())) {
@@ -3187,7 +3174,7 @@ public class  HRegionServer implements ClientProtocol,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public UnlockRowResponse unlockRow(final RpcController controller,
       final UnlockRowRequest request) throws ServiceException {
     try {
@@ -3393,7 +3380,7 @@ public class  HRegionServer implements ClientProtocol,
 // Start Admin methods
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public GetRegionInfoResponse getRegionInfo(final RpcController controller,
       final GetRegionInfoRequest request) throws ServiceException {
     try {
@@ -3440,7 +3427,7 @@ public class  HRegionServer implements ClientProtocol,
   }
 
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public GetOnlineRegionResponse getOnlineRegion(final RpcController controller,
       final GetOnlineRegionRequest request) throws ServiceException {
     try {
@@ -3468,7 +3455,7 @@ public class  HRegionServer implements ClientProtocol,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public OpenRegionResponse openRegion(final RpcController controller, final OpenRegionRequest request)
   throws ServiceException {
     int versionOfOfflineNode = -1;
@@ -3555,7 +3542,7 @@ public class  HRegionServer implements ClientProtocol,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public CloseRegionResponse closeRegion(final RpcController controller,
       final CloseRegionRequest request) throws ServiceException {
     int versionOfClosingNode = -1;
@@ -3594,7 +3581,7 @@ public class  HRegionServer implements ClientProtocol,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public FlushRegionResponse flushRegion(final RpcController controller,
       final FlushRegionRequest request) throws ServiceException {
     try {
@@ -3625,7 +3612,7 @@ public class  HRegionServer implements ClientProtocol,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public SplitRegionResponse splitRegion(final RpcController controller,
       final SplitRegionRequest request) throws ServiceException {
     try {
@@ -3654,7 +3641,7 @@ public class  HRegionServer implements ClientProtocol,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.HIGH_QOS)
   public CompactRegionResponse compactRegion(final RpcController controller,
       final CompactRegionRequest request) throws ServiceException {
     try {
@@ -3688,7 +3675,7 @@ public class  HRegionServer implements ClientProtocol,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HIGH_QOS)
+  @QosPriority(priority=HConstants.REPLICATION_QOS)
   public ReplicateWALEntryResponse replicateWALEntry(final RpcController controller,
       final ReplicateWALEntryRequest request) throws ServiceException {
     try {

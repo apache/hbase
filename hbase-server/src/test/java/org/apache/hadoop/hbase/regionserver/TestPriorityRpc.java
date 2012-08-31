@@ -25,6 +25,7 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -85,7 +86,7 @@ public class TestPriorityRpc {
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
     Mockito.when(mockRegionInfo.isMetaRegion()).thenReturn(true);
     qosFunction.setRegionServer(mockRS);
-    assertTrue (qosFunction.apply(rpcRequest) == HRegionServer.HIGH_QOS);
+    assertTrue (qosFunction.apply(rpcRequest) == HConstants.HIGH_QOS);
   }
 
   @Test
@@ -99,7 +100,7 @@ public class TestPriorityRpc {
     rpcRequestBuilder.setRequestClassName(GetOnlineRegionRequest.class.getCanonicalName());
     RpcRequestBody rpcRequest = rpcRequestBuilder.build();
     QosFunction qosFunc = regionServer.getQosFunction();
-    assertTrue (qosFunc.apply(rpcRequest) == HRegionServer.NORMAL_QOS);
+    assertTrue (qosFunc.apply(rpcRequest) == HConstants.NORMAL_QOS);
   }
 
   @Test
@@ -112,7 +113,7 @@ public class TestPriorityRpc {
     ByteString requestBody = scanBuilder.build().toByteString();
     rpcRequestBuilder.setRequest(requestBody);
     RpcRequestBody rpcRequest = rpcRequestBuilder.build();
-    assertTrue (qosFunction.apply(rpcRequest) == HRegionServer.NORMAL_QOS);
+    assertTrue (qosFunction.apply(rpcRequest) == HConstants.NORMAL_QOS);
 
     //build a scan request with scannerID
     scanBuilder = ScanRequest.newBuilder();
@@ -134,11 +135,11 @@ public class TestPriorityRpc {
 
     qosFunction.setRegionServer(mockRS);
 
-    assertTrue (qosFunction.apply(rpcRequest) == HRegionServer.HIGH_QOS);
+    assertTrue (qosFunction.apply(rpcRequest) == HConstants.HIGH_QOS);
 
     //the same as above but with non-meta region
     Mockito.when(mockRegionInfo.isMetaRegion()).thenReturn(false);
-    assertTrue (qosFunction.apply(rpcRequest) == HRegionServer.NORMAL_QOS);
+    assertTrue (qosFunction.apply(rpcRequest) == HConstants.NORMAL_QOS);
   }
 
   @org.junit.Rule
