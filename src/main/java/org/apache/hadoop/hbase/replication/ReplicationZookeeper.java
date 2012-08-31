@@ -29,6 +29,7 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -38,7 +39,9 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
@@ -226,19 +229,7 @@ public class ReplicationZookeeper {
     try {
       addresses = fetchSlavesAddresses(peer.getZkw());
     } catch (KeeperException ke) {
-      if (ke instanceof ConnectionLossException
-          || ke instanceof SessionExpiredException) {
-        LOG.warn(
-            "Lost the ZooKeeper connection for peer " + peer.getClusterKey(),
-            ke);
-        try {
-          peer.reloadZkWatcher();
-        } catch(IOException io) {
-          LOG.warn(
-              "Creation of ZookeeperWatcher failed for peer "
-                  + peer.getClusterKey(), io);
-        }
-      }
+      reconnectPeer(ke, peer);
       addresses = Collections.emptyList();
     }
     peer.setRegionServers(addresses);
@@ -703,6 +694,50 @@ public class ReplicationZookeeper {
     String znode = ZKUtil.joinZNode(clusterZnode, hlog);
     String data = Bytes.toString(ZKUtil.getData(this.zookeeper, znode));
     return data == null || data.length() == 0 ? 0 : Long.parseLong(data);
+  }
+
+  /**
+   * Returns the UUID of the provided peer id. Should a connection loss or session
+   * expiration happen, the ZK handler will be reopened once and if it still doesn't
+   * work then it will bail and return null.
+   * @param peerId the peer's ID that will be converted into a UUID
+   * @return a UUID or null if there's a ZK connection issue
+   */
+  public UUID getPeerUUID(String peerId) {
+    ReplicationPeer peer = getPeerClusters().get(peerId);
+    UUID peerUUID = null;
+    try {
+      peerUUID = getUUIDForCluster(peer.getZkw());
+    } catch (KeeperException ke) {
+      reconnectPeer(ke, peer);
+    }
+    return peerUUID;
+  }
+
+  /**
+   * Get the UUID for the provided ZK watcher. Doesn't handle any ZK exceptions
+   * @param zkw watcher connected to an ensemble
+   * @return the UUID read from zookeeper
+   * @throws KeeperException
+   */
+  public UUID getUUIDForCluster(ZooKeeperWatcher zkw) throws KeeperException {
+    return UUID.fromString(ClusterId.readClusterIdZNode(zkw));
+  }
+
+  private void reconnectPeer(KeeperException ke, ReplicationPeer peer) {
+    if (ke instanceof ConnectionLossException
+      || ke instanceof SessionExpiredException) {
+      LOG.warn(
+        "Lost the ZooKeeper connection for peer " + peer.getClusterKey(),
+        ke);
+      try {
+        peer.reloadZkWatcher();
+      } catch(IOException io) {
+        LOG.warn(
+          "Creation of ZookeeperWatcher failed for peer "
+            + peer.getClusterKey(), io);
+      }
+    }
   }
 
   public void registerRegionServerListener(ZooKeeperListener listener) {
