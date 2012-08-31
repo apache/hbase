@@ -98,6 +98,8 @@ public class HBaseRpcMetrics implements Updater {
          new MetricsTimeVaryingInt("rpcAuthorizationSuccesses", registry);
   public MetricsTimeVaryingRate rpcSlowResponseTime =
       new MetricsTimeVaryingRate("RpcSlowResponse", registry);
+  public final MetricsIntValue replicationCallQueueLen =
+    new MetricsIntValue("replicationCallQueueLen", registry);
 
   private void initMethods(Class<? extends VersionedProtocol> protocol) {
     for (Method m : protocol.getDeclaredMethods()) {
