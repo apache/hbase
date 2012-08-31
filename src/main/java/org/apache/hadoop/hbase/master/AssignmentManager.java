@@ -2911,9 +2911,13 @@ public class AssignmentManager extends ZooKeeperListener {
            //decide on action upon timeout
             actOnTimeOut(regionState);
           } else if (this.allRegionServersOffline && !allRSsOffline) {
-            // if some RSs just came back online, we can start the
-            // the assignment right away
-            actOnTimeOut(regionState);
+            RegionPlan existingPlan = regionPlans.get(regionState.getRegion().getEncodedName());
+            if (existingPlan == null
+                || !this.serverManager.isServerOnline(existingPlan.getDestination())) {
+              // if some RSs just came back online, we can start the
+              // the assignment right away
+              actOnTimeOut(regionState);
+            }
           }
         }
       }
