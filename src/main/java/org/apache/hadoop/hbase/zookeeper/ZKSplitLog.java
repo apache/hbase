@@ -115,13 +115,19 @@ public class ZKSplitLog {
       state = s.getBytes();
     }
 
-    public byte[] get(String serverName) {
-      return (Bytes.add(state, " ".getBytes(), serverName.getBytes()));
+    public byte[] get(String workerName) {
+      return (Bytes.add(state, " ".getBytes(), workerName.getBytes()));
     }
 
     public String getWriterName(byte[] data) {
       String str = Bytes.toString(data);
       return str.substring(str.indexOf(' ') + 1);
+    }
+
+    public String getServerName(byte[] data) {
+      String str = Bytes.toString(data);
+      String [] parts = str.split(" ");
+      return parts[1];
     }
 
 
@@ -141,8 +147,8 @@ public class ZKSplitLog {
       return (true);
     }
 
-    public boolean equals(byte[] s, String serverName) {
-      return (Arrays.equals(s, get(serverName)));
+    public boolean equals(byte[] s, String workerName) {
+      return (Arrays.equals(s, get(workerName)));
     }
     @Override
     public String toString() {

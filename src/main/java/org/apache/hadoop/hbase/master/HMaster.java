@@ -1158,7 +1158,7 @@ public class HMaster extends HasThread implements HMasterInterface,
               "splitting");
           return;
         }
-        splitLogManager.handleDeadWorker(serverName);
+        splitLogManager.handleDeadServer(serverName);
       }
       splitLogManager.splitLogDistributed(logDirs);
     } else {

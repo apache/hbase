@@ -1002,7 +1002,7 @@ public class ServerManager {
       " to dead servers, added shutdown processing operation");
     this.deadServers.add(serverName);
     if (this.master.getSplitLogManager() != null) {
-      this.master.getSplitLogManager().handleDeadWorker(serverName);
+      this.master.getSplitLogManager().handleDeadServer(serverName);
     }
     this.master.getRegionServerOperationQueue().
       put(new ProcessServerShutdown(master, info));

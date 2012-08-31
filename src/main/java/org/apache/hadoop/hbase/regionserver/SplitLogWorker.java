@@ -77,7 +77,7 @@ public class SplitLogWorker implements Runnable, Watcher {
   private static final Log LOG = LogFactory.getLog(SplitLogWorker.class);
 
   Thread worker;
-  private final String serverName;
+  private final String workerName;
   private final TaskExecutor executor;
   private long zkretries;
 
@@ -89,11 +89,12 @@ public class SplitLogWorker implements Runnable, Watcher {
   private Object grabTaskLock = new Object();
   private boolean workerInGrabTask = false;
   protected ZooKeeperWrapper watcher;
+  private static int numWorkers = 0;
 
   public SplitLogWorker(ZooKeeperWrapper watcher, Configuration conf,
       String serverName, TaskExecutor executor) {
     this.watcher = watcher;
-    this.serverName = serverName;
+    this.workerName = serverName + " Worker-" + numWorkers++;
     this.executor = executor;
     this.zkretries = conf.getLong("hbase.splitlog.zk.retries", 3);
   }
@@ -128,8 +129,8 @@ public class SplitLogWorker implements Runnable, Watcher {
             LOG.warn("file status is null for file " + filename);
             return Status.ERR;
           }
-          String tmpname =
-            ZKSplitLog.getSplitLogDirTmpComponent(serverName, filename);
+          String tmpname = ZKSplitLog.getSplitLogDirTmpComponent(
+              serverName + "-worker-" + numWorkers, filename);
           if (HLogSplitter.splitLogFileToTemp(rootdir, tmpname,
               st, fs, conf, p, logCloseThreadPool, masterRef.get()) == false) {
             return Status.PREEMPTED;
@@ -272,7 +273,7 @@ public class SplitLogWorker implements Runnable, Watcher {
         tot_wkr_failed_to_grab_task_lost_race.incrementAndGet();
         return;
       }
-      LOG.info("worker " + serverName + " acquired task " + path);
+      LOG.info("worker " + workerName + " acquired task " + path);
       tot_wkr_task_acquired.incrementAndGet();
       getDataSetWatchAsync();
 
@@ -321,7 +322,7 @@ public class SplitLogWorker implements Runnable, Watcher {
       }
     } finally {
       if (t > 0) {
-        LOG.info("worker " + serverName + " done with task " + path +
+        LOG.info("worker " + workerName + " done with task " + path +
             " in " + (System.currentTimeMillis() - t) + "ms");
       }
       synchronized (grabTaskLock) {
@@ -346,7 +347,7 @@ public class SplitLogWorker implements Runnable, Watcher {
   private boolean ownTask(boolean isFirstTime) {
     try {
       Stat stat = this.watcher.setDataGetStat(currentTask,
-          TaskState.TASK_OWNED.get(serverName), currentVersion);
+          TaskState.TASK_OWNED.get(workerName), currentVersion);
       if (stat == null) {
         LOG.warn("zk.setData() returned null for path " + currentTask);
         tot_wkr_task_heartbeat_failed.incrementAndGet();
@@ -385,7 +386,7 @@ public class SplitLogWorker implements Runnable, Watcher {
     String path = currentTask;
     currentTask = null;
     try {
-      if (watcher.setData(path, ts.get(serverName), currentVersion)) {
+      if (watcher.setData(path, ts.get(workerName), currentVersion)) {
         LOG.info("successfully transitioned task " + path +
             " to final state " + ts);
         ctr.incrementAndGet();
@@ -424,12 +425,12 @@ public class SplitLogWorker implements Runnable, Watcher {
           // UNASSIGNED because by the time this worker sets the data watch
           // the node might have made two transitions - from owned by this
           // worker to unassigned to owned by another worker
-          if (! TaskState.TASK_OWNED.equals(data, serverName) &&
-              ! TaskState.TASK_DONE.equals(data, serverName) &&
-              ! TaskState.TASK_ERR.equals(data, serverName) &&
-              ! TaskState.TASK_RESIGNED.equals(data, serverName)) {
-            LOG.info("task " + taskpath + " preempted from server " +
-                serverName + " ... current task state and owner - " +
+          if (! TaskState.TASK_OWNED.equals(data, workerName) &&
+              ! TaskState.TASK_DONE.equals(data, workerName) &&
+              ! TaskState.TASK_ERR.equals(data, workerName) &&
+              ! TaskState.TASK_RESIGNED.equals(data, workerName)) {
+            LOG.info("task " + taskpath + " preempted from worker " +
+                workerName + " ... current task state and owner - " +
                 new String(data));
             stopTask();
           }
@@ -533,7 +534,7 @@ public class SplitLogWorker implements Runnable, Watcher {
    * start the SplitLogWorker thread
    */
   public void start() {
-    worker = new Thread(null, this, "SplitLogWorker-" + serverName);
+    worker = new Thread(null, this, "SplitLogWorker-" + workerName);
     exitWorker = false;
     worker.start();
     return;

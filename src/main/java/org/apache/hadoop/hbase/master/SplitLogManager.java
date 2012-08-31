@@ -110,8 +110,8 @@ public class SplitLogManager implements Watcher {
     new ConcurrentHashMap<String, Task>();
   private TimeoutMonitor timeoutMonitor;
 
-  private Set<String> deadWorkers = null;
-  private Object deadWorkersLock = new Object();
+  private Set<String> deadServers = null;
+  private Object deadServersLock = new Object();
 
   /**
    * Wrapper around {@link #SplitLogManager(ZooKeeperWatcher, Configuration,
@@ -424,6 +424,7 @@ public class SplitLogManager implements Watcher {
       handleUnassignedTask(path);
     } else if (TaskState.TASK_OWNED.equals(data)) {
       heartbeat(path, version,
+          TaskState.TASK_OWNED.getServerName(data),
           TaskState.TASK_OWNED.getWriterName(data));
     } else if (TaskState.TASK_RESIGNED.equals(data)) {
       LOG.info("task " + path + " entered state " + new String(data));
@@ -481,14 +482,14 @@ public class SplitLogManager implements Watcher {
   }
 
   private void heartbeat(String path, int new_version,
-      String workerName) {
+      String serverName, String workerName) {
     Task task = findOrCreateOrphanTask(path);
     if (new_version != task.last_version) {
       if (task.isUnassigned()) {
         LOG.info("task " + path + " acquired by " + workerName);
       }
       task.heartbeat(EnvironmentEdgeManager.currentTimeMillis(),
-          new_version, workerName);
+          new_version, serverName, workerName);
       tot_mgr_heartbeat.incrementAndGet();
     } else {
       // duplicate heartbeats - heartbeats w/o zk node version
@@ -804,6 +805,7 @@ public class SplitLogManager implements Watcher {
     volatile long last_update;
     volatile int last_version;
     volatile String cur_worker_name;
+    volatile String cur_server_name;
     TaskBatch batch;
     volatile TerminationStatus status;
     volatile int incarnation;
@@ -815,6 +817,7 @@ public class SplitLogManager implements Watcher {
       return ("last_update = " + last_update +
           " last_version = " + last_version +
           " cur_worker_name = " + cur_worker_name +
+          " cur_server_name = " + cur_server_name +
           " status = " + status +
           " incarnation = " + incarnation +
           " resubmits = " + unforcedResubmits +
@@ -840,28 +843,36 @@ public class SplitLogManager implements Watcher {
       last_update = time;
     }
 
-    public void heartbeat(long time, int version, String worker) {
+    public void heartbeat(long time, int version, String server, String worker) {
       last_version = version;
       last_update = time;
+      if ((cur_server_name != null && !cur_server_name.equals(server))
+          || (cur_worker_name != null && !cur_worker_name.equals(worker))) {
+        LOG.warn("heartBeat updating to a different worker/server " +
+           " old " + cur_worker_name + " on " + cur_server_name +
+           " updating to " + worker + " on " + server);
+      }
+      cur_server_name = server;
       cur_worker_name = worker;
     }
 
     public void setUnassigned() {
+      cur_server_name = null;
       cur_worker_name = null;
       last_update = -1;
     }
   }
 
-  public void handleDeadWorker(String worker_name) {
+  public void handleDeadServer(String server_name) {
     // resubmit the tasks on the TimeoutMonitor thread. Makes it easier
     // to reason about concurrency. Makes it easier to retry.
-    synchronized (deadWorkersLock) {
-      if (deadWorkers == null) {
-        deadWorkers = new HashSet<String>(100);
+    synchronized (deadServersLock) {
+      if (deadServers == null) {
+        deadServers = new HashSet<String>(100);
       }
-      deadWorkers.add(worker_name);
+      deadServers.add(server_name);
     }
-    LOG.info("dead splitlog worker " + worker_name);
+    LOG.info("dead splitlog worker(s) on server: " + server_name);
   }
 
   /**
@@ -881,17 +892,17 @@ public class SplitLogManager implements Watcher {
       int unassigned = 0;
       int tot = 0;
       boolean found_assigned_task = false;
-      Set<String> localDeadWorkers;
+      Set<String> localDeadServers;
 
-      synchronized (deadWorkersLock) {
-        localDeadWorkers = deadWorkers;
-        deadWorkers = null;
+      synchronized (deadServersLock) {
+        localDeadServers = deadServers;
+        deadServers = null;
       }
 
       for (Map.Entry<String, Task> e : tasks.entrySet()) {
         String path = e.getKey();
         Task task = e.getValue();
-        String cur_worker = task.cur_worker_name;
+        String cur_server = task.cur_server_name;
         tot++;
         // don't easily resubmit a task which hasn't been picked up yet. It
         // might be a long while before a SplitLogWorker is free to pick up a
@@ -903,14 +914,14 @@ public class SplitLogManager implements Watcher {
           continue;
         }
         found_assigned_task = true;
-        if (localDeadWorkers != null && localDeadWorkers.contains(cur_worker)) {
+        if (localDeadServers != null && localDeadServers.contains(cur_server)) {
           tot_mgr_resubmit_dead_server_task.incrementAndGet();
           if (resubmit(path, task, FORCE)) {
             resubmitted++;
           } else {
-            handleDeadWorker(cur_worker);
+            handleDeadServer(cur_server);
             LOG.warn("Failed to resubmit task " + path + " owned by dead " +
-                cur_worker + ", will retry.");
+                cur_server + ", will retry.");
           }
         } else if (resubmit(path, task, CHECK)) {
           resubmitted++;

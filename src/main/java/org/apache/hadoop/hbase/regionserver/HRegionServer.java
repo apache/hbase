@@ -1490,7 +1490,7 @@ public class HRegionServer implements HRegionInterface,
     this.splitLogWorkers = new ArrayList<SplitLogWorker>(numSplitLogWorkers);
     for (int i = 0; i < numSplitLogWorkers; i++) {
       SplitLogWorker splitLogWorker = new SplitLogWorker(this.zooKeeperWrapper,
-          this.getConfiguration(), this.serverInfo.getServerName() + "_Worker_" + i,
+          this.getConfiguration(), this.serverInfo.getServerName(),
           logCloseThreadPool, masterRef);
       this.splitLogWorkers.add(splitLogWorker);
       splitLogWorker.start();
