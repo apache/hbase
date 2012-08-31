@@ -1671,6 +1671,13 @@ of all regions.
            on the size you need by surveying regionserver UIs; you'll see index block size accounted near the
            top of the webpage).</para>
          </section>
+    <section xml:id="nagles">
+      <title><link xlink:href="http://en.wikipedia.org/wiki/Nagle's_algorithm">Nagle's</link> or the small package problem</title>
+      <para>If a big 40ms or so occasional delay is seen in operations against HBase,
+      try the Nagles' setting.  For example, see the user mailing list thread,
+      <link xlink:href="http://search-hadoop.com/m/pduLg2fydtE/Inconsistent+scan+performance+with+caching+set+&amp;subj=Re+Inconsistent+scan+performance+with+caching+set+to+1">Inconsistent scan performance with caching set to 1</link>
+      and the issue cited therein where setting notcpdelay improved scan speeds.</para>
+    </section>
          
       </section>
       
