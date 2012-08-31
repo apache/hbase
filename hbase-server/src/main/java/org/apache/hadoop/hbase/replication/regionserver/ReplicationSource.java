@@ -189,8 +189,7 @@ public class ReplicationSource extends Thread
     this.metrics = new ReplicationSourceMetrics(peerClusterZnode);
 
     try {
-      this.clusterId = UUID.fromString(ZKClusterId.readClusterIdZNode(zkHelper
-          .getZookeeperWatcher()));
+      this.clusterId = zkHelper.getUUIDForCluster(zkHelper.getZookeeperWatcher());
     } catch (KeeperException ke) {
       throw new IOException("Could not read cluster id", ke);
     }
@@ -250,13 +249,19 @@ public class ReplicationSource extends Thread
       metrics.clear();
       return;
     }
+    int sleepMultiplier = 1;
     // delay this until we are in an asynchronous thread
-    try {
-      this.peerClusterId = UUID.fromString(ZKClusterId
-          .readClusterIdZNode(zkHelper.getPeerClusters().get(peerId).getZkw()));
-    } catch (KeeperException ke) {
-      this.terminate("Could not read peer's cluster id", ke);
+    while (this.peerClusterId == null) {
+      this.peerClusterId = zkHelper.getPeerUUID(this.peerId);
+      if (this.peerClusterId == null) {
+        if (sleepForRetries("Cannot contact the peer's zk ensemble", sleepMultiplier)) {
+          sleepMultiplier++;
+        }
+      }
     }
+    // resetting to 1 to reuse later
+    sleepMultiplier = 1;
+
     LOG.info("Replicating "+clusterId + " -> " + peerClusterId);
 
     // If this is recovered, the queue is already full and the first log
@@ -270,7 +275,6 @@ public class ReplicationSource extends Thread
             peerClusterZnode, e);
       }
     }
-    int sleepMultiplier = 1;
     // Loop until we close down
     while (isActive()) {
       // Sleep until replication is enabled again

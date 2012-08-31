@@ -2295,10 +2295,8 @@ public class HRegion implements HeapSize { // , Writable{
       // -------------------------
       // STEP 7. Sync wal.
       // -------------------------
-      if (walEdit.size() > 0 &&
-          (this.regionInfo.isMetaRegion() ||
-           !this.htableDescriptor.isDeferredLogFlush())) {
-        this.log.sync(txid);
+      if (walEdit.size() > 0) {
+        syncOrDefer(txid);
       }
       walSyncSuccessful = true;
       // ------------------------------------------------------------------
@@ -4498,10 +4496,8 @@ public class HRegion implements HeapSize { // , Writable{
             acquiredLocks = null;
           }
           // 10. Sync edit log
-          if (txid != 0 &&
-              (this.regionInfo.isMetaRegion() ||
-               !this.htableDescriptor.isDeferredLogFlush())) {
-            this.log.sync(txid);
+          if (txid != 0) {
+            syncOrDefer(txid);
           }
           walSyncSuccessful = true;
         }
@@ -4750,7 +4746,7 @@ public class HRegion implements HeapSize { // , Writable{
         releaseRowLock(lid);
       }
       if (writeToWAL) {
-        this.log.sync(txid); // sync the transaction log outside the rowlock
+        syncOrDefer(txid); // sync the transaction log outside the rowlock
       }
     } finally {
       closeRegionOperation();
@@ -4878,7 +4874,7 @@ public class HRegion implements HeapSize { // , Writable{
         releaseRowLock(lid);
       }
       if (writeToWAL) {
-        this.log.sync(txid); // sync the transaction log outside the rowlock
+        syncOrDefer(txid); // sync the transaction log outside the rowlock
       }
     } finally {
       closeRegionOperation();
@@ -4976,7 +4972,7 @@ public class HRegion implements HeapSize { // , Writable{
         releaseRowLock(lid);
       }
       if (writeToWAL) {
-        this.log.sync(txid); // sync the transaction log outside the rowlock
+        syncOrDefer(txid); // sync the transaction log outside the rowlock
       }
     } finally {
       closeRegionOperation();
@@ -5387,6 +5383,19 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     dataInMemoryWithoutWAL.addAndGet(putSize);
+  }
+
+  /**
+   * Calls sync with the given transaction ID if the region's table is not
+   * deferring it.
+   * @param txid should sync up to which transaction
+   * @throws IOException If anything goes wrong with DFS
+   */
+  private void syncOrDefer(long txid) throws IOException {
+    if (this.regionInfo.isMetaRegion() ||
+      !this.htableDescriptor.isDeferredLogFlush()) {
+      this.log.sync(txid);
+    }
   }
 
   /**
