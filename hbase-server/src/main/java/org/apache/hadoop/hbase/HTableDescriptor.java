@@ -414,6 +414,15 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
           "> at 0. User-space table names can only start with 'word " +
           "characters': i.e. [a-zA-Z_0-9]: " + Bytes.toString(tableName));
     }
+    if (HConstants.CLUSTER_ID_FILE_NAME.equalsIgnoreCase(Bytes
+        .toString(tableName))
+        || HConstants.SPLIT_LOGDIR_NAME.equalsIgnoreCase(Bytes
+            .toString(tableName))
+        || HConstants.VERSION_FILE_NAME.equalsIgnoreCase(Bytes
+            .toString(tableName))) {
+      throw new IllegalArgumentException(Bytes.toString(tableName)
+          + " conflicted with system reserved words");
+    }
     for (int i = 0; i < tableName.length; i++) {
       if (Character.isLetterOrDigit(tableName[i]) || tableName[i] == '_' || 
     		  tableName[i] == '-' || tableName[i] == '.') {
