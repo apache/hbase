@@ -1257,14 +1257,15 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param regionInfo
    */
   public void regionOffline(final HRegionInfo regionInfo) {
+    // remove the region plan as well just in case.
+    clearRegionPlan(regionInfo);
+    setOffline(regionInfo);
+
     synchronized(this.regionsInTransition) {
       if (this.regionsInTransition.remove(regionInfo.getEncodedName()) != null) {
         this.regionsInTransition.notifyAll();
       }
     }
-    // remove the region plan as well just in case.
-    clearRegionPlan(regionInfo);
-    setOffline(regionInfo);
   }
 
   /**
@@ -2065,7 +2066,8 @@ public class AssignmentManager extends ZooKeeperListener {
       if (t instanceof RemoteException) {
         t = ((RemoteException)t).unwrapRemoteException();
         if (t instanceof NotServingRegionException) {
-          if (checkIfRegionBelongsToDisabling(region)) {
+          if (checkIfRegionBelongsToDisabling(region)
+              || checkIfRegionBelongsToDisabled(region)) {
             // Remove from the regionsinTransition map
             LOG.info("While trying to recover the table "
                 + region.getTableNameAsString()
