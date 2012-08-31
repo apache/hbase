@@ -478,10 +478,10 @@ public class SplitLogManager extends ZooKeeperListener {
     } else if (slt.isOwned()) {
       heartbeat(path, version, slt.getServerName());
     } else if (slt.isResigned()) {
-      LOG.info("task " + path + " entered state " + new String(data));
+      LOG.info("task " + path + " entered state: " + slt.toString());
       resubmitOrFail(path, FORCE);
     } else if (slt.isDone()) {
-      LOG.info("task " + path + " entered state " + new String(data));
+      LOG.info("task " + path + " entered state: " + slt.toString());
       if (taskFinisher != null && !ZKSplitLog.isRescanNode(watcher, path)) {
         if (taskFinisher.finish(slt.getServerName(), ZKSplitLog.getFileName(path)) == Status.DONE) {
           setDone(path, SUCCESS);
@@ -492,10 +492,10 @@ public class SplitLogManager extends ZooKeeperListener {
         setDone(path, SUCCESS);
       }
     } else if (slt.isErr()) {
-      LOG.info("task " + path + " entered state " + new String(data));
+      LOG.info("task " + path + " entered state: " + slt.toString());
       resubmitOrFail(path, CHECK);
     } else {
-      LOG.fatal("logic error - unexpected zk state for path = " + path + " data = " + new String(data));
+      LOG.fatal("logic error - unexpected zk state for path = " + path + " data = " + slt.toString());
       setDone(path, FAILURE);
     }
   }
