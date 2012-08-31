@@ -143,7 +143,8 @@ struct TScan {
  * more general Hbase error conditions.
  */
 exception IOError {
-  1:string message
+  1: string message,
+  2: i64 backoffTimeMillis
 }
 
 /**
