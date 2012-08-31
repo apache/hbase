@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Map;
@@ -70,9 +71,13 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   private boolean assignSeqIds;
 
+  public static String EXIT_ON_FIRST_FAILURE = "hbase.mapreduce.bulkload.failure.exitOnFirst";
+  private boolean exitOnFirstFailure;
+
   public LoadIncrementalHFiles(Configuration conf) {
     super(conf);
     assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
+    exitOnFirstFailure = conf.getBoolean(EXIT_ON_FIRST_FAILURE, true);
   }
 
   public LoadIncrementalHFiles() {
@@ -161,17 +166,35 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
 
     Deque<LoadQueueItem> queue = null;
+    ArrayList<LoadQueueItem>  failedItems = new ArrayList<LoadQueueItem>();
     try {
       queue = discoverLoadQueue(hfofDir);
       while (!queue.isEmpty()) {
         LoadQueueItem item = queue.remove();
-        tryLoad(item, conn, table.getTableName(), queue);
+        try {
+          tryLoad(item, conn, table.getTableName(), queue);
+        } catch (IOException e) {
+          LOG.error("Caught exception while processing " + item.hfilePath, e);
+
+          if (exitOnFirstFailure) throw e;
+          // otherwise lets keep quiet and try the next item
+          failedItems.add(item);
+        }
       }
     } finally {
-      if (queue != null && !queue.isEmpty()) {
+      if (!failedItems.isEmpty()
+          || (queue != null && !queue.isEmpty())) {
         StringBuilder err = new StringBuilder();
         err.append("-------------------------------------------------\n");
         err.append("Bulk load aborted with some files not yet loaded:\n");
+        err.append("-------------------------------------------------\n");
+        err.append("Had errors on:\n");
+        err.append("-------------------------------------------------\n");
+        for (LoadQueueItem q : failedItems) {
+          err.append("  ").append(q.hfilePath).append('\n');
+        }
+        err.append("-------------------------------------------------\n");
+        err.append("Did not try:\n");
         err.append("-------------------------------------------------\n");
         for (LoadQueueItem q : queue) {
           err.append("  ").append(q.hfilePath).append('\n');
