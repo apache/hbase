@@ -34,9 +34,7 @@ import org.apache.hadoop.hbase.KeyValue.MetaComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
-import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
 public class TestKeyValue extends TestCase {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
 
@@ -518,9 +516,5 @@ public class TestKeyValue extends TestCase {
     assertEquals(HConstants.LATEST_TIMESTAMP, time1);
     assertEquals(12345L, time2);
   }
-
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

@@ -14,7 +14,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.util.test;
 
 import java.util.Random;
 
