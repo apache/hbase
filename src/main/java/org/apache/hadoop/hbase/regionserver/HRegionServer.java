@@ -291,7 +291,7 @@ public class HRegionServer implements HRegionInterface,
   private final ExecutorService regionOpenCloseThreadPool;
   
   // Log Splitting Worker
-  private SplitLogWorker splitLogWorker;
+  private List<SplitLogWorker> splitLogWorkers;
 
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
@@ -766,8 +766,10 @@ public class HRegionServer implements HRegionInterface,
     if (this.server != null) {
       this.server.stop();
     }
-    if (this.splitLogWorker != null) {
-      splitLogWorker.stop();
+    if (this.splitLogWorkers != null) {
+      for(SplitLogWorker splitLogWorker: splitLogWorkers) {
+        splitLogWorker.stop();
+      }
     }
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
@@ -1483,11 +1485,16 @@ public class HRegionServer implements HRegionInterface,
     }
     this.server.start();
     isRpcServerRunning = true;
+    int numSplitLogWorkers = conf.getInt(HConstants.HREGIONSERVER_SPLITLOG_WORKERS_NUM, 3);
     // Create the log splitting worker and start it
-    this.splitLogWorker = new SplitLogWorker(this.zooKeeperWrapper,
-        this.getConfiguration(), this.serverInfo.getServerName(),
-        logCloseThreadPool, masterRef);
-    splitLogWorker.start();
+    this.splitLogWorkers = new ArrayList<SplitLogWorker>(numSplitLogWorkers);
+    for (int i = 0; i < numSplitLogWorkers; i++) {
+      SplitLogWorker splitLogWorker = new SplitLogWorker(this.zooKeeperWrapper,
+          this.getConfiguration(), this.serverInfo.getServerName() + "_Worker_" + i,
+          logCloseThreadPool, masterRef);
+      this.splitLogWorkers.add(splitLogWorker);
+      splitLogWorker.start();
+    }
     LOG.info("HRegionServer started at: " +
       this.serverInfo.getServerAddress().toString());
   }

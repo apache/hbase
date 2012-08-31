@@ -256,6 +256,13 @@ public final class HConstants {
    */
   public static final int DEFAULT_HREGION_OPEN_AND_CLOSE_THREADS_MAX = 8;
 
+  /**
+   * The max number of threads used for splitting logs
+   * in parallel
+   */
+  public static final String HREGIONSERVER_SPLITLOG_WORKERS_NUM =
+    "hbase.hregionserver.hlog.split.workers.num";
+
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
 
