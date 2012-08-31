@@ -281,6 +281,9 @@ elif [ "$COMMAND" = "zookeeper" ] ; then
   fi
 elif [ "$COMMAND" = "zkcli" ] ; then
   CLASS='org.apache.zookeeper.ZooKeeperMain'
+elif [ "$COMMAND" = "classpath" ] ; then
+  # print the computed classpath and exit
+  CLASS=
 else
   CLASS=$COMMAND
 fi
@@ -296,6 +299,11 @@ HBASE_OPTS="$HBASE_OPTS -Dhbase.id.str=$HBASE_IDENT_STRING"
 HBASE_OPTS="$HBASE_OPTS -Dhbase.root.logger=${HBASE_ROOT_LOGGER:-INFO,console}"
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
   HBASE_OPTS="$HBASE_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
+fi
+
+if [ "$COMMAND" = "classpath" ] ; then
+  echo $CLASSPATH
+  exit 0
 fi
 
 # run it
