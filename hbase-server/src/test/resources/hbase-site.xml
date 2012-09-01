@@ -78,6 +78,21 @@
     </description>
   </property>
   <property>
+    <name>hbase.master.port</name>
+    <value>0</value>
+    <description>Always have masters and regionservers come up on port '0' so we don't clash over
+      default ports.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.port</name>
+    <value>0</value>
+    <description>Always have masters and regionservers come up on port '0' so we don't clash over
+      default ports.
+    </description>
+  </property>
+
+  <property>
     <name>hbase.regionserver.info.port</name>
     <value>-1</value>
     <description>The port for the hbase regionserver web UI
