@@ -343,7 +343,7 @@ class StoreScanner extends NonLazyKeyValueScanner
           throw new IOException("Key " + prevKV + " followed by a " +
               "smaller key " + kv + " in cf " + store);
         }
-        prevKV = copyKv;
+        prevKV = kv;
         ScanQueryMatcher.MatchCode qcode = matcher.match(copyKv);
 
         switch(qcode) {
