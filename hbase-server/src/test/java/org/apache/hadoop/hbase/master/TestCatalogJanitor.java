@@ -32,6 +32,8 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -76,6 +78,8 @@ import com.google.protobuf.ServiceException;
 
 @Category(SmallTests.class)
 public class TestCatalogJanitor {
+  private static final Log LOG = LogFactory.getLog(TestCatalogJanitor.class);
+
   /**
    * Pseudo server for below tests.
    * Be sure to call stop on the way out else could leave some mess around.
@@ -529,6 +533,10 @@ public class TestCatalogJanitor {
     janitor.join();
   }
 
+  /**
+   * Test that we correctly archive all the storefiles when a region is deleted
+   * @throws Exception
+   */
   @Test
   public void testArchiveOldRegion() throws Exception {
     String table = "table";
@@ -546,10 +554,10 @@ public class TestCatalogJanitor {
     HRegionInfo parent = new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"), Bytes.toBytes("eee"));
     HRegionInfo splita = new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"), Bytes.toBytes("ccc"));
     HRegionInfo splitb = new HRegionInfo(htd.getName(), Bytes.toBytes("ccc"), Bytes.toBytes("eee"));
+
     // Test that when both daughter regions are in place, that we do not
     // remove the parent.
-    Result r = createResult(parent, splita, splitb);
-
+    Result parentMetaRow = createResult(parent, splita, splitb);
     FileSystem fs = FileSystem.get(htu.getConfiguration());
     Path rootdir = services.getMasterFileSystem().getRootDir();
     // have to set the root directory since we use it in HFileDisposer to figure out to get to the
@@ -559,30 +567,51 @@ public class TestCatalogJanitor {
     Path tabledir = HTableDescriptor.getTableDir(rootdir, htd.getName());
     Path storedir = HStore.getStoreHomedir(tabledir, parent.getEncodedName(),
       htd.getColumnFamilies()[0].getName());
-
-    // delete the file and ensure that the files have been archived
     Path storeArchive = HFileArchiveUtil.getStoreArchivePath(services.getConfiguration(), parent,
       tabledir, htd.getColumnFamilies()[0].getName());
+    LOG.debug("Table dir:" + tabledir);
+    LOG.debug("Store dir:" + storedir);
+    LOG.debug("Store archive dir:" + storeArchive);
 
-    // enable archiving, make sure that files get archived
-    addMockStoreFiles(2, services, storedir);
+    // add a couple of store files that we can check for
+    FileStatus[] mockFiles = addMockStoreFiles(2, services, storedir);
     // get the current store files for comparison
     FileStatus[] storeFiles = fs.listStatus(storedir);
+    int index = 0;
     for (FileStatus file : storeFiles) {
-      System.out.println("Have store file:" + file.getPath());
+      LOG.debug("Have store file:" + file.getPath());
+      assertEquals("Got unexpected store file", mockFiles[index].getPath(),
+        storeFiles[index].getPath());
+      index++;
     }
 
     // do the cleaning of the parent
-    assertTrue(janitor.cleanParent(parent, r));
+    assertTrue(janitor.cleanParent(parent, parentMetaRow));
+    LOG.debug("Finished cleanup of parent region");
 
     // and now check to make sure that the files have actually been archived
     FileStatus[] archivedStoreFiles = fs.listStatus(storeArchive);
+    logFiles("archived files", storeFiles);
+    logFiles("archived files", archivedStoreFiles);
+
     assertArchiveEqualToOriginal(storeFiles, archivedStoreFiles, fs);
 
     // cleanup
+    FSUtils.delete(fs, rootdir, true);
     services.stop("Test finished");
-    server.stop("shutdown");
+    server.stop("Test finished");
     janitor.join();
+  }
+
+  /**
+   * @param description description of the files for logging
+   * @param storeFiles the status of the files to log
+   */
+  private void logFiles(String description, FileStatus[] storeFiles) {
+    LOG.debug("Current " + description + ": ");
+    for (FileStatus file : storeFiles) {
+      LOG.debug(file.getPath());
+    }
   }
 
   /**
@@ -657,7 +686,7 @@ public class TestCatalogJanitor {
     janitor.join();
   }
 
-  private void addMockStoreFiles(int count, MasterServices services, Path storedir)
+  private FileStatus[] addMockStoreFiles(int count, MasterServices services, Path storedir)
       throws IOException {
     // get the existing store files
     FileSystem fs = services.getMasterFileSystem().getFileSystem();
@@ -669,9 +698,11 @@ public class TestCatalogJanitor {
       dos.writeBytes("Some data: " + i);
       dos.close();
     }
+    LOG.debug("Adding " + count + " store files to the storedir:" + storedir);
     // make sure the mock store files are there
     FileStatus[] storeFiles = fs.listStatus(storedir);
-    assertEquals(count, storeFiles.length);
+    assertEquals("Didn't have expected store files", count, storeFiles.length);
+    return storeFiles;
   }
 
   private String setRootDirAndCleanIt(final HBaseTestingUtility htu,

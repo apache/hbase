@@ -85,29 +85,29 @@ public class HFileArchiveTestingUtil {
 
   /**
    * Compare the archived files to the files in the original directory
-   * @param previous original files that should have been archived
-   * @param archived files that were archived
+   * @param expected original files that should have been archived
+   * @param actual files that were archived
    * @param fs filessystem on which the archiving took place
    * @throws IOException
    */
-  public static void assertArchiveEqualToOriginal(FileStatus[] previous, FileStatus[] archived,
+  public static void assertArchiveEqualToOriginal(FileStatus[] expected, FileStatus[] actual,
       FileSystem fs) throws IOException {
-    assertArchiveEqualToOriginal(previous, archived, fs, false);
+    assertArchiveEqualToOriginal(expected, actual, fs, false);
   }
 
   /**
    * Compare the archived files to the files in the original directory
-   * @param previous original files that should have been archived
-   * @param archived files that were archived
+   * @param expected original files that should have been archived
+   * @param actual files that were archived
    * @param fs {@link FileSystem} on which the archiving took place
    * @param hasTimedBackup <tt>true</tt> if we expect to find an archive backup directory with a
    *          copy of the files in the archive directory (and the original files).
    * @throws IOException
    */
-  public static void assertArchiveEqualToOriginal(FileStatus[] previous, FileStatus[] archived,
+  public static void assertArchiveEqualToOriginal(FileStatus[] expected, FileStatus[] actual,
       FileSystem fs, boolean hasTimedBackup) throws IOException {
 
-    List<List<String>> lists = getFileLists(previous, archived);
+    List<List<String>> lists = getFileLists(expected, actual);
     List<String> original = lists.get(0);
     Collections.sort(original);
 
