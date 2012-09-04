@@ -346,13 +346,13 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
     KeyValue kv;
     KeyValue prevKV = null;
-    List<KeyValue> results = new ArrayList<KeyValue>();
 
     // Only do a sanity-check if store and comparator are available.
     KeyValue.KVComparator comparator =
         store != null ? store.getComparator() : null;
 
     long cumulativeMetric = 0;
+    int count = 0;
     try {
       LOOP: while((kv = this.heap.peek()) != null) {
         // Check that the heap gives us KVs in an increasing order.
@@ -366,11 +366,11 @@ public class StoreScanner extends NonLazyKeyValueScanner
           case INCLUDE_AND_SEEK_NEXT_COL:
 
             Filter f = matcher.getFilter();
-            results.add(f == null ? kv : f.transform(kv));
+            outResult.add(f == null ? kv : f.transform(kv));
+            count++;
 
             if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
               if (!matcher.moreRowsMayExistAfter(kv)) {
-                outResult.addAll(results);
                 return false;
               }
               reseek(matcher.getKeyForNextRow(kv));
@@ -381,21 +381,16 @@ public class StoreScanner extends NonLazyKeyValueScanner
             }
 
             cumulativeMetric += kv.getLength();
-            if (limit > 0 && (results.size() == limit)) {
+            if (limit > 0 && (count == limit)) {
               break LOOP;
             }
             continue;
 
           case DONE:
-            // copy jazz
-            outResult.addAll(results);
             return true;
 
           case DONE_SCAN:
             close();
-
-            // copy jazz
-            outResult.addAll(results);
 
             return false;
 
@@ -403,7 +398,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
             // This is just a relatively simple end of scan fix, to short-cut end
             // us if there is an endKey in the scan.
             if (!matcher.moreRowsMayExistAfter(kv)) {
-              outResult.addAll(results);
               return false;
             }
 
@@ -438,9 +432,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
       }
     }
 
-    if (!results.isEmpty()) {
-      // copy jazz
-      outResult.addAll(results);
+    if (count > 0) {
       return true;
     }
 
