@@ -414,6 +414,27 @@ public class TestHBaseFsck {
     }
   }
 
+  @Test
+  public void testHbckMissingTableinfo() throws Exception {
+    String table = "tableInfo";
+    FileSystem fs = null;
+    Path tableinfo = null;
+    try {
+      setupTable(table);
+      Path hbaseTableDir = new Path(conf.get(HConstants.HBASE_DIR) + "/" + table );
+      fs = hbaseTableDir.getFileSystem(conf);
+      FileStatus status = FSTableDescriptors.getTableInfoPath(fs, hbaseTableDir);
+      tableinfo = status.getPath();
+      fs.rename(tableinfo, new Path("/.tableinfo"));
+      
+      HBaseFsck hbck = doFsck(conf, false); 
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.NO_TABLEINFO_FILE });
+    } finally {
+      fs.rename(new Path("/.tableinfo"), tableinfo);
+      deleteTable(table);
+    }
+  }
+   
   /**
    * This create and fixes a bad table with regions that have a duplicate
    * start key

@@ -712,8 +712,9 @@ public class HBaseFsck {
               hbaseRoot, tableName);
           modTInfo.htds.add(htd);
         } catch (IOException ioe) {
-          LOG.error("Unable to read .tableinfo from " + hbaseRoot, ioe);
-          throw ioe;
+          LOG.warn("Unable to read .tableinfo from " + hbaseRoot, ioe);
+          errors.reportError(ERROR_CODE.NO_TABLEINFO_FILE, 
+              "Unable to read .tableinfo from " + hbaseRoot);
         }
       }
       modTInfo.addRegionInfo(hbi);
@@ -2640,7 +2641,7 @@ public class HBaseFsck {
       MULTI_DEPLOYED, SHOULD_NOT_BE_DEPLOYED, MULTI_META_REGION, RS_CONNECT_FAILURE,
       FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
-      ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT
+      ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE
     }
     public void clear();
     public void report(String message);
