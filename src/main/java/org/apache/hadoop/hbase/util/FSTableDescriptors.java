@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableInfoMissingException;
 
 
 /**
@@ -158,7 +158,18 @@ public class FSTableDescriptors implements TableDescriptors {
         return tdm.getTableDescriptor();
       }
     }
-    HTableDescriptor htd = getTableDescriptor(this.fs, this.rootdir, tablename);
+    
+    HTableDescriptor htd = null;
+    try {
+       htd = getTableDescriptor(this.fs, this.rootdir, tablename);
+    } catch (NullPointerException e) {
+      LOG.debug("Exception during readTableDecriptor. Current table name = "
+          + tablename, e);
+    } catch (IOException ioe) {
+      LOG.debug("Exception during readTableDecriptor. Current table name = "
+          + tablename, ioe);
+    }
+    
     if (htd == null) {
       LOG.warn("The following folder is in HBase's root directory and " +
         "doesn't contain a table descriptor, " +
@@ -253,7 +264,7 @@ public class FSTableDescriptors implements TableDescriptors {
    * @return The 'current' tableinfo file.
    * @throws IOException
    */
-  private static FileStatus getTableInfoPath(final FileSystem fs,
+  public static FileStatus getTableInfoPath(final FileSystem fs,
       final Path tabledir)
   throws IOException {
     FileStatus [] status = FSUtils.listStatus(fs, tabledir, new PathFilter() {
@@ -370,21 +381,25 @@ public class FSTableDescriptors implements TableDescriptors {
   public static HTableDescriptor getTableDescriptor(FileSystem fs,
       Path hbaseRootDir, byte[] tableName)
   throws IOException {
-     return getTableDescriptor(fs, hbaseRootDir, Bytes.toString(tableName));
+     HTableDescriptor htd = null;
+     try {
+       htd = getTableDescriptor(fs, hbaseRootDir, Bytes.toString(tableName));
+     } catch (NullPointerException e) {
+       LOG.debug("Exception during readTableDecriptor. Current table name = "
+           + Bytes.toString(tableName), e);
+     }
+     return htd;
   }
 
   static HTableDescriptor getTableDescriptor(FileSystem fs,
-      Path hbaseRootDir, String tableName) {
+      Path hbaseRootDir, String tableName) throws NullPointerException, IOException{
     HTableDescriptor htd = null;
-    try {
-      htd = getTableDescriptor(fs, FSUtils.getTablePath(hbaseRootDir, tableName));
-    } catch (NullPointerException e) {
-      LOG.debug("Exception during readTableDecriptor. Current table name = " +
-        tableName , e);
-    } catch (IOException ioe) {
-      LOG.debug("Exception during readTableDecriptor. Current table name = " +
-        tableName , ioe);
+    // ignore both -ROOT- and .META. tables
+    if (Bytes.compareTo(Bytes.toBytes(tableName), HConstants.ROOT_TABLE_NAME) == 0
+        || Bytes.compareTo(Bytes.toBytes(tableName), HConstants.META_TABLE_NAME) == 0) {
+      return null;
     }
+    htd = getTableDescriptor(fs, FSUtils.getTablePath(hbaseRootDir, tableName));
     return htd;
   }
 
@@ -392,7 +407,10 @@ public class FSTableDescriptors implements TableDescriptors {
   throws IOException, NullPointerException {
     if (tableDir == null) throw new NullPointerException();
     FileStatus status = getTableInfoPath(fs, tableDir);
-    if (status == null) return null;
+    if (status == null) {
+      throw new TableInfoMissingException("No .tableinfo file under "
+          + tableDir.toUri());
+    }
     FSDataInputStream fsDataInputStream = fs.open(status.getPath());
     HTableDescriptor hTableDescriptor = null;
     try {
