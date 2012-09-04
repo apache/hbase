@@ -105,6 +105,7 @@ Release 0.92.2 - Unreleased
    HBASE-6565  Coprocessor exec result Map is not thread safe (Yuan Kang)
    HBASE-6686  HFile Quarantine fails with missing dirs in hadoop 2.0
    HBASE-6321  ReplicationSource dies reading the peer's id
+   HBASE-6516  hbck cannot detect any IOException while ".tableinfo" file is missing (Jie Huang)
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
