@@ -630,10 +630,7 @@ public class ThriftServerRunner implements Runnable {
       byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
       byte[] tableNameBytes = getBytes(tableName);
       byte[] rowBytes = getBytes(row);
-      if(famAndQf.length == 1) {
-        return get(tableNameBytes, rowBytes, famAndQf[0], HConstants.EMPTY_BYTE_ARRAY);
-      }
-      return get(tableNameBytes, rowBytes, famAndQf[0], famAndQf[1]);
+      return get(tableNameBytes, rowBytes, famAndQf[0], getQualifier(famAndQf));
     }
 
     public List<TCell> get(byte [] tableName, byte [] row, byte [] family,
@@ -659,7 +656,7 @@ public class ThriftServerRunner implements Runnable {
         ByteBuffer column, int numVersions) throws IOError {
       byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
       return getVer(getBytes(tableName), getBytes(row), famAndQf[0],
-          famAndQf.length <= 1 ? HConstants.EMPTY_BYTE_ARRAY : famAndQf[1], numVersions);
+          getQualifier(famAndQf), numVersions);
     }
 
     public List<TCell> getVer(byte [] tableName, byte [] row, byte [] family,
@@ -682,7 +679,7 @@ public class ThriftServerRunner implements Runnable {
         ByteBuffer column, long timestamp, int numVersions) throws IOError {
       byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
       return getVerTs(getBytes(tableName), getBytes(row),
-          famAndQf[0], famAndQf.length <= 1 ? HConstants.EMPTY_BYTE_ARRAY : famAndQf[1],
+          famAndQf[0], getQualifier(famAndQf),
           timestamp, numVersions);
     }
 
@@ -952,12 +949,7 @@ public class ThriftServerRunner implements Runnable {
             if (put == null) {
               put = new Put(rowBytes, timestamp, null);
             }
-            if (famAndQf.length == 1) {
-              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, effectiveTimestamp,
-                  getBytes(m.value));
-            } else {
-              put.add(famAndQf[0], famAndQf[1], effectiveTimestamp, getBytes(m.value));
-            }
+            put.add(famAndQf[0], getQualifier(famAndQf), effectiveTimestamp, getBytes(m.value));
           }
 
           if (firstMutation) {
@@ -1030,12 +1022,8 @@ public class ThriftServerRunner implements Runnable {
             if (put == null) {
               put = new Put(row, timestamp, null);
             }
-            if(famAndQf.length == 1) {
-              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, effectiveTimestamp,
-                  getBytes(m.value));
-            } else {
-              put.add(famAndQf[0], famAndQf[1], effectiveTimestamp, getBytes(m.value));
-            }
+            put.add(famAndQf[0], getQualifier(famAndQf), effectiveTimestamp,
+                getBytes(m.value));
           }
           if (firstMutation) {
             // Remember the first mutation's writeToWAL status.
@@ -1127,11 +1115,7 @@ public class ThriftServerRunner implements Runnable {
             }
           } else {
             byte[] valueBytes = getBytes(m.value);
-            if (famAndQf.length == 1) {
-              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, effectiveTimestamp, valueBytes);
-            } else {
-              put.add(famAndQf[0], famAndQf[1], effectiveTimestamp, valueBytes);
-            }
+            put.add(famAndQf[0], getQualifier(famAndQf), effectiveTimestamp, valueBytes);
           }
         }
         byte[][] famAndQfCheck = KeyValue.parseColumn(getBytes(columnCheck));
@@ -1144,13 +1128,11 @@ public class ThriftServerRunner implements Runnable {
         }
         if (!delete.isEmpty()) {
           return table.checkAndDelete(rowBytes, famAndQfCheck[0],
-                  famAndQfCheck.length != 1 ? famAndQfCheck[1]
-                      : HConstants.EMPTY_BYTE_ARRAY, valueCheckBytes, delete);
+                  getQualifier(famAndQfCheck), valueCheckBytes, delete);
         }
         if (!put.isEmpty()) {
           return table.checkAndPut(rowBytes, famAndQfCheck[0],
-                  famAndQfCheck.length != 1 ? famAndQfCheck[1]
-                      : HConstants.EMPTY_BYTE_ARRAY, valueCheckBytes, put);
+                  getQualifier(famAndQfCheck), valueCheckBytes, put);
         }
         throw new IllegalArgument(
             "Thrift CheckAndMutate call must do either put or delete.");
@@ -1167,7 +1149,7 @@ public class ThriftServerRunner implements Runnable {
         long amount) throws IOError, IllegalArgument, TException {
       byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
       return atomicIncrement(getBytes(tableName), getBytes(row), famAndQf[0],
-          famAndQf.length <= 1 ? HConstants.EMPTY_BYTE_ARRAY : famAndQf[1], amount);
+          getQualifier(famAndQf), amount);
     }
 
     public long atomicIncrement(byte [] tableName, byte [] row, byte [] family,
@@ -1509,5 +1491,12 @@ public class ThriftServerRunner implements Runnable {
     }
     return new IOError(e.getMessage(), 0);
   }
-  
+
+  private static byte[] getQualifier(byte[][] familyAndQualifier) {
+    if (familyAndQualifier.length > 1) {
+      return familyAndQualifier[1];
+    }
+    return HConstants.EMPTY_BYTE_ARRAY;
+  }
+
 }
