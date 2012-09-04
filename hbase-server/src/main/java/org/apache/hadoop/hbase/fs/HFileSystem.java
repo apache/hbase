@@ -23,9 +23,11 @@ package org.apache.hadoop.hbase.fs;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 
 import org.apache.commons.logging.Log;
@@ -258,14 +260,32 @@ public class HFileSystem extends FilterFileSystem {
             new InvocationHandler() {
               public Object invoke(Object proxy, Method method,
                                    Object[] args) throws Throwable {
-                Object res = method.invoke(cp, args);
-                if (res != null && args.length == 3 && "getBlockLocations".equals(method.getName())
-                    && res instanceof LocatedBlocks
-                    && args[0] instanceof String
-                    && args[0] != null) {
-                  lrb.reorderBlocks(conf, (LocatedBlocks) res, (String) args[0]);
+                try { 
+                  Object res = method.invoke(cp, args);
+                  if (res != null && args.length == 3 && "getBlockLocations".equals(method.getName())
+                      && res instanceof LocatedBlocks
+                      && args[0] instanceof String
+                      && args[0] != null) {
+                    lrb.reorderBlocks(conf, (LocatedBlocks) res, (String) args[0]);
+                  }
+                  return res;
+                } catch  (InvocationTargetException ite) {
+                  // We will have this for all the exception, checked on not, sent
+                  //  by any layer, including the functional exception
+                  Throwable cause = ite.getCause();
+                  if (cause == null){
+                    throw new RuntimeException(
+                      "Proxy invocation failed and getCause is null", ite);
+                  }
+                  if (cause instanceof UndeclaredThrowableException) {
+                    Throwable causeCause = cause.getCause();
+                    if (causeCause == null) {
+                      throw new RuntimeException("UndeclaredThrowableException had null cause!");
+                    }
+                    cause = cause.getCause();
+                  }
+                  throw cause;
                 }
-                return res;
               }
             });
   }
