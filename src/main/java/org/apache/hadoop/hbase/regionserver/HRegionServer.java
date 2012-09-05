@@ -2060,6 +2060,7 @@ public class HRegionServer implements HRegionInterface,
         this.addToRetryCloseRegions(region);
         throw e;
       }
+      serverInfo.getFlushedSequenceIdByRegion().remove(hri.getRegionName());
       ClosedRegionInfo info =
         new ClosedRegionInfo(hri.getRegionNameAsString(), EnvironmentEdgeManager.currentTimeMillis() ,
                              hri.getStartKey(), hri.getEndKey());
