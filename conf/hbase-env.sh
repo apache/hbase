@@ -65,6 +65,9 @@ export HBASE_OPTS="-XX:+UseConcMarkSweepGC"
 #HBASE_REGIONSERVER_MLOCK=true
 #HBASE_REGIONSERVER_UID="hbase"
 
+# File naming hosts on which backup HMaster will run.  $HBASE_HOME/conf/backup-masters by default.
+# export HBASE_BACKUP_MASTERS=${HBASE_HOME}/conf/backup-masters
+
 # Extra ssh options.  Empty by default.
 # export HBASE_SSH_OPTS="-o ConnectTimeout=1 -o SendEnv=HBASE_CONF_DIR"
 
