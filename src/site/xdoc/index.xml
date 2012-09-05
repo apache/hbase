@@ -65,10 +65,10 @@ HBase is an open-source, distributed, versioned, column-oriented store modeled a
    </p>
  </section>
      <section name="News">
+            <p>September 11th, 2012 <a href="http://www.meetup.com/hbaseusergroup/events/80621872/">Contributor's Pow-Wow at HortonWorks HQ.</a></p>
             <p>August 8th, 2012 <a href="http://www.apache.org/dyn/closer.cgi/hbase/">HBase 0.94.1 is available for download</a></p>
             <p>June 15th, 2012 <a href="http://www.meetup.com/hbaseusergroup/events/59829652/">Birds-of-a-feather</a> in San Jose, day after <a href="http://hadoopsummit.org">Hadoop Summit</a></p>
             <p>May 23rd, 2012 <a href="http://www.meetup.com/hackathon/events/58953522/">HackConAthon</a> in Palo Alto</p>
-            <p>May 22nd, 2012 <a href="http://www.hbasecon.com">HBaseCon2012</a> in San Francisco</p>
 
       <p><small><a href="old_news.html">Old News</a></small></p>
     </section>
