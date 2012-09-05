@@ -73,7 +73,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param value     the new value of the gauge.
    */
   public void setGauge(String gaugeName, long value) {
-    MutableGaugeLong gaugeInt = getLongGauge(gaugeName, value);
+    MutableGaugeLong gaugeInt = metricsRegistry.getLongGauge(gaugeName, value);
     gaugeInt.set(value);
   }
 
@@ -84,7 +84,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param delta     The amount to increment the gauge by.
    */
   public void incGauge(String gaugeName, long delta) {
-    MutableGaugeLong gaugeInt = getLongGauge(gaugeName, 0l);
+    MutableGaugeLong gaugeInt = metricsRegistry.getLongGauge(gaugeName, 0l);
     gaugeInt.incr(delta);
   }
 
@@ -95,7 +95,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param delta     the ammount to subtract from a gauge value.
    */
   public void decGauge(String gaugeName, long delta) {
-    MutableGaugeLong gaugeInt = getLongGauge(gaugeName, 0l);
+    MutableGaugeLong gaugeInt = metricsRegistry.getLongGauge(gaugeName, 0l);
     gaugeInt.decr(delta);
   }
 
@@ -106,7 +106,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    * @param delta the ammount to increment
    */
   public void incCounters(String key, long delta) {
-    MutableCounterLong counter = getLongCounter(key, 0l);
+    MutableCounterLong counter = metricsRegistry.getLongCounter(key, 0l);
     counter.incr(delta);
 
   }
@@ -127,28 +127,6 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
    */
   public void removeCounter(String key) {
     metricsRegistry.removeMetric(key);
-  }
-
-  /**
-   * Get a MetricMutableGaugeLong from the storage.  If it is not there atomically put it.
-   *
-   * @param gaugeName              name of the gauge to create or get.
-   * @param potentialStartingValue value of the new counter if we have to create it.
-   * @return
-   */
-  protected MutableGaugeLong getLongGauge(String gaugeName, long potentialStartingValue) {
-    return metricsRegistry.getLongGauge(gaugeName, potentialStartingValue);
-  }
-
-  /**
-   * Get a MetricMutableCounterLong from the storage.  If it is not there atomically put it.
-   *
-   * @param counterName            Name of the counter to get
-   * @param potentialStartingValue starting value if we have to create a new counter
-   * @return
-   */
-  protected MutableCounterLong getLongCounter(String counterName, long potentialStartingValue) {
-    return metricsRegistry.getLongCounter(counterName, potentialStartingValue);
   }
 
   @Override

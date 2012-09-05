@@ -53,10 +53,10 @@ public class MasterMetricsSourceImpl
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
 
     this.masterWrapper = masterWrapper;
-    clusterRequestsCounter = getLongCounter("cluster_requests", 0);
-    ritGauge = getLongGauge("ritCount", 0);
-    ritCountOverThresholdGauge = getLongGauge("ritCountOverThreshold", 0);
-    ritOldestAgeGauge = getLongGauge("ritOldestAge", 0);
+    clusterRequestsCounter = metricsRegistry.newCounter("cluster_requests", "",  0l);
+    ritGauge = metricsRegistry.newGauge("ritCount", "", 0l);
+    ritCountOverThresholdGauge = metricsRegistry.newGauge("ritCountOverThreshold","", 0l);
+    ritOldestAgeGauge = metricsRegistry.newGauge("ritOldestAge", "", 0l);
   }
 
   public void incRequests(final int inc) {

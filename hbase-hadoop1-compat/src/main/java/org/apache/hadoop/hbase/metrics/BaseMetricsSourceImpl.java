@@ -77,28 +77,6 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
     DefaultMetricsSystem.INSTANCE.registerSource(metricsJmxContext, metricsDescription, this);
   }
 
-  /**
-   * Get a MetricMutableGaugeLong from the storage.  If it is not there atomically put it.
-   *
-   * @param gaugeName              name of the gauge to create or get.
-   * @param potentialStartingValue value of the new gauge if we have to create it.
-   * @return a metric object
-   */
-  protected MetricMutableGaugeLong getLongGauge(String gaugeName, long potentialStartingValue) {
-    return metricsRegistry.getLongGauge(gaugeName, potentialStartingValue);
-  }
-
-  /**
-   * Get a MetricMutableCounterLong from the storage.  If it is not there atomically put it.
-   *
-   * @param counterName            Name of the counter to get
-   * @param potentialStartingValue starting value if we have to create a new counter
-   * @return a metric object
-   */
-  protected MetricMutableCounterLong getLongCounter(String counterName,
-                                                    long potentialStartingValue) {
-    return metricsRegistry.getLongCounter(counterName, potentialStartingValue);
-  }
 
   /**
    * Set a single gauge to a value.
