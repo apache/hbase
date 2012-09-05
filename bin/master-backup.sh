@@ -25,7 +25,7 @@
 # Environment Variables
 #
 #   HBASE_BACKUP_MASTERS File naming remote hosts.
-#     Default is ${HADOOP_CONF_DIR}/backup-masters
+#     Default is ${HBASE_CONF_DIR}/backup-masters
 #   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
 #   HBASE_CONF_DIR  Alternate hbase conf dir. Default is ${HBASE_HOME}/conf.
 #   HADOOP_SLAVE_SLEEP Seconds to sleep between spawning remote commands.
