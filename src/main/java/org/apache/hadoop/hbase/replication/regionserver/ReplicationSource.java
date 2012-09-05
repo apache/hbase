@@ -428,7 +428,12 @@ public class ReplicationSource extends Thread
           currentNbEntries >= this.replicationQueueNbCapacity) {
         break;
       }
-      entry = this.reader.next(entriesArray[currentNbEntries]);
+      try {
+        entry = this.reader.next(entriesArray[currentNbEntries]);
+      } catch (IOException ie) {
+        LOG.debug("Break on IOE: " + ie.getMessage());
+        break;
+      }
     }
     LOG.debug("currentNbOperations:" + currentNbOperations +
         " and seenEntries:" + seenEntries +
