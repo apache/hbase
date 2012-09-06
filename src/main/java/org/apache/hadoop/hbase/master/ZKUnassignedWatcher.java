@@ -188,7 +188,8 @@ public class ZKUnassignedWatcher implements Watcher {
     }
 
     HBaseEventType rsEvent = HBaseEventType.fromByte(data[0]);
-    LOG.debug("Got event type [ " + rsEvent + " ] for region " + region);
+    LOG.debug("Got event type [ " + rsEvent + " ] for region " + region +
+        " triggered by " + eventType);
 
     RegionTransitionEventData rt = new RegionTransitionEventData();
     Writables.getWritable(data, rt);
