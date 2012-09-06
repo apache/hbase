@@ -153,4 +153,12 @@ public class RegionLoad {
   public long getCurrentCompactedKVs() {
     return regionLoadPB.getCurrentCompactedKVs();
   }
+
+  /**
+   * This does not really belong inside RegionLoad but its being done in the name of expediency.
+   * @return the completed sequence Id for the region
+   */
+  public long getCompleteSequenceId() {
+    return regionLoadPB.getCompleteSequenceId();
+  }
 }

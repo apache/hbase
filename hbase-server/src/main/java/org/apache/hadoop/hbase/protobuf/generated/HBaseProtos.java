@@ -4049,6 +4049,10 @@ public final class HBaseProtos {
         getCoprocessorsOrBuilderList();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder getCoprocessorsOrBuilder(
         int index);
+    
+    // optional uint64 completeSequenceId = 16;
+    boolean hasCompleteSequenceId();
+    long getCompleteSequenceId();
   }
   public static final class RegionLoad extends
       com.google.protobuf.GeneratedMessage
@@ -4243,6 +4247,16 @@ public final class HBaseProtos {
       return coprocessors_.get(index);
     }
     
+    // optional uint64 completeSequenceId = 16;
+    public static final int COMPLETESEQUENCEID_FIELD_NUMBER = 16;
+    private long completeSequenceId_;
+    public boolean hasCompleteSequenceId() {
+      return ((bitField0_ & 0x00004000) == 0x00004000);
+    }
+    public long getCompleteSequenceId() {
+      return completeSequenceId_;
+    }
+    
     private void initFields() {
       regionSpecifier_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       stores_ = 0;
@@ -4259,6 +4273,7 @@ public final class HBaseProtos {
       totalStaticIndexSizeKB_ = 0;
       totalStaticBloomSizeKB_ = 0;
       coprocessors_ = java.util.Collections.emptyList();
+      completeSequenceId_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4331,6 +4346,9 @@ public final class HBaseProtos {
       for (int i = 0; i < coprocessors_.size(); i++) {
         output.writeMessage(15, coprocessors_.get(i));
       }
+      if (((bitField0_ & 0x00004000) == 0x00004000)) {
+        output.writeUInt64(16, completeSequenceId_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -4399,6 +4417,10 @@ public final class HBaseProtos {
       for (int i = 0; i < coprocessors_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(15, coprocessors_.get(i));
+      }
+      if (((bitField0_ & 0x00004000) == 0x00004000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(16, completeSequenceId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4495,6 +4517,11 @@ public final class HBaseProtos {
       }
       result = result && getCoprocessorsList()
           .equals(other.getCoprocessorsList());
+      result = result && (hasCompleteSequenceId() == other.hasCompleteSequenceId());
+      if (hasCompleteSequenceId()) {
+        result = result && (getCompleteSequenceId()
+            == other.getCompleteSequenceId());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -4563,6 +4590,10 @@ public final class HBaseProtos {
       if (getCoprocessorsCount() > 0) {
         hash = (37 * hash) + COPROCESSORS_FIELD_NUMBER;
         hash = (53 * hash) + getCoprocessorsList().hashCode();
+      }
+      if (hasCompleteSequenceId()) {
+        hash = (37 * hash) + COMPLETESEQUENCEID_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getCompleteSequenceId());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -4720,6 +4751,8 @@ public final class HBaseProtos {
         } else {
           coprocessorsBuilder_.clear();
         }
+        completeSequenceId_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00008000);
         return this;
       }
       
@@ -4827,6 +4860,10 @@ public final class HBaseProtos {
         } else {
           result.coprocessors_ = coprocessorsBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00008000) == 0x00008000)) {
+          to_bitField0_ |= 0x00004000;
+        }
+        result.completeSequenceId_ = completeSequenceId_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4910,6 +4947,9 @@ public final class HBaseProtos {
               coprocessorsBuilder_.addAllMessages(other.coprocessors_);
             }
           }
+        }
+        if (other.hasCompleteSequenceId()) {
+          setCompleteSequenceId(other.getCompleteSequenceId());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -5034,6 +5074,11 @@ public final class HBaseProtos {
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addCoprocessors(subBuilder.buildPartial());
+              break;
+            }
+            case 128: {
+              bitField0_ |= 0x00008000;
+              completeSequenceId_ = input.readUInt64();
               break;
             }
           }
@@ -5589,6 +5634,27 @@ public final class HBaseProtos {
           coprocessors_ = null;
         }
         return coprocessorsBuilder_;
+      }
+      
+      // optional uint64 completeSequenceId = 16;
+      private long completeSequenceId_ ;
+      public boolean hasCompleteSequenceId() {
+        return ((bitField0_ & 0x00008000) == 0x00008000);
+      }
+      public long getCompleteSequenceId() {
+        return completeSequenceId_;
+      }
+      public Builder setCompleteSequenceId(long value) {
+        bitField0_ |= 0x00008000;
+        completeSequenceId_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearCompleteSequenceId() {
+        bitField0_ = (bitField0_ & ~0x00008000);
+        completeSequenceId_ = 0L;
+        onChanged();
+        return this;
       }
       
       // @@protoc_insertion_point(builder_scope:RegionLoad)
@@ -11091,7 +11157,7 @@ public final class HBaseProtos {
       "\0222\n\004type\030\001 \002(\0162$.RegionSpecifier.RegionS" +
       "pecifierType\022\r\n\005value\030\002 \002(\014\"?\n\023RegionSpe" +
       "cifierType\022\017\n\013REGION_NAME\020\001\022\027\n\023ENCODED_R" +
-      "EGION_NAME\020\002\"\270\003\n\nRegionLoad\022)\n\017regionSpe" +
+      "EGION_NAME\020\002\"\324\003\n\nRegionLoad\022)\n\017regionSpe" +
       "cifier\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006stores" +
       "\030\002 \001(\r\022\022\n\nstorefiles\030\003 \001(\r\022\037\n\027storeUncom" +
       "pressedSizeMB\030\004 \001(\r\022\027\n\017storefileSizeMB\030\005" +
@@ -11102,31 +11168,31 @@ public final class HBaseProtos {
       "dKVs\030\013 \001(\004\022\027\n\017rootIndexSizeKB\030\014 \001(\r\022\036\n\026t" +
       "otalStaticIndexSizeKB\030\r \001(\r\022\036\n\026totalStat" +
       "icBloomSizeKB\030\016 \001(\r\022\"\n\014coprocessors\030\017 \003(" +
-      "\0132\014.Coprocessor\"\342\001\n\nServerLoad\022\030\n\020number" +
-      "OfRequests\030\001 \001(\r\022\035\n\025totalNumberOfRequest" +
-      "s\030\002 \001(\r\022\022\n\nusedHeapMB\030\003 \001(\r\022\021\n\tmaxHeapMB" +
-      "\030\004 \001(\r\022 \n\013regionLoads\030\005 \003(\0132\013.RegionLoad" +
-      "\022\"\n\014coprocessors\030\006 \003(\0132\014.Coprocessor\022\027\n\017",
-      "reportStartTime\030\007 \001(\004\022\025\n\rreportEndTime\030\010" +
-      " \001(\004\"%\n\tTimeRange\022\014\n\004from\030\001 \001(\004\022\n\n\002to\030\002 " +
-      "\001(\004\"0\n\006Filter\022\014\n\004name\030\001 \002(\t\022\030\n\020serialize" +
-      "dFilter\030\002 \001(\014\"w\n\010KeyValue\022\013\n\003row\030\001 \002(\014\022\016" +
-      "\n\006family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022\021\n\ttim" +
-      "estamp\030\004 \001(\004\022\031\n\007keyType\030\005 \001(\0162\010.KeyType\022" +
-      "\r\n\005value\030\006 \001(\014\"?\n\nServerName\022\020\n\010hostName" +
-      "\030\001 \002(\t\022\014\n\004port\030\002 \001(\r\022\021\n\tstartCode\030\003 \001(\004\"" +
-      "\033\n\013Coprocessor\022\014\n\004name\030\001 \002(\t\"-\n\016NameStri" +
-      "ngPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\",\n\rN",
-      "ameBytesPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001(" +
-      "\014\"/\n\016BytesBytesPair\022\r\n\005first\030\001 \002(\014\022\016\n\006se" +
-      "cond\030\002 \002(\014*r\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rL" +
-      "ESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003" +
-      "\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005N" +
-      "O_OP\020\006*_\n\007KeyType\022\013\n\007MINIMUM\020\000\022\007\n\003PUT\020\004\022" +
-      "\n\n\006DELETE\020\010\022\021\n\rDELETE_COLUMN\020\014\022\021\n\rDELETE" +
-      "_FAMILY\020\016\022\014\n\007MAXIMUM\020\377\001B>\n*org.apache.ha" +
-      "doop.hbase.protobuf.generatedB\013HBaseProt" +
-      "osH\001\240\001\001"
+      "\0132\014.Coprocessor\022\032\n\022completeSequenceId\030\020 " +
+      "\001(\004\"\342\001\n\nServerLoad\022\030\n\020numberOfRequests\030\001" +
+      " \001(\r\022\035\n\025totalNumberOfRequests\030\002 \001(\r\022\022\n\nu" +
+      "sedHeapMB\030\003 \001(\r\022\021\n\tmaxHeapMB\030\004 \001(\r\022 \n\013re" +
+      "gionLoads\030\005 \003(\0132\013.RegionLoad\022\"\n\014coproces",
+      "sors\030\006 \003(\0132\014.Coprocessor\022\027\n\017reportStartT" +
+      "ime\030\007 \001(\004\022\025\n\rreportEndTime\030\010 \001(\004\"%\n\tTime" +
+      "Range\022\014\n\004from\030\001 \001(\004\022\n\n\002to\030\002 \001(\004\"0\n\006Filte" +
+      "r\022\014\n\004name\030\001 \002(\t\022\030\n\020serializedFilter\030\002 \001(" +
+      "\014\"w\n\010KeyValue\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002" +
+      "(\014\022\021\n\tqualifier\030\003 \002(\014\022\021\n\ttimestamp\030\004 \001(\004" +
+      "\022\031\n\007keyType\030\005 \001(\0162\010.KeyType\022\r\n\005value\030\006 \001" +
+      "(\014\"?\n\nServerName\022\020\n\010hostName\030\001 \002(\t\022\014\n\004po" +
+      "rt\030\002 \001(\r\022\021\n\tstartCode\030\003 \001(\004\"\033\n\013Coprocess" +
+      "or\022\014\n\004name\030\001 \002(\t\"-\n\016NameStringPair\022\014\n\004na",
+      "me\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\",\n\rNameBytesPair" +
+      "\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001(\014\"/\n\016BytesBy" +
+      "tesPair\022\r\n\005first\030\001 \002(\014\022\016\n\006second\030\002 \002(\014*r" +
+      "\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL" +
+      "\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_" +
+      "OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*_\n\007Ke" +
+      "yType\022\013\n\007MINIMUM\020\000\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022" +
+      "\021\n\rDELETE_COLUMN\020\014\022\021\n\rDELETE_FAMILY\020\016\022\014\n" +
+      "\007MAXIMUM\020\377\001B>\n*org.apache.hadoop.hbase.p" +
+      "rotobuf.generatedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -11186,7 +11252,7 @@ public final class HBaseProtos {
           internal_static_RegionLoad_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionLoad_descriptor,
-              new java.lang.String[] { "RegionSpecifier", "Stores", "Storefiles", "StoreUncompressedSizeMB", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "TotalCompactingKVs", "CurrentCompactedKVs", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "Coprocessors", },
+              new java.lang.String[] { "RegionSpecifier", "Stores", "Storefiles", "StoreUncompressedSizeMB", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "TotalCompactingKVs", "CurrentCompactedKVs", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "Coprocessors", "CompleteSequenceId", },
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad.class,
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad.Builder.class);
           internal_static_ServerLoad_descriptor =

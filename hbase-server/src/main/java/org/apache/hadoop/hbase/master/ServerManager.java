@@ -28,7 +28,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,14 +40,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
-import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -55,8 +54,16 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
+import org.apache.hadoop.hbase.util.Bytes;
 
+import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -78,6 +85,9 @@ public class ServerManager {
 
   // Set if we are to shutdown the cluster.
   private volatile boolean clusterShutdown = false;
+
+  private final SortedMap<byte[], Long> flushedSequenceIdByRegion =
+    new ConcurrentSkipListMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
 
   /** Map of registered servers to their current load */
   private final Map<ServerName, ServerLoad> onlineServers =
@@ -163,6 +173,33 @@ public class ServerManager {
     return sn;
   }
 
+  /**
+   * Updates last flushed sequence Ids for the regions on server sn
+   * @param sn
+   * @param hsl
+   */
+  private void updateLastFlushedSequenceIds(ServerName sn, ServerLoad hsl) {
+    Map<byte[], RegionLoad> regionsLoad = hsl.getRegionsLoad();
+    for (Entry<byte[], RegionLoad> entry : regionsLoad.entrySet()) {
+      Long existingValue = flushedSequenceIdByRegion.get(entry.getKey());
+      long l = entry.getValue().getCompleteSequenceId();
+      if (existingValue != null) {
+        if (l != -1 && l < existingValue) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("RegionServer " + sn +
+                " indicates a last flushed sequence id (" + entry.getValue() +
+                ") that is less than the previous last flushed sequence id (" +
+                existingValue + ") for region " +
+                Bytes.toString(entry.getKey()) + " Ignoring.");
+          }
+          continue; // Don't let smaller sequence ids override greater
+          // sequence ids.
+        }
+      }
+      flushedSequenceIdByRegion.put(entry.getKey(), l);
+    }
+  }
+
   void regionServerReport(ServerName sn, ServerLoad sl)
   throws YouAreDeadException, PleaseHoldException {
     checkIsDead(sn, "REPORT");
@@ -178,6 +215,7 @@ public class ServerManager {
     } else {
       this.onlineServers.put(sn, sl);
     }
+    updateLastFlushedSequenceIds(sn, sl);
   }
 
   /**
@@ -269,6 +307,14 @@ public class ServerManager {
     LOG.info("Registering server=" + serverName);
     this.onlineServers.put(serverName, sl);
     this.serverConnections.remove(serverName);
+  }
+
+  public long getLastFlushedSequenceId(byte[] regionName) {
+    long seqId = -1;
+    if (flushedSequenceIdByRegion.containsKey(regionName)) {
+      seqId = flushedSequenceIdByRegion.get(regionName);
+    }
+    return seqId;
   }
 
   /**

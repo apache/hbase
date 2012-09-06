@@ -30,8 +30,11 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -58,6 +61,7 @@ import org.apache.hadoop.hbase.MasterMonitorProtocol;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
@@ -150,6 +154,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDe
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
@@ -1150,8 +1156,16 @@ Server {
   }
 
   @Override
+  public GetLastFlushedSequenceIdResponse getLastFlushedSequenceId(RpcController controller,
+      GetLastFlushedSequenceIdRequest request) throws ServiceException {
+    byte[] regionName = request.getRegionName().toByteArray();
+    long seqId = serverManager.getLastFlushedSequenceId(regionName);
+    return ResponseConverter.buildGetLastFlushedSequenceIdResponse(seqId);
+  }
+
+  @Override
   public RegionServerReportResponse regionServerReport(
-      RpcController controller,RegionServerReportRequest request) throws ServiceException {
+      RpcController controller, RegionServerReportRequest request) throws ServiceException {
     try {
       HBaseProtos.ServerLoad sl = request.getLoad();
       this.serverManager.regionServerReport(ProtobufUtil.toServerName(request.getServer()), new ServerLoad(sl));
@@ -1746,12 +1760,14 @@ Server {
   }
 
   @Override
-  public GetClusterStatusResponse getClusterStatus(RpcController controller, GetClusterStatusRequest req)
+  public GetClusterStatusResponse getClusterStatus(RpcController controller,
+      GetClusterStatusRequest req)
   throws ServiceException {
     GetClusterStatusResponse.Builder response = GetClusterStatusResponse.newBuilder();
     response.setClusterStatus(getClusterStatus().convert());
     return response.build();
   }
+
   /**
    * @return cluster status
    */
@@ -1770,7 +1786,8 @@ Server {
     for (String s: backupMasterStrings) {
       try {
         byte [] bytes =
-            ZKUtil.getData(this.zooKeeper, ZKUtil.joinZNode(this.zooKeeper.backupMasterAddressesZNode, s));
+            ZKUtil.getData(this.zooKeeper, ZKUtil.joinZNode(
+                this.zooKeeper.backupMasterAddressesZNode, s));
         if (bytes != null) {
           ServerName sn;
           try {

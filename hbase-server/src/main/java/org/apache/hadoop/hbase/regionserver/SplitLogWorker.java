@@ -30,9 +30,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DeserializationException;
+import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
+import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -90,7 +92,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   }
 
   public SplitLogWorker(ZooKeeperWatcher watcher, final Configuration conf,
-      final ServerName serverName) {
+      final ServerName serverName, final LastSequenceId sequenceIdChecker) {
     this(watcher, conf, serverName, new TaskExecutor () {
       @Override
       public Status exec(String filename, CancelableProgressable p) {
@@ -108,7 +110,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         // encountered a bad non-retry-able persistent error.
         try {
           if (HLogSplitter.splitLogFile(rootdir,
-              fs.getFileStatus(new Path(filename)), fs, conf, p) == false) {
+              fs.getFileStatus(new Path(filename)), fs, conf, p, sequenceIdChecker) == false) {
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {

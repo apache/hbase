@@ -49,6 +49,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.ObjectName;
@@ -114,6 +115,7 @@ import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
@@ -214,6 +216,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
@@ -232,7 +235,7 @@ import com.google.protobuf.RpcController;
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
 public class  HRegionServer implements ClientProtocol,
-    AdminProtocol, Runnable, RegionServerServices, HBaseRPCErrorHandler {
+    AdminProtocol, Runnable, RegionServerServices, HBaseRPCErrorHandler, LastSequenceId {
 
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
 
@@ -1248,7 +1251,8 @@ public class  HRegionServer implements ClientProtocol,
       .setReadRequestsCount((int) r.readRequestsCount.get())
       .setWriteRequestsCount((int) r.writeRequestsCount.get())
       .setTotalCompactingKVs(totalCompactingKVs)
-      .setCurrentCompactedKVs(currentCompactedKVs);
+      .setCurrentCompactedKVs(currentCompactedKVs)
+      .setCompleteSequenceId(r.completeSequenceId);
     Set<String> coprocessors = r.getCoprocessorHost().getCoprocessors();
     for (String coprocessor : coprocessors) {
       regionLoad.addCoprocessors(
@@ -1622,7 +1626,7 @@ public class  HRegionServer implements ClientProtocol,
 
     // Create the log splitting worker and start it
     this.splitLogWorker = new SplitLogWorker(this.zooKeeper,
-        this.getConfiguration(), this.getServerName());
+        this.getConfiguration(), this.getServerName(), this);
     splitLogWorker.start();
   }
 
@@ -1967,6 +1971,22 @@ public class  HRegionServer implements ClientProtocol,
       }
     }
     return result;
+  }
+
+  @Override
+  public long getLastSequenceId(byte[] region) {
+    Long lastFlushedSequenceId = -1l;
+    try {
+      GetLastFlushedSequenceIdRequest req =
+        RequestConverter.buildGetLastFlushedSequenceIdRequest(region);
+      lastFlushedSequenceId = hbaseMaster.getLastFlushedSequenceId(null, req)
+      .getLastFlushedSequenceId();
+    } catch (ServiceException e) {
+      lastFlushedSequenceId = -1l;
+      LOG.warn("Unable to connect to the master to check " +
+          "the last flushed sequence id", e);
+    }
+    return lastFlushedSequenceId;
   }
 
   /**
