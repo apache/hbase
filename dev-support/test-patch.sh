@@ -29,7 +29,6 @@ fi
 PROJECT_NAME=HBase
 JENKINS=false
 PATCH_DIR=/tmp
-SUPPORT_DIR=/tmp
 BASEDIR=$(pwd)
 
 PS=${PS:-ps}
@@ -66,7 +65,6 @@ printUsage() {
   echo
   echo "Jenkins-only options:"
   echo "--jenkins              Run by Jenkins (runs tests and posts results to JIRA)"
-  echo "--support-dir=<dir>    The directory to find support files in"
   echo "--wget-cmd=<cmd>       The 'wget' command to use (default 'wget')"
   echo "--jira-cmd=<cmd>       The 'jira' command to use (default 'jira')"
   echo "--jira-password=<pw>   The password for the 'jira' command"
@@ -83,9 +81,6 @@ parseArgs() {
       ;;
     --patch-dir=*)
       PATCH_DIR=${i#*=}
-      ;;
-    --support-dir=*)
-      SUPPORT_DIR=${i#*=}
       ;;
     --basedir=*)
       BASEDIR=${i#*=}
@@ -216,8 +211,6 @@ setup () {
   $patchURL
   against trunk revision ${SVN_REVISION}."
 
-    ### Copy in any supporting files needed by this process
-    cp -r $SUPPORT_DIR/lib/* ./lib
     #PENDING: cp -f $SUPPORT_DIR/etc/checkstyle* ./src/test
   ### Copy the patch file to $PATCH_DIR
   else
