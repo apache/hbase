@@ -626,6 +626,21 @@ mvn compile
            <para>This convention comes from our parent project Hadoop.</para>
            </section> <!-- code.standards -->
 
+          <section xml:id="design.invariants">
+           <title>Invariants</title>
+           <para>We don't have many but what we have we list below.  All are subject to challenge of
+           course but until then, please hold to the rules of the road.
+           </para>
+          <section xml:id="design.invariants.zk.data">
+            <title>No permanent state in ZooKeeper</title>
+          <para>ZooKeeper state should transient (treat it like memory). If deleted, hbase
+          should be able to recover and essentially be in the same state<footnote><para>There are currently
+          a few exceptions that we need to fix around whether a table is enabled or disabled</para></footnote>.
+          </para>
+          </section>
+
+           </section> <!-- design.invariants -->
+
           <section xml:id="run.insitu">
            <title>Running In-Situ</title>
            <para>If you are developing HBase, frequently it is useful to test your changes against a more-real cluster than what you find in unit tests. In this case, HBase can be run directly from the source in local-mode.
