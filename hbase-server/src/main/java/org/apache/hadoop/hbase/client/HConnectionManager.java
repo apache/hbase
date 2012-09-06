@@ -1617,26 +1617,16 @@ public class HConnectionManager {
       return getKeepAliveMasterMonitor();
     }
 
-    /**
-     * This function allows HBaseAdmin and potentially others
-     * to get a shared MasterAdminProtocol connection.
-     *
-     * @return The shared instance. Never returns null.
-     * @throws MasterNotRunningException
-     */
-    MasterAdminKeepAliveConnection getKeepAliveMasterAdmin() throws MasterNotRunningException {
+    @Override
+    public MasterAdminKeepAliveConnection getKeepAliveMasterAdmin()
+        throws MasterNotRunningException {
       return (MasterAdminKeepAliveConnection)
         getKeepAliveMasterProtocol(masterAdminProtocol, MasterAdminKeepAliveConnection.class);
     }
 
-    /**
-     * This function allows HBaseAdminProtocol and potentially others
-     * to get a shared MasterMonitor connection.
-     *
-     * @return The shared instance. Never returns null.
-     * @throws MasterNotRunningException
-     */
-    MasterMonitorKeepAliveConnection getKeepAliveMasterMonitor() throws MasterNotRunningException {
+    @Override
+    public MasterMonitorKeepAliveConnection getKeepAliveMasterMonitor()
+        throws MasterNotRunningException {
       return (MasterMonitorKeepAliveConnection)
         getKeepAliveMasterProtocol(masterMonitorProtocol, MasterMonitorKeepAliveConnection.class);
     }

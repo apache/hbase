@@ -119,7 +119,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   // We use the implementation class rather then the interface because we
   //  need the package protected functions to get the connection to master
-  private HConnectionManager.HConnectionImplementation connection;
+  private HConnection connection;
 
   private volatile Configuration conf;
   private final long pause;
@@ -154,10 +154,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public HBaseAdmin(HConnection connection)
       throws MasterNotRunningException, ZooKeeperConnectionException {
     this.conf = connection.getConfiguration();
-
-    // We want the real class, without showing it our public interface,
-    //  hence the cast.
-    this.connection = (HConnectionManager.HConnectionImplementation)connection;
+    this.connection = connection;
 
     this.pause = this.conf.getLong("hbase.client.pause", 1000);
     this.numRetries = this.conf.getInt("hbase.client.retries.number", 10);
