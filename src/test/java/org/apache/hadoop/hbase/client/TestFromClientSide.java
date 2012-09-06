@@ -48,6 +48,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -102,6 +103,7 @@ import org.junit.experimental.categories.Category;
  * Each creates a table named for the method and does its stuff against that.
  */
 @Category(LargeTests.class)
+@SuppressWarnings ("deprecation")
 public class TestFromClientSide {
   final Log LOG = LogFactory.getLog(getClass());
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -4366,8 +4368,8 @@ public class TestFromClientSide {
     }
 
     final Object waitLock = new Object();
-
     ExecutorService executorService = Executors.newFixedThreadPool(numVersions);
+    final AtomicReference<AssertionError> error = new AtomicReference<AssertionError>(null);
     for (int versions = numVersions; versions < numVersions * 2; versions++) {
       final int versionsCopy = versions;
       executorService.submit(new Callable<Void>() {
@@ -4392,6 +4394,11 @@ public class TestFromClientSide {
               waitLock.wait();
             }
           } catch (Exception e) {
+          } catch (AssertionError e) {
+            // the error happens in a thread, it won't fail the test,
+            // need to pass it to the caller for proper handling.
+            error.set(e);
+            LOG.error(e);
           }
 
           return null;
@@ -4402,8 +4409,8 @@ public class TestFromClientSide {
       waitLock.notifyAll();
     }
     executorService.shutdownNow();
+    assertNull(error.get());
   }
-
 
   @Test
   public void testCheckAndPut() throws IOException {
@@ -4450,6 +4457,7 @@ public class TestFromClientSide {
   * @throws Exception
   */
   @Test
+  @SuppressWarnings ("unused")
   public void testScanMetrics() throws Exception {
     byte [] TABLENAME = Bytes.toBytes("testScanMetrics");
 
@@ -4518,9 +4526,8 @@ public class TestFromClientSide {
     ScanMetrics scanMetricsWithClose = getScanMetrics(scanWithClose);
     assertEquals("Did not access all the regions in the table", numOfRegions,
         scanMetricsWithClose.countOfRegions.getCurrentIntervalValue());
-
   }
-  
+
   private ScanMetrics getScanMetrics(Scan scan) throws Exception {
     byte[] serializedMetrics = scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
     assertTrue("Serialized metrics were not found.", serializedMetrics != null);
@@ -4559,6 +4566,20 @@ public class TestFromClientSide {
     long startBlockCount = cache.getBlockCount();
     long startBlockHits = cache.getStats().getHitCount();
     long startBlockMiss = cache.getStats().getMissCount();
+
+    // wait till baseline is stable, (minimal 500 ms)
+    for (int i = 0; i < 5; i++) {
+      Thread.sleep(100);
+      if (startBlockCount != cache.getBlockCount()
+          || startBlockHits != cache.getStats().getHitCount()
+          || startBlockMiss != cache.getStats().getMissCount()) {
+        startBlockCount = cache.getBlockCount();
+        startBlockHits = cache.getStats().getHitCount();
+        startBlockMiss = cache.getStats().getMissCount();
+        i = -1;
+      }
+    }
+
     // insert data
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, data);
@@ -4701,7 +4722,6 @@ public class TestFromClientSide {
     HTable table = TEST_UTIL.createTable(TABLE, new byte[][] {FAMILY}, 10);
     int numOfRegions = TEST_UTIL.createMultiRegions(table, FAMILY);
     assertEquals(25, numOfRegions);
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
 
     // Get the regions in this range
     List<HRegionLocation> regionsList = table.getRegionsInRange(startKey,
