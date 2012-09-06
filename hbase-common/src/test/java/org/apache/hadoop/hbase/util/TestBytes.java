@@ -283,5 +283,12 @@ public class TestBytes extends TestCase {
     assertEquals("World", Bytes.readStringFixedSize(dis, 18));
     assertEquals("", Bytes.readStringFixedSize(dis, 9));
   }
+  
+  public void testCopy() throws Exception {
+    byte [] bytes = Bytes.toBytes("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    byte [] copy =  Bytes.copy(bytes);
+    assertFalse(bytes == copy);
+    assertTrue(Bytes.equals(bytes, copy));
+  }
 }
 

@@ -1655,5 +1655,17 @@ public class Bytes {
 
     return toString(b, 0, n);
   }
-
+  
+  /**
+   * Copy the byte array given in parameter and return an instance 
+   * of a new byte array with the same length and the same content.
+   * @param bytes the byte array to duplicate
+   * @return a copy of the given byte array 
+   */
+  public static byte [] copy(byte [] bytes) {
+    if (bytes == null) return null;
+    byte [] result = new byte[bytes.length];
+    System.arraycopy(bytes, 0, result, 0, bytes.length);	  
+    return result;
+  }
 }
