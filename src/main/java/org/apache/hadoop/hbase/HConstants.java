@@ -536,6 +536,17 @@ public final class HConstants {
       "(" + CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN + ")=(" +
       CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN + "),?");
 
+  /**
+   * QOS attributes: these attributes are used to demarcate RPC call processing
+   * by different set of handlers. For example, HIGH_QOS tagged methods are
+   * handled by high priority handlers.
+   */
+  public static final int NORMAL_QOS = 0;
+  public static final int QOS_THRESHOLD = 10;
+  public static final int HIGH_QOS = 100;
+  public static final int REPLICATION_QOS = 5; // normal_QOS < replication_QOS < high_QOS
+
+  
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

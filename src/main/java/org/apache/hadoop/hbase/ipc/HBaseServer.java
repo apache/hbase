@@ -212,6 +212,10 @@ public abstract class HBaseServer implements RpcServer {
   protected int numConnections = 0;
   private Handler[] handlers = null;
   private Handler[] priorityHandlers = null;
+  /** replication related queue; */
+  private BlockingQueue<Call> replicationQueue;
+  private int numOfReplicationHandlers = 0;
+  private Handler[] replicationHandlers = null;
   protected HBaseRPCErrorHandler errorHandler = null;
 
   /**
@@ -1262,6 +1266,8 @@ public abstract class HBaseServer implements RpcServer {
 
       if (priorityCallQueue != null && getQosLevel(param) > highPriorityLevel) {
         priorityCallQueue.put(call);
+      } else if (replicationQueue != null && getQosLevel(param) == HConstants.REPLICATION_QOS) {
+        replicationQueue.put(call); 
       } else {
         callQueue.put(call);              // queue the call; maybe blocked here
       }
@@ -1293,6 +1299,8 @@ public abstract class HBaseServer implements RpcServer {
       if (cq == priorityCallQueue) {
         // this is just an amazing hack, but it works.
         threadName = "PRI " + threadName;
+      } else if (cq == replicationQueue) {
+        threadName = "REPL " + threadName;
       }
       this.setName(threadName);
       this.status = TaskMonitor.get().createRPCStatus(threadName);
@@ -1441,7 +1449,11 @@ public abstract class HBaseServer implements RpcServer {
     this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
     this.purgeTimeout = conf.getLong("ipc.client.call.purge.timeout",
                                      2 * HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-
+    this.numOfReplicationHandlers = 
+      conf.getInt("hbase.regionserver.replication.handler.count", 3);
+    if (numOfReplicationHandlers > 0) {
+      this.replicationQueue = new LinkedBlockingQueue<Call>(maxQueueSize);
+    }
     // Start the listener here and let it bind to the port
     listener = new Listener();
     this.port = listener.getAddress().getPort();
@@ -1539,20 +1551,21 @@ public abstract class HBaseServer implements RpcServer {
   public synchronized void startThreads() {
     responder.start();
     listener.start();
-    handlers = new Handler[handlerCount];
+    handlers = startHandlers(callQueue, handlerCount);
+    priorityHandlers = startHandlers(priorityCallQueue, priorityHandlerCount);
+    replicationHandlers = startHandlers(replicationQueue, numOfReplicationHandlers);
+    }
 
-    for (int i = 0; i < handlerCount; i++) {
-      handlers[i] = new Handler(callQueue, i);
+  private Handler[] startHandlers(BlockingQueue<Call> queue, int numOfHandlers) {
+    if (numOfHandlers <= 0) {
+      return null;
+    }
+    Handler[] handlers = new Handler[numOfHandlers];
+    for (int i = 0; i < numOfHandlers; i++) {
+      handlers[i] = new Handler(queue, i);
       handlers[i].start();
     }
-
-    if (priorityHandlerCount > 0) {
-      priorityHandlers = new Handler[priorityHandlerCount];
-      for (int i = 0 ; i < priorityHandlerCount; i++) {
-        priorityHandlers[i] = new Handler(priorityCallQueue, i);
-        priorityHandlers[i].start();
-      }
-    }
+    return handlers;
   }
 
   /** Stops the service.  No new calls will be handled after this is called. */
@@ -1560,26 +1573,25 @@ public abstract class HBaseServer implements RpcServer {
   public synchronized void stop() {
     LOG.info("Stopping server on " + port);
     running = false;
-    if (handlers != null) {
-      for (Handler handler : handlers) {
-        if (handler != null) {
-          handler.interrupt();
-        }
-      }
-    }
-    if (priorityHandlers != null) {
-      for (Handler handler : priorityHandlers) {
-        if (handler != null) {
-          handler.interrupt();
-        }
-      }
-    }
+    stopHandlers(handlers);
+    stopHandlers(priorityHandlers);
+    stopHandlers(replicationHandlers);
     listener.interrupt();
     listener.doStop();
     responder.interrupt();
     notifyAll();
     if (this.rpcMetrics != null) {
       this.rpcMetrics.shutdown();
+    }
+  }
+
+  private void stopHandlers(Handler[] handlers) {
+    if (handlers != null) {
+      for (Handler handler : handlers) {
+        if (handler != null) {
+          handler.interrupt();
+        }
+      }
     }
   }
 
