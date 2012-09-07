@@ -1310,8 +1310,17 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
             used by tests).
       </para>
       <para>
-          Minimally, a client of HBase needs the hbase, hadoop, log4j, commons-logging, commons-lang,
-          and ZooKeeper jars in its <varname>CLASSPATH</varname> connecting to a cluster.
+          Minimally, a client of HBase needs several libraries in its <varname>CLASSPATH</varname> when connecting to a cluster, including:
+          <programlisting>
+commons-configuration (commons-configuration-1.6.jar)
+commons-lang (commons-lang-2.5.jar) 
+commons-logging (commons-logging-1.1.1.jar) 
+hadoop-core (hadoop-core-1.0.0.jar) 
+hbase (hbase-0.92.0.jar)
+log4j (log4j-1.2.16.jar) 
+slf4j-api (slf4j-api-1.5.8.jar)
+slf4j-log4j (slf4j-log4j12-1.5.8.jar)
+zookeeper (zookeeper-3.4.2.jar)</programlisting>
       </para>
         <para>
           An example basic <filename>hbase-site.xml</filename> for client only
