@@ -4235,7 +4235,8 @@ public class TestFromClientSide {
     expectedBlockCount += 1; // cached one data block
     assertEquals(expectedBlockCount, cache.getBlockCount());
     assertEquals(expectedBlockHits, cache.getStats().getHitCount());
-    assertEquals(++expectedBlockMiss, cache.getStats().getMissCount());
+    expectedBlockMiss += 2; // Dobule checked locking
+    assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
   }
 
   private void waitForStoreFileCount(Store store, int count, int timeout)
