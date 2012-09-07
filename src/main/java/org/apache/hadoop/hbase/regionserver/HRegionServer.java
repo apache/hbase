@@ -150,6 +150,7 @@ import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
@@ -354,6 +355,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private ObjectName mxBean = null;
 
   /**
+   * ClusterId
+   */
+  private ClusterId clusterId = null;
+
+  /**
    * Starts a HRegionServer at the default location
    *
    * @param conf
@@ -552,6 +558,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private void preRegistrationInitialization(){
     try {
       initializeZooKeeper();
+
+      clusterId = new ClusterId(zooKeeper, this);
+      if(clusterId.hasId()) {
+        conf.set(HConstants.CLUSTER_ID, clusterId.getId());
+      }
+
       initializeThreads();
       int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
       for (int i = 0; i < nbBlocks; i++) {
