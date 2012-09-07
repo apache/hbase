@@ -235,4 +235,14 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
       }
     }
   }
+
+  /**
+   * Get the cleaner chain.
+   * <p>
+   * Exposed for testing.
+   * @return the list of currently used cleaners
+   */
+  public List<T> getCleanerChain() {
+    return this.cleanersChain;
+  }
 }
