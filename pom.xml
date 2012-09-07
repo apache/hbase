@@ -393,6 +393,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
+          <version>2.5.1</version>
           <configuration>
             <source>${compileSource}</source>
             <target>${compileSource}</target>
