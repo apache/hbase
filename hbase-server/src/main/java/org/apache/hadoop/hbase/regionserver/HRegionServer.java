@@ -200,6 +200,7 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -757,6 +758,20 @@ public class  HRegionServer implements ClientProtocol,
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.conf,
       this, this.conf.getInt("hbase.regionserver.catalog.timeout", 600000));
     catalogTracker.start();
+
+    // Retrieve clusterId
+    // Since cluster status is now up
+    // ID should have already been set by HMaster
+    try {
+      String clusterId = ZKClusterId.readClusterIdZNode(this.zooKeeper);
+      if (clusterId == null) {
+        this.abort("Cluster ID has not been set");
+      }
+      this.conf.set(HConstants.CLUSTER_ID, clusterId);
+      LOG.info("ClusterId : "+clusterId);
+    } catch (KeeperException e) {
+      this.abort("Failed to retrieve Cluster ID",e);
+    }
   }
 
   /**
