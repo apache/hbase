@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
@@ -62,11 +61,11 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 
 /**
  * Writes HFiles. Passed KeyValues must arrive in order.
@@ -83,9 +82,9 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   static Log LOG = LogFactory.getLog(HFileOutputFormat.class);
   static final String COMPRESSION_CONF_KEY = "hbase.hfileoutputformat.families.compression";
   TimeRangeTracker trt = new TimeRangeTracker();
-  private static final String DATABLOCK_ENCODING_CONF_KEY = 
+  private static final String DATABLOCK_ENCODING_CONF_KEY =
      "hbase.mapreduce.hfileoutputformat.datablock.encoding";
-  
+
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(final TaskAttemptContext context)
   throws IOException, InterruptedException {
     // Get the path of the temporary output file
@@ -121,7 +120,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
                 + DATABLOCK_ENCODING_CONF_KEY + " : " + dataBlockEncodingStr);
       }
     }
-    
+
     return new RecordWriter<ImmutableBytesWritable, KeyValue>() {
       // Map of families to writers and how much has been output on the writer.
       private final Map<byte [], WriterLength> writers =
@@ -317,13 +316,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   public static void configureIncrementalLoad(Job job, HTable table)
   throws IOException {
     Configuration conf = job.getConfiguration();
-    Class<? extends Partitioner> topClass;
-    try {
-      topClass = getTotalOrderPartitionerClass();
-    } catch (ClassNotFoundException e) {
-      throw new IOException("Failed getting TotalOrderPartitioner", e);
-    }
-    job.setPartitionerClass(topClass);
+
+    job.setPartitionerClass(TotalOrderPartitioner.class);
     job.setOutputKeyClass(ImmutableBytesWritable.class);
     job.setOutputValueClass(KeyValue.class);
     job.setOutputFormatClass(HFileOutputFormat.class);
@@ -355,11 +349,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
 
     URI cacheUri;
     try {
-      // Below we make explicit reference to the bundled TOP.  Its cheating.
-      // We are assume the define in the hbase bundled TOP is as it is in
-      // hadoop (whether 0.20 or 0.22, etc.)
-      cacheUri = new URI(partitionsPath.toString() + "#" +
-        org.apache.hadoop.hbase.mapreduce.hadoopbackport.TotalOrderPartitioner.DEFAULT_PATH);
+      cacheUri = new URI(partitionsPath.toString() + "#" + TotalOrderPartitioner.DEFAULT_PATH);
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }
@@ -371,27 +361,6 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
 
     TableMapReduceUtil.addDependencyJars(job);
     LOG.info("Incremental table output configured.");
-  }
-
-  /**
-   * If > hadoop 0.20, then we want to use the hadoop TotalOrderPartitioner.
-   * If 0.20, then we want to use the TOP that we have under hadoopbackport.
-   * This method is about hbase being able to run on different versions of
-   * hadoop.  In 0.20.x hadoops, we have to use the TOP that is bundled with
-   * hbase.  Otherwise, we use the one in Hadoop.
-   * @return Instance of the TotalOrderPartitioner class
-   * @throws ClassNotFoundException If can't find a TotalOrderPartitioner.
-   */
-  private static Class<? extends Partitioner> getTotalOrderPartitionerClass()
-  throws ClassNotFoundException {
-    Class<? extends Partitioner> clazz = null;
-    try {
-      clazz = (Class<? extends Partitioner>) Class.forName("org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner");
-    } catch (ClassNotFoundException e) {
-      clazz =
-        (Class<? extends Partitioner>) Class.forName("org.apache.hadoop.hbase.mapreduce.hadoopbackport.TotalOrderPartitioner");
-    }
-    return clazz;
   }
 
   /**

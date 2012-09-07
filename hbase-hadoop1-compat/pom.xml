@@ -59,6 +59,12 @@ limitations under the License.
       <artifactId>hbase-hadoop-compat</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-hadoop-compat</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-core</artifactId>
       <version>${hadoop-one.version}</version><!--$NO-MVN-MAN-VER$-->

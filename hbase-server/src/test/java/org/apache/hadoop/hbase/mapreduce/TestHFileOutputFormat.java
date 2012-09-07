@@ -26,7 +26,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -43,11 +42,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HadoopShims;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
@@ -74,7 +75,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -180,7 +180,7 @@ public class TestHFileOutputFormat  {
     try {
       Job job = new Job(conf);
       FileOutputFormat.setOutputPath(job, dir);
-      context = getTestTaskAttemptContext(job);
+      context = createTestTaskAttemptContext(job);
       HFileOutputFormat hof = new HFileOutputFormat();
       writer = hof.getRecordWriter(context);
       final byte [] b = Bytes.toBytes("b");
@@ -208,29 +208,10 @@ public class TestHFileOutputFormat  {
     }
   }
 
-  /**
-   * @return True if the available mapreduce is post-0.20.
-   */
-  private static boolean isPost020MapReduce() {
-    // Here is a coarse test for post 0.20 hadoop; TAC became an interface.
-    return TaskAttemptContext.class.isInterface();
-  }
-
-  private TaskAttemptContext getTestTaskAttemptContext(final Job job)
+  private TaskAttemptContext createTestTaskAttemptContext(final Job job)
   throws IOException, Exception {
-    TaskAttemptContext context;
-    if (isPost020MapReduce()) {
-      TaskAttemptID id =
-        TaskAttemptID.forName("attempt_200707121733_0001_m_000000_0");
-      Class<?> clazz =
-        Class.forName("org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl");
-      Constructor<?> c = clazz.
-          getConstructor(Configuration.class, TaskAttemptID.class);
-      context = (TaskAttemptContext)c.newInstance(job.getConfiguration(), id);
-    } else {
-      context = org.apache.hadoop.hbase.mapreduce.hadoopbackport.InputSampler.
-        getTaskAttemptContext(job);
-    }
+    HadoopShims hadoop = CompatibilitySingletonFactory.getInstance(HadoopShims.class);
+    TaskAttemptContext context = hadoop.createTestTaskAttemptContext(job, "attempt_200707121733_0001_m_000000_0");
     return context;
   }
 
@@ -250,7 +231,7 @@ public class TestHFileOutputFormat  {
       // build a record writer using HFileOutputFormat
       Job job = new Job(conf);
       FileOutputFormat.setOutputPath(job, dir);
-      context = getTestTaskAttemptContext(job);
+      context = createTestTaskAttemptContext(job);
       HFileOutputFormat hof = new HFileOutputFormat();
       writer = hof.getRecordWriter(context);
 
@@ -593,7 +574,7 @@ public class TestHFileOutputFormat  {
       setupRandomGeneratorMapper(job);
       HFileOutputFormat.configureIncrementalLoad(job, table);
       FileOutputFormat.setOutputPath(job, dir);
-      context = getTestTaskAttemptContext(job);
+      context = createTestTaskAttemptContext(job);
       HFileOutputFormat hof = new HFileOutputFormat();
       writer = hof.getRecordWriter(context);
 
