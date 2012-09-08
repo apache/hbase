@@ -745,6 +745,15 @@ public class ServerManager {
             // A duplicate report from the correct server
             return;
           }
+
+          // Do not consider this a duplicate assignment if we are getting a notification
+          // for the same server twice
+          if (regionManager.lastOpenedAt(region.getRegionNameAsString(),
+              serverInfo.getServerName())) {
+            LOG.warn("Multiple REGION_OPENED notifications for region: " + region + " opened on " +
+              serverInfo);
+            return;
+          }
           duplicateAssignment = true;
         }
       }

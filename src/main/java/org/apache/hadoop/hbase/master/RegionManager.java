@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -114,6 +115,19 @@ public class RegionManager {
    final SortedMap<String, RegionState> regionsInTransition =
     Collections.synchronizedSortedMap(new TreeMap<String, RegionState>());
    
+   /** Serves as a cache for locating where a particular region is open.
+    * Currently being used to detect legitmate duplicate assignments from
+    * spurious ones, that may seem to occur if a ZK notification is received
+    * twice.
+    *
+    * maps regionName --> serverName
+    *
+    * Note: This is a temporary hack. Should be safe to remove once we get
+    * rid of duplicate notifications from ZK.
+    */
+   final ConcurrentMap<String, String> regionLocationHintToDetectDupAssignment =
+       new ConcurrentHashMap<String, String>();
+
    // regions in transition are also recorded in ZK using the zk wrapper
    final ZooKeeperWrapper zkWrapper;
 
@@ -1057,8 +1071,8 @@ public class RegionManager {
     int prefixlen = META_REGION_PREFIX.length;
     if (row.length > prefixlen &&
      Bytes.compareTo(META_REGION_PREFIX, 0, prefixlen, row, 0, prefixlen) == 0) {
-    	return new MetaRegion(this.master.getRegionManager().getRootRegionLocation(),
-    	  HRegionInfo.ROOT_REGIONINFO);
+      return new MetaRegion(this.master.getRegionManager().getRootRegionLocation(),
+        HRegionInfo.ROOT_REGIONINFO);
     }
     return this.onlineMetaRegions.floorEntry(row).getValue();
   }
@@ -1442,9 +1456,21 @@ public class RegionManager {
       if (s != null) {
         s.setOpen();
         this.master.getMetrics().incRegionsOpened();
+        this.regionLocationHintToDetectDupAssignment.put(regionName, s.serverName);
       }
     }
 
+  }
+
+  /**
+   * Check if the region was last opened at the particular server
+   * @param regionName
+   * @param serverName
+   * @return true if regionName was last opened at serverName
+   */
+  public boolean lastOpenedAt(String regionName, String serverName) {
+    String openAt = this.regionLocationHintToDetectDupAssignment.get(regionName);
+    return openAt != null && openAt.equals(serverName);
   }
 
   /**

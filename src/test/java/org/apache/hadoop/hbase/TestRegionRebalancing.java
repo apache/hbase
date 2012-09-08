@@ -32,6 +32,9 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.DuplicateZKNotificationInjectionHandler;
+import org.apache.hadoop.hbase.util.InjectionEvent;
+import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 
 /**
@@ -114,6 +117,26 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     LOG.debug("Restart: adding that region server back");
     cluster.startRegionServer();
     assertRegionsAreBalanced();
+  }
+
+  /**
+   * Make sure we can handle duplicate notifications for region
+   * being opened. Same as testRebalancing -- but we will duplicate
+   * some of the notifications.
+   *
+   * @throws IOException
+   */
+  public void testRebalancingWithDuplicateNotification() throws IOException {
+    DuplicateZKNotificationInjectionHandler duplicator =
+      new DuplicateZKNotificationInjectionHandler();
+    duplicator.setProbability(0.05);
+    duplicator.duplicateEvent(InjectionEvent.ZKUNASSIGNEDWATCHER_REGION_OPENED);
+    InjectionHandler.set(duplicator);
+
+    testRebalancing();
+
+    // make sure that some events did get duplicated.
+    assertTrue(duplicator.getDuplicatedEventCnt() > 0);
   }
 
   private void checkingServerStatus() {

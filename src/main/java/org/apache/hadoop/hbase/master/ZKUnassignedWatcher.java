@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.util.ParamCallable;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZNodeEventData;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.hbase.util.InjectionEvent;
+import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -167,8 +169,8 @@ public class ZKUnassignedWatcher implements Watcher {
     handleRegionStateInZK(eventType, zNodePath, data, true);
   }
 
-  void handleRegionStateInZK(EventType eventType, String zNodePath, byte[] data, boolean canDefer)
-      throws IOException {
+  public void handleRegionStateInZK(EventType eventType, String zNodePath,
+      byte[] data, boolean canDefer) throws IOException {
     // a null value is set when a node is created, we don't need to handle this
     if(data == null) {
       return;
@@ -214,6 +216,12 @@ public class ZKUnassignedWatcher implements Watcher {
             rsEvent == HBaseEventType.RS2ZK_REGION_OPENING) {
       new MasterOpenRegionHandler(rsEvent, serverManager, serverName, region,
           data).submit();
+
+      // For testing purposes
+      if (rsEvent == HBaseEventType.RS2ZK_REGION_OPENED) {
+        InjectionHandler.processEvent(InjectionEvent.ZKUNASSIGNEDWATCHER_REGION_OPENED,
+            this, eventType, zNodePath, data);
+      }
     }
   }
 
