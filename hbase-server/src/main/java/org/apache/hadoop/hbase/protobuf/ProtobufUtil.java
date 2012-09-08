@@ -1265,14 +1265,15 @@ public final class ProtobufUtil {
    * @param client
    * @param familyPaths
    * @param regionName
+   * @param assignSeqNum
    * @return true if all are loaded
    * @throws IOException
    */
   public static boolean bulkLoadHFile(final ClientProtocol client,
       final List<Pair<byte[], String>> familyPaths,
-      final byte[] regionName) throws IOException {
+      final byte[] regionName, boolean assignSeqNum) throws IOException {
     BulkLoadHFileRequest request =
-      RequestConverter.buildBulkLoadHFileRequest(familyPaths, regionName);
+      RequestConverter.buildBulkLoadHFileRequest(familyPaths, regionName, assignSeqNum);
     try {
       BulkLoadHFileResponse response =
         client.bulkLoadHFile(null, request);

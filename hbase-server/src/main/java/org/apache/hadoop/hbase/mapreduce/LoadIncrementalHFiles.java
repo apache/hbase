@@ -97,11 +97,14 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private Configuration cfg;
 
   public static String NAME = "completebulkload";
+  private static String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
+  private boolean assignSeqIds;
 
   public LoadIncrementalHFiles(Configuration conf) throws Exception {
     super(conf);
     this.cfg = conf;
     this.hbAdmin = new HBaseAdmin(conf);
+    assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
   }
 
   private void usage() {
@@ -482,7 +485,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         LOG.debug("Going to connect to server " + location + " for row "
             + Bytes.toStringBinary(row));
         byte[] regionName = location.getRegionInfo().getRegionName();
-        return ProtobufUtil.bulkLoadHFile(server, famPaths, regionName);
+        return ProtobufUtil.bulkLoadHFile(server, famPaths, regionName,
+            assignSeqIds);
       }
     };
 

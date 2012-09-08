@@ -150,7 +150,7 @@ public class TestHRegionServerBulkLoad {
               + Bytes.toStringBinary(row));
           byte[] regionName = location.getRegionInfo().getRegionName();
           BulkLoadHFileRequest request =
-            RequestConverter.buildBulkLoadHFileRequest(famPaths, regionName);
+            RequestConverter.buildBulkLoadHFileRequest(famPaths, regionName, true);
           server.bulkLoadHFile(null, request);
           return null;
         }

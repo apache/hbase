@@ -564,11 +564,14 @@ public class HRegion implements HeapSize { // , Writable{
           HStore store = future.get();
 
           this.stores.put(store.getColumnFamilyName().getBytes(), store);
-          long storeSeqId = store.getMaxSequenceId();
+          // Do not include bulk loaded files when determining seqIdForReplay
+          long storeSeqIdForReplay = store.getMaxSequenceId(false);
           maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(),
-              storeSeqId);
-          if (maxSeqId == -1 || storeSeqId > maxSeqId) {
-            maxSeqId = storeSeqId;
+              storeSeqIdForReplay);
+          // Include bulk loaded files when determining seqIdForAssignment
+          long storeSeqIdForAssignment = store.getMaxSequenceId(true);
+          if (maxSeqId == -1 || storeSeqIdForAssignment > maxSeqId) {
+            maxSeqId = storeSeqIdForAssignment;
           }
           long maxStoreMemstoreTS = store.getMaxMemstoreTS();
           if (maxStoreMemstoreTS > maxMemstoreTS) {
@@ -3314,11 +3317,12 @@ public class HRegion implements HeapSize { // , Writable{
    * rows with multiple column families atomically.
    *
    * @param familyPaths List of Pair<byte[] column family, String hfilePath>
+   * @param assignSeqId
    * @return true if successful, false if failed recoverably
    * @throws IOException if failed unrecoverably.
    */
-  public boolean bulkLoadHFiles(List<Pair<byte[], String>> familyPaths)
-  throws IOException {
+  public boolean bulkLoadHFiles(List<Pair<byte[], String>> familyPaths,
+      boolean assignSeqId) throws IOException {
     Preconditions.checkNotNull(familyPaths);
     // we need writeLock for multi-family bulk load
     startBulkRegionOperation(hasMultipleColumnFamilies(familyPaths));
@@ -3378,7 +3382,7 @@ public class HRegion implements HeapSize { // , Writable{
         String path = p.getSecond();
         Store store = getStore(familyName);
         try {
-          store.bulkLoadHFile(path);
+          store.bulkLoadHFile(path, assignSeqId ? this.log.obtainSeqNum() : -1);
         } catch (IOException ioe) {
           // A failure here can cause an atomicity violation that we currently
           // cannot recover from since it is likely a failed HDFS operation.

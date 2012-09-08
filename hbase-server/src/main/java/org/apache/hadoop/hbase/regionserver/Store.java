@@ -191,8 +191,11 @@ public interface Store extends SchemaAware, HeapSize {
   /**
    * This method should only be called from HRegion. It is assumed that the ranges of values in the
    * HFile fit within the stores assigned region. (assertBulkLoadHFileOk checks this)
+   * 
+   * @param srcPathStr
+   * @param sequenceId sequence Id associated with the HFile
    */
-  public void bulkLoadHFile(String srcPathStr) throws IOException;
+  public void bulkLoadHFile(String srcPathStr, long sequenceId) throws IOException;
 
   // General accessors into the state of the store
   // TODO abstract some of this out into a metrics class

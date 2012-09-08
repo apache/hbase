@@ -3284,7 +3284,7 @@ public class  HRegionServer implements ClientProtocol,
       }
       boolean loaded = false;
       if (!bypass) {
-        loaded = region.bulkLoadHFiles(familyPaths);
+        loaded = region.bulkLoadHFiles(familyPaths, request.getAssignSeqNum());
       }
       if (region.getCoprocessorHost() != null) {
         loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, loaded);

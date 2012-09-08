@@ -13967,6 +13967,10 @@ public final class ClientProtos {
         getFamilyPathOrBuilderList();
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPathOrBuilder getFamilyPathOrBuilder(
         int index);
+
+    // optional bool assignSeqNum = 3;
+    boolean hasAssignSeqNum();
+    boolean getAssignSeqNum();
   }
   public static final class BulkLoadHFileRequest extends
       com.google.protobuf.GeneratedMessage
@@ -14524,9 +14528,20 @@ public final class ClientProtos {
       return familyPath_.get(index);
     }
     
+    // optional bool assignSeqNum = 3;
+    public static final int ASSIGNSEQNUM_FIELD_NUMBER = 3;
+    private boolean assignSeqNum_;
+    public boolean hasAssignSeqNum() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public boolean getAssignSeqNum() {
+      return assignSeqNum_;
+    }
+
     private void initFields() {
       region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       familyPath_ = java.util.Collections.emptyList();
+      assignSeqNum_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -14560,6 +14575,9 @@ public final class ClientProtos {
       for (int i = 0; i < familyPath_.size(); i++) {
         output.writeMessage(2, familyPath_.get(i));
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBool(3, assignSeqNum_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -14576,6 +14594,10 @@ public final class ClientProtos {
       for (int i = 0; i < familyPath_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(2, familyPath_.get(i));
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(3, assignSeqNum_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -14607,6 +14629,11 @@ public final class ClientProtos {
       }
       result = result && getFamilyPathList()
           .equals(other.getFamilyPathList());
+      result = result && (hasAssignSeqNum() == other.hasAssignSeqNum());
+      if (hasAssignSeqNum()) {
+        result = result && (getAssignSeqNum()
+            == other.getAssignSeqNum());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -14623,6 +14650,10 @@ public final class ClientProtos {
       if (getFamilyPathCount() > 0) {
         hash = (37 * hash) + FAMILYPATH_FIELD_NUMBER;
         hash = (53 * hash) + getFamilyPathList().hashCode();
+      }
+      if (hasAssignSeqNum()) {
+        hash = (37 * hash) + ASSIGNSEQNUM_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getAssignSeqNum());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -14754,6 +14785,8 @@ public final class ClientProtos {
         } else {
           familyPathBuilder_.clear();
         }
+        assignSeqNum_ = false;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
       
@@ -14809,6 +14842,10 @@ public final class ClientProtos {
         } else {
           result.familyPath_ = familyPathBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.assignSeqNum_ = assignSeqNum_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -14853,6 +14890,9 @@ public final class ClientProtos {
               familyPathBuilder_.addAllMessages(other.familyPath_);
             }
           }
+        }
+        if (other.hasAssignSeqNum()) {
+          setAssignSeqNum(other.getAssignSeqNum());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -14912,6 +14952,11 @@ public final class ClientProtos {
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addFamilyPath(subBuilder.buildPartial());
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              assignSeqNum_ = input.readBool();
               break;
             }
           }
@@ -15196,6 +15241,27 @@ public final class ClientProtos {
         return familyPathBuilder_;
       }
       
+      // optional bool assignSeqNum = 3;
+      private boolean assignSeqNum_ ;
+      public boolean hasAssignSeqNum() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public boolean getAssignSeqNum() {
+        return assignSeqNum_;
+      }
+      public Builder setAssignSeqNum(boolean value) {
+        bitField0_ |= 0x00000004;
+        assignSeqNum_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearAssignSeqNum() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        assignSeqNum_ = false;
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:BulkLoadHFileRequest)
     }
     
@@ -21617,38 +21683,39 @@ public final class ClientProtos {
       "\003row\030\002 \003(\014\".\n\017LockRowResponse\022\016\n\006lockId\030" +
       "\001 \002(\004\022\013\n\003ttl\030\002 \001(\r\"D\n\020UnlockRowRequest\022 " +
       "\n\006region\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006lock" +
-      "Id\030\002 \002(\004\"\023\n\021UnlockRowResponse\"\232\001\n\024BulkLo" +
+      "Id\030\002 \002(\004\"\023\n\021UnlockRowResponse\"\260\001\n\024BulkLo" +
       "adHFileRequest\022 \n\006region\030\001 \002(\0132\020.RegionS" +
       "pecifier\0224\n\nfamilyPath\030\002 \003(\0132 .BulkLoadH" +
-      "FileRequest.FamilyPath\032*\n\nFamilyPath\022\016\n\006" +
-      "family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHF" +
-      "ileResponse\022\016\n\006loaded\030\001 \002(\010\"\203\001\n\004Exec\022\013\n\003" +
-      "row\030\001 \002(\014\022\024\n\014protocolName\030\002 \002(\t\022\022\n\nmetho",
-      "dName\030\003 \002(\t\022!\n\010property\030\004 \003(\0132\017.NameStri" +
-      "ngPair\022!\n\tparameter\030\005 \003(\0132\016.NameBytesPai" +
-      "r\"O\n\026ExecCoprocessorRequest\022 \n\006region\030\001 " +
-      "\002(\0132\020.RegionSpecifier\022\023\n\004call\030\002 \002(\0132\005.Ex" +
-      "ec\"8\n\027ExecCoprocessorResponse\022\035\n\005value\030\001" +
-      " \002(\0132\016.NameBytesPair\"N\n\013MultiAction\022\027\n\006m" +
-      "utate\030\001 \001(\0132\007.Mutate\022\021\n\003get\030\002 \001(\0132\004.Get\022" +
-      "\023\n\004exec\030\003 \001(\0132\005.Exec\"P\n\014ActionResult\022\035\n\005" +
-      "value\030\001 \001(\0132\016.NameBytesPair\022!\n\texception" +
-      "\030\002 \001(\0132\016.NameBytesPair\"^\n\014MultiRequest\022 ",
-      "\n\006region\030\001 \002(\0132\020.RegionSpecifier\022\034\n\006acti" +
-      "on\030\002 \003(\0132\014.MultiAction\022\016\n\006atomic\030\003 \001(\010\"." +
-      "\n\rMultiResponse\022\035\n\006result\030\001 \003(\0132\r.Action" +
-      "Result2\221\003\n\rClientService\022 \n\003get\022\013.GetReq" +
-      "uest\032\014.GetResponse\022)\n\006mutate\022\016.MutateReq" +
-      "uest\032\017.MutateResponse\022#\n\004scan\022\014.ScanRequ" +
-      "est\032\r.ScanResponse\022,\n\007lockRow\022\017.LockRowR" +
-      "equest\032\020.LockRowResponse\0222\n\tunlockRow\022\021." +
-      "UnlockRowRequest\032\022.UnlockRowResponse\022>\n\r" +
-      "bulkLoadHFile\022\025.BulkLoadHFileRequest\032\026.B",
-      "ulkLoadHFileResponse\022D\n\017execCoprocessor\022" +
-      "\027.ExecCoprocessorRequest\032\030.ExecCoprocess" +
-      "orResponse\022&\n\005multi\022\r.MultiRequest\032\016.Mul" +
-      "tiResponseBB\n*org.apache.hadoop.hbase.pr" +
-      "otobuf.generatedB\014ClientProtosH\001\210\001\001\240\001\001"
+      "FileRequest.FamilyPath\022\024\n\014assignSeqNum\030\003" +
+      " \001(\010\032*\n\nFamilyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004pa" +
+      "th\030\002 \002(\t\"\'\n\025BulkLoadHFileResponse\022\016\n\006loa" +
+      "ded\030\001 \002(\010\"\203\001\n\004Exec\022\013\n\003row\030\001 \002(\014\022\024\n\014proto",
+      "colName\030\002 \002(\t\022\022\n\nmethodName\030\003 \002(\t\022!\n\010pro" +
+      "perty\030\004 \003(\0132\017.NameStringPair\022!\n\tparamete" +
+      "r\030\005 \003(\0132\016.NameBytesPair\"O\n\026ExecCoprocess" +
+      "orRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecif" +
+      "ier\022\023\n\004call\030\002 \002(\0132\005.Exec\"8\n\027ExecCoproces" +
+      "sorResponse\022\035\n\005value\030\001 \002(\0132\016.NameBytesPa" +
+      "ir\"N\n\013MultiAction\022\027\n\006mutate\030\001 \001(\0132\007.Muta" +
+      "te\022\021\n\003get\030\002 \001(\0132\004.Get\022\023\n\004exec\030\003 \001(\0132\005.Ex" +
+      "ec\"P\n\014ActionResult\022\035\n\005value\030\001 \001(\0132\016.Name" +
+      "BytesPair\022!\n\texception\030\002 \001(\0132\016.NameBytes",
+      "Pair\"^\n\014MultiRequest\022 \n\006region\030\001 \002(\0132\020.R" +
+      "egionSpecifier\022\034\n\006action\030\002 \003(\0132\014.MultiAc" +
+      "tion\022\016\n\006atomic\030\003 \001(\010\".\n\rMultiResponse\022\035\n" +
+      "\006result\030\001 \003(\0132\r.ActionResult2\221\003\n\rClientS" +
+      "ervice\022 \n\003get\022\013.GetRequest\032\014.GetResponse" +
+      "\022)\n\006mutate\022\016.MutateRequest\032\017.MutateRespo" +
+      "nse\022#\n\004scan\022\014.ScanRequest\032\r.ScanResponse" +
+      "\022,\n\007lockRow\022\017.LockRowRequest\032\020.LockRowRe" +
+      "sponse\0222\n\tunlockRow\022\021.UnlockRowRequest\032\022" +
+      ".UnlockRowResponse\022>\n\rbulkLoadHFile\022\025.Bu",
+      "lkLoadHFileRequest\032\026.BulkLoadHFileRespon" +
+      "se\022D\n\017execCoprocessor\022\027.ExecCoprocessorR" +
+      "equest\032\030.ExecCoprocessorResponse\022&\n\005mult" +
+      "i\022\r.MultiRequest\032\016.MultiResponseBB\n*org." +
+      "apache.hadoop.hbase.protobuf.generatedB\014" +
+      "ClientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21804,7 +21871,7 @@ public final class ClientProtos {
           internal_static_BulkLoadHFileRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_BulkLoadHFileRequest_descriptor,
-              new java.lang.String[] { "Region", "FamilyPath", },
+              new java.lang.String[] { "Region", "FamilyPath", "AssignSeqNum", },
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.Builder.class);
           internal_static_BulkLoadHFileRequest_FamilyPath_descriptor =

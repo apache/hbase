@@ -454,10 +454,12 @@ public final class RequestConverter {
    *
    * @param familyPaths
    * @param regionName
+   * @param assignSeqNum
    * @return a bulk load request
    */
   public static BulkLoadHFileRequest buildBulkLoadHFileRequest(
-      final List<Pair<byte[], String>> familyPaths, final byte[] regionName) {
+      final List<Pair<byte[], String>> familyPaths,
+      final byte[] regionName, boolean assignSeqNum) {
     BulkLoadHFileRequest.Builder builder = BulkLoadHFileRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
@@ -468,6 +470,7 @@ public final class RequestConverter {
       familyPathBuilder.setPath(familyPath.getSecond());
       builder.addFamilyPath(familyPathBuilder.build());
     }
+    builder.setAssignSeqNum(assignSeqNum);
     return builder.build();
   }
 

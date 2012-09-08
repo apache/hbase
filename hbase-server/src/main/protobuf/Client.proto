@@ -247,6 +247,7 @@ message UnlockRowResponse {
 message BulkLoadHFileRequest {
   required RegionSpecifier region = 1;
   repeated FamilyPath familyPath = 2;
+  optional bool assignSeqNum = 3;
 
   message FamilyPath {
     required bytes family = 1;
