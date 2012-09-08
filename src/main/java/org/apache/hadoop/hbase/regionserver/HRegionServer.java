@@ -720,29 +720,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // Just skip out w/o closing regions.  Used when testing.
     } else if (abortRequested) {
       if (this.fsOk) {
-        closeUserRegions(abortRequested); // Don't leave any open file handles
+        closeAllRegions(abortRequested); // Don't leave any open file handles
       }
       LOG.info("aborting server " + this.serverNameFromMasterPOV);
     } else {
-      closeUserRegions(abortRequested);
+      closeAllRegions(abortRequested);
       closeAllScanners();
       LOG.info("stopping server " + this.serverNameFromMasterPOV);
     }
     // Interrupt catalog tracker here in case any regions being opened out in
     // handlers are stuck waiting on meta or root.
     if (this.catalogTracker != null) this.catalogTracker.stop();
-
-    // Closing the compactSplit thread before closing meta regions
-    if (!this.killed && containsMetaTableRegions()) {
-      if (!abortRequested || this.fsOk) {
-        if (this.compactSplitThread != null) {
-          this.compactSplitThread.join();
-          this.compactSplitThread = null;
-        }
-        closeMetaTableRegions(abortRequested);
-      }
-    }
-
     if (!this.killed && this.fsOk) {
       waitOnAllRegionsToClose(abortRequested);
       LOG.info("stopping server " + this.serverNameFromMasterPOV +
@@ -775,16 +763,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     LOG.info(Thread.currentThread().getName() + " exiting");
   }
 
-  private boolean containsMetaTableRegions() {
-    return onlineRegions.containsKey(HRegionInfo.ROOT_REGIONINFO.getEncodedName())
-        || onlineRegions.containsKey(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
-  }
-
   private boolean areAllUserRegionsOffline() {
     if (getNumberOfOnlineRegions() > 2) return false;
     boolean allUserRegionsOffline = true;
     for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
-      if (!e.getValue().getRegionInfo().isMetaTable()) {
+      if (!e.getValue().getRegionInfo().isMetaRegion()) {
         allUserRegionsOffline = false;
         break;
       }
@@ -1716,14 +1699,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   protected void closeAllRegions(final boolean abort) {
     closeUserRegions(abort);
-    closeMetaTableRegions(abort);
-  }
-
-  /**
-   * Close root and meta regions if we carry them
-   * @param abort Whether we're running an abort.
-   */
-  void closeMetaTableRegions(final boolean abort) {
+    // Only root and meta should remain.  Are we carrying root or meta?
     HRegion meta = null;
     HRegion root = null;
     this.lock.writeLock().lock();
@@ -1755,7 +1731,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     try {
       for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
         HRegion r = e.getValue();
-        if (!r.getRegionInfo().isMetaTable() && r.isAvailable()) {
+        if (!r.getRegionInfo().isMetaRegion() && r.isAvailable()) {
           // Don't update zk with this close transition; pass false.
           closeRegion(r.getRegionInfo(), abort, false);
         }
