@@ -37,12 +37,12 @@ public class HbckTestingUtil {
 
   public static HBaseFsck doFsck(
       Configuration conf, boolean fix, String table) throws Exception {
-    return doFsck(conf, fix, fix, fix, fix,fix, fix, table);
+    return doFsck(conf, fix, fix, fix, fix,fix, fix, fix, table);
   }
 
   public static HBaseFsck doFsck(Configuration conf, boolean fixAssignments,
       boolean fixMeta, boolean fixHdfsHoles, boolean fixHdfsOverlaps,
-      boolean fixHdfsOrphans, boolean fixVersionFile,
+      boolean fixHdfsOrphans, boolean fixTableOrphans, boolean fixVersionFile,
       String table) throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf);
     fsck.connect();
@@ -53,6 +53,7 @@ public class HbckTestingUtil {
     fsck.setFixHdfsHoles(fixHdfsHoles);
     fsck.setFixHdfsOverlaps(fixHdfsOverlaps);
     fsck.setFixHdfsOrphans(fixHdfsOrphans);
+    fsck.setFixTableOrphans(fixTableOrphans);
     fsck.setFixVersionFile(fixVersionFile);
     if (table != null) {
       fsck.includeTable(table);
