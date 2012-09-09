@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -54,6 +55,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -182,6 +184,7 @@ public class HBaseFsck {
   private boolean fixHdfsHoles = false; // fix fs holes?
   private boolean fixHdfsOverlaps = false; // fix fs overlaps (risky)
   private boolean fixHdfsOrphans = false; // fix fs holes (missing .regioninfo)
+  private boolean fixTableOrphans = false; // fix fs holes (missing .tableinfo)
   private boolean fixVersionFile = false; // fix missing hbase.version file in hdfs
   private boolean fixSplitParents = false; // fix lingering split parents
 
@@ -231,6 +234,8 @@ public class HBaseFsck {
    * When initially looking at HDFS, we attempt to find any orphaned data.
    */
   private List<HbckInfo> orphanHdfsDirs = Collections.synchronizedList(new ArrayList<HbckInfo>());
+  
+  private Map<String, Set<String>> orphanTableDirs = new HashMap<String, Set<String>>();
 
   /**
    * Constructor
@@ -333,7 +338,8 @@ public class HBaseFsck {
    */
   public void offlineHdfsIntegrityRepair() throws IOException, InterruptedException {
     // Initial pass to fix orphans.
-    if (shouldFixHdfsOrphans() || shouldFixHdfsHoles() || shouldFixHdfsOverlaps()) {
+    if (shouldFixHdfsOrphans() || shouldFixHdfsHoles()
+        || shouldFixHdfsOverlaps() || shouldFixTableOrphans()) {
       LOG.info("Loading regioninfos HDFS");
       // if nothing is happening this should always complete in two iterations.
       int maxIterations = conf.getInt("hbase.hbck.integrityrepair.iterations.max", 3);
@@ -385,7 +391,7 @@ public class HBaseFsck {
     if (!checkMetaOnly) {
       reportTablesInFlux();
     }
-
+    
     // get regions according to what is online on each RegionServer
     loadDeployedRegions();
 
@@ -398,6 +404,9 @@ public class HBaseFsck {
 
     // Get disabled tables from ZooKeeper
     loadDisabledTables();
+
+    // fix the orphan tables
+    fixOrphanTables();
 
     // Check and fix consistency
     checkAndFixConsistency();
@@ -704,7 +713,7 @@ public class HBaseFsck {
       if (modTInfo == null) {
         // only executed once per table.
         modTInfo = new TableInfo(tableName);
-        Path hbaseRoot = new Path(conf.get(HConstants.HBASE_DIR));
+        Path hbaseRoot = FSUtils.getRootDir(conf);
         tablesInfo.put(tableName, modTInfo);
         try {
           HTableDescriptor htd =
@@ -712,15 +721,117 @@ public class HBaseFsck {
               hbaseRoot, tableName);
           modTInfo.htds.add(htd);
         } catch (IOException ioe) {
-          LOG.warn("Unable to read .tableinfo from " + hbaseRoot, ioe);
-          errors.reportError(ERROR_CODE.NO_TABLEINFO_FILE, 
-              "Unable to read .tableinfo from " + hbaseRoot);
+          if (!orphanTableDirs.containsKey(tableName)) {
+            LOG.warn("Unable to read .tableinfo from " + hbaseRoot, ioe);
+            //should only report once for each table
+            errors.reportError(ERROR_CODE.NO_TABLEINFO_FILE, 
+                "Unable to read .tableinfo from " + hbaseRoot + "/" + tableName);
+            Set<String> columns = new HashSet<String>();
+            orphanTableDirs.put(tableName, getColumnFamilyList(columns, hbi));
+          }
         }
       }
       modTInfo.addRegionInfo(hbi);
     }
 
     return tablesInfo;
+  }
+  
+  /**
+   * To get the column family list according to the column family dirs
+   * @param columns
+   * @param hbi
+   * @return
+   * @throws IOException
+   */
+  private Set<String> getColumnFamilyList(Set<String> columns, HbckInfo hbi) throws IOException {
+    Path regionDir = hbi.getHdfsRegionDir();
+    FileSystem fs = regionDir.getFileSystem(conf);
+    FileStatus[] subDirs = fs.listStatus(regionDir, new FSUtils.FamilyDirFilter(fs));
+    for (FileStatus subdir : subDirs) {
+      String columnfamily = subdir.getPath().getName();
+      columns.add(columnfamily);
+    }
+    return columns;
+  }
+  
+  /**
+   * To fabricate a .tableinfo file with following contents<br>
+   * 1. the correct tablename <br>
+   * 2. the correct colfamily list<br>
+   * 3. the default properties for both {@link HTableDescriptor} and {@link HColumnDescriptor}<br>
+   * @param tableName
+   * @throws IOException
+   */
+  private boolean fabricateTableInfo(String tableName, Set<String> columns) throws IOException {
+    if (columns ==null || columns.isEmpty()) return false;
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    for (String columnfamimly : columns) {
+      htd.addFamily(new HColumnDescriptor(columnfamimly));
+    }
+    FSTableDescriptors.createTableDescriptor(htd, conf, true);
+    return true;
+  }
+  
+  /**
+   * To fix orphan table by creating a .tableinfo file under tableDir <br>
+   * 1. if TableInfo is cached, to recover the .tableinfo accordingly <br>
+   * 2. else create a default .tableinfo file with following items<br>
+   * &nbsp;2.1 the correct tablename <br>
+   * &nbsp;2.2 the correct colfamily list<br>
+   * &nbsp;2.3 the default properties for both {@link HTableDescriptor} and {@link HColumnDescriptor}<br>
+   * @throws IOException
+   */
+  public void fixOrphanTables() throws IOException {
+    if (shouldFixTableOrphans() && !orphanTableDirs.isEmpty()) {
+
+      Path hbaseRoot = FSUtils.getRootDir(conf);
+      List<String> tmpList = new ArrayList<String>();
+      tmpList.addAll(orphanTableDirs.keySet());
+      HTableDescriptor[] htds = getHTableDescriptors(tmpList);
+      Iterator iter = orphanTableDirs.entrySet().iterator();
+      int j = 0; 
+      int numFailedCase = 0;
+      while (iter.hasNext()) {
+        Entry<String, Set<String>> entry = (Entry<String, Set<String>>) iter.next();
+        String tableName = entry.getKey();
+        LOG.info("Trying to fix orphan table error: " + tableName);
+        if (j < htds.length) {
+          if (tableName.equals(Bytes.toString(htds[j].getName()))) {
+            HTableDescriptor htd = htds[j];
+            LOG.info("fixing orphan table: " + tableName + " from cache");
+            FSTableDescriptors.createTableDescriptor(
+                hbaseRoot.getFileSystem(conf), hbaseRoot, htd, true);
+            j++;
+            iter.remove();
+          }
+        } else {
+          if (fabricateTableInfo(tableName, entry.getValue())) {
+            LOG.warn("fixing orphan table: " + tableName + " with a default .tableinfo file");
+            LOG.warn("Strongly recommend to modify the HTableDescriptor if necessary for: " + tableName);
+            iter.remove();
+          } else {
+            LOG.error("Unable to create default .tableinfo for " + tableName + " while missing column family information");
+            numFailedCase++;
+          }
+        }
+        fixes++;
+      }
+
+      if (orphanTableDirs.isEmpty()) {
+        // all orphanTableDirs are luckily recovered
+        // re-run doFsck after recovering the .tableinfo file
+        setShouldRerun();
+        LOG.warn("Strongly recommend to re-run manually hfsck after all orphanTableDirs being fixed");
+      } else if (numFailedCase > 0) {
+        LOG.error("Failed to fix " + numFailedCase
+            + " OrphanTables with default .tableinfo files");
+      }
+
+    }
+    //cleanup the list
+    orphanTableDirs.clear();
+
   }
 
   /**
@@ -3017,7 +3128,15 @@ public class HBaseFsck {
   boolean shouldFixHdfsHoles() {
     return fixHdfsHoles;
   }
-
+  
+  public void setFixTableOrphans(boolean shouldFix) {
+    fixTableOrphans = shouldFix;
+  }
+   
+  boolean shouldFixTableOrphans() {
+    return fixTableOrphans;
+  }
+  
   public void setFixHdfsOverlaps(boolean shouldFix) {
     fixHdfsOverlaps = shouldFix;
   }
@@ -3159,6 +3278,7 @@ public class HBaseFsck {
     System.err.println("   -fixMeta          Try to fix meta problems.  This assumes HDFS region info is good.");
     System.err.println("   -fixHdfsHoles     Try to fix region holes in hdfs.");
     System.err.println("   -fixHdfsOrphans   Try to fix region dirs with no .regioninfo file in hdfs");
+    System.err.println("   -fixTableOrphans  Try to fix table dirs with no .tableinfo file in hdfs (online mode only)");
     System.err.println("   -fixHdfsOverlaps  Try to fix region overlaps in hdfs.");
     System.err.println("   -fixVersionFile   Try to fix missing hbase.version file in hdfs.");
     System.err.println("   -maxMerge <n>     When fixing region overlaps, allow at most <n> regions to merge. (n=" + DEFAULT_MAX_MERGE +" by default)");
@@ -3263,6 +3383,8 @@ public class HBaseFsck {
         setFixHdfsHoles(true);
       } else if (cmd.equals("-fixHdfsOrphans")) {
         setFixHdfsOrphans(true);
+      } else if (cmd.equals("-fixTableOrphans")) {
+        setFixTableOrphans(true);
       } else if (cmd.equals("-fixHdfsOverlaps")) {
         setFixHdfsOverlaps(true);
       } else if (cmd.equals("-fixVersionFile")) {
@@ -3389,6 +3511,7 @@ public class HBaseFsck {
       setFixHdfsHoles(false);
       setFixHdfsOverlaps(false);
       setFixVersionFile(false);
+      setFixTableOrphans(false);
       errors.resetErrors();
       code = onlineHbck();
       setRetCode(code);
