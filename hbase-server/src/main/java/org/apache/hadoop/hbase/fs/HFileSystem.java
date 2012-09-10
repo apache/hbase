@@ -262,7 +262,8 @@ public class HFileSystem extends FilterFileSystem {
                                    Object[] args) throws Throwable {
                 try { 
                   Object res = method.invoke(cp, args);
-                  if (res != null && args.length == 3 && "getBlockLocations".equals(method.getName())
+                  if (res != null && args != null && args.length == 3
+                      && "getBlockLocations".equals(method.getName())
                       && res instanceof LocatedBlocks
                       && args[0] instanceof String
                       && args[0] != null) {

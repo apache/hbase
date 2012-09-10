@@ -371,88 +371,42 @@ public class TestBlockReorder {
     fop.writeDouble(toWrite);
     fop.close();
 
+    for (int i=0; i<10; i++){
+      // The interceptor is not set in this test, so we get the raw list at this point
+      LocatedBlocks l;
+      final long max = System.currentTimeMillis() + 10000;
+      do {
+        l = getNamenode(dfs.getClient()).getBlockLocations(fileName, 0, 1);
+        Assert.assertNotNull(l.getLocatedBlocks());
+        Assert.assertEquals(l.getLocatedBlocks().size(), 1);
+        Assert.assertTrue("Expecting " + repCount + " , got " + l.get(0).getLocations().length,
+            System.currentTimeMillis() < max);
+      } while (l.get(0).getLocations().length != repCount);
 
-    // The interceptor is not set in this test, so we get the raw list at this point
-    LocatedBlocks l;
-    final long max = System.currentTimeMillis() + 10000;
-    do {
-      l = getNamenode(dfs.getClient()).getBlockLocations(fileName, 0, 1);
-      Assert.assertNotNull(l.getLocatedBlocks());
-      Assert.assertEquals(l.getLocatedBlocks().size(), 1);
-      Assert.assertTrue("Expecting " + repCount + " , got " + l.get(0).getLocations().length,
-          System.currentTimeMillis() < max);
-    } while (l.get(0).getLocations().length != repCount);
+      // Should be filtered, the name is different => The order won't change
+      Object originalList[] = l.getLocatedBlocks().toArray();
+      HFileSystem.ReorderWALBlocks lrb = new HFileSystem.ReorderWALBlocks();
+      lrb.reorderBlocks(conf, l, fileName);
+      Assert.assertArrayEquals(originalList, l.getLocatedBlocks().toArray());
 
+      // Should be reordered, as we pretend to be a file name with a compliant stuff
+      Assert.assertNotNull(conf.get(HConstants.HBASE_DIR));
+      Assert.assertFalse(conf.get(HConstants.HBASE_DIR).isEmpty());
+      String pseudoLogFile = conf.get(HConstants.HBASE_DIR) + "/" +
+          HConstants.HREGION_LOGDIR_NAME + "/" + host1 + ",6977,6576" + "/mylogfile";
 
-    // Let's fix our own order
-    setOurOrder(l);
+      // Check that it will be possible to extract a ServerName from our construction
+      Assert.assertNotNull("log= " + pseudoLogFile,
+          HLog.getServerNameFromHLogDirectoryName(dfs.getConf(), pseudoLogFile));
 
-    HFileSystem.ReorderWALBlocks lrb = new HFileSystem.ReorderWALBlocks();
-    // Should be filtered, the name is different
-    lrb.reorderBlocks(conf, l, fileName);
-    checkOurOrder(l);
+      // And check we're doing the right reorder.
+      lrb.reorderBlocks(conf, l, pseudoLogFile);
+      Assert.assertEquals(host1, l.get(0).getLocations()[2].getHostName());
 
-    // Should be reordered, as we pretend to be a file name with a compliant stuff
-    Assert.assertNotNull(conf.get(HConstants.HBASE_DIR));
-    Assert.assertFalse(conf.get(HConstants.HBASE_DIR).isEmpty());
-    String pseudoLogFile = conf.get(HConstants.HBASE_DIR) + "/" +
-        HConstants.HREGION_LOGDIR_NAME + "/" + host1 + ",6977,6576" + "/mylogfile";
-
-    // Check that it will be possible to extract a ServerName from our construction
-    Assert.assertNotNull("log= " + pseudoLogFile,
-        HLog.getServerNameFromHLogDirectoryName(dfs.getConf(), pseudoLogFile));
-
-    // And check we're doing the right reorder.
-    lrb.reorderBlocks(conf, l, pseudoLogFile);
-    checkOurFixedOrder(l);
-
-    // And change again and check again
-    l.get(0).getLocations()[0].setHostName(host2);
-    l.get(0).getLocations()[1].setHostName(host1);
-    l.get(0).getLocations()[2].setHostName(host3);
-    lrb.reorderBlocks(conf, l, pseudoLogFile);
-    checkOurFixedOrder(l);
-
-    // And change again and check again
-    l.get(0).getLocations()[0].setHostName(host2);
-    l.get(0).getLocations()[1].setHostName(host1);
-    l.get(0).getLocations()[2].setHostName(host3);
-    lrb.reorderBlocks(conf, l, pseudoLogFile);
-    checkOurFixedOrder(l);
-
-    // nothing to do here, but let's check
-    l.get(0).getLocations()[0].setHostName(host2);
-    l.get(0).getLocations()[1].setHostName(host3);
-    l.get(0).getLocations()[2].setHostName(host1);
-    lrb.reorderBlocks(conf, l, pseudoLogFile);
-    checkOurFixedOrder(l);
-
-    // nothing to do here, check again
-    l.get(0).getLocations()[0].setHostName(host2);
-    l.get(0).getLocations()[1].setHostName(host3);
-    l.get(0).getLocations()[2].setHostName("nothing");
-    lrb.reorderBlocks(conf, l, pseudoLogFile);
-    Assert.assertEquals(host2, l.get(0).getLocations()[0].getHostName());
-    Assert.assertEquals(host3, l.get(0).getLocations()[1].getHostName());
-    Assert.assertEquals("nothing", l.get(0).getLocations()[2].getHostName());
-  }
-
-  private void setOurOrder(LocatedBlocks l) {
-    l.get(0).getLocations()[0].setHostName(host1);
-    l.get(0).getLocations()[1].setHostName(host2);
-    l.get(0).getLocations()[2].setHostName(host3);
-  }
-
-  private void checkOurOrder(LocatedBlocks l) {
-    Assert.assertEquals(host1, l.get(0).getLocations()[0].getHostName());
-    Assert.assertEquals(host2, l.get(0).getLocations()[1].getHostName());
-    Assert.assertEquals(host3, l.get(0).getLocations()[2].getHostName());
-  }
-
-  private void checkOurFixedOrder(LocatedBlocks l) {
-    Assert.assertEquals(host2, l.get(0).getLocations()[0].getHostName());
-    Assert.assertEquals(host3, l.get(0).getLocations()[1].getHostName());
-    Assert.assertEquals(host1, l.get(0).getLocations()[2].getHostName());
+      // Check again, it should remain the same.
+      lrb.reorderBlocks(conf, l, pseudoLogFile);
+      Assert.assertEquals(host1, l.get(0).getLocations()[2].getHostName());
+    }
   }
 
   @org.junit.Rule
