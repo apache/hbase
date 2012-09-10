@@ -417,7 +417,7 @@ public class TestHBaseFsck {
       HBaseFsck hbck = doFsck(conf, false); 
       assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.NO_TABLEINFO_FILE });
       
-      // fix OrphanTable with default .tableinfo
+      // fix OrphanTable with default .tableinfo (htd not yet cached on master)
       hbck = doFsck(conf, true);
       assertNoErrors(hbck);
       status = null;
@@ -432,7 +432,7 @@ public class TestHBaseFsck {
       fs.delete(status.getPath(), true);
       
       // fix OrphanTable with cache
-      htd = admin.getTableDescriptor(table.getBytes());
+      htd = admin.getTableDescriptor(table.getBytes()); // warms up cached htd on master
       hbck = doFsck(conf, true);
       assertNoErrors(hbck);
       status = null;
