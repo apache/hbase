@@ -54,6 +54,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
@@ -85,7 +86,6 @@ public class HBaseClient {
   protected final ConcurrentMap<ConnectionId, Connection> connections =
     new ConcurrentHashMap<ConnectionId, Connection>();
 
-  protected final Class<? extends Writable> valueClass;   // class of call values
   protected int counter;                            // counter for call ids
   protected final AtomicBoolean running = new AtomicBoolean(true); // if client runs
   final protected Configuration conf;
@@ -137,7 +137,7 @@ public class HBaseClient {
   private class Call {
     final int id;                                       // call id
     final Writable param;                               // parameter
-    Writable value;                               // value, null if error
+    HbaseObjectWritable value;                               // value, null if error
     IOException error;                            // exception, null if value
     boolean done;                                 // true when call is done
     protected int version = HBaseServer.CURRENT_VERSION;
@@ -173,7 +173,7 @@ public class HBaseClient {
      *
      * @param value return value of the call.
      */
-    public synchronized void setValue(Writable value) {
+    public synchronized void setValue(HbaseObjectWritable value) {
       this.value = value;
       callComplete();
     }
@@ -616,7 +616,7 @@ public class HBaseClient {
               WritableUtils.readString(localIn)));
           calls.remove(id);
         } else {
-          Writable value = ReflectionUtils.newInstance(valueClass, conf);
+          HbaseObjectWritable value = createNewHbaseWritable();
           value.readFields(localIn);                 // read value
           if (call.getVersion() >= HBaseServer.VERSION_RPCOPTIONS) {
             boolean hasProfiling = localIn.readBoolean();
@@ -650,6 +650,12 @@ public class HBaseClient {
           rpcCompression.returnDecompressor(decompressor);
         }
       }
+    }
+    
+    private HbaseObjectWritable createNewHbaseWritable() {
+      HbaseObjectWritable ret = new HbaseObjectWritable();
+      ret.setConf(conf);
+      return ret;
     }
 
     private synchronized void markClosed(IOException e) {
@@ -729,12 +735,12 @@ public class HBaseClient {
 
   /** Result collector for parallel calls. */
   private static class ParallelResults {
-    protected final Writable[] values;
+    protected final HbaseObjectWritable[] values;
     protected int size;
     protected int count;
 
     public ParallelResults(int size) {
-      this.values = new Writable[size];
+      this.values = new HbaseObjectWritable[size];
       this.size = size;
     }
 
@@ -757,9 +763,7 @@ public class HBaseClient {
    * @param conf configuration
    * @param factory socket factory
    */
-  public HBaseClient(Class<? extends Writable> valueClass, Configuration conf,
-      SocketFactory factory) {
-    this.valueClass = valueClass;
+  public HBaseClient(Configuration conf, SocketFactory factory) {
     this.maxIdleTime =
       conf.getInt("hbase.ipc.client.connection.maxidletime", 10000); //10s
     this.maxConnectRetries =
@@ -783,8 +787,8 @@ public class HBaseClient {
    * @param valueClass value class
    * @param conf configuration
    */
-  public HBaseClient(Class<? extends Writable> valueClass, Configuration conf) {
-    this(valueClass, conf, NetUtils.getDefaultSocketFactory(conf));
+  public HBaseClient(Configuration conf) {
+    this(conf, NetUtils.getDefaultSocketFactory(conf));
   }
 
   /** Return the socket factory of this client
@@ -830,12 +834,12 @@ public class HBaseClient {
    * @return Writable
    * @throws IOException e
    */
-  public Writable call(Writable param, InetSocketAddress address, HBaseRPCOptions options)
-  throws IOException {
+  public HbaseObjectWritable call(Writable param, InetSocketAddress address, 
+      HBaseRPCOptions options) throws IOException {
       return call(param, address, null, 0, options);
   }
 
-  public Writable call(Writable param, InetSocketAddress addr,
+  public HbaseObjectWritable call(Writable param, InetSocketAddress addr,
                        UserGroupInformation ticket, int rpcTimeout,
                        HBaseRPCOptions options)
                        throws IOException {
@@ -912,10 +916,10 @@ public class HBaseClient {
    * @return  Writable[]
    * @throws IOException e
    */
-  public Writable[] call(Writable[] params, InetSocketAddress[] addresses,
+  public HbaseObjectWritable[] call(Writable[] params, InetSocketAddress[] addresses,
       HBaseRPCOptions options)
     throws IOException {
-    if (addresses.length == 0) return new Writable[0];
+    if (addresses.length == 0) return new HbaseObjectWritable[0];
 
     ParallelResults results = new ParallelResults(params.length);
     // TODO this synchronization block doesnt make any sense, we should possibly fix it

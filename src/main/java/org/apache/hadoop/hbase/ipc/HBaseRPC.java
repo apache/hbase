@@ -205,7 +205,7 @@ public class HBaseRPC {
       HBaseClient client = clients.get(factory);
       if (client == null) {
         // Make an hbase client instead of hadoop Client.
-        client = new HBaseClient(HbaseObjectWritable.class, conf, factory);
+        client = new HBaseClient(conf, factory);
         clients.put(factory, client);
       }
       return client;
@@ -273,9 +273,8 @@ public class HBaseRPC {
       if (isTraceEnabled) {
         startTime = System.currentTimeMillis();
       }
-      HbaseObjectWritable value = (HbaseObjectWritable)
-        client.call(new Invocation(method, args), address, ticket,
-            rpcTimeout, options);
+      HbaseObjectWritable value = client.call(new Invocation(method, args),
+          address, ticket, rpcTimeout, options);
       if (isTraceEnabled) {
         long callTime = System.currentTimeMillis() - startTime;
         LOG.trace("Call: " + method.getName() + " " + callTime);
