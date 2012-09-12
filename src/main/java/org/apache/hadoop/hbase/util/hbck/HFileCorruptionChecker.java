@@ -149,9 +149,19 @@ public class HFileCorruptionChecker {
    * @throws IOException
    */
   protected void checkColFamDir(Path cfDir) throws IOException {
-    FileStatus[] hfs = fs.listStatus(cfDir, new HFileFilter(fs)); // use same filter as scanner.
+    FileStatus[] hfs = null;
+    try {
+      hfs = fs.listStatus(cfDir, new HFileFilter(fs)); // use same filter as scanner.
+    } catch (FileNotFoundException fnfe) {
+      // Hadoop 0.23+ listStatus semantics throws an exception if the path does not exist.
+      LOG.warn("Colfam Directory " + cfDir +
+          " does not exist.  Likely due to concurrent split/compaction. Skipping.");
+      missing.add(cfDir);
+      return;
+    }
+
+    // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
     if (hfs.length == 0 && !fs.exists(cfDir)) {
-      // interestingly, listStatus does not throw an exception if the path does not exist.
       LOG.warn("Colfam Directory " + cfDir +
           " does not exist.  Likely due to concurrent split/compaction. Skipping.");
       missing.add(cfDir);
@@ -171,9 +181,19 @@ public class HFileCorruptionChecker {
    * @throws IOException
    */
   protected void checkRegionDir(Path regionDir) throws IOException {
-    FileStatus[] cfs = fs.listStatus(regionDir, new FamilyDirFilter(fs));
+    FileStatus[] cfs = null;
+    try {
+      cfs = fs.listStatus(regionDir, new FamilyDirFilter(fs));
+    } catch (FileNotFoundException fnfe) {
+      // Hadoop 0.23+ listStatus semantics throws an exception if the path does not exist.
+      LOG.warn("Region Directory " + regionDir +
+          " does not exist.  Likely due to concurrent split/compaction. Skipping.");
+      missing.add(regionDir);
+      return;
+    }
+
+    // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
     if (cfs.length == 0 && !fs.exists(regionDir)) {
-      // interestingly, listStatus does not throw an exception if the path does not exist.
       LOG.warn("Region Directory " + regionDir +
           " does not exist.  Likely due to concurrent split/compaction. Skipping.");
       missing.add(regionDir);

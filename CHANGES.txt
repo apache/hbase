@@ -99,10 +99,12 @@ Release 0.92.2 - Unreleased
    HBASE-6334  TestImprovement for TestHRegion.testWritesWhileGetting (Gregory Chanan)
    HBASE-4470  ServerNotRunningException coming out of assignRootAndMeta kills the Master (Gregory Chanan) 
    HBASE-6460  hbck "-repairHoles" usage inconsistent with "-fixHdfsOrphans" (Jie Huang)
-   HBASE-6507 [hbck] TestHBaseFsck ran into TableNotEnabledException
-   HBASE-6552 TestAcidGuarantees system test should flush more aggresively (Gregory Chanan)
-   HBASE-6512 Incorrect OfflineMetaRepair log class name (Liang Xie)
-   HBASE-6565 Coprocessor exec result Map is not thread safe (Yuan Kang)
+   HBASE-6507  [hbck] TestHBaseFsck ran into TableNotEnabledException
+   HBASE-6552  TestAcidGuarantees system test should flush more aggresively (Gregory Chanan)
+   HBASE-6512  Incorrect OfflineMetaRepair log class name (Liang Xie)
+   HBASE-6565  Coprocessor exec result Map is not thread safe (Yuan Kang)
+   HBASE-6686  HFile Quarantine fails with missing dirs in hadoop 2.0
+   HBASE-6321  ReplicationSource dies reading the peer's id
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)

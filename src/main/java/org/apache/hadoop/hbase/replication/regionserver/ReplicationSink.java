@@ -135,16 +135,15 @@ public class ReplicationSink {
           }
           // With mini-batching, we need to expect multiple rows per edit
           byte[] lastKey = kvs.get(0).getRow();
-          Put put = new Put(kvs.get(0).getRow(),
-              kvs.get(0).getTimestamp());
+          Put put = new Put(kvs.get(0).getRow());
           put.setClusterId(entry.getKey().getClusterId());
           for (KeyValue kv : kvs) {
             if (!Bytes.equals(lastKey, kv.getRow())) {
               tableList.add(put);
-              put = new Put(kv.getRow(), kv.getTimestamp());
+              put = new Put(kv.getRow());
               put.setClusterId(entry.getKey().getClusterId());
             }
-            put.add(kv.getFamily(), kv.getQualifier(), kv.getValue());
+            put.add(kv.getFamily(), kv.getQualifier(), kv.getTimestamp(), kv.getValue());
             lastKey = kv.getRow();
           }
           tableList.add(put);
