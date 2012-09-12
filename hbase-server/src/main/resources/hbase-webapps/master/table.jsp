@@ -95,7 +95,6 @@
                 <li><a href="/">Home</a></li>
                 <li><a href="/tablesDetailed.jsp">Table Details</a></li>
                 <li><a href="/logs/">Local logs</a></li>
-                <li><a href="/stacks">Thread Dump</a></li>
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/dump">Debug dump</a></li>
             </ul>
@@ -171,7 +170,6 @@
                 <li><a href="/">Home</a></li>
                 <li><a href="/tablesDetailed.jsp">Table Details</a></li>
                 <li><a href="/logs/">Local logs</a></li>
-                <li><a href="/stacks">Thread Dump</a></li>
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/dump">Debug dump</a></li>
             </ul>
