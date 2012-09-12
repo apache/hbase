@@ -195,6 +195,9 @@ public class TestHalfStoreFileReader {
       foundKeyValue = doTestOfSeekBefore(p, fs, bottom, items.get(1), cacheConf);
       assertEquals(items.get(0), foundKeyValue);
 
+      // Try to seek before the splitKey in the top file
+      foundKeyValue = doTestOfSeekBefore(p, fs, top, midKV, cacheConf);
+      assertNull(foundKeyValue);
     }
 
   private KeyValue doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, KeyValue seekBefore,
