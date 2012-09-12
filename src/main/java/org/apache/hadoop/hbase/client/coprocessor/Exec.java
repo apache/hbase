@@ -64,7 +64,7 @@ public class Exec extends Invocation implements Row {
       byte[] row,
       Class<? extends CoprocessorProtocol> protocol,
       Method method, Object[] parameters) {
-    super(method, parameters);
+    super(method, protocol, parameters);
     this.conf = configuration;
     this.referenceRow = row;
     this.protocol = protocol;

@@ -45,26 +45,27 @@ public class Invocation extends VersionedWritable implements Configurable {
 
   public Invocation() {}
 
-  public Invocation(Method method, Object[] parameters) {
+  public Invocation(Method method,
+      Class<? extends VersionedProtocol> declaringClass, Object[] parameters) {
     this.methodName = method.getName();
     this.parameterClasses = method.getParameterTypes();
     this.parameters = parameters;
-    if (method.getDeclaringClass().equals(VersionedProtocol.class)) {
+    if (declaringClass.equals(VersionedProtocol.class)) {
       //VersionedProtocol is exempted from version check.
       clientVersion = 0;
       clientMethodsHash = 0;
     } else {
       try {
-        Field versionField = method.getDeclaringClass().getField("VERSION");
+        Field versionField = declaringClass.getField("VERSION");
         versionField.setAccessible(true);
-        this.clientVersion = versionField.getLong(method.getDeclaringClass());
+        this.clientVersion = versionField.getLong(declaringClass);
       } catch (NoSuchFieldException ex) {
-        throw new RuntimeException("The " + method.getDeclaringClass(), ex);
+        throw new RuntimeException("The " + declaringClass, ex);
       } catch (IllegalAccessException ex) {
         throw new RuntimeException(ex);
       }
-      this.clientMethodsHash = ProtocolSignature.getFingerprint(method
-          .getDeclaringClass().getMethods());
+      this.clientMethodsHash = ProtocolSignature.getFingerprint(
+          declaringClass.getMethods());
     }
   }
 
