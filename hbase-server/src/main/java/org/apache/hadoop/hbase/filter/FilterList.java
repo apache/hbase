@@ -204,9 +204,6 @@ public class FilterList extends Filter {
         switch (code) {
         case INCLUDE:
           continue;
-        case NEXT_ROW:
-        case SKIP:
-          return ReturnCode.SKIP;
         default:
           return code;
         }
