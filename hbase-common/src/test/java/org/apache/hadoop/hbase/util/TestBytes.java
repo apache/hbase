@@ -290,5 +290,13 @@ public class TestBytes extends TestCase {
     assertFalse(bytes == copy);
     assertTrue(Bytes.equals(bytes, copy));
   }
+
+  public void testToBytesBinaryTrailingBackslashes() throws Exception {
+    try {
+      Bytes.toBytesBinary("abc\\x00\\x01\\");
+    } catch (StringIndexOutOfBoundsException ex) {
+      fail("Illegal string access: " + ex.getMessage());
+    }
+  }
 }
 
