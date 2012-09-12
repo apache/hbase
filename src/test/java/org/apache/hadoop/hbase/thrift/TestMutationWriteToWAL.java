@@ -110,12 +110,12 @@ public class TestMutationWriteToWAL extends ThriftServerTestBase {
         final ByteBuffer rowBuf = ByteBuffer.wrap(Bytes.toBytes(row));
         // Exercise both APIs.
         if (i % 2 == 0) {
-          client.mutateRow(HTestConst.DEFAULT_TABLE_BYTE_BUF, rowBuf, mutations);
+          client.mutateRow(HTestConst.DEFAULT_TABLE_BYTE_BUF, rowBuf, mutations, null);
         } else {
           List<BatchMutation> rowBatches = new ArrayList<BatchMutation>();
           BatchMutation bm = new BatchMutation(rowBuf, mutations);
           rowBatches.add(bm);
-          client.mutateRows(HTestConst.DEFAULT_TABLE_BYTE_BUF, rowBatches);
+          client.mutateRows(HTestConst.DEFAULT_TABLE_BYTE_BUF, rowBatches, null);
         }
       }
       client.disableTable(HTestConst.DEFAULT_TABLE_BYTE_BUF);

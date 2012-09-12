@@ -95,6 +95,7 @@ struct TRegionInfo {
 
 /**
  * A Mutation object is used to either update or delete a column-value.
+ * If LATEST_TIMESTAMP is used, the server will select timestamp automatically.
  */
 struct Mutation {
   1:bool isDelete = 0,
@@ -111,6 +112,7 @@ struct BatchMutation {
   1:Text row,
   2:list<Mutation> mutations
 }
+
 
 /**
  * Holds row name and then a map of columns to cells.
@@ -166,65 +168,79 @@ exception AlreadyExists {
 //
 // Service
 //
+// The method definitions should be kept in the alphabetical order for the ease
+// of merging changes between various client and server branches.
 
 service Hbase {
-  /**
-   * Brings a table on-line (enables it)
+  /** 
+   * Atomically increment the column value specified. Returns the next value
+   * post increment.
    */
-  void enableTable(
-    /** name of the table */
-    1:Bytes tableName
-  ) throws (1:IOError io)
+  i64 atomicIncrement(
+    /** name of table */
+    1:Text tableName,
+
+    /** row to increment */
+    2:Text row,
+
+    /** name of column */
+    3:Text column,
+
+    /** amount to increment by */
+    4:i64 value
+  ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
-   * Disables a table (takes it off-line) If it is being served, the master
-   * will tell the servers to stop serving it.
+   * Applies a list of mutations to a single row only if the value for
+   * row, cf[:qualifier] equals valueCheck
+   *
+   * Accepts null or '' for valueCheck, in which case entry for
+   * row, cf[:qualifier] must not exist.
+   *
+   * @return bool whether the check passed and mutations were applied
    */
-  void disableTable(
-    /** name of the table */
-    1:Bytes tableName
-  ) throws (1:IOError io)
+  bool checkAndMutateRow(
+    /** name of table */
+    1:Text tableName,
+
+    /** row key */
+    2:Text row,
+
+    3:Text columnCheck,
+    4:Text valueCheck,
+    /** list of mutation commands */
+    5:list<Mutation> mutations,
+
+    /** Put attributes */
+    6:map<Text, Text> attributes
+  ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
-   * @return true if table is on-line
+   * Same as above, but the puts and deletes are added at specified timestamp.
+   *
+   * NOTE: No way to specify what timerange to query for the checked value;
+   * it will look for most recent entry (the default Get behavior).
    */
-  bool isTableEnabled(
-    /** name of the table to check */
-    1:Bytes tableName
-  ) throws (1:IOError io)
+  bool checkAndMutateRowTs(
+    /** name of table */
+    1:Text tableName,
+
+    /** row key */
+    2:Text row,
+
+    3:Text columnCheck,
+    4:Text valueCheck,
+    /** list of mutation commands */
+    5:list<Mutation> mutations,
+
+    /** timestamp */
+    6:i64 timestamp,
+
+    /** Put attributes */
+    7:map<Text, Text> attributes
+  ) throws (1:IOError io, 2:IllegalArgument ia)
 
   void compact(1:Bytes tableNameOrRegionName)
-    throws (1:IOError io)
-
-  void majorCompact(1:Bytes tableNameOrRegionName)
-    throws (1:IOError io)
-
-  /**
-   * List all the userspace tables.
-   *
-   * @return returns a list of names
-   */
-  list<Text> getTableNames()
-    throws (1:IOError io)
-
-  /**
-   * List all the column families assoicated with a table.
-   *
-   * @return list of column family descriptors
-   */
-  map<Text,ColumnDescriptor> getColumnDescriptors (
-    /** table name */
-    1:Text tableName
-  ) throws (1:IOError io)
-
-  /**
-   * List the regions associated with a table.
-   *
-   * @return list of region descriptors
-   */
-  list<TRegionInfo> getTableRegions(
-    /** table name */
-    1:Text tableName)
     throws (1:IOError io)
 
   /**
@@ -246,6 +262,67 @@ service Hbase {
   ) throws (1:IOError io, 2:IllegalArgument ia, 3:AlreadyExists exist)
 
   /**
+   * Delete all cells that match the passed row and column.
+   */
+  void deleteAll(
+    /** name of table */
+    1:Text tableName,
+
+    /** Row to update */
+    2:Text row,
+
+    /** name of column whose value is to be deleted */
+    3:Text column
+  ) throws (1:IOError io)
+
+  /**
+   * Completely delete the row's cells.
+   */
+  void deleteAllRow(
+    /** name of table */
+    1:Text tableName,
+
+    /** key of the row to be completely deleted. */
+    2:Text row
+
+    /** Delete attributes */
+    3:map<Text, Text> attributes
+  ) throws (1:IOError io)
+
+  /**
+   * Completely delete the row's cells marked with a timestamp
+   * equal-to or older than the passed timestamp.
+   */
+  void deleteAllRowTs(
+    /** name of table */
+    1:Text tableName,
+
+    /** key of the row to be completely deleted. */
+    2:Text row,
+
+    /** timestamp */
+    3:i64 timestamp
+  ) throws (1:IOError io)
+
+  /**
+   * Delete all cells that match the passed row and column and whose
+   * timestamp is equal-to or older than the passed timestamp.
+   */
+  void deleteAllTs(
+    /** name of table */
+    1:Text tableName,
+
+    /** Row to update */
+    2:Text row,
+
+    /** name of column whose value is to be deleted */
+    3:Text column,
+
+    /** timestamp */
+    4:i64 timestamp
+  ) throws (1:IOError io)
+
+  /**
    * Deletes a table
    *
    * @throws IOError if table doesn't exist on server or there was some other
@@ -254,6 +331,23 @@ service Hbase {
   void deleteTable(
     /** name of table to delete */
     1:Text tableName
+  ) throws (1:IOError io)
+
+  /**
+   * Disables a table (takes it off-line) If it is being served, the master
+   * will tell the servers to stop serving it.
+   */
+  void disableTable(
+    /** name of the table */
+    1:Bytes tableName
+  ) throws (1:IOError io)
+
+  /**
+   * Brings a table on-line (enables it)
+   */
+  void enableTable(
+    /** name of the table */
+    1:Bytes tableName
   ) throws (1:IOError io)
 
   /**
@@ -274,47 +368,25 @@ service Hbase {
   ) throws (1:IOError io)
 
   /**
-   * Get the specified number of versions for the specified table,
-   * row, and column.
+   * List all the column families associated with a table.
    *
-   * @return list of cells for specified row/column
+   * @return list of column family descriptors
    */
-  list<TCell> getVer(
-    /** name of table */
-    1:Text tableName,
-
-    /** row key */
-    2:Text row,
-
-    /** column name */
-    3:Text column,
-
-    /** number of versions to retrieve */
-    4:i32 numVersions
+  map<Text,ColumnDescriptor> getColumnDescriptors (
+    /** table name */
+    1:Text tableName
   ) throws (1:IOError io)
 
   /**
-   * Get the specified number of versions for the specified table,
-   * row, and column.  Only versions less than or equal to the specified
-   * timestamp will be returned.
+   * Get the regininfo for the specified row. It scans
+   * the metatable to find region's start and end keys.
    *
-   * @return list of cells for specified row/column
+   * @return value for specified row/column
    */
-  list<TCell> getVerTs(
-    /** name of table */
-    1:Text tableName,
-
+  TRegionInfo getRegionInfo(
     /** row key */
-    2:Text row,
+    1:Text row,
 
-    /** column name */
-    3:Text column,
-
-    /** timestamp */
-    4:i64 timestamp,
-
-    /** number of versions to retrieve */
-    5:i32 numVersions
   ) throws (1:IOError io)
 
   /**
@@ -332,23 +404,6 @@ service Hbase {
   ) throws (1:IOError io)
 
   /**
-   * Get the specified columns for the specified table and row at the latest
-   * timestamp. Returns an empty list if the row does not exist.
-   *
-   * @return TRowResult containing the row and map of columns to TCells
-   */
-  list<TRowResult> getRowWithColumns(
-    /** name of table */
-    1:Text tableName,
-
-    /** row key */
-    2:Text row,
-
-    /** List of columns to return, null for all columns */
-    3:list<Text> columns
-  ) throws (1:IOError io)
-
-  /**
    * Get all the data for the specified table and row at the specified
    * timestamp. Returns an empty list if the row does not exist.
    *
@@ -363,24 +418,6 @@ service Hbase {
 
     /** timestamp */
     3:i64 timestamp
-  ) throws (1:IOError io)
-
-  /**
-   * Get the specified columns for the specified table and row at the specified
-   * timestamp. Returns an empty list if the row does not exist.
-   *
-   * @return TRowResult containing the row and map of columns to TCells
-   */
-  list<TRowResult> getRowWithColumnsTs(
-    /** name of table */
-    1:Text tableName,
-
-    /** row key */
-    2:Text row,
-
-    /** List of columns to return, null for all columns */
-    3:list<Text> columns,
-    4:i64 timestamp
   ) throws (1:IOError io)
 
   /**
@@ -432,6 +469,41 @@ service Hbase {
   ) throws (1:IOError io)
 
   /**
+   * Get the specified columns for the specified table and row at the latest
+   * timestamp. Returns an empty list if the row does not exist.
+   *
+   * @return TRowResult containing the row and map of columns to TCells
+   */
+  list<TRowResult> getRowWithColumns(
+    /** name of table */
+    1:Text tableName,
+
+    /** row key */
+    2:Text row,
+
+    /** List of columns to return, null for all columns */
+    3:list<Text> columns
+  ) throws (1:IOError io)
+
+  /**
+   * Get the specified columns for the specified table and row at the specified
+   * timestamp. Returns an empty list if the row does not exist.
+   *
+   * @return TRowResult containing the row and map of columns to TCells
+   */
+  list<TRowResult> getRowWithColumnsTs(
+    /** name of table */
+    1:Text tableName,
+
+    /** row key */
+    2:Text row,
+
+    /** List of columns to return, null for all columns */
+    3:list<Text> columns,
+    4:i64 timestamp
+  ) throws (1:IOError io)
+
+  /**
    * Get multiple rows with the same columns or timestamps for all.
    * This returns latest entries, all columns and cfs.
    *
@@ -478,6 +550,79 @@ service Hbase {
   ) throws (1:IOError io)
 
   /**
+   * List all the userspace tables.
+   *
+   * @return returns a list of names
+   */
+  list<Text> getTableNames()
+    throws (1:IOError io)
+
+  /**
+   * List the regions associated with a table.
+   *
+   * @return list of region descriptors
+   */
+  list<TRegionInfo> getTableRegions(
+    /** table name */
+    1:Text tableName)
+    throws (1:IOError io)
+
+  /**
+   * Get the specified number of versions for the specified table,
+   * row, and column.
+   *
+   * @return list of cells for specified row/column
+   */
+  list<TCell> getVer(
+    /** name of table */
+    1:Text tableName,
+
+    /** row key */
+    2:Text row,
+
+    /** column name */
+    3:Text column,
+
+    /** number of versions to retrieve */
+    4:i32 numVersions
+  ) throws (1:IOError io)
+
+  /**
+   * Get the specified number of versions for the specified table,
+   * row, and column.  Only versions less than or equal to the specified
+   * timestamp will be returned.
+   *
+   * @return list of cells for specified row/column
+   */
+  list<TCell> getVerTs(
+    /** name of table */
+    1:Text tableName,
+
+    /** row key */
+    2:Text row,
+
+    /** column name */
+    3:Text column,
+
+    /** timestamp */
+    4:i64 timestamp,
+
+    /** number of versions to retrieve */
+    5:i32 numVersions
+  ) throws (1:IOError io)
+
+  /**
+   * @return true if table is on-line
+   */
+  bool isTableEnabled(
+    /** name of the table to check */
+    1:Bytes tableName
+  ) throws (1:IOError io)
+
+  void majorCompact(1:Bytes tableNameOrRegionName)
+    throws (1:IOError io)
+
+  /**
    * Apply a series of mutations (updates/deletes) to a row in a
    * single transaction.  If an exception is thrown, then the
    * transaction is aborted.  Default current timestamp is used, and
@@ -491,7 +636,10 @@ service Hbase {
     2:Text row,
 
     /** list of mutation commands */
-    3:list<Mutation> mutations
+    3:list<Mutation> mutations,
+
+    /** Put attributes */
+    4:map<Text, Text> attributes
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
@@ -511,7 +659,10 @@ service Hbase {
     3:list<Mutation> mutations,
 
     /** timestamp */
-    4:i64 timestamp
+    4:i64 timestamp,
+
+    /** Put attributes */
+    5:map<Text, Text> attributes
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
@@ -525,8 +676,30 @@ service Hbase {
     1:Text tableName,
 
     /** list of row batches */
-    2:list<BatchMutation> rowBatches
+    2:list<BatchMutation> rowBatches,
+
+    /** Put attributes */
+    3:map<Text, Text> attributes
   ) throws (1:IOError io, 2:IllegalArgument ia)
+
+  /**
+   * Async (oneway) versions of some of above.
+   * @TODO only the two multi mutates have been done yet
+   * @TODO currently no way for client to know success
+   *   or failure of the call!!
+   */
+
+  /**
+   * Asynchronous multi-row mutation call
+   * See mutateRows()
+   */
+  oneway void mutateRowsAsync(
+    /** name of table */
+    1:Text tableName,
+
+    /** list of row batches */
+    2:list<BatchMutation> rowBatches
+  )
 
   /**
    * Apply a series of batches (each a series of mutations on a single row)
@@ -542,127 +715,78 @@ service Hbase {
     2:list<BatchMutation> rowBatches,
 
     /** timestamp */
-    3:i64 timestamp
+    3:i64 timestamp,
+
+    /** Put attributes */
+    4:map<Text, Text> attributes
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
-   * Applies a list of mutations to a single row only if the value for
-   * row, cf[:qualifier] equals valueCheck
+   * Asynchronous multi-row mutation call with ts
+   * See mutateRowsTs()
    *
-   * Accepts null or '' for valueCheck, in which case entry for
-   * row, cf[:qualifier] must not exist.
-   *
-   * @return bool whether the check passed and mutations were applied
+   * The specified timestamp is used, and
+   * all entries will have an identical timestamp.
    */
-  bool checkAndMutateRow(
+  oneway void mutateRowsTsAsync(
     /** name of table */
     1:Text tableName,
 
-    /** row key */
-    2:Text row,
-
-    3:Text columnCheck,
-    4:Text valueCheck,
-    /** list of mutation commands */
-    5:list<Mutation> mutations,
-  ) throws (1:IOError io, 2:IllegalArgument ia)
-
-  /**
-   * Same as above, but the puts and deletes are added at specified timestamp.
-   *
-   * NOTE: No way to specify what timerange to query for the checked value;
-   * it will look for most recent entry (the default Get behavior).
-   */
-  bool checkAndMutateRowTs(
-    /** name of table */
-    1:Text tableName,
-
-    /** row key */
-    2:Text row,
-
-    3:Text columnCheck,
-    4:Text valueCheck,
-    /** list of mutation commands */
-    5:list<Mutation> mutations,
-
-    /** timestamp */
-    6:i64 timestamp
-  ) throws (1:IOError io, 2:IllegalArgument ia)
-
-  /**
-   * Atomically increment the column value specified.  Returns the next value post increment.
-   */
-  i64 atomicIncrement(
-    /** name of table */
-    1:Text tableName,
-
-    /** row to increment */
-    2:Text row,
-
-    /** name of column */
-    3:Text column,
-
-    /** amount to increment by */
-    4:i64 value
-  ) throws (1:IOError io, 2:IllegalArgument ia)
-
-  /**
-   * Delete all cells that match the passed row and column.
-   */
-  void deleteAll(
-    /** name of table */
-    1:Text tableName,
-
-    /** Row to update */
-    2:Text row,
-
-    /** name of column whose value is to be deleted */
-    3:Text column
-  ) throws (1:IOError io)
-
-  /**
-   * Delete all cells that match the passed row and column and whose
-   * timestamp is equal-to or older than the passed timestamp.
-   */
-  void deleteAllTs(
-    /** name of table */
-    1:Text tableName,
-
-    /** Row to update */
-    2:Text row,
-
-    /** name of column whose value is to be deleted */
-    3:Text column,
-
-    /** timestamp */
-    4:i64 timestamp
-  ) throws (1:IOError io)
-
-  /**
-   * Completely delete the row's cells.
-   */
-  void deleteAllRow(
-    /** name of table */
-    1:Text tableName,
-
-    /** key of the row to be completely deleted. */
-    2:Text row
-  ) throws (1:IOError io)
-
-  /**
-   * Completely delete the row's cells marked with a timestamp
-   * equal-to or older than the passed timestamp.
-   */
-  void deleteAllRowTs(
-    /** name of table */
-    1:Text tableName,
-
-    /** key of the row to be completely deleted. */
-    2:Text row,
+    /** list of row batches */
+    2:list<BatchMutation> rowBatches,
 
     /** timestamp */
     3:i64 timestamp
-  ) throws (1:IOError io)
+  )
+
+  /**
+   * Closes the server-state associated with an open scanner.
+   *
+   * @throws IllegalArgument if ScannerID is invalid
+   */
+  void scannerClose(
+    /** id of a scanner returned by scannerOpen */
+    1:ScannerID id
+  ) throws (1:IOError io, 2:IllegalArgument ia)
+
+  /**
+   * Returns the scanner's current row value and advances to the next
+   * row in the table.  When there are no more rows in the table, or a key
+   * greater-than-or-equal-to the scanner's specified stopRow is reached,
+   * an empty list is returned.
+   *
+   * @return a TRowResult containing the current row and
+   * a map of the columns to TCells.
+   *
+   * @throws IllegalArgument if ScannerID is invalid
+   *
+   * @throws NotFound when the scanner reaches the end
+   */
+  list<TRowResult> scannerGet(
+    /** id of a scanner returned by scannerOpen */
+    1:ScannerID id
+  ) throws (1:IOError io, 2:IllegalArgument ia)
+
+  /**
+   * Returns, starting at the scanner's current row value nbRows worth of
+   * rows and advances to the next row in the table.  When there are no more
+   * rows in the table, or a key greater-than-or-equal-to the scanner's
+   * specified stopRow is reached,  an empty list is returned.
+   *
+   * @return a TRowResult containing the current row and
+   * a map of the columns to TCells.
+   *
+   * @throws IllegalArgument if ScannerID is invalid
+   *
+   * @throws NotFound when the scanner reaches the end
+   */
+  list<TRowResult> scannerGetList(
+    /** id of a scanner returned by scannerOpen */
+    1:ScannerID id,
+
+    /** number of results to return */
+    2:i32 nbRows
+  ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
    * Get a scanner on the current table starting at the specified row and
@@ -686,66 +810,7 @@ service Hbase {
      * to pass a regex in the column qualifier.
      */
     3:list<Text> columns
-  ) throws (1:IOError io)
 
-  /**
-   * Get a scanner on the current table, using the Scan instance
-   * for the scan parameters.
-   */
-  ScannerID scannerOpenWithScan(
-    /** name of table */
-    1:Text tableName,
-
-    /** Scan instance */
-    2:TScan scan
-  ) throws (1:IOError io)
-
-  /**
-   * Get a scanner on the current table starting and stopping at the
-   * specified rows.  ending at the last row in the table.  Return the
-   * specified columns.
-   *
-   * @return scanner id to be used with other scanner procedures
-   */
-  ScannerID scannerOpenWithStop(
-    /** name of table */
-    1:Text tableName,
-
-    /**
-     * Starting row in table to scan.
-     * Send "" (empty string) to start at the first row.
-     */
-    2:Text startRow,
-
-    /**
-     * row to stop scanning on. This row is *not* included in the
-     * scanner's results
-     */
-    3:Text stopRow,
-
-    /**
-     * columns to scan. If column name is a column family, all
-     * columns of the specified column family are returned. It's also possible
-     * to pass a regex in the column qualifier.
-     */
-    4:list<Text> columns
-  ) throws (1:IOError io)
-
-  /**
-   * Open a scanner for a given prefix.  That is all rows will have the specified
-   * prefix. No other rows will be returned.
-   *
-   * @return scanner id to use with other scanner calls
-   */
-  ScannerID scannerOpenWithPrefix(
-    /** name of table */
-    1:Text tableName,
-
-    /** the prefix (and thus start row) of the keys you want */
-    2:Text startAndPrefix,
-
-    /** the columns you want returned */
-    3:list<Text> columns
   ) throws (1:IOError io)
 
   /**
@@ -774,41 +839,6 @@ service Hbase {
 
     /** timestamp */
     4:i64 timestamp
-  ) throws (1:IOError io)
-
-  /**
-   * Get a scanner on the current table starting and stopping at the
-   * specified rows.  ending at the last row in the table.  Return the
-   * specified columns.  Only values with the specified timestamp are
-   * returned.
-   *
-   * @return scanner id to be used with other scanner procedures
-   */
-  ScannerID scannerOpenWithStopTs(
-    /** name of table */
-    1:Text tableName,
-
-    /**
-     * Starting row in table to scan.
-     * Send "" (empty string) to start at the first row.
-     */
-    2:Text startRow,
-
-    /**
-     * row to stop scanning on. This row is *not* included in the
-     * scanner's results
-     */
-    3:Text stopRow,
-
-    /**
-     * columns to scan. If column name is a column family, all
-     * columns of the specified column family are returned. It's also possible
-     * to pass a regex in the column qualifier.
-     */
-    4:list<Text> columns,
-
-    /** timestamp */
-    5:i64 timestamp
   ) throws (1:IOError io)
 
   /**
@@ -855,6 +885,74 @@ service Hbase {
    /** timestamp */
     3:i64 timestamp
 
+  ) throws (1:IOError io)
+
+  /**
+   * Open a scanner for a given prefix.  That is all rows will have the specified
+   * prefix. No other rows will be returned.
+   *
+   * @return scanner id to use with other scanner calls
+   */
+  ScannerID scannerOpenWithPrefix(
+    /** name of table */
+    1:Text tableName,
+
+   /**
+    * The prefix (and thus start row) of the keys you want
+    * Only those rows with the specified prefix will be returned
+    */
+    2:Text startAndPrefix,
+
+   /**
+    * columns to scan. If column name is a column family, all
+    * columns of the specified column family are returned. It's also possible
+    * to pass a regex in the column qualifier.
+    */
+    3:list<Text> columns
+  ) throws (1:IOError io)
+
+  /**
+   * Get a scanner on the current table, using the Scan instance
+   * for the scan parameters.
+   */
+  ScannerID scannerOpenWithScan(
+    /** name of table */
+    1:Text tableName,
+
+    /** Scan instance */
+    2:TScan scan
+  ) throws (1:IOError io)
+
+  /**
+   * Get a scanner on the current table starting and stopping at the
+   * specified rows.  ending at the last row in the table.  Return the
+   * specified columns.
+   *
+   * @return scanner id to be used with other scanner procedures
+   */
+  ScannerID scannerOpenWithStop(
+    /** name of table */
+    1:Text tableName,
+
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
+    2:Text startRow,
+
+    /**
+     * Row to stop scanning on. This row is *not* included in the
+     * scanner's results
+     * Send "" (empty string) to stop at the last row.
+     */
+    3:Text stopRow,
+
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
+    4:list<Text> columns
   ) throws (1:IOError io)
 
   /**
@@ -928,61 +1026,38 @@ service Hbase {
   ) throws (1:IOError io)
 
   /**
-   * Returns the scanner's current row value and advances to the next
-   * row in the table.  When there are no more rows in the table, or a key
-   * greater-than-or-equal-to the scanner's specified stopRow is reached,
-   * an empty list is returned.
+   * Get a scanner on the current table starting and stopping at the
+   * specified rows.  ending at the last row in the table.  Return the
+   * specified columns.  Only values with the specified timestamp are
+   * returned.
    *
-   * @return a TRowResult containing the current row and a map of the columns to TCells.
-   *
-   * @throws IllegalArgument if ScannerID is invalid
-   *
-   * @throws NotFound when the scanner reaches the end
+   * @return scanner id to be used with other scanner procedures
    */
-  list<TRowResult> scannerGet(
-    /** id of a scanner returned by scannerOpen */
-    1:ScannerID id
-  ) throws (1:IOError io, 2:IllegalArgument ia)
+  ScannerID scannerOpenWithStopTs(
+    /** name of table */
+    1:Text tableName,
 
-  /**
-   * Returns, starting at the scanner's current row value nbRows worth of
-   * rows and advances to the next row in the table.  When there are no more
-   * rows in the table, or a key greater-than-or-equal-to the scanner's
-   * specified stopRow is reached,  an empty list is returned.
-   *
-   * @return a TRowResult containing the current row and a map of the columns to TCells.
-   *
-   * @throws IllegalArgument if ScannerID is invalid
-   *
-   * @throws NotFound when the scanner reaches the end
-   */
-  list<TRowResult> scannerGetList(
-    /** id of a scanner returned by scannerOpen */
-    1:ScannerID id,
+    /**
+     * Starting row in table to scan.
+     * Send "" (empty string) to start at the first row.
+     */
+    2:Text startRow,
 
-    /** number of results to return */
-    2:i32 nbRows
-  ) throws (1:IOError io, 2:IllegalArgument ia)
+    /**
+     * Row to stop scanning on. This row is *not* included in the
+     * scanner's results
+     * Send "" (empty string) to stop at the last row.
+     */
+    3:Text stopRow,
 
-  /**
-   * Closes the server-state associated with an open scanner.
-   *
-   * @throws IllegalArgument if ScannerID is invalid
-   */
-  void scannerClose(
-    /** id of a scanner returned by scannerOpen */
-    1:ScannerID id
-  ) throws (1:IOError io, 2:IllegalArgument ia)
+    /**
+     * columns to scan. If column name is a column family, all
+     * columns of the specified column family are returned. It's also possible
+     * to pass a regex in the column qualifier.
+     */
+    4:list<Text> columns,
 
-  /**
-   * Get the regininfo for the specified row. It scans
-   * the metatable to find region's start and end keys.
-   *
-   * @return value for specified row/column
-   */
-  TRegionInfo getRegionInfo(
-    /** row key */
-    1:Text row,
-
+    /** timestamp */
+    5:i64 timestamp
   ) throws (1:IOError io)
 }

@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * A Mutation object is used to either update or delete a column-value.
+ * If LATEST_TIMESTAMP is used, the server will select timestamp automatically.
  */
 public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fields>, java.io.Serializable, Cloneable {
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("Mutation");

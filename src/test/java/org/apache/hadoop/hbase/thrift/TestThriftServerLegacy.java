@@ -146,7 +146,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
     // Apply a few Mutations to rowA
     //     mutations.add(new Mutation(false, columnAname, valueAname));
     //     mutations.add(new Mutation(false, columnBname, valueBname));
-    handler.mutateRow(tableAname, rowAname, getMutations());
+    handler.mutateRow(tableAname, rowAname, getMutations(), null);
 
     // Assert that the changes were made
     assertBufferEquals(valueAname, handler.get(tableAname, rowAname, columnAname).get(0).value);
@@ -162,7 +162,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
     // rowBmutations.add(new Mutation(false, columnAname, valueCname));
     // rowBmutations.add(new Mutation(false, columnBname, valueDname));
     // batchMutations.add(new BatchMutation(rowBname, rowBmutations));
-    handler.mutateRows(tableAname, getBatchMutations());
+    handler.mutateRows(tableAname, getBatchMutations(), null);
 
     // Assert that changes were made to rowA
     List<TCell> cells = handler.get(tableAname, rowAname, columnAname);
@@ -180,7 +180,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
     // Apply some deletes
     handler.deleteAll(tableAname, rowAname, columnBname);
-    handler.deleteAllRow(tableAname, rowBname);
+    handler.deleteAllRow(tableAname, rowBname, null);
 
     // Assert that the deletes were applied
     int size = handler.get(tableAname, rowAname, columnBname).size();
@@ -191,7 +191,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
     // Try null mutation
     List<Mutation> mutations = new ArrayList<Mutation>();
     mutations.add(new Mutation(false, columnAname, null, true, HConstants.LATEST_TIMESTAMP));
-    handler.mutateRow(tableAname, rowAname, mutations);
+    handler.mutateRow(tableAname, rowAname, mutations, null);
     TRowResult rowResult3 = handler.getRow(tableAname, rowAname).get(0);
     assertEquals(rowAname, rowResult3.row);
     assertEquals(0, rowResult3.columns.get(columnAname).value.remaining());
@@ -215,16 +215,16 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
     // Apply timestamped Mutations to rowA
     long time1 = System.currentTimeMillis();
-    handler.mutateRowTs(tableAname, rowAname, getMutations(), time1);
+    handler.mutateRowTs(tableAname, rowAname, getMutations(), time1, null);
 
     Thread.sleep(1000);
 
     // Apply timestamped BatchMutations for rowA and rowB
     long time2 = System.currentTimeMillis();
-    handler.mutateRowsTs(tableAname, getBatchMutations(), time2);
+    handler.mutateRowsTs(tableAname, getBatchMutations(), time2, null);
 
     // Apply an overlapping timestamped mutation to rowB
-    handler.mutateRowTs(tableAname, rowBname, getMutations(), time2);
+    handler.mutateRowTs(tableAname, rowBname, getMutations(), time2, null);
 
     // the getVerTs is [inf, ts) so you need to increment one.
     time1 += 1;
@@ -293,7 +293,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
     // Apply timestamped Mutations to rowA
     long time1 = System.currentTimeMillis();
-    handler.mutateRowTs(tableAname, rowAname, getMutations(), time1);
+    handler.mutateRowTs(tableAname, rowAname, getMutations(), time1, null);
 
     // Sleep to assure that 'time1' and 'time2' will be different even with a
     // coarse grained system timer.
@@ -301,7 +301,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
     // Apply timestamped BatchMutations for rowA and rowB
     long time2 = System.currentTimeMillis();
-    handler.mutateRowsTs(tableAname, getBatchMutations(), time2);
+    handler.mutateRowsTs(tableAname, getBatchMutations(), time2, null);
 
     time1 += 1;
 
@@ -360,7 +360,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
     // Apply timestamped Mutations to rowA
     long time1 = System.currentTimeMillis();
-    handler.mutateRowTs(tableAname, rowAname, getMutations(), time1);
+    handler.mutateRowTs(tableAname, rowAname, getMutations(), time1, null);
 
     // Sleep to assure that 'time1' and 'time2' will be different even with a
     // coarse grained system timer.
@@ -368,7 +368,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
     // Apply timestamped BatchMutations for rowA and rowB
     long time2 = System.currentTimeMillis();
-    handler.mutateRowsTs(tableAname, getBatchMutations(), time2);
+    handler.mutateRowsTs(tableAname, getBatchMutations(), time2, null);
 
     time1 += 1;
 
@@ -403,7 +403,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
     // Apply timestamped Mutations to rowA
     long time1 = System.currentTimeMillis();
     handler.checkAndMutateRowTs(tableAname, rowAname, columnAname, null,
-        getMutations(), time1);
+        getMutations(), time1, null);
 
     List<TRowResult> res1 = handler.getRow(tableAname, rowAname);
     // Check that all went according to plan
@@ -419,9 +419,9 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
     // Mess stuff up; shouldn't pass, null check value
     handler.checkAndMutateRowTs(tableAname, rowAname, columnAname, null,
-        getMutations2(), time2);
+        getMutations2(), time2, null);
     handler.checkAndMutateRowTs(tableAname, rowAname, columnBname, null,
-        getMutations2(), time2);
+        getMutations2(), time2, null);
 
     // Check that all still the same!
     assertEquals(res1.get(0).columns.get(columnAname).value, valueAname);
@@ -429,9 +429,9 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
     // Mess stuff up; shouldn't pass, wrong check value
     handler.checkAndMutateRowTs(tableAname, rowAname, columnAname,
-        ByteBuffer.wrap(Bytes.toBytes("randovalue1")), getMutations2(), time2);
+        ByteBuffer.wrap(Bytes.toBytes("randovalue1")), getMutations2(), time2, null);
     handler.checkAndMutateRowTs(tableAname, rowAname, columnBname,
-        ByteBuffer.wrap(Bytes.toBytes("randovalue2")), getMutations2(), time2);
+        ByteBuffer.wrap(Bytes.toBytes("randovalue2")), getMutations2(), time2, null);
 
     // Check that all still the same!
     assertEquals(res1.get(0).columns.get(columnAname).value, valueAname);
@@ -439,7 +439,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
     // Now actually change things
     handler.checkAndMutateRowTs(tableAname, rowAname, columnAname, valueAname,
-        getMutations2(), time2);
+        getMutations2(), time2, null);
 
     res1 = handler.getRow(tableAname, rowAname);
 

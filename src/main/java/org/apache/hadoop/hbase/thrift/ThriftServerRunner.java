@@ -862,7 +862,8 @@ public class ThriftServerRunner implements Runnable {
     }
 
     @Override
-    public void deleteAllRow(ByteBuffer tableName, ByteBuffer row) throws IOError {
+    public void deleteAllRow(ByteBuffer tableName, ByteBuffer row,
+        Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       deleteAllRowTs(tableName, row, HConstants.LATEST_TIMESTAMP);
     }
 
@@ -916,14 +917,15 @@ public class ThriftServerRunner implements Runnable {
     }
 
     @Override
-    public void mutateRow(ByteBuffer tableName, ByteBuffer row,
-        List<Mutation> mutations) throws IOError, IllegalArgument {
-      mutateRowTs(tableName, row, mutations, HConstants.LATEST_TIMESTAMP);
+    public void mutateRow(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations,
+        Map<ByteBuffer, ByteBuffer> attributes) throws IOError, IllegalArgument {
+      mutateRowTs(tableName, row, mutations, HConstants.LATEST_TIMESTAMP, attributes);
     }
 
     @Override
     public void mutateRowTs(ByteBuffer tableName, ByteBuffer row,
-        List<Mutation> mutations, long timestamp) throws IOError, IllegalArgument {
+        List<Mutation> mutations, long timestamp,
+        Map<ByteBuffer, ByteBuffer> attributes) throws IOError, IllegalArgument {
       HTable table = null;
       try {
         table = getTable(getBytes(tableName));
@@ -979,14 +981,16 @@ public class ThriftServerRunner implements Runnable {
     }
 
     @Override
-    public void mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches)
+    public void mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches,
+        Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, IllegalArgument, TException {
-      mutateRowsTs(tableName, rowBatches, HConstants.LATEST_TIMESTAMP);
+      mutateRowsTs(tableName, rowBatches, HConstants.LATEST_TIMESTAMP, attributes);
     }
 
     @Override
     public void mutateRowsTs(
-        ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp)
+        ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp,
+        Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, IllegalArgument, TException {
       List<Put> puts = null;
       List<Delete> deletes = null;
@@ -1081,17 +1085,18 @@ public class ThriftServerRunner implements Runnable {
      */
     @Override
     public boolean checkAndMutateRow(ByteBuffer tableName, ByteBuffer row,
-        ByteBuffer columnCheck, ByteBuffer valueCheck, List<Mutation> mutations)
+        ByteBuffer columnCheck, ByteBuffer valueCheck, List<Mutation> mutations,
+        Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, IllegalArgument {
       return checkAndMutateRowTs(tableName, row, columnCheck, valueCheck,
-          mutations, HConstants.LATEST_TIMESTAMP);
+          mutations, HConstants.LATEST_TIMESTAMP, attributes);
     }
 
     @Override
     public boolean checkAndMutateRowTs(ByteBuffer tableName, ByteBuffer row,
         ByteBuffer columnCheck, ByteBuffer valueCheck,
         List<Mutation> mutations,
-        long timestamp) throws IOError, IllegalArgument {
+        long timestamp, Map<ByteBuffer, ByteBuffer> attributes) throws IOError, IllegalArgument {
       HTable table;
       try {
         table = getTable(tableName);
@@ -1469,6 +1474,17 @@ public class ThriftServerRunner implements Runnable {
       this.metrics = metrics;
     }
 
+    @Override
+    public void mutateRowsAsync(ByteBuffer tableName, List<BatchMutation> rowBatches)
+        throws TException {
+      throw new TException("Not implemented");
+    }
+
+    @Override
+    public void mutateRowsTsAsync(ByteBuffer tableName, List<BatchMutation> rowBatches,
+        long timestamp) throws TException {
+      throw new TException("Not implemented");
+    }
   }
 
   public static void registerFilters(Configuration conf) {

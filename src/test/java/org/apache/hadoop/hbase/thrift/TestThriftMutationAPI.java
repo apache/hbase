@@ -134,7 +134,7 @@ public class TestThriftMutationAPI extends ThriftServerTestBase {
       if (bms.size() == 1) {
         doSingleRowMutation(client, rand, bms, defaultTS);
       } else {
-        client.mutateRowsTs(HTestConst.DEFAULT_TABLE_BYTE_BUF, bms, defaultTS);
+        client.mutateRowsTs(HTestConst.DEFAULT_TABLE_BYTE_BUF, bms, defaultTS, null);
         numMutateRows++;
       }
       
@@ -211,7 +211,7 @@ public class TestThriftMutationAPI extends ThriftServerTestBase {
             }
             client.checkAndMutateRowTs(HTestConst.DEFAULT_TABLE_BYTE_BUF, bm.bufferForRow(),
                 currentValue.bufferForColumn(), currentValue.bufferForValue(),
-                bm.getMutations(), defaultTS);
+                bm.getMutations(), defaultTS, null);
             numCheckAndMutate++;
             return;
           }
@@ -221,7 +221,7 @@ public class TestThriftMutationAPI extends ThriftServerTestBase {
     
     // We did not check-and-mutate, do a normal operation.
     client.mutateRowTs(HTestConst.DEFAULT_TABLE_BYTE_BUF,
-        bm.bufferForRow(), bm.getMutations(), defaultTS);
+        bm.bufferForRow(), bm.getMutations(), defaultTS, null);
     numMutateRow++;
   }
 
