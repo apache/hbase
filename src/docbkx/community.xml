@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+    <chapter xml:id="developer"
+      version="5.0" xmlns="http://docbook.org/ns/docbook"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:svg="http://www.w3.org/2000/svg"
+      xmlns:m="http://www.w3.org/1998/Math/MathML"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      xmlns:db="http://docbook.org/ns/docbook">
+<!--
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+    <title>Community</title>
+    <section xml:id="decisions">
+      <title>Descisions</title>
+      <section xml:id="feature_branches">
+        <title>Feature Branches</title>
+        <para>Feature Branches are easy to make.  You do not have to be a committer to make one.  Just request the name of your branch be added to JIRA up on the
+        developer's mailing list and a committer will add it for you.  Thereafter you can file issues against your feature branch in HBase JIRA.  Your code you
+        keep elsewhere -- it should be public so it can be observed -- and you can update dev mailing list on progress.   When the feature is ready for commit,
+        3 +1s from committers will get your feature merged<footnote><para>See <link xlink:href="http://search-hadoop.com/m/uPNz32C5FkS1&amp;subj=Re+Thoughts+about+large+feature+dev+branches">HBase, mail # dev - Thoughts about large feature dev branches</link></para></footnote>
+        </para>
+      </section>         
+    </section>    
+    </chapter>
