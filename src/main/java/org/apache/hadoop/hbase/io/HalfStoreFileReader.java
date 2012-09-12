@@ -52,6 +52,10 @@ public class HalfStoreFileReader extends StoreFile.Reader {
   // This is the key we split around.  Its the first possible entry on a row:
   // i.e. empty column and a timestamp of LATEST_TIMESTAMP.
   protected final byte [] splitkey;
+  
+  private byte[] firstKey = null;
+  
+  private boolean firstKeySeeked = false;
 
   /**
    * @param fs
@@ -141,8 +145,11 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       public boolean seekBefore(byte [] key, int offset, int length)
       throws IOException {
         if (top) {
-          if (getComparator().compare(key, offset, length, splitkey, 0,
-              splitkey.length) < 0) {
+          byte[] fk = getFirstKey();
+          // This will be null when the file is empty in which we can not seekBefore to any key
+          if (fk == null) return false;
+          if (getComparator().compare(key, offset, length, fk, 0,
+              fk.length) <= 0) {
             return false;
           }
         } else {
@@ -270,5 +277,21 @@ public class HalfStoreFileReader extends StoreFile.Reader {
   public byte[] midkey() throws IOException {
     // Returns null to indicate file is not splitable.
     return null;
+  }
+  
+  @Override
+  public byte[] getFirstKey() {
+    if (!firstKeySeeked) {
+      HFileScanner scanner = getScanner(true, true, false);
+      try {
+        if (scanner.seekTo()) {
+          this.firstKey = Bytes.toBytes(scanner.getKey());
+        }
+        firstKeySeeked = true;
+      } catch (IOException e) {
+        LOG.warn("Failed seekTo first KV in the file", e);
+      }
+    }
+    return this.firstKey;
   }
 }
