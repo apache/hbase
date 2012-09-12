@@ -203,9 +203,6 @@ public class FilterList implements Filter {
         switch (code) {
         case INCLUDE:
           continue;
-        case NEXT_ROW:
-        case SKIP:
-          return ReturnCode.SKIP;
         default:
           return code;
         }
