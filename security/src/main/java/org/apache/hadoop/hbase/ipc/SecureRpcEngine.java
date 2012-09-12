@@ -162,7 +162,7 @@ public class SecureRpcEngine implements RpcEngine {
         startTime = System.currentTimeMillis();
       }
       HbaseObjectWritable value = (HbaseObjectWritable)
-        client.call(new Invocation(method, args), address,
+        client.call(new Invocation(method, protocol, args), address,
                     protocol, ticket, rpcTimeout);
       if (logDebug) {
         long callTime = System.currentTimeMillis() - startTime;
@@ -234,7 +234,7 @@ public class SecureRpcEngine implements RpcEngine {
 
     Invocation[] invocations = new Invocation[params.length];
     for (int i = 0; i < params.length; i++)
-      invocations[i] = new Invocation(method, params[i]);
+      invocations[i] = new Invocation(method, protocol, params[i]);
     SecureClient client = CLIENTS.getClient(conf);
     try {
       Writable[] wrappedValues =
