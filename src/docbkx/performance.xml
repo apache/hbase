@@ -194,6 +194,36 @@
     </section>
 
   </section>
+  <section xml:id="perf.hdfs.configs">
+    <title>HDFS Configuration</title>
+    <section xml:id="perf.hdfs.configs.localread">
+    <title>Leveraging local data</title>
+<para>Since Hadoop 1.0.0 (also 0.22.1, 0.23.1, CDH3u3 and HDP 1.0) via
+<link xlink:href="https://issues.apache.org/jira/browse/HDFS-2246">HDFS-2246</link>,
+it is possible for the DFSClient to take a shortcut and
+read directly from disk instead of going through the DataNode when the
+data is local. What this means for HBase is that the RegionServers can
+read directly off their machine's disks instead of having to open a
+socket to talk to the DataNode, the former being generally much
+faster<footnote><para>See JD's <link xlink:href="http://files.meetup.com/1350427/hug_ebay_jdcryans.pdf">Performance Talk</link></para></footnote>.
+</para>
+<para>To enable "shortcircuit" reads, you must set two configurations.
+First, the hdfs-site.xml needs to be amended. Set
+the property  <varname>dfs.block.local-path-access.user</varname> 
+to be the <emphasis>only</emphasis> user that can use the shortcut.
+This has to be the user that started HBase.  Then in hbase-site.xml,
+set <varname>dfs.client.read.shortcircuit</varname> to be <varname>true</varname>
+</para>
+<para>
+The DataNodes need to be restarted in order to pick up the new
+configuration. Be aware that if a process started under another
+username than the one configured here also has the shortcircuit
+enabled, it will get an Exception regarding an unauthorized access but
+the data will still be read.
+</para>
+  </section>
+
+  </section>
   <section xml:id="perf.zookeeper">
     <title>ZooKeeper</title>
     <para>See <xref linkend="zookeeper"/> for information on configuring ZooKeeper, and see the part
