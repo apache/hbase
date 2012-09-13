@@ -73,6 +73,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
+import org.apache.hadoop.hbase.FailedSanityCheckException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -2155,10 +2156,16 @@ public class HRegion implements HeapSize { // , Writable{
           } else {
             prepareDelete((Delete) mutation);
           }
-        } catch (DoNotRetryIOException dnrioe) {
-          LOG.warn("No such column family in batch mutation", dnrioe);
+        } catch (NoSuchColumnFamilyException nscf) {
+          LOG.warn("No such column family in batch mutation", nscf);
           batchOp.retCodeDetails[lastIndexExclusive] = new OperationStatus(
-              OperationStatusCode.SANITY_CHECK_FAILURE, dnrioe.getMessage());
+              OperationStatusCode.BAD_FAMILY, nscf.getMessage());
+          lastIndexExclusive++;
+          continue;
+        } catch (FailedSanityCheckException fsce) {
+          LOG.warn("Batch Mutation did not pass sanity check", fsce);
+          batchOp.retCodeDetails[lastIndexExclusive] = new OperationStatus(
+              OperationStatusCode.SANITY_CHECK_FAILURE, fsce.getMessage());
           lastIndexExclusive++;
           continue;
         }
@@ -2731,7 +2738,7 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   void checkTimestamps(final Map<byte[], List<KeyValue>> familyMap,
-      long now) throws DoNotRetryIOException {
+      long now) throws FailedSanityCheckException {
     if (timestampSlop == HConstants.LATEST_TIMESTAMP) {
       return;
     }
@@ -2740,7 +2747,7 @@ public class HRegion implements HeapSize { // , Writable{
       for (KeyValue kv : kvs) {
         // see if the user-side TS is out of range. latest = server-side
         if (!kv.isLatestTimestamp() && kv.getTimestamp() > maxTs) {
-          throw new DoNotRetryIOException("Timestamp for KV out of range "
+          throw new FailedSanityCheckException("Timestamp for KV out of range "
               + kv + " (too.new=" + timestampSlop + ")");
         }
       }

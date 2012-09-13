@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.FailedSanityCheckException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -575,7 +576,7 @@ public class TestHRegion extends HBaseTestCase {
       boolean exception = false;
       try {
         this.region.put(p);
-      } catch (DoNotRetryIOException e) {
+      } catch (NoSuchColumnFamilyException e) {
         exception = true;
       }
       assertTrue(exception);
@@ -616,7 +617,7 @@ public class TestHRegion extends HBaseTestCase {
       codes = this.region.put(puts);
       assertEquals(10, codes.length);
       for (int i = 0; i < 10; i++) {
-        assertEquals((i == 5) ? OperationStatusCode.SANITY_CHECK_FAILURE :
+        assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
           OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
       }
       assertEquals(1, HLog.getSyncTime().count);
@@ -654,7 +655,7 @@ public class TestHRegion extends HBaseTestCase {
       assertEquals(1, HLog.getSyncTime().count);
       codes = retFromThread.get();
       for (int i = 0; i < 10; i++) {
-        assertEquals((i == 5) ? OperationStatusCode.SANITY_CHECK_FAILURE :
+        assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
           OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
       }
   
@@ -671,7 +672,7 @@ public class TestHRegion extends HBaseTestCase {
       codes = region.batchMutate(putsAndLocks.toArray(new Pair[0]));
       LOG.info("...performed put");
       for (int i = 0; i < 10; i++) {
-        assertEquals((i == 5) ? OperationStatusCode.SANITY_CHECK_FAILURE :
+        assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
           OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
       }
       // Make sure we didn't do an extra batch
@@ -685,6 +686,45 @@ public class TestHRegion extends HBaseTestCase {
       HRegion.closeHRegion(this.region);
        this.region = null;
     }
+  }
+
+  public void testBatchPutWithTsSlop() throws Exception {
+    byte[] b = Bytes.toBytes(getName());
+    byte[] cf = Bytes.toBytes(COLUMN_FAMILY);
+    byte[] qual = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("val");
+
+    HBaseConfiguration conf = new HBaseConfiguration();
+
+
+    // add data with a timestamp that is too recent for range. Ensure assert
+    conf.setInt("hbase.hregion.keyvalue.timestamp.slop.millisecs", 1000);
+    this.region = initHRegion(b, getName(), conf, cf);
+
+    try{
+      HLog.getSyncTime(); // clear counter from prior tests
+      assertEquals(0, HLog.getSyncTime().count);
+
+      final Put[] puts = new Put[10];
+      for (int i = 0; i < 10; i++) {
+        puts[i] = new Put(Bytes.toBytes("row_" + i), Long.MAX_VALUE - 100);
+        puts[i].add(cf, qual, val);
+      }
+
+      OperationStatus[] codes = this.region.put(puts);
+      assertEquals(10, codes.length);
+      for (int i = 0; i < 10; i++) {
+        assertEquals(OperationStatusCode.SANITY_CHECK_FAILURE, codes[i]
+            .getOperationStatusCode());
+      }
+      assertEquals(0, HLog.getSyncTime().count);
+
+
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -1219,6 +1259,7 @@ public class TestHRegion extends HBaseTestCase {
 
   }
 
+
   /**
    * Tests that there is server-side filtering for invalid timestamp upper
    * bound. Note that the timestamp lower bound is automatically handled for us
@@ -1234,6 +1275,7 @@ public class TestHRegion extends HBaseTestCase {
     // add data with a timestamp that is too recent for range. Ensure assert
     conf.setInt("hbase.hregion.keyvalue.timestamp.slop.millisecs", 1000);
     this.region = initHRegion(tableName, method, conf, families);
+    boolean caughtExcep = false;
     try {
       try {
         // no TS specified == use latest. should not error
@@ -1244,9 +1286,11 @@ public class TestHRegion extends HBaseTestCase {
             System.currentTimeMillis() + 2000,
             Bytes.toBytes("value")), false);
         fail("Expected IOE for TS out of configured timerange");
-      } catch (DoNotRetryIOException ioe) {
+      } catch (FailedSanityCheckException ioe) {
         LOG.debug("Received expected exception", ioe);
+        caughtExcep = true;
       }
+      assertTrue("Should catch FailedSanityCheckException", caughtExcep);
     } finally {
       HRegion.closeHRegion(this.region);
       this.region = null;

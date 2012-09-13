@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -3683,6 +3684,25 @@ public class TestFromClientSide {
   }
 
   @Test
+  public void testPutNoCF() throws IOException {
+    final byte[] BAD_FAM = Bytes.toBytes("BAD_CF");
+    final byte[] VAL = Bytes.toBytes(100);
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testPutNoCF"), new byte[][]{FAMILY});
+
+    boolean caughtNSCFE = false;
+
+    try {
+      Put p = new Put(ROW);
+      p.add(BAD_FAM, QUALIFIER, VAL);
+      table.put(p);
+    } catch (RetriesExhaustedWithDetailsException e) {
+      caughtNSCFE = e.getCause(0) instanceof NoSuchColumnFamilyException;
+    }
+    assertTrue("Should throw NoSuchColumnFamilyException", caughtNSCFE);
+
+  }
+
+  @Test
   public void testRowsPut() throws IOException {
     final byte[] CONTENTS_FAMILY = Bytes.toBytes("contents");
     final byte[] SMALL_FAMILY = Bytes.toBytes("smallfam");
@@ -4273,6 +4293,8 @@ public class TestFromClientSide {
       // success
     }
   }
+
+
 
   @Test
   public void testIncrement() throws Exception {

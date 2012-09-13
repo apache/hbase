@@ -64,6 +64,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.FailedSanityCheckException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -3922,10 +3923,27 @@ public class  HRegionServer implements ClientProtocol,
 
       OperationStatus codes[] = region.batchMutate(mutationsWithLocks);
       for (i = 0; i < codes.length; i++) {
-        if (codes[i].getOperationStatusCode() != OperationStatusCode.SUCCESS) {
-          result = ResponseConverter.buildActionResult(
-            new DoNotRetryIOException(codes[i].getExceptionMsg()));
-          builder.setResult(i, result);
+        switch (codes[i].getOperationStatusCode()) {
+          case BAD_FAMILY:
+            result = ResponseConverter.buildActionResult(
+                new NoSuchColumnFamilyException(codes[i].getExceptionMsg()));
+            builder.setResult(i, result);
+            break;
+
+          case SANITY_CHECK_FAILURE:
+            result = ResponseConverter.buildActionResult(
+                new FailedSanityCheckException(codes[i].getExceptionMsg()));
+            builder.setResult(i, result);
+            break;
+
+          default:
+            result = ResponseConverter.buildActionResult(
+                new DoNotRetryIOException(codes[i].getExceptionMsg()));
+            builder.setResult(i, result);
+            break;
+
+          case SUCCESS:
+            break;
         }
       }
     } catch (IOException ie) {
