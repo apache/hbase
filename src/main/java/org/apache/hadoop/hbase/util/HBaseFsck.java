@@ -89,7 +89,7 @@ import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
-import org.apache.hadoop.hbase.zookeeper.ZKTable;
+import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -1156,7 +1156,7 @@ public class HBaseFsck {
       public Void connect(HConnection connection) throws IOException {
         ZooKeeperWatcher zkw = connection.getZooKeeperWatcher();
         try {
-          for (String tableName : ZKTable.getDisabledOrDisablingTables(zkw)) {
+          for (String tableName : ZKTableReadOnly.getDisabledOrDisablingTables(zkw)) {
             disabledTables.add(Bytes.toBytes(tableName));
           }
         } catch (KeeperException ke) {
