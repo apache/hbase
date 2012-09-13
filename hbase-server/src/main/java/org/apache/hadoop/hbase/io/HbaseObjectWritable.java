@@ -84,7 +84,7 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -218,7 +218,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(ValueFilter.class, code++);
     addToMap(QualifierFilter.class, code++);
     addToMap(SkipFilter.class, code++);
-    addToMap(WritableByteArrayComparable.class, code++);
+    addToMap(ByteArrayComparable.class, code++);
     addToMap(FirstKeyOnlyFilter.class, code++);
     addToMap(DependentColumnFilter.class, code++);
 

@@ -30,7 +30,7 @@ import com.google.protobuf.ByteString;
 /** Base class for byte array comparators */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public abstract class WritableByteArrayComparable implements Comparable<byte[]> {
+public abstract class ByteArrayComparable implements Comparable<byte[]> {
 
   byte[] value;
 
@@ -38,7 +38,7 @@ public abstract class WritableByteArrayComparable implements Comparable<byte[]> 
    * Constructor.
    * @param value the value to compare against
    */
-  public WritableByteArrayComparable(byte [] value) {
+  public ByteArrayComparable(byte [] value) {
     this.value = value;
   }
 
@@ -59,15 +59,15 @@ public abstract class WritableByteArrayComparable implements Comparable<byte[]> 
   }
 
   /**
-   * @param pbBytes A pb serialized {@link WritableByteArrayComparable} instance
-   * @return An instance of {@link WritableByteArrayComparable} made from <code>bytes</code>
+   * @param pbBytes A pb serialized {@link ByteArrayComparable} instance
+   * @return An instance of {@link ByteArrayComparable} made from <code>bytes</code>
    * @throws DeserializationException
    * @see {@link #toByteArray()}
    */
-  public static WritableByteArrayComparable parseFrom(final byte [] pbBytes)
+  public static ByteArrayComparable parseFrom(final byte [] pbBytes)
   throws DeserializationException {
     throw new DeserializationException(
-      "parseFrom called on base WritableByteArrayComparable, but should be called on derived type");
+      "parseFrom called on base ByteArrayComparable, but should be called on derived type");
   }
 
   /**
@@ -75,9 +75,9 @@ public abstract class WritableByteArrayComparable implements Comparable<byte[]> 
    * @return true if and only if the fields of the comparator that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
-  boolean areSerializedFieldsEqual(WritableByteArrayComparable o) {
+  boolean areSerializedFieldsEqual(ByteArrayComparable o) {
     if (o == this) return true;
-    if (!(o instanceof WritableByteArrayComparable)) return false;
+    if (!(o instanceof ByteArrayComparable)) return false;
 
     return Bytes.equals(this.getValue(), o.getValue());
   }

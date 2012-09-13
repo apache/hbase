@@ -74,7 +74,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
    * @param comparator Comparator to use.
    */
   public SingleColumnValueExcludeFilter(byte[] family, byte[] qualifier,
-      CompareOp compareOp, WritableByteArrayComparable comparator) {
+      CompareOp compareOp, ByteArrayComparable comparator) {
     super(family, qualifier, compareOp, comparator);
   }
 
@@ -90,7 +90,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
    * @param latestVersionOnly
    */
   protected SingleColumnValueExcludeFilter(final byte[] family, final byte [] qualifier,
-    final CompareOp compareOp, WritableByteArrayComparable comparator, final boolean foundColumn,
+    final CompareOp compareOp, ByteArrayComparable comparator, final boolean foundColumn,
     final boolean matchedColumn, final boolean filterIfMissing, final boolean latestVersionOnly) {
     super(family,qualifier,compareOp,comparator,foundColumn,
       matchedColumn,filterIfMissing,latestVersionOnly);
@@ -150,7 +150,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
     FilterProtos.SingleColumnValueFilter parentProto = proto.getSingleColumnValueFilter();
     final CompareOp compareOp =
       CompareOp.valueOf(parentProto.getCompareOp().name());
-    final WritableByteArrayComparable comparator;
+    final ByteArrayComparable comparator;
     try {
       comparator = ProtobufUtil.toComparator(parentProto.getComparator());
     } catch (IOException ioe) {

@@ -13967,7 +13967,7 @@ public final class ClientProtos {
         getFamilyPathOrBuilderList();
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPathOrBuilder getFamilyPathOrBuilder(
         int index);
-
+    
     // optional bool assignSeqNum = 3;
     boolean hasAssignSeqNum();
     boolean getAssignSeqNum();
@@ -14537,7 +14537,7 @@ public final class ClientProtos {
     public boolean getAssignSeqNum() {
       return assignSeqNum_;
     }
-
+    
     private void initFields() {
       region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       familyPath_ = java.util.Collections.emptyList();
@@ -15261,7 +15261,7 @@ public final class ClientProtos {
         onChanged();
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:BulkLoadHFileRequest)
     }
     

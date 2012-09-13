@@ -102,7 +102,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -2930,7 +2930,7 @@ public class  HRegionServer implements ClientProtocol,
           byte[] family = condition.getFamily().toByteArray();
           byte[] qualifier = condition.getQualifier().toByteArray();
           CompareOp compareOp = CompareOp.valueOf(condition.getCompareType().name());
-          WritableByteArrayComparable comparator =
+          ByteArrayComparable comparator =
             ProtobufUtil.toComparator(condition.getComparator());
           if (region.getCoprocessorHost() != null) {
             processed = region.getCoprocessorHost().preCheckAndPut(
@@ -2959,7 +2959,7 @@ public class  HRegionServer implements ClientProtocol,
           byte[] family = condition.getFamily().toByteArray();
           byte[] qualifier = condition.getQualifier().toByteArray();
           CompareOp compareOp = CompareOp.valueOf(condition.getCompareType().name());
-          WritableByteArrayComparable comparator =
+          ByteArrayComparable comparator =
             ProtobufUtil.toComparator(condition.getComparator());
           if (region.getCoprocessorHost() != null) {
             processed = region.getCoprocessorHost().preCheckAndDelete(

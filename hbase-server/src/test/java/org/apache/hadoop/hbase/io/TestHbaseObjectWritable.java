@@ -82,7 +82,7 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -517,7 +517,7 @@ public class TestHbaseObjectWritable extends TestCase {
     assertEquals(51,HbaseObjectWritable.getClassCode(ValueFilter.class).intValue());
     assertEquals(52,HbaseObjectWritable.getClassCode(QualifierFilter.class).intValue());
     assertEquals(53,HbaseObjectWritable.getClassCode(SkipFilter.class).intValue());
-    assertEquals(54,HbaseObjectWritable.getClassCode(WritableByteArrayComparable.class).intValue());
+    assertEquals(54,HbaseObjectWritable.getClassCode(ByteArrayComparable.class).intValue());
     assertEquals(55,HbaseObjectWritable.getClassCode(FirstKeyOnlyFilter.class).intValue());
     assertEquals(56,HbaseObjectWritable.getClassCode(DependentColumnFilter.class).intValue());
 

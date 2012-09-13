@@ -32,7 +32,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class NullComparator extends WritableByteArrayComparable {
+public class NullComparator extends ByteArrayComparable {
 
   public NullComparator() {
     super(new byte[0]);
@@ -79,7 +79,7 @@ public class NullComparator extends WritableByteArrayComparable {
    * @return true if and only if the fields of the comparator that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
-  boolean areSerializedFieldsEqual(WritableByteArrayComparable other) {
+  boolean areSerializedFieldsEqual(ByteArrayComparable other) {
     if (other == this) return true;
     if (!(other instanceof NullComparator)) return false;
 

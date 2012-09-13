@@ -69,7 +69,7 @@ public class TestFakeKeyInFilter extends BinaryComparator {
     region.flushcache();
     Scan scan = new Scan();
     scan.addColumn(cf, cq);
-    WritableByteArrayComparable comparable = new TestFakeKeyInFilter();
+    ByteArrayComparable comparable = new TestFakeKeyInFilter();
     Filter filter = new RowFilter(CompareFilter.CompareOp.EQUAL, comparable);
     scan.setFilter(filter);
     RegionScanner scanner = region.getScanner(scan);

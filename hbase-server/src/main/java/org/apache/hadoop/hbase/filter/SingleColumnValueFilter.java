@@ -43,7 +43,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 /**
  * This filter is used to filter cells based on value. It takes a {@link CompareFilter.CompareOp}
  * operator (equal, greater, not equal, etc), and either a byte [] value or
- * a WritableByteArrayComparable.
+ * a ByteArrayComparable.
  * <p>
  * If we have a byte [] value then we just do a lexicographic compare. For
  * example, if passed value is 'b' and cell has 'a' and the compare operator
@@ -75,7 +75,7 @@ public class SingleColumnValueFilter extends FilterBase {
   protected byte [] columnFamily;
   protected byte [] columnQualifier;
   private CompareOp compareOp;
-  private WritableByteArrayComparable comparator;
+  private ByteArrayComparable comparator;
   private boolean foundColumn = false;
   private boolean matchedColumn = false;
   private boolean filterIfMissing = false;
@@ -115,7 +115,7 @@ public class SingleColumnValueFilter extends FilterBase {
    * @param comparator Comparator to use.
    */
   public SingleColumnValueFilter(final byte [] family, final byte [] qualifier,
-      final CompareOp compareOp, final WritableByteArrayComparable comparator) {
+      final CompareOp compareOp, final ByteArrayComparable comparator) {
     this.columnFamily = family;
     this.columnQualifier = qualifier;
     this.compareOp = compareOp;
@@ -134,7 +134,7 @@ public class SingleColumnValueFilter extends FilterBase {
    * @param latestVersionOnly
    */
   protected SingleColumnValueFilter(final byte[] family, final byte [] qualifier,
-    final CompareOp compareOp, WritableByteArrayComparable comparator, final boolean foundColumn,
+    final CompareOp compareOp, ByteArrayComparable comparator, final boolean foundColumn,
     final boolean matchedColumn, final boolean filterIfMissing, final boolean latestVersionOnly) {
     this(family,qualifier,compareOp,comparator);
     this.foundColumn = foundColumn;
@@ -153,7 +153,7 @@ public class SingleColumnValueFilter extends FilterBase {
   /**
    * @return the comparator
    */
-  public WritableByteArrayComparable getComparator() {
+  public ByteArrayComparable getComparator() {
     return comparator;
   }
 
@@ -277,7 +277,7 @@ public class SingleColumnValueFilter extends FilterBase {
     byte [] family = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
     byte [] qualifier = ParseFilter.removeQuotesFromByteArray(filterArguments.get(1));
     CompareOp compareOp = ParseFilter.createCompareOp(filterArguments.get(2));
-    WritableByteArrayComparable comparator = ParseFilter.createComparator(
+    ByteArrayComparable comparator = ParseFilter.createComparator(
       ParseFilter.removeQuotesFromByteArray(filterArguments.get(3)));
 
     if (comparator instanceof RegexStringComparator ||
@@ -345,7 +345,7 @@ public class SingleColumnValueFilter extends FilterBase {
 
     final CompareOp compareOp =
       CompareOp.valueOf(proto.getCompareOp().name());
-    final WritableByteArrayComparable comparator;
+    final ByteArrayComparable comparator;
     try {
       comparator = ProtobufUtil.toComparator(proto.getComparator());
     } catch (IOException ioe) {

@@ -41,7 +41,7 @@ import java.util.List;
  * </li>
  * </ul>
  *
- * Filter instances are created one per region/scan.  This interface replaces
+ * Filter instances are created one per region/scan.  This abstract class replaces
  * the old RowFilterInterface.
  *
  * When implementing your own filters, consider inheriting {@link FilterBase} to help

@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
@@ -936,12 +936,12 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a WritableByteArrayComparable to a protocol buffer Comparator
+   * Convert a ByteArrayComparable to a protocol buffer Comparator
    *
-   * @param comparator the WritableByteArrayComparable to convert
+   * @param comparator the ByteArrayComparable to convert
    * @return the converted protocol buffer Comparator
    */
-  public static ComparatorProtos.Comparator toComparator(WritableByteArrayComparable comparator) {
+  public static ComparatorProtos.Comparator toComparator(ByteArrayComparable comparator) {
     ComparatorProtos.Comparator.Builder builder = ComparatorProtos.Comparator.newBuilder();
     builder.setName(comparator.getClass().getName());
     builder.setSerializedComparator(ByteString.copyFrom(comparator.toByteArray()));
@@ -949,24 +949,24 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer Comparator to a WritableByteArrayComparable
+   * Convert a protocol buffer Comparator to a ByteArrayComparable
    *
    * @param proto the protocol buffer Comparator to convert
-   * @return the converted WritableByteArrayComparable
+   * @return the converted ByteArrayComparable
    */
-  public static WritableByteArrayComparable toComparator(ComparatorProtos.Comparator proto)
+  public static ByteArrayComparable toComparator(ComparatorProtos.Comparator proto)
   throws IOException {
     String type = proto.getName();
     String funcName = "parseFrom";
     byte [] value = proto.getSerializedComparator().toByteArray();
     try {
-      Class<? extends WritableByteArrayComparable> c =
-        (Class<? extends WritableByteArrayComparable>)(Class.forName(type));
+      Class<? extends ByteArrayComparable> c =
+        (Class<? extends ByteArrayComparable>)(Class.forName(type));
       Method parseFrom = c.getMethod(funcName, byte[].class);
       if (parseFrom == null) {
         throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
       }
-      return (WritableByteArrayComparable)parseFrom.invoke(null, value);
+      return (ByteArrayComparable)parseFrom.invoke(null, value);
     } catch (Exception e) {
       throw new IOException(e);
     }

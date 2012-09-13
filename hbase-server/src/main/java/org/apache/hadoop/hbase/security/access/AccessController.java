@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.FilterList;
-import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RequestContext;
@@ -909,7 +909,7 @@ public class AccessController extends BaseRegionObserver
   public boolean preCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareFilter.CompareOp compareOp,
-      final WritableByteArrayComparable comparator, final Put put,
+      final ByteArrayComparable comparator, final Put put,
       final boolean result) throws IOException {
     Collection<byte[]> familyMap = Arrays.asList(new byte[][]{family});
     requirePermission(Permission.Action.READ, c.getEnvironment(), familyMap);
@@ -921,7 +921,7 @@ public class AccessController extends BaseRegionObserver
   public boolean preCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareFilter.CompareOp compareOp,
-      final WritableByteArrayComparable comparator, final Delete delete,
+      final ByteArrayComparable comparator, final Delete delete,
       final boolean result) throws IOException {
     Collection<byte[]> familyMap = Arrays.asList(new byte[][]{family});
     requirePermission(Permission.Action.READ, c.getEnvironment(), familyMap);

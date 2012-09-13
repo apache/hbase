@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -981,7 +981,7 @@ public class RegionCoprocessorHost
    */
   public Boolean preCheckAndPut(final byte [] row, final byte [] family,
       final byte [] qualifier, final CompareOp compareOp,
-      final WritableByteArrayComparable comparator, Put put)
+      final ByteArrayComparable comparator, Put put)
     throws IOException {
     boolean bypass = false;
     boolean result = false;
@@ -1017,7 +1017,7 @@ public class RegionCoprocessorHost
    */
   public boolean postCheckAndPut(final byte [] row, final byte [] family,
       final byte [] qualifier, final CompareOp compareOp,
-      final WritableByteArrayComparable comparator, final Put put,
+      final ByteArrayComparable comparator, final Put put,
       boolean result)
     throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
@@ -1051,7 +1051,7 @@ public class RegionCoprocessorHost
    */
   public Boolean preCheckAndDelete(final byte [] row, final byte [] family,
       final byte [] qualifier, final CompareOp compareOp,
-      final WritableByteArrayComparable comparator, Delete delete)
+      final ByteArrayComparable comparator, Delete delete)
       throws IOException {
     boolean bypass = false;
     boolean result = false;
@@ -1085,7 +1085,7 @@ public class RegionCoprocessorHost
    */
   public boolean postCheckAndDelete(final byte [] row, final byte [] family,
       final byte [] qualifier, final CompareOp compareOp,
-      final WritableByteArrayComparable comparator, final Delete delete,
+      final ByteArrayComparable comparator, final Delete delete,
       boolean result)
     throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;

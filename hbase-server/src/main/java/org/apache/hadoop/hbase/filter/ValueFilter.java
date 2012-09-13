@@ -54,7 +54,7 @@ public class ValueFilter extends CompareFilter {
    * @param valueComparator the comparator for value matching
    */
   public ValueFilter(final CompareOp valueCompareOp,
-      final WritableByteArrayComparable valueComparator) {
+      final ByteArrayComparable valueComparator) {
     super(valueCompareOp, valueComparator);
   }
 
@@ -70,7 +70,7 @@ public class ValueFilter extends CompareFilter {
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
     ArrayList arguments = CompareFilter.extractArguments(filterArguments);
     CompareOp compareOp = (CompareOp)arguments.get(0);
-    WritableByteArrayComparable comparator = (WritableByteArrayComparable)arguments.get(1);
+    ByteArrayComparable comparator = (ByteArrayComparable)arguments.get(1);
     return new ValueFilter(compareOp, comparator);
   }
 
@@ -100,7 +100,7 @@ public class ValueFilter extends CompareFilter {
     }
     final CompareOp valueCompareOp =
       CompareOp.valueOf(proto.getCompareFilter().getCompareOp().name());
-    WritableByteArrayComparable valueComparator = null;
+    ByteArrayComparable valueComparator = null;
     try {
       if (proto.getCompareFilter().hasComparator()) {
         valueComparator = ProtobufUtil.toComparator(proto.getCompareFilter().getComparator());

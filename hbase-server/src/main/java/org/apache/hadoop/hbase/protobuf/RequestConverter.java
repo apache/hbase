@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
-import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -231,7 +231,7 @@ public final class RequestConverter {
    */
   public static MutateRequest buildMutateRequest(
       final byte[] regionName, final byte[] row, final byte[] family,
-      final byte [] qualifier, final WritableByteArrayComparable comparator,
+      final byte [] qualifier, final ByteArrayComparable comparator,
       final CompareType compareType, final Put put) throws IOException {
     MutateRequest.Builder builder = MutateRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
@@ -259,7 +259,7 @@ public final class RequestConverter {
    */
   public static MutateRequest buildMutateRequest(
       final byte[] regionName, final byte[] row, final byte[] family,
-      final byte [] qualifier, final WritableByteArrayComparable comparator,
+      final byte [] qualifier, final ByteArrayComparable comparator,
       final CompareType compareType, final Delete delete) throws IOException {
     MutateRequest.Builder builder = MutateRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
@@ -866,7 +866,7 @@ public final class RequestConverter {
    */
   private static Condition buildCondition(final byte[] row,
       final byte[] family, final byte [] qualifier,
-      final WritableByteArrayComparable comparator,
+      final ByteArrayComparable comparator,
       final CompareType compareType) throws IOException {
     Condition.Builder builder = Condition.newBuilder();
     builder.setRow(ByteString.copyFrom(row));

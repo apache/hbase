@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
@@ -456,7 +456,7 @@ public interface RegionObserver extends Coprocessor {
    */
   boolean preCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOp compareOp, final WritableByteArrayComparable comparator,
+      final CompareOp compareOp, final ByteArrayComparable comparator,
       final Put put, final boolean result)
     throws IOException;
 
@@ -478,7 +478,7 @@ public interface RegionObserver extends Coprocessor {
    */
   boolean postCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOp compareOp, final WritableByteArrayComparable comparator,
+      final CompareOp compareOp, final ByteArrayComparable comparator,
       final Put put, final boolean result)
     throws IOException;
 
@@ -502,7 +502,7 @@ public interface RegionObserver extends Coprocessor {
    */
   boolean preCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOp compareOp, final WritableByteArrayComparable comparator,
+      final CompareOp compareOp, final ByteArrayComparable comparator,
       final Delete delete, final boolean result)
     throws IOException;
 
@@ -524,7 +524,7 @@ public interface RegionObserver extends Coprocessor {
    */
   boolean postCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final byte [] qualifier,
-      final CompareOp compareOp, final WritableByteArrayComparable comparator,
+      final CompareOp compareOp, final ByteArrayComparable comparator,
       final Delete delete, final boolean result)
     throws IOException;
 
