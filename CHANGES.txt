@@ -1,5 +1,110 @@
 HBase Change Log
 
+Release 0.94.2 - 9/13/2012
+Sub-task
+
+    [HBASE-6257] - Avoid unnecessary flush & compact on Meta in admin.rb.
+    [HBASE-6496] - Example ZK based scan policy
+
+Bug
+
+    [HBASE-5292] - getsize per-CF metric incorrectly counts compaction related reads as well
+    [HBASE-5549] - Master can fail if ZooKeeper session expires
+    [HBASE-5997] - Fix concerns raised in HBASE-5922 related to HalfStoreFileReader
+    [HBASE-6165] - Replication can overrun .META. scans on cluster re-start
+    [HBASE-6211] - Put latencies in jmx
+    [HBASE-6263] - Use default mode for HBase Thrift gateway if not specified
+    [HBASE-6268] - Can't enable a table on a 0.94 cluster from a 0.92 client
+    [HBASE-6321] - ReplicationSource dies reading the peer's id
+    [HBASE-6340] - HBase RPC should allow protocol extension with common interfaces.
+    [HBASE-6359] - KeyValue may return incorrect values after readFields()
+    [HBASE-6364] - Powering down the server host holding the .META. table causes HBase Client to take excessively long to recover and connect to reassigned .META. table
+    [HBASE-6378] - the javadoc of setEnabledTable maybe not describe accurately
+    [HBASE-6432] - HRegionServer doesn't properly set clusterId in conf
+    [HBASE-6437] - Avoid admin.balance during master initialize
+    [HBASE-6447] - Common TestZooKeeper failures on jenkins: testMasterSessionExpired and testCreateSilentIsReallySilent
+    [HBASE-6450] - HBase startup should be with MALLOC_MAX_ARENA set
+    [HBASE-6460] - hbck "-repairHoles" usage inconsistent with "-fixHdfsOrphans"
+    [HBASE-6471] - Performance regression caused by HBASE-4054
+    [HBASE-6478] - TestClassLoading.testClassLoadingFromLibDirInJar occasionally fails
+    [HBASE-6503] - HBase Shell Documentation For DROP Is Outdated
+    [HBASE-6512] - Incorrect OfflineMetaRepair log class name
+    [HBASE-6514] - unknown metrics type: org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram
+    [HBASE-6516] - hbck cannot detect any IOException while ".tableinfo" file is missing
+    [HBASE-6520] - MSLab May cause the Bytes.toLong not work correctly for increment
+    [HBASE-6525] - bin/replication/copy_tables_desc.rb references non-existent class
+    [HBASE-6529] - With HFile v2, the region server will always perform an extra copy of source files
+    [HBASE-6537] - Race between balancer and disable table can lead to inconsistent cluster
+    [HBASE-6552] - TestAcidGuarantees system test should flush more aggressively
+    [HBASE-6561] - Gets/Puts with many columns send the RegionServer into an "endless" loop
+    [HBASE-6562] - Fake KVs are sometimes passed to filters
+    [HBASE-6565] - Coprocessor exec result Map is not thread safe
+    [HBASE-6576] - HBaseAdmin.createTable should wait until the table is enabled
+    [HBASE-6579] - Unnecessary KV order check in StoreScanner
+    [HBASE-6587] - Region would be assigned twice in the case of all RS offline
+    [HBASE-6596] - Revert HBASE-5022; it undoes HBC.create
+    [HBASE-6602] - Region Server Dynamic Metrics can cause high cpu usage.
+    [HBASE-6603] - RegionMetricsStorage.incrNumericMetric is called too often
+    [HBASE-6608] - Fix for HBASE-6160, META entries from daughters can be deleted before parent entries, shouldn't compare HRegionInfo's
+    [HBASE-6615] - hbase.rs.evictblocksonclose seems to be ineffective
+    [HBASE-6616] - test failure in TestDelayedRpc#testTooManyDelayedRpcs
+    [HBASE-6621] - Reduce calls to Bytes.toInt
+    [HBASE-6623] - [replication] replication metrics value AgeOfLastShippedOp is not set correctly
+    [HBASE-6631] - TestHMasterRPCException in 0.92 failed twice on socket timeout
+    [HBASE-6632] - [0.92 UNIT TESTS] testCreateTableRPCTimeOut sets rpc timeout to 1500ms and leaves it (testHundredsOfTable fails w/ 1500ms timeout)
+    [HBASE-6638] - Move DaemonThreadFactory into Threads (0.94)
+    [HBASE-6641] - more message with DoNotRetryIOException in client
+    [HBASE-6647] - [performance regression] appendNoSync/HBASE-4528 doesn't take deferred log flush into account
+    [HBASE-6648] - [0.92 UNIT TESTS] TestMasterObserver.testRegionTransitionOperations fails occasionally
+    [HBASE-6649] - [0.92 UNIT TESTS] TestReplication.queueFailover occasionally fails [Part-1]
+    [HBASE-6662] - Region server incorrectly reports its own address as master's address
+    [HBASE-6663] - NPE race in HConnection if zookeeper is reset
+    [HBASE-6671] - Kerberos authenticated super user should be able to retrieve proxied delegation tokens
+    [HBASE-6685] - Thrift DemoClient.pl got NullPointerException
+    [HBASE-6686] - HFile Quarantine fails with missing dirs in hadoop 2.0
+    [HBASE-6710] - 0.92/0.94 compatibility issues due to HBASE-5206
+    [HBASE-6711] - Avoid local results copy in StoreScanner
+    [HBASE-6713] - Stopping META/ROOT RS may take 50mins when some region is splitting
+    [HBASE-6734] - Code duplication in LoadIncrementalHFiles
+    [HBASE-6757] - Very inefficient behaviour of scan using FilterList
+    [HBASE-6762] - HBASE-6340 broke SecureRPCEngine
+    [HBASE-6769] - HRS.multi eats NoSuchColumnFamilyException since HBASE-5021
+
+Improvement
+
+    [HBASE-3271] - Allow .META. table to be exported
+    [HBASE-5631] - hbck should handle case where .tableinfo file is missing.
+    [HBASE-5714] - Add write permissions check before any hbck run that modifies hdfs.
+    [HBASE-5728] - Methods Missing in HTableInterface
+    [HBASE-6286] - Upgrade maven-compiler-plugin to 2.5.1
+    [HBASE-6291] - Don't retry increments on an invalid cell
+    [HBASE-6308] - Coprocessors should be loaded in a custom ClassLoader to prevent dependency conflicts with HBase
+    [HBASE-6373] - Add more context information to audit log messages
+    [HBASE-6444] - Expose the ability to set custom HTTP Request Headers for the REST client used by RemoteHTable
+    [HBASE-6458] - new comparator twice in checkAndPut, just reuse the first one
+    [HBASE-6522] - Expose locks and leases to Coprocessors
+    [HBASE-6586] - Quarantine Corrupted HFiles with hbck
+    [HBASE-6643] - Accept encoded region name in compacting/spliting region from shell
+    [HBASE-6644] - HBaseAdmin.createTable should wait more till table is enabled.
+
+New Feature
+
+    [HBASE-6427] - Pluggable compaction and scan policies via coprocessors
+    [HBASE-6505] - Allow shared RegionObserver state
+    [HBASE-6550] - Refactoring ReplicationSink to make it more responsive of cluster health
+
+Task
+
+    [HBASE-5042] - TestReadWriteConsistencyControl should be renamed
+    [HBASE-6288] - In hbase-daemons.sh, description of the default backup-master file path is wrong
+    [HBASE-6538] - Remove copy_table.rb script
+
+Test
+
+    [HBASE-6507] - [hbck] TestHBaseFsck ran into TableNotEnabledException
+    [HBASE-6593] - TestAdmin times out sometimes
+
+
 Release 0.94.1 - 7/24/2012
 Sub-task
 
