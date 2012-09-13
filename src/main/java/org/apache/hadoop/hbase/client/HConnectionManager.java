@@ -1582,7 +1582,10 @@ public class HConnectionManager {
       if (fInfo == null) {
         fInfo = new FailureInfo();
         fInfo.timeOfFirstFailureMilliSec = currentTime;
-        fInfo = repeatedFailuresMap.putIfAbsent(server, fInfo);
+        FailureInfo oldfInfo = repeatedFailuresMap.putIfAbsent(server, fInfo);
+        if (oldfInfo != null) {
+          fInfo = oldfInfo;
+        }
       }
       fInfo.timeOfLatestAttemptMilliSec = currentTime;
       fInfo.numConsecutiveFailures.incrementAndGet();
