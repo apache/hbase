@@ -1021,6 +1021,83 @@ public class TestMasterFailover {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  /**
+   * return the index of the active master in the cluster
+   * @throws MasterNotRunningException if no active master found
+   */
+  private int getActiveMasterIndex(MiniHBaseCluster cluster) throws MasterNotRunningException {
+    // get all the master threads
+    List<MasterThread> masterThreads = cluster.getMasterThreads();
+
+    for (int i = 0; i < masterThreads.size(); i++) {
+      if (masterThreads.get(i).getMaster().isActiveMaster()) {
+        return i;
+      }
+    }
+    throw new MasterNotRunningException();
+  }
+
+  /**
+   * Kill the master and wait for a new active master to show up
+   * @param cluster
+   * @return the new active master
+   * @throws InterruptedException
+   * @throws MasterNotRunningException
+   */
+  private HMaster killActiveAndWaitForNewActive(MiniHBaseCluster cluster)
+  throws InterruptedException, MasterNotRunningException {
+    int activeIndex = getActiveMasterIndex(cluster);
+    HMaster active = cluster.getMaster();
+    cluster.stopMaster(activeIndex);
+    cluster.waitOnMaster(activeIndex);
+    assertTrue(cluster.waitForActiveAndReadyMaster());
+    // double check this is actually a new master
+    HMaster newActive = cluster.getMaster();
+    assertFalse(active == newActive);
+    return newActive;
+  }
+
+  /**
+   * Test that if the master fails, the load balancer maintains its
+   * state (running or not) when the next master takes over
+   * @throws Exception
+   */
+  @Test (timeout=240000)
+  public void testMasterFailoverBalancerPersistence() throws Exception {
+    final int NUM_MASTERS = 3;
+    final int NUM_RS = 1;
+
+    // Start the cluster
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+
+    assertTrue(cluster.waitForActiveAndReadyMaster());
+    HMaster active = cluster.getMaster();
+    // check that the balancer is on by default for the active master
+    ClusterStatus clusterStatus = active.getClusterStatus();
+    assertTrue(clusterStatus.isBalancerOn());
+
+    active = killActiveAndWaitForNewActive(cluster);
+
+    // ensure the load balancer is still running on new master
+    clusterStatus = active.getClusterStatus();
+    assertTrue(clusterStatus.isBalancerOn());
+
+    // turn off the load balancer
+    active.balanceSwitch(false);
+
+    // once more, kill active master and wait for new active master to show up
+    active = killActiveAndWaitForNewActive(cluster);
+
+    // ensure the load balancer is not running on the new master
+    clusterStatus = active.getClusterStatus();
+    assertFalse(clusterStatus.isBalancerOn());
+
+    // Stop the cluster
+    TEST_UTIL.shutdownMiniCluster();
+  }
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =

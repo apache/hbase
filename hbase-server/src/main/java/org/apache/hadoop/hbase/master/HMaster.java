@@ -177,6 +177,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
+import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -232,6 +233,8 @@ Server {
   private RegionServerTracker regionServerTracker;
   // Draining region server tracker
   private DrainingServerTracker drainingServerTracker;
+  // Tracker for load balancer state
+  private LoadBalancerTracker loadBalancerTracker;
 
   // RPC server for the HMaster
   private final RpcServer rpcServer;
@@ -281,8 +284,6 @@ Server {
 
   private LoadBalancer balancer;
   private Thread balancerChore;
-  // If 'true', the balancer is 'on'.  If 'false', the balancer will not run.
-  private volatile boolean balanceSwitch = true;
 
   private CatalogJanitor catalogJanitorChore;
   private LogCleaner logCleaner;
@@ -516,6 +517,8 @@ Server {
     this.catalogTracker.start();
 
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
+    this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
+    this.loadBalancerTracker.start();
     this.assignmentManager = new AssignmentManager(this, serverManager,
       this.catalogTracker, this.balancer, this.executorService, this.metrics);
     zooKeeper.registerListenerFirst(assignmentManager);
@@ -1250,7 +1253,7 @@ Server {
       return false;
     }
     // If balance not true, don't run balancer.
-    if (!this.balanceSwitch) return false;
+    if (!this.loadBalancerTracker.isBalancerOn()) return false;
     // Do this call outside of synchronized block.
     int maximumBalanceTime = getBalancerCutoffTime();
     long cutoffTime = System.currentTimeMillis() + maximumBalanceTime;
@@ -1339,19 +1342,23 @@ Server {
    * @param mode BalanceSwitchMode
    * @return old balancer switch
    */
-  public boolean switchBalancer(final boolean b, BalanceSwitchMode mode) {
-    boolean oldValue = this.balanceSwitch;
+  public boolean switchBalancer(final boolean b, BalanceSwitchMode mode) throws IOException {
+    boolean oldValue = this.loadBalancerTracker.isBalancerOn();
     boolean newValue = b;
     try {
       if (this.cpHost != null) {
         newValue = this.cpHost.preBalanceSwitch(newValue);
       }
-      if (mode == BalanceSwitchMode.SYNC) {
-        synchronized (this.balancer) {
-          this.balanceSwitch = newValue;
+      try {
+        if (mode == BalanceSwitchMode.SYNC) {
+          synchronized (this.balancer) {
+            this.loadBalancerTracker.setBalancerOn(newValue);
+          }
+        } else {
+          this.loadBalancerTracker.setBalancerOn(newValue);
         }
-      } else {
-        this.balanceSwitch = newValue;
+      } catch (KeeperException ke) {
+        throw new IOException(ke);
       }
       LOG.info("BalanceSwitch=" + newValue);
       if (this.cpHost != null) {
@@ -1363,20 +1370,24 @@ Server {
     return oldValue;
   }
 
-  public boolean synchronousBalanceSwitch(final boolean b) {
+  public boolean synchronousBalanceSwitch(final boolean b) throws IOException {
     return switchBalancer(b, BalanceSwitchMode.SYNC);
   }
 
-  public boolean balanceSwitch(final boolean b) {
+  public boolean balanceSwitch(final boolean b) throws IOException {
     return switchBalancer(b, BalanceSwitchMode.ASYNC);
   }
 
   @Override
   public SetBalancerRunningResponse setBalancerRunning(
       RpcController controller, SetBalancerRunningRequest req) throws ServiceException {
-    boolean prevValue = (req.getSynchronous())?
-      synchronousBalanceSwitch(req.getOn()):balanceSwitch(req.getOn());
-    return SetBalancerRunningResponse.newBuilder().setPrevBalanceValue(prevValue).build();
+    try {
+      boolean prevValue = (req.getSynchronous())?
+        synchronousBalanceSwitch(req.getOn()):balanceSwitch(req.getOn());
+      return SetBalancerRunningResponse.newBuilder().setPrevBalanceValue(prevValue).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
   }
 
   /**
@@ -1815,7 +1826,7 @@ Server {
       this.serverName,
       backupMasters,
       this.assignmentManager.getRegionStates().getRegionsInTransition(),
-      this.getCoprocessors(), this.balanceSwitch);
+      this.getCoprocessors(), this.loadBalancerTracker.isBalancerOn());
   }
 
   public String getClusterId() {
