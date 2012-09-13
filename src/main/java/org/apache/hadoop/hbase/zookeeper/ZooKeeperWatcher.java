@@ -96,8 +96,13 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   public String clusterStateZNode;
   // znode used for region transitioning and assignment
   public String assignmentZNode;
-  // znode used for table disabling/enabling
-  public String tableZNode;
+  // znode that the master uses for reading/writing the table disabling/enabling states
+  public String masterTableZNode;
+  // znode where the client reads table enabling/disabling states.
+  public String clientTableZNode;
+  // znode where the master writes table disabling/enabling states in the format expected
+  // by 0.92.0/0.92.1 clients for backwards compatibility.  See HBASE-6710 for details.
+  public String masterTableZNode92;
   // znode containing the unique cluster ID
   public String clusterIdZNode;
   // znode used for log splitting work assignment
@@ -162,7 +167,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
       ZKUtil.createAndFailSilent(this, assignmentZNode);
       ZKUtil.createAndFailSilent(this, rsZNode);
       ZKUtil.createAndFailSilent(this, drainingZNode);
-      ZKUtil.createAndFailSilent(this, tableZNode);
+      ZKUtil.createAndFailSilent(this, masterTableZNode);
+      ZKUtil.createAndFailSilent(this, masterTableZNode92);
       ZKUtil.createAndFailSilent(this, splitLogZNode);
       ZKUtil.createAndFailSilent(this, backupMasterAddressesZNode);
     } catch (KeeperException e) {
@@ -210,8 +216,13 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
         conf.get("zookeeper.znode.state", "shutdown"));
     assignmentZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.unassigned", "unassigned"));
-    tableZNode = ZKUtil.joinZNode(baseZNode,
-        conf.get("zookeeper.znode.tableEnableDisable", "table"));
+    String tableZNodeDefault = "table";
+    masterTableZNode = ZKUtil.joinZNode(baseZNode,
+        conf.get("zookeeper.znode.masterTableEnableDisable", tableZNodeDefault));
+    clientTableZNode = ZKUtil.joinZNode(baseZNode,
+            conf.get("zookeeper.znode.clientTableEnableDisable", tableZNodeDefault));
+    masterTableZNode92 = ZKUtil.joinZNode(baseZNode,
+        conf.get("zookeeper.znode.masterTableEnableDisable92", "table92"));
     clusterIdZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.clusterId", "hbaseid"));
     splitLogZNode = ZKUtil.joinZNode(baseZNode,
