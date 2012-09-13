@@ -173,9 +173,12 @@ mvn clean compile
         release will be tagged 0.92.0.  Making the maven release, copy the 0.92.0 tag to 0.92.0mvn.
         Check out this tag and change the version therein and commit.
         </para>
+        <para>When you run <command>release:perform</command>, pass <command>-Papache-release</command>
+        else it will not 'sign' the artifacts it uploads.
+        </para>
         <para>Here is how I'd answer the questions at <command>release:prepare</command> time:
         <programlisting>What is the release version for "HBase"? (org.apache.hbase:hbase) 0.92.0: : 
-What is SCM release tag or label for "HBase"? (org.apache.hbase:hbase) hbase-0.92.0: : 0.92.0mvnrelease
+What is SCM release tag or label for "HBase"? (org.apache.hbase:hbase) hbase-0.92.0: : 0.92.0mvn
 What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.1-SNAPSHOT: : 
 [INFO] Transforming 'HBase'...</programlisting>
         </para>
@@ -221,9 +224,8 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.1
 &lt;/settings>
         </programlisting>
         </para>
-        <para>When you run <command>release:perform</command>, pass <command>-Papache-release</command>
-        else it will not 'sign' the artifacts it uploads.
-        </para>
+
+
         <para>If you see run into the below, its because you need to edit version in the pom.xml and add
         <code>-SNAPSHOT</code> to the version (and commit).
         <programlisting>[INFO] Scanning for projects...
