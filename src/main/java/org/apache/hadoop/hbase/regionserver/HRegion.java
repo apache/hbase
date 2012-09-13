@@ -2065,10 +2065,19 @@ public class HRegion implements HeapSize { // , Writable{
           } else {
             prepareDelete((Delete) mutation);
           }
-        } catch (DoNotRetryIOException dnrioe) {
-          LOG.warn("No such column family in batch mutation", dnrioe);
+        } catch (NoSuchColumnFamilyException nscf) {
+          LOG.warn("No such column family in batch mutation", nscf);
           batchOp.retCodeDetails[lastIndexExclusive] = new OperationStatus(
-              OperationStatusCode.SANITY_CHECK_FAILURE, dnrioe.getMessage());
+              OperationStatusCode.BAD_FAMILY, nscf.getMessage());
+          lastIndexExclusive++;
+          continue;
+        } catch (DoNotRetryIOException fsce) {
+          // The only thing that throws a generic DoNotRetryIOException in the above code is
+          // checkTimestamps so that DoNotRetryIOException means that timestamps were invalid.
+          // If more checks are added, be sure to revisit this assumption.
+          LOG.warn("Batch Mutation did not pass sanity check", fsce);
+          batchOp.retCodeDetails[lastIndexExclusive] = new OperationStatus(
+              OperationStatusCode.SANITY_CHECK_FAILURE, fsce.getMessage());
           lastIndexExclusive++;
           continue;
         }

@@ -3464,7 +3464,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
               result = new Result();
             } else if (code.getOperationStatusCode()
                 == OperationStatusCode.SANITY_CHECK_FAILURE) {
+              // Don't send a FailedSanityCheckException as older clients will not know about
+              // that class being a subclass of DoNotRetryIOException
+              // and will retry mutations that will never succeed.
               result = new DoNotRetryIOException(code.getExceptionMsg());
+            } else if (code.getOperationStatusCode() == OperationStatusCode.BAD_FAMILY) {
+              result = new NoSuchColumnFamilyException(code.getExceptionMsg());
             }
             // FAILURE && NOT_RUN becomes null, aka: need to run again.
 
