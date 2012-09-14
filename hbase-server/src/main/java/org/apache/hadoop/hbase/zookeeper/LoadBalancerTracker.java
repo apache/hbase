@@ -30,7 +30,7 @@ import org.apache.zookeeper.KeeperException;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
- * Tracks the load balancer switch up in ZK
+ * Tracks the load balancer state up in ZK
  */
 @InterfaceAudience.Private
 public class LoadBalancerTracker extends ZooKeeperNodeTracker {
@@ -47,7 +47,7 @@ public class LoadBalancerTracker extends ZooKeeperNodeTracker {
   public boolean isBalancerOn() {
     byte [] upData = super.getData(false);
     try {
-      // is data in ZK is null, use default of on.
+      // if data in ZK is null, use default of on.
       return upData == null || parseFrom(upData).getBalancerOn();
     } catch (DeserializationException dex) {
       LOG.error("ZK state for LoadBalancer could not be parsed " + Bytes.toStringBinary(upData));
@@ -68,6 +68,7 @@ public class LoadBalancerTracker extends ZooKeeperNodeTracker {
     } catch(KeeperException.NodeExistsException nee) {
       ZKUtil.setData(watcher, watcher.balancerZNode, upData);
     }
+    super.nodeDataChanged(watcher.balancerZNode);
   }
 
   private byte [] toByteArray(boolean isBalancerOn) {
