@@ -17,14 +17,11 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-
 /**
  * 
  * Failed to find .tableinfo file under table dir
  *
  */
-@InterfaceAudience.Private
 @SuppressWarnings("serial")
 public class TableInfoMissingException extends HBaseIOException {
 

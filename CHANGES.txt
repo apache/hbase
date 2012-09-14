@@ -106,6 +106,7 @@ Release 0.92.2 - Unreleased
    HBASE-6686  HFile Quarantine fails with missing dirs in hadoop 2.0
    HBASE-6321  ReplicationSource dies reading the peer's id
    HBASE-6516  hbck cannot detect any IOException while ".tableinfo" file is missing (Jie Huang)
+   HBASE-6792  Remove interface audience annotations in 0.94/0.92 introduced by HBASE-6516
 
   IMPROVEMENTS
    HBASE-5592  Make it easier to get a table from shell (Ben West)
