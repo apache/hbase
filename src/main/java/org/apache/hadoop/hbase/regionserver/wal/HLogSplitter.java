@@ -97,7 +97,7 @@ public class HLogSplitter {
 
   private MonitoredTask status;
 
-
+  
   /**
    * Create a new HLogSplitter using the given {@link Configuration} and the
    * <code>hbase.hlog.splitter.impl</code> property to derived the instance
@@ -185,6 +185,9 @@ public class HLogSplitter {
     synchronizedMap(new TreeMap<byte[], Object>(Bytes.BYTES_COMPARATOR));
     boolean isCorrupted = false;
 
+    long t0, t1;
+    StringBuilder timingInfo = new StringBuilder();
+
     Preconditions.checkState(status == null);
     status = TaskMonitor.get().createStatus(
         "Splitting log file " + logfile.getPath() +
@@ -207,7 +210,14 @@ public class HLogSplitter {
     status.setStatus("Opening log file");
     Reader in = null;
     try {
+      t0 = System.currentTimeMillis();
+
       in = getReader(fs, logfile, conf, skipErrors);
+
+      t1  = System.currentTimeMillis();
+      timingInfo.append("getReader took " + (t1-t0) + " ms. ");
+      t0 = t1;
+
     } catch (CorruptedLogFileException e) {
       LOG.warn("Could not get reader, corrupted log file " + logPath, e);
       ZKSplitLog.markCorrupted(rootDir, tmpname, fs);
@@ -237,8 +247,16 @@ public class HLogSplitter {
           lastFlushedSequenceId = lastFlushedSequenceIds.get(region);
           if (lastFlushedSequenceId == null) {
             try {
+
+              t0  = System.currentTimeMillis();
+
               lastFlushedSequenceId = master.getLastFlushedSequenceId(region);
               lastFlushedSequenceIds.put(region, lastFlushedSequenceId);
+
+              t1  = System.currentTimeMillis();
+              timingInfo.append("getLastFlushedSeqId took " + (t1-t0) + " ms. ");
+              t0 = t1;
+
             } catch (ConnectException e) {
               lastFlushedSequenceId = -1l;
               LOG.warn("Unable to connect to the master to check " +
@@ -256,7 +274,14 @@ public class HLogSplitter {
         }
         WriterAndPath wap = (WriterAndPath)o;
         if (wap == null) {
+          t0  = System.currentTimeMillis();
+
           wap = createWAP(region, entry, rootDir, tmpname, fs, conf);
+
+          t1  = System.currentTimeMillis();
+          timingInfo.append("createWAP took " + (t1-t0) + " ms. ");
+          t0 = t1;
+
           if (wap == null) {
             // ignore edits from this region. It doesn't exist anymore.
             // It was probably already split.
@@ -271,8 +296,8 @@ public class HLogSplitter {
         if (editsCount % interval == 0) {
           status.setStatus("Split " + (editsCount - editsSkipped) +
               " edits, skipped " + editsSkipped + " edits.");
-          long t1 = EnvironmentEdgeManager.currentTimeMillis();
-          if ((t1 - last_report_at) > period) {
+          long t2 = EnvironmentEdgeManager.currentTimeMillis();
+          if ((t2 - last_report_at) > period) {
             last_report_at = t;
             if (reporter != null && reporter.progress() == false) {
               status.setStatus("Failed: reporter.progress asked us to terminate");
@@ -290,11 +315,14 @@ public class HLogSplitter {
       e = RemoteExceptionHandler.checkIOException(e);
       throw e;
     } finally {
+
+      t0  = System.currentTimeMillis();
+
       int n = 0;
       List<Future<Void>> closeResults = new ArrayList<Future<Void>>();
       for (Object o : logWriters.values()) {
-        long t1 = EnvironmentEdgeManager.currentTimeMillis();
-        if ((t1 - last_report_at) > period) {
+        long t2 = EnvironmentEdgeManager.currentTimeMillis();
+        if ((t2 - last_report_at) > period) {
           last_report_at = t;
           if ((progress_failed == false) && (reporter != null) &&
               (reporter.progress() == false)) {
@@ -342,16 +370,27 @@ public class HLogSplitter {
         LOG.error("Interrupted while closing a log writer", ie);
         throw new InterruptedIOException("Interrupted while closing " + ie);
       }
+
+      t1  = System.currentTimeMillis();
+      timingInfo.append("closing logWriters took " + (t1-t0) + " ms. ");
+      t0 = t1;
+
       try {
         in.close();
       } catch (IOException ioe) {
         LOG.warn("Failed to close log reader " + logfile.getPath(), ioe);
       }
-      String msg = "processed " + editsCount + " edits across " + n +
-          " regions" + " threw away edits for " + (logWriters.size() - n) +
-          " regions" + " log file = " + logPath + " is corrupted = " +
+
+      t1  = System.currentTimeMillis();
+      timingInfo.append("closing inputLog took " + (t1-t0) + " ms. ");
+      t0 = t1;
+
+      String msg = "processed " + editsCount + " edits across " + n + 
+          " regions" + " threw away edits for " + (logWriters.size() - n) + 
+          " regions" + " log file = " + logPath + " is corrupted = " + 
           isCorrupted + " progress interrupted? = " + progress_failed;
       LOG.info(msg);
+      LOG.debug(timingInfo);
       status.markComplete(msg);
     }
     if (progress_failed) {

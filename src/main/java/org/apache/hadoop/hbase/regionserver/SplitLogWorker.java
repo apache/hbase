@@ -115,9 +115,17 @@ public class SplitLogWorker implements Runnable, Watcher {
       public Status exec(String filename, CancelableProgressable p) {
         Path rootdir;
         FileSystem fs;
+        StringBuilder timingInfo = new StringBuilder();
+        long t0, t1;
+        t0 = System.currentTimeMillis();
         try {
           rootdir = FSUtils.getRootDir(conf);
           fs = rootdir.getFileSystem(conf);
+
+          t1  = System.currentTimeMillis();
+          timingInfo.append("getFileSystem took " + (t1-t0) + " ms. ");
+          t0 = t1;
+
         } catch (IOException e) {
           LOG.warn("could not find root dir or fs", e);
           return Status.RESIGNED;
@@ -129,6 +137,11 @@ public class SplitLogWorker implements Runnable, Watcher {
           FileStatus st;
           try {
           st = fs.getFileStatus(new Path(filename));
+
+          t1  = System.currentTimeMillis();
+          timingInfo.append("getFileStatus took " + (t1-t0) + " ms. ");
+          t0 = t1;
+
           } catch (FileNotFoundException ex) {
             LOG.warn("nothing to do, file doesn't exist - " + filename);
             return Status.DONE;
@@ -141,6 +154,11 @@ public class SplitLogWorker implements Runnable, Watcher {
               workerName, filename);
           if (HLogSplitter.splitLogFileToTemp(rootdir, tmpname,
               st, fs, conf, p, logCloseThreadPool, masterRef.get()) == false) {
+
+            t1  = System.currentTimeMillis();
+            timingInfo.append("splitLogFileToTemp took " + (t1-t0) + " ms. ");
+            t0 = t1;
+
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {
@@ -157,6 +175,9 @@ public class SplitLogWorker implements Runnable, Watcher {
           LOG.warn("log splitting of " + filename + " failed, returning error",
               e);
           return Status.ERR;
+        }
+        finally {
+          LOG.debug("LogSplit timing info " + timingInfo.toString());
         }
         return Status.DONE;
       }
