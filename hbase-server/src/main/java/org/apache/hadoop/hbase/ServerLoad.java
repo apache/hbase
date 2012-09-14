@@ -253,8 +253,7 @@ public class ServerLoad {
    * @return number of requests per second received since the last report
    */
   public double getRequestsPerSecond() {
-    long msgInterval = serverLoad.getReportEndTime() - serverLoad.getReportStartTime();
-    return (msgInterval==0)?0.0:(getNumberOfRequests()/(double)msgInterval);
+    return getNumberOfRequests();
   }
 
   /**
