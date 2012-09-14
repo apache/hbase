@@ -64,6 +64,8 @@ import org.apache.hadoop.hbase.zookeeper.LegacyRootZNodeUpdater;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.hadoop.io.Text;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Class to manage assigning regions to servers, state of root and meta, etc.
  */
@@ -1451,12 +1453,15 @@ public class RegionManager {
    * @param regionName
    */
   public void setOpen(String regionName) {
+    Preconditions.checkNotNull(regionName);
     synchronized (regionsInTransition) {
       RegionState s = regionsInTransition.get(regionName);
       if (s != null) {
         s.setOpen();
         this.master.getMetrics().incRegionsOpened();
-        this.regionLocationHintToDetectDupAssignment.put(regionName, s.serverName);
+        if (s.serverName != null) {
+          this.regionLocationHintToDetectDupAssignment.put(regionName, s.serverName);
+        }
       }
     }
 
