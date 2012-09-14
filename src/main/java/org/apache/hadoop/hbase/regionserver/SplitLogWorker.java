@@ -92,9 +92,9 @@ public class SplitLogWorker implements Runnable, Watcher {
   private static int numWorkers = 0;
 
   public SplitLogWorker(ZooKeeperWrapper watcher, Configuration conf,
-      String serverName, TaskExecutor executor) {
+      String workerName, TaskExecutor executor) {
     this.watcher = watcher;
-    this.workerName = serverName + " Worker-" + numWorkers++;
+    this.workerName = workerName;
     this.executor = executor;
     this.zkretries = conf.getLong("hbase.splitlog.zk.retries", 3);
   }
@@ -102,7 +102,15 @@ public class SplitLogWorker implements Runnable, Watcher {
   public SplitLogWorker(ZooKeeperWrapper watcher, final Configuration conf,
       final String serverName, final ExecutorService logCloseThreadPool,
       final AtomicReference<HMasterRegionInterface> masterRef) {
-    this(watcher, conf, serverName, new TaskExecutor () {
+     this(watcher, conf, serverName, serverName + "-worker-" + numWorkers++,
+         logCloseThreadPool, masterRef);
+  }
+
+  private SplitLogWorker(ZooKeeperWrapper watcher, final Configuration conf,
+      final String serverName, final String workerName,
+      final ExecutorService logCloseThreadPool,
+      final AtomicReference<HMasterRegionInterface> masterRef) {
+    this(watcher, conf, workerName, new TaskExecutor () {
       @Override
       public Status exec(String filename, CancelableProgressable p) {
         Path rootdir;
@@ -130,7 +138,7 @@ public class SplitLogWorker implements Runnable, Watcher {
             return Status.ERR;
           }
           String tmpname = ZKSplitLog.getSplitLogDirTmpComponent(
-              serverName + "-worker-" + numWorkers, filename);
+              workerName, filename);
           if (HLogSplitter.splitLogFileToTemp(rootdir, tmpname,
               st, fs, conf, p, logCloseThreadPool, masterRef.get()) == false) {
             return Status.PREEMPTED;

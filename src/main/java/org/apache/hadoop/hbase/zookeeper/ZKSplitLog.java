@@ -125,9 +125,9 @@ public class ZKSplitLog {
     }
 
     public String getServerName(byte[] data) {
-      String str = Bytes.toString(data);
-      String [] parts = str.split(" ");
-      return parts[1];
+      String writer = getWriterName(data);
+      String [] parts = writer.split("-worker");
+      return parts[0];
     }
 
 
