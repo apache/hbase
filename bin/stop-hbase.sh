@@ -60,7 +60,8 @@ done
 echo
 
 # distributed == false means that the HMaster will kill ZK when it exits
-distMode=`$bin/hbase --config "$HBASE_CONF_DIR" org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed`
+# HBASE-6504 - only take the first line of the output in case verbose gc is on
+distMode=`$bin/hbase --config "$HBASE_CONF_DIR" org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed | head -n 1`
 if [ "$distMode" == 'true' ] 
 then
   # TODO: store backup masters in ZooKeeper and have the primary send them a shutdown message
