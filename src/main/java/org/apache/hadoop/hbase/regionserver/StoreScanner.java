@@ -27,8 +27,11 @@ import java.util.NavigableSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -328,11 +331,16 @@ class StoreScanner extends NonLazyKeyValueScanner
     KeyValue prevKV = null;
     List<KeyValue> results = new ArrayList<KeyValue>();
 
+
+    Call call = HRegionServer.callContext.get();
+    long quotaRemaining = (call == null) ? Long.MAX_VALUE
+        : HRegionServer.getResponseSizeLimit() - call.getPartialResponseSize();
+
     // Only do a sanity-check if store and comparator are available.
     KeyValue.KVComparator comparator =
         store != null ? store.getComparator() : null;
 
-    long cumulativeMetric = 0;
+    long addedResultsSize = 0;
     try {
       LOOP: while((kv = this.heap.peek()) != null) {
         // kv is no longer immutable due to KeyOnlyFilter! use copy for safety
@@ -365,9 +373,14 @@ class StoreScanner extends NonLazyKeyValueScanner
             // add to results only if we have skipped #rowOffset kvs
             // also update metric accordingly
             if (this.countPerRow > storeOffset) {
-              if (metric != null) {
-                cumulativeMetric += copyKv.getLength();
+              addedResultsSize += copyKv.getLength();
+              if (addedResultsSize > quotaRemaining) {
+                LOG.warn("Result too large. Please consider using Batching."
+                    + " Cannot allow  operations that fetch more than "
+                    + HRegionServer.getResponseSizeLimit() + " bytes.");
+                throw new DoNotRetryIOException("Result too large");
               }
+
               results.add(copyKv);
             }
 
@@ -435,10 +448,15 @@ class StoreScanner extends NonLazyKeyValueScanner
       }
     } finally { 
       // update the counter 
-      if (cumulativeMetric > 0 && metric != null) { 
+      if (addedResultsSize > 0 && metric != null) {
         HRegion.incrNumericMetric(this.metricNamePrefix + metric, 
-            cumulativeMetric);  
+            addedResultsSize);
       } 
+      // update the partial results size
+      if (call != null) {
+        call.setPartialResponseSize(call.getPartialResponseSize()
+            + addedResultsSize);
+      }
     }
 
     if (!results.isEmpty()) {

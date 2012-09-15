@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -320,7 +321,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
         cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
             cacheConf.isInMemory());
       }
-      ProfilingData pData = HRegionServer.threadLocalProfilingData.get();
+      Call call = HRegionServer.callContext.get();
+      ProfilingData pData = call == null ? null : call.getProfilingData();
       if (pData != null) {
         pData.incInt(ProfilingData.blockMissStr(
             hfileBlock.getBlockType().getCategory(),
@@ -359,7 +361,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
             cachedBlock.getBlockType().getCategory();
           getSchemaMetrics().updateOnCacheHit(blockCategory, isCompaction);
 
-          ProfilingData pData = HRegionServer.threadLocalProfilingData.get();
+          Call call = HRegionServer.callContext.get();
+          ProfilingData pData = call == null ? null : call.getProfilingData();
           if (pData != null) {
             pData.incInt(ProfilingData.blockHitStr(
                 cachedBlock.getBlockType().getCategory(),

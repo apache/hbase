@@ -664,6 +664,76 @@ public class TestFromClientSide {
   }
 
   /**
+   * Test result limits. If we request a row(s) too large
+   * we should get an exception instead of the server trying until
+   * OOM.
+   */
+  @Test
+  public void testResultLimits() throws Exception {
+    // We want to set the max result size to something small
+    HRegionServer.setResponseSizeLimit(40000L);
+
+    byte [] TABLE = Bytes.toBytes("testResultLimits");
+    byte [][] ROWS = makeN(ROW, 3);
+    byte [][] FAMILIES = makeNAscii(FAMILY, 10);
+    byte [][] VALUES = new byte[3][];
+    VALUES[0] = new byte[2000];
+    VALUES[1] = new byte[3000];
+    VALUES[2] = new byte[5000];
+
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+
+    Get get1, get2, get3;
+    Put put;
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Insert one column to one family
+    ////////////////////////////////////////////////////////////////////////////
+
+    for (int r = 0; r < ROWS.length; r++) {
+      for (int f = 0; f < FAMILIES.length; f++) {
+        put = new Put(ROWS[r]);
+        put.add(FAMILIES[f], QUALIFIER, VALUES[r]);
+        ht.put(put);
+      }
+    }
+
+    // try with the small row.
+    // Expeced size 10 * 2000 < limit
+    get1 = new Get(ROWS[0]);
+    ht.get(get1);
+
+    // try with the small row.
+    // Expeced size 10 * 3000 < limit
+    get2 = new Get(ROWS[1]);
+    ht.get(get2);
+
+    // try with the large row.
+    // Expeced size 10 * 5000 > limit
+    try {
+      get3 = new Get(ROWS[2]);
+      ht.get(get3);
+      assert(false);
+    } catch (IOException e) {
+    }
+
+    // try with the multiple rows.
+    // Expeced size 10 * 2000 + 10 * 3000 > limit
+    try {
+      ArrayList<Get> list = new ArrayList<Get>();
+      list.add(get1);
+      list.add(get2);
+      ht.get(list);
+      assert(false);
+    } catch (IOException e) {
+    }
+
+    // reset the max response size
+    HRegionServer.setResponseSizeLimit(Integer.MAX_VALUE);
+  }
+
+
+  /**
    * Test basic puts, gets, scans, and deletes for a single row
    * in a multiple family table.
    */

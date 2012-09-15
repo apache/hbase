@@ -118,6 +118,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
+import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
@@ -335,13 +336,27 @@ public class HRegionServer implements HRegionInterface,
   private String stopReason = "not stopping";
 
   // profiling threadlocal
-  public static final ThreadLocal<ProfilingData> threadLocalProfilingData = new ThreadLocal<ProfilingData> ();
+  public static final ThreadLocal<Call> callContext = new ThreadLocal<Call> ();
 
   /** Regionserver launched by the main method. Not used in tests. */
   private static HRegionServer mainRegionServer;
   /** Keep a reference to the current active master for use by HLogSplitter. */
   private final AtomicReference<HMasterRegionInterface> masterRef =
       new AtomicReference<HMasterRegionInterface>();
+
+  // maximum size (in bytes) for any allowed call. Applies to gets/nexts. If
+  // the size of the Result to be returned exceeds this value, the server will
+  // throw out an Exception. This is done to avoid OutOfMemory Errors, and
+  // large GC issues.
+  private static long responseSizeLimit;
+
+  public static long getResponseSizeLimit() {
+    return responseSizeLimit;
+  }
+
+  public static void setResponseSizeLimit(long responseSizeLimit) {
+    HRegionServer.responseSizeLimit = responseSizeLimit;
+  }
 
   /**
    * Starts a HRegionServer at the default location
@@ -393,6 +408,9 @@ public class HRegionServer implements HRegionInterface,
     this.rpcTimeout = conf.getInt(
         HConstants.HBASE_RPC_TIMEOUT_KEY,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+
+    this.responseSizeLimit = conf.getLong("hbase.regionserver.results.size.max",
+        (long)Integer.MAX_VALUE); // set the max to 2G
 
     reinitialize();
     SchemaMetrics.configureGlobally(conf);

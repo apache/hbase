@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -958,7 +959,8 @@ public class HLog implements Syncable {
     }
     long time = System.currentTimeMillis() - start;
     writeTime.inc(time);
-    ProfilingData pData = HRegionServer.threadLocalProfilingData.get();
+    Call call = HRegionServer.callContext.get();
+    ProfilingData pData = call == null ? null : call.getProfilingData();
     if (pData != null) {
       pData.addLong(ProfilingData.HLOG_WRITE_TIME_MS, time);
     }

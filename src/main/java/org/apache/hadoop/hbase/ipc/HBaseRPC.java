@@ -495,6 +495,7 @@ public class HBaseRPC {
     private final int warnResponseTime;
     private final int warnResponseSize;
 
+
     /**
      * Construct an RPC server.
      * @param instance the instance whose methods will be called
@@ -568,7 +569,8 @@ public class HBaseRPC {
           throw new IOException("Could not find requested method, the usual " +
               "cause is a version mismatch between client and server.");
         }
-        ProfilingData pData = HRegionServer.threadLocalProfilingData.get();
+        Call callInfo = HRegionServer.callContext.get();
+        ProfilingData pData = callInfo == null ? null : callInfo.getProfilingData();
         if (pData != null) {
           pData.addString(ProfilingData.RPC_METHOD_NAME, call.getMethodName ());
         }

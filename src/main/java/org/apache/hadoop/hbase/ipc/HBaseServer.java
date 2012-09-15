@@ -229,7 +229,7 @@ public abstract class HBaseServer {
   }
 
   /** A call queued for handling. */
-  private static class Call {
+  public static class Call {
     protected int id;                             // the client's call id
     protected Writable param;                     // the parameter passed
     protected Connection connection;              // connection to client
@@ -243,6 +243,7 @@ public abstract class HBaseServer {
     protected boolean shouldProfile = false;
     protected ProfilingData profilingData = null;
     protected String tag = null;
+    protected long partialResponseSize; // size of the results collected so far
 
     public Call(int id, Writable param, Connection connection) {
       this.id = id;
@@ -250,6 +251,7 @@ public abstract class HBaseServer {
       this.connection = connection;
       this.timestamp = System.currentTimeMillis();
       this.response = null;
+      this.partialResponseSize = 0;
     }
     
     public void setTag(String tag) {
@@ -276,6 +278,14 @@ public abstract class HBaseServer {
       return this.compressionAlgo;
     }
 
+    public long getPartialResponseSize() {
+      return partialResponseSize;
+    }
+
+    public void setPartialResponseSize(long partialResponseSize) {
+      this.partialResponseSize = partialResponseSize;
+    }
+
     @Override
     public String toString() {
       return param.toString() + " from " + connection.toString();
@@ -283,6 +293,10 @@ public abstract class HBaseServer {
 
     public void setResponse(ByteBuffer response) {
       this.response = response;
+    }
+
+    public ProfilingData getProfilingData(){
+      return this.profilingData;
     }
   }
 
@@ -1086,8 +1100,10 @@ public abstract class HBaseServer {
           
           if (call.shouldProfile) {
             call.profilingData = new ProfilingData ();
-            HRegionServer.threadLocalProfilingData.set (call.profilingData);
+          } else {
+            call.profilingData = null;
           }
+          HRegionServer.callContext.set(call);
           
           CurCall.set(call);
           UserGroupInformation previous = UserGroupInformation.getCurrentUGI();
@@ -1108,8 +1124,8 @@ public abstract class HBaseServer {
           if (call.shouldProfile) {
             call.profilingData.addLong(
                 ProfilingData.TOTAL_SERVER_TIME_MS, total);
-            HRegionServer.threadLocalProfilingData.remove ();
           }
+          HRegionServer.callContext.remove();
           
           int size = BUFFER_INITIAL_SIZE;
           if (value instanceof WritableWithSize) {
@@ -1158,12 +1174,12 @@ public abstract class HBaseServer {
             value.write(out);
             // write profiling data if requested
             if (call.getVersion () >= VERSION_RPCOPTIONS) {
-            	if (!call.shouldProfile) {
-            		out.writeBoolean(false);
-            	} else {
-            		out.writeBoolean(true);
-            		call.profilingData.write(out);
-            	}
+              if (!call.shouldProfile) {
+                out.writeBoolean(false);
+              } else {
+                out.writeBoolean(true);
+                call.profilingData.write(out);
+              }
             }
           } else {
             WritableUtils.writeString(out, errorClass);
