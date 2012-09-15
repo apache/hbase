@@ -40,9 +40,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * Reads, caches and sets state up in zookeeper.  If multiple read/write
  * clients, will make for confusion.  Read-only clients other than
  * AssignmentManager interested in learning table state can use the
- * read-only utility methods {@link #isEnabledTable(ZooKeeperWatcher, String)}
- * and {@link #isDisabledTable(ZooKeeperWatcher, String)}.
- * 
+ * read-only utility methods in {@link ZKTableReadOnly}.
+ *
  * <p>To save on trips to the zookeeper ensemble, internally we cache table
  * state.
  */
@@ -83,36 +82,9 @@ public class ZKTable {
       List<String> children = ZKUtil.listChildrenNoWatch(this.watcher, this.watcher.tableZNode);
       if (children == null) return;
       for (String child: children) {
-        ZooKeeperProtos.Table.State state = getTableState(this.watcher, child);
+        ZooKeeperProtos.Table.State state = ZKTableReadOnly.getTableState(this.watcher, child);
         if (state != null) this.cache.put(child, state);
       }
-    }
-  }
-
-  /**
-   * @param zkw
-   * @param child
-   * @return Null or {@link TableState} found in znode.
-   * @throws KeeperException
-   */
-  private static ZooKeeperProtos.Table.State getTableState(final ZooKeeperWatcher zkw,
-      final String child)
-  throws KeeperException {
-    String znode = ZKUtil.joinZNode(zkw.tableZNode, child);
-    byte [] data = ZKUtil.getData(zkw, znode);
-    if (data == null || data.length <= 0) return ZooKeeperProtos.Table.State.ENABLED;
-    try {
-      ProtobufUtil.expectPBMagicPrefix(data);
-      ZooKeeperProtos.Table.Builder builder = ZooKeeperProtos.Table.newBuilder();
-      int magicLen = ProtobufUtil.lengthOfPBMagic();
-      ZooKeeperProtos.Table t = builder.mergeFrom(data, magicLen, data.length - magicLen).build();
-      return t.getState();
-    } catch (InvalidProtocolBufferException e) {
-      KeeperException ke = new KeeperException.DataInconsistencyException();
-      ke.initCause(e);
-      throw ke;
-    } catch (DeserializationException e) {
-      throw ZKUtil.convert(e);
     }
   }
 
@@ -240,22 +212,6 @@ public class ZKTable {
     return isTableState(tableName, ZooKeeperProtos.Table.State.DISABLED);
   }
 
-  /**
-   * Go to zookeeper and see if state of table is {@link TableState#DISABLED}.
-   * This method does not use cache as {@link #isDisabledTable(String)} does.
-   * This method is for clients other than {@link AssignmentManager}
-   * @param zkw
-   * @param tableName
-   * @return True if table is enabled.
-   * @throws KeeperException
-   */
-  public static boolean isDisabledTable(final ZooKeeperWatcher zkw,
-      final String tableName)
-  throws KeeperException {
-    ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
-    return isTableState(ZooKeeperProtos.Table.State.DISABLED, state);
-  }
-
   public boolean isDisablingTable(final String tableName) {
     return isTableState(tableName, ZooKeeperProtos.Table.State.DISABLING);
   }
@@ -268,43 +224,10 @@ public class ZKTable {
     return isTableState(tableName, ZooKeeperProtos.Table.State.ENABLED);
   }
 
-  /**
-   * Go to zookeeper and see if state of table is {@link TableState#ENABLED}.
-   * This method does not use cache as {@link #isEnabledTable(String)} does.
-   * This method is for clients other than {@link AssignmentManager}
-   * @param zkw
-   * @param tableName
-   * @return True if table is enabled.
-   * @throws KeeperException
-   */
-  public static boolean isEnabledTable(final ZooKeeperWatcher zkw,
-      final String tableName)
-  throws KeeperException {
-    return getTableState(zkw, tableName) == ZooKeeperProtos.Table.State.ENABLED;
-  }
-
   public boolean isDisablingOrDisabledTable(final String tableName) {
     synchronized (this.cache) {
       return isDisablingTable(tableName) || isDisabledTable(tableName);
     }
-  }
-
-  /**
-   * Go to zookeeper and see if state of table is {@link TableState#DISABLING}
-   * of {@link TableState#DISABLED}.
-   * This method does not use cache as {@link #isEnabledTable(String)} does.
-   * This method is for clients other than {@link AssignmentManager}.
-   * @param zkw
-   * @param tableName
-   * @return True if table is enabled.
-   * @throws KeeperException
-   */
-  public static boolean isDisablingOrDisabledTable(final ZooKeeperWatcher zkw,
-      final String tableName)
-  throws KeeperException {
-    ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
-    return isTableState(ZooKeeperProtos.Table.State.DISABLING, state) ||
-      isTableState(ZooKeeperProtos.Table.State.DISABLED, state);
   }
 
   public boolean isEnabledOrDisablingTable(final String tableName) {
@@ -322,13 +245,8 @@ public class ZKTable {
   private boolean isTableState(final String tableName, final ZooKeeperProtos.Table.State state) {
     synchronized (this.cache) {
       ZooKeeperProtos.Table.State currentState = this.cache.get(tableName);
-      return isTableState(currentState, state);
+      return ZKTableReadOnly.isTableState(currentState, state);
     }
-  }
-
-  private static boolean isTableState(final ZooKeeperProtos.Table.State expectedState,
-      final ZooKeeperProtos.Table.State currentState) {
-    return currentState != null && currentState.equals(expectedState);
   }
 
   /**
@@ -384,42 +302,6 @@ public class ZKTable {
       for (String table: tables) {
         if (isDisabledTable(table)) disabledTables.add(table);
       }
-    }
-    return disabledTables;
-  }
-
-  /**
-   * Gets a list of all the tables set as disabled in zookeeper.
-   * @return Set of disabled tables, empty Set if none
-   * @throws KeeperException 
-   */
-  public static Set<String> getDisabledTables(ZooKeeperWatcher zkw)
-  throws KeeperException {
-    Set<String> disabledTables = new HashSet<String>();
-    List<String> children =
-      ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
-    for (String child: children) {
-      ZooKeeperProtos.Table.State state = getTableState(zkw, child);
-      if (state == ZooKeeperProtos.Table.State.DISABLED) disabledTables.add(child);
-    }
-    return disabledTables;
-  }
-
-  /**
-   * Gets a list of all the tables set as disabled in zookeeper.
-   * @return Set of disabled tables, empty Set if none
-   * @throws KeeperException 
-   */
-  public static Set<String> getDisabledOrDisablingTables(ZooKeeperWatcher zkw)
-  throws KeeperException {
-    Set<String> disabledTables = new HashSet<String>();
-    List<String> children =
-      ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
-    for (String child: children) {
-      ZooKeeperProtos.Table.State state = getTableState(zkw, child);
-      if (state == ZooKeeperProtos.Table.State.DISABLED ||
-          state == ZooKeeperProtos.Table.State.DISABLING)
-        disabledTables.add(child);
     }
     return disabledTables;
   }

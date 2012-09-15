@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogUtilsForTests;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.ZKTable;
+import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
@@ -1008,7 +1008,7 @@ public class TestAdmin {
     ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
     byte [] tableName = Bytes.toBytes("testMasterAdmin");
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
-    while (!ZKTable.isEnabledTable(zkw, "testMasterAdmin")) {
+    while (!ZKTableReadOnly.isEnabledTable(zkw, "testMasterAdmin")) {
       Thread.sleep(10);
     }
     this.admin.disableTable(tableName);

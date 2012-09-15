@@ -92,7 +92,7 @@ import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZKTable;
+import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
@@ -880,9 +880,9 @@ public class HConnectionManager {
       ZooKeeperKeepAliveConnection zkw = getKeepAliveZooKeeperWatcher();
       try {
         if (online) {
-          return ZKTable.isEnabledTable(zkw, tableNameStr);
+          return ZKTableReadOnly.isEnabledTable(zkw, tableNameStr);
         }
-        return ZKTable.isDisabledTable(zkw, tableNameStr);
+        return ZKTableReadOnly.isDisabledTable(zkw, tableNameStr);
       } catch (KeeperException e) {
         throw new IOException("Enable/Disable failed", e);
       }finally {
