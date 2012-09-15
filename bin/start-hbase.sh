@@ -46,7 +46,8 @@ else
   commandToRun="start"
 fi
 
-distMode=`$bin/hbase --config "$HBASE_CONF_DIR" org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed`
+# HBASE-6504 - only take the first line of the output in case verbose gc is on
+distMode=`$bin/hbase --config "$HBASE_CONF_DIR" org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed | head -n 1`
 
 
 if [ "$distMode" == 'false' ] 
