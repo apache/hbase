@@ -200,14 +200,16 @@
     <title>Leveraging local data</title>
 <para>Since Hadoop 1.0.0 (also 0.22.1, 0.23.1, CDH3u3 and HDP 1.0) via
 <link xlink:href="https://issues.apache.org/jira/browse/HDFS-2246">HDFS-2246</link>,
-it is possible for the DFSClient to take a shortcut and
+it is possible for the DFSClient to take a "short circuit" and
 read directly from disk instead of going through the DataNode when the
 data is local. What this means for HBase is that the RegionServers can
 read directly off their machine's disks instead of having to open a
 socket to talk to the DataNode, the former being generally much
 faster<footnote><para>See JD's <link xlink:href="http://files.meetup.com/1350427/hug_ebay_jdcryans.pdf">Performance Talk</link></para></footnote>.
+Also see <link xlink:href="http://search-hadoop.com/m/zV6dKrLCVh1">HBase, mail # dev - read short circuit</link> thread for
+more discussion around short circuit reads.
 </para>
-<para>To enable "shortcircuit" reads, you must set two configurations.
+<para>To enable "short circuit" reads, you must set two configurations.
 First, the hdfs-site.xml needs to be amended. Set
 the property  <varname>dfs.block.local-path-access.user</varname> 
 to be the <emphasis>only</emphasis> user that can use the shortcut.
