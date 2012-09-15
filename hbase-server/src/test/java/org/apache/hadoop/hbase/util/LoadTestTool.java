@@ -289,7 +289,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   }
 
   @Override
-  protected void doWork() throws IOException {
+  protected int doWork() throws IOException {
     if (cmd.hasOption(OPT_ZK_QUORUM)) {
       conf.set(HConstants.ZOOKEEPER_QUORUM, cmd.getOptionValue(OPT_ZK_QUORUM));
     }
@@ -335,6 +335,16 @@ public class LoadTestTool extends AbstractHBaseTool {
     if (isRead) {
       readerThreads.waitForFinish();
     }
+
+    boolean success = true;
+    if (isWrite) {
+      success = success && writerThreads.getNumWriteFailures() == 0;
+    }
+    if (isRead) {
+      success = success && readerThreads.getNumReadErrors() == 0
+          && readerThreads.getNumReadFailures() == 0;
+    }
+    return success ? 0 : 1;
   }
 
   public static void main(String[] args) {

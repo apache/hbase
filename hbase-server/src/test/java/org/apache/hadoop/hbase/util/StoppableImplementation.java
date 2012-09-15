@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,18 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.util;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Stoppable;
 
 /**
- * Tag a test as 'small', meaning that the test class has the following
- * characteristics:
- *  - can be run simultaneously with other small tests in the same JVM
- *  - ideally, last less than 15 seconds
- *  - does not use a cluster
- *
- * @see MediumTests
- * @see LargeTests
- * @see IntegrationTests
+ * A base implementation for a Stoppable service
  */
-public interface SmallTests {
+@InterfaceAudience.Private
+public class StoppableImplementation implements Stoppable {
+  volatile boolean stopped = false;
+
+  @Override
+  public void stop(String why) {
+    this.stopped = true;
+  }
+
+  @Override
+  public boolean isStopped() {
+    return stopped;
+  }
 }

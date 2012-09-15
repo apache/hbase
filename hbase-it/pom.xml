@@ -38,6 +38,12 @@
   </properties>
 
   <build>
+    <testResources>
+      <testResource>
+         <!-- We depend on hbase-server test resources -->
+        <directory>../hbase-server/src/test/resources</directory>
+      </testResource>
+    </testResources>
     <pluginManagement>
       <plugins>
         <plugin>
@@ -52,7 +58,7 @@
             </dependency>
           </dependencies>
           <configuration>
-	        <includes>
+            <includes>
               <include>${integrationtest.include}</include>
             </includes>
             <excludes>
@@ -66,16 +72,20 @@
               <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/nativelib</DYLD_LIBRARY_PATH>
               <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
             </environmentVariables>
+            <failIfNoTests>false</failIfNoTests>
+            <testFailureIgnore>false</testFailureIgnore>
           </configuration>
           <executions>
             <execution>
               <id>integration-test</id>
+              <phase>integration-test</phase>
               <goals>
                 <goal>integration-test</goal>
               </goals>
             </execution>
             <execution>
               <id>verify</id>
+              <phase>verify</phase>
               <goals>
                 <goal>verify</goal>
               </goals>
@@ -93,6 +103,12 @@
           <configuration>
             <skip>false</skip>
             <forkMode>always</forkMode>
+            <!-- TODO: failsafe does timeout, but verify does not fail the build because of the timeout.
+                 I believe it is a failsafe bug, we may consider using surefire -->
+            <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
+            <argLine>-enableassertions -Xmx1900m
+              -Djava.security.egd=file:/dev/./urandom</argLine>
+            <testFailureIgnore>false</testFailureIgnore>
           </configuration>
       </plugin>
     </plugins>
@@ -100,7 +116,7 @@
 
   <dependencies>
 	<!-- Intra-project dependencies -->
-	<dependency>
+    <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-server</artifactId>
     </dependency>

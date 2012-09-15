@@ -34,7 +34,19 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.RegionTransition;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -42,9 +54,9 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -219,7 +231,7 @@ public class TestMasterFailover {
     enabledAndAssignedRegions.add(enabledRegions.remove(0));
     enabledAndAssignedRegions.add(enabledRegions.remove(0));
     enabledAndAssignedRegions.add(closingRegion);
-    
+
     List<HRegionInfo> disabledAndAssignedRegions = new ArrayList<HRegionInfo>();
     disabledAndAssignedRegions.add(disabledRegions.remove(0));
     disabledAndAssignedRegions.add(disabledRegions.remove(0));
@@ -457,18 +469,18 @@ public class TestMasterFailover {
     // Create a ZKW to use in the test
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
         "unittest", new Abortable() {
-          
+
           @Override
           public void abort(String why, Throwable e) {
             LOG.error("Fatal ZK Error: " + why, e);
             org.junit.Assert.assertFalse("Fatal ZK error", true);
           }
-          
+
           @Override
           public boolean isAborted() {
             return false;
           }
-          
+
     });
 
     // get all the master threads
@@ -895,8 +907,8 @@ public class TestMasterFailover {
     TEST_UTIL.shutdownMiniHBaseCluster();
 
     // Create a ZKW to use in the test
-    ZooKeeperWatcher zkw = 
-      HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL, 
+    ZooKeeperWatcher zkw =
+      HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL,
           metaRegion, regionServer.getServerName());
 
     LOG.info("Staring cluster for second time");
@@ -1042,10 +1054,10 @@ public class TestMasterFailover {
    * @param cluster
    * @return the new active master
    * @throws InterruptedException
-   * @throws MasterNotRunningException
+   * @throws IOException
    */
   private HMaster killActiveAndWaitForNewActive(MiniHBaseCluster cluster)
-  throws InterruptedException, MasterNotRunningException {
+  throws InterruptedException, IOException {
     int activeIndex = getActiveMasterIndex(cluster);
     HMaster active = cluster.getMaster();
     cluster.stopMaster(activeIndex);

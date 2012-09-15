@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,15 +19,21 @@
 package org.apache.hadoop.hbase;
 
 /**
- * Tag a test as 'small', meaning that the test class has the following
- * characteristics:
- *  - can be run simultaneously with other small tests in the same JVM
- *  - ideally, last less than 15 seconds
- *  - does not use a cluster
+ * Tag a test as 'integration/system' test, meaning that the test class has the following
+ * characteristics: <ul>
+ *  <li> Possibly takes hours to complete</li>
+ *  <li> Can be run on a mini cluster or an actual cluster</li>
+ *  <li> Can make changes to the given cluster (starting stopping daemons, etc)</li>
+ *  <li> Should not be run in parallel of other integration tests</li>
+ * </ul>
  *
+ * Integration / System tests should have a class name starting with "IntegrationTest", and
+ * should be annotated with @Category(IntegrationTests.class). Integration tests can be run
+ * using the IntegrationTestsDriver class or from mvn verify.
+ *
+ * @see SmallTests
  * @see MediumTests
  * @see LargeTests
- * @see IntegrationTests
  */
-public interface SmallTests {
+public interface IntegrationTests {
 }

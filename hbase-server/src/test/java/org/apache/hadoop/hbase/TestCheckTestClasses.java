@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.hbase;
 
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runners.Suite;
+import static junit.framework.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -31,8 +31,9 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
-import static junit.framework.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.runners.Suite;
 
 
 /**
@@ -41,8 +42,21 @@ import static org.junit.Assert.assertTrue;
 @Category(SmallTests.class)
 public class TestCheckTestClasses {
 
+  private FileFilter TEST_CLASS_FILE_FILTER = new FileFilter() {
+    @Override
+    public boolean accept(File file) {
+      return file.isDirectory() || isTestClassFile(file);
+
+    }
+    private boolean isTestClassFile(File file) {
+      String fileName = file.getName();
+      return fileName.endsWith(".class")
+          && (fileName.startsWith("Test") || fileName.startsWith("IntegrationTest"));
+    }
+  };
+
   /**
-   * Throws an assertion if we find a test class without category (small/medium/large).
+   * Throws an assertion if we find a test class without category (small/medium/large/integration).
    * List all the test classes without category in the assertion message.
    */
   @Test
@@ -50,7 +64,7 @@ public class TestCheckTestClasses {
     List<Class<?>> badClasses = new java.util.ArrayList<Class<?>>();
 
     for (Class<?> c : findTestClasses()) {
-      if (!existCategoryAnnotation(c)) {
+      if (!existCategoryAnnotation(c, null)) {
         badClasses.add(c);
       }
     }
@@ -59,9 +73,22 @@ public class TestCheckTestClasses {
       + badClasses, badClasses.isEmpty());
   }
 
+  /** Returns whether the class has @Category annotation having the xface value.
+   */
+  private boolean existCategoryAnnotation(Class<?> c, Class<?> xface) {
+    Category category = c.getAnnotation(Category.class);
 
-  private boolean existCategoryAnnotation(Class<?> c) {
-    return (c.getAnnotation(Category.class) != null);
+    if (category != null) {
+      if (xface == null) {
+        return true;
+      }
+      for (Class<?> cc : category.value()) {
+        if (cc.equals(xface)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /*
@@ -88,6 +115,19 @@ public class TestCheckTestClasses {
     return false;
   }
 
+  /**
+   * Finds test classes which are annotated with @Category having xface value
+   * @param xface the @Category value
+   */
+  public List<Class<?>> findTestClasses(Class<?> xface) throws ClassNotFoundException, IOException {
+    List<Class<?>> classes = new ArrayList<Class<?>>();
+    for (Class<?> c : findTestClasses()) {
+      if (existCategoryAnnotation(c, xface)) {
+        classes.add(c);
+      }
+    }
+    return classes;
+  }
 
   private List<Class<?>> findTestClasses() throws ClassNotFoundException, IOException {
     final String packageName = "org.apache.hadoop.hbase";
@@ -117,14 +157,14 @@ public class TestCheckTestClasses {
       return classes;
     }
 
-    File[] files = baseDirectory.listFiles();
+    File[] files = baseDirectory.listFiles(TEST_CLASS_FILE_FILTER);
     assertNotNull(files);
 
     for (File file : files) {
       final String fileName = file.getName();
       if (file.isDirectory()) {
         classes.addAll(findTestClasses(file, packageName + "." + fileName));
-      } else if (fileName.endsWith(".class") && fileName.startsWith("Test")) {
+      } else {
         Class<?> c = Class.forName(
           packageName + '.' + fileName.substring(0, fileName.length() - 6),
           false,
