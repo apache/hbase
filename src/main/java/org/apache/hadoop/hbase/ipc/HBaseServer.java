@@ -59,6 +59,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.DaemonThreadFactory;
+import org.apache.hadoop.hbase.util.SizeBasedThrottler;
 import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
@@ -183,6 +184,14 @@ public abstract class HBaseServer {
   protected int socketSendBufferSize;
   protected final boolean tcpNoDelay;   // if T then disable Nagle's Algorithm
   protected final boolean tcpKeepAlive; // if T then use keepalives
+
+  // responseQueuesSizeThrottler is shared among all responseQueues,
+  // it bounds memory occupied by responses in all responseQueues
+  final SizeBasedThrottler responseQueuesSizeThrottler;
+
+  // RESPONSE_QUEUE_MAX_SIZE limits total size of responses in every response queue
+  private static final long DEFAULT_RESPONSE_QUEUES_MAX_SIZE = 1024 * 1024 * 1024; // 1G
+  private static final String RESPONSE_QUEUES_MAX_SIZE = "ipc.server.response.queue.maxsize";
 
   volatile protected boolean running = true;         // true while server runs
   protected BlockingQueue<Call> callQueue; // queued calls
@@ -749,7 +758,7 @@ public abstract class HBaseServer {
           //
           // Extract the first call
           //
-          call = responseQueue.removeFirst();
+          call = responseQueue.peek();
           SocketChannel channel = call.connection.channel;
           if (LOG.isTraceEnabled()) {
             LOG.trace(getName() + ": responding to #" + call.id + " from " +
@@ -760,9 +769,13 @@ public abstract class HBaseServer {
           //
           int numBytes = channelWrite(channel, call.response);
           if (numBytes < 0) {
+            // Error flag is set, so returning here closes connection and
+            // clears responseQueue.
             return true;
           }
           if (!call.response.hasRemaining()) {
+            responseQueue.poll();
+            responseQueuesSizeThrottler.decrease(call.response.limit());
             call.connection.decRpcCount();
             //noinspection RedundantIfStatement
             if (numElements == 1) {    // last call fully processes.
@@ -775,12 +788,6 @@ public abstract class HBaseServer {
                         call.connection + " Wrote " + numBytes + " bytes.");
             }
           } else {
-            //
-            // If we were unable to write the entire response out, then
-            // insert in Selector queue.
-            //
-            call.connection.responseQueue.addFirst(call);
-
             if (inHandler) {
               // set the serve time when the response has to be sent later
               call.timestamp = System.currentTimeMillis();
@@ -819,12 +826,23 @@ public abstract class HBaseServer {
     //
     // Enqueue a response from the application.
     //
-    void doRespond(Call call) throws IOException {
+    void doRespond(Call call) throws IOException, InterruptedException {
+      boolean closed;
+      responseQueuesSizeThrottler.increase(call.response.remaining());
       synchronized (call.connection.responseQueue) {
-        call.connection.responseQueue.addLast(call);
-        if (call.connection.responseQueue.size() == 1) {
-          processResponse(call.connection.responseQueue, true);
+        closed = call.connection.closed;
+        if (!closed) {
+          call.connection.responseQueue.addLast(call);
+          if (call.connection.responseQueue.size() == 1) {
+            processResponse(call.connection.responseQueue, true);
+          }
         }
+      }
+      if (closed) {
+        // Connection was closed when we tried to submit response, but we
+        // increased responseQueues size already. It shoud be
+        // decreased here.
+        responseQueuesSizeThrottler.decrease(call.response.remaining());
       }
     }
 
@@ -851,6 +869,8 @@ public abstract class HBaseServer {
     private int version = -1;
     private boolean headerRead = false;  //if the connection header that
                                          //follows version is read.
+
+    protected volatile boolean closed = false;    // indicates if connection was closed
     protected SocketChannel channel;
     private ByteBuffer data;
     private ByteBuffer dataLengthBuffer;
@@ -1053,6 +1073,7 @@ public abstract class HBaseServer {
     }
 
     protected synchronized void close() {
+      closed = true;
       data = null;
       dataLengthBuffer = null;
       if (!channel.isOpen())
@@ -1253,6 +1274,9 @@ public abstract class HBaseServer {
     this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", false);
     this.tcpKeepAlive = conf.getBoolean("ipc.server.tcpkeepalive", true);
 
+    this.responseQueuesSizeThrottler = new SizeBasedThrottler(
+        conf.getLong(RESPONSE_QUEUES_MAX_SIZE, DEFAULT_RESPONSE_QUEUES_MAX_SIZE));
+
     // Create the responder here
     responder = new Responder();
   }
@@ -1263,6 +1287,15 @@ public abstract class HBaseServer {
         numConnections--;
     }
     connection.close();
+
+    long bytes = 0;
+    synchronized (connection.responseQueue) {
+      for (Call c : connection.responseQueue) {
+        bytes += c.response.limit();
+      }
+      connection.responseQueue.clear();
+    }
+    responseQueuesSizeThrottler.decrease(bytes);
   }
 
   /** Sets the socket buffer size used for responding to RPCs.
@@ -1459,5 +1492,9 @@ public abstract class HBaseServer {
     synchronized (selectionKey) {
       selectionKey.interestOps(selectionKey.interestOps() & (~SelectionKey.OP_READ));
     }
+  }
+
+  public long getResponseQueueSize(){
+    return responseQueuesSizeThrottler.getCurrentValue();
   }
 }

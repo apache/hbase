@@ -979,7 +979,7 @@ public class HRegionServer implements HRegionInterface,
       this.hlog = setupHLog();
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
-      this.dynamicMetrics = RegionServerDynamicMetrics.newInstance();
+      this.dynamicMetrics = RegionServerDynamicMetrics.newInstance(this);
       startServiceThreads();
       isOnline = true;
 
@@ -3493,4 +3493,12 @@ public class HRegionServer implements HRegionInterface,
     }
   }
   
+  public long getResponseQueueSize(){
+    HBaseServer s = server;
+    if (s != null) {
+      return s.getResponseQueueSize();
+    }
+    return 0;
+  }
+
 }
