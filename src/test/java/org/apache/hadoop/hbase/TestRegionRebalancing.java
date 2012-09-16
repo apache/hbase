@@ -119,26 +119,6 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     assertRegionsAreBalanced();
   }
 
-  /**
-   * Make sure we can handle duplicate notifications for region
-   * being opened. Same as testRebalancing -- but we will duplicate
-   * some of the notifications.
-   *
-   * @throws IOException
-   */
-  public void testRebalancingWithDuplicateNotification() throws IOException {
-    DuplicateZKNotificationInjectionHandler duplicator =
-      new DuplicateZKNotificationInjectionHandler();
-    duplicator.setProbability(0.05);
-    duplicator.duplicateEvent(InjectionEvent.ZKUNASSIGNEDWATCHER_REGION_OPENED);
-    InjectionHandler.set(duplicator);
-
-    testRebalancing();
-
-    // make sure that some events did get duplicated.
-    assertTrue(duplicator.getDuplicatedEventCnt() > 0);
-  }
-
   private void checkingServerStatus() {
     List<HRegionServer> servers = getOnlineRegionServers();
     double avg = cluster.getMaster().getAverageLoad();
