@@ -691,7 +691,6 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     for (byte[] column: columns) {
       builder.addColumns(ByteString.copyFrom(column));
     }
-    builder.setBatch(batch);
     if (startTime != 0) {
       builder.setStartTime(startTime);
     }
