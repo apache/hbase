@@ -100,10 +100,7 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
       LOG.info("Stopping " + this.archiveTracker);
       this.archiveTracker.stop();
     }
-  }
 
-  boolean isArchiving(String tableName) {
-    return this.archiveTracker.keepHFiles(tableName);
   }
 
 }
