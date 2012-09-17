@@ -151,6 +151,13 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
+   * Return length 0 byte array for Filters that don't require special serialization
+   */
+  public byte [] toByteArray() {
+    return new byte[0];
+  }
+
+  /**
    * Default implementation so that writers of custom filters aren't forced to implement.
    *
    * @param other
