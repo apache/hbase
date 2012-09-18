@@ -138,7 +138,7 @@ public class Threads {
   /**
    * @param millis How long to sleep for in milliseconds.
    */
-  public static void sleep(int millis) {
+  public static void sleep(long millis) {
     try {
       Thread.sleep(millis);
     } catch (InterruptedException e) {
@@ -150,7 +150,7 @@ public class Threads {
    * Sleeps for the given amount of time. Retains the thread's interruption status. 
    * @param millis How long to sleep for in milliseconds.
    */
-  public static void sleepRetainInterrupt(int millis) {
+  public static void sleepRetainInterrupt(long millis) {
     try {
       Thread.sleep(millis);
     } catch (InterruptedException e) {

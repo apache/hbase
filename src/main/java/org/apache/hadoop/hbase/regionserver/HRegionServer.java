@@ -143,6 +143,8 @@ import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.ProtocolSignature;
@@ -2891,6 +2893,21 @@ public class HRegionServer implements HRegionInterface,
       + " available");
     }
     return region.getLastFlushTime();
+  }
+
+  @Override
+  public MapWritable getLastFlushTimes() {
+     MapWritable map = new MapWritable();
+     for (HRegion region: this.getOnlineRegions()) {
+       map.put(new BytesWritable(region.getRegionName()),
+           new LongWritable(region.getLastFlushTime()));
+     }
+     return map;
+  }
+
+  @Override
+  public long getCurrentTimeMillis() {
+    return EnvironmentEdgeManager.currentTimeMillis();
   }
 
   public Map<HRegionInfo, String> getSortedOnlineRegionInfosAndOpenDate() {

@@ -37,10 +37,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -74,10 +76,15 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOverloadedException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -434,6 +441,11 @@ public class HConnectionManager {
     // created for, we do not want the thrift layer to hold up IPC threads handling retries.
     private int maxServerRequestedRetries;
 
+    // keep track of servers that have been updated for batchedLoad
+    // tablename -> Map
+    Map<String, ConcurrentMap<HRegionInfo, HServerAddress>> batchedUploadUpdatesMap;
+    private int batchedUploadSoftFlushRetries;
+    private long batchedUploadSoftFlushTimeoutMillis;
     /**
      * constructor
      * @param conf Configuration object
@@ -479,6 +491,12 @@ public class HConnectionManager {
 
       this.master = null;
       this.masterChecked = false;
+      this.batchedUploadSoftFlushRetries =
+          conf.getInt("hbase.client.batched-upload.softflush.retries", 10);
+      this.batchedUploadSoftFlushTimeoutMillis =
+          conf.getLong("hbase.client.batched-upload.softflush.timeout.ms", 60000L); // 1 min
+      batchedUploadUpdatesMap  = new ConcurrentHashMap<String,
+          ConcurrentMap<HRegionInfo, HServerAddress>>();
     }
 
     private long getPauseTime(int tries) {
@@ -1445,6 +1463,9 @@ public class HConnectionManager {
           roe = ex;
           serverRequestedWaitTime = roe.getBackoffTimeMillis();
           continue;
+        } catch (ClientSideDoNotRetryException exp) {
+          // Bail out of the retry loop, immediately
+          throw exp;
         } catch (PreemptiveFastFailException pfe) {
           // Bail out of the retry loop, if the host has been consistently unreachable.
           throw pfe;
@@ -1522,7 +1543,9 @@ public class HConnectionManager {
       boolean couldNotCommunicateWithServer = false;
       boolean retryDespiteFastFailMode = false;
       try {
-        if (instantiateRegionLocation) callable.instantiateRegionLocation(false);
+        if (instantiateRegionLocation) {
+          callable.instantiateRegionLocation(false);
+        }
 
         // Logic to fast fail requests to unreachable servers.
         server = callable.getServerAddress();
@@ -1542,6 +1565,8 @@ public class HConnectionManager {
         return callable.call();
       } catch (PreemptiveFastFailException pfe) {
         throw pfe;
+      } catch (ClientSideDoNotRetryException exp) {
+        throw exp;
       } catch (Throwable t1) {
         Throwable t2 = translateException(t1);
         boolean isLocalException = !(t2 instanceof RemoteException);
@@ -1696,32 +1721,70 @@ public class HConnectionManager {
       occasionallyCleanupFailureInformation();
     }
 
+    private Callable<Long> createCurrentTimeCallable(
+        final HServerAddress address,
+        final HBaseRPCOptions options) {
+      final HConnection connection = this;
+      return new Callable<Long>() {
+        public Long call() throws IOException {
+          return getRegionServerWithoutRetries(
+            new ServerCallableForBatchOps<Long>(connection, address, options) {
+              public Long call() throws IOException {
+                return server.getCurrentTimeMillis();
+              }
+            });
+        }
+      };
+    }
+
+
+    private Callable<MapWritable> createGetLastFlushTimesCallable(
+        final HServerAddress address,
+        final HBaseRPCOptions options) {
+      final HConnection connection = this;
+      return new Callable<MapWritable>() {
+        public MapWritable call() throws IOException {
+          return getRegionServerWithoutRetries(
+            new ServerCallableForBatchOps<MapWritable>(connection, address, options) {
+              public MapWritable call() throws IOException {
+                return server.getLastFlushTimes();
+              }
+            });
+        }
+      };
+    }
+
+    private Callable<Void> createFlushCallable(final HServerAddress address,
+        final HRegionInfo region,
+        final long targetFlushTime,
+        final HBaseRPCOptions options) {
+      final HConnection connection = this;
+      return new Callable<Void>() {
+        public Void  call() throws IOException {
+          return getRegionServerWithoutRetries(
+            new ServerCallableForBatchOps<Void>(connection, address, options) {
+              public Void call() throws IOException {
+                server.flushRegion(region.getRegionName(), targetFlushTime);
+                return null;
+              }
+            });
+      }};
+    }
+
+
     private <R> Callable<MultiResponse> createMultiActionCallable(final HServerAddress address,
         final MultiAction multi, final byte [] tableName,
         final HBaseRPCOptions options) {
       final HConnection connection = this;
+      // no need to track mutations here. Done at the caller.
       return new Callable<MultiResponse>() {
        public MultiResponse call() throws IOException {
          return getRegionServerWithoutRetries(
-             new ServerCallable<MultiResponse>(connection, tableName, null, options) {
+             new ServerCallableForBatchOps<MultiResponse>(connection, address, options) {
                public MultiResponse call() throws IOException {
                  return server.multiAction(multi);
                }
-
-               @Override
-               public void instantiateRegionLocation(boolean reload) throws IOException {
-                  // we don't need to locate the region, since we have been given the address of the
-                  // server. But, let us store the information in this.location, so that
-                  // we can handle failures (i.e. clear cache) if we fail to connect to the RS.
-                  this.location = new HRegionLocation(null, address);
-               }
-
-               @Override
-               public void instantiateServer() throws IOException {
-                 server = connection.getHRegionConnection(address, options);
-               }
-             }
-         );
+             });
        }
      };
    }
@@ -1768,6 +1831,7 @@ public class HConnectionManager {
          Row row = workingList.get(i);
          if (row != null) {
            HRegionLocation loc = locateRegion(tableName, row.getRow(), true);
+
            byte[] regionName = loc.getRegionInfo().getRegionName();
 
            MultiAction actions = actionsByServer.get(loc.getServerAddress());
@@ -1779,6 +1843,8 @@ public class HConnectionManager {
            if (isGets) {
              actions.addGet(regionName, (Get)row, i);
            } else {
+             trackMutationsToTable(tableName,
+                 loc.getRegionInfo(), loc.getServerAddress());
              actions.mutate(regionName, (Mutation)row);
            }
          }
@@ -2204,6 +2270,9 @@ public class HConnectionManager {
           return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
               tableName, row, options) {
             public Integer call() throws IOException {
+              trackMutationsToTable(tableName,
+                  location.getRegionInfo(),
+                  location.getServerAddress());
               return server.put(location.getRegionInfo().getRegionName(), puts);
             }
           });
@@ -2259,6 +2328,9 @@ public class HConnectionManager {
           getRegionServerWithRetries(new ServerCallable<Void>(this.c,
                 tableName, row, options) {
               public Void call() throws IOException {
+                trackMutationsToTable(tableName,
+                    location.getRegionInfo(),
+                    location.getServerAddress());
                 server.mutateRow(location.getRegionInfo().getRegionName(),
                   mutations);
                 return null;
@@ -2284,6 +2356,9 @@ public class HConnectionManager {
           return getRegionServerWithRetries(new ServerCallable<Integer>(this.c,
                 tableName, row, options) {
               public Integer call() throws IOException {
+                trackMutationsToTable(tableName,
+                    location.getRegionInfo(),
+                    location.getServerAddress());
                 return server.delete(location.getRegionInfo().getRegionName(),
                   deletes);
               }
@@ -2326,6 +2401,8 @@ public class HConnectionManager {
           regionPuts.put(address, mput);
         }
         mput.add(regionName, put);
+        trackMutationsToTable(tableName,
+            loc.getRegionInfo(), loc.getServerAddress());
       }
 
       return new ArrayList<MultiPut>(regionPuts.values());
@@ -2378,6 +2455,10 @@ public class HConnectionManager {
           if (singleServer &&
               ex.getCause() instanceof PreemptiveFastFailException) {
             throw (PreemptiveFastFailException)ex.getCause();
+          }
+
+          if (ex.getCause() instanceof ClientSideDoNotRetryException) {
+            throw (ClientSideDoNotRetryException)ex.getCause();
           }
         }
 
@@ -2483,6 +2564,9 @@ public class HConnectionManager {
           roe = ex;
           serverRequestedWaitTime = roe.getBackoffTimeMillis();
           continue;
+        } catch (ClientSideDoNotRetryException exp) {
+          // Bail out of the retry loop, immediately
+          throw exp;
         } catch (PreemptiveFastFailException pfe) {
           throw pfe;
         }
@@ -2527,28 +2611,14 @@ public class HConnectionManager {
       return new Callable<MultiPutResponse>() {
         public MultiPutResponse call() throws IOException {
           return getRegionServerWithoutRetries(
-              new ServerCallable<MultiPutResponse>(connection, null, null, options) {
+              new ServerCallableForBatchOps<MultiPutResponse>(connection, address, options) {
                 public MultiPutResponse call() throws IOException {
+                  // caller of createPutCallable is responsible to track mutations.
                   MultiPutResponse resp = server.multiPut(puts);
                   resp.request = puts;
                   return resp;
                 }
-                @Override
-                public void instantiateRegionLocation(boolean reload)
-                    throws IOException {
-                  // we don't need to locate the region, since we have been given the address of the
-                  // server. But, let us store the information in this.location, so that
-                  // we can handle failures (i.e. clear cache) if we fail to connect to the RS.
-                  // (see HConnectionManager.getRegionServerWithRetries for how it is used to
-                  // call deleteCachedLocation.)
-                  this.location = new HRegionLocation(null, address);
-                }
-                @Override
-                public void instantiateServer() throws IOException {
-                  server = connection.getHRegionConnection(address, options);
-                }
-              }
-          );
+              });
         }
       };
     }
@@ -2615,6 +2685,267 @@ public class HConnectionManager {
         cacheLocation(tableName,
             new HRegionLocation(e.getKey(), e.getValue()));
       }
+    }
+
+    @Override
+    public void startBatchedLoad(byte[] tableName) {
+      batchedUploadUpdatesMap.put(Bytes.toString(tableName),
+          new ConcurrentHashMap<HRegionInfo, HServerAddress>());
+    }
+
+    @Override
+    public void endBatchedLoad(byte[] tableName, HBaseRPCOptions options) throws IOException {
+      Map<HRegionInfo, HServerAddress> regionsUpdated = getRegionsUpdated(tableName);
+
+      // get the current TS from the RegionServer
+      Map<HRegionInfo, Long> targetTSMap = getCurrentTimeForRegions(regionsUpdated, options);
+
+      // loop to ensure that we have flushed beyond the corresponding TS.
+      int tries = 0;
+      long now = EnvironmentEdgeManager.currentTimeMillis();
+      long waitUntilForHardFlush = now + batchedUploadSoftFlushTimeoutMillis;
+
+      while (tries++ < this.batchedUploadSoftFlushRetries
+          && now < waitUntilForHardFlush) {
+        // get the lastFlushedTS from the RegionServer. throws Exception if the region has
+        // moved elsewhere
+        Map<HRegionInfo, Long> flushedTSMap =
+            getRegionFlushTimes(regionsUpdated, options);
+
+        for (Entry<HRegionInfo, Long> entry: targetTSMap.entrySet()) {
+          HRegionInfo region = entry.getKey();
+          long targetTime = entry.getValue().longValue();
+          long flushedTime = flushedTSMap.get(region).longValue();
+          if (flushedTime > targetTime) {
+            targetTSMap.remove(region);
+          }
+          LOG.debug("Region " + region.getEncodedName() + " was flushed at "
+              + flushedTime
+              + (flushedTime > targetTime
+                  ? ". All updates we made are already on disk."
+                  : ". Still waiting for updates to go to the disk.")
+              + " Last update was made "
+              + (flushedTime > targetTime
+                  ? ((flushedTime - targetTime) + " ms before flush.")
+                  : ((targetTime - flushedTime) + " ms after flush.")));
+        }
+
+        if (targetTSMap.isEmpty()) {
+          LOG.info("All regions have been flushed.");
+          break;
+        }
+        LOG.info("Try #" + tries + ". Still waiting to flush " + targetTSMap.size() + " regions.");
+        long sleepTime = getPauseTime(tries);
+        Threads.sleep(sleepTime);
+        now = EnvironmentEdgeManager.currentTimeMillis();
+      }
+
+      // if we have not succeded in flushing all. Force flush.
+      if (!targetTSMap.isEmpty()) {
+        LOG.info("Forcing regions to flush.");
+        flushRegionsAtServers(targetTSMap, regionsUpdated, options);
+      }
+
+      clearMutationsToTable(tableName);
+    }
+
+    private void trackMutationsToTable(byte[] tableNameBytes,
+        HRegionInfo regionInfo, HServerAddress serverAddress) throws IOException {
+      String tableName = Bytes.toString(tableNameBytes);
+      HServerAddress oldAddress  = !batchedUploadUpdatesMap.containsKey(tableName) ? null
+          : batchedUploadUpdatesMap.get(tableName).putIfAbsent(regionInfo, serverAddress);
+      if (oldAddress != null && !oldAddress.equals(serverAddress)) {
+        throw new ClientSideDoNotRetryException("Region "
+            + regionInfo.getRegionNameAsString() + " moved from " + oldAddress
+            + ". but has moved to." + serverAddress );
+      }
+    }
+
+    /**
+     * Return a map of regions (and the servers they were on) to which
+     * mutations were made since {@link startBatchedLoad(tableName)} was
+     * called.
+     * @param tableName
+     * @return Map containing regionInfo, and the servers they were on.
+     */
+    private Map<HRegionInfo, HServerAddress> getRegionsUpdated(byte[] tableName) {
+      return batchedUploadUpdatesMap.get(Bytes.toString(tableName));
+    }
+
+    /**
+     * Clear the map of regions (and the servers) contacted for the specified
+     * table.
+     * @param tableName
+     */
+    private void clearMutationsToTable(byte[] tableNameBytes) {
+      String tableName = Bytes.toString(tableNameBytes);
+      if (batchedUploadUpdatesMap.containsKey(tableName)) {
+        batchedUploadUpdatesMap.get(tableName).clear();
+      }
+    }
+
+    /**
+     * Get the current time in milliseconds at the server for each
+     * of the regions in the map.
+     * @param regionsContacted -- map of regions to server address
+     * @param options -- rpc options to use
+     * @return Map of regions to Long, representing current time in mills at the server
+     * @throws IOException if (a) could not talk to the server, or (b) any of the regions
+     * have moved from the location indicated in regionsContacted.
+     */
+    private Map<HRegionInfo, Long> getCurrentTimeForRegions(
+        Map<HRegionInfo, HServerAddress> regionsContacted,
+        HBaseRPCOptions options) throws IOException {
+
+      Map<HRegionInfo, Long> currentTimeForRegions =
+          new HashMap<HRegionInfo, Long>();
+
+      Map<HServerAddress, Long> currentTimeAtServers =
+          new HashMap<HServerAddress, Long>();
+      HashMap<HServerAddress, Future<Long>> futures =
+          new HashMap<HServerAddress,Future<Long>>();
+
+      // get flush times from that server
+      for (HServerAddress server: regionsContacted.values()) {
+        futures.put(server, HTable.multiActionThreadPool.submit(
+            createCurrentTimeCallable(server, options)));
+      }
+
+      // populate serverTimes;
+      for (HServerAddress server: futures.keySet()) {
+        Future<Long> future = futures.get(server);
+        try {
+          currentTimeAtServers.put(server, future.get());
+        } catch (InterruptedException e) {
+          throw new IOException("Interrupted: Could not get current time from server"
+                      + server);
+        } catch (ExecutionException e) {
+          throw new IOException("Could not get current time from " + server,
+              e.getCause());
+        }
+      }
+
+      for(HRegionInfo region: regionsContacted.keySet()) {
+        HServerAddress serverToLookFor = regionsContacted.get(region);
+        Long currentTime = currentTimeAtServers.get(serverToLookFor);
+        currentTimeForRegions.put(region, currentTime);
+      }
+      return currentTimeForRegions;
+    }
+
+    /**
+     * Ask the regionservers to flush the given regions, if they have not flushed
+     * past the desired time.
+     * @param targetTSMap -- map of regions to the desired flush time
+     * @param regionsContacted -- map of regions to server address
+     * @param options -- rpc options to use
+     * @throws IOException if (a) could not talk to the server, or (b) any of the regions
+     * have moved from the location indicated in regionsContacted.
+     */
+    private void  flushRegionsAtServers(Map<HRegionInfo, Long> targetTSMap,
+        Map<HRegionInfo, HServerAddress> regionsContacted,
+        HBaseRPCOptions options) throws IOException {
+
+      Map<HRegionInfo, Future<Void>> futures =
+          new HashMap<HRegionInfo, Future<Void>>();
+
+      // get flush times from that server
+      for (HRegionInfo region: targetTSMap.keySet()) {
+        HServerAddress server = regionsContacted.get(region);
+        long targetFlushTime = targetTSMap.get(region).longValue();
+
+        LOG.debug("forcing a flush at " + server.getHostname());
+        futures.put(region, HTable.multiActionThreadPool.submit(
+            // use targetFlushTime + 1 to force a flush even if they are equal.
+            createFlushCallable(server, region, targetFlushTime + 1, options)));
+      }
+
+      boolean toCancel = false;
+      IOException toThrow = null;
+      // populate regionTimes;
+      for(HRegionInfo region: futures.keySet()) {
+        Future<Void> future = futures.get(region);
+        try {
+          if (!toCancel) {
+            future.get();
+          } else {
+            future.cancel(true);
+          }
+        } catch (InterruptedException e) {
+          toCancel = true;
+          toThrow = new IOException("Got Interrupted: Could not flush region " + region);
+        } catch (ExecutionException e) {
+          toThrow = new IOException("Could not flush region " + region, e.getCause());
+        }
+      }
+      if (toThrow != null) {
+        throw toThrow;
+      }
+    }
+
+    /**
+     * Ask the regionservers for the last flushed time for each regions.
+     * @param regionsContacted -- map of regions to server address
+     * @param options -- rpc options to use
+     * @return Map from the region to the region's last flushed time.
+     * @throws IOException if (a) could not talk to the server, or (b) any of the regions
+     * have moved from the location indicated in regionsContacted.
+     */
+    private Map<HRegionInfo, Long> getRegionFlushTimes(
+        Map<HRegionInfo, HServerAddress> regionsContacted,
+        HBaseRPCOptions options) throws IOException {
+
+      Map<HRegionInfo, Long> regionFlushTimesMap =
+          new HashMap<HRegionInfo, Long>();
+
+      Map<HServerAddress, MapWritable> rsRegionTimes =
+          new HashMap<HServerAddress, MapWritable>();
+      Map<HServerAddress, Future<MapWritable>> futures =
+          new HashMap<HServerAddress, Future<MapWritable>>();
+
+      // get flush times from that server
+      for (HServerAddress server: regionsContacted.values()) {
+        futures.put(server, HTable.multiActionThreadPool.submit(
+            createGetLastFlushTimesCallable(server, options)));
+      }
+
+      boolean toCancel = false;
+      IOException toThrow = null;
+      // populate flushTimes;
+      for(HServerAddress server: futures.keySet()) {
+        Future<MapWritable> future = futures.get(server);
+        try {
+          if (!toCancel) {
+            rsRegionTimes.put(server, future.get());
+          } else {
+            future.cancel(true);
+          }
+        } catch (InterruptedException e) {
+          toThrow = new IOException("Got Interrupted: Could not get last flushed times");
+        } catch (ExecutionException e) {
+          toThrow = new IOException("Could not get last flushed times from " + server, e.getCause());
+        }
+      }
+      if (toThrow != null) {
+        throw toThrow;
+      }
+
+      for(HRegionInfo region: regionsContacted.keySet()) {
+        HServerAddress serverToLookFor = regionsContacted.get(region);
+
+        MapWritable serverMap = rsRegionTimes.get(serverToLookFor);
+        LongWritable lastFlushedTime = (LongWritable) serverMap.get(
+            new BytesWritable(region.getRegionName()));
+
+        if (lastFlushedTime == null) { // The region is no longer on the server
+          throw new ClientSideDoNotRetryException("Region "
+                                + region.getRegionNameAsString() + " was on "
+                                + serverToLookFor + " but no longer there." );
+        }
+
+        regionFlushTimesMap.put(region, new Long(lastFlushedTime.get()));
+      }
+      return regionFlushTimesMap;
     }
   }
 }

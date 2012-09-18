@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.io.MapWritable;
 
 /**
  * Clients interact with HRegionServers using a handle to the HRegionInterface.
@@ -93,10 +95,22 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
     throws IllegalArgumentException, IOException;
 
   /**
-   * Gets last flush time for the given region
+   * Gets last flush time (in milli sec) for the given region
    * @return the last flush time for a region
    */
   public long getLastFlushTime(byte[] regionName);
+
+  /**
+   * Gets last flush time (in milli sec) for all regions on the server
+   * @return a map of regionName to the last flush time for the region
+   */
+  public MapWritable getLastFlushTimes();
+
+  /**
+   * Gets the current time (in milli sec) at the region server
+   * @return time in milli seconds at the regionserver.
+   */
+  public long getCurrentTimeMillis();
 
   /**
    * Get a list of store files for a particular CF in a particular region
@@ -393,6 +407,6 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
   /**
    * Update the configuration.
    */
-  public void updateConfiguration()	throws IOException;
+  public void updateConfiguration() throws IOException;
 
 }

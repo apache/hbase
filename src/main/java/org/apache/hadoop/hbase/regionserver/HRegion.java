@@ -273,7 +273,7 @@ public class HRegion implements HeapSize {
 
   final long timestampTooNew;
   final long memstoreFlushSize;
-  private volatile long lastFlushTime;
+  private volatile long lastFlushTime; // start time for the last successful flush.
   private List<Pair<Long,Long>> recentFlushes
     = new ArrayList<Pair<Long,Long>>();
   final FlushRequester flushListener;
@@ -1398,11 +1398,10 @@ public class HRegion implements HeapSize {
   protected boolean internalFlushcache(final HLog wal, final long myseqid,
       MonitoredTask status) throws IOException {
     final long startTime = EnvironmentEdgeManager.currentTimeMillis();
-    // Clear flush flag.
-    // Record latest flush time
-    this.lastFlushTime = startTime;
     // If nothing to flush, return and avoid logging start/stop flush.
     if (this.memstoreSize.get() <= 0) {
+      // Record latest flush time
+      this.lastFlushTime = startTime;
       return false;
     }
     if (LOG.isDebugEnabled()) {
@@ -1528,6 +1527,8 @@ public class HRegion implements HeapSize {
 
     // If we get to here, the HStores have been written. If we get an
     // error in completeCacheFlush it will release the lock it is holding
+    // update lastFlushTime after the HStores have been written.
+    this.lastFlushTime = startTime;
 
     // B.  Write a FLUSHCACHE-COMPLETE message to the log.
     //     This tells future readers that the HStores were emitted correctly,
@@ -1861,6 +1862,7 @@ public class HRegion implements HeapSize {
     }
     HRegion.writeOps.incrementAndGet();
   }
+
 
   /**
    * @param put

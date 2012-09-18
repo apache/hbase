@@ -356,4 +356,24 @@ public interface HConnection extends Closeable {
    */
   public void prewarmRegionCache(final byte[] tableName,
       final Map<HRegionInfo, HServerAddress> regions);
+
+  /**
+   * Starts tracking the updates made to the tableName so that
+   * we can ensure that the updates were completed and flushed to
+   * disk at the end of the job.
+   * @param tableName -- the table for which we should start tracking
+   */
+  public void startBatchedLoad(byte[] tableName);
+
+  /**
+   * Ensure that all the updates made to the table, since
+   * startBatchedLoad was called are persisted. This method
+   * waits for all the regionservers contacted to
+   * flush all the data written so far. If this doesn't happen
+   * within a configurable amount of time, it requests the regions
+   * to flush.
+   * @param tableName -- tableName to flush all puts/deletes for.
+   * @param options -- hbase rpc options to use when talking to regionservers
+   */
+  public void endBatchedLoad(byte[] tableName, HBaseRPCOptions options) throws IOException;
 }

@@ -1322,4 +1322,23 @@ public class HTable implements HTableInterface {
   public Compression.Algorithm getRxCompression() {
     return this.options.getRxCompression();
   }
+
+  /**
+   * Starts tracking the updates made to this table so that
+   * we can ensure that the updates were completed and flushed to
+   * disk at the end of the job.
+   */
+  public void startBatchedLoad() {
+    connection.startBatchedLoad(tableName);
+  }
+
+  /**
+   * Ensure that all the updates made to the table, since
+   * startBatchedLoad was called are persisted. This method
+   * waits for all the regionservers contacted, to
+   * flush all the data written so far.
+   */
+  public void endBatchedLoad() throws IOException {
+    connection.endBatchedLoad(tableName, this.options);
+  }
 }
