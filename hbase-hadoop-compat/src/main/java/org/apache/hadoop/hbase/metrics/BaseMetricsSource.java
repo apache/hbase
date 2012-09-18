@@ -68,6 +68,24 @@ public interface BaseMetricsSource {
   public void incCounters(String counterName, long delta);
 
   /**
+   * Add some value to a histogram.
+   *
+   * @param name the name of the histogram
+   * @param value the value to add to the histogram
+   */
+  public void updateHistogram(String name, long value);
+
+
+  /**
+   * Add some value to a Quantile (An accurate histogram).
+   *
+   * @param name the name of the quantile
+   * @param value the value to add to the quantile
+   */
+  public void updateQuantile(String name, long value);
+
+
+  /**
    * Remove a counter and stop announcing it to metrics2.
    *
    * @param key

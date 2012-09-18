@@ -51,8 +51,8 @@ public class MasterMetrics  {
    * @param size length of original HLogs that were split
    */
   public synchronized void addSplit(long time, long size) {
-    //TODO use new metrics histogram
-
+    masterMetricsSource.updateSplitTime(time);
+    masterMetricsSource.updateSplitSize(size);
   }
 
   /**

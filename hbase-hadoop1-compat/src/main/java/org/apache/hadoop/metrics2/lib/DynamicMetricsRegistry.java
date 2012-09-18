@@ -178,6 +178,46 @@ public class DynamicMetricsRegistry {
   }
 
   /**
+   * Create a new histogram.
+   * @param name Name of the histogram.
+   * @return A new MutableHistogram
+   */
+  public MetricMutableHistogram newHistogram(String name) {
+    return newHistogram(name, "");
+  }
+
+  /**
+   * Create a new histogram.
+   * @param name The name of the histogram
+   * @param desc The description of the data in the histogram.
+   * @return A new MutableHistogram
+   */
+  public MetricMutableHistogram newHistogram(String name, String desc) {
+    MetricMutableHistogram histo = new MetricMutableHistogram(name, desc);
+    return addNewMetricIfAbsent(name, histo, MetricMutableHistogram.class);
+  }
+
+  /**
+   * Create a new MutableQuantile(A more accurate histogram).
+   * @param name The name of the histogram
+   * @return a new MutableQuantile
+   */
+  public MetricMutableQuantiles newQuantile(String name) {
+    return newQuantile(name, "");
+  }
+
+  /**
+   * Create a new MutableQuantile(A more accurate histogram).
+   * @param name The name of the histogram
+   * @param desc Description of the data.
+   * @return a new MutableQuantile
+   */
+  public MetricMutableQuantiles newQuantile(String name, String desc) {
+    MetricMutableQuantiles histo = new MetricMutableQuantiles(name, desc);
+    return addNewMetricIfAbsent(name, histo, MetricMutableQuantiles.class);
+  }
+
+  /**
    * Set the metrics context tag
    * @param name of the context
    * @return the registry itself as a convenience
@@ -277,7 +317,7 @@ public class DynamicMetricsRegistry {
     if (metric == null) {
 
       //Create the potential new gauge.
-      MetricMutableGaugeLong newGauge = new MetricMutableGaugeLong(gaugeName, "",
+      MetricMutableGaugeLong newGauge = mf.newGauge(gaugeName, "",
               potentialStartingValue);
 
         // Try and put the gauge in.  This is atomic.
@@ -313,7 +353,7 @@ public class DynamicMetricsRegistry {
     MetricMutable counter = metricsMap.get(counterName);
     if (counter == null) {
       MetricMutableCounterLong newCounter =
-              new MetricMutableCounterLong(counterName, "", potentialStartingValue);
+              mf.newCounter(counterName, "", potentialStartingValue);
       counter = metricsMap.putIfAbsent(counterName, newCounter);
       if (counter == null) {
         return newCounter;
@@ -326,6 +366,46 @@ public class DynamicMetricsRegistry {
     }
 
     return (MetricMutableCounterLong) counter;
+  }
+
+  public MetricMutableHistogram getHistogram(String histoName) {
+    //See getLongGauge for description on how this works.
+    MetricMutable histo = metricsMap.get(histoName);
+    if (histo == null) {
+      MetricMutableHistogram newHisto =
+          new MetricMutableHistogram(histoName, "");
+      histo = metricsMap.putIfAbsent(histoName, newHisto);
+      if (histo == null) {
+        return newHisto;
+      }
+    }
+
+    if (!(histo instanceof MetricMutableHistogram)) {
+      throw new MetricsException("Metric already exists in registry for metric name: " +
+          name + "and not of type MetricMutableHistogram");
+    }
+
+    return (MetricMutableHistogram) histo;
+  }
+
+  public MetricMutableQuantiles getQuantile(String histoName) {
+    //See getLongGauge for description on how this works.
+    MetricMutable histo = metricsMap.get(histoName);
+    if (histo == null) {
+      MetricMutableQuantiles newHisto =
+          new MetricMutableQuantiles(histoName, "");
+      histo = metricsMap.putIfAbsent(histoName, newHisto);
+      if (histo == null) {
+        return newHisto;
+      }
+    }
+
+    if (!(histo instanceof MetricMutableQuantiles)) {
+      throw new MetricsException("Metric already exists in registry for metric name: " +
+          name + "and not of type MetricMutableQuantiles");
+    }
+
+    return (MetricMutableQuantiles) histo;
   }
 
   private<T extends MetricMutable> T

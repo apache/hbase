@@ -55,6 +55,12 @@ public interface MasterMetricsSource extends BaseMetricsSource {
   public static final String SERVER_NAME_NAME = "serverName";
   public static final String CLUSTER_ID_NAME = "clusterId";
   public static final String IS_ACTIVE_MASTER_NAME = "isActiveMaster";
+  public static final String SPLIT_TIME_NAME = "hlogSplitTime";
+  public static final String SPLIT_SIZE_NAME = "hlogSplitSize";
+  public static final String CLUSTER_REQUESTS_NAME = "clusterRequests";
+  public static final String RIT_COUNT_NAME = "ritCount";
+  public static final String RIT_COUNT_OVER_THRESHOLD_NAME = "ritCountOverThreshold";
+  public static final String RIT_OLDEST_AGE_NAME = "ritOldestAge";
   public static final String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
   public static final String MASTER_START_TIME_DESC = "Master Start Time";
   public static final String AVERAGE_LOAD_DESC = "AverageLoad";
@@ -64,6 +70,8 @@ public interface MasterMetricsSource extends BaseMetricsSource {
   public static final String SERVER_NAME_DESC = "Server Name";
   public static final String CLUSTER_ID_DESC = "Cluster Id";
   public static final String IS_ACTIVE_MASTER_DESC = "Is Active Master";
+  public static final String SPLIT_TIME_DESC = "Time it takes to finish HLog.splitLog()";
+  public static final String SPLIT_SIZE_DESC = "Size of HLog files being split";
 
 
   /**
@@ -89,5 +97,9 @@ public interface MasterMetricsSource extends BaseMetricsSource {
    * @param age age of the oldest RIT.
    */
   public void setRITOldestAge(long age);
+
+  public void updateSplitTime(long time);
+
+  public void updateSplitSize(long size);
 
 }

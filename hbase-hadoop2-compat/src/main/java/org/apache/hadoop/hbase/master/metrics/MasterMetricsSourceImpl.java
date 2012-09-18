@@ -24,16 +24,20 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MutableHistogram;
 
 /** Hadoop2 implementation of MasterMetricsSource. */
 public class MasterMetricsSourceImpl
     extends BaseMetricsSourceImpl implements MasterMetricsSource {
+
 
   MutableCounterLong clusterRequestsCounter;
   MutableGaugeLong ritGauge;
   MutableGaugeLong ritCountOverThresholdGauge;
   MutableGaugeLong ritOldestAgeGauge;
   private final MasterMetricsWrapper masterWrapper;
+  private MutableHistogram splitTimeHisto;
+  private MutableHistogram splitSizeHisto;
 
   public MasterMetricsSourceImpl(MasterMetricsWrapper masterMetricsWrapper) {
     this(METRICS_NAME,
@@ -50,6 +54,12 @@ public class MasterMetricsSourceImpl
                                  MasterMetricsWrapper masterWrapper) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
     this.masterWrapper = masterWrapper;
+    clusterRequestsCounter = metricsRegistry.newCounter(CLUSTER_REQUESTS_NAME, "", 0l);
+    ritGauge = metricsRegistry.newGauge(RIT_COUNT_NAME, "", 0l);
+    ritCountOverThresholdGauge = metricsRegistry.newGauge(RIT_COUNT_OVER_THRESHOLD_NAME, "", 0l);
+    ritOldestAgeGauge = metricsRegistry.newGauge(RIT_OLDEST_AGE_NAME, "", 0l);
+    splitTimeHisto = metricsRegistry.newHistogram(SPLIT_SIZE_NAME, SPLIT_SIZE_DESC);
+    splitSizeHisto = metricsRegistry.newHistogram(SPLIT_TIME_NAME, SPLIT_TIME_DESC);
   }
 
  @Override
@@ -75,6 +85,16 @@ public class MasterMetricsSourceImpl
 
   public void setRITOldestAge(long ritCount) {
     ritCountOverThresholdGauge.set(ritCount);
+  }
+
+  @Override
+  public void updateSplitTime(long time) {
+    splitTimeHisto.add(time);
+  }
+
+  @Override
+  public void updateSplitSize(long size) {
+    splitSizeHisto.add(size);
   }
 
   @Override

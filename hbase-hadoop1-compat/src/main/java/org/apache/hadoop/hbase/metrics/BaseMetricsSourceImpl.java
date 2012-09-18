@@ -27,6 +27,8 @@ import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MetricMutable;
 import org.apache.hadoop.metrics2.lib.MetricMutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MetricMutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MetricMutableHistogram;
+import org.apache.hadoop.metrics2.lib.MetricMutableQuantiles;
 import org.apache.hadoop.metrics2.source.JvmMetricsSource;
 
 import java.util.Map;
@@ -126,6 +128,18 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
     MetricMutableCounterLong counter = metricsRegistry.getLongCounter(key, 0l);
     counter.incr(delta);
 
+  }
+
+  @Override
+  public void updateHistogram(String name, long value) {
+    MetricMutableHistogram histo = metricsRegistry.getHistogram(name);
+    histo.add(value);
+  }
+
+  @Override
+  public void updateQuantile(String name, long value) {
+    MetricMutableQuantiles histo = metricsRegistry.getQuantile(name);
+    histo.add(value);
   }
 
   /**
