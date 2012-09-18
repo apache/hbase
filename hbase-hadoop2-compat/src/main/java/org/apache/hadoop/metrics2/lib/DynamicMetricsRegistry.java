@@ -465,4 +465,8 @@ public class DynamicMetricsRegistry {
 
     return (T) metric;
   }
+
+  public void clearMetrics() {
+    metricsMap.clear();
+  }
 }

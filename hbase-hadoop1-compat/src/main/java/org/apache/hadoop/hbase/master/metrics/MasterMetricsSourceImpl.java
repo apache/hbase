@@ -26,18 +26,16 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.MetricMutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MetricMutableGaugeLong;
 
-/**
- * Hadoop1 implementation of MasterMetricsSource.
- */
+/** Hadoop1 implementation of MasterMetricsSource. */
 public class MasterMetricsSourceImpl
-        extends BaseMetricsSourceImpl implements MasterMetricsSource {
+    extends BaseMetricsSourceImpl implements MasterMetricsSource {
 
   private static final Log LOG = LogFactory.getLog(MasterMetricsSourceImpl.class.getName());
 
-  final MetricMutableCounterLong clusterRequestsCounter;
-  final MetricMutableGaugeLong ritGauge;
-  final MetricMutableGaugeLong ritCountOverThresholdGauge;
-  final MetricMutableGaugeLong ritOldestAgeGauge;
+  MetricMutableCounterLong clusterRequestsCounter;
+  MetricMutableGaugeLong ritGauge;
+  MetricMutableGaugeLong ritCountOverThresholdGauge;
+  MetricMutableGaugeLong ritOldestAgeGauge;
 
   private final MasterMetricsWrapper masterWrapper;
 
@@ -51,12 +49,16 @@ public class MasterMetricsSourceImpl
                                  String metricsJmxContext,
                                  MasterMetricsWrapper masterWrapper) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
-
     this.masterWrapper = masterWrapper;
-    clusterRequestsCounter = metricsRegistry.newCounter("cluster_requests", "",  0l);
-    ritGauge = metricsRegistry.newGauge("ritCount", "", 0l);
-    ritCountOverThresholdGauge = metricsRegistry.newGauge("ritCountOverThreshold","", 0l);
-    ritOldestAgeGauge = metricsRegistry.newGauge("ritOldestAge", "", 0l);
+  }
+
+  @Override
+  public void init() {
+    this.metricsRegistry.clearMetrics();
+    clusterRequestsCounter = getMetricsRegistry().getLongCounter("cluster_requests", 0);
+    ritGauge = getMetricsRegistry().getLongGauge("ritCount", 0);
+    ritCountOverThresholdGauge = getMetricsRegistry().getLongGauge("ritCountOverThreshold", 0);
+    ritOldestAgeGauge = getMetricsRegistry().getLongGauge("ritOldestAge", 0);
   }
 
   public void incRequests(final int inc) {
@@ -110,4 +112,5 @@ public class MasterMetricsSourceImpl
 
     metricsRegistry.snapshot(metricsRecordBuilder, true);
   }
+
 }

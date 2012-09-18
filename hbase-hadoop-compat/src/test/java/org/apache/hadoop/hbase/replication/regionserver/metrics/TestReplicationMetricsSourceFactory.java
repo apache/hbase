@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,29 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.rest.metrics;
+package org.apache.hadoop.hbase.replication.regionserver.metrics;
 
-import javax.management.ObjectName;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.junit.Test;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.metrics.MetricsMBeanBase;
+/**
+ *  Test for the CompatibilitySingletonFactory and building ReplicationMetricsSource
+ */
+public class TestReplicationMetricsSourceFactory {
 
-import org.apache.hadoop.metrics.util.MBeanUtil;
-import org.apache.hadoop.metrics.util.MetricsRegistry;
-
-@InterfaceAudience.Private
-public class RESTStatistics  extends MetricsMBeanBase {
-  private final ObjectName mbeanName;
-
-  public RESTStatistics(MetricsRegistry registry) {
-    super(registry, "restStatistics");
-    mbeanName = MBeanUtil.registerMBean("rest", "restStatistics", this);
+  @Test(expected=RuntimeException.class)
+  public void testGetInstanceNoHadoopCompat() throws Exception {
+    //This should throw an exception because there is no compat lib on the class path.
+    CompatibilitySingletonFactory.getInstance(ReplicationMetricsSource.class);
   }
-
-  public void shutdown() {
-    if (mbeanName != null) {
-      MBeanUtil.unregisterMBean(mbeanName);
-    }
-  }
-
 }

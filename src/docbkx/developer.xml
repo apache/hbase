@@ -128,13 +128,13 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
        <title>Building HBase</title>
       <section xml:id="build.basic">
        <title>Basic Compile</title>
-       <para>Thanks to maven, building HBase is easy. You can read about the various maven commands in <xref linkend="maven.build.commands"/>, but the simplest command to compile HBase from its java source code is:
+       <para>Thanks to maven, building HBase is pretty easy. You can read about the various maven commands in <xref linkend="maven.build.commands"/>, but the simplest command to compile HBase from its java source code is:
        <programlisting>
-mvn compile
+mvn package -DskipTests
        </programlisting>
        Or, to clean up before compiling:
        <programlisting>
-mvn clean compile
+mvn clean package -DskipTests
        </programlisting>
        With Eclipse set up as explained above in <xref linkend="eclipse"/>, you can also simply use the build command in Eclipse. To create the full installable HBase package takes a little bit more work, so read on. 
        </para>

@@ -30,6 +30,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -159,9 +160,13 @@ public class TestCheckTestClasses {
 
     File[] files = baseDirectory.listFiles(TEST_CLASS_FILE_FILTER);
     assertNotNull(files);
-
+    Pattern p = Pattern.compile("hbase-hadoop\\d?-compat");
     for (File file : files) {
       final String fileName = file.getName();
+      if (p.matcher(file.getAbsolutePath()).find()) {
+        continue;
+      }
+
       if (file.isDirectory()) {
         classes.addAll(findTestClasses(file, packageName + "." + fileName));
       } else {

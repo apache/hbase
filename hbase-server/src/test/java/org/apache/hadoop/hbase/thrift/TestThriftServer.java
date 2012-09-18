@@ -31,11 +31,13 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
@@ -66,6 +68,8 @@ import org.junit.experimental.categories.Category;
 public class TestThriftServer {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestThriftServer.class);
+  private static final MetricsAssertHelper metricsHelper = CompatibilityFactory
+      .getInstance(MetricsAssertHelper.class);
   protected static final int MAXVERSIONS = 3;
 
   private static ByteBuffer asByteBuffer(String i) {
@@ -164,14 +168,14 @@ public class TestThriftServer {
     Hbase.Iface handler = getHandlerForMetricsTest(metrics, conf);
     createTestTables(handler);
     dropTestTables(handler);
-    verifyMetrics(metrics, "createTable_num_ops", 2);
-    verifyMetrics(metrics, "deleteTable_num_ops", 2);
-    verifyMetrics(metrics, "disableTable_num_ops", 2);
+    metricsHelper.assertCounter("createTable_num_ops", 2, metrics.getSource());
+    metricsHelper.assertCounter("deleteTable_num_ops", 2, metrics.getSource());
+    metricsHelper.assertCounter("disableTable_num_ops", 2, metrics.getSource());
     handler.getTableNames(); // This will have an artificial delay.
 
-    // 3 to 6 seconds (to account for potential slowness), measured in nanoseconds.
-    verifyMetricRange(metrics, "getTableNames_avg_time", 3L * 1000 * 1000 * 1000,
-        6L * 1000 * 1000 * 1000);
+    // 3 to 6 seconds (to account for potential slowness), measured in nanoseconds
+   metricsHelper.assertGaugeGt("getTableNames_avg_time", 3L * 1000 * 1000 * 1000, metrics.getSource());
+   metricsHelper.assertGaugeLt("getTableNames_avg_time",6L * 1000 * 1000 * 1000, metrics.getSource());
   }
 
   private static Hbase.Iface getHandlerForMetricsTest(ThriftMetrics metrics, Configuration conf)
@@ -181,17 +185,9 @@ public class TestThriftServer {
   }
 
   private static ThriftMetrics getMetrics(Configuration conf) throws Exception {
-    setupMetricsContext();
-    return new ThriftMetrics(ThriftServerRunner.DEFAULT_LISTEN_PORT, conf, Hbase.Iface.class);
+    return new ThriftMetrics( conf, ThriftMetrics.ThriftServerType.ONE);
   }
 
-  private static void setupMetricsContext() throws IOException {
-    ContextFactory factory = ContextFactory.getFactory();
-    factory.setAttribute(ThriftMetrics.CONTEXT_NAME + ".class",
-        NoEmitMetricsContext.class.getName());
-    MetricsUtil.getContext(ThriftMetrics.CONTEXT_NAME)
-               .createRecord(ThriftMetrics.CONTEXT_NAME).remove();
-  }
 
   public static void createTestTables(Hbase.Iface handler) throws Exception {
     // Create/enable/disable/delete tables, ensure methods act correctly
@@ -222,31 +218,6 @@ public class TestThriftServer {
     handler.disableTable(tableAname);*/
     handler.deleteTable(tableAname);
     assertEquals(handler.getTableNames().size(), 0);
-  }
-
-  private static void verifyMetrics(ThriftMetrics metrics, String name, long expectValue)
-      throws Exception {
-    long metricVal = getMetricValue(metrics, name);
-    assertEquals(expectValue, metricVal);
-  }
-
-  private static void verifyMetricRange(ThriftMetrics metrics, String name,
-      long minValue, long maxValue)
-      throws Exception {
-    long metricVal = getMetricValue(metrics, name);
-    if (metricVal < minValue || metricVal > maxValue) {
-      throw new AssertionError("Value of metric " + name + " is outside of the expected " +
-          "range [" +  minValue + ", " + maxValue + "]: " + metricVal);
-    }
-  }
-
-  private static long getMetricValue(ThriftMetrics metrics, String name) {
-    MetricsContext context = MetricsUtil.getContext(
-        ThriftMetrics.CONTEXT_NAME);
-    metrics.doUpdates(context);
-    OutputRecord record = context.getAllRecords().get(
-        ThriftMetrics.CONTEXT_NAME).iterator().next();
-    return record.getMetric(name).longValue();
   }
 
   public void doTestIncrements() throws Exception {

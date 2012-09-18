@@ -16,26 +16,22 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.master.metrics;
+package org.apache.hadoop.hbase.replication.regionserver.metrics;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.junit.Test;
 
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 /**
- *  Test for MasterMetricsSourceImpl
+ *  Test to make sure that ReplicationMetricsSourceImpl is hooked up to ServiceLoader
  */
-public class MasterMetricsSourceImplTest {
+public class TestReplicationMetricsSourceImpl {
 
   @Test
   public void testGetInstance() throws Exception {
-    MasterMetricsSourceFactory masterMetricsSourceFactory = CompatibilitySingletonFactory
-        .getInstance(MasterMetricsSourceFactory.class);
-    MasterMetricsSource masterMetricsSource = masterMetricsSourceFactory.create(null);
-    assertTrue(masterMetricsSource instanceof MasterMetricsSourceImpl);
-    assertSame(masterMetricsSourceFactory, CompatibilitySingletonFactory.getInstance(MasterMetricsSourceFactory.class));
+    ReplicationMetricsSource rms = CompatibilitySingletonFactory
+        .getInstance(ReplicationMetricsSource.class);
+    assertTrue(rms instanceof ReplicationMetricsSourceImpl);
   }
-
 }

@@ -235,7 +235,7 @@ public class ThriftServerRunner implements Runnable {
   public ThriftServerRunner(Configuration conf, HBaseHandler handler) {
     this.conf = HBaseConfiguration.create(conf);
     this.listenPort = conf.getInt(PORT_CONF_KEY, DEFAULT_LISTEN_PORT);
-    this.metrics = new ThriftMetrics(listenPort, conf, Hbase.Iface.class);
+    this.metrics = new ThriftMetrics(conf, ThriftMetrics.ThriftServerType.ONE);
     handler.initMetrics(metrics);
     this.handler = HbaseHandlerMetricsProxy.newInstance(handler, metrics, conf);
   }

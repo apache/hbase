@@ -16,22 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.replication.regionserver.metrics;
+package org.apache.hadoop.hbase.thrift.metrics;
 
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.junit.Test;
+/** Factory that will be used to create metrics sources for the two diffent types of thrift servers. */
+public interface ThriftServerMetricsSourceFactory {
 
-import static org.junit.Assert.assertTrue;
+  public static final String METRICS_NAME = "Thrift";
+  public static final String METRICS_DESCRIPTION = "Thrift Server Metrics";
+  public static final String THRIFT_ONE_METRICS_CONTEXT = "thrift-one";
+  public static final String THRIFT_ONE_JMX_CONTEXT = "Thrift,sub=ThriftOne";
+  public static final String THRIFT_TWO_METRICS_CONTEXT = "thrift-two";
+  public static final String THRIFT_TWO_JMX_CONTEXT = "Thrift,sub=ThriftTwo";
 
-/**
- *  Test to make sure that ReplicationMetricsSourceImpl is hooked up to ServiceLoader
- */
-public class ReplicationMetricsSourceImplTest {
+  public ThriftServerMetricsSource createThriftOneSource();
 
-  @Test
-  public void testGetInstance() throws Exception {
-    ReplicationMetricsSource rms = CompatibilitySingletonFactory
-        .getInstance(ReplicationMetricsSource.class);
-    assertTrue(rms instanceof ReplicationMetricsSourceImpl);
-  }
+  public ThriftServerMetricsSource createThriftTwoSource();
+
 }

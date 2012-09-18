@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.master.metrics.MasterMetricsSource;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -28,12 +27,11 @@ import java.util.Map;
 import java.util.ServiceLoader;
 
 /**
- *  Factory for classes supplied by hadoop compatibility modules.
+ *  Factory for classes supplied by hadoop compatibility modules.  Only one of each class will be
+ *  created.
  */
-public class CompatibilitySingletonFactory {
+public class CompatibilitySingletonFactory extends CompatibilityFactory {
   private static final Log LOG = LogFactory.getLog(CompatibilitySingletonFactory.class);
-  public static final String EXCEPTION_START = "Could not create  ";
-  public static final String EXCEPTION_END = " Is the hadoop compatibility jar on the classpath?";
 
   private static final Map<Class, Object> instances = new HashMap<Class, Object>();
 
@@ -75,9 +73,4 @@ public class CompatibilitySingletonFactory {
     }
     return instance;
   }
-
-  private static String createExceptionString(Class klass) {
-     return EXCEPTION_START + klass.toString() + EXCEPTION_END;
-  }
-
 }

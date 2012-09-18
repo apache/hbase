@@ -16,26 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.master.metrics;
+package org.apache.hadoop.hbase.rest.metrics;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.junit.Test;
 
-import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- *  Test for MasterMetricsSourceImpl
+ *  Test for hadoop1's version of RESTMetricsSource
  */
-public class MasterMetricsSourceImplTest {
+public class TestRESTMetricsSourceImpl {
 
   @Test
-  public void testGetInstance() throws Exception {
-    MasterMetricsSourceFactory masterMetricsSourceFactory = CompatibilitySingletonFactory
-        .getInstance(MasterMetricsSourceFactory.class);
-    MasterMetricsSource masterMetricsSource = masterMetricsSourceFactory.create(null);
-    assertTrue(masterMetricsSource instanceof MasterMetricsSourceImpl);
-    assertSame(masterMetricsSourceFactory, CompatibilitySingletonFactory.getInstance(MasterMetricsSourceFactory.class));
+  public void ensureCompatRegistered() throws Exception {
+    assertNotNull(CompatibilitySingletonFactory.getInstance(RESTMetricsSource.class));
+    assertTrue(CompatibilitySingletonFactory.getInstance(RESTMetricsSource.class) instanceof RESTMetricsSourceImpl);
   }
 
 }

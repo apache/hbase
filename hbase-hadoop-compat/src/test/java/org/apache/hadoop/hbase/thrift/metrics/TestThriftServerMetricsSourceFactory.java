@@ -16,20 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.master.metrics;
+package org.apache.hadoop.hbase.thrift.metrics;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.junit.Test;
 
 /**
- *  Test for the CompatibilitySingletonFactory and building MasterMetricsSource
+ * Test for the interface of ThriftServerMetricsSourceFactory
  */
-public class MasterMetricsSourceFactoryTest {
+public class TestThriftServerMetricsSourceFactory {
+
 
   @Test(expected=RuntimeException.class)
-  public void testGetInstanceNoHadoopCompat() throws Exception {
+  public void testGetInstanceNoHadoopCompat() throws RuntimeException {
     //This should throw an exception because there is no compat lib on the class path.
-    CompatibilitySingletonFactory.getInstance(MasterMetricsSource.class);
-
+    CompatibilitySingletonFactory.getInstance(ThriftServerMetricsSourceFactory.class);
   }
+
 }

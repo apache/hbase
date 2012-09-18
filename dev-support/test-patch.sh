@@ -382,9 +382,9 @@ checkJavadocWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean compile javadoc:javadoc -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1"
+  echo "$MVN clean package javadoc:javadoc -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1"
   export MAVEN_OPTS="${MAVEN_OPTS}"
-  $MVN clean compile javadoc:javadoc -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1
+  $MVN clean package javadoc:javadoc -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1
   javadocWarnings=`$GREP '\[WARNING\]' $PATCH_DIR/patchJavadocWarnings.txt | $AWK '/Javadoc Warnings/,EOF' | $GREP warning | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
   echo ""
   echo ""
@@ -415,9 +415,9 @@ checkJavacWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean compile -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
+  echo "$MVN clean package -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
   export MAVEN_OPTS="${MAVEN_OPTS}"
-  $MVN clean compile -DskipTests -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchJavacWarnings.txt 2>&1
+  $MVN clean package -DskipTests -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
@@ -501,9 +501,9 @@ checkStyle () {
   echo "THIS IS NOT IMPLEMENTED YET"
   echo ""
   echo ""
-  echo "$MVN compile checkstyle:checkstyle -D${PROJECT_NAME}PatchProcess"
+  echo "$MVN package checkstyle:checkstyle -D${PROJECT_NAME}PatchProcess -DskipTests"
   export MAVEN_OPTS="${MAVEN_OPTS}"
-  $MVN compile checkstyle:checkstyle -D${PROJECT_NAME}PatchProcess
+  $MVN package checkstyle:checkstyle -D${PROJECT_NAME}PatchProcess -DskipTests
 
   JIRA_COMMENT_FOOTER="Checkstyle results: $BUILD_URL/artifact/trunk/build/test/checkstyle-errors.html
 $JIRA_COMMENT_FOOTER"
@@ -534,9 +534,9 @@ checkFindbugsWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean compile findbugs:findbugs -D${PROJECT_NAME}PatchProcess" 
+  echo "$MVN clean package findbugs:findbugs -D${PROJECT_NAME}PatchProcess" 
   export MAVEN_OPTS="${MAVEN_OPTS}"
-  $MVN clean compile findbugs:findbugs -D${PROJECT_NAME}PatchProcess < /dev/null
+  $MVN clean package findbugs:findbugs -D${PROJECT_NAME}PatchProcess -DskipTests < /dev/null
 
   if [ $? != 0 ] ; then
     JIRA_COMMENT="$JIRA_COMMENT

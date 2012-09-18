@@ -223,8 +223,7 @@ public class ThriftServer {
       boolean hsha = cmd.hasOption("hsha");
 
       Configuration conf = HBaseConfiguration.create();
-      ThriftMetrics metrics = new ThriftMetrics(
-          listenPort, conf, THBaseService.Iface.class);
+      ThriftMetrics metrics = new ThriftMetrics(conf, ThriftMetrics.ThriftServerType.TWO);
 
       // Construct correct ProtocolFactory
       TProtocolFactory protocolFactory = getTProtocolFactory(cmd.hasOption("compact"));

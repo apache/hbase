@@ -75,6 +75,11 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
 
     //Register this instance.
     DefaultMetricsSystem.INSTANCE.registerSource(metricsJmxContext, metricsDescription, this);
+    init();
+  }
+
+  public void init() {
+    this.metricsRegistry.clearMetrics();
   }
 
 
@@ -150,5 +155,13 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
   @Override
   public void getMetrics(MetricsBuilder metricsBuilder, boolean all) {
     metricsRegistry.snapshot(metricsBuilder.addRecord(metricsRegistry.name()), all);
+  }
+
+  /**
+   * Used to get at the DynamicMetricsRegistry.
+   * @return
+   */
+  protected DynamicMetricsRegistry getMetricsRegistry() {
+    return metricsRegistry;
   }
 }

@@ -58,12 +58,18 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
     if (!defaultMetricsSystemInited) {
       //Not too worried about mutlithread here as all it does is spam the logs.
       defaultMetricsSystemInited = true;
+
       DefaultMetricsSystem.initialize(HBASE_METRICS_SYSTEM_NAME);
       jvmMetricsSource = JvmMetrics.create(metricsName, "", DefaultMetricsSystem.instance());
     }
 
     DefaultMetricsSystem.instance().register(metricsJmxContext, metricsDescription, this);
+    init();
 
+  }
+
+  public void init() {
+    this.metricsRegistry.clearMetrics();
   }
 
   /**
@@ -129,8 +135,14 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
     metricsRegistry.removeMetric(key);
   }
 
+  protected DynamicMetricsRegistry getMetricsRegistry() {
+    return metricsRegistry;
+  }
+
   @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
     metricsRegistry.snapshot(metricsCollector.addRecord(metricsRegistry.info()), all);
   }
+
+
 }

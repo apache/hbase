@@ -24,6 +24,11 @@ package org.apache.hadoop.hbase.metrics;
 public interface BaseMetricsSource {
 
   /**
+   * Clear out the metrics and re-prepare the source.
+   */
+  public void init();
+
+  /**
    * Set a gauge to a specific value.
    *
    * @param gaugeName the name of the gauge

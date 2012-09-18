@@ -19,128 +19,74 @@
 
 package org.apache.hadoop.hbase.thrift;
 
-import java.lang.reflect.Method;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.thrift.generated.Hbase;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.Updater;
-import org.apache.hadoop.metrics.util.MetricsBase;
-import org.apache.hadoop.metrics.util.MetricsIntValue;
-import org.apache.hadoop.metrics.util.MetricsRegistry;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.thrift.metrics.ThriftServerMetricsSource;
+import org.apache.hadoop.hbase.thrift.metrics.ThriftServerMetricsSourceFactory;
 
 /**
  * This class is for maintaining the various statistics of thrift server
  * and publishing them through the metrics interfaces.
  */
 @InterfaceAudience.Private
-public class ThriftMetrics implements Updater {
-  public final static Log LOG = LogFactory.getLog(ThriftMetrics.class);
-  public final static String CONTEXT_NAME = "thriftserver";
+public class ThriftMetrics  {
 
-  private final MetricsContext context;
-  private final MetricsRecord metricsRecord;
-  private final MetricsRegistry registry = new MetricsRegistry();
+
+  public enum ThriftServerType {
+    ONE,
+    TWO
+  }
+
+  public ThriftServerMetricsSource getSource() {
+    return source;
+  }
+
+  public void setSource(ThriftServerMetricsSource source) {
+    this.source = source;
+  }
+
+  private ThriftServerMetricsSource source;
   private final long slowResponseTime;
   public static final String SLOW_RESPONSE_NANO_SEC =
     "hbase.thrift.slow.response.nano.second";
   public static final long DEFAULT_SLOW_RESPONSE_NANO_SEC = 10 * 1000 * 1000;
 
-  private final MetricsIntValue callQueueLen =
-      new MetricsIntValue("callQueueLen", registry);
-  private final MetricsTimeVaryingRate numRowKeysInBatchGet =
-      new MetricsTimeVaryingRate("numRowKeysInBatchGet", registry);
-  private final MetricsTimeVaryingRate numRowKeysInBatchMutate =
-      new MetricsTimeVaryingRate("numRowKeysInBatchMutate", registry);
-  private final MetricsTimeVaryingRate timeInQueue =
-      new MetricsTimeVaryingRate("timeInQueue", registry);
-  private MetricsTimeVaryingRate thriftCall =
-      new MetricsTimeVaryingRate("thriftCall", registry);
-  private MetricsTimeVaryingRate slowThriftCall =
-      new MetricsTimeVaryingRate("slowThriftCall", registry);
 
-  public ThriftMetrics(int port, Configuration conf, Class<?> iface) {
-    slowResponseTime = conf.getLong(
-        SLOW_RESPONSE_NANO_SEC, DEFAULT_SLOW_RESPONSE_NANO_SEC);
-    context = MetricsUtil.getContext(CONTEXT_NAME);
-    metricsRecord = MetricsUtil.createRecord(context, CONTEXT_NAME);
+  public ThriftMetrics(Configuration conf, ThriftServerType t) {
+    slowResponseTime = conf.getLong( SLOW_RESPONSE_NANO_SEC, DEFAULT_SLOW_RESPONSE_NANO_SEC);
 
-    metricsRecord.setTag("port", port + "");
+    if (t == ThriftServerType.ONE) {
+      source = CompatibilitySingletonFactory.getInstance(ThriftServerMetricsSourceFactory.class).createThriftOneSource();
+    } else if (t == ThriftServerType.TWO) {
+      source = CompatibilitySingletonFactory.getInstance(ThriftServerMetricsSourceFactory.class).createThriftTwoSource();
+    }
 
-    LOG.info("Initializing RPC Metrics with port=" + port);
-
-    context.registerUpdater(this);
-
-    createMetricsForMethods(iface);
   }
 
   public void incTimeInQueue(long time) {
-    timeInQueue.inc(time);
+    source.incTimeInQueue(time);
   }
 
   public void setCallQueueLen(int len) {
-    callQueueLen.set(len);
+    source.setCallQueueLen(len);
   }
 
   public void incNumRowKeysInBatchGet(int diff) {
-    numRowKeysInBatchGet.inc(diff);
+    source.incNumRowKeysInBatchGet(diff);
   }
 
   public void incNumRowKeysInBatchMutate(int diff) {
-    numRowKeysInBatchMutate.inc(diff);
+    source.incNumRowKeysInBatchMutate(diff);
   }
 
   public void incMethodTime(String name, long time) {
-    MetricsTimeVaryingRate methodTimeMetric = getMethodTimeMetrics(name);
-    if (methodTimeMetric == null) {
-      LOG.warn(
-          "Got incMethodTime() request for method that doesnt exist: " + name);
-      return; // ignore methods that dont exist.
-    }
-
-    // inc method specific processTime
-    methodTimeMetric.inc(time);
-
+    source.incMethodTime(name, time);
     // inc general processTime
-    thriftCall.inc(time);
+    source.incCall(time);
     if (time > slowResponseTime) {
-      slowThriftCall.inc(time);
+      source.incSlowCall(time);
     }
   }
 
-  private void createMetricsForMethods(Class<?> iface) {
-    LOG.debug("Creating metrics for interface " + iface.toString());
-    for (Method m : iface.getDeclaredMethods()) {
-      if (getMethodTimeMetrics(m.getName()) == null)
-        LOG.debug("Creating metrics for method:" + m.getName());
-        createMethodTimeMetrics(m.getName());
-    }
-  }
-
-  private MetricsTimeVaryingRate getMethodTimeMetrics(String key) {
-    return (MetricsTimeVaryingRate) registry.get(key);
-  }
-
-  private MetricsTimeVaryingRate createMethodTimeMetrics(String key) {
-    return new MetricsTimeVaryingRate(key, this.registry);
-  }
-
-  /**
-   * Push the metrics to the monitoring subsystem on doUpdate() call.
-   */
-  public void doUpdates(final MetricsContext context) {
-    // getMetricsList() and pushMetric() are thread safe methods
-    for (MetricsBase m : registry.getMetricsList()) {
-      m.pushMetric(metricsRecord);
-    }
-    metricsRecord.update();
-  }
 }

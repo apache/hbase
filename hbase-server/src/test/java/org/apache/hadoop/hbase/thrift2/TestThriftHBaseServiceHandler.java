@@ -18,28 +18,16 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
 import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
@@ -55,17 +43,20 @@ import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.metrics.ContextFactory;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.spi.NoEmitMetricsContext;
-import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.apache.thrift.TException;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+import static org.junit.Assert.*;
 
 /**
  * Unit testing for ThriftServer.HBaseHandler, a part of the org.apache.hadoop.hbase.thrift2 package.
@@ -89,6 +80,11 @@ public class TestThriftHBaseServiceHandler {
       new HColumnDescriptor(familyBname)
           .setMaxVersions(2)
   };
+
+
+  private static final MetricsAssertHelper metricsHelper =
+      CompatibilityFactory.getInstance(MetricsAssertHelper.class);
+
 
   public void assertTColumnValuesEqual(List<TColumnValue> columnValuesA, List<TColumnValue> columnValuesB) {
     assertEquals(columnValuesA.size(), columnValuesB.size());
@@ -557,50 +553,14 @@ public class TestThriftHBaseServiceHandler {
     handler.put(table, put);
 
     assertTrue(handler.exists(table, get));
-    logMetrics(metrics);
-    verifyMetrics(metrics, "put_num_ops", 1);
-    verifyMetrics(metrics, "exists_num_ops", 2);
-  }
- 
-  private static ThriftMetrics getMetrics(Configuration conf) throws Exception {
-    setupMetricsContext();
-    return new ThriftMetrics(Integer.parseInt(ThriftServer.DEFAULT_LISTEN_PORT),
-        conf, THBaseService.Iface.class);
-  }
- 
-  private static void setupMetricsContext() throws IOException {
-    ContextFactory factory = ContextFactory.getFactory();
-    factory.setAttribute(ThriftMetrics.CONTEXT_NAME + ".class",
-        NoEmitMetricsContext.class.getName());
-    MetricsUtil.getContext(ThriftMetrics.CONTEXT_NAME)
-               .createRecord(ThriftMetrics.CONTEXT_NAME).remove();
-  }
- 
-  private static void logMetrics(ThriftMetrics metrics) throws Exception {
-    if (LOG.isDebugEnabled()) {
-      return;
-    }
-    MetricsContext context = MetricsUtil.getContext( 
-        ThriftMetrics.CONTEXT_NAME); 
-    metrics.doUpdates(context); 
-    for (String key : context.getAllRecords().keySet()) {
-      for (OutputRecord record : context.getAllRecords().get(key)) {
-        for (String name : record.getMetricNames()) {
-          LOG.debug("metrics:" + name + " value:" +
-              record.getMetric(name).intValue());
-        }
-      }
-    }
+    metricsHelper.assertCounter("put_num_ops", 1, metrics.getSource());
+    metricsHelper.assertCounter( "exists_num_ops", 2, metrics.getSource());
   }
 
-  private static void verifyMetrics(ThriftMetrics metrics, String name, int expectValue)
-      throws Exception { 
-    MetricsContext context = MetricsUtil.getContext( 
-        ThriftMetrics.CONTEXT_NAME); 
-    metrics.doUpdates(context); 
-    OutputRecord record = context.getAllRecords().get( 
-        ThriftMetrics.CONTEXT_NAME).iterator().next(); 
-    assertEquals(expectValue, record.getMetric(name).intValue()); 
+  private static ThriftMetrics getMetrics(Configuration conf) throws Exception {
+    ThriftMetrics m = new ThriftMetrics(conf, ThriftMetrics.ThriftServerType.TWO);
+    m.getSource().init(); //Clear all the metrics
+    return m;
   }
 
   @org.junit.Rule

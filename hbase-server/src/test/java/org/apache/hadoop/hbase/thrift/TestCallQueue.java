@@ -28,15 +28,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.thrift.CallQueue.Call;
-import org.apache.hadoop.hbase.thrift.generated.Hbase;
-import org.apache.hadoop.metrics.ContextFactory;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.spi.NoEmitMetricsContext;
-import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -53,6 +49,9 @@ public class TestCallQueue {
 
   public static final Log LOG = LogFactory.getLog(TestCallQueue.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  private static final MetricsAssertHelper metricsHelper =
+      CompatibilitySingletonFactory.getInstance(MetricsAssertHelper.class);
 
   private int elementsAdded;
   private int elementsRemoved;
@@ -74,6 +73,7 @@ public class TestCallQueue {
     this.elementsRemoved = elementsRemoved;
     LOG.debug("elementsAdded:" + elementsAdded +
               " elementsRemoved:" + elementsRemoved);
+
   }
 
   @Test(timeout=3000)
@@ -105,28 +105,16 @@ public class TestCallQueue {
   }
 
   private static ThriftMetrics createMetrics() throws Exception {
-    setupMetricsContext();
     Configuration conf = UTIL.getConfiguration();
-    return new ThriftMetrics(
-        ThriftServerRunner.DEFAULT_LISTEN_PORT, conf, Hbase.Iface.class);
+    ThriftMetrics m = new ThriftMetrics(conf, ThriftMetrics.ThriftServerType.ONE);
+    m.getSource().init();
+    return m;
   }
 
-  private static void setupMetricsContext() throws Exception {
-    ContextFactory factory = ContextFactory.getFactory();
-    factory.setAttribute(ThriftMetrics.CONTEXT_NAME + ".class",
-        NoEmitMetricsContext.class.getName());
-    MetricsUtil.getContext(ThriftMetrics.CONTEXT_NAME)
-               .createRecord(ThriftMetrics.CONTEXT_NAME).remove();
-  }
 
   private static void verifyMetrics(ThriftMetrics metrics, String name, int expectValue)
       throws Exception { 
-    MetricsContext context = MetricsUtil.getContext( 
-        ThriftMetrics.CONTEXT_NAME); 
-    metrics.doUpdates(context); 
-    OutputRecord record = context.getAllRecords().get( 
-        ThriftMetrics.CONTEXT_NAME).iterator().next(); 
-    assertEquals(expectValue, record.getMetric(name).intValue()); 
+      metricsHelper.assertCounter(name, expectValue, metrics.getSource());
   }
 
   private static Runnable createDummyRunnable() {

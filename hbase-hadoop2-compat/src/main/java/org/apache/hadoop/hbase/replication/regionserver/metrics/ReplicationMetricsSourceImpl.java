@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.replication.regionserver.metrics;
 
 import org.apache.hadoop.hbase.metrics.BaseMetricsSourceImpl;
-import org.apache.hadoop.metrics2.MetricsSource;
 
 /**
  * Hadoop2 implementation of ReplicationMetricsSource. This provides access to metrics gauges and

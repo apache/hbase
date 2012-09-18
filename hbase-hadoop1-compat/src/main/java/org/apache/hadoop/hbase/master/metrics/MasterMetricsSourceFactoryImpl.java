@@ -22,9 +22,16 @@ package org.apache.hadoop.hbase.master.metrics;
  *  Factory to create MasterMetricsSource when given a  MasterMetricsWrapper
  */
 public class MasterMetricsSourceFactoryImpl implements MasterMetricsSourceFactory {
+  private static enum FactoryStorage {
+    INSTANCE;
+    MasterMetricsSource source;
+  }
 
   @Override
-  public MasterMetricsSource create(MasterMetricsWrapper beanWrapper) {
-    return new MasterMetricsSourceImpl(beanWrapper);
+  public synchronized MasterMetricsSource create(MasterMetricsWrapper beanWrapper) {
+    if (FactoryStorage.INSTANCE.source == null ) {
+      FactoryStorage.INSTANCE.source = new MasterMetricsSourceImpl(beanWrapper);
+    }
+    return FactoryStorage.INSTANCE.source;
   }
 }
