@@ -31,6 +31,7 @@ import javax.management.ObjectName;
 /**
  * Exports HBase system information as an MBean for JMX observation.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class HBaseInfo {
   protected static class HBaseInfoMBean extends MetricsMBeanBase {

@@ -27,6 +27,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
 /**
  * Publishes a string to the metrics collector
  */
+@Deprecated
 @InterfaceAudience.Private
 public class MetricsString extends MetricsBase {
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.hbase.metrics");

@@ -45,6 +45,7 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
  * org.apache.hadoop.metrics.util implementations.
  *
  */
+@Deprecated
 @InterfaceAudience.Private
 public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
 

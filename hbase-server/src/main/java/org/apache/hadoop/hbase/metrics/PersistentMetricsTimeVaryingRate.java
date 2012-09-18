@@ -29,6 +29,7 @@ import org.apache.hadoop.util.StringUtils;
  * This class extends MetricsTimeVaryingRate to let the metrics
  * persist past a pushMetric() call
  */
+@Deprecated
 @InterfaceAudience.Private
 public class PersistentMetricsTimeVaryingRate extends MetricsTimeVaryingRate {
   protected static final Log LOG =

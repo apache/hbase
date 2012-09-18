@@ -30,6 +30,7 @@ import com.yammer.metrics.stats.Snapshot;
 import com.yammer.metrics.stats.UniformSample;
 import com.yammer.metrics.stats.ExponentiallyDecayingSample;
 
+@Deprecated
 public class MetricsHistogram extends MetricsBase {
   
   // 1028 items implies 99.9% CI w/ 5% margin of error 

@@ -37,6 +37,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 
+@Deprecated
 public class ExactCounterMetric extends MetricsBase {
 
   private static final int DEFAULT_TOP_N = 5;
