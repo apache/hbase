@@ -28,18 +28,16 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner;
-import org.apache.hadoop.hbase.thrift.ThriftUtilities;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
-import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.thrift.TException;
@@ -139,81 +137,79 @@ public class HRegionThriftServer extends HasThread {
     }
 
     /**
-     * Get a record. Shortcircuit to get better performance.
+     * Process a get request. If the region name is set, using the shortcircuit optimization.
      */
     @Override
-    public List<TRowResult> getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row,
-                                                List<ByteBuffer> columns,
-                                                long timestamp)
-      throws IOError {
-      try {
-        HTable table = getTable(tableName);
-        byte[] rowBytes = Bytes.getBytes(row);
-        HRegionLocation location = table.getRegionLocation(rowBytes);
-        byte[] regionName = location.getRegionInfo().getRegionName();
-
-        if (columns == null) {
-          Get get = new Get(rowBytes);
-          get.setTimeRange(Long.MIN_VALUE, timestamp);
-          Result result = rs.get(regionName, get);
-          return ThriftUtilities.rowResultFromHBase(result);
-        }
-        byte[][] columnArr = columns.toArray(new byte[columns.size()][]);
-        Get get = new Get(rowBytes);
-        for (byte[] column : columnArr) {
-          byte[][] famAndQf = KeyValue.parseColumn(column);
-          if (famAndQf.length == 1) {
-            get.addFamily(famAndQf[0]);
-          } else {
-            get.addColumn(famAndQf[0], famAndQf[1]);
-          }
-        }
-        get.setTimeRange(Long.MIN_VALUE, timestamp);
-        Result result = rs.get(regionName, get);
-        return ThriftUtilities.rowResultFromHBase(result);
-      } catch (NotServingRegionException e) {
-        if (!redirect) {
-          throw new IOError(e.getMessage(), 0);
-        }
-        LOG.info("ThriftServer redirecting getRowWithColumnsTs");
-        return super.getRowWithColumnsTs(tableName, row, columns, timestamp);
-      } catch (IOException e) {
-        throw new IOError(e.getMessage(), 0);
+    protected Result processGet(ByteBuffer tableName, ByteBuffer regionName, Get get)
+        throws IOException, IOError {
+      if (Bytes.isNonEmpty(regionName)) {
+        metrics.incDirectCalls();
+        return rs.get(Bytes.getBytes(regionName), get);
+      } else {
+        metrics.incIndirectCalls();
+        return super.processGet(tableName, regionName, get);
       }
     }
 
+    /**
+     * Process a put request. If the region name is set, using the shortcircuit optimization.
+     */
     @Override
-    public List<TRowResult> getRowWithColumnPrefix(ByteBuffer tableName,
-        ByteBuffer row, ByteBuffer prefix) throws IOError {
-      return (getRowWithColumnPrefixTs(tableName, row, prefix,
-          HConstants.LATEST_TIMESTAMP));
+    protected void processPut(ByteBuffer tableName, ByteBuffer regionName, Put put)
+        throws IOException, IOError {
+      if (Bytes.isNonEmpty(regionName)) {
+        metrics.incDirectCalls();
+        rs.put(Bytes.getBytes(regionName), put);
+      } else {
+        metrics.incIndirectCalls();
+        super.processPut(tableName, regionName, put);
+      }
     }
 
+    /**
+     * Process a delete request. If the region name is set, using the shortcircuit optimization.
+     */
     @Override
-    public List<TRowResult> getRowWithColumnPrefixTs(ByteBuffer tableName,
-        ByteBuffer row, ByteBuffer prefix, long timestamp) throws IOError {
-      try {
-        HTable table = getTable(tableName);
-        byte[] rowBytes = Bytes.getBytes(row);
-        if (prefix == null) {
-          Get get = new Get(rowBytes);
-          get.setTimeRange(Long.MIN_VALUE, timestamp);
-          Result result = table.get(get);
-          return ThriftUtilities.rowResultFromHBase(result);
-        }
-        Get get = new Get(rowBytes);
-        byte[][] famAndPrefix = KeyValue.parseColumn(Bytes.getBytes(prefix));
-        if (famAndPrefix.length == 2) {
-          get.addFamily(famAndPrefix[0]);
-          get.setFilter(new ColumnPrefixFilter(famAndPrefix[1]));
-        } else {
-          get.setFilter(new ColumnPrefixFilter(famAndPrefix[0]));
-        }
-        get.setTimeRange(Long.MIN_VALUE, timestamp);
-        Result result = table.get(get);
-        return ThriftUtilities.rowResultFromHBase(result);
-      } catch (IOException e) {
-        throw new IOError(e.getMessage(), 0);
+    protected void processDelete(ByteBuffer tableName, ByteBuffer regionName, Delete delete)
+        throws IOException, IOError {
+      if (Bytes.isNonEmpty(regionName)) {
+        metrics.incDirectCalls();
+        rs.delete(Bytes.getBytes(regionName), delete);
+      } else {
+        metrics.incIndirectCalls();
+        super.processDelete(tableName, regionName, delete);
+      }
+    }
+
+    /**
+     * Process the multiGet requests. If the region name is set, using the shortcircuit 
+     * optimization
+     */
+    @Override
+    protected Result[] processMultiGet(ByteBuffer tableName, ByteBuffer regionName, List<Get> gets)
+        throws IOException, IOError {
+      if (Bytes.isNonEmpty(regionName)) {
+        metrics.incDirectCalls();
+        return rs.get(Bytes.getBytes(regionName), gets);
+      } else {
+        metrics.incIndirectCalls();
+        return super.processMultiGet(tableName, regionName, gets);
+      }
+    }
+
+    /**
+     * Process the multiPut requests. If the region name is set, using the shortcircuit
+     * optimization
+     */
+    @Override
+    protected void processMultiPut(ByteBuffer tableName, ByteBuffer regionName, List<Put> puts)
+        throws IOException, IOError {
+      if (Bytes.isNonEmpty(regionName)) {
+        metrics.incDirectCalls();
+        rs.put(Bytes.getBytes(regionName), puts);
+      } else {
+        metrics.incIndirectCalls();
+        super.processMultiPut(tableName, regionName, puts);
       }
     }
   }

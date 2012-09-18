@@ -31,6 +31,7 @@ import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 /**
@@ -59,6 +60,8 @@ public class ThriftMetrics implements Updater {
       new MetricsTimeVaryingRate("numBatchGetRowKeys", registry);
   private final MetricsTimeVaryingRate numBatchMutateRowKeys =
       new MetricsTimeVaryingRate("numBatchMutateRowKeys", registry);
+  private final MetricsTimeVaryingRate numMultiPutRowKeys =
+      new MetricsTimeVaryingRate("numMultiPutRowKeys", registry);
   private final MetricsTimeVaryingRate timeInQueue =
       new MetricsTimeVaryingRate("timeInQueue", registry);
   private MetricsTimeVaryingRate thriftCall =
@@ -66,7 +69,21 @@ public class ThriftMetrics implements Updater {
   private MetricsTimeVaryingRate slowThriftCall =
       new MetricsTimeVaryingRate("slowThriftCall", registry);
 
-   private final ThriftMBean mbean;
+  /**
+   * Number of calls that go through HTable. Only updated in the embedded Thrift server. This only
+   * counts API functions that were capable of accepting a region name from the client and skipping
+   * the client logic, but the region name was not passed.
+   */
+  private MetricsTimeVaryingInt indirectCalls =
+      new MetricsTimeVaryingInt("indirectThriftCalls", registry);
+
+  /**
+   * Number of direct calls to HRegion (preferred way). Only updated in the embedded Thrift server.
+   */
+  private MetricsTimeVaryingInt directCalls =
+      new MetricsTimeVaryingInt("directThriftCalls", registry);
+
+  private final ThriftMBean mbean;
   
   public ThriftMetrics(int port, Configuration conf, Class<?> iface) {
     slowResponseTime = conf.getLong(
@@ -111,6 +128,18 @@ public class ThriftMetrics implements Updater {
 
   public void incNumBatchMutateRowKeys(int diff) {
     numBatchMutateRowKeys.inc(diff);
+  }
+
+  public void incNumMultiPutRowKeys(int diff) {
+    this.numMultiPutRowKeys.inc(diff);
+  }
+
+  public final void incIndirectCalls() {
+    this.indirectCalls.inc();
+  }
+
+  public final void incDirectCalls() {
+    this.directCalls.inc();
   }
 
   public void incMethodTime(String name, long time) {

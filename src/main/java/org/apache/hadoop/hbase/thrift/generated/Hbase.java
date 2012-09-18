@@ -32,7 +32,8 @@ public class Hbase {
   public interface Iface {
 
     /**
-     * Atomically increment the column value specified.  Returns the next value post increment.
+     * Atomically increment the column value specified. Returns the next value
+     * post increment.
      *
      * @param tableName name of table
      * 
@@ -111,8 +112,10 @@ public class Hbase {
      * @param row Row to update
      * 
      * @param column name of column whose value is to be deleted
+     * 
+     * @param regionName
      */
-    public void deleteAll(ByteBuffer tableName, ByteBuffer row, ByteBuffer column) throws IOError, org.apache.thrift.TException;
+    public void deleteAll(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Completely delete the row's cells.
@@ -122,8 +125,10 @@ public class Hbase {
      * @param row key of the row to be completely deleted.
      * 
      * @param attributes Delete attributes
+     * 
+     * @param regionName
      */
-    public void deleteAllRow(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, org.apache.thrift.TException;
+    public void deleteAllRow(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Completely delete the row's cells marked with a timestamp
@@ -134,8 +139,10 @@ public class Hbase {
      * @param row key of the row to be completely deleted.
      * 
      * @param timestamp timestamp
+     * 
+     * @param regionName
      */
-    public void deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp) throws IOError, org.apache.thrift.TException;
+    public void deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Delete all cells that match the passed row and column and whose
@@ -148,8 +155,10 @@ public class Hbase {
      * @param column name of column whose value is to be deleted
      *
      * @param timestamp timestamp
+     * 
+     * @param regionName
      */
-    public void deleteAllTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp) throws IOError, org.apache.thrift.TException;
+    public void deleteAllTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Deletes a table
@@ -187,8 +196,10 @@ public class Hbase {
      * @param row row key
      *
      * @param column column name
+     * 
+     * @param regionName
      */
-    public List<TCell> get(ByteBuffer tableName, ByteBuffer row, ByteBuffer column) throws IOError, org.apache.thrift.TException;
+    public List<TCell> get(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * List all the column families associated with a table.
@@ -218,8 +229,10 @@ public class Hbase {
      * @param tableName name of table
      *
      * @param row row key
+     * 
+     * @param regionName
      */
-    public List<TRowResult> getRow(ByteBuffer tableName, ByteBuffer row) throws IOError, org.apache.thrift.TException;
+    public List<TRowResult> getRow(ByteBuffer tableName, ByteBuffer row, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Get all the data for the specified table and row at the specified
@@ -232,8 +245,10 @@ public class Hbase {
      * @param row row key
      *
      * @param timestamp timestamp
+     * 
+     * @param regionName
      */
-    public List<TRowResult> getRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp) throws IOError, org.apache.thrift.TException;
+    public List<TRowResult> getRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Get the columns with the specified prefix for the specified table and
@@ -250,8 +265,10 @@ public class Hbase {
      * family name can be specified as <family>:<qualifier prefix>
      * If only <qualifier prefix> provided then all families are
      * searched
+     * 
+     * @param regionName
      */
-    public List<TRowResult> getRowWithColumnPrefix(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix) throws IOError, org.apache.thrift.TException;
+    public List<TRowResult> getRowWithColumnPrefix(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Get the columns with the specified prefix for the specified table and
@@ -270,8 +287,9 @@ public class Hbase {
      * searched
      *
      * @param timestamp
+     * @param regionName
      */
-    public List<TRowResult> getRowWithColumnPrefixTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, long timestamp) throws IOError, org.apache.thrift.TException;
+    public List<TRowResult> getRowWithColumnPrefixTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Get the specified columns for the specified table and row at the latest
@@ -284,8 +302,10 @@ public class Hbase {
      * @param row row key
      *
      * @param columns List of columns to return, null for all columns
+     * 
+     * @param regionName
      */
-    public List<TRowResult> getRowWithColumns(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns) throws IOError, org.apache.thrift.TException;
+    public List<TRowResult> getRowWithColumns(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Get the specified columns for the specified table and row at the specified
@@ -300,8 +320,9 @@ public class Hbase {
      * @param columns List of columns to return, null for all columns
      *
      * @param timestamp
+     * @param regionName
      */
-    public List<TRowResult> getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, long timestamp) throws IOError, org.apache.thrift.TException;
+    public List<TRowResult> getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Get multiple rows with the same columns or timestamps for all.
@@ -311,8 +332,9 @@ public class Hbase {
      *
      * @param tableName
      * @param rows
+     * @param regionName
      */
-    public List<TRowResult> getRows(ByteBuffer tableName, List<ByteBuffer> rows) throws IOError, org.apache.thrift.TException;
+    public List<TRowResult> getRows(ByteBuffer tableName, List<ByteBuffer> rows, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Get multiple rows only up to a certain timestamp
@@ -322,8 +344,9 @@ public class Hbase {
      * @param tableName
      * @param rows
      * @param timestamp
+     * @param regionName
      */
-    public List<TRowResult> getRowsTs(ByteBuffer tableName, List<ByteBuffer> rows, long timestamp) throws IOError, org.apache.thrift.TException;
+    public List<TRowResult> getRowsTs(ByteBuffer tableName, List<ByteBuffer> rows, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Get multiple rows only with particular cf:qualifier pairs on all rows
@@ -333,8 +356,9 @@ public class Hbase {
      * @param tableName
      * @param rows
      * @param families
+     * @param regionName
      */
-    public List<TRowResult> getRowsWithColumns(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families) throws IOError, org.apache.thrift.TException;
+    public List<TRowResult> getRowsWithColumns(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Get multiple rows only with particular cf:qualifier pairs on all rows
@@ -346,8 +370,9 @@ public class Hbase {
      * @param rows
      * @param families
      * @param timestamp
+     * @param regionName
      */
-    public List<TRowResult> getRowsWithColumnsTs(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, long timestamp) throws IOError, org.apache.thrift.TException;
+    public List<TRowResult> getRowsWithColumnsTs(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * List all the userspace tables.
@@ -378,8 +403,10 @@ public class Hbase {
      * @param column column name
      *
      * @param numVersions number of versions to retrieve
+     * 
+     * @param regionName
      */
-    public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, int numVersions) throws IOError, org.apache.thrift.TException;
+    public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, int numVersions, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * Get the specified number of versions for the specified table,
@@ -397,8 +424,10 @@ public class Hbase {
      * @param timestamp timestamp
      *
      * @param numVersions number of versions to retrieve
+     * 
+     * @param regionName
      */
-    public List<TCell> getVerTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, int numVersions) throws IOError, org.apache.thrift.TException;
+    public List<TCell> getVerTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, int numVersions, ByteBuffer regionName) throws IOError, org.apache.thrift.TException;
 
     /**
      * @return true if table is on-line
@@ -408,6 +437,19 @@ public class Hbase {
     public boolean isTableEnabled(ByteBuffer tableName) throws IOError, org.apache.thrift.TException;
 
     public void majorCompact(ByteBuffer tableNameOrRegionName) throws IOError, org.apache.thrift.TException;
+
+    /**
+     * Apply a batch of puts for the target region.
+     * It assumes all the BatchMuations are Put operations
+     * and ignores the isDelete field in Mutation.
+     * 
+     * @param tableName name of tableName
+     * 
+     * @param rowBatches list of Put
+     * 
+     * @param regionName name of the region
+     */
+    public void multiPut(ByteBuffer tableName, List<BatchMutation> rowBatches, ByteBuffer regionName) throws IOError, IllegalArgument, org.apache.thrift.TException;
 
     /**
      * Apply a series of mutations (updates/deletes) to a row in a
@@ -422,8 +464,10 @@ public class Hbase {
      * @param mutations list of mutation commands
      *
      * @param attributes Put attributes
+     * 
+     * @param regionName
      */
-    public void mutateRow(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, IllegalArgument, org.apache.thrift.TException;
+    public void mutateRow(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws IOError, IllegalArgument, org.apache.thrift.TException;
 
     /**
      * Apply a series of mutations (updates/deletes) to a row in a
@@ -440,8 +484,10 @@ public class Hbase {
      * @param timestamp timestamp
      *
      * @param attributes Put attributes
+     * 
+     * @param regionName
      */
-    public void mutateRowTs(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, long timestamp, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, IllegalArgument, org.apache.thrift.TException;
+    public void mutateRowTs(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws IOError, IllegalArgument, org.apache.thrift.TException;
 
     /**
      * Apply a series of batches (each a series of mutations on a single row)
@@ -454,8 +500,10 @@ public class Hbase {
      * @param rowBatches list of row batches
      *
      * @param attributes Put attributes
+     * 
+     * @param regionName
      */
-    public void mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, IllegalArgument, org.apache.thrift.TException;
+    public void mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws IOError, IllegalArgument, org.apache.thrift.TException;
 
     /**
      * Asynchronous multi-row mutation call
@@ -480,8 +528,10 @@ public class Hbase {
      * @param timestamp timestamp
      * 
      * @param attributes Put attributes
+     * 
+     * @param regionName
      */
-    public void mutateRowsTs(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, IllegalArgument, org.apache.thrift.TException;
+    public void mutateRowsTs(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws IOError, IllegalArgument, org.apache.thrift.TException;
 
     /**
      * Asynchronous multi-row mutation call with ts
@@ -752,13 +802,13 @@ public class Hbase {
 
     public void createTable(ByteBuffer tableName, List<ColumnDescriptor> columnFamilies, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.createTable_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void deleteAll(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.deleteAll_call> resultHandler) throws org.apache.thrift.TException;
+    public void deleteAll(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.deleteAll_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void deleteAllRow(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.deleteAllRow_call> resultHandler) throws org.apache.thrift.TException;
+    public void deleteAllRow(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.deleteAllRow_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.deleteAllRowTs_call> resultHandler) throws org.apache.thrift.TException;
+    public void deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.deleteAllRowTs_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void deleteAllTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.deleteAllTs_call> resultHandler) throws org.apache.thrift.TException;
+    public void deleteAllTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.deleteAllTs_call> resultHandler) throws org.apache.thrift.TException;
 
     public void deleteTable(ByteBuffer tableName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.deleteTable_call> resultHandler) throws org.apache.thrift.TException;
 
@@ -766,53 +816,55 @@ public class Hbase {
 
     public void enableTable(ByteBuffer tableName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.enableTable_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void get(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.get_call> resultHandler) throws org.apache.thrift.TException;
+    public void get(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.get_call> resultHandler) throws org.apache.thrift.TException;
 
     public void getColumnDescriptors(ByteBuffer tableName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getColumnDescriptors_call> resultHandler) throws org.apache.thrift.TException;
 
     public void getRegionInfo(ByteBuffer row, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRegionInfo_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void getRow(ByteBuffer tableName, ByteBuffer row, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRow_call> resultHandler) throws org.apache.thrift.TException;
+    public void getRow(ByteBuffer tableName, ByteBuffer row, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRow_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void getRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowTs_call> resultHandler) throws org.apache.thrift.TException;
+    public void getRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowTs_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void getRowWithColumnPrefix(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowWithColumnPrefix_call> resultHandler) throws org.apache.thrift.TException;
+    public void getRowWithColumnPrefix(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowWithColumnPrefix_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void getRowWithColumnPrefixTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, long timestamp, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowWithColumnPrefixTs_call> resultHandler) throws org.apache.thrift.TException;
+    public void getRowWithColumnPrefixTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowWithColumnPrefixTs_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void getRowWithColumns(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowWithColumns_call> resultHandler) throws org.apache.thrift.TException;
+    public void getRowWithColumns(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowWithColumns_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, long timestamp, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowWithColumnsTs_call> resultHandler) throws org.apache.thrift.TException;
+    public void getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowWithColumnsTs_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void getRows(ByteBuffer tableName, List<ByteBuffer> rows, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRows_call> resultHandler) throws org.apache.thrift.TException;
+    public void getRows(ByteBuffer tableName, List<ByteBuffer> rows, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRows_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void getRowsTs(ByteBuffer tableName, List<ByteBuffer> rows, long timestamp, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowsTs_call> resultHandler) throws org.apache.thrift.TException;
+    public void getRowsTs(ByteBuffer tableName, List<ByteBuffer> rows, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowsTs_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void getRowsWithColumns(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowsWithColumns_call> resultHandler) throws org.apache.thrift.TException;
+    public void getRowsWithColumns(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowsWithColumns_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void getRowsWithColumnsTs(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, long timestamp, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowsWithColumnsTs_call> resultHandler) throws org.apache.thrift.TException;
+    public void getRowsWithColumnsTs(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getRowsWithColumnsTs_call> resultHandler) throws org.apache.thrift.TException;
 
     public void getTableNames(org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getTableNames_call> resultHandler) throws org.apache.thrift.TException;
 
     public void getTableRegions(ByteBuffer tableName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getTableRegions_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void getVer(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, int numVersions, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getVer_call> resultHandler) throws org.apache.thrift.TException;
+    public void getVer(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, int numVersions, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getVer_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void getVerTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, int numVersions, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getVerTs_call> resultHandler) throws org.apache.thrift.TException;
+    public void getVerTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, int numVersions, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getVerTs_call> resultHandler) throws org.apache.thrift.TException;
 
     public void isTableEnabled(ByteBuffer tableName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.isTableEnabled_call> resultHandler) throws org.apache.thrift.TException;
 
     public void majorCompact(ByteBuffer tableNameOrRegionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.majorCompact_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void mutateRow(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.mutateRow_call> resultHandler) throws org.apache.thrift.TException;
+    public void multiPut(ByteBuffer tableName, List<BatchMutation> rowBatches, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.multiPut_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void mutateRowTs(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.mutateRowTs_call> resultHandler) throws org.apache.thrift.TException;
+    public void mutateRow(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.mutateRow_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.mutateRows_call> resultHandler) throws org.apache.thrift.TException;
+    public void mutateRowTs(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.mutateRowTs_call> resultHandler) throws org.apache.thrift.TException;
+
+    public void mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.mutateRows_call> resultHandler) throws org.apache.thrift.TException;
 
     public void mutateRowsAsync(ByteBuffer tableName, List<BatchMutation> rowBatches, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.mutateRowsAsync_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void mutateRowsTs(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.mutateRowsTs_call> resultHandler) throws org.apache.thrift.TException;
+    public void mutateRowsTs(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.mutateRowsTs_call> resultHandler) throws org.apache.thrift.TException;
 
     public void mutateRowsTsAsync(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.mutateRowsTsAsync_call> resultHandler) throws org.apache.thrift.TException;
 
@@ -1018,18 +1070,19 @@ public class Hbase {
       return;
     }
 
-    public void deleteAll(ByteBuffer tableName, ByteBuffer row, ByteBuffer column) throws IOError, org.apache.thrift.TException
+    public void deleteAll(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_deleteAll(tableName, row, column);
+      send_deleteAll(tableName, row, column, regionName);
       recv_deleteAll();
     }
 
-    public void send_deleteAll(ByteBuffer tableName, ByteBuffer row, ByteBuffer column) throws org.apache.thrift.TException
+    public void send_deleteAll(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       deleteAll_args args = new deleteAll_args();
       args.setTableName(tableName);
       args.setRow(row);
       args.setColumn(column);
+      args.setRegionName(regionName);
       sendBase("deleteAll", args);
     }
 
@@ -1043,18 +1096,19 @@ public class Hbase {
       return;
     }
 
-    public void deleteAllRow(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, org.apache.thrift.TException
+    public void deleteAllRow(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_deleteAllRow(tableName, row, attributes);
+      send_deleteAllRow(tableName, row, attributes, regionName);
       recv_deleteAllRow();
     }
 
-    public void send_deleteAllRow(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes) throws org.apache.thrift.TException
+    public void send_deleteAllRow(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       deleteAllRow_args args = new deleteAllRow_args();
       args.setTableName(tableName);
       args.setRow(row);
       args.setAttributes(attributes);
+      args.setRegionName(regionName);
       sendBase("deleteAllRow", args);
     }
 
@@ -1068,18 +1122,19 @@ public class Hbase {
       return;
     }
 
-    public void deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp) throws IOError, org.apache.thrift.TException
+    public void deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_deleteAllRowTs(tableName, row, timestamp);
+      send_deleteAllRowTs(tableName, row, timestamp, regionName);
       recv_deleteAllRowTs();
     }
 
-    public void send_deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp) throws org.apache.thrift.TException
+    public void send_deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       deleteAllRowTs_args args = new deleteAllRowTs_args();
       args.setTableName(tableName);
       args.setRow(row);
       args.setTimestamp(timestamp);
+      args.setRegionName(regionName);
       sendBase("deleteAllRowTs", args);
     }
 
@@ -1093,19 +1148,20 @@ public class Hbase {
       return;
     }
 
-    public void deleteAllTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp) throws IOError, org.apache.thrift.TException
+    public void deleteAllTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_deleteAllTs(tableName, row, column, timestamp);
+      send_deleteAllTs(tableName, row, column, timestamp, regionName);
       recv_deleteAllTs();
     }
 
-    public void send_deleteAllTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp) throws org.apache.thrift.TException
+    public void send_deleteAllTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       deleteAllTs_args args = new deleteAllTs_args();
       args.setTableName(tableName);
       args.setRow(row);
       args.setColumn(column);
       args.setTimestamp(timestamp);
+      args.setRegionName(regionName);
       sendBase("deleteAllTs", args);
     }
 
@@ -1188,18 +1244,19 @@ public class Hbase {
       return;
     }
 
-    public List<TCell> get(ByteBuffer tableName, ByteBuffer row, ByteBuffer column) throws IOError, org.apache.thrift.TException
+    public List<TCell> get(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_get(tableName, row, column);
+      send_get(tableName, row, column, regionName);
       return recv_get();
     }
 
-    public void send_get(ByteBuffer tableName, ByteBuffer row, ByteBuffer column) throws org.apache.thrift.TException
+    public void send_get(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       get_args args = new get_args();
       args.setTableName(tableName);
       args.setRow(row);
       args.setColumn(column);
+      args.setRegionName(regionName);
       sendBase("get", args);
     }
 
@@ -1268,17 +1325,18 @@ public class Hbase {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getRegionInfo failed: unknown result");
     }
 
-    public List<TRowResult> getRow(ByteBuffer tableName, ByteBuffer row) throws IOError, org.apache.thrift.TException
+    public List<TRowResult> getRow(ByteBuffer tableName, ByteBuffer row, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_getRow(tableName, row);
+      send_getRow(tableName, row, regionName);
       return recv_getRow();
     }
 
-    public void send_getRow(ByteBuffer tableName, ByteBuffer row) throws org.apache.thrift.TException
+    public void send_getRow(ByteBuffer tableName, ByteBuffer row, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       getRow_args args = new getRow_args();
       args.setTableName(tableName);
       args.setRow(row);
+      args.setRegionName(regionName);
       sendBase("getRow", args);
     }
 
@@ -1295,18 +1353,19 @@ public class Hbase {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getRow failed: unknown result");
     }
 
-    public List<TRowResult> getRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp) throws IOError, org.apache.thrift.TException
+    public List<TRowResult> getRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_getRowTs(tableName, row, timestamp);
+      send_getRowTs(tableName, row, timestamp, regionName);
       return recv_getRowTs();
     }
 
-    public void send_getRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp) throws org.apache.thrift.TException
+    public void send_getRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       getRowTs_args args = new getRowTs_args();
       args.setTableName(tableName);
       args.setRow(row);
       args.setTimestamp(timestamp);
+      args.setRegionName(regionName);
       sendBase("getRowTs", args);
     }
 
@@ -1323,18 +1382,19 @@ public class Hbase {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getRowTs failed: unknown result");
     }
 
-    public List<TRowResult> getRowWithColumnPrefix(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix) throws IOError, org.apache.thrift.TException
+    public List<TRowResult> getRowWithColumnPrefix(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_getRowWithColumnPrefix(tableName, row, prefix);
+      send_getRowWithColumnPrefix(tableName, row, prefix, regionName);
       return recv_getRowWithColumnPrefix();
     }
 
-    public void send_getRowWithColumnPrefix(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix) throws org.apache.thrift.TException
+    public void send_getRowWithColumnPrefix(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       getRowWithColumnPrefix_args args = new getRowWithColumnPrefix_args();
       args.setTableName(tableName);
       args.setRow(row);
       args.setPrefix(prefix);
+      args.setRegionName(regionName);
       sendBase("getRowWithColumnPrefix", args);
     }
 
@@ -1351,19 +1411,20 @@ public class Hbase {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getRowWithColumnPrefix failed: unknown result");
     }
 
-    public List<TRowResult> getRowWithColumnPrefixTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, long timestamp) throws IOError, org.apache.thrift.TException
+    public List<TRowResult> getRowWithColumnPrefixTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_getRowWithColumnPrefixTs(tableName, row, prefix, timestamp);
+      send_getRowWithColumnPrefixTs(tableName, row, prefix, timestamp, regionName);
       return recv_getRowWithColumnPrefixTs();
     }
 
-    public void send_getRowWithColumnPrefixTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, long timestamp) throws org.apache.thrift.TException
+    public void send_getRowWithColumnPrefixTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, long timestamp, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       getRowWithColumnPrefixTs_args args = new getRowWithColumnPrefixTs_args();
       args.setTableName(tableName);
       args.setRow(row);
       args.setPrefix(prefix);
       args.setTimestamp(timestamp);
+      args.setRegionName(regionName);
       sendBase("getRowWithColumnPrefixTs", args);
     }
 
@@ -1380,18 +1441,19 @@ public class Hbase {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getRowWithColumnPrefixTs failed: unknown result");
     }
 
-    public List<TRowResult> getRowWithColumns(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns) throws IOError, org.apache.thrift.TException
+    public List<TRowResult> getRowWithColumns(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_getRowWithColumns(tableName, row, columns);
+      send_getRowWithColumns(tableName, row, columns, regionName);
       return recv_getRowWithColumns();
     }
 
-    public void send_getRowWithColumns(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns) throws org.apache.thrift.TException
+    public void send_getRowWithColumns(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       getRowWithColumns_args args = new getRowWithColumns_args();
       args.setTableName(tableName);
       args.setRow(row);
       args.setColumns(columns);
+      args.setRegionName(regionName);
       sendBase("getRowWithColumns", args);
     }
 
@@ -1408,19 +1470,20 @@ public class Hbase {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getRowWithColumns failed: unknown result");
     }
 
-    public List<TRowResult> getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, long timestamp) throws IOError, org.apache.thrift.TException
+    public List<TRowResult> getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_getRowWithColumnsTs(tableName, row, columns, timestamp);
+      send_getRowWithColumnsTs(tableName, row, columns, timestamp, regionName);
       return recv_getRowWithColumnsTs();
     }
 
-    public void send_getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, long timestamp) throws org.apache.thrift.TException
+    public void send_getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, long timestamp, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       getRowWithColumnsTs_args args = new getRowWithColumnsTs_args();
       args.setTableName(tableName);
       args.setRow(row);
       args.setColumns(columns);
       args.setTimestamp(timestamp);
+      args.setRegionName(regionName);
       sendBase("getRowWithColumnsTs", args);
     }
 
@@ -1437,17 +1500,18 @@ public class Hbase {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getRowWithColumnsTs failed: unknown result");
     }
 
-    public List<TRowResult> getRows(ByteBuffer tableName, List<ByteBuffer> rows) throws IOError, org.apache.thrift.TException
+    public List<TRowResult> getRows(ByteBuffer tableName, List<ByteBuffer> rows, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_getRows(tableName, rows);
+      send_getRows(tableName, rows, regionName);
       return recv_getRows();
     }
 
-    public void send_getRows(ByteBuffer tableName, List<ByteBuffer> rows) throws org.apache.thrift.TException
+    public void send_getRows(ByteBuffer tableName, List<ByteBuffer> rows, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       getRows_args args = new getRows_args();
       args.setTableName(tableName);
       args.setRows(rows);
+      args.setRegionName(regionName);
       sendBase("getRows", args);
     }
 
@@ -1464,18 +1528,19 @@ public class Hbase {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getRows failed: unknown result");
     }
 
-    public List<TRowResult> getRowsTs(ByteBuffer tableName, List<ByteBuffer> rows, long timestamp) throws IOError, org.apache.thrift.TException
+    public List<TRowResult> getRowsTs(ByteBuffer tableName, List<ByteBuffer> rows, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_getRowsTs(tableName, rows, timestamp);
+      send_getRowsTs(tableName, rows, timestamp, regionName);
       return recv_getRowsTs();
     }
 
-    public void send_getRowsTs(ByteBuffer tableName, List<ByteBuffer> rows, long timestamp) throws org.apache.thrift.TException
+    public void send_getRowsTs(ByteBuffer tableName, List<ByteBuffer> rows, long timestamp, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       getRowsTs_args args = new getRowsTs_args();
       args.setTableName(tableName);
       args.setRows(rows);
       args.setTimestamp(timestamp);
+      args.setRegionName(regionName);
       sendBase("getRowsTs", args);
     }
 
@@ -1492,18 +1557,19 @@ public class Hbase {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getRowsTs failed: unknown result");
     }
 
-    public List<TRowResult> getRowsWithColumns(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families) throws IOError, org.apache.thrift.TException
+    public List<TRowResult> getRowsWithColumns(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_getRowsWithColumns(tableName, rows, families);
+      send_getRowsWithColumns(tableName, rows, families, regionName);
       return recv_getRowsWithColumns();
     }
 
-    public void send_getRowsWithColumns(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families) throws org.apache.thrift.TException
+    public void send_getRowsWithColumns(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       getRowsWithColumns_args args = new getRowsWithColumns_args();
       args.setTableName(tableName);
       args.setRows(rows);
       args.setFamilies(families);
+      args.setRegionName(regionName);
       sendBase("getRowsWithColumns", args);
     }
 
@@ -1520,19 +1586,20 @@ public class Hbase {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getRowsWithColumns failed: unknown result");
     }
 
-    public List<TRowResult> getRowsWithColumnsTs(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, long timestamp) throws IOError, org.apache.thrift.TException
+    public List<TRowResult> getRowsWithColumnsTs(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, long timestamp, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_getRowsWithColumnsTs(tableName, rows, families, timestamp);
+      send_getRowsWithColumnsTs(tableName, rows, families, timestamp, regionName);
       return recv_getRowsWithColumnsTs();
     }
 
-    public void send_getRowsWithColumnsTs(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, long timestamp) throws org.apache.thrift.TException
+    public void send_getRowsWithColumnsTs(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, long timestamp, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       getRowsWithColumnsTs_args args = new getRowsWithColumnsTs_args();
       args.setTableName(tableName);
       args.setRows(rows);
       args.setFamilies(families);
       args.setTimestamp(timestamp);
+      args.setRegionName(regionName);
       sendBase("getRowsWithColumnsTs", args);
     }
 
@@ -1600,19 +1667,20 @@ public class Hbase {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getTableRegions failed: unknown result");
     }
 
-    public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, int numVersions) throws IOError, org.apache.thrift.TException
+    public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, int numVersions, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_getVer(tableName, row, column, numVersions);
+      send_getVer(tableName, row, column, numVersions, regionName);
       return recv_getVer();
     }
 
-    public void send_getVer(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, int numVersions) throws org.apache.thrift.TException
+    public void send_getVer(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, int numVersions, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       getVer_args args = new getVer_args();
       args.setTableName(tableName);
       args.setRow(row);
       args.setColumn(column);
       args.setNumVersions(numVersions);
+      args.setRegionName(regionName);
       sendBase("getVer", args);
     }
 
@@ -1629,13 +1697,13 @@ public class Hbase {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getVer failed: unknown result");
     }
 
-    public List<TCell> getVerTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, int numVersions) throws IOError, org.apache.thrift.TException
+    public List<TCell> getVerTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, int numVersions, ByteBuffer regionName) throws IOError, org.apache.thrift.TException
     {
-      send_getVerTs(tableName, row, column, timestamp, numVersions);
+      send_getVerTs(tableName, row, column, timestamp, numVersions, regionName);
       return recv_getVerTs();
     }
 
-    public void send_getVerTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, int numVersions) throws org.apache.thrift.TException
+    public void send_getVerTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, int numVersions, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       getVerTs_args args = new getVerTs_args();
       args.setTableName(tableName);
@@ -1643,6 +1711,7 @@ public class Hbase {
       args.setColumn(column);
       args.setTimestamp(timestamp);
       args.setNumVersions(numVersions);
+      args.setRegionName(regionName);
       sendBase("getVerTs", args);
     }
 
@@ -1708,19 +1777,48 @@ public class Hbase {
       return;
     }
 
-    public void mutateRow(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, IllegalArgument, org.apache.thrift.TException
+    public void multiPut(ByteBuffer tableName, List<BatchMutation> rowBatches, ByteBuffer regionName) throws IOError, IllegalArgument, org.apache.thrift.TException
     {
-      send_mutateRow(tableName, row, mutations, attributes);
+      send_multiPut(tableName, rowBatches, regionName);
+      recv_multiPut();
+    }
+
+    public void send_multiPut(ByteBuffer tableName, List<BatchMutation> rowBatches, ByteBuffer regionName) throws org.apache.thrift.TException
+    {
+      multiPut_args args = new multiPut_args();
+      args.setTableName(tableName);
+      args.setRowBatches(rowBatches);
+      args.setRegionName(regionName);
+      sendBase("multiPut", args);
+    }
+
+    public void recv_multiPut() throws IOError, IllegalArgument, org.apache.thrift.TException
+    {
+      multiPut_result result = new multiPut_result();
+      receiveBase(result, "multiPut");
+      if (result.io != null) {
+        throw result.io;
+      }
+      if (result.ia != null) {
+        throw result.ia;
+      }
+      return;
+    }
+
+    public void mutateRow(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws IOError, IllegalArgument, org.apache.thrift.TException
+    {
+      send_mutateRow(tableName, row, mutations, attributes, regionName);
       recv_mutateRow();
     }
 
-    public void send_mutateRow(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, Map<ByteBuffer,ByteBuffer> attributes) throws org.apache.thrift.TException
+    public void send_mutateRow(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       mutateRow_args args = new mutateRow_args();
       args.setTableName(tableName);
       args.setRow(row);
       args.setMutations(mutations);
       args.setAttributes(attributes);
+      args.setRegionName(regionName);
       sendBase("mutateRow", args);
     }
 
@@ -1737,13 +1835,13 @@ public class Hbase {
       return;
     }
 
-    public void mutateRowTs(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, long timestamp, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, IllegalArgument, org.apache.thrift.TException
+    public void mutateRowTs(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws IOError, IllegalArgument, org.apache.thrift.TException
     {
-      send_mutateRowTs(tableName, row, mutations, timestamp, attributes);
+      send_mutateRowTs(tableName, row, mutations, timestamp, attributes, regionName);
       recv_mutateRowTs();
     }
 
-    public void send_mutateRowTs(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, long timestamp, Map<ByteBuffer,ByteBuffer> attributes) throws org.apache.thrift.TException
+    public void send_mutateRowTs(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       mutateRowTs_args args = new mutateRowTs_args();
       args.setTableName(tableName);
@@ -1751,6 +1849,7 @@ public class Hbase {
       args.setMutations(mutations);
       args.setTimestamp(timestamp);
       args.setAttributes(attributes);
+      args.setRegionName(regionName);
       sendBase("mutateRowTs", args);
     }
 
@@ -1767,18 +1866,19 @@ public class Hbase {
       return;
     }
 
-    public void mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, IllegalArgument, org.apache.thrift.TException
+    public void mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws IOError, IllegalArgument, org.apache.thrift.TException
     {
-      send_mutateRows(tableName, rowBatches, attributes);
+      send_mutateRows(tableName, rowBatches, attributes, regionName);
       recv_mutateRows();
     }
 
-    public void send_mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches, Map<ByteBuffer,ByteBuffer> attributes) throws org.apache.thrift.TException
+    public void send_mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       mutateRows_args args = new mutateRows_args();
       args.setTableName(tableName);
       args.setRowBatches(rowBatches);
       args.setAttributes(attributes);
+      args.setRegionName(regionName);
       sendBase("mutateRows", args);
     }
 
@@ -1808,19 +1908,20 @@ public class Hbase {
       sendBase("mutateRowsAsync", args);
     }
 
-    public void mutateRowsTs(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, Map<ByteBuffer,ByteBuffer> attributes) throws IOError, IllegalArgument, org.apache.thrift.TException
+    public void mutateRowsTs(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws IOError, IllegalArgument, org.apache.thrift.TException
     {
-      send_mutateRowsTs(tableName, rowBatches, timestamp, attributes);
+      send_mutateRowsTs(tableName, rowBatches, timestamp, attributes, regionName);
       recv_mutateRowsTs();
     }
 
-    public void send_mutateRowsTs(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, Map<ByteBuffer,ByteBuffer> attributes) throws org.apache.thrift.TException
+    public void send_mutateRowsTs(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName) throws org.apache.thrift.TException
     {
       mutateRowsTs_args args = new mutateRowsTs_args();
       args.setTableName(tableName);
       args.setRowBatches(rowBatches);
       args.setTimestamp(timestamp);
       args.setAttributes(attributes);
+      args.setRegionName(regionName);
       sendBase("mutateRowsTs", args);
     }
 
@@ -2444,9 +2545,9 @@ public class Hbase {
       }
     }
 
-    public void deleteAll(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, org.apache.thrift.async.AsyncMethodCallback<deleteAll_call> resultHandler) throws org.apache.thrift.TException {
+    public void deleteAll(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<deleteAll_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      deleteAll_call method_call = new deleteAll_call(tableName, row, column, resultHandler, this, ___protocolFactory, ___transport);
+      deleteAll_call method_call = new deleteAll_call(tableName, row, column, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -2455,11 +2556,13 @@ public class Hbase {
       private ByteBuffer tableName;
       private ByteBuffer row;
       private ByteBuffer column;
-      public deleteAll_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, org.apache.thrift.async.AsyncMethodCallback<deleteAll_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public deleteAll_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<deleteAll_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.column = column;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -2468,6 +2571,7 @@ public class Hbase {
         args.setTableName(tableName);
         args.setRow(row);
         args.setColumn(column);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -2482,9 +2586,9 @@ public class Hbase {
       }
     }
 
-    public void deleteAllRow(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<deleteAllRow_call> resultHandler) throws org.apache.thrift.TException {
+    public void deleteAllRow(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<deleteAllRow_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      deleteAllRow_call method_call = new deleteAllRow_call(tableName, row, attributes, resultHandler, this, ___protocolFactory, ___transport);
+      deleteAllRow_call method_call = new deleteAllRow_call(tableName, row, attributes, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -2493,11 +2597,13 @@ public class Hbase {
       private ByteBuffer tableName;
       private ByteBuffer row;
       private Map<ByteBuffer,ByteBuffer> attributes;
-      public deleteAllRow_call(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<deleteAllRow_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public deleteAllRow_call(ByteBuffer tableName, ByteBuffer row, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<deleteAllRow_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.attributes = attributes;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -2506,6 +2612,7 @@ public class Hbase {
         args.setTableName(tableName);
         args.setRow(row);
         args.setAttributes(attributes);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -2520,9 +2627,9 @@ public class Hbase {
       }
     }
 
-    public void deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, org.apache.thrift.async.AsyncMethodCallback<deleteAllRowTs_call> resultHandler) throws org.apache.thrift.TException {
+    public void deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<deleteAllRowTs_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      deleteAllRowTs_call method_call = new deleteAllRowTs_call(tableName, row, timestamp, resultHandler, this, ___protocolFactory, ___transport);
+      deleteAllRowTs_call method_call = new deleteAllRowTs_call(tableName, row, timestamp, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -2531,11 +2638,13 @@ public class Hbase {
       private ByteBuffer tableName;
       private ByteBuffer row;
       private long timestamp;
-      public deleteAllRowTs_call(ByteBuffer tableName, ByteBuffer row, long timestamp, org.apache.thrift.async.AsyncMethodCallback<deleteAllRowTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public deleteAllRowTs_call(ByteBuffer tableName, ByteBuffer row, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<deleteAllRowTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.timestamp = timestamp;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -2544,6 +2653,7 @@ public class Hbase {
         args.setTableName(tableName);
         args.setRow(row);
         args.setTimestamp(timestamp);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -2558,9 +2668,9 @@ public class Hbase {
       }
     }
 
-    public void deleteAllTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, org.apache.thrift.async.AsyncMethodCallback<deleteAllTs_call> resultHandler) throws org.apache.thrift.TException {
+    public void deleteAllTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<deleteAllTs_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      deleteAllTs_call method_call = new deleteAllTs_call(tableName, row, column, timestamp, resultHandler, this, ___protocolFactory, ___transport);
+      deleteAllTs_call method_call = new deleteAllTs_call(tableName, row, column, timestamp, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -2570,12 +2680,14 @@ public class Hbase {
       private ByteBuffer row;
       private ByteBuffer column;
       private long timestamp;
-      public deleteAllTs_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, org.apache.thrift.async.AsyncMethodCallback<deleteAllTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public deleteAllTs_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<deleteAllTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.column = column;
         this.timestamp = timestamp;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -2585,6 +2697,7 @@ public class Hbase {
         args.setRow(row);
         args.setColumn(column);
         args.setTimestamp(timestamp);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -2695,9 +2808,9 @@ public class Hbase {
       }
     }
 
-    public void get(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, org.apache.thrift.async.AsyncMethodCallback<get_call> resultHandler) throws org.apache.thrift.TException {
+    public void get(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<get_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      get_call method_call = new get_call(tableName, row, column, resultHandler, this, ___protocolFactory, ___transport);
+      get_call method_call = new get_call(tableName, row, column, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -2706,11 +2819,13 @@ public class Hbase {
       private ByteBuffer tableName;
       private ByteBuffer row;
       private ByteBuffer column;
-      public get_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, org.apache.thrift.async.AsyncMethodCallback<get_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public get_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<get_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.column = column;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -2719,6 +2834,7 @@ public class Hbase {
         args.setTableName(tableName);
         args.setRow(row);
         args.setColumn(column);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -2797,9 +2913,9 @@ public class Hbase {
       }
     }
 
-    public void getRow(ByteBuffer tableName, ByteBuffer row, org.apache.thrift.async.AsyncMethodCallback<getRow_call> resultHandler) throws org.apache.thrift.TException {
+    public void getRow(ByteBuffer tableName, ByteBuffer row, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRow_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getRow_call method_call = new getRow_call(tableName, row, resultHandler, this, ___protocolFactory, ___transport);
+      getRow_call method_call = new getRow_call(tableName, row, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -2807,10 +2923,12 @@ public class Hbase {
     public static class getRow_call extends org.apache.thrift.async.TAsyncMethodCall {
       private ByteBuffer tableName;
       private ByteBuffer row;
-      public getRow_call(ByteBuffer tableName, ByteBuffer row, org.apache.thrift.async.AsyncMethodCallback<getRow_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public getRow_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRow_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -2818,6 +2936,7 @@ public class Hbase {
         getRow_args args = new getRow_args();
         args.setTableName(tableName);
         args.setRow(row);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -2832,9 +2951,9 @@ public class Hbase {
       }
     }
 
-    public void getRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, org.apache.thrift.async.AsyncMethodCallback<getRowTs_call> resultHandler) throws org.apache.thrift.TException {
+    public void getRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowTs_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getRowTs_call method_call = new getRowTs_call(tableName, row, timestamp, resultHandler, this, ___protocolFactory, ___transport);
+      getRowTs_call method_call = new getRowTs_call(tableName, row, timestamp, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -2843,11 +2962,13 @@ public class Hbase {
       private ByteBuffer tableName;
       private ByteBuffer row;
       private long timestamp;
-      public getRowTs_call(ByteBuffer tableName, ByteBuffer row, long timestamp, org.apache.thrift.async.AsyncMethodCallback<getRowTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public getRowTs_call(ByteBuffer tableName, ByteBuffer row, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.timestamp = timestamp;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -2856,6 +2977,7 @@ public class Hbase {
         args.setTableName(tableName);
         args.setRow(row);
         args.setTimestamp(timestamp);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -2870,9 +2992,9 @@ public class Hbase {
       }
     }
 
-    public void getRowWithColumnPrefix(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumnPrefix_call> resultHandler) throws org.apache.thrift.TException {
+    public void getRowWithColumnPrefix(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumnPrefix_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getRowWithColumnPrefix_call method_call = new getRowWithColumnPrefix_call(tableName, row, prefix, resultHandler, this, ___protocolFactory, ___transport);
+      getRowWithColumnPrefix_call method_call = new getRowWithColumnPrefix_call(tableName, row, prefix, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -2881,11 +3003,13 @@ public class Hbase {
       private ByteBuffer tableName;
       private ByteBuffer row;
       private ByteBuffer prefix;
-      public getRowWithColumnPrefix_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumnPrefix_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public getRowWithColumnPrefix_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumnPrefix_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.prefix = prefix;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -2894,6 +3018,7 @@ public class Hbase {
         args.setTableName(tableName);
         args.setRow(row);
         args.setPrefix(prefix);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -2908,9 +3033,9 @@ public class Hbase {
       }
     }
 
-    public void getRowWithColumnPrefixTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, long timestamp, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumnPrefixTs_call> resultHandler) throws org.apache.thrift.TException {
+    public void getRowWithColumnPrefixTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumnPrefixTs_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getRowWithColumnPrefixTs_call method_call = new getRowWithColumnPrefixTs_call(tableName, row, prefix, timestamp, resultHandler, this, ___protocolFactory, ___transport);
+      getRowWithColumnPrefixTs_call method_call = new getRowWithColumnPrefixTs_call(tableName, row, prefix, timestamp, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -2920,12 +3045,14 @@ public class Hbase {
       private ByteBuffer row;
       private ByteBuffer prefix;
       private long timestamp;
-      public getRowWithColumnPrefixTs_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, long timestamp, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumnPrefixTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public getRowWithColumnPrefixTs_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer prefix, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumnPrefixTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.prefix = prefix;
         this.timestamp = timestamp;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -2935,6 +3062,7 @@ public class Hbase {
         args.setRow(row);
         args.setPrefix(prefix);
         args.setTimestamp(timestamp);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -2949,9 +3077,9 @@ public class Hbase {
       }
     }
 
-    public void getRowWithColumns(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumns_call> resultHandler) throws org.apache.thrift.TException {
+    public void getRowWithColumns(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumns_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getRowWithColumns_call method_call = new getRowWithColumns_call(tableName, row, columns, resultHandler, this, ___protocolFactory, ___transport);
+      getRowWithColumns_call method_call = new getRowWithColumns_call(tableName, row, columns, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -2960,11 +3088,13 @@ public class Hbase {
       private ByteBuffer tableName;
       private ByteBuffer row;
       private List<ByteBuffer> columns;
-      public getRowWithColumns_call(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumns_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public getRowWithColumns_call(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumns_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.columns = columns;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -2973,6 +3103,7 @@ public class Hbase {
         args.setTableName(tableName);
         args.setRow(row);
         args.setColumns(columns);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -2987,9 +3118,9 @@ public class Hbase {
       }
     }
 
-    public void getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, long timestamp, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumnsTs_call> resultHandler) throws org.apache.thrift.TException {
+    public void getRowWithColumnsTs(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumnsTs_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getRowWithColumnsTs_call method_call = new getRowWithColumnsTs_call(tableName, row, columns, timestamp, resultHandler, this, ___protocolFactory, ___transport);
+      getRowWithColumnsTs_call method_call = new getRowWithColumnsTs_call(tableName, row, columns, timestamp, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -2999,12 +3130,14 @@ public class Hbase {
       private ByteBuffer row;
       private List<ByteBuffer> columns;
       private long timestamp;
-      public getRowWithColumnsTs_call(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, long timestamp, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumnsTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public getRowWithColumnsTs_call(ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowWithColumnsTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.columns = columns;
         this.timestamp = timestamp;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -3014,6 +3147,7 @@ public class Hbase {
         args.setRow(row);
         args.setColumns(columns);
         args.setTimestamp(timestamp);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -3028,9 +3162,9 @@ public class Hbase {
       }
     }
 
-    public void getRows(ByteBuffer tableName, List<ByteBuffer> rows, org.apache.thrift.async.AsyncMethodCallback<getRows_call> resultHandler) throws org.apache.thrift.TException {
+    public void getRows(ByteBuffer tableName, List<ByteBuffer> rows, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRows_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getRows_call method_call = new getRows_call(tableName, rows, resultHandler, this, ___protocolFactory, ___transport);
+      getRows_call method_call = new getRows_call(tableName, rows, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -3038,10 +3172,12 @@ public class Hbase {
     public static class getRows_call extends org.apache.thrift.async.TAsyncMethodCall {
       private ByteBuffer tableName;
       private List<ByteBuffer> rows;
-      public getRows_call(ByteBuffer tableName, List<ByteBuffer> rows, org.apache.thrift.async.AsyncMethodCallback<getRows_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public getRows_call(ByteBuffer tableName, List<ByteBuffer> rows, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRows_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.rows = rows;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -3049,6 +3185,7 @@ public class Hbase {
         getRows_args args = new getRows_args();
         args.setTableName(tableName);
         args.setRows(rows);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -3063,9 +3200,9 @@ public class Hbase {
       }
     }
 
-    public void getRowsTs(ByteBuffer tableName, List<ByteBuffer> rows, long timestamp, org.apache.thrift.async.AsyncMethodCallback<getRowsTs_call> resultHandler) throws org.apache.thrift.TException {
+    public void getRowsTs(ByteBuffer tableName, List<ByteBuffer> rows, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowsTs_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getRowsTs_call method_call = new getRowsTs_call(tableName, rows, timestamp, resultHandler, this, ___protocolFactory, ___transport);
+      getRowsTs_call method_call = new getRowsTs_call(tableName, rows, timestamp, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -3074,11 +3211,13 @@ public class Hbase {
       private ByteBuffer tableName;
       private List<ByteBuffer> rows;
       private long timestamp;
-      public getRowsTs_call(ByteBuffer tableName, List<ByteBuffer> rows, long timestamp, org.apache.thrift.async.AsyncMethodCallback<getRowsTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public getRowsTs_call(ByteBuffer tableName, List<ByteBuffer> rows, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowsTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.rows = rows;
         this.timestamp = timestamp;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -3087,6 +3226,7 @@ public class Hbase {
         args.setTableName(tableName);
         args.setRows(rows);
         args.setTimestamp(timestamp);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -3101,9 +3241,9 @@ public class Hbase {
       }
     }
 
-    public void getRowsWithColumns(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, org.apache.thrift.async.AsyncMethodCallback<getRowsWithColumns_call> resultHandler) throws org.apache.thrift.TException {
+    public void getRowsWithColumns(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowsWithColumns_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getRowsWithColumns_call method_call = new getRowsWithColumns_call(tableName, rows, families, resultHandler, this, ___protocolFactory, ___transport);
+      getRowsWithColumns_call method_call = new getRowsWithColumns_call(tableName, rows, families, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -3112,11 +3252,13 @@ public class Hbase {
       private ByteBuffer tableName;
       private List<ByteBuffer> rows;
       private List<ByteBuffer> families;
-      public getRowsWithColumns_call(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, org.apache.thrift.async.AsyncMethodCallback<getRowsWithColumns_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public getRowsWithColumns_call(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowsWithColumns_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.rows = rows;
         this.families = families;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -3125,6 +3267,7 @@ public class Hbase {
         args.setTableName(tableName);
         args.setRows(rows);
         args.setFamilies(families);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -3139,9 +3282,9 @@ public class Hbase {
       }
     }
 
-    public void getRowsWithColumnsTs(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, long timestamp, org.apache.thrift.async.AsyncMethodCallback<getRowsWithColumnsTs_call> resultHandler) throws org.apache.thrift.TException {
+    public void getRowsWithColumnsTs(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowsWithColumnsTs_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getRowsWithColumnsTs_call method_call = new getRowsWithColumnsTs_call(tableName, rows, families, timestamp, resultHandler, this, ___protocolFactory, ___transport);
+      getRowsWithColumnsTs_call method_call = new getRowsWithColumnsTs_call(tableName, rows, families, timestamp, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -3151,12 +3294,14 @@ public class Hbase {
       private List<ByteBuffer> rows;
       private List<ByteBuffer> families;
       private long timestamp;
-      public getRowsWithColumnsTs_call(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, long timestamp, org.apache.thrift.async.AsyncMethodCallback<getRowsWithColumnsTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public getRowsWithColumnsTs_call(ByteBuffer tableName, List<ByteBuffer> rows, List<ByteBuffer> families, long timestamp, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getRowsWithColumnsTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.rows = rows;
         this.families = families;
         this.timestamp = timestamp;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -3166,6 +3311,7 @@ public class Hbase {
         args.setRows(rows);
         args.setFamilies(families);
         args.setTimestamp(timestamp);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -3241,9 +3387,9 @@ public class Hbase {
       }
     }
 
-    public void getVer(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, int numVersions, org.apache.thrift.async.AsyncMethodCallback<getVer_call> resultHandler) throws org.apache.thrift.TException {
+    public void getVer(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, int numVersions, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getVer_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getVer_call method_call = new getVer_call(tableName, row, column, numVersions, resultHandler, this, ___protocolFactory, ___transport);
+      getVer_call method_call = new getVer_call(tableName, row, column, numVersions, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -3253,12 +3399,14 @@ public class Hbase {
       private ByteBuffer row;
       private ByteBuffer column;
       private int numVersions;
-      public getVer_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, int numVersions, org.apache.thrift.async.AsyncMethodCallback<getVer_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public getVer_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, int numVersions, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getVer_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.column = column;
         this.numVersions = numVersions;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -3268,6 +3416,7 @@ public class Hbase {
         args.setRow(row);
         args.setColumn(column);
         args.setNumVersions(numVersions);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -3282,9 +3431,9 @@ public class Hbase {
       }
     }
 
-    public void getVerTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, int numVersions, org.apache.thrift.async.AsyncMethodCallback<getVerTs_call> resultHandler) throws org.apache.thrift.TException {
+    public void getVerTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, int numVersions, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getVerTs_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getVerTs_call method_call = new getVerTs_call(tableName, row, column, timestamp, numVersions, resultHandler, this, ___protocolFactory, ___transport);
+      getVerTs_call method_call = new getVerTs_call(tableName, row, column, timestamp, numVersions, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -3295,13 +3444,15 @@ public class Hbase {
       private ByteBuffer column;
       private long timestamp;
       private int numVersions;
-      public getVerTs_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, int numVersions, org.apache.thrift.async.AsyncMethodCallback<getVerTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public getVerTs_call(ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long timestamp, int numVersions, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<getVerTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.column = column;
         this.timestamp = timestamp;
         this.numVersions = numVersions;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -3312,6 +3463,7 @@ public class Hbase {
         args.setColumn(column);
         args.setTimestamp(timestamp);
         args.setNumVersions(numVersions);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -3390,9 +3542,47 @@ public class Hbase {
       }
     }
 
-    public void mutateRow(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<mutateRow_call> resultHandler) throws org.apache.thrift.TException {
+    public void multiPut(ByteBuffer tableName, List<BatchMutation> rowBatches, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<multiPut_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      mutateRow_call method_call = new mutateRow_call(tableName, row, mutations, attributes, resultHandler, this, ___protocolFactory, ___transport);
+      multiPut_call method_call = new multiPut_call(tableName, rowBatches, regionName, resultHandler, this, ___protocolFactory, ___transport);
+      this.___currentMethod = method_call;
+      ___manager.call(method_call);
+    }
+
+    public static class multiPut_call extends org.apache.thrift.async.TAsyncMethodCall {
+      private ByteBuffer tableName;
+      private List<BatchMutation> rowBatches;
+      private ByteBuffer regionName;
+      public multiPut_call(ByteBuffer tableName, List<BatchMutation> rowBatches, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<multiPut_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+        super(client, protocolFactory, transport, resultHandler, false);
+        this.tableName = tableName;
+        this.rowBatches = rowBatches;
+        this.regionName = regionName;
+      }
+
+      public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
+        prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("multiPut", org.apache.thrift.protocol.TMessageType.CALL, 0));
+        multiPut_args args = new multiPut_args();
+        args.setTableName(tableName);
+        args.setRowBatches(rowBatches);
+        args.setRegionName(regionName);
+        args.write(prot);
+        prot.writeMessageEnd();
+      }
+
+      public void getResult() throws IOError, IllegalArgument, org.apache.thrift.TException {
+        if (getState() != org.apache.thrift.async.TAsyncMethodCall.State.RESPONSE_READ) {
+          throw new IllegalStateException("Method call not finished!");
+        }
+        org.apache.thrift.transport.TMemoryInputTransport memoryTransport = new org.apache.thrift.transport.TMemoryInputTransport(getFrameBuffer().array());
+        org.apache.thrift.protocol.TProtocol prot = client.getProtocolFactory().getProtocol(memoryTransport);
+        (new Client(prot)).recv_multiPut();
+      }
+    }
+
+    public void mutateRow(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<mutateRow_call> resultHandler) throws org.apache.thrift.TException {
+      checkReady();
+      mutateRow_call method_call = new mutateRow_call(tableName, row, mutations, attributes, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -3402,12 +3592,14 @@ public class Hbase {
       private ByteBuffer row;
       private List<Mutation> mutations;
       private Map<ByteBuffer,ByteBuffer> attributes;
-      public mutateRow_call(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<mutateRow_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public mutateRow_call(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<mutateRow_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.mutations = mutations;
         this.attributes = attributes;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -3417,6 +3609,7 @@ public class Hbase {
         args.setRow(row);
         args.setMutations(mutations);
         args.setAttributes(attributes);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -3431,9 +3624,9 @@ public class Hbase {
       }
     }
 
-    public void mutateRowTs(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<mutateRowTs_call> resultHandler) throws org.apache.thrift.TException {
+    public void mutateRowTs(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<mutateRowTs_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      mutateRowTs_call method_call = new mutateRowTs_call(tableName, row, mutations, timestamp, attributes, resultHandler, this, ___protocolFactory, ___transport);
+      mutateRowTs_call method_call = new mutateRowTs_call(tableName, row, mutations, timestamp, attributes, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -3444,13 +3637,15 @@ public class Hbase {
       private List<Mutation> mutations;
       private long timestamp;
       private Map<ByteBuffer,ByteBuffer> attributes;
-      public mutateRowTs_call(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<mutateRowTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public mutateRowTs_call(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<mutateRowTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.row = row;
         this.mutations = mutations;
         this.timestamp = timestamp;
         this.attributes = attributes;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -3461,6 +3656,7 @@ public class Hbase {
         args.setMutations(mutations);
         args.setTimestamp(timestamp);
         args.setAttributes(attributes);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -3475,9 +3671,9 @@ public class Hbase {
       }
     }
 
-    public void mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<mutateRows_call> resultHandler) throws org.apache.thrift.TException {
+    public void mutateRows(ByteBuffer tableName, List<BatchMutation> rowBatches, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<mutateRows_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      mutateRows_call method_call = new mutateRows_call(tableName, rowBatches, attributes, resultHandler, this, ___protocolFactory, ___transport);
+      mutateRows_call method_call = new mutateRows_call(tableName, rowBatches, attributes, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -3486,11 +3682,13 @@ public class Hbase {
       private ByteBuffer tableName;
       private List<BatchMutation> rowBatches;
       private Map<ByteBuffer,ByteBuffer> attributes;
-      public mutateRows_call(ByteBuffer tableName, List<BatchMutation> rowBatches, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<mutateRows_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public mutateRows_call(ByteBuffer tableName, List<BatchMutation> rowBatches, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<mutateRows_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.rowBatches = rowBatches;
         this.attributes = attributes;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -3499,6 +3697,7 @@ public class Hbase {
         args.setTableName(tableName);
         args.setRowBatches(rowBatches);
         args.setAttributes(attributes);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -3547,9 +3746,9 @@ public class Hbase {
       }
     }
 
-    public void mutateRowsTs(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<mutateRowsTs_call> resultHandler) throws org.apache.thrift.TException {
+    public void mutateRowsTs(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<mutateRowsTs_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      mutateRowsTs_call method_call = new mutateRowsTs_call(tableName, rowBatches, timestamp, attributes, resultHandler, this, ___protocolFactory, ___transport);
+      mutateRowsTs_call method_call = new mutateRowsTs_call(tableName, rowBatches, timestamp, attributes, regionName, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -3559,12 +3758,14 @@ public class Hbase {
       private List<BatchMutation> rowBatches;
       private long timestamp;
       private Map<ByteBuffer,ByteBuffer> attributes;
-      public mutateRowsTs_call(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, org.apache.thrift.async.AsyncMethodCallback<mutateRowsTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private ByteBuffer regionName;
+      public mutateRowsTs_call(ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp, Map<ByteBuffer,ByteBuffer> attributes, ByteBuffer regionName, org.apache.thrift.async.AsyncMethodCallback<mutateRowsTs_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.tableName = tableName;
         this.rowBatches = rowBatches;
         this.timestamp = timestamp;
         this.attributes = attributes;
+        this.regionName = regionName;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -3574,6 +3775,7 @@ public class Hbase {
         args.setRowBatches(rowBatches);
         args.setTimestamp(timestamp);
         args.setAttributes(attributes);
+        args.setRegionName(regionName);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -4163,6 +4365,7 @@ public class Hbase {
       processMap.put("getVerTs", new getVerTs());
       processMap.put("isTableEnabled", new isTableEnabled());
       processMap.put("majorCompact", new majorCompact());
+      processMap.put("multiPut", new multiPut());
       processMap.put("mutateRow", new mutateRow());
       processMap.put("mutateRowTs", new mutateRowTs());
       processMap.put("mutateRows", new mutateRows());
@@ -4310,7 +4513,7 @@ public class Hbase {
       protected deleteAll_result getResult(I iface, deleteAll_args args) throws org.apache.thrift.TException {
         deleteAll_result result = new deleteAll_result();
         try {
-          iface.deleteAll(args.tableName, args.row, args.column);
+          iface.deleteAll(args.tableName, args.row, args.column, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4330,7 +4533,7 @@ public class Hbase {
       protected deleteAllRow_result getResult(I iface, deleteAllRow_args args) throws org.apache.thrift.TException {
         deleteAllRow_result result = new deleteAllRow_result();
         try {
-          iface.deleteAllRow(args.tableName, args.row, args.attributes);
+          iface.deleteAllRow(args.tableName, args.row, args.attributes, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4350,7 +4553,7 @@ public class Hbase {
       protected deleteAllRowTs_result getResult(I iface, deleteAllRowTs_args args) throws org.apache.thrift.TException {
         deleteAllRowTs_result result = new deleteAllRowTs_result();
         try {
-          iface.deleteAllRowTs(args.tableName, args.row, args.timestamp);
+          iface.deleteAllRowTs(args.tableName, args.row, args.timestamp, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4370,7 +4573,7 @@ public class Hbase {
       protected deleteAllTs_result getResult(I iface, deleteAllTs_args args) throws org.apache.thrift.TException {
         deleteAllTs_result result = new deleteAllTs_result();
         try {
-          iface.deleteAllTs(args.tableName, args.row, args.column, args.timestamp);
+          iface.deleteAllTs(args.tableName, args.row, args.column, args.timestamp, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4450,7 +4653,7 @@ public class Hbase {
       protected get_result getResult(I iface, get_args args) throws org.apache.thrift.TException {
         get_result result = new get_result();
         try {
-          result.success = iface.get(args.tableName, args.row, args.column);
+          result.success = iface.get(args.tableName, args.row, args.column, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4510,7 +4713,7 @@ public class Hbase {
       protected getRow_result getResult(I iface, getRow_args args) throws org.apache.thrift.TException {
         getRow_result result = new getRow_result();
         try {
-          result.success = iface.getRow(args.tableName, args.row);
+          result.success = iface.getRow(args.tableName, args.row, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4530,7 +4733,7 @@ public class Hbase {
       protected getRowTs_result getResult(I iface, getRowTs_args args) throws org.apache.thrift.TException {
         getRowTs_result result = new getRowTs_result();
         try {
-          result.success = iface.getRowTs(args.tableName, args.row, args.timestamp);
+          result.success = iface.getRowTs(args.tableName, args.row, args.timestamp, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4550,7 +4753,7 @@ public class Hbase {
       protected getRowWithColumnPrefix_result getResult(I iface, getRowWithColumnPrefix_args args) throws org.apache.thrift.TException {
         getRowWithColumnPrefix_result result = new getRowWithColumnPrefix_result();
         try {
-          result.success = iface.getRowWithColumnPrefix(args.tableName, args.row, args.prefix);
+          result.success = iface.getRowWithColumnPrefix(args.tableName, args.row, args.prefix, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4570,7 +4773,7 @@ public class Hbase {
       protected getRowWithColumnPrefixTs_result getResult(I iface, getRowWithColumnPrefixTs_args args) throws org.apache.thrift.TException {
         getRowWithColumnPrefixTs_result result = new getRowWithColumnPrefixTs_result();
         try {
-          result.success = iface.getRowWithColumnPrefixTs(args.tableName, args.row, args.prefix, args.timestamp);
+          result.success = iface.getRowWithColumnPrefixTs(args.tableName, args.row, args.prefix, args.timestamp, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4590,7 +4793,7 @@ public class Hbase {
       protected getRowWithColumns_result getResult(I iface, getRowWithColumns_args args) throws org.apache.thrift.TException {
         getRowWithColumns_result result = new getRowWithColumns_result();
         try {
-          result.success = iface.getRowWithColumns(args.tableName, args.row, args.columns);
+          result.success = iface.getRowWithColumns(args.tableName, args.row, args.columns, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4610,7 +4813,7 @@ public class Hbase {
       protected getRowWithColumnsTs_result getResult(I iface, getRowWithColumnsTs_args args) throws org.apache.thrift.TException {
         getRowWithColumnsTs_result result = new getRowWithColumnsTs_result();
         try {
-          result.success = iface.getRowWithColumnsTs(args.tableName, args.row, args.columns, args.timestamp);
+          result.success = iface.getRowWithColumnsTs(args.tableName, args.row, args.columns, args.timestamp, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4630,7 +4833,7 @@ public class Hbase {
       protected getRows_result getResult(I iface, getRows_args args) throws org.apache.thrift.TException {
         getRows_result result = new getRows_result();
         try {
-          result.success = iface.getRows(args.tableName, args.rows);
+          result.success = iface.getRows(args.tableName, args.rows, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4650,7 +4853,7 @@ public class Hbase {
       protected getRowsTs_result getResult(I iface, getRowsTs_args args) throws org.apache.thrift.TException {
         getRowsTs_result result = new getRowsTs_result();
         try {
-          result.success = iface.getRowsTs(args.tableName, args.rows, args.timestamp);
+          result.success = iface.getRowsTs(args.tableName, args.rows, args.timestamp, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4670,7 +4873,7 @@ public class Hbase {
       protected getRowsWithColumns_result getResult(I iface, getRowsWithColumns_args args) throws org.apache.thrift.TException {
         getRowsWithColumns_result result = new getRowsWithColumns_result();
         try {
-          result.success = iface.getRowsWithColumns(args.tableName, args.rows, args.families);
+          result.success = iface.getRowsWithColumns(args.tableName, args.rows, args.families, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4690,7 +4893,7 @@ public class Hbase {
       protected getRowsWithColumnsTs_result getResult(I iface, getRowsWithColumnsTs_args args) throws org.apache.thrift.TException {
         getRowsWithColumnsTs_result result = new getRowsWithColumnsTs_result();
         try {
-          result.success = iface.getRowsWithColumnsTs(args.tableName, args.rows, args.families, args.timestamp);
+          result.success = iface.getRowsWithColumnsTs(args.tableName, args.rows, args.families, args.timestamp, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4750,7 +4953,7 @@ public class Hbase {
       protected getVer_result getResult(I iface, getVer_args args) throws org.apache.thrift.TException {
         getVer_result result = new getVer_result();
         try {
-          result.success = iface.getVer(args.tableName, args.row, args.column, args.numVersions);
+          result.success = iface.getVer(args.tableName, args.row, args.column, args.numVersions, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4770,7 +4973,7 @@ public class Hbase {
       protected getVerTs_result getResult(I iface, getVerTs_args args) throws org.apache.thrift.TException {
         getVerTs_result result = new getVerTs_result();
         try {
-          result.success = iface.getVerTs(args.tableName, args.row, args.column, args.timestamp, args.numVersions);
+          result.success = iface.getVerTs(args.tableName, args.row, args.column, args.timestamp, args.numVersions, args.regionName);
         } catch (IOError io) {
           result.io = io;
         }
@@ -4819,6 +5022,28 @@ public class Hbase {
       }
     }
 
+    private static class multiPut<I extends Iface> extends org.apache.thrift.ProcessFunction<I, multiPut_args> {
+      public multiPut() {
+        super("multiPut");
+      }
+
+      protected multiPut_args getEmptyArgsInstance() {
+        return new multiPut_args();
+      }
+
+      protected multiPut_result getResult(I iface, multiPut_args args) throws org.apache.thrift.TException {
+        multiPut_result result = new multiPut_result();
+        try {
+          iface.multiPut(args.tableName, args.rowBatches, args.regionName);
+        } catch (IOError io) {
+          result.io = io;
+        } catch (IllegalArgument ia) {
+          result.ia = ia;
+        }
+        return result;
+      }
+    }
+
     private static class mutateRow<I extends Iface> extends org.apache.thrift.ProcessFunction<I, mutateRow_args> {
       public mutateRow() {
         super("mutateRow");
@@ -4831,7 +5056,7 @@ public class Hbase {
       protected mutateRow_result getResult(I iface, mutateRow_args args) throws org.apache.thrift.TException {
         mutateRow_result result = new mutateRow_result();
         try {
-          iface.mutateRow(args.tableName, args.row, args.mutations, args.attributes);
+          iface.mutateRow(args.tableName, args.row, args.mutations, args.attributes, args.regionName);
         } catch (IOError io) {
           result.io = io;
         } catch (IllegalArgument ia) {
@@ -4853,7 +5078,7 @@ public class Hbase {
       protected mutateRowTs_result getResult(I iface, mutateRowTs_args args) throws org.apache.thrift.TException {
         mutateRowTs_result result = new mutateRowTs_result();
         try {
-          iface.mutateRowTs(args.tableName, args.row, args.mutations, args.timestamp, args.attributes);
+          iface.mutateRowTs(args.tableName, args.row, args.mutations, args.timestamp, args.attributes, args.regionName);
         } catch (IOError io) {
           result.io = io;
         } catch (IllegalArgument ia) {
@@ -4875,7 +5100,7 @@ public class Hbase {
       protected mutateRows_result getResult(I iface, mutateRows_args args) throws org.apache.thrift.TException {
         mutateRows_result result = new mutateRows_result();
         try {
-          iface.mutateRows(args.tableName, args.rowBatches, args.attributes);
+          iface.mutateRows(args.tableName, args.rowBatches, args.attributes, args.regionName);
         } catch (IOError io) {
           result.io = io;
         } catch (IllegalArgument ia) {
@@ -4912,7 +5137,7 @@ public class Hbase {
       protected mutateRowsTs_result getResult(I iface, mutateRowsTs_args args) throws org.apache.thrift.TException {
         mutateRowsTs_result result = new mutateRowsTs_result();
         try {
-          iface.mutateRowsTs(args.tableName, args.rowBatches, args.timestamp, args.attributes);
+          iface.mutateRowsTs(args.tableName, args.rowBatches, args.timestamp, args.attributes, args.regionName);
         } catch (IOError io) {
           result.io = io;
         } catch (IllegalArgument ia) {
@@ -6359,6 +6584,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -7361,7 +7588,7 @@ public class Hbase {
                   for (int _i30 = 0; _i30 < _map29.size; ++_i30)
                   {
                     ByteBuffer _key31; // required
-                    ByteBuffer _val32; // required
+                    ByteBuffer _val32; // optional
                     _key31 = iprot.readBinary();
                     _val32 = iprot.readBinary();
                     struct.attributes.put(_key31, _val32);
@@ -7544,7 +7771,7 @@ public class Hbase {
             for (int _i41 = 0; _i41 < _map40.size; ++_i41)
             {
               ByteBuffer _key42; // required
-              ByteBuffer _val43; // required
+              ByteBuffer _val43; // optional
               _key42 = iprot.readBinary();
               _val43 = iprot.readBinary();
               struct.attributes.put(_key42, _val43);
@@ -7971,6 +8198,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -9069,7 +9298,7 @@ public class Hbase {
                   for (int _i48 = 0; _i48 < _map47.size; ++_i48)
                   {
                     ByteBuffer _key49; // required
-                    ByteBuffer _val50; // required
+                    ByteBuffer _val50; // optional
                     _key49 = iprot.readBinary();
                     _val50 = iprot.readBinary();
                     struct.attributes.put(_key49, _val50);
@@ -9265,7 +9494,7 @@ public class Hbase {
             for (int _i59 = 0; _i59 < _map58.size; ++_i59)
             {
               ByteBuffer _key60; // required
-              ByteBuffer _val61; // required
+              ByteBuffer _val61; // optional
               _key60 = iprot.readBinary();
               _val61 = iprot.readBinary();
               struct.attributes.put(_key60, _val61);
@@ -9692,6 +9921,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -11656,6 +11887,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField TABLE_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("tableName", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
     private static final org.apache.thrift.protocol.TField COLUMN_FIELD_DESC = new org.apache.thrift.protocol.TField("column", org.apache.thrift.protocol.TType.STRING, (short)3);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)4);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -11675,6 +11907,7 @@ public class Hbase {
      * name of column whose value is to be deleted
      */
     public ByteBuffer column; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -11689,7 +11922,8 @@ public class Hbase {
       /**
        * name of column whose value is to be deleted
        */
-      COLUMN((short)3, "column");
+      COLUMN((short)3, "column"),
+      REGION_NAME((short)4, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -11710,6 +11944,8 @@ public class Hbase {
             return ROW;
           case 3: // COLUMN
             return COLUMN;
+          case 4: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -11759,6 +11995,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       tmpMap.put(_Fields.COLUMN, new org.apache.thrift.meta_data.FieldMetaData("column", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(deleteAll_args.class, metaDataMap);
     }
@@ -11769,12 +12007,14 @@ public class Hbase {
     public deleteAll_args(
       ByteBuffer tableName,
       ByteBuffer row,
-      ByteBuffer column)
+      ByteBuffer column,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
       this.row = row;
       this.column = column;
+      this.regionName = regionName;
     }
 
     /**
@@ -11790,6 +12030,9 @@ public class Hbase {
       if (other.isSetColumn()) {
         this.column = other.column;
       }
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public deleteAll_args deepCopy() {
@@ -11801,6 +12044,7 @@ public class Hbase {
       this.tableName = null;
       this.row = null;
       this.column = null;
+      this.regionName = null;
     }
 
     /**
@@ -11923,6 +12167,40 @@ public class Hbase {
       }
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public deleteAll_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public deleteAll_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -11949,6 +12227,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -11962,6 +12248,9 @@ public class Hbase {
 
       case COLUMN:
         return getColumn();
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -11980,6 +12269,8 @@ public class Hbase {
         return isSetRow();
       case COLUMN:
         return isSetColumn();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -12021,6 +12312,15 @@ public class Hbase {
         if (!(this_present_column && that_present_column))
           return false;
         if (!this.column.equals(that.column))
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -12070,6 +12370,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -12111,6 +12421,14 @@ public class Hbase {
         sb.append("null");
       } else {
         sb.append(this.column);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
       }
       first = false;
       sb.append(")");
@@ -12179,6 +12497,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 4: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -12209,6 +12535,11 @@ public class Hbase {
           oprot.writeBinary(struct.column);
           oprot.writeFieldEnd();
         }
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -12236,7 +12567,10 @@ public class Hbase {
         if (struct.isSetColumn()) {
           optionals.set(2);
         }
-        oprot.writeBitSet(optionals, 3);
+        if (struct.isSetRegionName()) {
+          optionals.set(3);
+        }
+        oprot.writeBitSet(optionals, 4);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -12246,12 +12580,15 @@ public class Hbase {
         if (struct.isSetColumn()) {
           oprot.writeBinary(struct.column);
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, deleteAll_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(3);
+        BitSet incoming = iprot.readBitSet(4);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -12263,6 +12600,10 @@ public class Hbase {
         if (incoming.get(2)) {
           struct.column = iprot.readBinary();
           struct.setColumnIsSet(true);
+        }
+        if (incoming.get(3)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -12630,6 +12971,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField TABLE_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("tableName", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
     private static final org.apache.thrift.protocol.TField ATTRIBUTES_FIELD_DESC = new org.apache.thrift.protocol.TField("attributes", org.apache.thrift.protocol.TType.MAP, (short)3);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)4);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -12649,6 +12991,7 @@ public class Hbase {
      * Delete attributes
      */
     public Map<ByteBuffer,ByteBuffer> attributes; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -12663,7 +13006,8 @@ public class Hbase {
       /**
        * Delete attributes
        */
-      ATTRIBUTES((short)3, "attributes");
+      ATTRIBUTES((short)3, "attributes"),
+      REGION_NAME((short)4, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -12684,6 +13028,8 @@ public class Hbase {
             return ROW;
           case 3: // ATTRIBUTES
             return ATTRIBUTES;
+          case 4: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -12735,6 +13081,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.MapMetaData(org.apache.thrift.protocol.TType.MAP, 
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"), 
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"))));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(deleteAllRow_args.class, metaDataMap);
     }
@@ -12745,12 +13093,14 @@ public class Hbase {
     public deleteAllRow_args(
       ByteBuffer tableName,
       ByteBuffer row,
-      Map<ByteBuffer,ByteBuffer> attributes)
+      Map<ByteBuffer,ByteBuffer> attributes,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
       this.row = row;
       this.attributes = attributes;
+      this.regionName = regionName;
     }
 
     /**
@@ -12778,6 +13128,9 @@ public class Hbase {
         }
         this.attributes = __this__attributes;
       }
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public deleteAllRow_args deepCopy() {
@@ -12789,6 +13142,7 @@ public class Hbase {
       this.tableName = null;
       this.row = null;
       this.attributes = null;
+      this.regionName = null;
     }
 
     /**
@@ -12912,6 +13266,40 @@ public class Hbase {
       }
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public deleteAllRow_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public deleteAllRow_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -12938,6 +13326,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -12951,6 +13347,9 @@ public class Hbase {
 
       case ATTRIBUTES:
         return getAttributes();
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -12969,6 +13368,8 @@ public class Hbase {
         return isSetRow();
       case ATTRIBUTES:
         return isSetAttributes();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -13010,6 +13411,15 @@ public class Hbase {
         if (!(this_present_attributes && that_present_attributes))
           return false;
         if (!this.attributes.equals(that.attributes))
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -13059,6 +13469,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -13100,6 +13520,14 @@ public class Hbase {
         sb.append("null");
       } else {
         sb.append(this.attributes);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
       }
       first = false;
       sb.append(")");
@@ -13168,7 +13596,7 @@ public class Hbase {
                   for (int _i71 = 0; _i71 < _map70.size; ++_i71)
                   {
                     ByteBuffer _key72; // required
-                    ByteBuffer _val73; // required
+                    ByteBuffer _val73; // optional
                     _key72 = iprot.readBinary();
                     _val73 = iprot.readBinary();
                     struct.attributes.put(_key72, _val73);
@@ -13176,6 +13604,14 @@ public class Hbase {
                   iprot.readMapEnd();
                 }
                 struct.setAttributesIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            case 4: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
               } else { 
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
@@ -13218,6 +13654,11 @@ public class Hbase {
           }
           oprot.writeFieldEnd();
         }
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -13245,7 +13686,10 @@ public class Hbase {
         if (struct.isSetAttributes()) {
           optionals.set(2);
         }
-        oprot.writeBitSet(optionals, 3);
+        if (struct.isSetRegionName()) {
+          optionals.set(3);
+        }
+        oprot.writeBitSet(optionals, 4);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -13262,12 +13706,15 @@ public class Hbase {
             }
           }
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, deleteAllRow_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(3);
+        BitSet incoming = iprot.readBitSet(4);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -13283,13 +13730,17 @@ public class Hbase {
             for (int _i77 = 0; _i77 < _map76.size; ++_i77)
             {
               ByteBuffer _key78; // required
-              ByteBuffer _val79; // required
+              ByteBuffer _val79; // optional
               _key78 = iprot.readBinary();
               _val79 = iprot.readBinary();
               struct.attributes.put(_key78, _val79);
             }
           }
           struct.setAttributesIsSet(true);
+        }
+        if (incoming.get(3)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -13657,6 +14108,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField TABLE_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("tableName", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
     private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)3);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)4);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -13676,6 +14128,7 @@ public class Hbase {
      * timestamp
      */
     public long timestamp; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -13690,7 +14143,8 @@ public class Hbase {
       /**
        * timestamp
        */
-      TIMESTAMP((short)3, "timestamp");
+      TIMESTAMP((short)3, "timestamp"),
+      REGION_NAME((short)4, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -13711,6 +14165,8 @@ public class Hbase {
             return ROW;
           case 3: // TIMESTAMP
             return TIMESTAMP;
+          case 4: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -13762,6 +14218,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       tmpMap.put(_Fields.TIMESTAMP, new org.apache.thrift.meta_data.FieldMetaData("timestamp", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(deleteAllRowTs_args.class, metaDataMap);
     }
@@ -13772,13 +14230,15 @@ public class Hbase {
     public deleteAllRowTs_args(
       ByteBuffer tableName,
       ByteBuffer row,
-      long timestamp)
+      long timestamp,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
       this.row = row;
       this.timestamp = timestamp;
       setTimestampIsSet(true);
+      this.regionName = regionName;
     }
 
     /**
@@ -13794,6 +14254,9 @@ public class Hbase {
         this.row = other.row;
       }
       this.timestamp = other.timestamp;
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public deleteAllRowTs_args deepCopy() {
@@ -13806,6 +14269,7 @@ public class Hbase {
       this.row = null;
       setTimestampIsSet(false);
       this.timestamp = 0;
+      this.regionName = null;
     }
 
     /**
@@ -13917,6 +14381,40 @@ public class Hbase {
       __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public deleteAllRowTs_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public deleteAllRowTs_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -13943,6 +14441,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -13956,6 +14462,9 @@ public class Hbase {
 
       case TIMESTAMP:
         return Long.valueOf(getTimestamp());
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -13974,6 +14483,8 @@ public class Hbase {
         return isSetRow();
       case TIMESTAMP:
         return isSetTimestamp();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -14015,6 +14526,15 @@ public class Hbase {
         if (!(this_present_timestamp && that_present_timestamp))
           return false;
         if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -14064,6 +14584,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -14102,6 +14632,14 @@ public class Hbase {
       if (!first) sb.append(", ");
       sb.append("timestamp:");
       sb.append(this.timestamp);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
+      }
       first = false;
       sb.append(")");
       return sb.toString();
@@ -14171,6 +14709,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 4: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -14199,6 +14745,11 @@ public class Hbase {
         oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
         oprot.writeI64(struct.timestamp);
         oprot.writeFieldEnd();
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -14226,7 +14777,10 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           optionals.set(2);
         }
-        oprot.writeBitSet(optionals, 3);
+        if (struct.isSetRegionName()) {
+          optionals.set(3);
+        }
+        oprot.writeBitSet(optionals, 4);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -14236,12 +14790,15 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           oprot.writeI64(struct.timestamp);
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, deleteAllRowTs_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(3);
+        BitSet incoming = iprot.readBitSet(4);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -14253,6 +14810,10 @@ public class Hbase {
         if (incoming.get(2)) {
           struct.timestamp = iprot.readI64();
           struct.setTimestampIsSet(true);
+        }
+        if (incoming.get(3)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -14621,6 +15182,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
     private static final org.apache.thrift.protocol.TField COLUMN_FIELD_DESC = new org.apache.thrift.protocol.TField("column", org.apache.thrift.protocol.TType.STRING, (short)3);
     private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)4);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)5);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -14644,6 +15206,7 @@ public class Hbase {
      * timestamp
      */
     public long timestamp; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -14662,7 +15225,8 @@ public class Hbase {
       /**
        * timestamp
        */
-      TIMESTAMP((short)4, "timestamp");
+      TIMESTAMP((short)4, "timestamp"),
+      REGION_NAME((short)5, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -14685,6 +15249,8 @@ public class Hbase {
             return COLUMN;
           case 4: // TIMESTAMP
             return TIMESTAMP;
+          case 5: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -14738,6 +15304,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       tmpMap.put(_Fields.TIMESTAMP, new org.apache.thrift.meta_data.FieldMetaData("timestamp", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(deleteAllTs_args.class, metaDataMap);
     }
@@ -14749,7 +15317,8 @@ public class Hbase {
       ByteBuffer tableName,
       ByteBuffer row,
       ByteBuffer column,
-      long timestamp)
+      long timestamp,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
@@ -14757,6 +15326,7 @@ public class Hbase {
       this.column = column;
       this.timestamp = timestamp;
       setTimestampIsSet(true);
+      this.regionName = regionName;
     }
 
     /**
@@ -14775,6 +15345,9 @@ public class Hbase {
         this.column = other.column;
       }
       this.timestamp = other.timestamp;
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public deleteAllTs_args deepCopy() {
@@ -14788,6 +15361,7 @@ public class Hbase {
       this.column = null;
       setTimestampIsSet(false);
       this.timestamp = 0;
+      this.regionName = null;
     }
 
     /**
@@ -14939,6 +15513,40 @@ public class Hbase {
       __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public deleteAllTs_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public deleteAllTs_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -14973,6 +15581,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -14989,6 +15605,9 @@ public class Hbase {
 
       case TIMESTAMP:
         return Long.valueOf(getTimestamp());
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -15009,6 +15628,8 @@ public class Hbase {
         return isSetColumn();
       case TIMESTAMP:
         return isSetTimestamp();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -15059,6 +15680,15 @@ public class Hbase {
         if (!(this_present_timestamp && that_present_timestamp))
           return false;
         if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -15118,6 +15748,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -15164,6 +15804,14 @@ public class Hbase {
       if (!first) sb.append(", ");
       sb.append("timestamp:");
       sb.append(this.timestamp);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
+      }
       first = false;
       sb.append(")");
       return sb.toString();
@@ -15241,6 +15889,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 5: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -15274,6 +15930,11 @@ public class Hbase {
         oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
         oprot.writeI64(struct.timestamp);
         oprot.writeFieldEnd();
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -15304,7 +15965,10 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           optionals.set(3);
         }
-        oprot.writeBitSet(optionals, 4);
+        if (struct.isSetRegionName()) {
+          optionals.set(4);
+        }
+        oprot.writeBitSet(optionals, 5);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -15317,12 +15981,15 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           oprot.writeI64(struct.timestamp);
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, deleteAllTs_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(4);
+        BitSet incoming = iprot.readBitSet(5);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -15338,6 +16005,10 @@ public class Hbase {
         if (incoming.get(3)) {
           struct.timestamp = iprot.readI64();
           struct.setTimestampIsSet(true);
+        }
+        if (incoming.get(4)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -17895,6 +18566,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField TABLE_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("tableName", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
     private static final org.apache.thrift.protocol.TField COLUMN_FIELD_DESC = new org.apache.thrift.protocol.TField("column", org.apache.thrift.protocol.TType.STRING, (short)3);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)4);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -17914,6 +18586,7 @@ public class Hbase {
      * column name
      */
     public ByteBuffer column; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -17928,7 +18601,8 @@ public class Hbase {
       /**
        * column name
        */
-      COLUMN((short)3, "column");
+      COLUMN((short)3, "column"),
+      REGION_NAME((short)4, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -17949,6 +18623,8 @@ public class Hbase {
             return ROW;
           case 3: // COLUMN
             return COLUMN;
+          case 4: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -17998,6 +18674,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       tmpMap.put(_Fields.COLUMN, new org.apache.thrift.meta_data.FieldMetaData("column", org.apache.thrift.TFieldRequirementType.DEFAULT,
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(get_args.class, metaDataMap);
     }
@@ -18008,12 +18686,14 @@ public class Hbase {
     public get_args(
       ByteBuffer tableName,
       ByteBuffer row,
-      ByteBuffer column)
+      ByteBuffer column,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
       this.row = row;
       this.column = column;
+      this.regionName = regionName;
     }
 
     /**
@@ -18029,6 +18709,9 @@ public class Hbase {
       if (other.isSetColumn()) {
         this.column = other.column;
       }
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public get_args deepCopy() {
@@ -18040,6 +18723,7 @@ public class Hbase {
       this.tableName = null;
       this.row = null;
       this.column = null;
+      this.regionName = null;
     }
 
     /**
@@ -18162,6 +18846,40 @@ public class Hbase {
       }
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public get_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public get_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -18188,6 +18906,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -18201,6 +18927,9 @@ public class Hbase {
 
       case COLUMN:
         return getColumn();
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -18219,6 +18948,8 @@ public class Hbase {
         return isSetRow();
       case COLUMN:
         return isSetColumn();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -18260,6 +18991,15 @@ public class Hbase {
         if (!(this_present_column && that_present_column))
           return false;
         if (!this.column.equals(that.column))
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -18309,6 +19049,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -18350,6 +19100,14 @@ public class Hbase {
         sb.append("null");
       } else {
         sb.append(this.column);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
       }
       first = false;
       sb.append(")");
@@ -18418,6 +19176,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 4: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -18448,6 +19214,11 @@ public class Hbase {
           oprot.writeBinary(struct.column);
           oprot.writeFieldEnd();
         }
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -18475,7 +19246,10 @@ public class Hbase {
         if (struct.isSetColumn()) {
           optionals.set(2);
         }
-        oprot.writeBitSet(optionals, 3);
+        if (struct.isSetRegionName()) {
+          optionals.set(3);
+        }
+        oprot.writeBitSet(optionals, 4);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -18485,12 +19259,15 @@ public class Hbase {
         if (struct.isSetColumn()) {
           oprot.writeBinary(struct.column);
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, get_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(3);
+        BitSet incoming = iprot.readBitSet(4);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -18502,6 +19279,10 @@ public class Hbase {
         if (incoming.get(2)) {
           struct.column = iprot.readBinary();
           struct.setColumnIsSet(true);
+        }
+        if (incoming.get(3)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -19787,7 +20568,7 @@ public class Hbase {
                   for (int _i89 = 0; _i89 < _map88.size; ++_i89)
                   {
                     ByteBuffer _key90; // required
-                    ColumnDescriptor _val91; // required
+                    ColumnDescriptor _val91; // optional
                     _key90 = iprot.readBinary();
                     _val91 = new ColumnDescriptor();
                     _val91.read(iprot);
@@ -19893,7 +20674,7 @@ public class Hbase {
             for (int _i95 = 0; _i95 < _map94.size; ++_i95)
             {
               ByteBuffer _key96; // required
-              ColumnDescriptor _val97; // required
+              ColumnDescriptor _val97; // optional
               _key96 = iprot.readBinary();
               _val97 = new ColumnDescriptor();
               _val97.read(iprot);
@@ -20749,6 +21530,7 @@ public class Hbase {
 
     private static final org.apache.thrift.protocol.TField TABLE_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("tableName", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)3);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -20764,6 +21546,7 @@ public class Hbase {
      * row key
      */
     public ByteBuffer row; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -20774,7 +21557,8 @@ public class Hbase {
       /**
        * row key
        */
-      ROW((short)2, "row");
+      ROW((short)2, "row"),
+      REGION_NAME((short)3, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -20793,6 +21577,8 @@ public class Hbase {
             return TABLE_NAME;
           case 2: // ROW
             return ROW;
+          case 3: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -20840,6 +21626,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       tmpMap.put(_Fields.ROW, new org.apache.thrift.meta_data.FieldMetaData("row", org.apache.thrift.TFieldRequirementType.DEFAULT,
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getRow_args.class, metaDataMap);
     }
@@ -20849,11 +21637,13 @@ public class Hbase {
 
     public getRow_args(
       ByteBuffer tableName,
-      ByteBuffer row)
+      ByteBuffer row,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
       this.row = row;
+      this.regionName = regionName;
     }
 
     /**
@@ -20866,6 +21656,9 @@ public class Hbase {
       if (other.isSetRow()) {
         this.row = other.row;
       }
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public getRow_args deepCopy() {
@@ -20876,6 +21669,7 @@ public class Hbase {
     public void clear() {
       this.tableName = null;
       this.row = null;
+      this.regionName = null;
     }
 
     /**
@@ -20958,6 +21752,40 @@ public class Hbase {
       }
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public getRow_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public getRow_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -20976,6 +21804,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -20986,6 +21822,9 @@ public class Hbase {
 
       case ROW:
         return getRow();
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -21002,6 +21841,8 @@ public class Hbase {
         return isSetTableName();
       case ROW:
         return isSetRow();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -21034,6 +21875,15 @@ public class Hbase {
         if (!(this_present_row && that_present_row))
           return false;
         if (!this.row.equals(that.row))
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -21073,6 +21923,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -21106,6 +21966,14 @@ public class Hbase {
         sb.append("null");
       } else {
         sb.append(this.row);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
       }
       first = false;
       sb.append(")");
@@ -21166,6 +22034,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 3: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -21189,6 +22065,11 @@ public class Hbase {
         if (struct.row != null) {
           oprot.writeFieldBegin(ROW_FIELD_DESC);
           oprot.writeBinary(struct.row);
+          oprot.writeFieldEnd();
+        }
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
           oprot.writeFieldEnd();
         }
         oprot.writeFieldStop();
@@ -21215,19 +22096,25 @@ public class Hbase {
         if (struct.isSetRow()) {
           optionals.set(1);
         }
-        oprot.writeBitSet(optionals, 2);
+        if (struct.isSetRegionName()) {
+          optionals.set(2);
+        }
+        oprot.writeBitSet(optionals, 3);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
         if (struct.isSetRow()) {
           oprot.writeBinary(struct.row);
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, getRow_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(2);
+        BitSet incoming = iprot.readBitSet(3);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -21235,6 +22122,10 @@ public class Hbase {
         if (incoming.get(1)) {
           struct.row = iprot.readBinary();
           struct.setRowIsSet(true);
+        }
+        if (incoming.get(2)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -21756,6 +22647,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField TABLE_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("tableName", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
     private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)3);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)4);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -21775,6 +22667,7 @@ public class Hbase {
      * timestamp
      */
     public long timestamp; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -21789,7 +22682,8 @@ public class Hbase {
       /**
        * timestamp
        */
-      TIMESTAMP((short)3, "timestamp");
+      TIMESTAMP((short)3, "timestamp"),
+      REGION_NAME((short)4, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -21810,6 +22704,8 @@ public class Hbase {
             return ROW;
           case 3: // TIMESTAMP
             return TIMESTAMP;
+          case 4: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -21861,6 +22757,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       tmpMap.put(_Fields.TIMESTAMP, new org.apache.thrift.meta_data.FieldMetaData("timestamp", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getRowTs_args.class, metaDataMap);
     }
@@ -21871,13 +22769,15 @@ public class Hbase {
     public getRowTs_args(
       ByteBuffer tableName,
       ByteBuffer row,
-      long timestamp)
+      long timestamp,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
       this.row = row;
       this.timestamp = timestamp;
       setTimestampIsSet(true);
+      this.regionName = regionName;
     }
 
     /**
@@ -21893,6 +22793,9 @@ public class Hbase {
         this.row = other.row;
       }
       this.timestamp = other.timestamp;
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public getRowTs_args deepCopy() {
@@ -21905,6 +22808,7 @@ public class Hbase {
       this.row = null;
       setTimestampIsSet(false);
       this.timestamp = 0;
+      this.regionName = null;
     }
 
     /**
@@ -22016,6 +22920,40 @@ public class Hbase {
       __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public getRowTs_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public getRowTs_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -22042,6 +22980,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -22055,6 +23001,9 @@ public class Hbase {
 
       case TIMESTAMP:
         return Long.valueOf(getTimestamp());
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -22073,6 +23022,8 @@ public class Hbase {
         return isSetRow();
       case TIMESTAMP:
         return isSetTimestamp();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -22114,6 +23065,15 @@ public class Hbase {
         if (!(this_present_timestamp && that_present_timestamp))
           return false;
         if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -22163,6 +23123,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -22201,6 +23171,14 @@ public class Hbase {
       if (!first) sb.append(", ");
       sb.append("timestamp:");
       sb.append(this.timestamp);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
+      }
       first = false;
       sb.append(")");
       return sb.toString();
@@ -22270,6 +23248,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 4: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -22298,6 +23284,11 @@ public class Hbase {
         oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
         oprot.writeI64(struct.timestamp);
         oprot.writeFieldEnd();
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -22325,7 +23316,10 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           optionals.set(2);
         }
-        oprot.writeBitSet(optionals, 3);
+        if (struct.isSetRegionName()) {
+          optionals.set(3);
+        }
+        oprot.writeBitSet(optionals, 4);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -22335,12 +23329,15 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           oprot.writeI64(struct.timestamp);
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, getRowTs_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(3);
+        BitSet incoming = iprot.readBitSet(4);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -22352,6 +23349,10 @@ public class Hbase {
         if (incoming.get(2)) {
           struct.timestamp = iprot.readI64();
           struct.setTimestampIsSet(true);
+        }
+        if (incoming.get(3)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -22873,6 +23874,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField TABLE_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("tableName", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
     private static final org.apache.thrift.protocol.TField PREFIX_FIELD_DESC = new org.apache.thrift.protocol.TField("prefix", org.apache.thrift.protocol.TType.STRING, (short)3);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)4);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -22895,6 +23897,7 @@ public class Hbase {
      * searched
      */
     public ByteBuffer prefix; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -22912,7 +23915,8 @@ public class Hbase {
        * If only <qualifier prefix> provided then all families are
        * searched
        */
-      PREFIX((short)3, "prefix");
+      PREFIX((short)3, "prefix"),
+      REGION_NAME((short)4, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -22933,6 +23937,8 @@ public class Hbase {
             return ROW;
           case 3: // PREFIX
             return PREFIX;
+          case 4: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -22982,6 +23988,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       tmpMap.put(_Fields.PREFIX, new org.apache.thrift.meta_data.FieldMetaData("prefix", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getRowWithColumnPrefix_args.class, metaDataMap);
     }
@@ -22992,12 +24000,14 @@ public class Hbase {
     public getRowWithColumnPrefix_args(
       ByteBuffer tableName,
       ByteBuffer row,
-      ByteBuffer prefix)
+      ByteBuffer prefix,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
       this.row = row;
       this.prefix = prefix;
+      this.regionName = regionName;
     }
 
     /**
@@ -23013,6 +24023,9 @@ public class Hbase {
       if (other.isSetPrefix()) {
         this.prefix = other.prefix;
       }
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public getRowWithColumnPrefix_args deepCopy() {
@@ -23024,6 +24037,7 @@ public class Hbase {
       this.tableName = null;
       this.row = null;
       this.prefix = null;
+      this.regionName = null;
     }
 
     /**
@@ -23152,6 +24166,40 @@ public class Hbase {
       }
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public getRowWithColumnPrefix_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public getRowWithColumnPrefix_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -23178,6 +24226,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -23191,6 +24247,9 @@ public class Hbase {
 
       case PREFIX:
         return getPrefix();
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -23209,6 +24268,8 @@ public class Hbase {
         return isSetRow();
       case PREFIX:
         return isSetPrefix();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -23250,6 +24311,15 @@ public class Hbase {
         if (!(this_present_prefix && that_present_prefix))
           return false;
         if (!this.prefix.equals(that.prefix))
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -23299,6 +24369,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -23340,6 +24420,14 @@ public class Hbase {
         sb.append("null");
       } else {
         sb.append(this.prefix);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
       }
       first = false;
       sb.append(")");
@@ -23408,6 +24496,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 4: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -23438,6 +24534,11 @@ public class Hbase {
           oprot.writeBinary(struct.prefix);
           oprot.writeFieldEnd();
         }
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -23465,7 +24566,10 @@ public class Hbase {
         if (struct.isSetPrefix()) {
           optionals.set(2);
         }
-        oprot.writeBitSet(optionals, 3);
+        if (struct.isSetRegionName()) {
+          optionals.set(3);
+        }
+        oprot.writeBitSet(optionals, 4);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -23475,12 +24579,15 @@ public class Hbase {
         if (struct.isSetPrefix()) {
           oprot.writeBinary(struct.prefix);
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, getRowWithColumnPrefix_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(3);
+        BitSet incoming = iprot.readBitSet(4);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -23492,6 +24599,10 @@ public class Hbase {
         if (incoming.get(2)) {
           struct.prefix = iprot.readBinary();
           struct.setPrefixIsSet(true);
+        }
+        if (incoming.get(3)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -24014,6 +25125,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
     private static final org.apache.thrift.protocol.TField PREFIX_FIELD_DESC = new org.apache.thrift.protocol.TField("prefix", org.apache.thrift.protocol.TType.STRING, (short)3);
     private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)4);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)5);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -24037,6 +25149,7 @@ public class Hbase {
      */
     public ByteBuffer prefix; // required
     public long timestamp; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -24055,7 +25168,8 @@ public class Hbase {
        * searched
        */
       PREFIX((short)3, "prefix"),
-      TIMESTAMP((short)4, "timestamp");
+      TIMESTAMP((short)4, "timestamp"),
+      REGION_NAME((short)5, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -24078,6 +25192,8 @@ public class Hbase {
             return PREFIX;
           case 4: // TIMESTAMP
             return TIMESTAMP;
+          case 5: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -24131,6 +25247,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       tmpMap.put(_Fields.TIMESTAMP, new org.apache.thrift.meta_data.FieldMetaData("timestamp", org.apache.thrift.TFieldRequirementType.DEFAULT,
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getRowWithColumnPrefixTs_args.class, metaDataMap);
     }
@@ -24142,7 +25260,8 @@ public class Hbase {
       ByteBuffer tableName,
       ByteBuffer row,
       ByteBuffer prefix,
-      long timestamp)
+      long timestamp,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
@@ -24150,6 +25269,7 @@ public class Hbase {
       this.prefix = prefix;
       this.timestamp = timestamp;
       setTimestampIsSet(true);
+      this.regionName = regionName;
     }
 
     /**
@@ -24168,6 +25288,9 @@ public class Hbase {
         this.prefix = other.prefix;
       }
       this.timestamp = other.timestamp;
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public getRowWithColumnPrefixTs_args deepCopy() {
@@ -24181,6 +25304,7 @@ public class Hbase {
       this.prefix = null;
       setTimestampIsSet(false);
       this.timestamp = 0;
+      this.regionName = null;
     }
 
     /**
@@ -24332,6 +25456,40 @@ public class Hbase {
       __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public getRowWithColumnPrefixTs_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public getRowWithColumnPrefixTs_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -24366,6 +25524,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -24382,6 +25548,9 @@ public class Hbase {
 
       case TIMESTAMP:
         return Long.valueOf(getTimestamp());
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -24402,6 +25571,8 @@ public class Hbase {
         return isSetPrefix();
       case TIMESTAMP:
         return isSetTimestamp();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -24452,6 +25623,15 @@ public class Hbase {
         if (!(this_present_timestamp && that_present_timestamp))
           return false;
         if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -24511,6 +25691,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -24557,6 +25747,14 @@ public class Hbase {
       if (!first) sb.append(", ");
       sb.append("timestamp:");
       sb.append(this.timestamp);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
+      }
       first = false;
       sb.append(")");
       return sb.toString();
@@ -24634,6 +25832,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 5: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -24667,6 +25873,11 @@ public class Hbase {
         oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
         oprot.writeI64(struct.timestamp);
         oprot.writeFieldEnd();
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -24697,7 +25908,10 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           optionals.set(3);
         }
-        oprot.writeBitSet(optionals, 4);
+        if (struct.isSetRegionName()) {
+          optionals.set(4);
+        }
+        oprot.writeBitSet(optionals, 5);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -24710,12 +25924,15 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           oprot.writeI64(struct.timestamp);
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, getRowWithColumnPrefixTs_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(4);
+        BitSet incoming = iprot.readBitSet(5);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -24731,6 +25948,10 @@ public class Hbase {
         if (incoming.get(3)) {
           struct.timestamp = iprot.readI64();
           struct.setTimestampIsSet(true);
+        }
+        if (incoming.get(4)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -25252,6 +26473,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField TABLE_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("tableName", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
     private static final org.apache.thrift.protocol.TField COLUMNS_FIELD_DESC = new org.apache.thrift.protocol.TField("columns", org.apache.thrift.protocol.TType.LIST, (short)3);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)4);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -25271,6 +26493,7 @@ public class Hbase {
      * List of columns to return, null for all columns
      */
     public List<ByteBuffer> columns; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -25285,7 +26508,8 @@ public class Hbase {
       /**
        * List of columns to return, null for all columns
        */
-      COLUMNS((short)3, "columns");
+      COLUMNS((short)3, "columns"),
+      REGION_NAME((short)4, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -25306,6 +26530,8 @@ public class Hbase {
             return ROW;
           case 3: // COLUMNS
             return COLUMNS;
+          case 4: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -25356,6 +26582,8 @@ public class Hbase {
       tmpMap.put(_Fields.COLUMNS, new org.apache.thrift.meta_data.FieldMetaData("columns", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"))));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getRowWithColumns_args.class, metaDataMap);
     }
@@ -25366,12 +26594,14 @@ public class Hbase {
     public getRowWithColumns_args(
       ByteBuffer tableName,
       ByteBuffer row,
-      List<ByteBuffer> columns)
+      List<ByteBuffer> columns,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
       this.row = row;
       this.columns = columns;
+      this.regionName = regionName;
     }
 
     /**
@@ -25391,6 +26621,9 @@ public class Hbase {
         }
         this.columns = __this__columns;
       }
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public getRowWithColumns_args deepCopy() {
@@ -25402,6 +26635,7 @@ public class Hbase {
       this.tableName = null;
       this.row = null;
       this.columns = null;
+      this.regionName = null;
     }
 
     /**
@@ -25529,6 +26763,40 @@ public class Hbase {
       }
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public getRowWithColumns_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public getRowWithColumns_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -25555,6 +26823,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -25568,6 +26844,9 @@ public class Hbase {
 
       case COLUMNS:
         return getColumns();
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -25586,6 +26865,8 @@ public class Hbase {
         return isSetRow();
       case COLUMNS:
         return isSetColumns();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -25627,6 +26908,15 @@ public class Hbase {
         if (!(this_present_columns && that_present_columns))
           return false;
         if (!this.columns.equals(that.columns))
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -25676,6 +26966,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -25717,6 +27017,14 @@ public class Hbase {
         sb.append("null");
       } else {
         sb.append(this.columns);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
       }
       first = false;
       sb.append(")");
@@ -25795,6 +27103,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 4: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -25832,6 +27148,11 @@ public class Hbase {
           }
           oprot.writeFieldEnd();
         }
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -25859,7 +27180,10 @@ public class Hbase {
         if (struct.isSetColumns()) {
           optionals.set(2);
         }
-        oprot.writeBitSet(optionals, 3);
+        if (struct.isSetRegionName()) {
+          optionals.set(3);
+        }
+        oprot.writeBitSet(optionals, 4);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -25875,12 +27199,15 @@ public class Hbase {
             }
           }
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, getRowWithColumns_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(3);
+        BitSet incoming = iprot.readBitSet(4);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -25901,6 +27228,10 @@ public class Hbase {
             }
           }
           struct.setColumnsIsSet(true);
+        }
+        if (incoming.get(3)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -26423,6 +27754,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
     private static final org.apache.thrift.protocol.TField COLUMNS_FIELD_DESC = new org.apache.thrift.protocol.TField("columns", org.apache.thrift.protocol.TType.LIST, (short)3);
     private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)4);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)5);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -26443,6 +27775,7 @@ public class Hbase {
      */
     public List<ByteBuffer> columns; // required
     public long timestamp; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -26458,7 +27791,8 @@ public class Hbase {
        * List of columns to return, null for all columns
        */
       COLUMNS((short)3, "columns"),
-      TIMESTAMP((short)4, "timestamp");
+      TIMESTAMP((short)4, "timestamp"),
+      REGION_NAME((short)5, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -26481,6 +27815,8 @@ public class Hbase {
             return COLUMNS;
           case 4: // TIMESTAMP
             return TIMESTAMP;
+          case 5: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -26535,6 +27871,8 @@ public class Hbase {
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"))));
       tmpMap.put(_Fields.TIMESTAMP, new org.apache.thrift.meta_data.FieldMetaData("timestamp", org.apache.thrift.TFieldRequirementType.DEFAULT,
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getRowWithColumnsTs_args.class, metaDataMap);
     }
@@ -26546,7 +27884,8 @@ public class Hbase {
       ByteBuffer tableName,
       ByteBuffer row,
       List<ByteBuffer> columns,
-      long timestamp)
+      long timestamp,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
@@ -26554,6 +27893,7 @@ public class Hbase {
       this.columns = columns;
       this.timestamp = timestamp;
       setTimestampIsSet(true);
+      this.regionName = regionName;
     }
 
     /**
@@ -26576,6 +27916,9 @@ public class Hbase {
         this.columns = __this__columns;
       }
       this.timestamp = other.timestamp;
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public getRowWithColumnsTs_args deepCopy() {
@@ -26589,6 +27932,7 @@ public class Hbase {
       this.columns = null;
       setTimestampIsSet(false);
       this.timestamp = 0;
+      this.regionName = null;
     }
 
     /**
@@ -26739,6 +28083,40 @@ public class Hbase {
       __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public getRowWithColumnsTs_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public getRowWithColumnsTs_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -26773,6 +28151,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -26789,6 +28175,9 @@ public class Hbase {
 
       case TIMESTAMP:
         return Long.valueOf(getTimestamp());
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -26809,6 +28198,8 @@ public class Hbase {
         return isSetColumns();
       case TIMESTAMP:
         return isSetTimestamp();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -26859,6 +28250,15 @@ public class Hbase {
         if (!(this_present_timestamp && that_present_timestamp))
           return false;
         if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -26918,6 +28318,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -26964,6 +28374,14 @@ public class Hbase {
       if (!first) sb.append(", ");
       sb.append("timestamp:");
       sb.append(this.timestamp);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
+      }
       first = false;
       sb.append(")");
       return sb.toString();
@@ -27051,6 +28469,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 5: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -27091,6 +28517,11 @@ public class Hbase {
         oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
         oprot.writeI64(struct.timestamp);
         oprot.writeFieldEnd();
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -27121,7 +28552,10 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           optionals.set(3);
         }
-        oprot.writeBitSet(optionals, 4);
+        if (struct.isSetRegionName()) {
+          optionals.set(4);
+        }
+        oprot.writeBitSet(optionals, 5);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -27140,12 +28574,15 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           oprot.writeI64(struct.timestamp);
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, getRowWithColumnsTs_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(4);
+        BitSet incoming = iprot.readBitSet(5);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -27170,6 +28607,10 @@ public class Hbase {
         if (incoming.get(3)) {
           struct.timestamp = iprot.readI64();
           struct.setTimestampIsSet(true);
+        }
+        if (incoming.get(4)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -27690,6 +29131,7 @@ public class Hbase {
 
     private static final org.apache.thrift.protocol.TField TABLE_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("tableName", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField ROWS_FIELD_DESC = new org.apache.thrift.protocol.TField("rows", org.apache.thrift.protocol.TType.LIST, (short)2);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)3);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -27699,11 +29141,13 @@ public class Hbase {
 
     public ByteBuffer tableName; // required
     public List<ByteBuffer> rows; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
       TABLE_NAME((short)1, "tableName"),
-      ROWS((short)2, "rows");
+      ROWS((short)2, "rows"),
+      REGION_NAME((short)3, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -27722,6 +29166,8 @@ public class Hbase {
             return TABLE_NAME;
           case 2: // ROWS
             return ROWS;
+          case 3: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -27770,6 +29216,8 @@ public class Hbase {
       tmpMap.put(_Fields.ROWS, new org.apache.thrift.meta_data.FieldMetaData("rows", org.apache.thrift.TFieldRequirementType.DEFAULT,
           new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST,
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"))));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getRows_args.class, metaDataMap);
     }
@@ -27779,11 +29227,13 @@ public class Hbase {
 
     public getRows_args(
       ByteBuffer tableName,
-      List<ByteBuffer> rows)
+      List<ByteBuffer> rows,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
       this.rows = rows;
+      this.regionName = regionName;
     }
 
     /**
@@ -27800,6 +29250,9 @@ public class Hbase {
         }
         this.rows = __this__rows;
       }
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public getRows_args deepCopy() {
@@ -27810,6 +29263,7 @@ public class Hbase {
     public void clear() {
       this.tableName = null;
       this.rows = null;
+      this.regionName = null;
     }
 
     public byte[] getTableName() {
@@ -27885,6 +29339,40 @@ public class Hbase {
       }
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public getRows_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public getRows_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -27903,6 +29391,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -27913,6 +29409,9 @@ public class Hbase {
 
       case ROWS:
         return getRows();
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -27929,6 +29428,8 @@ public class Hbase {
         return isSetTableName();
       case ROWS:
         return isSetRows();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -27961,6 +29462,15 @@ public class Hbase {
         if (!(this_present_rows && that_present_rows))
           return false;
         if (!this.rows.equals(that.rows))
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -28000,6 +29510,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -28033,6 +29553,14 @@ public class Hbase {
         sb.append("null");
       } else {
         sb.append(this.rows);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
       }
       first = false;
       sb.append(")");
@@ -28103,6 +29631,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 3: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -28135,6 +29671,11 @@ public class Hbase {
           }
           oprot.writeFieldEnd();
         }
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -28159,7 +29700,10 @@ public class Hbase {
         if (struct.isSetRows()) {
           optionals.set(1);
         }
-        oprot.writeBitSet(optionals, 2);
+        if (struct.isSetRegionName()) {
+          optionals.set(2);
+        }
+        oprot.writeBitSet(optionals, 3);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -28172,12 +29716,15 @@ public class Hbase {
             }
           }
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, getRows_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(2);
+        BitSet incoming = iprot.readBitSet(3);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -28194,6 +29741,10 @@ public class Hbase {
             }
           }
           struct.setRowsIsSet(true);
+        }
+        if (incoming.get(2)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -28715,6 +30266,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField TABLE_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("tableName", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField ROWS_FIELD_DESC = new org.apache.thrift.protocol.TField("rows", org.apache.thrift.protocol.TType.LIST, (short)2);
     private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)3);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)4);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -28725,12 +30277,14 @@ public class Hbase {
     public ByteBuffer tableName; // required
     public List<ByteBuffer> rows; // required
     public long timestamp; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
       TABLE_NAME((short)1, "tableName"),
       ROWS((short)2, "rows"),
-      TIMESTAMP((short)3, "timestamp");
+      TIMESTAMP((short)3, "timestamp"),
+      REGION_NAME((short)4, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -28751,6 +30305,8 @@ public class Hbase {
             return ROWS;
           case 3: // TIMESTAMP
             return TIMESTAMP;
+          case 4: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -28803,6 +30359,8 @@ public class Hbase {
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"))));
       tmpMap.put(_Fields.TIMESTAMP, new org.apache.thrift.meta_data.FieldMetaData("timestamp", org.apache.thrift.TFieldRequirementType.DEFAULT,
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getRowsTs_args.class, metaDataMap);
     }
@@ -28813,13 +30371,15 @@ public class Hbase {
     public getRowsTs_args(
       ByteBuffer tableName,
       List<ByteBuffer> rows,
-      long timestamp)
+      long timestamp,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
       this.rows = rows;
       this.timestamp = timestamp;
       setTimestampIsSet(true);
+      this.regionName = regionName;
     }
 
     /**
@@ -28839,6 +30399,9 @@ public class Hbase {
         this.rows = __this__rows;
       }
       this.timestamp = other.timestamp;
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public getRowsTs_args deepCopy() {
@@ -28851,6 +30414,7 @@ public class Hbase {
       this.rows = null;
       setTimestampIsSet(false);
       this.timestamp = 0;
+      this.regionName = null;
     }
 
     public byte[] getTableName() {
@@ -28949,6 +30513,40 @@ public class Hbase {
       __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public getRowsTs_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public getRowsTs_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -28975,6 +30573,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -28988,6 +30594,9 @@ public class Hbase {
 
       case TIMESTAMP:
         return Long.valueOf(getTimestamp());
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -29006,6 +30615,8 @@ public class Hbase {
         return isSetRows();
       case TIMESTAMP:
         return isSetTimestamp();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -29047,6 +30658,15 @@ public class Hbase {
         if (!(this_present_timestamp && that_present_timestamp))
           return false;
         if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -29096,6 +30716,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -29134,6 +30764,14 @@ public class Hbase {
       if (!first) sb.append(", ");
       sb.append("timestamp:");
       sb.append(this.timestamp);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
+      }
       first = false;
       sb.append(")");
       return sb.toString();
@@ -29213,6 +30851,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 4: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -29248,6 +30894,11 @@ public class Hbase {
         oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
         oprot.writeI64(struct.timestamp);
         oprot.writeFieldEnd();
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -29275,7 +30926,10 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           optionals.set(2);
         }
-        oprot.writeBitSet(optionals, 3);
+        if (struct.isSetRegionName()) {
+          optionals.set(3);
+        }
+        oprot.writeBitSet(optionals, 4);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -29291,12 +30945,15 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           oprot.writeI64(struct.timestamp);
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, getRowsTs_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(3);
+        BitSet incoming = iprot.readBitSet(4);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -29317,6 +30974,10 @@ public class Hbase {
         if (incoming.get(2)) {
           struct.timestamp = iprot.readI64();
           struct.setTimestampIsSet(true);
+        }
+        if (incoming.get(3)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -29838,6 +31499,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField TABLE_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("tableName", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField ROWS_FIELD_DESC = new org.apache.thrift.protocol.TField("rows", org.apache.thrift.protocol.TType.LIST, (short)2);
     private static final org.apache.thrift.protocol.TField FAMILIES_FIELD_DESC = new org.apache.thrift.protocol.TField("families", org.apache.thrift.protocol.TType.LIST, (short)3);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)4);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -29848,12 +31510,14 @@ public class Hbase {
     public ByteBuffer tableName; // required
     public List<ByteBuffer> rows; // required
     public List<ByteBuffer> families; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
       TABLE_NAME((short)1, "tableName"),
       ROWS((short)2, "rows"),
-      FAMILIES((short)3, "families");
+      FAMILIES((short)3, "families"),
+      REGION_NAME((short)4, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -29874,6 +31538,8 @@ public class Hbase {
             return ROWS;
           case 3: // FAMILIES
             return FAMILIES;
+          case 4: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -29925,6 +31591,8 @@ public class Hbase {
       tmpMap.put(_Fields.FAMILIES, new org.apache.thrift.meta_data.FieldMetaData("families", org.apache.thrift.TFieldRequirementType.DEFAULT,
           new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST,
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"))));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getRowsWithColumns_args.class, metaDataMap);
     }
@@ -29935,12 +31603,14 @@ public class Hbase {
     public getRowsWithColumns_args(
       ByteBuffer tableName,
       List<ByteBuffer> rows,
-      List<ByteBuffer> families)
+      List<ByteBuffer> families,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
       this.rows = rows;
       this.families = families;
+      this.regionName = regionName;
     }
 
     /**
@@ -29964,6 +31634,9 @@ public class Hbase {
         }
         this.families = __this__families;
       }
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public getRowsWithColumns_args deepCopy() {
@@ -29975,6 +31648,7 @@ public class Hbase {
       this.tableName = null;
       this.rows = null;
       this.families = null;
+      this.regionName = null;
     }
 
     public byte[] getTableName() {
@@ -30089,6 +31763,40 @@ public class Hbase {
       }
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public getRowsWithColumns_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public getRowsWithColumns_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -30115,6 +31823,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -30128,6 +31844,9 @@ public class Hbase {
 
       case FAMILIES:
         return getFamilies();
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -30146,6 +31865,8 @@ public class Hbase {
         return isSetRows();
       case FAMILIES:
         return isSetFamilies();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -30187,6 +31908,15 @@ public class Hbase {
         if (!(this_present_families && that_present_families))
           return false;
         if (!this.families.equals(that.families))
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -30236,6 +31966,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -30277,6 +32017,14 @@ public class Hbase {
         sb.append("null");
       } else {
         sb.append(this.families);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
       }
       first = false;
       sb.append(")");
@@ -30365,6 +32113,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 4: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -30409,6 +32165,11 @@ public class Hbase {
           }
           oprot.writeFieldEnd();
         }
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -30436,7 +32197,10 @@ public class Hbase {
         if (struct.isSetFamilies()) {
           optionals.set(2);
         }
-        oprot.writeBitSet(optionals, 3);
+        if (struct.isSetRegionName()) {
+          optionals.set(3);
+        }
+        oprot.writeBitSet(optionals, 4);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -30458,12 +32222,15 @@ public class Hbase {
             }
           }
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, getRowsWithColumns_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(3);
+        BitSet incoming = iprot.readBitSet(4);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -30493,6 +32260,10 @@ public class Hbase {
             }
           }
           struct.setFamiliesIsSet(true);
+        }
+        if (incoming.get(3)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -31015,6 +32786,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField ROWS_FIELD_DESC = new org.apache.thrift.protocol.TField("rows", org.apache.thrift.protocol.TType.LIST, (short)2);
     private static final org.apache.thrift.protocol.TField FAMILIES_FIELD_DESC = new org.apache.thrift.protocol.TField("families", org.apache.thrift.protocol.TType.LIST, (short)3);
     private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)4);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)5);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -31026,13 +32798,15 @@ public class Hbase {
     public List<ByteBuffer> rows; // required
     public List<ByteBuffer> families; // required
     public long timestamp; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
       TABLE_NAME((short)1, "tableName"),
       ROWS((short)2, "rows"),
       FAMILIES((short)3, "families"),
-      TIMESTAMP((short)4, "timestamp");
+      TIMESTAMP((short)4, "timestamp"),
+      REGION_NAME((short)5, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -31055,6 +32829,8 @@ public class Hbase {
             return FAMILIES;
           case 4: // TIMESTAMP
             return TIMESTAMP;
+          case 5: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -31110,6 +32886,8 @@ public class Hbase {
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"))));
       tmpMap.put(_Fields.TIMESTAMP, new org.apache.thrift.meta_data.FieldMetaData("timestamp", org.apache.thrift.TFieldRequirementType.DEFAULT,
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getRowsWithColumnsTs_args.class, metaDataMap);
     }
@@ -31121,7 +32899,8 @@ public class Hbase {
       ByteBuffer tableName,
       List<ByteBuffer> rows,
       List<ByteBuffer> families,
-      long timestamp)
+      long timestamp,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
@@ -31129,6 +32908,7 @@ public class Hbase {
       this.families = families;
       this.timestamp = timestamp;
       setTimestampIsSet(true);
+      this.regionName = regionName;
     }
 
     /**
@@ -31155,6 +32935,9 @@ public class Hbase {
         this.families = __this__families;
       }
       this.timestamp = other.timestamp;
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public getRowsWithColumnsTs_args deepCopy() {
@@ -31168,6 +32951,7 @@ public class Hbase {
       this.families = null;
       setTimestampIsSet(false);
       this.timestamp = 0;
+      this.regionName = null;
     }
 
     public byte[] getTableName() {
@@ -31305,6 +33089,40 @@ public class Hbase {
       __isset_bit_vector.set(__TIMESTAMP_ISSET_ID, value);
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public getRowsWithColumnsTs_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public getRowsWithColumnsTs_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -31339,6 +33157,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -31355,6 +33181,9 @@ public class Hbase {
 
       case TIMESTAMP:
         return Long.valueOf(getTimestamp());
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -31375,6 +33204,8 @@ public class Hbase {
         return isSetFamilies();
       case TIMESTAMP:
         return isSetTimestamp();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -31425,6 +33256,15 @@ public class Hbase {
         if (!(this_present_timestamp && that_present_timestamp))
           return false;
         if (this.timestamp != that.timestamp)
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -31484,6 +33324,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -31530,6 +33380,14 @@ public class Hbase {
       if (!first) sb.append(", ");
       sb.append("timestamp:");
       sb.append(this.timestamp);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
+      }
       first = false;
       sb.append(")");
       return sb.toString();
@@ -31627,6 +33485,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 5: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -31674,6 +33540,11 @@ public class Hbase {
         oprot.writeFieldBegin(TIMESTAMP_FIELD_DESC);
         oprot.writeI64(struct.timestamp);
         oprot.writeFieldEnd();
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -31704,7 +33575,10 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           optionals.set(3);
         }
-        oprot.writeBitSet(optionals, 4);
+        if (struct.isSetRegionName()) {
+          optionals.set(4);
+        }
+        oprot.writeBitSet(optionals, 5);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -31729,12 +33603,15 @@ public class Hbase {
         if (struct.isSetTimestamp()) {
           oprot.writeI64(struct.timestamp);
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, getRowsWithColumnsTs_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(4);
+        BitSet incoming = iprot.readBitSet(5);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -31768,6 +33645,10 @@ public class Hbase {
         if (incoming.get(3)) {
           struct.timestamp = iprot.readI64();
           struct.setTimestampIsSet(true);
+        }
+        if (incoming.get(4)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -33926,6 +35807,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
     private static final org.apache.thrift.protocol.TField COLUMN_FIELD_DESC = new org.apache.thrift.protocol.TField("column", org.apache.thrift.protocol.TType.STRING, (short)3);
     private static final org.apache.thrift.protocol.TField NUM_VERSIONS_FIELD_DESC = new org.apache.thrift.protocol.TField("numVersions", org.apache.thrift.protocol.TType.I32, (short)4);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)5);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -33949,6 +35831,7 @@ public class Hbase {
      * number of versions to retrieve
      */
     public int numVersions; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -33967,7 +35850,8 @@ public class Hbase {
       /**
        * number of versions to retrieve
        */
-      NUM_VERSIONS((short)4, "numVersions");
+      NUM_VERSIONS((short)4, "numVersions"),
+      REGION_NAME((short)5, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -33990,6 +35874,8 @@ public class Hbase {
             return COLUMN;
           case 4: // NUM_VERSIONS
             return NUM_VERSIONS;
+          case 5: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -34043,6 +35929,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       tmpMap.put(_Fields.NUM_VERSIONS, new org.apache.thrift.meta_data.FieldMetaData("numVersions", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getVer_args.class, metaDataMap);
     }
@@ -34054,7 +35942,8 @@ public class Hbase {
       ByteBuffer tableName,
       ByteBuffer row,
       ByteBuffer column,
-      int numVersions)
+      int numVersions,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
@@ -34062,6 +35951,7 @@ public class Hbase {
       this.column = column;
       this.numVersions = numVersions;
       setNumVersionsIsSet(true);
+      this.regionName = regionName;
     }
 
     /**
@@ -34080,6 +35970,9 @@ public class Hbase {
         this.column = other.column;
       }
       this.numVersions = other.numVersions;
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public getVer_args deepCopy() {
@@ -34093,6 +35986,7 @@ public class Hbase {
       this.column = null;
       setNumVersionsIsSet(false);
       this.numVersions = 0;
+      this.regionName = null;
     }
 
     /**
@@ -34244,6 +36138,40 @@ public class Hbase {
       __isset_bit_vector.set(__NUMVERSIONS_ISSET_ID, value);
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public getVer_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public getVer_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -34278,6 +36206,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -34294,6 +36230,9 @@ public class Hbase {
 
       case NUM_VERSIONS:
         return Integer.valueOf(getNumVersions());
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -34314,6 +36253,8 @@ public class Hbase {
         return isSetColumn();
       case NUM_VERSIONS:
         return isSetNumVersions();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -34364,6 +36305,15 @@ public class Hbase {
         if (!(this_present_numVersions && that_present_numVersions))
           return false;
         if (this.numVersions != that.numVersions)
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -34423,6 +36373,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -34470,6 +36430,14 @@ public class Hbase {
       sb.append("numVersions:");
       sb.append(this.numVersions);
       first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
+      }
+      first = false;
       sb.append(")");
       return sb.toString();
     }
@@ -34488,6 +36456,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -34544,6 +36514,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 5: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -34577,6 +36555,11 @@ public class Hbase {
         oprot.writeFieldBegin(NUM_VERSIONS_FIELD_DESC);
         oprot.writeI32(struct.numVersions);
         oprot.writeFieldEnd();
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -34607,7 +36590,10 @@ public class Hbase {
         if (struct.isSetNumVersions()) {
           optionals.set(3);
         }
-        oprot.writeBitSet(optionals, 4);
+        if (struct.isSetRegionName()) {
+          optionals.set(4);
+        }
+        oprot.writeBitSet(optionals, 5);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -34620,12 +36606,15 @@ public class Hbase {
         if (struct.isSetNumVersions()) {
           oprot.writeI32(struct.numVersions);
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, getVer_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(4);
+        BitSet incoming = iprot.readBitSet(5);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -34641,6 +36630,10 @@ public class Hbase {
         if (incoming.get(3)) {
           struct.numVersions = iprot.readI32();
           struct.setNumVersionsIsSet(true);
+        }
+        if (incoming.get(4)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -35164,6 +37157,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField COLUMN_FIELD_DESC = new org.apache.thrift.protocol.TField("column", org.apache.thrift.protocol.TType.STRING, (short)3);
     private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)4);
     private static final org.apache.thrift.protocol.TField NUM_VERSIONS_FIELD_DESC = new org.apache.thrift.protocol.TField("numVersions", org.apache.thrift.protocol.TType.I32, (short)5);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)6);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -35191,6 +37185,7 @@ public class Hbase {
      * number of versions to retrieve
      */
     public int numVersions; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -35213,7 +37208,8 @@ public class Hbase {
       /**
        * number of versions to retrieve
        */
-      NUM_VERSIONS((short)5, "numVersions");
+      NUM_VERSIONS((short)5, "numVersions"),
+      REGION_NAME((short)6, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -35238,6 +37234,8 @@ public class Hbase {
             return TIMESTAMP;
           case 5: // NUM_VERSIONS
             return NUM_VERSIONS;
+          case 6: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -35294,6 +37292,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
       tmpMap.put(_Fields.NUM_VERSIONS, new org.apache.thrift.meta_data.FieldMetaData("numVersions", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getVerTs_args.class, metaDataMap);
     }
@@ -35306,7 +37306,8 @@ public class Hbase {
       ByteBuffer row,
       ByteBuffer column,
       long timestamp,
-      int numVersions)
+      int numVersions,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
@@ -35316,6 +37317,7 @@ public class Hbase {
       setTimestampIsSet(true);
       this.numVersions = numVersions;
       setNumVersionsIsSet(true);
+      this.regionName = regionName;
     }
 
     /**
@@ -35335,6 +37337,9 @@ public class Hbase {
       }
       this.timestamp = other.timestamp;
       this.numVersions = other.numVersions;
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public getVerTs_args deepCopy() {
@@ -35350,6 +37355,7 @@ public class Hbase {
       this.timestamp = 0;
       setNumVersionsIsSet(false);
       this.numVersions = 0;
+      this.regionName = null;
     }
 
     /**
@@ -35530,6 +37536,40 @@ public class Hbase {
       __isset_bit_vector.set(__NUMVERSIONS_ISSET_ID, value);
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public getVerTs_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public getVerTs_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -35572,6 +37612,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -35591,6 +37639,9 @@ public class Hbase {
 
       case NUM_VERSIONS:
         return Integer.valueOf(getNumVersions());
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -35613,6 +37664,8 @@ public class Hbase {
         return isSetTimestamp();
       case NUM_VERSIONS:
         return isSetNumVersions();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -35672,6 +37725,15 @@ public class Hbase {
         if (!(this_present_numVersions && that_present_numVersions))
           return false;
         if (this.numVersions != that.numVersions)
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -35741,6 +37803,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -35791,6 +37863,14 @@ public class Hbase {
       if (!first) sb.append(", ");
       sb.append("numVersions:");
       sb.append(this.numVersions);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
+      }
       first = false;
       sb.append(")");
       return sb.toString();
@@ -35874,6 +37954,14 @@ public class Hbase {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 6: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -35910,6 +37998,11 @@ public class Hbase {
         oprot.writeFieldBegin(NUM_VERSIONS_FIELD_DESC);
         oprot.writeI32(struct.numVersions);
         oprot.writeFieldEnd();
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -35943,7 +38036,10 @@ public class Hbase {
         if (struct.isSetNumVersions()) {
           optionals.set(4);
         }
-        oprot.writeBitSet(optionals, 5);
+        if (struct.isSetRegionName()) {
+          optionals.set(5);
+        }
+        oprot.writeBitSet(optionals, 6);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -35959,12 +38055,15 @@ public class Hbase {
         if (struct.isSetNumVersions()) {
           oprot.writeI32(struct.numVersions);
         }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, getVerTs_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(5);
+        BitSet incoming = iprot.readBitSet(6);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -35984,6 +38083,10 @@ public class Hbase {
         if (incoming.get(4)) {
           struct.numVersions = iprot.readI32();
           struct.setNumVersionsIsSet(true);
+        }
+        if (incoming.get(5)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -37211,6 +39314,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -38044,6 +40149,1126 @@ public class Hbase {
 
   }
 
+  public static class multiPut_args implements org.apache.thrift.TBase<multiPut_args, multiPut_args._Fields>, java.io.Serializable, Cloneable   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("multiPut_args");
+
+    private static final org.apache.thrift.protocol.TField TABLE_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("tableName", org.apache.thrift.protocol.TType.STRING, (short)1);
+    private static final org.apache.thrift.protocol.TField ROW_BATCHES_FIELD_DESC = new org.apache.thrift.protocol.TField("rowBatches", org.apache.thrift.protocol.TType.LIST, (short)2);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)3);
+
+    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
+    static {
+      schemes.put(StandardScheme.class, new multiPut_argsStandardSchemeFactory());
+      schemes.put(TupleScheme.class, new multiPut_argsTupleSchemeFactory());
+    }
+
+    /**
+     * name of tableName
+     */
+    public ByteBuffer tableName; // required
+    /**
+     * list of Put
+     */
+    public List<BatchMutation> rowBatches; // required
+    /**
+     * name of the region
+     */
+    public ByteBuffer regionName; // required
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+      /**
+       * name of tableName
+       */
+      TABLE_NAME((short)1, "tableName"),
+      /**
+       * list of Put
+       */
+      ROW_BATCHES((short)2, "rowBatches"),
+      /**
+       * name of the region
+       */
+      REGION_NAME((short)3, "regionName");
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          case 1: // TABLE_NAME
+            return TABLE_NAME;
+          case 2: // ROW_BATCHES
+            return ROW_BATCHES;
+          case 3: // REGION_NAME
+            return REGION_NAME;
+          default:
+            return null;
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      tmpMap.put(_Fields.TABLE_NAME, new org.apache.thrift.meta_data.FieldMetaData("tableName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
+      tmpMap.put(_Fields.ROW_BATCHES, new org.apache.thrift.meta_data.FieldMetaData("rowBatches", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
+              new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, BatchMutation.class))));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(multiPut_args.class, metaDataMap);
+    }
+
+    public multiPut_args() {
+    }
+
+    public multiPut_args(
+      ByteBuffer tableName,
+      List<BatchMutation> rowBatches,
+      ByteBuffer regionName)
+    {
+      this();
+      this.tableName = tableName;
+      this.rowBatches = rowBatches;
+      this.regionName = regionName;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public multiPut_args(multiPut_args other) {
+      if (other.isSetTableName()) {
+        this.tableName = other.tableName;
+      }
+      if (other.isSetRowBatches()) {
+        List<BatchMutation> __this__rowBatches = new ArrayList<BatchMutation>();
+        for (BatchMutation other_element : other.rowBatches) {
+          __this__rowBatches.add(new BatchMutation(other_element));
+        }
+        this.rowBatches = __this__rowBatches;
+      }
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
+    }
+
+    public multiPut_args deepCopy() {
+      return new multiPut_args(this);
+    }
+
+    @Override
+    public void clear() {
+      this.tableName = null;
+      this.rowBatches = null;
+      this.regionName = null;
+    }
+
+    /**
+     * name of tableName
+     */
+    public byte[] getTableName() {
+      setTableName(org.apache.thrift.TBaseHelper.rightSize(tableName));
+      return tableName == null ? null : tableName.array();
+    }
+
+    public ByteBuffer bufferForTableName() {
+      return tableName;
+    }
+
+    /**
+     * name of tableName
+     */
+    public multiPut_args setTableName(byte[] tableName) {
+      setTableName(tableName == null ? (ByteBuffer)null : ByteBuffer.wrap(tableName));
+      return this;
+    }
+
+    public multiPut_args setTableName(ByteBuffer tableName) {
+      this.tableName = tableName;
+      return this;
+    }
+
+    public void unsetTableName() {
+      this.tableName = null;
+    }
+
+    /** Returns true if field tableName is set (has been assigned a value) and false otherwise */
+    public boolean isSetTableName() {
+      return this.tableName != null;
+    }
+
+    public void setTableNameIsSet(boolean value) {
+      if (!value) {
+        this.tableName = null;
+      }
+    }
+
+    public int getRowBatchesSize() {
+      return (this.rowBatches == null) ? 0 : this.rowBatches.size();
+    }
+
+    public java.util.Iterator<BatchMutation> getRowBatchesIterator() {
+      return (this.rowBatches == null) ? null : this.rowBatches.iterator();
+    }
+
+    public void addToRowBatches(BatchMutation elem) {
+      if (this.rowBatches == null) {
+        this.rowBatches = new ArrayList<BatchMutation>();
+      }
+      this.rowBatches.add(elem);
+    }
+
+    /**
+     * list of Put
+     */
+    public List<BatchMutation> getRowBatches() {
+      return this.rowBatches;
+    }
+
+    /**
+     * list of Put
+     */
+    public multiPut_args setRowBatches(List<BatchMutation> rowBatches) {
+      this.rowBatches = rowBatches;
+      return this;
+    }
+
+    public void unsetRowBatches() {
+      this.rowBatches = null;
+    }
+
+    /** Returns true if field rowBatches is set (has been assigned a value) and false otherwise */
+    public boolean isSetRowBatches() {
+      return this.rowBatches != null;
+    }
+
+    public void setRowBatchesIsSet(boolean value) {
+      if (!value) {
+        this.rowBatches = null;
+      }
+    }
+
+    /**
+     * name of the region
+     */
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    /**
+     * name of the region
+     */
+    public multiPut_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public multiPut_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TABLE_NAME:
+        if (value == null) {
+          unsetTableName();
+        } else {
+          setTableName((ByteBuffer)value);
+        }
+        break;
+
+      case ROW_BATCHES:
+        if (value == null) {
+          unsetRowBatches();
+        } else {
+          setRowBatches((List<BatchMutation>)value);
+        }
+        break;
+
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TABLE_NAME:
+        return getTableName();
+
+      case ROW_BATCHES:
+        return getRowBatches();
+
+      case REGION_NAME:
+        return getRegionName();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      case TABLE_NAME:
+        return isSetTableName();
+      case ROW_BATCHES:
+        return isSetRowBatches();
+      case REGION_NAME:
+        return isSetRegionName();
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof multiPut_args)
+        return this.equals((multiPut_args)that);
+      return false;
+    }
+
+    public boolean equals(multiPut_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tableName = true && this.isSetTableName();
+      boolean that_present_tableName = true && that.isSetTableName();
+      if (this_present_tableName || that_present_tableName) {
+        if (!(this_present_tableName && that_present_tableName))
+          return false;
+        if (!this.tableName.equals(that.tableName))
+          return false;
+      }
+
+      boolean this_present_rowBatches = true && this.isSetRowBatches();
+      boolean that_present_rowBatches = true && that.isSetRowBatches();
+      if (this_present_rowBatches || that_present_rowBatches) {
+        if (!(this_present_rowBatches && that_present_rowBatches))
+          return false;
+        if (!this.rowBatches.equals(that.rowBatches))
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(multiPut_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      multiPut_args typedOther = (multiPut_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTableName()).compareTo(typedOther.isSetTableName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetTableName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.tableName, typedOther.tableName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      lastComparison = Boolean.valueOf(isSetRowBatches()).compareTo(typedOther.isSetRowBatches());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRowBatches()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.rowBatches, typedOther.rowBatches);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("multiPut_args(");
+      boolean first = true;
+
+      sb.append("tableName:");
+      if (this.tableName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.tableName);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("rowBatches:");
+      if (this.rowBatches == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.rowBatches);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private static class multiPut_argsStandardSchemeFactory implements SchemeFactory {
+      public multiPut_argsStandardScheme getScheme() {
+        return new multiPut_argsStandardScheme();
+      }
+    }
+
+    private static class multiPut_argsStandardScheme extends StandardScheme<multiPut_args> {
+
+      public void read(org.apache.thrift.protocol.TProtocol iprot, multiPut_args struct) throws org.apache.thrift.TException {
+        org.apache.thrift.protocol.TField schemeField;
+        iprot.readStructBegin();
+        while (true)
+        {
+          schemeField = iprot.readFieldBegin();
+          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
+            break;
+          }
+          switch (schemeField.id) {
+            case 1: // TABLE_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.tableName = iprot.readBinary();
+                struct.setTableNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            case 2: // ROW_BATCHES
+              if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
+                {
+                  org.apache.thrift.protocol.TList _list274 = iprot.readListBegin();
+                  struct.rowBatches = new ArrayList<BatchMutation>(_list274.size);
+                  for (int _i275 = 0; _i275 < _list274.size; ++_i275)
+                  {
+                    BatchMutation _elem276; // required
+                    _elem276 = new BatchMutation();
+                    _elem276.read(iprot);
+                    struct.rowBatches.add(_elem276);
+                  }
+                  iprot.readListEnd();
+                }
+                struct.setRowBatchesIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            case 3: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            default:
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+          }
+          iprot.readFieldEnd();
+        }
+        iprot.readStructEnd();
+
+        // check for required fields of primitive type, which can't be checked in the validate method
+        struct.validate();
+      }
+
+      public void write(org.apache.thrift.protocol.TProtocol oprot, multiPut_args struct) throws org.apache.thrift.TException {
+        struct.validate();
+
+        oprot.writeStructBegin(STRUCT_DESC);
+        if (struct.tableName != null) {
+          oprot.writeFieldBegin(TABLE_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.tableName);
+          oprot.writeFieldEnd();
+        }
+        if (struct.rowBatches != null) {
+          oprot.writeFieldBegin(ROW_BATCHES_FIELD_DESC);
+          {
+            oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.rowBatches.size()));
+            for (BatchMutation _iter277 : struct.rowBatches)
+            {
+              _iter277.write(oprot);
+            }
+            oprot.writeListEnd();
+          }
+          oprot.writeFieldEnd();
+        }
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
+          oprot.writeFieldEnd();
+        }
+        oprot.writeFieldStop();
+        oprot.writeStructEnd();
+      }
+
+    }
+
+    private static class multiPut_argsTupleSchemeFactory implements SchemeFactory {
+      public multiPut_argsTupleScheme getScheme() {
+        return new multiPut_argsTupleScheme();
+      }
+    }
+
+    private static class multiPut_argsTupleScheme extends TupleScheme<multiPut_args> {
+
+      @Override
+      public void write(org.apache.thrift.protocol.TProtocol prot, multiPut_args struct) throws org.apache.thrift.TException {
+        TTupleProtocol oprot = (TTupleProtocol) prot;
+        BitSet optionals = new BitSet();
+        if (struct.isSetTableName()) {
+          optionals.set(0);
+        }
+        if (struct.isSetRowBatches()) {
+          optionals.set(1);
+        }
+        if (struct.isSetRegionName()) {
+          optionals.set(2);
+        }
+        oprot.writeBitSet(optionals, 3);
+        if (struct.isSetTableName()) {
+          oprot.writeBinary(struct.tableName);
+        }
+        if (struct.isSetRowBatches()) {
+          {
+            oprot.writeI32(struct.rowBatches.size());
+            for (BatchMutation _iter278 : struct.rowBatches)
+            {
+              _iter278.write(oprot);
+            }
+          }
+        }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
+        }
+      }
+
+      @Override
+      public void read(org.apache.thrift.protocol.TProtocol prot, multiPut_args struct) throws org.apache.thrift.TException {
+        TTupleProtocol iprot = (TTupleProtocol) prot;
+        BitSet incoming = iprot.readBitSet(3);
+        if (incoming.get(0)) {
+          struct.tableName = iprot.readBinary();
+          struct.setTableNameIsSet(true);
+        }
+        if (incoming.get(1)) {
+          {
+            org.apache.thrift.protocol.TList _list279 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.rowBatches = new ArrayList<BatchMutation>(_list279.size);
+            for (int _i280 = 0; _i280 < _list279.size; ++_i280)
+            {
+              BatchMutation _elem281; // required
+              _elem281 = new BatchMutation();
+              _elem281.read(iprot);
+              struct.rowBatches.add(_elem281);
+            }
+          }
+          struct.setRowBatchesIsSet(true);
+        }
+        if (incoming.get(2)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
+        }
+      }
+    }
+
+  }
+
+  public static class multiPut_result implements org.apache.thrift.TBase<multiPut_result, multiPut_result._Fields>, java.io.Serializable, Cloneable   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("multiPut_result");
+
+    private static final org.apache.thrift.protocol.TField IO_FIELD_DESC = new org.apache.thrift.protocol.TField("io", org.apache.thrift.protocol.TType.STRUCT, (short)1);
+    private static final org.apache.thrift.protocol.TField IA_FIELD_DESC = new org.apache.thrift.protocol.TField("ia", org.apache.thrift.protocol.TType.STRUCT, (short)2);
+
+    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
+    static {
+      schemes.put(StandardScheme.class, new multiPut_resultStandardSchemeFactory());
+      schemes.put(TupleScheme.class, new multiPut_resultTupleSchemeFactory());
+    }
+
+    public IOError io; // required
+    public IllegalArgument ia; // required
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+      IO((short)1, "io"),
+      IA((short)2, "ia");
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          case 1: // IO
+            return IO;
+          case 2: // IA
+            return IA;
+          default:
+            return null;
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      tmpMap.put(_Fields.IO, new org.apache.thrift.meta_data.FieldMetaData("io", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRUCT)));
+      tmpMap.put(_Fields.IA, new org.apache.thrift.meta_data.FieldMetaData("ia", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRUCT)));
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(multiPut_result.class, metaDataMap);
+    }
+
+    public multiPut_result() {
+    }
+
+    public multiPut_result(
+      IOError io,
+      IllegalArgument ia)
+    {
+      this();
+      this.io = io;
+      this.ia = ia;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public multiPut_result(multiPut_result other) {
+      if (other.isSetIo()) {
+        this.io = new IOError(other.io);
+      }
+      if (other.isSetIa()) {
+        this.ia = new IllegalArgument(other.ia);
+      }
+    }
+
+    public multiPut_result deepCopy() {
+      return new multiPut_result(this);
+    }
+
+    @Override
+    public void clear() {
+      this.io = null;
+      this.ia = null;
+    }
+
+    public IOError getIo() {
+      return this.io;
+    }
+
+    public multiPut_result setIo(IOError io) {
+      this.io = io;
+      return this;
+    }
+
+    public void unsetIo() {
+      this.io = null;
+    }
+
+    /** Returns true if field io is set (has been assigned a value) and false otherwise */
+    public boolean isSetIo() {
+      return this.io != null;
+    }
+
+    public void setIoIsSet(boolean value) {
+      if (!value) {
+        this.io = null;
+      }
+    }
+
+    public IllegalArgument getIa() {
+      return this.ia;
+    }
+
+    public multiPut_result setIa(IllegalArgument ia) {
+      this.ia = ia;
+      return this;
+    }
+
+    public void unsetIa() {
+      this.ia = null;
+    }
+
+    /** Returns true if field ia is set (has been assigned a value) and false otherwise */
+    public boolean isSetIa() {
+      return this.ia != null;
+    }
+
+    public void setIaIsSet(boolean value) {
+      if (!value) {
+        this.ia = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case IO:
+        if (value == null) {
+          unsetIo();
+        } else {
+          setIo((IOError)value);
+        }
+        break;
+
+      case IA:
+        if (value == null) {
+          unsetIa();
+        } else {
+          setIa((IllegalArgument)value);
+        }
+        break;
+
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case IO:
+        return getIo();
+
+      case IA:
+        return getIa();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      case IO:
+        return isSetIo();
+      case IA:
+        return isSetIa();
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof multiPut_result)
+        return this.equals((multiPut_result)that);
+      return false;
+    }
+
+    public boolean equals(multiPut_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_io = true && this.isSetIo();
+      boolean that_present_io = true && that.isSetIo();
+      if (this_present_io || that_present_io) {
+        if (!(this_present_io && that_present_io))
+          return false;
+        if (!this.io.equals(that.io))
+          return false;
+      }
+
+      boolean this_present_ia = true && this.isSetIa();
+      boolean that_present_ia = true && that.isSetIa();
+      if (this_present_ia || that_present_ia) {
+        if (!(this_present_ia && that_present_ia))
+          return false;
+        if (!this.ia.equals(that.ia))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(multiPut_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      multiPut_result typedOther = (multiPut_result)other;
+
+      lastComparison = Boolean.valueOf(isSetIo()).compareTo(typedOther.isSetIo());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetIo()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.io, typedOther.io);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      lastComparison = Boolean.valueOf(isSetIa()).compareTo(typedOther.isSetIa());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetIa()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.ia, typedOther.ia);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
+      }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("multiPut_result(");
+      boolean first = true;
+
+      sb.append("io:");
+      if (this.io == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.io);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("ia:");
+      if (this.ia == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.ia);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private static class multiPut_resultStandardSchemeFactory implements SchemeFactory {
+      public multiPut_resultStandardScheme getScheme() {
+        return new multiPut_resultStandardScheme();
+      }
+    }
+
+    private static class multiPut_resultStandardScheme extends StandardScheme<multiPut_result> {
+
+      public void read(org.apache.thrift.protocol.TProtocol iprot, multiPut_result struct) throws org.apache.thrift.TException {
+        org.apache.thrift.protocol.TField schemeField;
+        iprot.readStructBegin();
+        while (true)
+        {
+          schemeField = iprot.readFieldBegin();
+          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
+            break;
+          }
+          switch (schemeField.id) {
+            case 1: // IO
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+                struct.io = new IOError();
+                struct.io.read(iprot);
+                struct.setIoIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            case 2: // IA
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+                struct.ia = new IllegalArgument();
+                struct.ia.read(iprot);
+                struct.setIaIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            default:
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+          }
+          iprot.readFieldEnd();
+        }
+        iprot.readStructEnd();
+
+        // check for required fields of primitive type, which can't be checked in the validate method
+        struct.validate();
+      }
+
+      public void write(org.apache.thrift.protocol.TProtocol oprot, multiPut_result struct) throws org.apache.thrift.TException {
+        struct.validate();
+
+        oprot.writeStructBegin(STRUCT_DESC);
+        if (struct.io != null) {
+          oprot.writeFieldBegin(IO_FIELD_DESC);
+          struct.io.write(oprot);
+          oprot.writeFieldEnd();
+        }
+        if (struct.ia != null) {
+          oprot.writeFieldBegin(IA_FIELD_DESC);
+          struct.ia.write(oprot);
+          oprot.writeFieldEnd();
+        }
+        oprot.writeFieldStop();
+        oprot.writeStructEnd();
+      }
+
+    }
+
+    private static class multiPut_resultTupleSchemeFactory implements SchemeFactory {
+      public multiPut_resultTupleScheme getScheme() {
+        return new multiPut_resultTupleScheme();
+      }
+    }
+
+    private static class multiPut_resultTupleScheme extends TupleScheme<multiPut_result> {
+
+      @Override
+      public void write(org.apache.thrift.protocol.TProtocol prot, multiPut_result struct) throws org.apache.thrift.TException {
+        TTupleProtocol oprot = (TTupleProtocol) prot;
+        BitSet optionals = new BitSet();
+        if (struct.isSetIo()) {
+          optionals.set(0);
+        }
+        if (struct.isSetIa()) {
+          optionals.set(1);
+        }
+        oprot.writeBitSet(optionals, 2);
+        if (struct.isSetIo()) {
+          struct.io.write(oprot);
+        }
+        if (struct.isSetIa()) {
+          struct.ia.write(oprot);
+        }
+      }
+
+      @Override
+      public void read(org.apache.thrift.protocol.TProtocol prot, multiPut_result struct) throws org.apache.thrift.TException {
+        TTupleProtocol iprot = (TTupleProtocol) prot;
+        BitSet incoming = iprot.readBitSet(2);
+        if (incoming.get(0)) {
+          struct.io = new IOError();
+          struct.io.read(iprot);
+          struct.setIoIsSet(true);
+        }
+        if (incoming.get(1)) {
+          struct.ia = new IllegalArgument();
+          struct.ia.read(iprot);
+          struct.setIaIsSet(true);
+        }
+      }
+    }
+
+  }
+
   public static class mutateRow_args implements org.apache.thrift.TBase<mutateRow_args, mutateRow_args._Fields>, java.io.Serializable, Cloneable   {
     private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("mutateRow_args");
 
@@ -38051,6 +41276,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)2);
     private static final org.apache.thrift.protocol.TField MUTATIONS_FIELD_DESC = new org.apache.thrift.protocol.TField("mutations", org.apache.thrift.protocol.TType.LIST, (short)3);
     private static final org.apache.thrift.protocol.TField ATTRIBUTES_FIELD_DESC = new org.apache.thrift.protocol.TField("attributes", org.apache.thrift.protocol.TType.MAP, (short)4);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)7);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -38074,6 +41300,7 @@ public class Hbase {
      * Put attributes
      */
     public Map<ByteBuffer,ByteBuffer> attributes; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -38092,7 +41319,8 @@ public class Hbase {
       /**
        * Put attributes
        */
-      ATTRIBUTES((short)4, "attributes");
+      ATTRIBUTES((short)4, "attributes"),
+      REGION_NAME((short)7, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -38115,6 +41343,8 @@ public class Hbase {
             return MUTATIONS;
           case 4: // ATTRIBUTES
             return ATTRIBUTES;
+          case 7: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -38169,6 +41399,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.MapMetaData(org.apache.thrift.protocol.TType.MAP, 
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"), 
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"))));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(mutateRow_args.class, metaDataMap);
     }
@@ -38180,13 +41412,15 @@ public class Hbase {
       ByteBuffer tableName,
       ByteBuffer row,
       List<Mutation> mutations,
-      Map<ByteBuffer,ByteBuffer> attributes)
+      Map<ByteBuffer,ByteBuffer> attributes,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
       this.row = row;
       this.mutations = mutations;
       this.attributes = attributes;
+      this.regionName = regionName;
     }
 
     /**
@@ -38221,6 +41455,9 @@ public class Hbase {
         }
         this.attributes = __this__attributes;
       }
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public mutateRow_args deepCopy() {
@@ -38233,6 +41470,7 @@ public class Hbase {
       this.row = null;
       this.mutations = null;
       this.attributes = null;
+      this.regionName = null;
     }
 
     /**
@@ -38401,6 +41639,40 @@ public class Hbase {
       }
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public mutateRow_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public mutateRow_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -38435,6 +41707,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -38451,6 +41731,9 @@ public class Hbase {
 
       case ATTRIBUTES:
         return getAttributes();
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -38471,6 +41754,8 @@ public class Hbase {
         return isSetMutations();
       case ATTRIBUTES:
         return isSetAttributes();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -38521,6 +41806,15 @@ public class Hbase {
         if (!(this_present_attributes && that_present_attributes))
           return false;
         if (!this.attributes.equals(that.attributes))
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -38580,6 +41874,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -38629,6 +41933,14 @@ public class Hbase {
         sb.append("null");
       } else {
         sb.append(this.attributes);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
       }
       first = false;
       sb.append(")");
@@ -38692,14 +42004,14 @@ public class Hbase {
             case 3: // MUTATIONS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list274 = iprot.readListBegin();
-                  struct.mutations = new ArrayList<Mutation>(_list274.size);
-                  for (int _i275 = 0; _i275 < _list274.size; ++_i275)
+                  org.apache.thrift.protocol.TList _list282 = iprot.readListBegin();
+                  struct.mutations = new ArrayList<Mutation>(_list282.size);
+                  for (int _i283 = 0; _i283 < _list282.size; ++_i283)
                   {
-                    Mutation _elem276; // required
-                    _elem276 = new Mutation();
-                    _elem276.read(iprot);
-                    struct.mutations.add(_elem276);
+                    Mutation _elem284; // required
+                    _elem284 = new Mutation();
+                    _elem284.read(iprot);
+                    struct.mutations.add(_elem284);
                   }
                   iprot.readListEnd();
                 }
@@ -38711,20 +42023,28 @@ public class Hbase {
             case 4: // ATTRIBUTES
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map277 = iprot.readMapBegin();
-                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map277.size);
-                  for (int _i278 = 0; _i278 < _map277.size; ++_i278)
+                  org.apache.thrift.protocol.TMap _map285 = iprot.readMapBegin();
+                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map285.size);
+                  for (int _i286 = 0; _i286 < _map285.size; ++_i286)
                   {
-                    ByteBuffer _key279; // required
-                    ByteBuffer _val280; // required
-                    _key279 = iprot.readBinary();
-                    _val280 = iprot.readBinary();
-                    struct.attributes.put(_key279, _val280);
+                    ByteBuffer _key287; // required
+                    ByteBuffer _val288; // optional
+                    _key287 = iprot.readBinary();
+                    _val288 = iprot.readBinary();
+                    struct.attributes.put(_key287, _val288);
                   }
                   iprot.readMapEnd();
                 }
                 struct.setAttributesIsSet(true);
               } else {
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            case 7: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
@@ -38757,9 +42077,9 @@ public class Hbase {
           oprot.writeFieldBegin(MUTATIONS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.mutations.size()));
-            for (Mutation _iter281 : struct.mutations)
+            for (Mutation _iter289 : struct.mutations)
             {
-              _iter281.write(oprot);
+              _iter289.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -38769,13 +42089,18 @@ public class Hbase {
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter282 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter290 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter282.getKey());
-              oprot.writeBinary(_iter282.getValue());
+              oprot.writeBinary(_iter290.getKey());
+              oprot.writeBinary(_iter290.getValue());
             }
             oprot.writeMapEnd();
           }
+          oprot.writeFieldEnd();
+        }
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
           oprot.writeFieldEnd();
         }
         oprot.writeFieldStop();
@@ -38808,7 +42133,10 @@ public class Hbase {
         if (struct.isSetAttributes()) {
           optionals.set(3);
         }
-        oprot.writeBitSet(optionals, 4);
+        if (struct.isSetRegionName()) {
+          optionals.set(4);
+        }
+        oprot.writeBitSet(optionals, 5);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -38818,28 +42146,31 @@ public class Hbase {
         if (struct.isSetMutations()) {
           {
             oprot.writeI32(struct.mutations.size());
-            for (Mutation _iter283 : struct.mutations)
+            for (Mutation _iter291 : struct.mutations)
             {
-              _iter283.write(oprot);
+              _iter291.write(oprot);
             }
           }
         }
         if (struct.isSetAttributes()) {
           {
             oprot.writeI32(struct.attributes.size());
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter284 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter292 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter284.getKey());
-              oprot.writeBinary(_iter284.getValue());
+              oprot.writeBinary(_iter292.getKey());
+              oprot.writeBinary(_iter292.getValue());
             }
           }
+        }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
         }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, mutateRow_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(4);
+        BitSet incoming = iprot.readBitSet(5);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -38850,32 +42181,36 @@ public class Hbase {
         }
         if (incoming.get(2)) {
           {
-            org.apache.thrift.protocol.TList _list285 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.mutations = new ArrayList<Mutation>(_list285.size);
-            for (int _i286 = 0; _i286 < _list285.size; ++_i286)
+            org.apache.thrift.protocol.TList _list293 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.mutations = new ArrayList<Mutation>(_list293.size);
+            for (int _i294 = 0; _i294 < _list293.size; ++_i294)
             {
-              Mutation _elem287; // required
-              _elem287 = new Mutation();
-              _elem287.read(iprot);
-              struct.mutations.add(_elem287);
+              Mutation _elem295; // required
+              _elem295 = new Mutation();
+              _elem295.read(iprot);
+              struct.mutations.add(_elem295);
             }
           }
           struct.setMutationsIsSet(true);
         }
         if (incoming.get(3)) {
           {
-            org.apache.thrift.protocol.TMap _map288 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map288.size);
-            for (int _i289 = 0; _i289 < _map288.size; ++_i289)
+            org.apache.thrift.protocol.TMap _map296 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map296.size);
+            for (int _i297 = 0; _i297 < _map296.size; ++_i297)
             {
-              ByteBuffer _key290; // required
-              ByteBuffer _val291; // required
-              _key290 = iprot.readBinary();
-              _val291 = iprot.readBinary();
-              struct.attributes.put(_key290, _val291);
+              ByteBuffer _key298; // required
+              ByteBuffer _val299; // optional
+              _key298 = iprot.readBinary();
+              _val299 = iprot.readBinary();
+              struct.attributes.put(_key298, _val299);
             }
           }
           struct.setAttributesIsSet(true);
+        }
+        if (incoming.get(4)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -39347,6 +42682,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField MUTATIONS_FIELD_DESC = new org.apache.thrift.protocol.TField("mutations", org.apache.thrift.protocol.TType.LIST, (short)3);
     private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)4);
     private static final org.apache.thrift.protocol.TField ATTRIBUTES_FIELD_DESC = new org.apache.thrift.protocol.TField("attributes", org.apache.thrift.protocol.TType.MAP, (short)5);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)6);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -39374,6 +42710,7 @@ public class Hbase {
      * Put attributes
      */
     public Map<ByteBuffer,ByteBuffer> attributes; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -39396,7 +42733,8 @@ public class Hbase {
       /**
        * Put attributes
        */
-      ATTRIBUTES((short)5, "attributes");
+      ATTRIBUTES((short)5, "attributes"),
+      REGION_NAME((short)6, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -39421,6 +42759,8 @@ public class Hbase {
             return TIMESTAMP;
           case 5: // ATTRIBUTES
             return ATTRIBUTES;
+          case 6: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -39479,6 +42819,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.MapMetaData(org.apache.thrift.protocol.TType.MAP, 
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"), 
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"))));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(mutateRowTs_args.class, metaDataMap);
     }
@@ -39491,7 +42833,8 @@ public class Hbase {
       ByteBuffer row,
       List<Mutation> mutations,
       long timestamp,
-      Map<ByteBuffer,ByteBuffer> attributes)
+      Map<ByteBuffer,ByteBuffer> attributes,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
@@ -39500,6 +42843,7 @@ public class Hbase {
       this.timestamp = timestamp;
       setTimestampIsSet(true);
       this.attributes = attributes;
+      this.regionName = regionName;
     }
 
     /**
@@ -39537,6 +42881,9 @@ public class Hbase {
         }
         this.attributes = __this__attributes;
       }
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public mutateRowTs_args deepCopy() {
@@ -39551,6 +42898,7 @@ public class Hbase {
       setTimestampIsSet(false);
       this.timestamp = 0;
       this.attributes = null;
+      this.regionName = null;
     }
 
     /**
@@ -39748,6 +43096,40 @@ public class Hbase {
       }
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public mutateRowTs_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public mutateRowTs_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -39790,6 +43172,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -39809,6 +43199,9 @@ public class Hbase {
 
       case ATTRIBUTES:
         return getAttributes();
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -39831,6 +43224,8 @@ public class Hbase {
         return isSetTimestamp();
       case ATTRIBUTES:
         return isSetAttributes();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -39890,6 +43285,15 @@ public class Hbase {
         if (!(this_present_attributes && that_present_attributes))
           return false;
         if (!this.attributes.equals(that.attributes))
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -39959,6 +43363,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -40012,6 +43426,14 @@ public class Hbase {
         sb.append("null");
       } else {
         sb.append(this.attributes);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
       }
       first = false;
       sb.append(")");
@@ -40075,14 +43497,14 @@ public class Hbase {
             case 3: // MUTATIONS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list292 = iprot.readListBegin();
-                  struct.mutations = new ArrayList<Mutation>(_list292.size);
-                  for (int _i293 = 0; _i293 < _list292.size; ++_i293)
+                  org.apache.thrift.protocol.TList _list300 = iprot.readListBegin();
+                  struct.mutations = new ArrayList<Mutation>(_list300.size);
+                  for (int _i301 = 0; _i301 < _list300.size; ++_i301)
                   {
-                    Mutation _elem294; // required
-                    _elem294 = new Mutation();
-                    _elem294.read(iprot);
-                    struct.mutations.add(_elem294);
+                    Mutation _elem302; // required
+                    _elem302 = new Mutation();
+                    _elem302.read(iprot);
+                    struct.mutations.add(_elem302);
                   }
                   iprot.readListEnd();
                 }
@@ -40102,19 +43524,27 @@ public class Hbase {
             case 5: // ATTRIBUTES
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map295 = iprot.readMapBegin();
-                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map295.size);
-                  for (int _i296 = 0; _i296 < _map295.size; ++_i296)
+                  org.apache.thrift.protocol.TMap _map303 = iprot.readMapBegin();
+                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map303.size);
+                  for (int _i304 = 0; _i304 < _map303.size; ++_i304)
                   {
-                    ByteBuffer _key297; // required
-                    ByteBuffer _val298; // required
-                    _key297 = iprot.readBinary();
-                    _val298 = iprot.readBinary();
-                    struct.attributes.put(_key297, _val298);
+                    ByteBuffer _key305; // required
+                    ByteBuffer _val306; // optional
+                    _key305 = iprot.readBinary();
+                    _val306 = iprot.readBinary();
+                    struct.attributes.put(_key305, _val306);
                   }
                   iprot.readMapEnd();
                 }
                 struct.setAttributesIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            case 6: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
               } else { 
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
@@ -40148,9 +43578,9 @@ public class Hbase {
           oprot.writeFieldBegin(MUTATIONS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.mutations.size()));
-            for (Mutation _iter299 : struct.mutations)
+            for (Mutation _iter307 : struct.mutations)
             {
-              _iter299.write(oprot);
+              _iter307.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -40163,13 +43593,18 @@ public class Hbase {
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter300 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter308 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter300.getKey());
-              oprot.writeBinary(_iter300.getValue());
+              oprot.writeBinary(_iter308.getKey());
+              oprot.writeBinary(_iter308.getValue());
             }
             oprot.writeMapEnd();
           }
+          oprot.writeFieldEnd();
+        }
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
           oprot.writeFieldEnd();
         }
         oprot.writeFieldStop();
@@ -40205,7 +43640,10 @@ public class Hbase {
         if (struct.isSetAttributes()) {
           optionals.set(4);
         }
-        oprot.writeBitSet(optionals, 5);
+        if (struct.isSetRegionName()) {
+          optionals.set(5);
+        }
+        oprot.writeBitSet(optionals, 6);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
@@ -40215,9 +43653,9 @@ public class Hbase {
         if (struct.isSetMutations()) {
           {
             oprot.writeI32(struct.mutations.size());
-            for (Mutation _iter301 : struct.mutations)
+            for (Mutation _iter309 : struct.mutations)
             {
-              _iter301.write(oprot);
+              _iter309.write(oprot);
             }
           }
         }
@@ -40227,19 +43665,22 @@ public class Hbase {
         if (struct.isSetAttributes()) {
           {
             oprot.writeI32(struct.attributes.size());
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter302 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter310 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter302.getKey());
-              oprot.writeBinary(_iter302.getValue());
+              oprot.writeBinary(_iter310.getKey());
+              oprot.writeBinary(_iter310.getValue());
             }
           }
+        }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
         }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, mutateRowTs_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(5);
+        BitSet incoming = iprot.readBitSet(6);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
@@ -40250,14 +43691,14 @@ public class Hbase {
         }
         if (incoming.get(2)) {
           {
-            org.apache.thrift.protocol.TList _list303 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.mutations = new ArrayList<Mutation>(_list303.size);
-            for (int _i304 = 0; _i304 < _list303.size; ++_i304)
+            org.apache.thrift.protocol.TList _list311 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.mutations = new ArrayList<Mutation>(_list311.size);
+            for (int _i312 = 0; _i312 < _list311.size; ++_i312)
             {
-              Mutation _elem305; // required
-              _elem305 = new Mutation();
-              _elem305.read(iprot);
-              struct.mutations.add(_elem305);
+              Mutation _elem313; // required
+              _elem313 = new Mutation();
+              _elem313.read(iprot);
+              struct.mutations.add(_elem313);
             }
           }
           struct.setMutationsIsSet(true);
@@ -40268,18 +43709,22 @@ public class Hbase {
         }
         if (incoming.get(4)) {
           {
-            org.apache.thrift.protocol.TMap _map306 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map306.size);
-            for (int _i307 = 0; _i307 < _map306.size; ++_i307)
+            org.apache.thrift.protocol.TMap _map314 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map314.size);
+            for (int _i315 = 0; _i315 < _map314.size; ++_i315)
             {
-              ByteBuffer _key308; // required
-              ByteBuffer _val309; // required
-              _key308 = iprot.readBinary();
-              _val309 = iprot.readBinary();
-              struct.attributes.put(_key308, _val309);
+              ByteBuffer _key316; // required
+              ByteBuffer _val317; // optional
+              _key316 = iprot.readBinary();
+              _val317 = iprot.readBinary();
+              struct.attributes.put(_key316, _val317);
             }
           }
           struct.setAttributesIsSet(true);
+        }
+        if (incoming.get(5)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -40749,6 +44194,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField TABLE_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("tableName", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField ROW_BATCHES_FIELD_DESC = new org.apache.thrift.protocol.TField("rowBatches", org.apache.thrift.protocol.TType.LIST, (short)2);
     private static final org.apache.thrift.protocol.TField ATTRIBUTES_FIELD_DESC = new org.apache.thrift.protocol.TField("attributes", org.apache.thrift.protocol.TType.MAP, (short)3);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)4);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -40768,6 +44214,7 @@ public class Hbase {
      * Put attributes
      */
     public Map<ByteBuffer,ByteBuffer> attributes; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -40782,7 +44229,8 @@ public class Hbase {
       /**
        * Put attributes
        */
-      ATTRIBUTES((short)3, "attributes");
+      ATTRIBUTES((short)3, "attributes"),
+      REGION_NAME((short)4, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -40803,6 +44251,8 @@ public class Hbase {
             return ROW_BATCHES;
           case 3: // ATTRIBUTES
             return ATTRIBUTES;
+          case 4: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -40855,6 +44305,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.MapMetaData(org.apache.thrift.protocol.TType.MAP, 
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"), 
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"))));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(mutateRows_args.class, metaDataMap);
     }
@@ -40865,12 +44317,14 @@ public class Hbase {
     public mutateRows_args(
       ByteBuffer tableName,
       List<BatchMutation> rowBatches,
-      Map<ByteBuffer,ByteBuffer> attributes)
+      Map<ByteBuffer,ByteBuffer> attributes,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
       this.rowBatches = rowBatches;
       this.attributes = attributes;
+      this.regionName = regionName;
     }
 
     /**
@@ -40902,6 +44356,9 @@ public class Hbase {
         }
         this.attributes = __this__attributes;
       }
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public mutateRows_args deepCopy() {
@@ -40913,6 +44370,7 @@ public class Hbase {
       this.tableName = null;
       this.rowBatches = null;
       this.attributes = null;
+      this.regionName = null;
     }
 
     /**
@@ -41041,6 +44499,40 @@ public class Hbase {
       }
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public mutateRows_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public mutateRows_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -41067,6 +44559,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -41080,6 +44580,9 @@ public class Hbase {
 
       case ATTRIBUTES:
         return getAttributes();
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -41098,6 +44601,8 @@ public class Hbase {
         return isSetRowBatches();
       case ATTRIBUTES:
         return isSetAttributes();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -41139,6 +44644,15 @@ public class Hbase {
         if (!(this_present_attributes && that_present_attributes))
           return false;
         if (!this.attributes.equals(that.attributes))
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -41188,6 +44702,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -41229,6 +44753,14 @@ public class Hbase {
         sb.append("null");
       } else {
         sb.append(this.attributes);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
       }
       first = false;
       sb.append(")");
@@ -41284,14 +44816,14 @@ public class Hbase {
             case 2: // ROW_BATCHES
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list310 = iprot.readListBegin();
-                  struct.rowBatches = new ArrayList<BatchMutation>(_list310.size);
-                  for (int _i311 = 0; _i311 < _list310.size; ++_i311)
+                  org.apache.thrift.protocol.TList _list318 = iprot.readListBegin();
+                  struct.rowBatches = new ArrayList<BatchMutation>(_list318.size);
+                  for (int _i319 = 0; _i319 < _list318.size; ++_i319)
                   {
-                    BatchMutation _elem312; // required
-                    _elem312 = new BatchMutation();
-                    _elem312.read(iprot);
-                    struct.rowBatches.add(_elem312);
+                    BatchMutation _elem320; // required
+                    _elem320 = new BatchMutation();
+                    _elem320.read(iprot);
+                    struct.rowBatches.add(_elem320);
                   }
                   iprot.readListEnd();
                 }
@@ -41303,20 +44835,28 @@ public class Hbase {
             case 3: // ATTRIBUTES
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map313 = iprot.readMapBegin();
-                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map313.size);
-                  for (int _i314 = 0; _i314 < _map313.size; ++_i314)
+                  org.apache.thrift.protocol.TMap _map321 = iprot.readMapBegin();
+                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map321.size);
+                  for (int _i322 = 0; _i322 < _map321.size; ++_i322)
                   {
-                    ByteBuffer _key315; // required
-                    ByteBuffer _val316; // required
-                    _key315 = iprot.readBinary();
-                    _val316 = iprot.readBinary();
-                    struct.attributes.put(_key315, _val316);
+                    ByteBuffer _key323; // required
+                    ByteBuffer _val324; // optional
+                    _key323 = iprot.readBinary();
+                    _val324 = iprot.readBinary();
+                    struct.attributes.put(_key323, _val324);
                   }
                   iprot.readMapEnd();
                 }
                 struct.setAttributesIsSet(true);
               } else {
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            case 4: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
@@ -41344,9 +44884,9 @@ public class Hbase {
           oprot.writeFieldBegin(ROW_BATCHES_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.rowBatches.size()));
-            for (BatchMutation _iter317 : struct.rowBatches)
+            for (BatchMutation _iter325 : struct.rowBatches)
             {
-              _iter317.write(oprot);
+              _iter325.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -41356,13 +44896,18 @@ public class Hbase {
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter318 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter326 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter318.getKey());
-              oprot.writeBinary(_iter318.getValue());
+              oprot.writeBinary(_iter326.getKey());
+              oprot.writeBinary(_iter326.getValue());
             }
             oprot.writeMapEnd();
           }
+          oprot.writeFieldEnd();
+        }
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
           oprot.writeFieldEnd();
         }
         oprot.writeFieldStop();
@@ -41392,67 +44937,77 @@ public class Hbase {
         if (struct.isSetAttributes()) {
           optionals.set(2);
         }
-        oprot.writeBitSet(optionals, 3);
+        if (struct.isSetRegionName()) {
+          optionals.set(3);
+        }
+        oprot.writeBitSet(optionals, 4);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
         if (struct.isSetRowBatches()) {
           {
             oprot.writeI32(struct.rowBatches.size());
-            for (BatchMutation _iter319 : struct.rowBatches)
+            for (BatchMutation _iter327 : struct.rowBatches)
             {
-              _iter319.write(oprot);
+              _iter327.write(oprot);
             }
           }
         }
         if (struct.isSetAttributes()) {
           {
             oprot.writeI32(struct.attributes.size());
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter320 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter328 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter320.getKey());
-              oprot.writeBinary(_iter320.getValue());
+              oprot.writeBinary(_iter328.getKey());
+              oprot.writeBinary(_iter328.getValue());
             }
           }
+        }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
         }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, mutateRows_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(3);
+        BitSet incoming = iprot.readBitSet(4);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
         }
         if (incoming.get(1)) {
           {
-            org.apache.thrift.protocol.TList _list321 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.rowBatches = new ArrayList<BatchMutation>(_list321.size);
-            for (int _i322 = 0; _i322 < _list321.size; ++_i322)
+            org.apache.thrift.protocol.TList _list329 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.rowBatches = new ArrayList<BatchMutation>(_list329.size);
+            for (int _i330 = 0; _i330 < _list329.size; ++_i330)
             {
-              BatchMutation _elem323; // required
-              _elem323 = new BatchMutation();
-              _elem323.read(iprot);
-              struct.rowBatches.add(_elem323);
+              BatchMutation _elem331; // required
+              _elem331 = new BatchMutation();
+              _elem331.read(iprot);
+              struct.rowBatches.add(_elem331);
             }
           }
           struct.setRowBatchesIsSet(true);
         }
         if (incoming.get(2)) {
           {
-            org.apache.thrift.protocol.TMap _map324 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map324.size);
-            for (int _i325 = 0; _i325 < _map324.size; ++_i325)
+            org.apache.thrift.protocol.TMap _map332 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map332.size);
+            for (int _i333 = 0; _i333 < _map332.size; ++_i333)
             {
-              ByteBuffer _key326; // required
-              ByteBuffer _val327; // required
-              _key326 = iprot.readBinary();
-              _val327 = iprot.readBinary();
-              struct.attributes.put(_key326, _val327);
+              ByteBuffer _key334; // required
+              ByteBuffer _val335; // optional
+              _key334 = iprot.readBinary();
+              _val335 = iprot.readBinary();
+              struct.attributes.put(_key334, _val335);
             }
           }
           struct.setAttributesIsSet(true);
+        }
+        if (incoming.get(3)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -42343,14 +45898,14 @@ public class Hbase {
             case 2: // ROW_BATCHES
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list328 = iprot.readListBegin();
-                  struct.rowBatches = new ArrayList<BatchMutation>(_list328.size);
-                  for (int _i329 = 0; _i329 < _list328.size; ++_i329)
+                  org.apache.thrift.protocol.TList _list336 = iprot.readListBegin();
+                  struct.rowBatches = new ArrayList<BatchMutation>(_list336.size);
+                  for (int _i337 = 0; _i337 < _list336.size; ++_i337)
                   {
-                    BatchMutation _elem330; // required
-                    _elem330 = new BatchMutation();
-                    _elem330.read(iprot);
-                    struct.rowBatches.add(_elem330);
+                    BatchMutation _elem338; // required
+                    _elem338 = new BatchMutation();
+                    _elem338.read(iprot);
+                    struct.rowBatches.add(_elem338);
                   }
                   iprot.readListEnd();
                 }
@@ -42383,9 +45938,9 @@ public class Hbase {
           oprot.writeFieldBegin(ROW_BATCHES_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.rowBatches.size()));
-            for (BatchMutation _iter331 : struct.rowBatches)
+            for (BatchMutation _iter339 : struct.rowBatches)
             {
-              _iter331.write(oprot);
+              _iter339.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -42422,9 +45977,9 @@ public class Hbase {
         if (struct.isSetRowBatches()) {
           {
             oprot.writeI32(struct.rowBatches.size());
-            for (BatchMutation _iter332 : struct.rowBatches)
+            for (BatchMutation _iter340 : struct.rowBatches)
             {
-              _iter332.write(oprot);
+              _iter340.write(oprot);
             }
           }
         }
@@ -42440,14 +45995,14 @@ public class Hbase {
         }
         if (incoming.get(1)) {
           {
-            org.apache.thrift.protocol.TList _list333 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.rowBatches = new ArrayList<BatchMutation>(_list333.size);
-            for (int _i334 = 0; _i334 < _list333.size; ++_i334)
+            org.apache.thrift.protocol.TList _list341 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.rowBatches = new ArrayList<BatchMutation>(_list341.size);
+            for (int _i342 = 0; _i342 < _list341.size; ++_i342)
             {
-              BatchMutation _elem335; // required
-              _elem335 = new BatchMutation();
-              _elem335.read(iprot);
-              struct.rowBatches.add(_elem335);
+              BatchMutation _elem343; // required
+              _elem343 = new BatchMutation();
+              _elem343.read(iprot);
+              struct.rowBatches.add(_elem343);
             }
           }
           struct.setRowBatchesIsSet(true);
@@ -42464,6 +46019,7 @@ public class Hbase {
     private static final org.apache.thrift.protocol.TField ROW_BATCHES_FIELD_DESC = new org.apache.thrift.protocol.TField("rowBatches", org.apache.thrift.protocol.TType.LIST, (short)2);
     private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)3);
     private static final org.apache.thrift.protocol.TField ATTRIBUTES_FIELD_DESC = new org.apache.thrift.protocol.TField("attributes", org.apache.thrift.protocol.TType.MAP, (short)4);
+    private static final org.apache.thrift.protocol.TField REGION_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("regionName", org.apache.thrift.protocol.TType.STRING, (short)5);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -42487,6 +46043,7 @@ public class Hbase {
      * Put attributes
      */
     public Map<ByteBuffer,ByteBuffer> attributes; // required
+    public ByteBuffer regionName; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -42505,7 +46062,8 @@ public class Hbase {
       /**
        * Put attributes
        */
-      ATTRIBUTES((short)4, "attributes");
+      ATTRIBUTES((short)4, "attributes"),
+      REGION_NAME((short)5, "regionName");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -42528,6 +46086,8 @@ public class Hbase {
             return TIMESTAMP;
           case 4: // ATTRIBUTES
             return ATTRIBUTES;
+          case 5: // REGION_NAME
+            return REGION_NAME;
           default:
             return null;
         }
@@ -42584,6 +46144,8 @@ public class Hbase {
           new org.apache.thrift.meta_data.MapMetaData(org.apache.thrift.protocol.TType.MAP, 
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"), 
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING              , "Text"))));
+      tmpMap.put(_Fields.REGION_NAME, new org.apache.thrift.meta_data.FieldMetaData("regionName", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , "Text")));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(mutateRowsTs_args.class, metaDataMap);
     }
@@ -42595,7 +46157,8 @@ public class Hbase {
       ByteBuffer tableName,
       List<BatchMutation> rowBatches,
       long timestamp,
-      Map<ByteBuffer,ByteBuffer> attributes)
+      Map<ByteBuffer,ByteBuffer> attributes,
+      ByteBuffer regionName)
     {
       this();
       this.tableName = tableName;
@@ -42603,6 +46166,7 @@ public class Hbase {
       this.timestamp = timestamp;
       setTimestampIsSet(true);
       this.attributes = attributes;
+      this.regionName = regionName;
     }
 
     /**
@@ -42637,6 +46201,9 @@ public class Hbase {
         }
         this.attributes = __this__attributes;
       }
+      if (other.isSetRegionName()) {
+        this.regionName = other.regionName;
+      }
     }
 
     public mutateRowsTs_args deepCopy() {
@@ -42650,6 +46217,7 @@ public class Hbase {
       setTimestampIsSet(false);
       this.timestamp = 0;
       this.attributes = null;
+      this.regionName = null;
     }
 
     /**
@@ -42807,6 +46375,40 @@ public class Hbase {
       }
     }
 
+    public byte[] getRegionName() {
+      setRegionName(org.apache.thrift.TBaseHelper.rightSize(regionName));
+      return regionName == null ? null : regionName.array();
+    }
+
+    public ByteBuffer bufferForRegionName() {
+      return regionName;
+    }
+
+    public mutateRowsTs_args setRegionName(byte[] regionName) {
+      setRegionName(regionName == null ? (ByteBuffer)null : ByteBuffer.wrap(regionName));
+      return this;
+    }
+
+    public mutateRowsTs_args setRegionName(ByteBuffer regionName) {
+      this.regionName = regionName;
+      return this;
+    }
+
+    public void unsetRegionName() {
+      this.regionName = null;
+    }
+
+    /** Returns true if field regionName is set (has been assigned a value) and false otherwise */
+    public boolean isSetRegionName() {
+      return this.regionName != null;
+    }
+
+    public void setRegionNameIsSet(boolean value) {
+      if (!value) {
+        this.regionName = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case TABLE_NAME:
@@ -42841,6 +46443,14 @@ public class Hbase {
         }
         break;
 
+      case REGION_NAME:
+        if (value == null) {
+          unsetRegionName();
+        } else {
+          setRegionName((ByteBuffer)value);
+        }
+        break;
+
       }
     }
 
@@ -42857,6 +46467,9 @@ public class Hbase {
 
       case ATTRIBUTES:
         return getAttributes();
+
+      case REGION_NAME:
+        return getRegionName();
 
       }
       throw new IllegalStateException();
@@ -42877,6 +46490,8 @@ public class Hbase {
         return isSetTimestamp();
       case ATTRIBUTES:
         return isSetAttributes();
+      case REGION_NAME:
+        return isSetRegionName();
       }
       throw new IllegalStateException();
     }
@@ -42927,6 +46542,15 @@ public class Hbase {
         if (!(this_present_attributes && that_present_attributes))
           return false;
         if (!this.attributes.equals(that.attributes))
+          return false;
+      }
+
+      boolean this_present_regionName = true && this.isSetRegionName();
+      boolean that_present_regionName = true && that.isSetRegionName();
+      if (this_present_regionName || that_present_regionName) {
+        if (!(this_present_regionName && that_present_regionName))
+          return false;
+        if (!this.regionName.equals(that.regionName))
           return false;
       }
 
@@ -42986,6 +46610,16 @@ public class Hbase {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRegionName()).compareTo(typedOther.isSetRegionName());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRegionName()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.regionName, typedOther.regionName);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -43031,6 +46665,14 @@ public class Hbase {
         sb.append("null");
       } else {
         sb.append(this.attributes);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("regionName:");
+      if (this.regionName == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.regionName);
       }
       first = false;
       sb.append(")");
@@ -43086,14 +46728,14 @@ public class Hbase {
             case 2: // ROW_BATCHES
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list336 = iprot.readListBegin();
-                  struct.rowBatches = new ArrayList<BatchMutation>(_list336.size);
-                  for (int _i337 = 0; _i337 < _list336.size; ++_i337)
+                  org.apache.thrift.protocol.TList _list344 = iprot.readListBegin();
+                  struct.rowBatches = new ArrayList<BatchMutation>(_list344.size);
+                  for (int _i345 = 0; _i345 < _list344.size; ++_i345)
                   {
-                    BatchMutation _elem338; // required
-                    _elem338 = new BatchMutation();
-                    _elem338.read(iprot);
-                    struct.rowBatches.add(_elem338);
+                    BatchMutation _elem346; // required
+                    _elem346 = new BatchMutation();
+                    _elem346.read(iprot);
+                    struct.rowBatches.add(_elem346);
                   }
                   iprot.readListEnd();
                 }
@@ -43113,20 +46755,28 @@ public class Hbase {
             case 4: // ATTRIBUTES
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map339 = iprot.readMapBegin();
-                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map339.size);
-                  for (int _i340 = 0; _i340 < _map339.size; ++_i340)
+                  org.apache.thrift.protocol.TMap _map347 = iprot.readMapBegin();
+                  struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map347.size);
+                  for (int _i348 = 0; _i348 < _map347.size; ++_i348)
                   {
-                    ByteBuffer _key341; // required
-                    ByteBuffer _val342; // required
-                    _key341 = iprot.readBinary();
-                    _val342 = iprot.readBinary();
-                    struct.attributes.put(_key341, _val342);
+                    ByteBuffer _key349; // required
+                    ByteBuffer _val350; // optional
+                    _key349 = iprot.readBinary();
+                    _val350 = iprot.readBinary();
+                    struct.attributes.put(_key349, _val350);
                   }
                   iprot.readMapEnd();
                 }
                 struct.setAttributesIsSet(true);
               } else {
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            case 5: // REGION_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.regionName = iprot.readBinary();
+                struct.setRegionNameIsSet(true);
+              } else { 
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
@@ -43154,9 +46804,9 @@ public class Hbase {
           oprot.writeFieldBegin(ROW_BATCHES_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.rowBatches.size()));
-            for (BatchMutation _iter343 : struct.rowBatches)
+            for (BatchMutation _iter351 : struct.rowBatches)
             {
-              _iter343.write(oprot);
+              _iter351.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -43169,13 +46819,18 @@ public class Hbase {
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter344 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter352 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter344.getKey());
-              oprot.writeBinary(_iter344.getValue());
+              oprot.writeBinary(_iter352.getKey());
+              oprot.writeBinary(_iter352.getValue());
             }
             oprot.writeMapEnd();
           }
+          oprot.writeFieldEnd();
+        }
+        if (struct.regionName != null) {
+          oprot.writeFieldBegin(REGION_NAME_FIELD_DESC);
+          oprot.writeBinary(struct.regionName);
           oprot.writeFieldEnd();
         }
         oprot.writeFieldStop();
@@ -43208,16 +46863,19 @@ public class Hbase {
         if (struct.isSetAttributes()) {
           optionals.set(3);
         }
-        oprot.writeBitSet(optionals, 4);
+        if (struct.isSetRegionName()) {
+          optionals.set(4);
+        }
+        oprot.writeBitSet(optionals, 5);
         if (struct.isSetTableName()) {
           oprot.writeBinary(struct.tableName);
         }
         if (struct.isSetRowBatches()) {
           {
             oprot.writeI32(struct.rowBatches.size());
-            for (BatchMutation _iter345 : struct.rowBatches)
+            for (BatchMutation _iter353 : struct.rowBatches)
             {
-              _iter345.write(oprot);
+              _iter353.write(oprot);
             }
           }
         }
@@ -43227,33 +46885,36 @@ public class Hbase {
         if (struct.isSetAttributes()) {
           {
             oprot.writeI32(struct.attributes.size());
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter346 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter354 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter346.getKey());
-              oprot.writeBinary(_iter346.getValue());
+              oprot.writeBinary(_iter354.getKey());
+              oprot.writeBinary(_iter354.getValue());
             }
           }
+        }
+        if (struct.isSetRegionName()) {
+          oprot.writeBinary(struct.regionName);
         }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, mutateRowsTs_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(4);
+        BitSet incoming = iprot.readBitSet(5);
         if (incoming.get(0)) {
           struct.tableName = iprot.readBinary();
           struct.setTableNameIsSet(true);
         }
         if (incoming.get(1)) {
           {
-            org.apache.thrift.protocol.TList _list347 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.rowBatches = new ArrayList<BatchMutation>(_list347.size);
-            for (int _i348 = 0; _i348 < _list347.size; ++_i348)
+            org.apache.thrift.protocol.TList _list355 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.rowBatches = new ArrayList<BatchMutation>(_list355.size);
+            for (int _i356 = 0; _i356 < _list355.size; ++_i356)
             {
-              BatchMutation _elem349; // required
-              _elem349 = new BatchMutation();
-              _elem349.read(iprot);
-              struct.rowBatches.add(_elem349);
+              BatchMutation _elem357; // required
+              _elem357 = new BatchMutation();
+              _elem357.read(iprot);
+              struct.rowBatches.add(_elem357);
             }
           }
           struct.setRowBatchesIsSet(true);
@@ -43264,18 +46925,22 @@ public class Hbase {
         }
         if (incoming.get(3)) {
           {
-            org.apache.thrift.protocol.TMap _map350 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map350.size);
-            for (int _i351 = 0; _i351 < _map350.size; ++_i351)
+            org.apache.thrift.protocol.TMap _map358 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map358.size);
+            for (int _i359 = 0; _i359 < _map358.size; ++_i359)
             {
-              ByteBuffer _key352; // required
-              ByteBuffer _val353; // required
-              _key352 = iprot.readBinary();
-              _val353 = iprot.readBinary();
-              struct.attributes.put(_key352, _val353);
+              ByteBuffer _key360; // required
+              ByteBuffer _val361; // optional
+              _key360 = iprot.readBinary();
+              _val361 = iprot.readBinary();
+              struct.attributes.put(_key360, _val361);
             }
           }
           struct.setAttributesIsSet(true);
+        }
+        if (incoming.get(4)) {
+          struct.regionName = iprot.readBinary();
+          struct.setRegionNameIsSet(true);
         }
       }
     }
@@ -44219,6 +47884,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -44254,14 +47921,14 @@ public class Hbase {
             case 2: // ROW_BATCHES
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list354 = iprot.readListBegin();
-                  struct.rowBatches = new ArrayList<BatchMutation>(_list354.size);
-                  for (int _i355 = 0; _i355 < _list354.size; ++_i355)
+                  org.apache.thrift.protocol.TList _list362 = iprot.readListBegin();
+                  struct.rowBatches = new ArrayList<BatchMutation>(_list362.size);
+                  for (int _i363 = 0; _i363 < _list362.size; ++_i363)
                   {
-                    BatchMutation _elem356; // required
-                    _elem356 = new BatchMutation();
-                    _elem356.read(iprot);
-                    struct.rowBatches.add(_elem356);
+                    BatchMutation _elem364; // required
+                    _elem364 = new BatchMutation();
+                    _elem364.read(iprot);
+                    struct.rowBatches.add(_elem364);
                   }
                   iprot.readListEnd();
                 }
@@ -44302,9 +47969,9 @@ public class Hbase {
           oprot.writeFieldBegin(ROW_BATCHES_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.rowBatches.size()));
-            for (BatchMutation _iter357 : struct.rowBatches)
+            for (BatchMutation _iter365 : struct.rowBatches)
             {
-              _iter357.write(oprot);
+              _iter365.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -44347,9 +48014,9 @@ public class Hbase {
         if (struct.isSetRowBatches()) {
           {
             oprot.writeI32(struct.rowBatches.size());
-            for (BatchMutation _iter358 : struct.rowBatches)
+            for (BatchMutation _iter366 : struct.rowBatches)
             {
-              _iter358.write(oprot);
+              _iter366.write(oprot);
             }
           }
         }
@@ -44368,14 +48035,14 @@ public class Hbase {
         }
         if (incoming.get(1)) {
           {
-            org.apache.thrift.protocol.TList _list359 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.rowBatches = new ArrayList<BatchMutation>(_list359.size);
-            for (int _i360 = 0; _i360 < _list359.size; ++_i360)
+            org.apache.thrift.protocol.TList _list367 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.rowBatches = new ArrayList<BatchMutation>(_list367.size);
+            for (int _i368 = 0; _i368 < _list367.size; ++_i368)
             {
-              BatchMutation _elem361; // required
-              _elem361 = new BatchMutation();
-              _elem361.read(iprot);
-              struct.rowBatches.add(_elem361);
+              BatchMutation _elem369; // required
+              _elem369 = new BatchMutation();
+              _elem369.read(iprot);
+              struct.rowBatches.add(_elem369);
             }
           }
           struct.setRowBatchesIsSet(true);
@@ -45482,8 +49149,6 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -46036,14 +49701,14 @@ public class Hbase {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list362 = iprot.readListBegin();
-                  struct.success = new ArrayList<TRowResult>(_list362.size);
-                  for (int _i363 = 0; _i363 < _list362.size; ++_i363)
+                  org.apache.thrift.protocol.TList _list370 = iprot.readListBegin();
+                  struct.success = new ArrayList<TRowResult>(_list370.size);
+                  for (int _i371 = 0; _i371 < _list370.size; ++_i371)
                   {
-                    TRowResult _elem364; // required
-                    _elem364 = new TRowResult();
-                    _elem364.read(iprot);
-                    struct.success.add(_elem364);
+                    TRowResult _elem372; // required
+                    _elem372 = new TRowResult();
+                    _elem372.read(iprot);
+                    struct.success.add(_elem372);
                   }
                   iprot.readListEnd();
                 }
@@ -46089,9 +49754,9 @@ public class Hbase {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (TRowResult _iter365 : struct.success)
+            for (TRowResult _iter373 : struct.success)
             {
-              _iter365.write(oprot);
+              _iter373.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -46138,9 +49803,9 @@ public class Hbase {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (TRowResult _iter366 : struct.success)
+            for (TRowResult _iter374 : struct.success)
             {
-              _iter366.write(oprot);
+              _iter374.write(oprot);
             }
           }
         }
@@ -46158,14 +49823,14 @@ public class Hbase {
         BitSet incoming = iprot.readBitSet(3);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TList _list367 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new ArrayList<TRowResult>(_list367.size);
-            for (int _i368 = 0; _i368 < _list367.size; ++_i368)
+            org.apache.thrift.protocol.TList _list375 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new ArrayList<TRowResult>(_list375.size);
+            for (int _i376 = 0; _i376 < _list375.size; ++_i376)
             {
-              TRowResult _elem369; // required
-              _elem369 = new TRowResult();
-              _elem369.read(iprot);
-              struct.success.add(_elem369);
+              TRowResult _elem377; // required
+              _elem377 = new TRowResult();
+              _elem377.read(iprot);
+              struct.success.add(_elem377);
             }
           }
           struct.setSuccessIsSet(true);
@@ -47115,14 +50780,14 @@ public class Hbase {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list370 = iprot.readListBegin();
-                  struct.success = new ArrayList<TRowResult>(_list370.size);
-                  for (int _i371 = 0; _i371 < _list370.size; ++_i371)
+                  org.apache.thrift.protocol.TList _list378 = iprot.readListBegin();
+                  struct.success = new ArrayList<TRowResult>(_list378.size);
+                  for (int _i379 = 0; _i379 < _list378.size; ++_i379)
                   {
-                    TRowResult _elem372; // required
-                    _elem372 = new TRowResult();
-                    _elem372.read(iprot);
-                    struct.success.add(_elem372);
+                    TRowResult _elem380; // required
+                    _elem380 = new TRowResult();
+                    _elem380.read(iprot);
+                    struct.success.add(_elem380);
                   }
                   iprot.readListEnd();
                 }
@@ -47168,9 +50833,9 @@ public class Hbase {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (TRowResult _iter373 : struct.success)
+            for (TRowResult _iter381 : struct.success)
             {
-              _iter373.write(oprot);
+              _iter381.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -47217,9 +50882,9 @@ public class Hbase {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (TRowResult _iter374 : struct.success)
+            for (TRowResult _iter382 : struct.success)
             {
-              _iter374.write(oprot);
+              _iter382.write(oprot);
             }
           }
         }
@@ -47237,14 +50902,14 @@ public class Hbase {
         BitSet incoming = iprot.readBitSet(3);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TList _list375 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new ArrayList<TRowResult>(_list375.size);
-            for (int _i376 = 0; _i376 < _list375.size; ++_i376)
+            org.apache.thrift.protocol.TList _list383 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new ArrayList<TRowResult>(_list383.size);
+            for (int _i384 = 0; _i384 < _list383.size; ++_i384)
             {
-              TRowResult _elem377; // required
-              _elem377 = new TRowResult();
-              _elem377.read(iprot);
-              struct.success.add(_elem377);
+              TRowResult _elem385; // required
+              _elem385 = new TRowResult();
+              _elem385.read(iprot);
+              struct.success.add(_elem385);
             }
           }
           struct.setSuccessIsSet(true);
@@ -47810,13 +51475,13 @@ public class Hbase {
             case 3: // COLUMNS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list378 = iprot.readListBegin();
-                  struct.columns = new ArrayList<ByteBuffer>(_list378.size);
-                  for (int _i379 = 0; _i379 < _list378.size; ++_i379)
+                  org.apache.thrift.protocol.TList _list386 = iprot.readListBegin();
+                  struct.columns = new ArrayList<ByteBuffer>(_list386.size);
+                  for (int _i387 = 0; _i387 < _list386.size; ++_i387)
                   {
-                    ByteBuffer _elem380; // required
-                    _elem380 = iprot.readBinary();
-                    struct.columns.add(_elem380);
+                    ByteBuffer _elem388; // required
+                    _elem388 = iprot.readBinary();
+                    struct.columns.add(_elem388);
                   }
                   iprot.readListEnd();
                 }
@@ -47854,9 +51519,9 @@ public class Hbase {
           oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, struct.columns.size()));
-            for (ByteBuffer _iter381 : struct.columns)
+            for (ByteBuffer _iter389 : struct.columns)
             {
-              oprot.writeBinary(_iter381);
+              oprot.writeBinary(_iter389);
             }
             oprot.writeListEnd();
           }
@@ -47899,9 +51564,9 @@ public class Hbase {
         if (struct.isSetColumns()) {
           {
             oprot.writeI32(struct.columns.size());
-            for (ByteBuffer _iter382 : struct.columns)
+            for (ByteBuffer _iter390 : struct.columns)
             {
-              oprot.writeBinary(_iter382);
+              oprot.writeBinary(_iter390);
             }
           }
         }
@@ -47921,13 +51586,13 @@ public class Hbase {
         }
         if (incoming.get(2)) {
           {
-            org.apache.thrift.protocol.TList _list383 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.columns = new ArrayList<ByteBuffer>(_list383.size);
-            for (int _i384 = 0; _i384 < _list383.size; ++_i384)
+            org.apache.thrift.protocol.TList _list391 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.columns = new ArrayList<ByteBuffer>(_list391.size);
+            for (int _i392 = 0; _i392 < _list391.size; ++_i392)
             {
-              ByteBuffer _elem385; // required
-              _elem385 = iprot.readBinary();
-              struct.columns.add(_elem385);
+              ByteBuffer _elem393; // required
+              _elem393 = iprot.readBinary();
+              struct.columns.add(_elem393);
             }
           }
           struct.setColumnsIsSet(true);
@@ -48274,6 +51939,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -48980,8 +52647,6 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -49025,13 +52690,13 @@ public class Hbase {
             case 3: // COLUMNS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list386 = iprot.readListBegin();
-                  struct.columns = new ArrayList<ByteBuffer>(_list386.size);
-                  for (int _i387 = 0; _i387 < _list386.size; ++_i387)
+                  org.apache.thrift.protocol.TList _list394 = iprot.readListBegin();
+                  struct.columns = new ArrayList<ByteBuffer>(_list394.size);
+                  for (int _i395 = 0; _i395 < _list394.size; ++_i395)
                   {
-                    ByteBuffer _elem388; // required
-                    _elem388 = iprot.readBinary();
-                    struct.columns.add(_elem388);
+                    ByteBuffer _elem396; // required
+                    _elem396 = iprot.readBinary();
+                    struct.columns.add(_elem396);
                   }
                   iprot.readListEnd();
                 }
@@ -49077,9 +52742,9 @@ public class Hbase {
           oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, struct.columns.size()));
-            for (ByteBuffer _iter389 : struct.columns)
+            for (ByteBuffer _iter397 : struct.columns)
             {
-              oprot.writeBinary(_iter389);
+              oprot.writeBinary(_iter397);
             }
             oprot.writeListEnd();
           }
@@ -49128,9 +52793,9 @@ public class Hbase {
         if (struct.isSetColumns()) {
           {
             oprot.writeI32(struct.columns.size());
-            for (ByteBuffer _iter390 : struct.columns)
+            for (ByteBuffer _iter398 : struct.columns)
             {
-              oprot.writeBinary(_iter390);
+              oprot.writeBinary(_iter398);
             }
           }
         }
@@ -49153,13 +52818,13 @@ public class Hbase {
         }
         if (incoming.get(2)) {
           {
-            org.apache.thrift.protocol.TList _list391 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.columns = new ArrayList<ByteBuffer>(_list391.size);
-            for (int _i392 = 0; _i392 < _list391.size; ++_i392)
+            org.apache.thrift.protocol.TList _list399 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.columns = new ArrayList<ByteBuffer>(_list399.size);
+            for (int _i400 = 0; _i400 < _list399.size; ++_i400)
             {
-              ByteBuffer _elem393; // required
-              _elem393 = iprot.readBinary();
-              struct.columns.add(_elem393);
+              ByteBuffer _elem401; // required
+              _elem401 = iprot.readBinary();
+              struct.columns.add(_elem401);
             }
           }
           struct.setColumnsIsSet(true);
@@ -49510,6 +53175,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -50459,6 +54126,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -51044,6 +54713,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -51517,6 +55188,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -52178,13 +55851,13 @@ public class Hbase {
             case 3: // COLUMNS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list394 = iprot.readListBegin();
-                  struct.columns = new ArrayList<ByteBuffer>(_list394.size);
-                  for (int _i395 = 0; _i395 < _list394.size; ++_i395)
+                  org.apache.thrift.protocol.TList _list402 = iprot.readListBegin();
+                  struct.columns = new ArrayList<ByteBuffer>(_list402.size);
+                  for (int _i403 = 0; _i403 < _list402.size; ++_i403)
                   {
-                    ByteBuffer _elem396; // required
-                    _elem396 = iprot.readBinary();
-                    struct.columns.add(_elem396);
+                    ByteBuffer _elem404; // required
+                    _elem404 = iprot.readBinary();
+                    struct.columns.add(_elem404);
                   }
                   iprot.readListEnd();
                 }
@@ -52222,9 +55895,9 @@ public class Hbase {
           oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, struct.columns.size()));
-            for (ByteBuffer _iter397 : struct.columns)
+            for (ByteBuffer _iter405 : struct.columns)
             {
-              oprot.writeBinary(_iter397);
+              oprot.writeBinary(_iter405);
             }
             oprot.writeListEnd();
           }
@@ -52267,9 +55940,9 @@ public class Hbase {
         if (struct.isSetColumns()) {
           {
             oprot.writeI32(struct.columns.size());
-            for (ByteBuffer _iter398 : struct.columns)
+            for (ByteBuffer _iter406 : struct.columns)
             {
-              oprot.writeBinary(_iter398);
+              oprot.writeBinary(_iter406);
             }
           }
         }
@@ -52289,13 +55962,13 @@ public class Hbase {
         }
         if (incoming.get(2)) {
           {
-            org.apache.thrift.protocol.TList _list399 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.columns = new ArrayList<ByteBuffer>(_list399.size);
-            for (int _i400 = 0; _i400 < _list399.size; ++_i400)
+            org.apache.thrift.protocol.TList _list407 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.columns = new ArrayList<ByteBuffer>(_list407.size);
+            for (int _i408 = 0; _i408 < _list407.size; ++_i408)
             {
-              ByteBuffer _elem401; // required
-              _elem401 = iprot.readBinary();
-              struct.columns.add(_elem401);
+              ByteBuffer _elem409; // required
+              _elem409 = iprot.readBinary();
+              struct.columns.add(_elem409);
             }
           }
           struct.setColumnsIsSet(true);
@@ -52642,6 +56315,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -53583,6 +57258,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -54359,13 +58036,13 @@ public class Hbase {
             case 4: // COLUMNS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list402 = iprot.readListBegin();
-                  struct.columns = new ArrayList<ByteBuffer>(_list402.size);
-                  for (int _i403 = 0; _i403 < _list402.size; ++_i403)
+                  org.apache.thrift.protocol.TList _list410 = iprot.readListBegin();
+                  struct.columns = new ArrayList<ByteBuffer>(_list410.size);
+                  for (int _i411 = 0; _i411 < _list410.size; ++_i411)
                   {
-                    ByteBuffer _elem404; // required
-                    _elem404 = iprot.readBinary();
-                    struct.columns.add(_elem404);
+                    ByteBuffer _elem412; // required
+                    _elem412 = iprot.readBinary();
+                    struct.columns.add(_elem412);
                   }
                   iprot.readListEnd();
                 }
@@ -54408,9 +58085,9 @@ public class Hbase {
           oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, struct.columns.size()));
-            for (ByteBuffer _iter405 : struct.columns)
+            for (ByteBuffer _iter413 : struct.columns)
             {
-              oprot.writeBinary(_iter405);
+              oprot.writeBinary(_iter413);
             }
             oprot.writeListEnd();
           }
@@ -54459,9 +58136,9 @@ public class Hbase {
         if (struct.isSetColumns()) {
           {
             oprot.writeI32(struct.columns.size());
-            for (ByteBuffer _iter406 : struct.columns)
+            for (ByteBuffer _iter414 : struct.columns)
             {
-              oprot.writeBinary(_iter406);
+              oprot.writeBinary(_iter414);
             }
           }
         }
@@ -54485,13 +58162,13 @@ public class Hbase {
         }
         if (incoming.get(3)) {
           {
-            org.apache.thrift.protocol.TList _list407 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.columns = new ArrayList<ByteBuffer>(_list407.size);
-            for (int _i408 = 0; _i408 < _list407.size; ++_i408)
+            org.apache.thrift.protocol.TList _list415 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.columns = new ArrayList<ByteBuffer>(_list415.size);
+            for (int _i416 = 0; _i416 < _list415.size; ++_i416)
             {
-              ByteBuffer _elem409; // required
-              _elem409 = iprot.readBinary();
-              struct.columns.add(_elem409);
+              ByteBuffer _elem417; // required
+              _elem417 = iprot.readBinary();
+              struct.columns.add(_elem417);
             }
           }
           struct.setColumnsIsSet(true);
@@ -54838,6 +58515,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -56043,6 +59722,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -57357,6 +61038,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -58221,13 +61904,13 @@ public class Hbase {
             case 4: // COLUMNS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list410 = iprot.readListBegin();
-                  struct.columns = new ArrayList<ByteBuffer>(_list410.size);
-                  for (int _i411 = 0; _i411 < _list410.size; ++_i411)
+                  org.apache.thrift.protocol.TList _list418 = iprot.readListBegin();
+                  struct.columns = new ArrayList<ByteBuffer>(_list418.size);
+                  for (int _i419 = 0; _i419 < _list418.size; ++_i419)
                   {
-                    ByteBuffer _elem412; // required
-                    _elem412 = iprot.readBinary();
-                    struct.columns.add(_elem412);
+                    ByteBuffer _elem420; // required
+                    _elem420 = iprot.readBinary();
+                    struct.columns.add(_elem420);
                   }
                   iprot.readListEnd();
                 }
@@ -58278,9 +61961,9 @@ public class Hbase {
           oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, struct.columns.size()));
-            for (ByteBuffer _iter413 : struct.columns)
+            for (ByteBuffer _iter421 : struct.columns)
             {
-              oprot.writeBinary(_iter413);
+              oprot.writeBinary(_iter421);
             }
             oprot.writeListEnd();
           }
@@ -58335,9 +62018,9 @@ public class Hbase {
         if (struct.isSetColumns()) {
           {
             oprot.writeI32(struct.columns.size());
-            for (ByteBuffer _iter414 : struct.columns)
+            for (ByteBuffer _iter422 : struct.columns)
             {
-              oprot.writeBinary(_iter414);
+              oprot.writeBinary(_iter422);
             }
           }
         }
@@ -58364,13 +62047,13 @@ public class Hbase {
         }
         if (incoming.get(3)) {
           {
-            org.apache.thrift.protocol.TList _list415 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-            struct.columns = new ArrayList<ByteBuffer>(_list415.size);
-            for (int _i416 = 0; _i416 < _list415.size; ++_i416)
+            org.apache.thrift.protocol.TList _list423 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+            struct.columns = new ArrayList<ByteBuffer>(_list423.size);
+            for (int _i424 = 0; _i424 < _list423.size; ++_i424)
             {
-              ByteBuffer _elem417; // required
-              _elem417 = iprot.readBinary();
-              struct.columns.add(_elem417);
+              ByteBuffer _elem425; // required
+              _elem425 = iprot.readBinary();
+              struct.columns.add(_elem425);
             }
           }
           struct.setColumnsIsSet(true);
@@ -58721,6 +62404,8 @@ public class Hbase {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);

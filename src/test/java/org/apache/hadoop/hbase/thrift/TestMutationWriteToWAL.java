@@ -110,12 +110,12 @@ public class TestMutationWriteToWAL extends ThriftServerTestBase {
         final ByteBuffer rowBuf = ByteBuffer.wrap(Bytes.toBytes(row));
         // Exercise both APIs.
         if (i % 2 == 0) {
-          client.mutateRow(HTestConst.DEFAULT_TABLE_BYTE_BUF, rowBuf, mutations, null);
+          client.mutateRow(HTestConst.DEFAULT_TABLE_BYTE_BUF, rowBuf, mutations, null, null);
         } else {
           List<BatchMutation> rowBatches = new ArrayList<BatchMutation>();
           BatchMutation bm = new BatchMutation(rowBuf, mutations);
           rowBatches.add(bm);
-          client.mutateRows(HTestConst.DEFAULT_TABLE_BYTE_BUF, rowBatches, null);
+          client.mutateRows(HTestConst.DEFAULT_TABLE_BYTE_BUF, rowBatches, null, null);
         }
       }
       client.disableTable(HTestConst.DEFAULT_TABLE_BYTE_BUF);
@@ -125,7 +125,7 @@ public class TestMutationWriteToWAL extends ThriftServerTestBase {
       for (int i = 0; i < NUM_ROWS; ++i) {
         final String row = getRow(i);
         List<TRowResult> results = client.getRow(HTestConst.DEFAULT_TABLE_BYTE_BUF,
-            ByteBuffer.wrap(Bytes.toBytes(row)));
+            ByteBuffer.wrap(Bytes.toBytes(row)), null);
         TRowResult result = results.get(0);
         assertEquals("No results found for row " + row, expectedEntriesForRow[i],
             result.getColumnsSize());

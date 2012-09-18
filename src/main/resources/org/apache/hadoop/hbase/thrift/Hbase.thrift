@@ -172,7 +172,7 @@ exception AlreadyExists {
 // of merging changes between various client and server branches.
 
 service Hbase {
-  /** 
+  /**
    * Atomically increment the column value specified. Returns the next value
    * post increment.
    */
@@ -272,7 +272,9 @@ service Hbase {
     2:Text row,
 
     /** name of column whose value is to be deleted */
-    3:Text column
+    3:Text column,
+
+    4:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -286,7 +288,9 @@ service Hbase {
     2:Text row
 
     /** Delete attributes */
-    3:map<Text, Text> attributes
+    3:map<Text, Text> attributes,
+
+    4:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -301,7 +305,9 @@ service Hbase {
     2:Text row,
 
     /** timestamp */
-    3:i64 timestamp
+    3:i64 timestamp,
+
+    4:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -319,7 +325,9 @@ service Hbase {
     3:Text column,
 
     /** timestamp */
-    4:i64 timestamp
+    4:i64 timestamp,
+
+    5:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -364,7 +372,9 @@ service Hbase {
     2:Text row,
 
     /** column name */
-    3:Text column
+    3:Text column,
+
+    4:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -400,7 +410,9 @@ service Hbase {
     1:Text tableName,
 
     /** row key */
-    2:Text row
+    2:Text row,
+
+    3:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -417,7 +429,9 @@ service Hbase {
     2:Text row,
 
     /** timestamp */
-    3:i64 timestamp
+    3:i64 timestamp,
+
+    4:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -440,7 +454,9 @@ service Hbase {
      * If only <qualifier prefix> provided then all families are
      * searched
      */
-    3:Text prefix
+    3:Text prefix,
+
+    4:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -465,7 +481,9 @@ service Hbase {
      */
     3:Text prefix
 
-    4:i64 timestamp
+    4:i64 timestamp,
+
+    5:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -482,7 +500,9 @@ service Hbase {
     2:Text row,
 
     /** List of columns to return, null for all columns */
-    3:list<Text> columns
+    3:list<Text> columns,
+
+    4:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -500,7 +520,8 @@ service Hbase {
 
     /** List of columns to return, null for all columns */
     3:list<Text> columns,
-    4:i64 timestamp
+    4:i64 timestamp,
+    5:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -512,6 +533,7 @@ service Hbase {
   list<TRowResult> getRows(
     1:Text tableName,
     2:list<Text> rows,
+    3:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -522,7 +544,8 @@ service Hbase {
   list<TRowResult> getRowsTs(
     1:Text tableName,
     2:list<Text> rows,
-    3:i64 timestamp
+    3:i64 timestamp,
+    4:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -533,7 +556,8 @@ service Hbase {
   list<TRowResult> getRowsWithColumns(
     1:Text tableName,
     2:list<Text> rows,
-    3:list<Text> families
+    3:list<Text> families,
+    4:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -546,7 +570,8 @@ service Hbase {
     1:Text tableName,
     2:list<Text> rows,
     3:list<Text> families
-    4:i64 timestamp
+    4:i64 timestamp,
+    5:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -584,7 +609,9 @@ service Hbase {
     3:Text column,
 
     /** number of versions to retrieve */
-    4:i32 numVersions
+    4:i32 numVersions,
+
+    5:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -608,7 +635,9 @@ service Hbase {
     4:i64 timestamp,
 
     /** number of versions to retrieve */
-    5:i32 numVersions
+    5:i32 numVersions,
+
+    6:Text regionName
   ) throws (1:IOError io)
 
   /**
@@ -621,6 +650,22 @@ service Hbase {
 
   void majorCompact(1:Bytes tableNameOrRegionName)
     throws (1:IOError io)
+
+  /**
+   * Apply a batch of puts for the target region.
+   * It assumes all the BatchMuations are Put operations
+   * and ignores the isDelete field in Mutation.
+   */
+  void multiPut(
+    /** name of tableName */
+    1:Text tableName,
+
+    /** list of Put */
+    2:list<BatchMutation> rowBatches,
+
+    /** name of the region */
+    3:Text regionName
+  ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
    * Apply a series of mutations (updates/deletes) to a row in a
@@ -639,7 +684,9 @@ service Hbase {
     3:list<Mutation> mutations,
 
     /** Put attributes */
-    4:map<Text, Text> attributes
+    4:map<Text, Text> attributes,
+
+    7:Text regionName
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
@@ -662,7 +709,9 @@ service Hbase {
     4:i64 timestamp,
 
     /** Put attributes */
-    5:map<Text, Text> attributes
+    5:map<Text, Text> attributes,
+
+    6:Text regionName
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
@@ -679,7 +728,9 @@ service Hbase {
     2:list<BatchMutation> rowBatches,
 
     /** Put attributes */
-    3:map<Text, Text> attributes
+    3:map<Text, Text> attributes,
+
+    4:Text regionName
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
@@ -718,7 +769,9 @@ service Hbase {
     3:i64 timestamp,
 
     /** Put attributes */
-    4:map<Text, Text> attributes
+    4:map<Text, Text> attributes,
+
+    5:Text regionName
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**

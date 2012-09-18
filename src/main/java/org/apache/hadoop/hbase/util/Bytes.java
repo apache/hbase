@@ -1470,4 +1470,12 @@ public class Bytes {
     return toString(b, 0, n);
   }
 
+  /**
+   * @param b a byte buffer
+   * @return true if the given byte buffer is non-null and non-empty (has remaining bytes)
+   */
+  public static boolean isNonEmpty(ByteBuffer b) {
+    return b != null && b.remaining() > 0;
+  }
+
 }
