@@ -296,6 +296,23 @@ message ExecCoprocessorResponse {
   required NameBytesPair value = 1;
 }
 
+message CoprocessorServiceCall {
+  required bytes row = 1;
+  required string serviceName = 2;
+  required string methodName = 3;
+  required bytes request = 4;
+}
+
+message CoprocessorServiceRequest {
+  required RegionSpecifier region = 1;
+  required CoprocessorServiceCall call = 2;
+}
+
+message CoprocessorServiceResponse {
+  required RegionSpecifier region = 1;
+  required NameBytesPair value = 2;
+}
+
 /**
  * An action that is part of MultiRequest.
  * This is a union type - exactly one of the fields will be set.
@@ -358,6 +375,9 @@ service ClientService {
 
   rpc execCoprocessor(ExecCoprocessorRequest)
     returns(ExecCoprocessorResponse);
+
+  rpc execService(CoprocessorServiceRequest)
+    returns(CoprocessorServiceResponse);
 
   rpc multi(MultiRequest)
     returns(MultiResponse);

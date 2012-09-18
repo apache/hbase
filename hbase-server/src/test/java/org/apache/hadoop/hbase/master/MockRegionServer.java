@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorRequest;
@@ -409,6 +410,12 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   public ExecCoprocessorResponse execCoprocessor(RpcController controller,
       ExecCoprocessorRequest request) throws ServiceException {
     // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public ClientProtos.CoprocessorServiceResponse execService(RpcController controller,
+      ClientProtos.CoprocessorServiceRequest request) throws ServiceException {
     return null;
   }
 

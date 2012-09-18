@@ -54,6 +54,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.ObjectName;
 
+import com.google.protobuf.Message;
 import org.apache.commons.lang.mutable.MutableDouble;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -115,6 +116,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -229,6 +231,9 @@ import com.google.common.base.Function;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
+
+import static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
+import static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 
 /**
  * HRegionServer makes a set of HRegions available to clients. It checks in with
@@ -3327,6 +3332,31 @@ public class  HRegionServer implements ClientProtocol,
       Exec clientCall = ProtobufUtil.toExec(call);
       ExecResult result = region.exec(clientCall);
       builder.setValue(ProtobufUtil.toParameter(result.getValue()));
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  @Override
+  public CoprocessorServiceResponse execService(final RpcController controller,
+      final CoprocessorServiceRequest request) throws ServiceException {
+    try {
+      requestCount.incrementAndGet();
+      HRegion region = getRegion(request.getRegion());
+      // ignore the passed in controller (from the serialized call)
+      ServerRpcController execController = new ServerRpcController();
+      Message result = region.execService(execController, request.getCall());
+      if (execController.getFailedOn() != null) {
+        throw execController.getFailedOn();
+      }
+      CoprocessorServiceResponse.Builder builder =
+          CoprocessorServiceResponse.newBuilder();
+      builder.setRegion(RequestConverter.buildRegionSpecifier(
+          RegionSpecifierType.REGION_NAME, region.getRegionName()));
+      builder.setValue(
+          builder.getValueBuilder().setName(result.getClass().getName())
+              .setValue(result.toByteString()));
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);

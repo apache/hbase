@@ -61,6 +61,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.protobuf.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -115,6 +116,7 @@ import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.metrics.OperationMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
@@ -142,6 +144,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MutableClassToInstanceMap;
+
+import static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 
 /**
  * HRegion stores data for a certain region of a table.  It stores all columns
@@ -214,6 +218,9 @@ public class HRegion implements HeapSize { // , Writable{
 
   private Map<String, Class<? extends CoprocessorProtocol>>
       protocolHandlerNames = Maps.newHashMap();
+
+  // TODO: account for each registered handler in HeapSize computation
+  private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
   /**
    * Temporary subdirectory of the region directory used for compaction output.
@@ -5027,7 +5034,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      36 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
+      37 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
       (7 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
@@ -5085,6 +5092,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return {@code true} if the registration was successful, {@code false}
    * otherwise
    */
+  @Deprecated
   public <T extends CoprocessorProtocol> boolean registerProtocol(
       Class<T> protocol, T handler) {
 
@@ -5109,6 +5117,41 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
+   * Registers a new protocol buffer {@link Service} subclass as a coprocessor endpoint to
+   * be available for handling
+   * {@link HRegion#execService(com.google.protobuf.RpcController, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall)}} calls.
+   *
+   * <p>
+   * Only a single instance may be registered per region for a given {@link Service} subclass (the
+   * instances are keyed on {@link com.google.protobuf.Descriptors.ServiceDescriptor#getFullName()}.
+   * After the first registration, subsequent calls with the same service name will fail with
+   * a return value of {@code false}.
+   * </p>
+   * @param instance the {@code Service} subclass instance to expose as a coprocessor endpoint
+   * @return {@code true} if the registration was successful, {@code false}
+   * otherwise
+   */
+  public boolean registerService(Service instance) {
+    /*
+     * No stacking of instances is allowed for a single service name
+     */
+    Descriptors.ServiceDescriptor serviceDesc = instance.getDescriptorForType();
+    if (coprocessorServiceHandlers.containsKey(serviceDesc.getFullName())) {
+      LOG.error("Coprocessor service "+serviceDesc.getFullName()+
+          " already registered, rejecting request from "+instance
+      );
+      return false;
+    }
+
+    coprocessorServiceHandlers.put(serviceDesc.getFullName(), instance);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Registered coprocessor service: region="+
+          Bytes.toStringBinary(getRegionName())+" service="+serviceDesc.getFullName());
+    }
+    return true;
+  }
+
+  /**
    * Executes a single {@link org.apache.hadoop.hbase.ipc.CoprocessorProtocol}
    * method using the registered protocol handlers.
    * {@link CoprocessorProtocol} implementations must be registered via the
@@ -5123,6 +5166,7 @@ public class HRegion implements HeapSize { // , Writable{
    *     occurs during the invocation
    * @see org.apache.hadoop.hbase.regionserver.HRegion#registerProtocol(Class, org.apache.hadoop.hbase.ipc.CoprocessorProtocol)
    */
+  @Deprecated
   public ExecResult exec(Exec call)
       throws IOException {
     Class<? extends CoprocessorProtocol> protocol = call.getProtocol();
@@ -5172,6 +5216,55 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     return new ExecResult(getRegionName(), value);
+  }
+
+  /**
+   * Executes a single protocol buffer coprocessor endpoint {@link Service} method using
+   * the registered protocol handlers.  {@link Service} implementations must be registered via the
+   * {@link org.apache.hadoop.hbase.regionserver.HRegion#registerService(com.google.protobuf.Service)}
+   * method before they are available.
+   *
+   * @param controller an {@code RpcContoller} implementation to pass to the invoked service
+   * @param call a {@code CoprocessorServiceCall} instance identifying the service, method,
+   *     and parameters for the method invocation
+   * @return a protocol buffer {@code Message} instance containing the method's result
+   * @throws IOException if no registered service handler is found or an error
+   *     occurs during the invocation
+   * @see org.apache.hadoop.hbase.regionserver.HRegion#registerService(com.google.protobuf.Service)
+   */
+  public Message execService(RpcController controller, CoprocessorServiceCall call)
+      throws IOException {
+    String serviceName = call.getServiceName();
+    String methodName = call.getMethodName();
+    if (!coprocessorServiceHandlers.containsKey(serviceName)) {
+      throw new HBaseRPC.UnknownProtocolException(null,
+          "No registered coprocessor service found for name "+serviceName+
+          " in region "+Bytes.toStringBinary(getRegionName()));
+    }
+
+    Service service = coprocessorServiceHandlers.get(serviceName);
+    Descriptors.ServiceDescriptor serviceDesc = service.getDescriptorForType();
+    Descriptors.MethodDescriptor methodDesc = serviceDesc.findMethodByName(methodName);
+    if (methodDesc == null) {
+      throw new HBaseRPC.UnknownProtocolException(service.getClass(),
+          "Unknown method "+methodName+" called on service "+serviceName+
+              " in region "+Bytes.toStringBinary(getRegionName()));
+    }
+
+    Message request = service.getRequestPrototype(methodDesc).newBuilderForType()
+        .mergeFrom(call.getRequest()).build();
+    final Message.Builder responseBuilder =
+        service.getResponsePrototype(methodDesc).newBuilderForType();
+    service.callMethod(methodDesc, controller, request, new RpcCallback<Message>() {
+      @Override
+      public void run(Message message) {
+        if (message != null) {
+          responseBuilder.mergeFrom(message);
+        }
+      }
+    });
+
+    return responseBuilder.build();
   }
 
   /*

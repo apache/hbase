@@ -2140,6 +2140,7 @@ public class HConnectionManager {
      * @param <R> the callable's return type
      * @throws IOException
      */
+    @Deprecated
     public <T extends CoprocessorProtocol,R> void processExecs(
         final Class<T> protocol,
         List<byte[]> rows,

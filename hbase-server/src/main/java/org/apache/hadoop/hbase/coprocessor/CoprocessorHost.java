@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -34,6 +36,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -250,6 +253,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    */
   public E loadInstance(Class<?> implClass, int priority, Configuration conf)
       throws IOException {
+    if (!Coprocessor.class.isAssignableFrom(implClass)) {
+      throw new IOException("Configured class " + implClass.getName() + " must implement "
+          + Coprocessor.class.getName() + " interface ");
+    }
+
     // create the instance
     Coprocessor impl;
     Object o = null;
@@ -435,7 +443,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
           byte[] qualifier, long amount, boolean writeToWAL)
           throws IOException {
         return table.incrementColumnValue(row, family, qualifier, amount,
-          writeToWAL);
+            writeToWAL);
       }
 
       @Override
@@ -534,6 +542,25 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       public <T extends CoprocessorProtocol> T coprocessorProxy(Class<T> protocol,
           byte[] row) {
         return table.coprocessorProxy(protocol, row);
+      }
+
+      @Override
+      public CoprocessorRpcChannel coprocessorService(byte[] row) {
+        return table.coprocessorService(row);
+      }
+
+      @Override
+      public <T extends Service, R> Map<byte[], R> coprocessorService(Class<T> service,
+          byte[] startKey, byte[] endKey, Batch.Call<T, R> callable)
+          throws ServiceException, Throwable {
+        return table.coprocessorService(service, startKey, endKey, callable);
+      }
+
+      @Override
+      public <T extends Service, R> void coprocessorService(Class<T> service,
+          byte[] startKey, byte[] endKey, Batch.Call<T, R> callable, Batch.Callback<R> callback)
+          throws ServiceException, Throwable {
+        table.coprocessorService(service, startKey, endKey, callable, callback);
       }
 
       @Override

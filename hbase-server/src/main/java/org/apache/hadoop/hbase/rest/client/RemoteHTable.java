@@ -28,12 +28,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -730,6 +733,25 @@ public class RemoteHTable implements HTableInterface {
       Batch.Call<T, R> callable, Batch.Callback<R> callback)
       throws IOException, Throwable {
     throw new UnsupportedOperationException("coprocessorExec not implemented");
+  }
+
+  @Override
+  public CoprocessorRpcChannel coprocessorService(byte[] row) {
+    throw new UnsupportedOperationException("coprocessorService not implemented");
+  }
+
+  @Override
+  public <T extends Service, R> Map<byte[], R> coprocessorService(Class<T> service,
+      byte[] startKey, byte[] endKey, Batch.Call<T, R> callable)
+      throws ServiceException, Throwable {
+    throw new UnsupportedOperationException("coprocessorService not implemented");
+  }
+
+  @Override
+  public <T extends Service, R> void coprocessorService(Class<T> service,
+      byte[] startKey, byte[] endKey, Batch.Call<T, R> callable, Batch.Callback<R> callback)
+      throws ServiceException, Throwable {
+    throw new UnsupportedOperationException("coprocessorService not implemented");
   }
 
   @Override

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,31 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.ipc;
 
+package org.apache.hadoop.hbase.coprocessor;
+
+import com.google.protobuf.Service;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * All custom RPC protocols to be exported by Coprocessors must extend this interface.
- *
- * <p>
- * <strong>Note that all callable methods must have a return type handled by
- * {@link org.apache.hadoop.hbase.io.HbaseObjectWritable#writeObject(java.io.DataOutput, Object, Class, org.apache.hadoop.conf.Configuration)}.</strong>
- * That is:
- * <ul>
- *   <li>a Java primitive type ({@code int}, {@code float}, etc)</li>
- *   <li>a Java {@code String}</li>
- *   <li>a {@link org.apache.hadoop.io.Writable}</li>
- *   <li>an array or {@code java.util.List} of one of the above</li>
- * </ul>
- * </p>
- * @deprecated since 0.96.  Use {@link org.apache.hadoop.hbase.coprocessor.CoprocessorService}
- * instead.
+ * Coprocessor endpoints providing protobuf services should implement this
+ * interface and return the {@link Service} instance via {@link #getService()}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-@Deprecated
-public interface CoprocessorProtocol extends VersionedProtocol {
-  public static final long VERSION = 1L;
+public interface CoprocessorService {
+  public Service getService();
 }

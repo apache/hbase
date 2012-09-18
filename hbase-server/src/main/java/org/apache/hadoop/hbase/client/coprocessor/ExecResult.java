@@ -46,7 +46,10 @@ import java.io.Serializable;
  * @see Exec
  * @see org.apache.hadoop.hbase.client.HTable#coprocessorExec(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)
  * @see org.apache.hadoop.hbase.client.HTable#coprocessorExec(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)
+ * @deprecated since 0.96.0.  See {@link org.apache.hadoop.hbase.client.HTable#coprocessorService(byte[])}
+ * or related methods instead.
  */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ExecResult implements Writable {

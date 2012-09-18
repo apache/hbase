@@ -32,11 +32,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -56,6 +62,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.io.DataInputInputStream;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -1318,6 +1325,7 @@ public class HTable implements HTableInterface {
    * {@inheritDoc}
    */
   @Override
+  @Deprecated
   public <T extends CoprocessorProtocol> T coprocessorProxy(
       Class<T> protocol, byte[] row) {
     return (T)Proxy.newProxyInstance(this.getClass().getClassLoader(),
@@ -1332,7 +1340,15 @@ public class HTable implements HTableInterface {
   /**
    * {@inheritDoc}
    */
+  public CoprocessorRpcChannel coprocessorService(byte[] row) {
+    return new CoprocessorRpcChannel(connection, tableName, row);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
   @Override
+  @Deprecated
   public <T extends CoprocessorProtocol, R> Map<byte[],R> coprocessorExec(
       Class<T> protocol, byte[] startKey, byte[] endKey,
       Batch.Call<T,R> callable)
@@ -1353,6 +1369,7 @@ public class HTable implements HTableInterface {
    * {@inheritDoc}
    */
   @Override
+  @Deprecated
   public <T extends CoprocessorProtocol, R> void coprocessorExec(
       Class<T> protocol, byte[] startKey, byte[] endKey,
       Batch.Call<T,R> callable, Batch.Callback<R> callback)
@@ -1362,6 +1379,75 @@ public class HTable implements HTableInterface {
     List<byte[]> keys = getStartKeysInRange(startKey, endKey);
     connection.processExecs(protocol, keys, tableName, pool, callable,
         callback);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public <T extends Service, R> Map<byte[],R> coprocessorService(final Class<T> service,
+      byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable)
+      throws ServiceException, Throwable {
+    final Map<byte[],R> results =  new ConcurrentSkipListMap<byte[], R>(Bytes.BYTES_COMPARATOR);
+    coprocessorService(service, startKey, endKey, callable, new Batch.Callback<R>() {
+      public void update(byte[] region, byte[] row, R value) {
+        if (value == null) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Call to " + service.getName() +
+                " received NULL value from Batch.Call for region " + Bytes.toStringBinary(region));
+          }
+        } else {
+          results.put(region, value);
+        }
+      }
+    });
+    return results;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public <T extends Service, R> void coprocessorService(final Class<T> service,
+      byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable,
+      final Batch.Callback<R> callback) throws ServiceException, Throwable {
+
+    // get regions covered by the row range
+    List<byte[]> keys = getStartKeysInRange(startKey, endKey);
+
+    Map<byte[],Future<R>> futures =
+        new TreeMap<byte[],Future<R>>(Bytes.BYTES_COMPARATOR);
+    for (final byte[] r : keys) {
+      final CoprocessorRpcChannel channel =
+          new CoprocessorRpcChannel(connection, tableName, r);
+      Future<R> future = pool.submit(
+          new Callable<R>() {
+            public R call() throws Exception {
+              T instance = ProtobufUtil.newServiceStub(service, channel);
+              R result = callable.call(instance);
+              byte[] region = channel.getLastRegion();
+              if (callback != null) {
+                callback.update(region, r, result);
+              }
+              return result;
+            }
+          });
+      futures.put(r, future);
+    }
+    for (Map.Entry<byte[],Future<R>> e : futures.entrySet()) {
+      try {
+        e.getValue().get();
+      } catch (ExecutionException ee) {
+        LOG.warn("Error calling coprocessor service " + service.getName() + " for row "
+            + Bytes.toStringBinary(e.getKey()), ee);
+        throw ee.getCause();
+      } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
+        throw new InterruptedIOException("Interrupted calling coprocessor service " + service.getName()
+            + " for row " + Bytes.toStringBinary(e.getKey()))
+            .initCause(ie);
+      }
+    }
   }
 
   private List<byte[]> getStartKeysInRange(byte[] start, byte[] end)

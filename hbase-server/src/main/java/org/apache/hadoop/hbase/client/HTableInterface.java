@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -30,6 +32,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 
 /**
  * Used to communicate with a single HBase table.
@@ -425,7 +428,9 @@ public interface HTableInterface extends Closeable {
    * @param protocol The class or interface defining the remote protocol
    * @param row The row key used to identify the remote region location
    * @return A CoprocessorProtocol instance
+   * @deprecated since 0.96.  Use {@link HTableInterface#coprocessorService(byte[])} instead.
    */
+  @Deprecated
   <T extends CoprocessorProtocol> T coprocessorProxy(Class<T> protocol, byte[] row);
 
   /**
@@ -450,7 +455,11 @@ public interface HTableInterface extends Closeable {
    * method
    * @return a <code>Map</code> of region names to
    * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)} return values
+   *
+   * @deprecated since 0.96.  Use
+   * {@link HTableInterface#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)} instead.
    */
+  @Deprecated
   <T extends CoprocessorProtocol, R> Map<byte[],R> coprocessorExec(
       Class<T> protocol, byte[] startKey, byte[] endKey, Batch.Call<T,R> callable)
       throws IOException, Throwable;
@@ -486,11 +495,95 @@ public interface HTableInterface extends Closeable {
    * @param <R> Return type for the
    * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
    * method
+   *
+   * @deprecated since 0.96.
+   * Use {@link HTableInterface#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)} instead.
    */
+  @Deprecated
   <T extends CoprocessorProtocol, R> void coprocessorExec(
       Class<T> protocol, byte[] startKey, byte[] endKey,
       Batch.Call<T,R> callable, Batch.Callback<R> callback)
       throws IOException, Throwable;
+
+  /**
+   * Creates and returns a {@link com.google.protobuf.RpcChannel} instance connected to the
+   * table region containing the specified row.  The row given does not actually have
+   * to exist.  Whichever region would contain the row based on start and end keys will
+   * be used.  Note that the {@code row} parameter is also not passed to the
+   * coprocessor handler registered for this protocol, unless the {@code row}
+   * is separately passed as an argument in the service request.  The parameter
+   * here is only used to locate the region used to handle the call.
+   *
+   * <p>
+   * The obtained {@link com.google.protobuf.RpcChannel} instance can be used to access a published
+   * coprocessor {@link com.google.protobuf.Service} using standard protobuf service invocations:
+   * </p>
+   *
+   * <div style="background-color: #cccccc; padding: 2px">
+   * <blockquote><pre>
+   * CoprocessorRpcChannel channel = myTable.coprocessorService(rowkey);
+   * MyService.BlockingInterface service = MyService.newBlockingStub(channel);
+   * MyCallRequest request = MyCallRequest.newBuilder()
+   *     ...
+   *     .build();
+   * MyCallResponse response = service.myCall(null, request);
+   * </pre></blockquote></div>
+   *
+   * @param row The row key used to identify the remote region location
+   * @return A CoprocessorRpcChannel instance
+   */
+  CoprocessorRpcChannel coprocessorService(byte[] row);
+
+  /**
+   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
+   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive),
+   * and invokes the passed {@link Batch.Call#call(Object)} method with each {@link Service}
+   * instance.
+   *
+   * @param service the protocol buffer {@code Service} implementation to call
+   * @param startKey start region selection with region containing this row.  If {@code null}, the
+   *                 selection will start with the first table region.
+   * @param endKey select regions up to and including the region containing this row.
+   *               If {@code null}, selection will continue through the last table region.
+   * @param callable this instance's {@link Batch.Call#call(Object)} method will be invoked once
+   *                 per table region, using the {@link Service} instance connected to that region.
+   * @param <T> the {@link Service} subclass to connect to
+   * @param <R> Return type for the {@code callable} parameter's
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)} method
+   * @return a map of result values keyed by region name
+   */
+  <T extends Service, R> Map<byte[],R> coprocessorService(final Class<T> service,
+      byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable)
+      throws ServiceException, Throwable;
+
+  /**
+   * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
+   * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive),
+   * and invokes the passed {@link Batch.Call#call(Object)} method with each {@link Service}
+   * instance.
+   *
+   * <p>
+   * The given
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[], byte[], Object)}
+   * method will be called with the return value from each region's {@link Batch.Call#call(Object)}
+   * invocation.
+   *</p>
+   *
+   * @param service the protocol buffer {@code Service} implementation to call
+   * @param startKey start region selection with region containing this row.  If {@code null}, the
+   *                 selection will start with the first table region.
+   * @param endKey select regions up to and including the region containing this row.
+   *               If {@code null}, selection will continue through the last table region.
+   * @param callable this instance's {@link Batch.Call#call(Object)} method will be invoked once
+   *                 per table region, using the {@link Service} instance connected to that region.
+   * @param callback
+   * @param <T> the {@link Service} subclass to connect to
+   * @param <R> Return type for the {@code callable} parameter's
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)} method
+   */
+  <T extends Service, R> void coprocessorService(final Class<T> service,
+      byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable,
+      final Batch.Callback<R> callback) throws ServiceException, Throwable;
 
   /**
    * See {@link #setAutoFlush(boolean, boolean)}

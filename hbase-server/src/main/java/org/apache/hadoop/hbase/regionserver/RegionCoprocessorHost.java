@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
@@ -216,7 +217,11 @@ public class RegionCoprocessorHost
     for (Class c : implClass.getInterfaces()) {
       if (CoprocessorProtocol.class.isAssignableFrom(c)) {
         region.registerProtocol(c, (CoprocessorProtocol)instance);
-        break;
+      }
+      // we allow endpoints to register as both CoproocessorProtocols and Services
+      // for ease of transition
+      if (CoprocessorService.class.isAssignableFrom(c)) {
+        region.registerService( ((CoprocessorService)instance).getService() );
       }
     }
     ConcurrentMap<String, Object> classData;

@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -93,6 +94,9 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Column;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
@@ -120,6 +124,7 @@ import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.collect.ArrayListMultimap;
@@ -127,7 +132,11 @@ import com.google.common.collect.ListMultimap;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
+
+import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.*;
 
 /**
  * Protobufs utility.
@@ -1306,6 +1315,26 @@ public final class ProtobufUtil {
     }
   }
 
+  public static CoprocessorServiceResponse execService(final ClientProtocol client,
+      final CoprocessorServiceCall call, final byte[] regionName) throws IOException {
+    CoprocessorServiceRequest request = CoprocessorServiceRequest.newBuilder()
+        .setCall(call).setRegion(
+            RequestConverter.buildRegionSpecifier(REGION_NAME, regionName)).build();
+    try {
+      CoprocessorServiceResponse response =
+          client.execService(null, request);
+      return response;
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  public static <T extends Service> T newServiceStub(Class<T> service, RpcChannel channel)
+      throws Exception {
+    return (T)Methods.call(service, null, "newStub",
+        new Class[]{ RpcChannel.class }, new Object[]{ channel });
+  }
+
 // End helpers for Client
 // Start helpers for Admin
 
@@ -1609,7 +1638,7 @@ public final class ProtobufUtil {
   /**
    * Convert a client Permission to a Permission proto
    *
-   * @param action the client Permission
+   * @param perm the client Permission
    * @return the protobuf Permission
    */
   public static AccessControlProtos.Permission toPermission(Permission perm) {
@@ -1650,7 +1679,7 @@ public final class ProtobufUtil {
   /**
    * Converts a Permission.Action proto to a client Permission.Action object.
    *
-   * @param proto the protobuf Action
+   * @param action the protobuf Action
    * @return the converted Action
    */
   public static Permission.Action toPermissionAction(
@@ -1788,5 +1817,22 @@ public final class ProtobufUtil {
     }
 
     return perms;
+  }
+
+  /**
+   * Unwraps an exception from a protobuf service into the underlying (expected) IOException.
+   * This method will <strong>always</strong> throw an exception.
+   * @param se the {@code ServiceException} instance to convert into an {@code IOException}
+   */
+  public static void toIOException(ServiceException se) throws IOException {
+    if (se == null) {
+      throw new NullPointerException("Null service exception passed!");
+    }
+
+    Throwable cause = se.getCause();
+    if (cause != null && cause instanceof IOException) {
+      throw (IOException)cause;
+    }
+    throw new IOException(se);
   }
 }

@@ -171,117 +171,37 @@ public class AccessControlCoprocessor extends BaseRegionObserverCoprocessor {
 
 <h2><a name="commandtarget">Endpoint</a></h2>
 <code>Coprocessor</code> and <code>RegionObserver</code> provide certain hooks
-for injecting user code running at each region. The user code will be triggerd
+for injecting user code running at each region. The user code will be triggered
 by existing <code>HTable</code> and <code>HBaseAdmin</code> operations at
 the certain hook points.
 <p>
-Through Endpoint and dynamic RPC protocol, you can define your own
-interface communicated between client and region server,
-i.e., you can create a new method, specify passed parameters and return types
-for this new method.
-And the new Endpoint methods can be triggered by
-calling client side dynamic RPC functions -- <code>HTable.coprocessorExec(...)
+Coprocessor Endpoints allow you to define your own dynamic RPC protocol to communicate
+between clients and region servers, i.e., you can create a new method, specifying custom
+request parameters and return types.  RPC methods exposed by coprocessor Endpoints can be
+triggered by calling client side dynamic RPC functions -- <code>HTable.coprocessorService(...)
 </code>.
 <p>
-To implement a Endpoint, you need to:
+To implement an Endpoint, you need to:
 <ul>
-<li>Extend <code>CoprocessorProtocol</code>: the interface defines
-communication protocol for the new Endpoint, and will be
-served as the RPC protocol between client and region server.</li>
-<li>Extend both <code>BaseEndpointCoprocessor</code> abstract class,
-and the above extended <code>CoprocessorProtocol</code> interface:
-the actually implemented class running at region server.</li>
+ <li>Define a protocol buffer Service and supporting Message types for the RPC methods.
+ See the
+ <a href="https://developers.google.com/protocol-buffers/docs/proto#services">protocol buffer guide</a>
+ for more details on defining services.</li>
+ <li>Generate the Service and Message code using the protoc compiler</li>
+ <li>Implement the generated Service interface in your coprocessor class and implement the
+ <code>CoprocessorService</code> interface.  The <code>CoprocessorService.getService()</code>
+ method should return a reference to the Endpoint's protocol buffer Service instance.
 </ul>
 <p>
-Here's an example of performing column aggregation at region server:
-<div style="background-color: #cccccc; padding: 2px">
-<blockquote><pre>
-// A sample protocol for performing aggregation at regions.
-public static interface ColumnAggregationProtocol
-extends CoprocessorProtocol {
-  // Perform aggregation for a given column at the region. The aggregation
-  // will include all the rows inside the region. It can be extended to
-  // allow passing start and end rows for a fine-grained aggregation.
-  public int sum(byte[] family, byte[] qualifier) throws IOException;
-}
-// Aggregation implementation at a region.
-public static class ColumnAggregationEndpoint extends BaseEndpointCoprocessor
-implements ColumnAggregationProtocol {
-  // @Override
-  // Scan the region by the given family and qualifier. Return the aggregation
-  // result.
-  public int sum(byte[] family, byte[] qualifier)
-  throws IOException {
-    // aggregate at each region
-    Scan scan = new Scan();
-    scan.addColumn(family, qualifier);
-    int sumResult = 0;
-    // use an internal scanner to perform scanning.
-    InternalScanner scanner = getEnvironment().getRegion().getScanner(scan);
-    try {
-      List&lt;KeyValue&gt; curVals = new ArrayList&lt;KeyValue&gt;();
-      boolean done = false;
-      do {
-        curVals.clear();
-        done = scanner.next(curVals);
-        KeyValue kv = curVals.get(0);
-        sumResult += Bytes.toInt(kv.getValue());
-      } while (done);
-    } finally {
-      scanner.close();
-    }
-    return sumResult;
-  }
-}
-</pre></blockquote>
-</div>
-<p>
-Client invocations are performed through <code>HTable</code>,
-which has the following methods added by dynamic RPC protocol:
+For a more detailed discussion of how to implement a coprocessor Endpoint, along with some sample
+code, see the {@link org.apache.hadoop.hbase.client.coprocessor} package documentation.
+</p>
 
-<div style="background-color: #cccccc; padding: 2px">
-<blockquote><pre>
-public &lt;T extends CoprocessorProtocol&gt; T coprocessorProxy(Class&lt;T&gt; protocol, Row row)
-
-public &lt;T extends CoprocessorProtocol, R&gt; void coprocessorExec(
-    Class&lt;T&gt; protocol, List&lt;? extends Row&gt; rows,
-    BatchCall&lt;T,R&gt; callable, BatchCallback&lt;R&gt; callback)
-
-public &lt;T extends CoprocessorProtocol, R&gt; void coprocessorExec(
-    Class&lt;T&gt; protocol, RowRange range,
-    BatchCall&lt;T,R&gt; callable, BatchCallback&lt;R&gt; callback)
-</pre></blockquote>
-</div>
-
-<p>
-Here is a client side example of invoking
-<code>ColumnAggregationEndpoint</code>:
-<div style="background-color: #cccccc; padding: 2px">
-<blockquote><pre>
-HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
-Scan scan;
-Map&lt;byte[], Integer&gt; results;
-
-// scan: for all regions
-scan = new Scan();
-results = table.coprocessorExec(ColumnAggregationProtocol.class, scan,
-    new BatchCall&lt;ColumnAggregationProtocol,Integer&gt;() {
-      public Integer call(ColumnAggregationProtocol instance) throws IOException{
-        return instance.sum(TEST_FAMILY, TEST_QUALIFIER);
-      }
-    });
-int sumResult = 0;
-int expectedResult = 0;
-for (Map.Entry&lt;byte[], Integer&gt; e : results.entrySet()) {
-  sumResult += e.getValue();
-}
-</pre></blockquote>
-</div>
-<h2><a name="load">Coprocess loading</a></h2>
+<h2><a name="load">Coprocessor loading</a></h2>
 A customized coprocessor can be loaded by two different ways, by configuration,
 or by <code>HTableDescriptor</code> for a newly created table.
 <p>
-(Currently we don't really have an on demand coprocessor loading machanism for
+(Currently we don't really have an on demand coprocessor loading mechanism for
 opened regions.)
 <h3>Load from configuration</h3>
 Whenever a region is opened, it will read coprocessor class names from
@@ -294,7 +214,7 @@ default coprocessors. The classes must be included in the classpath already.
 <blockquote><pre>
   &lt;property&gt;
     &lt;name&gt;hbase.coprocessor.region.classes&lt;/name&gt;
-    &lt;value&gt;org.apache.hadoop.hbase.coprocessor.AccessControllCoprocessor, org.apache.hadoop.hbase.coprocessor.ColumnAggregationProtocol&lt;/value&gt;
+    &lt;value&gt;org.apache.hadoop.hbase.coprocessor.AccessControlCoprocessor, org.apache.hadoop.hbase.coprocessor.ColumnAggregationProtocol&lt;/value&gt;
     &lt;description&gt;A comma-separated list of Coprocessors that are loaded by
     default. For any override coprocessor method from RegionObservor or
     Coprocessor, these classes' implementation will be called

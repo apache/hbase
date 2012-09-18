@@ -52,3 +52,48 @@ message UserTablePermissions {
 
   repeated UserPermissions permissions = 1;
 }
+
+message GrantRequest {
+    required UserPermission permission = 1;
+}
+
+message GrantResponse {
+}
+
+message RevokeRequest {
+    required UserPermission permission = 1;
+
+}
+
+message RevokeResponse {
+}
+
+
+message UserPermissionsRequest {
+    required bytes table = 1;
+}
+
+message UserPermissionsResponse {
+    repeated UserPermission permission = 1;
+}
+
+message CheckPermissionsRequest {
+    repeated Permission permission = 1;
+}
+
+message CheckPermissionsResponse {
+}
+
+service AccessControlService {
+    rpc grant(GrantRequest)
+      returns (GrantResponse);
+
+    rpc revoke(RevokeRequest)
+      returns (RevokeResponse);
+
+    rpc getUserPermissions(UserPermissionsRequest)
+      returns (UserPermissionsResponse);
+
+    rpc checkPermissions(CheckPermissionsRequest)
+      returns (CheckPermissionsResponse);
+}

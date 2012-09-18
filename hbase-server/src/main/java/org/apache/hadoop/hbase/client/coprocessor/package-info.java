@@ -37,30 +37,42 @@ protocols.
 
 <p>
 In order to provide a custom RPC protocol to clients, a coprocessor implementation
-defines an interface that extends {@link org.apache.hadoop.hbase.ipc.CoprocessorProtocol}.
-The interface can define any methods that the coprocessor wishes to expose.
-Using this protocol, you can communicate with the coprocessor instances via
-the {@link org.apache.hadoop.hbase.client.HTable#coprocessorProxy(Class, byte[])} and
-{@link org.apache.hadoop.hbase.client.HTable#coprocessorExec(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
+must:
+<ul>
+ <li>Define a protocol buffer Service and supporting Message types for the RPC methods.
+ See the
+ <a href="https://developers.google.com/protocol-buffers/docs/proto#services">protocol buffer guide</a>
+ for more details on defining services.</li>
+ <li>Generate the Service and Message code using the protoc compiler</li>
+ <li>Implement the generated Service interface in your coprocessor class and implement the
+ {@link org.apache.hadoop.hbase.coprocessor.CoprocessorService} interface.  The
+ {@link org.apache.hadoop.hbase.coprocessor.CoprocessorService#getService()}
+ method should return a reference to the Endpoint's protocol buffer Service instance.
+</ul>
+Clients may then call the defined service methods on coprocessor instances via
+the {@link org.apache.hadoop.hbase.client.HTable#coprocessorService(byte[])},
+{@link org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}, and
+{@link org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
 methods.
 </p>
 
 <p>
-Since {@link org.apache.hadoop.hbase.ipc.CoprocessorProtocol} instances are
-associated with individual regions within the table, the client RPC calls
-must ultimately identify which regions should be used in the <code>CoprocessorProtocol</code>
+Since coprocessor Service instances are associated with individual regions within the table,
+the client RPC calls must ultimately identify which regions should be used in the Service
 method invocations.  Since regions are seldom handled directly in client code
 and the region names may change over time, the coprocessor RPC calls use row keys
 to identify which regions should be used for the method invocations.  Clients
-can call <code>CoprocessorProtocol</code> methods against either:
+can call coprocessor Service methods against either:
 <ul>
  <li><strong>a single region</strong> - calling
-   {@link org.apache.hadoop.hbase.client.HTable#coprocessorProxy(Class, byte[])}
-   with a single row key.  This returns a dynamic proxy of the <code>CoprocessorProtocol</code>
-   interface which uses the region containing the given row key (even if the
-   row does not exist) as the RPC endpoint.</li>
+   {@link org.apache.hadoop.hbase.client.HTable#coprocessorService(byte[])}
+   with a single row key.  This returns a {@link org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel}
+   instance which communicates with the region containing the given row key (even if the
+   row does not exist) as the RPC endpoint.  Clients can then use the {@code CoprocessorRpcChannel}
+   instance in creating a new Service stub to call RPC methods on the region's coprocessor.</li>
  <li><strong>a range of regions</strong> - calling
-   {@link org.apache.hadoop.hbase.client.HTable#coprocessorExec(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
+   {@link org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}
+   or {@link org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
    with a starting row key and an ending row key.  All regions in the table
    from the region containing the start row key to the region containing the end
    row key (inclusive), will we used as the RPC endpoints.</li>
@@ -68,17 +80,16 @@ can call <code>CoprocessorProtocol</code> methods against either:
 </p>
 
 <p><em>Note that the row keys passed as parameters to the <code>HTable</code>
-methods are not passed to the <code>CoprocessorProtocol</code> implementations.
+methods are not passed directly to the coprocessor Service implementations.
 They are only used to identify the regions for endpoints of the remote calls.
 </em></p>
 
 <p>
 The {@link org.apache.hadoop.hbase.client.coprocessor.Batch} class defines two
-interfaces used for <code>CoprocessorProtocol</code> invocations against
-multiple regions.  Clients implement {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call} to
-call methods of the actual <code>CoprocessorProtocol</code> instance.  The interface's
-<code>call()</code> method will be called once per selected region, passing the
-<code>CoprocessorProtocol</code> instance for the region as a parameter.  Clients
+interfaces used for coprocessor Service invocations against multiple regions.  Clients implement
+{@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call} to call methods of the actual
+coprocessor Service instance.  The interface's <code>call()</code> method will be called once
+per selected region, passing the Service instance for the region as a parameter.  Clients
 can optionally implement {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback}
 to be notified of the results from each region invocation as they complete.
 The instance's {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[], byte[], Object)}
@@ -88,112 +99,128 @@ return value from each region.
 
 <h2><a name="usage">Example usage</a></h2>
 <p>
-To start with, let's use a fictitious coprocessor, <code>RowCountCoprocessor</code>
+To start with, let's use a fictitious coprocessor, <code>RowCountEndpoint</code>
 that counts the number of rows and key-values in each region where it is running.
-For clients to query this information, the coprocessor defines and implements
-the following {@link org.apache.hadoop.hbase.ipc.CoprocessorProtocol} extension
-interface:
+For clients to query this information, the coprocessor defines the following protocol buffer
+service:
 </p>
 
 <div style="background-color: #cccccc; padding: 2px">
 <blockquote><pre>
-public interface RowCountProtocol extends CoprocessorProtocol {
-  long getRowCount();
-  long getRowCount(Filter filt);
-  long getKeyValueCount();
+message CountRequest {
+}
+
+message CountResponse {
+  required int64 count = 1 [default = 0];
+}
+
+service RowCountService {
+  rpc getRowCount(CountRequest)
+    returns (CountResponse);
+  rpc getKeyValueCount(CountRequest)
+    returns (CountResponse);
 }
 </pre></blockquote></div>
 
 <p>
-Now we need a way to access the results that <code>RowCountCoprocessor</code>
+Next run the protoc compiler on the .proto file to generate Java code for the Service interface.
+The generated {@code RowCountService} interface should look something like:
+</p>
+<div style="background-color: #cccccc; padding: 2px">
+<blockquote><pre>
+public static abstract class RowCountService
+  implements com.google.protobuf.Service {
+  ...
+  public interface Interface {
+    public abstract void getRowCount(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse> done);
+
+    public abstract void getKeyValueCount(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse> done);
+  }
+}
+</pre></blockquote></div>
+
+<p>
+Our coprocessor Service will need to implement this interface and the {@link org.apache.hadoop.hbase.coprocessor.CoprocessorService}
+in order to be registered correctly as an endpoint.  For the sake of simplicity the server-side
+implementation is omitted.  To see the implementing code, please see the
+{@link org.apache.hadoop.hbase.coprocessor.example.RowCountEndpoint} class in the HBase source code.
+</p>
+
+<p>
+Now we need a way to access the results that <code>RowCountService</code>
 is making available.  If we want to find the row count for all regions, we could
 use:
 </p>
 
 <div style="background-color: #cccccc; padding: 2px">
 <blockquote><pre>
-HTable table = new HTable("mytable");
-// find row count keyed by region name
-Map<byte[],Long> results = table.coprocessorExec(
-    RowCountProtocol.class, // the protocol interface we're invoking
-    null, null,             // start and end row keys
-    new Batch.Call<RowCountProtocol,Long>() {
-       public Long call(RowCountProtocol counter) {
-         return counter.getRowCount();
-       }
-     });
+HTable table = new HTable(conf, "mytable");
+final ExampleProtos.CountRequest request = ExampleProtos.CountRequest.getDefaultInstance();
+Map<byte[],Long> results = table.coprocessorService(
+    ExampleProtos.RowCountService.class, // the protocol interface we're invoking
+    null, null,                          // start and end row keys
+    new Batch.Call<ExampleProtos.RowCountService,Long>() {
+        public Long call(ExampleProtos.RowCountService counter) throws IOException {
+          BlockingRpcCallback<ExampleProtos.CountResponse> rpcCallback =
+              new BlockingRpcCallback<ExampleProtos.CountResponse>();
+          counter.getRowCount(null, request, rpcCallback);
+          ExampleProtos.CountResponse response = rpcCallback.get();
+          return response.hasCount() ? response.getCount() : 0;
+        }
+    });
 </pre></blockquote></div>
 
 <p>
 This will return a <code>java.util.Map</code> of the <code>counter.getRowCount()</code>
-result for the <code>RowCountCoprocessor</code> instance running in each region
+result for the <code>RowCountService</code> instance running in each region
 of <code>mytable</code>, keyed by the region name.
 </p>
 
 <p>
 By implementing {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call}
-as an anonymous class, we can invoke <code>RowCountProtocol</code> methods
+as an anonymous class, we can invoke <code>RowCountService</code> methods
 directly against the {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
-method's argument.  Calling {@link org.apache.hadoop.hbase.client.HTable#coprocessorExec(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}
+method's argument.  Calling {@link org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}
 will take care of invoking <code>Batch.Call.call()</code> against our anonymous class
-with the <code>RowCountCoprocessor</code> instance for each table region.
+with the <code>RowCountService</code> instance for each table region.
 </p>
 
 <p>
-For this simple case, where we only want to obtain the result from a single
-<code>CoprocessorProtocol</code> method, there's also a bit of syntactic sugar
-we can use to cut down on the amount of code required:
-</p>
-
-<div style="background-color: #cccccc; padding: 2px">
-<blockquote><pre>
-HTable table = new HTable("mytable");
-Batch.Call<RowCountProtocol,Long> call = Batch.forMethod(RowCountProtocol.class, "getRowCount");
-Map<byte[],Long> results = table.coprocessorExec(RowCountProtocol.class, null, null, call);
-</pre></blockquote></div>
-
-<p>
-{@link org.apache.hadoop.hbase.client.coprocessor.Batch#forMethod(Class, String, Object...)}
-is a simple factory method that will return a {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call}
-instance that will call <code>RowCountProtocol.getRowCount()</code> for us
-using reflection.
-</p>
-
-<p>
-However, if you want to perform additional processing on the results,
-implementing {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call}
-directly will provide more power and flexibility.  For example, if you would
+Implementing {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call} also allows you to
+perform additional processing against each region's Service instance.  For example, if you would
 like to combine row count and key-value count for each region:
 </p>
 
 <div style="background-color: #cccccc; padding: 2px">
 <blockquote><pre>
-HTable table = new HTable("mytable");
+HTable table = new HTable(conf, "mytable");
 // combine row count and kv count for region
-Map<byte[],Pair<Long,Long>> results = table.coprocessorExec(
-    RowCountProtocol.class,
-    null, null,
-    new Batch.Call<RowCountProtocol,Pair<Long,Long>>() {
-        public Pair<Long,Long> call(RowCountProtocol counter) {
-          return new Pair(counter.getRowCount(), counter.getKeyValueCount());
-        }
-    });
-</pre></blockquote></div>
+final ExampleProtos.CountRequest request = ExampleProtos.CountRequest.getDefaultInstance();
+Map<byte[],Long> results = table.coprocessorService(
+    ExampleProtos.RowCountService.class, // the protocol interface we're invoking
+    null, null,                          // start and end row keys
+    new Batch.Call<ExampleProtos.RowCountService,Pair<Long,Long>>() {
+       public Long call(ExampleProtos.RowCountService counter) throws IOException {
+         BlockingRpcCallback<ExampleProtos.CountResponse> rowCallback =
+             new BlockingRpcCallback<ExampleProtos.CountResponse>();
+         counter.getRowCount(null, request, rowCallback);
 
-<p>
-Similarly, you could average the number of key-values per row for each region:
-</p>
+         BlockingRpcCallback<ExampleProtos.CountResponse> kvCallback =
+             new BlockingRpcCallback<ExampleProtos.CountResponse>();
+         counter.getKeyValueCount(null, request, kvCallback);
 
-<div style="background-color: #cccccc; padding: 2px">
-<blockquote><pre>
-Map<byte[],Double> results = table.coprocessorExec(
-    RowCountProtocol.class,
-    null, null,
-    new Batch.Call<RowCountProtocol,Double>() {
-        public Double call(RowCountProtocol counter) {
-          return ((double)counter.getKeyValueCount()) / ((double)counter.getRowCount());
-        }
-    });
+         ExampleProtos.CountResponse rowResponse = rowCallback.get();
+         ExampleProtos.CountResponse kvResponse = kvCallback.get();
+         return new Pair(rowResponse.hasCount() ? rowResponse.getCount() : 0,
+             kvResponse.hasCount() ? kvResponse.getCount() : 0);
+    }
+});
 </pre></blockquote></div>
 */
 package org.apache.hadoop.hbase.client.coprocessor;

@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * {@link org.apache.hadoop.hbase.client.ServerCallable} instance).
  */
 @InterfaceAudience.Private
+@Deprecated
 public class ExecRPCInvoker implements InvocationHandler {
   // LOG is NOT in hbase subpackage intentionally so that the default HBase
   // DEBUG log level does NOT emit RPC-level logging. 
@@ -84,6 +85,8 @@ public class ExecRPCInvoker implements InvocationHandler {
         LOG.debug("Result is region="+ Bytes.toStringBinary(regionName) +
             ", value="+result.getValue());
         return result.getValue();
+    } else if (LOG.isDebugEnabled()) {
+      LOG.debug("Null row passed for call");
     }
 
     return null;

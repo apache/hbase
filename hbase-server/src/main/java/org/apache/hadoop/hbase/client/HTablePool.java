@@ -24,6 +24,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -32,6 +34,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
@@ -490,6 +493,25 @@ public class HTablePool implements Closeable {
         Batch.Call<T, R> callable, Batch.Callback<R> callback)
         throws IOException, Throwable {
       table.coprocessorExec(protocol, startKey, endKey, callable, callback);
+    }
+
+    @Override
+    public CoprocessorRpcChannel coprocessorService(byte[] row) {
+      return table.coprocessorService(row);
+    }
+
+    @Override
+    public <T extends Service, R> Map<byte[], R> coprocessorService(Class<T> service,
+        byte[] startKey, byte[] endKey, Batch.Call<T, R> callable)
+        throws ServiceException, Throwable {
+      return table.coprocessorService(service, startKey, endKey, callable);
+    }
+
+    @Override
+    public <T extends Service, R> void coprocessorService(Class<T> service,
+        byte[] startKey, byte[] endKey, Batch.Call<T, R> callable, Callback<R> callback)
+        throws ServiceException, Throwable {
+      table.coprocessorService(service, startKey, endKey, callable, callback);
     }
 
     @Override

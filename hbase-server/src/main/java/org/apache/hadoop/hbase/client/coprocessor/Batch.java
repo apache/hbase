@@ -67,6 +67,7 @@ public abstract class Batch {
    * @see Batch#forMethod(java.lang.reflect.Method, Object...)
    * @see org.apache.hadoop.hbase.client.HTable#coprocessorExec(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)
    */
+  @Deprecated
   public static <T extends CoprocessorProtocol,R> Call<T,R> forMethod(
       final Class<T> protocol, final String method, final Object... args)
   throws NoSuchMethodException {
@@ -100,6 +101,7 @@ public abstract class Batch {
    * return the results
    * @see org.apache.hadoop.hbase.client.HTable#coprocessorExec(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)
    */
+  @Deprecated
   public static <T extends CoprocessorProtocol,R> Call<T,R> forMethod(
       final Method method, final Object... args) {
     return new Call<T,R>() {

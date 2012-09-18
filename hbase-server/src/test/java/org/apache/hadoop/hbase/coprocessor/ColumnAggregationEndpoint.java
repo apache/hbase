@@ -46,13 +46,16 @@ implements ColumnAggregationProtocol {
         .getRegion().getScanner(scan);
     try {
       List<KeyValue> curVals = new ArrayList<KeyValue>();
-      boolean done = false;
+      boolean hasMore = false;
       do {
         curVals.clear();
-        done = scanner.next(curVals);
-        KeyValue kv = curVals.get(0);
-        sumResult += Bytes.toInt(kv.getBuffer(), kv.getValueOffset());
-      } while (done);
+        hasMore = scanner.next(curVals);
+        for (KeyValue kv : curVals) {
+          if (Bytes.equals(qualifier, kv.getQualifier())) {
+            sumResult += Bytes.toInt(kv.getBuffer(), kv.getValueOffset());
+          }
+        }
+      } while (hasMore);
     } finally {
       scanner.close();
     }

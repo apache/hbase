@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
+import static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -27,6 +29,11 @@ import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.Lists;
+import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -52,6 +59,8 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
@@ -128,31 +137,63 @@ public class TestAccessController {
 
     // initilize access control
     HTable meta = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-    AccessControllerProtocol protocol = meta.coprocessorProxy(AccessControllerProtocol.class,
-      TEST_TABLE);
+    BlockingRpcChannel service = meta.coprocessorService(TEST_TABLE);
+    AccessControlService.BlockingInterface protocol =
+        AccessControlService.newBlockingStub(service);
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
     RCP_ENV = rcpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
       Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
-    protocol.grant(new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
-        Permission.Action.ADMIN, Permission.Action.CREATE, Permission.Action.READ,
-        Permission.Action.WRITE));
+    protocol.grant(null, newGrantRequest(USER_ADMIN.getShortName(),
+        null, null, null,
+        AccessControlProtos.Permission.Action.ADMIN,
+        AccessControlProtos.Permission.Action.CREATE,
+        AccessControlProtos.Permission.Action.READ,
+        AccessControlProtos.Permission.Action.WRITE));
 
-    protocol.grant(new UserPermission(Bytes.toBytes(USER_RW.getShortName()), TEST_TABLE,
-        TEST_FAMILY, Permission.Action.READ, Permission.Action.WRITE));
+    protocol.grant(null, newGrantRequest(USER_RW.getShortName(),
+        TEST_TABLE, TEST_FAMILY, null,
+        AccessControlProtos.Permission.Action.READ,
+        AccessControlProtos.Permission.Action.WRITE));
 
-    protocol.grant(new UserPermission(Bytes.toBytes(USER_RO.getShortName()), TEST_TABLE,
-        TEST_FAMILY, Permission.Action.READ));
+    protocol.grant(null, newGrantRequest(USER_RO.getShortName(), TEST_TABLE,
+        TEST_FAMILY, null, AccessControlProtos.Permission.Action.READ));
 
-    protocol.grant(new UserPermission(Bytes.toBytes(USER_CREATE.getShortName()), TEST_TABLE, null,
-        Permission.Action.CREATE));
+    protocol.grant(null, newGrantRequest(USER_CREATE.getShortName(),
+        TEST_TABLE, null, null, AccessControlProtos.Permission.Action.CREATE));
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  private static AccessControlProtos.GrantRequest newGrantRequest(
+      String username, byte[] table, byte[] family, byte[] qualifier,
+      AccessControlProtos.Permission.Action... actions) {
+    AccessControlProtos.Permission.Builder permissionBuilder =
+        AccessControlProtos.Permission.newBuilder();
+    for (AccessControlProtos.Permission.Action a : actions) {
+      permissionBuilder.addAction(a);
+    }
+    if (table != null) {
+      permissionBuilder.setTable(ByteString.copyFrom(table));
+    }
+    if (family != null) {
+      permissionBuilder.setFamily(ByteString.copyFrom(family));
+    }
+    if (qualifier != null) {
+      permissionBuilder.setQualifier(ByteString.copyFrom(qualifier));
+    }
+
+    return AccessControlProtos.GrantRequest.newBuilder()
+        .setPermission(
+            AccessControlProtos.UserPermission.newBuilder()
+                .setUser(ByteString.copyFromUtf8(username))
+                .setPermission(permissionBuilder.build())
+        ).build();
   }
 
   public void verifyAllowed(User user, PrivilegedExceptionAction... actions) throws Exception {
@@ -182,7 +223,13 @@ public class TestAccessController {
         // AccessDeniedException
         boolean isAccessDeniedException = false;
         for (Throwable ex : e.getCauses()) {
-          if (ex instanceof AccessDeniedException) {
+          if (ex instanceof ServiceException) {
+            ServiceException se = (ServiceException)ex;
+            if (se.getCause() != null && se.getCause() instanceof AccessDeniedException) {
+              isAccessDeniedException = true;
+              break;
+            }
+          } else if (ex instanceof AccessDeniedException) {
             isAccessDeniedException = true;
             break;
           }
@@ -1117,15 +1164,25 @@ public class TestAccessController {
 
   public void checkGlobalPerms(Permission.Action... actions) throws IOException {
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-    AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
-      new byte[0]);
+    BlockingRpcChannel channel = acl.coprocessorService(new byte[0]);
+    AccessControlService.BlockingInterface protocol =
+        AccessControlService.newBlockingStub(channel);
 
     Permission[] perms = new Permission[actions.length];
     for (int i = 0; i < actions.length; i++) {
       perms[i] = new Permission(actions[i]);
     }
 
-    protocol.checkPermissions(perms);
+    CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
+    for (Action a : actions) {
+      request.addPermission(AccessControlProtos.Permission.newBuilder()
+          .addAction(ProtobufUtil.toPermissionAction(a)).build());
+    }
+    try {
+      protocol.checkPermissions(null, request.build());
+    } catch (ServiceException se) {
+      ProtobufUtil.toIOException(se);
+    }
   }
 
   public void checkTablePerms(byte[] table, byte[] family, byte[] column,
@@ -1140,22 +1197,39 @@ public class TestAccessController {
 
   public void checkTablePerms(byte[] table, Permission... perms) throws IOException {
     HTable acl = new HTable(conf, table);
-    AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
-      new byte[0]);
-
-    protocol.checkPermissions(perms);
+    AccessControlService.BlockingInterface protocol =
+        AccessControlService.newBlockingStub(acl.coprocessorService(new byte[0]));
+    CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
+    for (Permission p : perms) {
+      request.addPermission(ProtobufUtil.toPermission(p));
+    }
+    try {
+      protocol.checkPermissions(null, request.build());
+    } catch (ServiceException se) {
+      ProtobufUtil.toIOException(se);
+    }
   }
 
-  public void grant(AccessControllerProtocol protocol, User user, byte[] t, byte[] f, byte[] q,
-      Permission.Action... actions) throws IOException {
-    protocol.grant(new UserPermission(Bytes.toBytes(user.getShortName()), t, f, q, actions));
+  public void grant(AccessControlService.BlockingInterface protocol, User user,
+      byte[] t, byte[] f, byte[] q, Permission.Action... actions)
+      throws ServiceException {
+    List<AccessControlProtos.Permission.Action> permActions =
+        Lists.newArrayListWithCapacity(actions.length);
+    for (Action a : actions) {
+      permActions.add(ProtobufUtil.toPermissionAction(a));
+    }
+    AccessControlProtos.GrantRequest request =
+        newGrantRequest(user.getShortName(), t, f, q, permActions.toArray(
+            new AccessControlProtos.Permission.Action[actions.length]));
+    protocol.grant(null, request);
   }
 
   @Test
   public void testCheckPermissions() throws Exception {
     final HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-    final AccessControllerProtocol protocol = acl.coprocessorProxy(AccessControllerProtocol.class,
-      TEST_TABLE);
+    BlockingRpcChannel channel = acl.coprocessorService(new byte[0]);
+    AccessControlService.BlockingInterface protocol =
+        AccessControlService.newBlockingStub(channel);
 
     // --------------------------------------
     // test global permissions
@@ -1278,11 +1352,15 @@ public class TestAccessController {
     // --------------------------------------
     // check for wrong table region
     try {
+      CheckPermissionsRequest checkRequest =
+          CheckPermissionsRequest.newBuilder().addPermission(
+              AccessControlProtos.Permission.newBuilder()
+                  .setTable(ByteString.copyFrom(TEST_TABLE)).addAction(AccessControlProtos.Permission.Action.CREATE)
+          ).build();
       // but ask for TablePermissions for TEST_TABLE
-      protocol.checkPermissions(new Permission[] { (Permission) new TablePermission(TEST_TABLE,
-          null, (byte[]) null, Permission.Action.CREATE) });
+      protocol.checkPermissions(null, checkRequest);
       fail("this should have thrown CoprocessorException");
-    } catch (CoprocessorException ex) {
+    } catch (ServiceException ex) {
       // expected
     }
 
