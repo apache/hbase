@@ -18,6 +18,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+
+  ON MVN COMPILE NOT WORKING
+
+  If you wondering why 'mvn compile' does not work building HBase
+  (in particular, if you are doing it for the first time), instead do
+  'mvn package'.  If you are interested in the full story, see
+  https://issues.apache.org/jira/browse/HBASE-6795.
+
 -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
