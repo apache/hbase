@@ -1591,7 +1591,7 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.debug("Server stopped; skipping assign of " + state);
         return;
       }
-      RegionPlan plan = getRegionPlan(state, forceNewPlan);
+      RegionPlan plan = getRegionPlan(state, !regionAlreadyInTransitionException && forceNewPlan);
       if (plan == null) {
         LOG.debug("Unable to determine a plan to assign " + state);
         this.timeoutMonitor.setAllRegionServersOffline(true);
