@@ -512,14 +512,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       // Now go through all of the tables we have seen and keep the max number
       // of regions of this table a single region server is hosting.
-      for (String tableName : tableRegionsOnCurrentServer.keySet()) {
-        Integer thisCount = tableRegionsOnCurrentServer.get(tableName).toInteger();
+      for (Entry<String, MutableInt> currentServerEntry: tableRegionsOnCurrentServer.entrySet()) {
+        String tableName = currentServerEntry.getKey();
+        Integer thisCount = currentServerEntry.getValue().toInteger();
         Integer maxCountSoFar = tableCostSeenSoFar.get(tableName);
 
         if (maxCountSoFar == null || thisCount.compareTo(maxCountSoFar) > 0) {
           tableCostSeenSoFar.put(tableName, thisCount);
         }
-
       }
     }
 
@@ -559,11 +559,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       for (HRegionInfo region : entry.getValue()) {
 
         max += 1;
-
-        // Only compute the data locality for moved regions.
-        if (initialRegionMapping.equals(sn)) {
-          continue;
-        }
 
         List<ServerName> dataOnServers = regionFinder.getTopBlockLocations(region);
 
