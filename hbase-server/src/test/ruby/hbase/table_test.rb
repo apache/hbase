@@ -311,6 +311,22 @@ module Hbase
       @test_table._get_internal('1') { |col, val| res[col] = val }
       assert_equal(res.keys.sort, [ 'x:a', 'x:b' ])
     end
+    
+    define_test "get should support COLUMNS with value CONVERTER information" do
+        @test_table.put(1, "x:c", [1024].pack('N'))
+        @test_table.put(1, "x:d", [98].pack('N'))
+        begin
+          res = @test_table._get_internal('1', ['x:c:toInt'], ['x:d:c(org.apache.hadoop.hbase.util.Bytes).toInt'])
+          assert_not_nil(res)
+          assert_kind_of(Hash, res)
+          assert_not_nil(/value=1024/.match(res['x:c']))
+          assert_not_nil(/value=98/.match(res['x:d']))
+        ensure
+          # clean up newly added columns for this test only.
+          @test_table.delete(1, "x:c")
+          @test_table.delete(1, "x:d")
+        end
+    end
 
     #-------------------------------------------------------------------------------
 
@@ -417,5 +433,22 @@ module Hbase
       res = @test_table._scan_internal { |row, cells| rows[row] = cells }
       assert_equal(rows.keys.size, res)
     end
+    
+    define_test "scan should support COLUMNS with value CONVERTER information" do
+      @test_table.put(1, "x:c", [1024].pack('N'))
+      @test_table.put(1, "x:d", [98].pack('N'))
+      begin
+        res = @test_table._scan_internal COLUMNS => ['x:c:toInt', 'x:d:c(org.apache.hadoop.hbase.util.Bytes).toInt']
+        assert_not_nil(res)
+        assert_kind_of(Hash, res)
+        assert_not_nil(/value=1024/.match(res['1']['x:c']))
+        assert_not_nil(/value=98/.match(res['1']['x:d']))
+      ensure
+        # clean up newly added columns for this test only.
+        @test_table.delete(1, "x:c")
+        @test_table.delete(1, "x:d")
+    end
+end
+    
   end
 end

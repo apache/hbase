@@ -113,6 +113,7 @@ EOF
       @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name)
       @name = table_name
       @shell = shell
+      @converters = Hash.new()
     end
 
     # Note the below methods are prefixed with '_' to hide them from the average user, as
@@ -187,7 +188,8 @@ EOF
     def _get_internal(row, *args)
       get = org.apache.hadoop.hbase.client.Get.new(row.to_s.to_java_bytes)
       maxlength = -1
-
+      @converters.clear()
+      
       # Normalize args
       args = args.first if args.first.kind_of?(Hash)
       if args.kind_of?(String) || args.kind_of?(Array)
@@ -299,6 +301,7 @@ EOF
 
       limit = args.delete("LIMIT") || -1
       maxlength = args.delete("MAXLENGTH") || -1
+      @converters.clear()
 
       if args.any?
         filter = args["FILTER"]
@@ -450,6 +453,7 @@ EOF
     # Returns family and (when has it) qualifier for a column name
     def parse_column_name(column)
       split = org.apache.hadoop.hbase.KeyValue.parseColumn(column.to_java_bytes)
+      set_converter(split) if split.length > 1
       return split[0], (split.length > 1) ? split[1] : nil
     end
 
@@ -474,9 +478,42 @@ EOF
       if kv.isDelete
         val = "timestamp=#{kv.getTimestamp}, type=#{org.apache.hadoop.hbase.KeyValue::Type::codeToType(kv.getType)}"
       else
-        val = "timestamp=#{kv.getTimestamp}, value=#{org.apache.hadoop.hbase.util.Bytes::toStringBinary(kv.getValue)}"
+        val = "timestamp=#{kv.getTimestamp}, value=#{convert(column, kv)}"
       end
       (maxlength != -1) ? val[0, maxlength] : val
+    end
+    
+    def convert(column, kv)
+      #use org.apache.hadoop.hbase.util.Bytes as the default class
+      klazz_name = 'org.apache.hadoop.hbase.util.Bytes'
+      #use org.apache.hadoop.hbase.util.Bytes::toStringBinary as the default convertor
+      converter = 'toStringBinary'
+      if @converters.has_key?(column)
+        # lookup the CONVERTER for certain column - "cf:qualifier"
+        matches = /c\((.+)\)\.(.+)/.match(@converters[column])
+        if matches.nil?
+          # cannot match the pattern of 'c(className).functionname'
+          # use the default klazz_name
+          converter = @converters[column] 
+        else
+          klazz_name = matches[1]
+          converter = matches[2]
+        end
+      end
+      method = eval(klazz_name).method(converter)
+      return method.call(kv.getValue) # apply the converter
+    end
+    
+    # if the column spec contains CONVERTER information, to get rid of :CONVERTER info from column pair.
+    # 1. return back normal column pair as usual, i.e., "cf:qualifier[:CONVERTER]" to "cf" and "qualifier" only
+    # 2. register the CONVERTER information based on column spec - "cf:qualifier"
+    def set_converter(column)
+      family = String.from_java_bytes(column[0])
+      parts = org.apache.hadoop.hbase.KeyValue.parseColumn(column[1])
+      if parts.length > 1
+        @converters["#{family}:#{String.from_java_bytes(parts[0])}"] = String.from_java_bytes(parts[1])
+        column[1] = parts[0]
+      end
     end
   end
 end

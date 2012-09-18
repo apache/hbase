@@ -42,8 +42,10 @@ Some examples:
   hbase> scan '.META.', {COLUMNS => 'info:regioninfo'}
   hbase> scan 't1', {COLUMNS => ['c1', 'c2'], LIMIT => 10, STARTROW => 'xyz'}
   hbase> scan 't1', {COLUMNS => 'c1', TIMERANGE => [1303668804, 1303668904]}
-  hbase> scan 't1', {FILTER => "(PrefixFilter ('row2') AND (QualifierFilter (>=, 'binary:xyz'))) AND (TimestampsFilter ( 123, 456))"}
-  hbase> scan 't1', {FILTER => org.apache.hadoop.hbase.filter.ColumnPaginationFilter.new(1, 0)}
+  hbase> scan 't1', {FILTER => "(PrefixFilter ('row2') AND
+    (QualifierFilter (>=, 'binary:xyz'))) AND (TimestampsFilter ( 123, 456))"}
+  hbase> scan 't1', {FILTER =>
+    org.apache.hadoop.hbase.filter.ColumnPaginationFilter.new(1, 0)}
 
 For experts, there is an additional option -- CACHE_BLOCKS -- which
 switches block caching for the scanner on (true) or off (false).  By
@@ -58,13 +60,29 @@ Disabled by default.  Example:
 
   hbase> scan 't1', {RAW => true, VERSIONS => 10}
 
-Scan can also be used directly from a table, by first getting a reference to a table, like such:
+Besides the default 'toStringBinary' format, 'scan' supports custom formatting
+by column.  A user can define a FORMATTER by adding it to the column name in
+the scan specification.  The FORMATTER can be stipulated: 
+
+ 1. either as a org.apache.hadoop.hbase.util.Bytes method name (e.g, toInt, toString)
+ 2. or as a custom class followed by method name: e.g. 'c(MyFormatterClass).format'.
+
+Example formatting cf:qualifier1 and cf:qualifier2 both as Integers: 
+  hbase> scan 't1', {COLUMNS => ['cf:qualifier1:toInt',
+    'cf:qualifier2:c(org.apache.hadoop.hbase.util.Bytes).toInt'] } 
+
+Note that you can specify a FORMATTER by column only (cf:qualifer).  You cannot
+specify a FORMATTER for all columns of a column family.
+
+Scan can also be used directly from a table, by first getting a reference to a
+table, like such:
 
   hbase> t = get_table 't'
   hbase> t.scan
 
-Note in the above situation, you can still provide all the filtering, columns, options, etc as
-described above.
+Note in the above situation, you can still provide all the filtering, columns,
+options, etc as described above.
+
 EOF
       end
 
