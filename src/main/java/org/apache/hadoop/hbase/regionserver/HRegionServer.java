@@ -129,7 +129,6 @@ import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -310,10 +309,6 @@ public class HRegionServer implements HRegionInterface,
   private Thread regionServerThread;
 
   private final String machineName;
-
-  // Replication-related attributes
-  private Replication replicationHandler;
-  // End of replication
 
   private final AtomicLong globalMemstoreSize = new AtomicLong(0);
 
@@ -1276,18 +1271,14 @@ public class HRegionServer implements HRegionInterface,
         "running at " + this.serverInfo.getServerName() +
         " because logdir " + logdir.toString() + " exists");
     }
-    this.replicationHandler = new Replication(this.conf, this.zooKeeperWrapper,
-        this.serverInfo, this.fs, oldLogDir, stopRequested);
     HLog log = instantiateHLog(logdir, oldLogDir);
-    this.replicationHandler.addLogEntryVisitor(log);
     return log;
   }
 
   // instantiate
   protected HLog instantiateHLog(Path logdir, Path oldLogDir) throws IOException {
     return new HLog(this.fs, logdir, oldLogDir, this.conf, this.hlogRoller,
-      this.replicationHandler.getReplicationManager(),
-        this.serverInfo.getServerAddress().toString());
+        null, this.serverInfo.getServerAddress().toString());
   }
 
 
@@ -1492,8 +1483,6 @@ public class HRegionServer implements HRegionInterface,
       }
     }
 
-    this.replicationHandler.startReplicationServices();
-
     if (this.server == null) {
       // Start Server to handle client requests.
       this.server = HBaseRPC.getServer(this,
@@ -1664,9 +1653,6 @@ public class HRegionServer implements HRegionInterface,
     Threads.shutdown(this.cacheFlusher);
     Threads.shutdown(this.hlogRoller);
     this.compactSplitThread.join();
-    if (replicationHandler != null) {
-      this.replicationHandler.join();
-    }
   }
 
   private boolean getMaster() {
@@ -3351,11 +3337,6 @@ public class HRegionServer implements HRegionInterface,
       throw new RuntimeException("Failed construction of " +
         "Master: " + regionServerClass.toString(), e);
     }
-  }
-
-  @Override
-  public void replicateLogEntries(HLog.Entry[] entries) throws IOException {
-    this.replicationHandler.replicateLogEntries(entries);
   }
 
   /**

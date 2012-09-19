@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.io.MapWritable;
 
 /**
@@ -374,17 +372,6 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
       byte[] regionName, byte[] familyName) throws IOException;
   public void bulkLoadHFile(String hfilePath,
       byte[] regionName, byte[] familyName, boolean assignSeqNum) throws IOException;
-
-  /**
-   * Replicates the given entries. The guarantee is that the given entries
-   * will be durable on the slave cluster if this method returns without
-   * any exception.
-   * hbase.replication has to be set to true for this to work.
-   *
-   * @param entries entries to replicate
-   * @throws IOException
-   */
-  public void replicateLogEntries(HLog.Entry[] entries) throws IOException;
 
   /**
    * Closes the specified region.
