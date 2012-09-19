@@ -36,5 +36,5 @@ if [ $? -eq 0 ]; then
   exit 1
 fi
 set -e
-cp $F.new $F
+mv -f $F.new $F
 
