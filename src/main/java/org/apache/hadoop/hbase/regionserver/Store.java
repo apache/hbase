@@ -266,17 +266,9 @@ public class Store implements HeapSize {
         LOG.warn("Skipping " + p + " because its empty. HBASE-646 DATA LOSS?");
         continue;
       }
-      StoreFile curfile = null;
-      try {
-        curfile = new StoreFile(fs, p, blockcache, this.conf,
+      StoreFile curfile = new StoreFile(fs, p, blockcache, this.conf,
             this.family.getBloomFilterType(), this.inMemory);
-        curfile.createReader();
-      } catch (IOException ioe) {
-        LOG.warn("Failed open of " + p + "; presumption is that file was " +
-          "corrupted at flush and lost edits picked up by commit log replay. " +
-          "Verify!", ioe);
-        continue;
-      }
+      curfile.createReader();
       long length = curfile.getReader().length();
       this.storeSize += length;
       if (LOG.isDebugEnabled()) {
