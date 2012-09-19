@@ -270,7 +270,14 @@ to ensure well-formedness of your document after an edit session.
     <footnote><para>Praveen Kumar has written
             a complimentary article,
             <link xlink:href="http://praveen.kumar.in/2011/06/20/building-hadoop-and-hbase-for-hbase-maven-application-development/">Building Hadoop and HBase for HBase Maven application development</link>.
-</para></footnote><footnote>Cloudera have <varname>dfs.support.append</varname> set to true by default.</footnote>.</para>
+</para></footnote><footnote>Cloudera have <varname>dfs.support.append</varname> set to true by default.</footnote>.
+        Please use the most up-to-date Hadoop possible.</para>
+   <note><title>HBase 0.96.0 will require Hadoop 1.0.0 at a minimum</title>
+   <para>As of HBase 0.96.x, Hadoop 1.0.x at least is required.  We will no
+   longer run properly on older Hadoops such as <filename>0.20.205</filename> or <filename>branch-0.20-append</filename>.
+   Do not move to 0.96.x if you cannot upgrade your Hadoop<footnote><para>See <link xlink:href="http://search-hadoop.com/m/7vFVx4EsUb2">HBase, mail # dev - DISCUSS: Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?</link></para></footnote>.
+   </para>
+   </note>
 
 <para>Or use the
     <link xlink:href="http://www.cloudera.com/">Cloudera</link> or
@@ -278,7 +285,9 @@ to ensure well-formedness of your document after an edit session.
     Cloudera' <link xlink:href="http://archive.cloudera.com/docs/">CDH3</link>
     is Apache Hadoop 0.20.x plus patches including all of the 
     <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
-    additions needed to add a durable sync. Use the released, most recent version of CDH3.</para>
+    additions needed to add a durable sync. Use the released, most recent version of CDH3.  In CDH, append
+    support is enabled by default so you do not need to make the above mentioned edits to
+    <filename>hdfs-site.xml</filename> or to <filename>hbase-site.xml</filename>.</para>
     <para>
     <link xlink:href="http://www.mapr.com/">MapR</link>
     includes a commercial, reimplementation of HDFS.
