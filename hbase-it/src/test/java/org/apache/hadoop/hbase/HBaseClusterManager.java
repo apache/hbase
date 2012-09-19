@@ -70,7 +70,7 @@ public class HBaseClusterManager extends ClusterManager {
     }
 
     @Override
-    protected String[] getExecString() {
+    public String[] getExecString() {
       return new String[] {
           "bash", "-c",
           StringUtils.join(new String[] { sshCmd,
