@@ -1159,10 +1159,13 @@ public class Store extends SchemaConfigured implements HeapSize {
         boolean hasMore;
         do {
           hasMore = scanner.next(kvs, 1);
+          // Create the writer even if no kv(Empty store file is also ok),
+          // because we need record the max seq id for the store file, see
+          // HBASE-6059
+          if (writer == null) {
+            writer = createWriterInTmp(maxKeyCount, compression, true);
+          }
           if (!kvs.isEmpty()) {
-            if (writer == null) {
-              writer = createWriterInTmp(maxKeyCount, compression, true);
-            }
             // output to writer:
             for (KeyValue kv : kvs) {
               if (kv.getMemstoreTS() <= smallestReadPoint) {
