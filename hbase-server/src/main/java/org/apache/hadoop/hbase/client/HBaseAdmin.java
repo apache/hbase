@@ -1196,7 +1196,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   /**
    * Flush a table or an individual region.
-   * Asynchronous operation.
+   * Synchronous operation.
    *
    * @param tableNameOrRegionName table or region to flush
    * @throws IOException if a remote or network exception occurs
@@ -1209,7 +1209,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   /**
    * Flush a table or an individual region.
-   * Asynchronous operation.
+   * Synchronous operation.
    *
    * @param tableNameOrRegionName table or region to flush
    * @throws IOException if a remote or network exception occurs
