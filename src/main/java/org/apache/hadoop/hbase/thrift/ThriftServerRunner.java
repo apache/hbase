@@ -115,6 +115,8 @@ public class ThriftServerRunner implements Runnable {
 
   private static ImplType DEFAULT_SERVER_TYPE = ImplType.THREADED_SELECTOR;
 
+  private static String NOT_SUPPORTED_BY_PROXY_MSG = "Not supported by Thrift proxy";
+  
   /** An enum of server implementation selections */
   enum ImplType {
     HS_HA("hsha", true, THsHaServer.class, false),
@@ -479,7 +481,7 @@ public class ThriftServerRunner implements Runnable {
      * hash-map.
      *
      * @param scanner
-     * @return integer scanner id
+     * @return integer scanner id 
      */
     protected synchronized int addScanner(ResultScanner scanner) {
       int id = nextScannerId++;
@@ -1528,6 +1530,22 @@ public class ThriftServerRunner implements Runnable {
       HTable table = getTable(tableName);
       table.put(puts);
     }
+
+    @Override
+    public Map<ByteBuffer, Long> getLastFlushTimes() throws TException {
+      throw new TException(NOT_SUPPORTED_BY_PROXY_MSG);
+    }
+
+    @Override
+    public long getCurrentTimeMillis() throws TException {
+      throw new TException(NOT_SUPPORTED_BY_PROXY_MSG);
+    }
+
+    @Override
+    public void flushRegion(ByteBuffer regionName, long ifOlderThanTS) throws TException, IOError {
+      throw new TException(NOT_SUPPORTED_BY_PROXY_MSG);
+    }
+    
   }
 
   public static void registerFilters(Configuration conf) {
@@ -1544,7 +1562,7 @@ public class ThriftServerRunner implements Runnable {
     }
   }
 
-  private static IOError convertIOException(IOException e) {
+  public static IOError convertIOException(IOException e) {
     if (e instanceof IOError) {
       return (IOError) e;
     }

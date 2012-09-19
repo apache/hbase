@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,6 +42,9 @@ import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HasThread;
+
+import static org.apache.hadoop.hbase.thrift.ThriftServerRunner.convertIOException;
+
 import org.apache.thrift.TException;
 
 /**
@@ -210,6 +215,30 @@ public class HRegionThriftServer extends HasThread {
       } else {
         metrics.incIndirectCalls();
         super.processMultiPut(tableName, regionName, puts);
+      }
+    }
+
+    @Override
+    public Map<ByteBuffer, Long> getLastFlushTimes() throws TException {
+      Map<ByteBuffer, Long> regionToFlushTime = new HashMap<ByteBuffer, Long>();
+      for (HRegion region: rs.getOnlineRegions()) {
+        regionToFlushTime.put(ByteBuffer.wrap(region.getRegionName()), region.getLastFlushTime());
+      }
+      return regionToFlushTime;
+    }
+
+    @Override
+    public long getCurrentTimeMillis() throws TException {
+      return rs.getCurrentTimeMillis();
+    }
+
+    @Override
+    public void flushRegion(ByteBuffer regionName, long ifOlderThanTS)
+        throws TException, IOError {
+      try {
+        rs.flushRegion(Bytes.getBytes(regionName), ifOlderThanTS);
+      } catch (IOException ex) {
+        throw convertIOException(ex);
       }
     }
   }

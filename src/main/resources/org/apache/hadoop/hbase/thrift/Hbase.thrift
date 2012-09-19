@@ -359,6 +359,12 @@ service Hbase {
   ) throws (1:IOError io)
 
   /**
+   * Flush the given region if lastFlushTime < ifOlderThanTS. Only supported
+   * in the Thrift server embedded in the regionserver.
+   */
+  void flushRegion(1:Text regionName, 2:i64 ifOlderThanTS) throws (1:IOError io)
+
+  /**
    * Get a single TCell for the specified table, row, and column at the
    * latest timestamp. Returns an empty list if no such value exists.
    *
@@ -386,6 +392,22 @@ service Hbase {
     /** table name */
     1:Text tableName
   ) throws (1:IOError io)
+
+  /**
+   * Gets last flush time (in milliseconds) for all regions on the server.
+   * Only supported in the Thrift server embedded in the regionserver.
+   *
+   * @return a map of regionName to the last flush time for the region
+   */
+  map<Text,i64> getLastFlushTimes()
+
+  /**
+   * Gets the current time (in milliseconds) at the region server. Only
+   * supported in the Thrift server embedded in the regionserver.
+   *
+   * @return time in milliseconds at the regionserver.
+   */
+  i64 getCurrentTimeMillis()
 
   /**
    * Get the regininfo for the specified row. It scans
