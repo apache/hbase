@@ -134,7 +134,7 @@ public class TestSplitLogWorker {
     SplitLogWorker slw = new SplitLogWorker(zkw, TEST_UTIL.getConfiguration(), RS, neverEndingTask);
     slw.start();
     try {
-      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 100);
+      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1000);
       byte [] bytes = ZKUtil.getData(zkw, ZKSplitLog.getEncodedNodeName(zkw, TATAS));
       SplitLogTask slt = SplitLogTask.parseFrom(bytes);
       assertTrue(slt.isOwned(RS));
