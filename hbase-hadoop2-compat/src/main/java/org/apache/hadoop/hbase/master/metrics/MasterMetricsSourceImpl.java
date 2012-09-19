@@ -54,21 +54,18 @@ public class MasterMetricsSourceImpl
                                  MasterMetricsWrapper masterWrapper) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
     this.masterWrapper = masterWrapper;
+
+  }
+
+ @Override
+ public void init() {
+    super.init();
     clusterRequestsCounter = metricsRegistry.newCounter(CLUSTER_REQUESTS_NAME, "", 0l);
     ritGauge = metricsRegistry.newGauge(RIT_COUNT_NAME, "", 0l);
     ritCountOverThresholdGauge = metricsRegistry.newGauge(RIT_COUNT_OVER_THRESHOLD_NAME, "", 0l);
     ritOldestAgeGauge = metricsRegistry.newGauge(RIT_OLDEST_AGE_NAME, "", 0l);
     splitTimeHisto = metricsRegistry.newHistogram(SPLIT_SIZE_NAME, SPLIT_SIZE_DESC);
     splitSizeHisto = metricsRegistry.newHistogram(SPLIT_TIME_NAME, SPLIT_TIME_DESC);
-  }
-
- @Override
- public void init() {
-     super.init();
-    clusterRequestsCounter = getMetricsRegistry().getLongCounter("cluster_requests", 0);
-    ritGauge = getMetricsRegistry().getLongGauge("ritCount", 0);
-    ritCountOverThresholdGauge = getMetricsRegistry().getLongGauge("ritCountOverThreshold", 0);
-    ritOldestAgeGauge = getMetricsRegistry().getLongGauge("ritOldestAge", 0);
   }
 
   public void incRequests(final int inc) {
@@ -107,7 +104,7 @@ public class MasterMetricsSourceImpl
     if (masterWrapper != null) {
       metricsRecordBuilder
           .addGauge(Interns.info(MASTER_ACTIVE_TIME_NAME,
-              MASTER_ACTIVE_TIME_DESC), masterWrapper.getMasterStartTime())
+              MASTER_ACTIVE_TIME_DESC), masterWrapper.getMasterActiveTime())
           .addGauge(Interns.info(MASTER_START_TIME_NAME,
               MASTER_START_TIME_DESC), masterWrapper.getMasterStartTime())
           .addGauge(Interns.info(AVERAGE_LOAD_NAME, AVERAGE_LOAD_DESC),

@@ -118,77 +118,80 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
 
   @Override
   public void assertGauge(String name, long expected, BaseMetricsSource source) {
-    getMetrics(source);
-    String cName = canonicalizeMetricName(name);
-    assertEquals("Metrics Should be equal", Long.valueOf(expected), gauges.get(cName));
+    long found = getGaugeLong(name, source);
+    assertEquals("Metrics Should be equal", (long) Long.valueOf(expected), found);
   }
 
   @Override
   public void assertGaugeGt(String name, long expected, BaseMetricsSource source) {
-    getMetrics(source);
-    String cName = canonicalizeMetricName(name);
-    assertNotNull(gauges.get(cName));
-    long found = gauges.get(cName).longValue();
+    double found = getGaugeDouble(name, source);
     assertTrue(name + " (" + found + ") should be greater than " + expected, found > expected);
   }
 
   @Override
   public void assertGaugeLt(String name, long expected, BaseMetricsSource source) {
-    getMetrics(source);
-    String cName = canonicalizeMetricName(name);
-    assertNotNull(gauges.get(cName));
-    long found = gauges.get(cName).longValue();
+    double found = getGaugeDouble(name, source);
     assertTrue(name + "(" + found + ") should be less than " + expected, found < expected);
   }
 
   @Override
   public void assertGauge(String name, double expected, BaseMetricsSource source) {
-    getMetrics(source);
-    String cName = canonicalizeMetricName(name);
-    assertEquals("Metrics Should be equal", Double.valueOf(expected), gauges.get(cName));
+    double found = getGaugeDouble(name, source);
+    assertEquals("Metrics Should be equal", (double) Double.valueOf(expected), found);
   }
 
   @Override
   public void assertGaugeGt(String name, double expected, BaseMetricsSource source) {
-    getMetrics(source);
-    String cName = canonicalizeMetricName(name);
-    assertNotNull(gauges.get(cName));
-    double found = gauges.get(cName).doubleValue();
+    double found = getGaugeDouble(name, source);
     assertTrue(name + "(" + found + ") should be greater than " + expected, found > expected);
   }
 
   @Override
   public void assertGaugeLt(String name, double expected, BaseMetricsSource source) {
-    getMetrics(source);
-    String cName = canonicalizeMetricName(name);
-    assertNotNull(gauges.get(cName));
-    double found = gauges.get(cName).doubleValue();
+    double found = getGaugeDouble(name, source);
     assertTrue(name + "(" + found + ") should be less than " + expected, found < expected);
   }
 
   @Override
   public void assertCounter(String name, long expected, BaseMetricsSource source) {
-    getMetrics(source);
-    String cName = canonicalizeMetricName(name);
-    assertEquals("Metrics Counters should be equal", Long.valueOf(expected), counters.get(cName));
+    long found = getCounter(name, source);
+    assertEquals("Metrics Counters should be equal", (long) Long.valueOf(expected), found);
   }
 
   @Override
   public void assertCounterGt(String name, long expected, BaseMetricsSource source) {
-    getMetrics(source);
-    String cName = canonicalizeMetricName(name);
-    assertNotNull(counters.get(cName));
-    long found = counters.get(cName).longValue();
+    long found = getCounter(name, source);
     assertTrue(name + " (" + found + ") should be greater than " + expected, found > expected);
   }
 
   @Override
   public void assertCounterLt(String name, long expected, BaseMetricsSource source) {
+    long found = getCounter(name, source);
+    assertTrue(name + "(" + found + ") should be less than " + expected, found < expected);
+  }
+
+  @Override
+  public long getCounter(String name, BaseMetricsSource source) {
     getMetrics(source);
     String cName = canonicalizeMetricName(name);
     assertNotNull(counters.get(cName));
-    long found = counters.get(cName).longValue();
-    assertTrue(name + "(" + found + ") should be less than " + expected, found < expected);
+    return  counters.get(cName).longValue();
+  }
+
+  @Override
+  public double getGaugeDouble(String name, BaseMetricsSource source) {
+    getMetrics(source);
+    String cName = canonicalizeMetricName(name);
+    assertNotNull(gauges.get(cName));
+    return  gauges.get(cName).doubleValue();
+  }
+
+  @Override
+  public long getGaugeLong(String name, BaseMetricsSource source) {
+    getMetrics(source);
+    String cName = canonicalizeMetricName(name);
+    assertNotNull(gauges.get(cName));
+    return  gauges.get(cName).longValue();
   }
 
   private void reset() {
