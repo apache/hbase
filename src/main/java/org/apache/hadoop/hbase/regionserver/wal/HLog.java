@@ -216,7 +216,7 @@ public class HLog implements Syncable {
   private final ConcurrentSkipListMap<byte [], Long> lastSeqWritten =
     new ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
 
-  private boolean closed = false;
+  private volatile boolean closed = false;
 
   private final AtomicLong logSeqNum = new AtomicLong(0);
 
@@ -263,6 +263,7 @@ public class HLog implements Syncable {
   private static final Pattern pattern = Pattern.compile(".*\\.\\d*");
 
   private static final FileStatus[] NO_FILES = new FileStatus[0];
+  protected static final byte[] DUMMY = Bytes.toBytes("");
 
   static byte [] COMPLETE_CACHE_FLUSH;
   static {
@@ -499,69 +500,99 @@ public class HLog implements Syncable {
    */
   public byte [][] rollWriter() throws IOException {
     // Return if nothing to flush.
-    if (this.writer != null && this.numEntries.get() <= 0) {
+    if (this.closed || this.writer != null && this.numEntries.get() <= 0) {
       return null;
     }
     byte [][] regionsToFlush = null;
     this.cacheFlushLock.lock();
+    long t0 = 0;
+    long t1 = 0;
     try {
+      // Creating the new file can be done earlier.
+      long newFileNum = System.currentTimeMillis();
+      Path newPath = computeFilename(newFileNum);
+      Writer newWriter;
+      try {
+        newWriter = createWriter(fs, newPath, HBaseConfiguration.create(conf));
+      } catch (IOException ioe) {
+        // If we fail to create a new writer, let us clean up the file.
+        fs.delete(newPath, false);
+        throw ioe;
+      }
+      int newFileReplication = fs.getFileStatus(newPath).getReplication();
+      OutputStream newOutStream = null;
+      if (newWriter instanceof SequenceFileLogWriter) {
+        newOutStream = ((SequenceFileLogWriter) newWriter)
+            .getDFSCOutputStream();
+        // append a dummy entry and sync. So we perform the costly
+        // allocateBlock and sync before we get the lock to roll writers.
+        WALEdit edit = new WALEdit();
+        HLogKey key = makeKey(DUMMY /* regionName */, DUMMY /* tableName */,
+            0, System.currentTimeMillis());
+        newWriter.append(new HLog.Entry(key, edit));
+        syncWriter(newWriter);
+      }
+
+      Writer oldWriter;
+      long oldFileLogSeqNum, oldFileNum;
+      int oldNumEntries;
       synchronized (updateLock) {
+        t0 = EnvironmentEdgeManager.currentTimeMillis();
         if (closed) {
           return regionsToFlush;
         }
+
         this.logRollPending = true;
         // Clean up current writer.
-        Path oldFile = cleanupCurrentWriter(this.filenum);
-        this.filenum = System.currentTimeMillis();
-        Path newPath = computeFilename();
-        this.writer = createWriter(fs, newPath, HBaseConfiguration.create(conf));
-        this.initialReplication = fs.getFileStatus(newPath).getReplication();
+        syncWriter(this.writer);
 
-        // Can we get at the dfsclient outputstream?  If an instance of
-        // SFLW, it'll have done the necessary reflection to get at the
-        // protected field name.
-        this.hdfs_out = null;
-        if (this.writer instanceof SequenceFileLogWriter) {
-          this.hdfs_out =
-            ((SequenceFileLogWriter)this.writer).getDFSCOutputStream();
-        }
-        // If there was an IOException before this point then either the old log
-        // has not been closed or the new writer has not been created.
-        // LogRoller will keep retyring. Nothing can be appended to the logs
+        // save the old information required for close()
+        oldFileNum = this.filenum;
+        oldWriter = this.writer;
+        oldNumEntries = this.numEntries.get();
+
+        this.filenum = newFileNum;
+        this.writer = newWriter;
+        this.initialReplication = newFileReplication;
+        this.hdfs_out = newOutStream;
+        this.numEntries.set(0);
+
+        // If there was an IOException before this point while the old file is being
+        // synched; LogRoller will keep retyring. Nothing can be appended to the logs
         // when logRollPending is true
         this.logRollPending = false;
+        oldFileLogSeqNum = this.logSeqNum.get();
+        t1 = EnvironmentEdgeManager.currentTimeMillis();
+      }
 
-        LOG.info((oldFile != null?
-            "Roll " + FSUtils.getPath(oldFile) + ", entries=" +
-            this.numEntries.get() +
-            ", filesize=" +
-            this.fs.getFileStatus(oldFile).getLen() + ". ": "") +
-          "New hlog " + FSUtils.getPath(newPath));
-        // Tell our listeners that a new log was created
-        if (!this.actionListeners.isEmpty()) {
-          for (LogActionsListener list : this.actionListeners) {
-            list.logRolled(newPath);
-          }
+      Path oldFile = closeWriter(oldWriter, oldFileNum, oldFileLogSeqNum);
+      LOG.info((oldFile != null ? "Roll " + FSUtils.getPath(oldFile)
+          + ", entries=" + oldNumEntries + ", filesize="
+          + this.fs.getFileStatus(oldFile).getLen() + ". " : "")
+          + "New hlog " + FSUtils.getPath(newPath)
+          + " Held updateLock for " + (t1 -t0) + " ms.");
+      // Tell our listeners that a new log was created
+      if (!this.actionListeners.isEmpty()) {
+        for (LogActionsListener list : this.actionListeners) {
+          list.logRolled(newPath);
         }
-        // Can we delete any of the old log files?
-        if (this.outputfiles.size() > 0) {
-          if (this.lastSeqWritten.size() <= 0) {
-            LOG.debug("Last sequence written is empty. Deleting all old hlogs");
-            // If so, then no new writes have come in since all regions were
-            // flushed (and removed from the lastSeqWritten map). Means can
-            // remove all but currently open log file.
-            TreeSet<Long> tempSet = new TreeSet<Long>(outputfiles.keySet());
-            for (Long seqNum : tempSet) {
-              archiveLogFile(outputfiles.get(seqNum), seqNum);
-              outputfiles.remove(seqNum);
-            }
-            assert outputfiles.size() == 0 :
-              "Someone added new log files? How?";
-          } else {
-            regionsToFlush = cleanOldLogs();
+      }
+      // Can we delete any of the old log files?
+      if (this.outputfiles.size() > 0) {
+        if (this.lastSeqWritten.size() <= 0) {
+          LOG.debug("Last sequence written is empty. Deleting all old hlogs");
+          // If so, then no new writes have come in since all regions were
+          // flushed (and removed from the lastSeqWritten map). Means can
+          // remove all but currently open log file.
+          TreeSet<Long> tempSet = new TreeSet<Long>(outputfiles.keySet());
+          for (Long seqNum : tempSet) {
+            archiveLogFile(outputfiles.get(seqNum), seqNum);
+            outputfiles.remove(seqNum);
           }
+          assert outputfiles.size() == 0 : "Someone added new log files? How?";
+        } else {
+          regionsToFlush = cleanOldLogs();
         }
-        this.numEntries.set(0);
       }
     } finally {
       this.cacheFlushLock.unlock();
@@ -724,23 +755,46 @@ public class HLog implements Syncable {
    * @return Path to current writer or null if none.
    * @throws IOException
    */
-  Path cleanupCurrentWriter(final long currentfilenum)
-  throws IOException {
-    Path oldFile = null;
+  Path cleanupCurrentWriter(final long currentfilenum) throws IOException {
+    Path hlog = null;
     if (this.writer != null) {
-      try {
-        if (!writerCloseSyncDone) {
-          this.writer.sync();
-        }
-      } catch (IOException ioe) {
-        syncFailureAbortStrategy.abort("log sync failed when trying to close " + this.writer, ioe);
+      if (!writerCloseSyncDone) {
+        syncWriter(this.writer);
       }
       // Close the current writer
       writerCloseSyncDone = true;
+      hlog = closeWriter(this.writer, currentfilenum, this.logSeqNum.get());
+      this.writer =  null;
+    }
+    return hlog;
+  }
+
+  /*
+   * Sync the edits to the datanodes.
+   * If this is called on this.writer, it should be holding the updates lock.
+   */
+  void syncWriter(Writer writer) throws IOException {
+    if (writer != null) {
       try {
-        this.writer.close();
+          writer.sync();
       } catch (IOException ioe) {
-        Path fname = computeFilename();
+        syncFailureAbortStrategy.abort("log sync failed when trying to close "
+            + writer, ioe);
+      }
+    }
+  }
+
+  /*
+   * Closes the given writer. Updates the output files using the specified logSeqNum
+   * @return The path to the closed file.
+   */
+  Path closeWriter(Writer writer, final long filenum, long logSeqNum) throws IOException {
+    Path oldFile = null;
+    if (writer != null) {
+      try {
+        writer.close();
+      } catch (IOException ioe) {
+        Path fname = computeFilename(filenum);
         if (!tryRecoverFileLease(fs, fname, conf)) {
           IOException ioe2 =
               new IOException("lease recovery pending for " + fname, ioe);
@@ -748,10 +802,9 @@ public class HLog implements Syncable {
         }
       }
       writerCloseSyncDone = false;
-      this.writer = null;
-      if (currentfilenum >= 0) {
-        oldFile = computeFilename();
-        this.outputfiles.put(Long.valueOf(this.logSeqNum.get()), oldFile);
+      if (filenum >= 0) {
+        oldFile = computeFilename(filenum);
+        this.outputfiles.put(Long.valueOf(logSeqNum), oldFile);
       }
     }
     return oldFile;
@@ -771,11 +824,20 @@ public class HLog implements Syncable {
   }
 
   /**
+   * This is a convenience method that is used by tests to get the current
+   * filename without knowing the file-number.
+   * @return Path
+   */
+  protected Path computeFilename() {
+    return computeFilename(this.filenum);
+  }
+
+  /**
    * This is a convenience method that computes a new filename with a given
    * file-number.
    * @return Path
    */
-  protected Path computeFilename() {
+  protected Path computeFilename(long filenum) {
     if (filenum < 0) {
       throw new RuntimeException("hlog file number can't be < 0");
     }
@@ -1905,6 +1967,9 @@ public class HLog implements Syncable {
         long threadTime = System.currentTimeMillis();
         try {
           int editsCount = 0;
+          if (Arrays.equals(region, DUMMY)) { // ignore dummy edits
+            return null;
+          }
           WriterAndPath wap = logWriters.get(region);
           for (Entry logEntry: entries) {
             checkForShutdown(shutdownStatus);

@@ -194,6 +194,7 @@ public class HLogSplitter {
         "into a temporary staging area.");
 
     Object BAD_WRITER = new Object();
+    logWriters.put(HLog.DUMMY, BAD_WRITER);
 
     boolean progress_failed = false;
 

@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -217,7 +218,7 @@ public class TestHLog  {
     int count = 0;
     HLog.Entry entry = new HLog.Entry();
     while ((entry = reader.next(entry)) != null) count++;
-    assertEquals(total, count);
+    assertEquals(total + 1, count); // one extra, for the initial Dummy entry.
     reader.close();
     // Add test that checks to see that an open of a Reader works on a file
     // that has had a sync done on it.
@@ -236,7 +237,7 @@ public class TestHLog  {
     reader = HLog.getReader(fs, walPath, conf);
     count = 0;
     while((entry = reader.next(entry)) != null) count++;
-    assertEquals(total * 2, count);
+    assertEquals(total * 2 + 1, count); // one extra, for the initial Dummy entry
     // Now do a test that ensures stuff works when we go over block boundary,
     // especially that we return good length on file.
     final byte [] value = new byte[1025 * 1024];  // Make a 1M value.
@@ -250,14 +251,14 @@ public class TestHLog  {
     reader = HLog.getReader(fs, walPath, conf);
     count = 0;
     while((entry = reader.next(entry)) != null) count++;
-    assertEquals(total * 3, count);
+    assertEquals(total * 3 + 1, count); // one extra, for the initial Dummy entry
     reader.close();
     // Close it and ensure that closed, Reader gets right length also.
     wal.close();
     reader = HLog.getReader(fs, walPath, conf);
     count = 0;
     while((entry = reader.next(entry)) != null) count++;
-    assertEquals(total * 3, count);
+    assertEquals(total * 3 + 1, count); // one extra, for the initial Dummy entry
     reader.close();
   }
 
@@ -421,6 +422,9 @@ public class TestHLog  {
     HLogKey key = HLog.newKey(conf);
     WALEdit val = new WALEdit();
     while (reader.next(key, val)) {
+      if (Arrays.equals(key.getRegionName(), HLog.DUMMY)) {
+        continue;
+      }
       count++;
       assertTrue("Should be one KeyValue per WALEdit",
                  val.getKeyValues().size() == 1);
@@ -463,17 +467,21 @@ public class TestHLog  {
       reader = HLog.getReader(fs, filename, conf);
       // Above we added all columns on a single row so we only read one
       // entry in the below... thats why we have '1'.
-      for (int i = 0; i < 1; i++) {
+      for (int count = 0; count < 1; ) {
         HLog.Entry entry = reader.next(null);
         if (entry == null) break;
         HLogKey key = entry.getKey();
         WALEdit val = entry.getEdit();
+        if (Arrays.equals(key.getRegionName(), HLog.DUMMY)) {
+          continue;
+        }
         assertTrue(Bytes.equals(regionName, key.getRegionName()));
         assertTrue(Bytes.equals(tableName, key.getTablename()));
         KeyValue kv = val.getKeyValues().get(0);
         assertTrue(Bytes.equals(row, kv.getRow()));
-        assertEquals((byte)(i + '0'), kv.getValue()[0]);
+        assertEquals((byte)(count + '0'), kv.getValue()[0]);
         System.out.println(key + " " + val);
+        count++;
       }
       HLog.Entry entry = null;
       while ((entry = reader.next(null)) != null) {
@@ -529,6 +537,7 @@ public class TestHLog  {
       log = null;
       // Now open a reader on the log and assert append worked.
       reader = HLog.getReader(fs, filename, conf);
+      reader.next(); // skip the dummy entry.
       HLog.Entry entry = reader.next();
       assertEquals(COL_COUNT, entry.getEdit().size());
       int idx = 0;
