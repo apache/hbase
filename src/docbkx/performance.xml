@@ -192,6 +192,13 @@
         If there is enough RAM, increasing this can help.  
         </para>
     </section>
+    <section xml:id="hbase.regionserver.checksum.verify">
+        <title><varname>hbase.regionserver.checksum.verify</varname></title>
+        <para>Have HBase write the checksum into the datablock and save
+        having to do the checksum seek whenever you read. See the
+        release note on <link xlink:href="https://issues.apache.org/jira/browse/HBASE-5074">HBASE-5074 support checksums in HBase block cache</link>.  
+        </para>
+    </section>
 
   </section>
   <section xml:id="perf.hdfs.configs">
