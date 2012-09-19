@@ -281,7 +281,7 @@ public class  HRegionServer implements ClientProtocol,
   // Compactions
   public CompactSplitThread compactSplitThread;
 
-  final Map<String, RegionScanner> scanners =
+  final ConcurrentHashMap<String, RegionScanner> scanners =
       new ConcurrentHashMap<String, RegionScanner>();
 
   /**
@@ -2818,11 +2818,18 @@ public class  HRegionServer implements ClientProtocol,
   }
 
   protected long addScanner(RegionScanner s) throws LeaseStillHeldException {
-    long scannerId = nextLong();
-    String scannerName = String.valueOf(scannerId);
-    scanners.put(scannerName, s);
-    this.leases.createLease(scannerName, this.scannerLeaseTimeoutPeriod, new ScannerListener(
-        scannerName));
+    long scannerId = -1;
+    while (true) {
+      scannerId = rand.nextLong();
+      if (scannerId == -1) continue;
+      String scannerName = String.valueOf(scannerId);
+      RegionScanner existing = scanners.putIfAbsent(scannerName, s);
+      if (existing == null) {
+        this.leases.createLease(scannerName, this.scannerLeaseTimeoutPeriod,
+            new ScannerListener(scannerName));
+        break;
+      }
+    }
     return scannerId;
   }
 
