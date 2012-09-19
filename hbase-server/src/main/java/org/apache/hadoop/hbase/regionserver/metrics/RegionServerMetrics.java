@@ -161,6 +161,17 @@ public class RegionServerMetrics implements Updater {
       new MetricsLongValue("writeRequestsCount", registry);
 
   /**
+   * Count of checkAndMutates the failed the check
+   */
+  public final MetricsLongValue  checkAndMutateChecksFailed =
+    new MetricsLongValue("checkAndMutateChecksFailed", registry);
+
+  /**
+   * Count of checkAndMutates that passed the check
+   */
+  public final MetricsLongValue checkAndMutateChecksPassed =
+    new MetricsLongValue("checkAndMutateChecksPassed", registry);
+  /**
    */
   public final MetricsIntValue storefileIndexSizeMB =
     new MetricsIntValue("storefileIndexSizeMB", registry);

@@ -239,6 +239,8 @@ public class HRegion implements HeapSize { // , Writable{
   final AtomicLong numPutsWithoutWAL = new AtomicLong(0);
   final AtomicLong dataInMemoryWithoutWAL = new AtomicLong(0);
 
+  final Counter checkAndMutateChecksPassed = new Counter();
+  final Counter checkAndMutateChecksFailed = new Counter();
   final Counter readRequestsCount = new Counter();
   final Counter writeRequestsCount = new Counter();
 
@@ -2416,7 +2418,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param lockId
    * @param writeToWAL
    * @throws IOException
-   * @return true if the new put was execute, false otherwise
+   * @return true if the new put was executed, false otherwise
    */
   public boolean checkAndMutate(byte [] row, byte [] family, byte [] qualifier,
       CompareOp compareOp, ByteArrayComparable comparator, Writable w,
@@ -2498,8 +2500,10 @@ public class HRegion implements HeapSize { // , Writable{
             prepareDelete(d);
             internalDelete(d, HConstants.DEFAULT_CLUSTER_ID, writeToWAL);
           }
+          this.checkAndMutateChecksPassed.increment();
           return true;
         }
+        this.checkAndMutateChecksFailed.increment();
         return false;
       } finally {
         if(lockId == null) releaseRowLock(lid);
@@ -4229,6 +4233,10 @@ public class HRegion implements HeapSize { // , Writable{
         newRegionInfo, a.getTableDesc(), null);
     dstRegion.readRequestsCount.set(a.readRequestsCount.get() + b.readRequestsCount.get());
     dstRegion.writeRequestsCount.set(a.writeRequestsCount.get() + b.writeRequestsCount.get());
+    dstRegion.checkAndMutateChecksFailed.set(
+      a.checkAndMutateChecksFailed.get() + b.checkAndMutateChecksFailed.get());
+    dstRegion.checkAndMutateChecksPassed.set(
+      a.checkAndMutateChecksPassed.get() + b.checkAndMutateChecksPassed.get());
     dstRegion.initialize();
     dstRegion.compactStores();
     if (LOG.isDebugEnabled()) {
@@ -5034,7 +5042,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      37 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
+      39 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
       (7 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 

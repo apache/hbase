@@ -1453,6 +1453,8 @@ public class  HRegionServer implements ClientProtocol,
     long memstoreSize = 0;
     int readRequestsCount = 0;
     int writeRequestsCount = 0;
+    long checkAndMutateChecksFailed = 0;
+    long checkAndMutateChecksPassed = 0;
     long storefileIndexSize = 0;
     HDFSBlocksDistribution hdfsBlocksDistribution =
       new HDFSBlocksDistribution();
@@ -1476,6 +1478,8 @@ public class  HRegionServer implements ClientProtocol,
       dataInMemoryWithoutWAL += r.dataInMemoryWithoutWAL.get();
       readRequestsCount += r.readRequestsCount.get();
       writeRequestsCount += r.writeRequestsCount.get();
+      checkAndMutateChecksFailed += r.checkAndMutateChecksFailed.get();
+      checkAndMutateChecksPassed += r.checkAndMutateChecksPassed.get();
       synchronized (r.stores) {
         stores += r.stores.size();
         for (Map.Entry<byte[], Store> ee : r.stores.entrySet()) {
@@ -1549,6 +1553,8 @@ public class  HRegionServer implements ClientProtocol,
         (int) (totalStaticBloomSize / 1024));
     this.metrics.readRequestsCount.set(readRequestsCount);
     this.metrics.writeRequestsCount.set(writeRequestsCount);
+    this.metrics.checkAndMutateChecksFailed.set(checkAndMutateChecksFailed);
+    this.metrics.checkAndMutateChecksPassed.set(checkAndMutateChecksPassed);
     this.metrics.compactionQueueSize.set(compactSplitThread
         .getCompactionQueueSize());
     this.metrics.flushQueueSize.set(cacheFlusher
