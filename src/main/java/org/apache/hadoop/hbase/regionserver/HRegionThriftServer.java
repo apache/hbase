@@ -218,6 +218,21 @@ public class HRegionThriftServer extends HasThread {
       }
     }
 
+    /**
+     * Process a delete request. If the region name is set, using the shortcircuit optimization.
+     */
+    @Override
+    protected void processMultiDelete(ByteBuffer tableName, ByteBuffer regionName,
+        List<Delete> deletes) throws IOException, IOError {
+      if (Bytes.isNonEmpty(regionName)) {
+        metrics.incDirectCalls();
+        rs.delete(Bytes.getBytes(regionName), deletes);
+      } else {
+        metrics.incIndirectCalls();
+        super.processMultiDelete(tableName, regionName, deletes);
+      }
+    }
+
     @Override
     public Map<ByteBuffer, Long> getLastFlushTimes() throws TException {
       Map<ByteBuffer, Long> regionToFlushTime = new HashMap<ByteBuffer, Long>();

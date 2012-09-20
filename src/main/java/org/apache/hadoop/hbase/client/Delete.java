@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Used to perform Delete operations on a single row.
  * <p>
@@ -120,8 +122,6 @@ public class Delete extends Mutation
     this.familyMap.putAll(d.getFamilyMap());
     this.writeToWAL = d.writeToWAL;
   }
-
-
 
   /**
    * Delete all versions of all columns of the specified family.
@@ -328,6 +328,18 @@ public class Delete extends Mutation
     Map<String, Object> map = super.getFingerprint();
     map.put("operation", "Delete");
     return map;
+  }
+
+  /**
+   * Modify this delete object to delete from all column families in the row at the given
+   * timestamp or older. If column families have been added already, 
+   * an {@link IllegalArgumentException} is thrown.
+   * @param timestamp will delete data at this timestamp or older 
+   */
+  public void deleteRow(long timestamp) {
+    Preconditions.checkArgument(familyMap.isEmpty(), 
+        "Cannot delete entire row, column families already specified");
+    ts = timestamp;
   }
 
 }

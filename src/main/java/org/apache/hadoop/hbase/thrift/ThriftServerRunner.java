@@ -398,7 +398,7 @@ public class ThriftServerRunner implements Runnable {
   /**
    * Retrieve timestamp from the given mutation Thrift object. If the mutation timestamp is not set
    * or is set to {@link HConstants#LATEST_TIMESTAMP}, the default timestamp is used.
-   * @param m mutation a mutation object optionally specifying a timestamp
+   * @param m a mutation object optionally specifying a timestamp
    * @param defaultTimestamp default timestamp to use if the mutation does not specify timestamp
    * @return the effective mutation timestamp
    */
@@ -834,14 +834,7 @@ public class ThriftServerRunner implements Runnable {
     public void deleteAllTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column,
         long timestamp, ByteBuffer regionName) throws IOError {
       try {
-        Delete delete  = new Delete(getBytes(row));
-        byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
-        if (famAndQf.length == 1) {
-          delete.deleteFamily(famAndQf[0], timestamp);
-        } else {
-          delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
-        }
-        processDelete(tableName, regionName, delete);
+        processDelete(tableName, regionName, createDelete(row, column, timestamp));
       } catch (IOException e) {
         throw convertIOException(e);
       }
@@ -853,6 +846,7 @@ public class ThriftServerRunner implements Runnable {
       deleteAllRowTs(tableName, row, HConstants.LATEST_TIMESTAMP, regionName);
     }
 
+    @Override
     public void deleteAllRowTs(ByteBuffer tableName, ByteBuffer row, long timestamp,
         ByteBuffer regionName)
         throws IOError {
@@ -909,56 +903,72 @@ public class ThriftServerRunner implements Runnable {
           regionName);
     }
 
+    private void mutateRowsHelper(ByteBuffer tableName, ByteBuffer row, List<Mutation> mutations,
+        long timestamp, ByteBuffer regionName, List<Put> puts, List<Delete> deletes)
+        throws IllegalArgument, IOError, IOException {
+      byte[] rowBytes = getBytes(row);
+      Put put = null;
+      Delete delete = null;
+
+      boolean firstMutation = true;
+      boolean writeToWAL = false;
+      for (Mutation m : mutations) {
+        byte[][] famAndQf = KeyValue.parseColumn(getBytes(m.column));
+        
+        // If this mutation has timestamp set, it takes precedence, otherwise we use the
+        // timestamp provided in the argument.
+        long effectiveTimestamp = getMutationTimestamp(m, timestamp);
+        
+        if (m.isDelete) {
+          if (delete == null) {
+            delete = new Delete(rowBytes);
+          }
+          updateDelete(delete, famAndQf, effectiveTimestamp);
+        } else {
+          if (put == null) {
+            put = new Put(rowBytes, timestamp, null);
+          }
+          put.add(famAndQf[0], getQualifier(famAndQf), effectiveTimestamp, getBytes(m.value));
+        }
+
+        if (firstMutation) {
+          // Remember the first mutation's writeToWAL status.
+          firstMutation = false;
+          writeToWAL = m.writeToWAL;
+        } else {
+          // Make sure writeToWAL status is consistent in all mutations.
+          if (m.writeToWAL != writeToWAL) {
+            throw new IllegalArgument("Mutations with contradicting writeToWal settings");
+          }
+        }
+      }
+      
+      if (delete != null) {
+        delete.setWriteToWAL(writeToWAL);
+        if (deletes != null) {
+          deletes.add(delete);
+        } else {
+          processDelete(tableName, regionName, delete);
+        }
+      }
+      
+      if (put != null) {
+        put.setWriteToWAL(writeToWAL);
+        if (puts != null) {
+          puts.add(put);
+        } else {
+          processPut(tableName, regionName, put);
+        }
+      }
+    }
+
     @Override
     public void mutateRowTs(ByteBuffer tableName, ByteBuffer row,
         List<Mutation> mutations, long timestamp,
         Map<ByteBuffer, ByteBuffer> attributes, ByteBuffer regionName)
     throws IOError, IllegalArgument {
       try {
-        byte[] rowBytes = getBytes(row);
-        Put put = null;
-        Delete delete = null;
-
-        boolean firstMutation = true;
-        boolean writeToWAL = false;
-        for (Mutation m : mutations) {
-          byte[][] famAndQf = KeyValue.parseColumn(getBytes(m.column));
-          long effectiveTimestamp = getMutationTimestamp(m, timestamp);
-          if (m.isDelete) {
-            if (delete == null) {
-              delete = new Delete(rowBytes);
-            }
-            if (famAndQf.length == 1) {
-              delete.deleteFamily(famAndQf[0], effectiveTimestamp);
-            } else {
-              delete.deleteColumns(famAndQf[0], famAndQf[1], effectiveTimestamp);
-            }
-          } else {
-            if (put == null) {
-              put = new Put(rowBytes, timestamp, null);
-            }
-            put.add(famAndQf[0], getQualifier(famAndQf), effectiveTimestamp, getBytes(m.value));
-          }
-
-          if (firstMutation) {
-            // Remember the first mutation's writeToWAL status.
-            firstMutation = false;
-            writeToWAL = m.writeToWAL;
-          } else {
-            // Make sure writeToWAL status is consistent in all mutations.
-            if (m.writeToWAL != writeToWAL) {
-              throw new IllegalArgument("Mutations with contradicting writeToWal settings");
-            }
-          }
-        }
-        if (delete != null) {
-          delete.setWriteToWAL(writeToWAL);
-          processDelete(tableName, regionName, delete);
-        }
-        if (put != null) {
-          put.setWriteToWAL(writeToWAL);
-          processPut(tableName, regionName, put);
-        }
+        mutateRowsHelper(tableName, row, mutations, timestamp, regionName, null, null);
       } catch (IOException e) {
         throw convertIOException(e);
       } catch (IllegalArgumentException e) {
@@ -979,80 +989,23 @@ public class ThriftServerRunner implements Runnable {
         ByteBuffer tableName, List<BatchMutation> rowBatches, long timestamp,
         Map<ByteBuffer, ByteBuffer> attributes, ByteBuffer regionName)
         throws IOError, IllegalArgument, TException {
-      List<Put> puts = null;
-      List<Delete> deletes = null;
+      List<Put> puts = new ArrayList<Put>();
+      List<Delete> deletes = new ArrayList<Delete>();
       if (metrics != null) {
         metrics.incNumBatchMutateRowKeys(rowBatches.size());
       }
 
-      for (BatchMutation batch : rowBatches) {
-        byte[] row = getBytes(batch.row);
-        List<Mutation> mutations = batch.mutations;
-        Delete delete = null;
-        Put put = null;
-        boolean firstMutation = true;
-        boolean writeToWAL = false;
-        for (Mutation m : mutations) {
-          byte[][] famAndQf = KeyValue.parseColumn(getBytes(m.column));
-
-          // If this mutation has timestamp set, it takes precedence, otherwise we use the
-          // timestamp provided in the argument.
-          long effectiveTimestamp = getMutationTimestamp(m, timestamp);
-
-          if (m.isDelete) {
-            if (delete == null) {
-              delete = new Delete(row);
-            }
-            // no qualifier, family only.
-            if (famAndQf.length == 1) {
-              delete.deleteFamily(famAndQf[0], effectiveTimestamp);
-            } else {
-              delete.deleteColumns(famAndQf[0], famAndQf[1], effectiveTimestamp);
-            }
-          } else {
-            if (put == null) {
-              put = new Put(row, timestamp, null);
-            }
-            put.add(famAndQf[0], getQualifier(famAndQf), effectiveTimestamp,
-                getBytes(m.value));
-          }
-          if (firstMutation) {
-            // Remember the first mutation's writeToWAL status.
-            firstMutation = false;
-            writeToWAL = m.writeToWAL;
-          } else {
-            // Make sure writeToWAL status is consistent in all mutations in this batch.
-            if (m.writeToWAL != writeToWAL) {
-              throw new IllegalArgument("Mutations with contradicting writeToWal settings in " +
-                  "the same batch");
-            }
-          }
-        }
-        if (delete != null) {
-          delete.setWriteToWAL(writeToWAL);
-          if (deletes == null) {
-            deletes = new ArrayList<Delete>();
-          }
-          deletes.add(delete);
-        }
-        if (put != null) {
-          put.setWriteToWAL(writeToWAL);
-          if (puts == null) {
-            puts = new ArrayList<Put>();
-          }
-          puts.add(put);
-        }
-      }
-
-      HTable table = null;
       try {
+        for (BatchMutation batch : rowBatches) {
+          mutateRowsHelper(tableName, batch.row, batch.mutations, timestamp, regionName,
+              puts, deletes);
+        }
+
         if (puts != null) {
           processMultiPut(tableName, regionName, puts);
         }
         if (deletes != null) {
-          for (Delete del : deletes) {
-            processDelete(tableName, regionName, del);
-          }
+          processMultiDelete(tableName, regionName, deletes);
         }
       } catch (IOException e) {
         throw convertIOException(e);
@@ -1099,11 +1052,7 @@ public class ThriftServerRunner implements Runnable {
 
           byte[][] famAndQf = KeyValue.parseColumn(Bytes.toBytesRemaining(m.column));
           if (m.isDelete) {
-            if (famAndQf.length == 1) {
-              delete.deleteFamily(famAndQf[0], effectiveTimestamp);
-            } else {
-              delete.deleteColumns(famAndQf[0], famAndQf[1], effectiveTimestamp);
-            }
+            updateDelete(delete, famAndQf, effectiveTimestamp);
           } else {
             byte[] valueBytes = getBytes(m.value);
             put.add(famAndQf[0], getQualifier(famAndQf), effectiveTimestamp, valueBytes);
@@ -1521,14 +1470,17 @@ public class ThriftServerRunner implements Runnable {
 
     protected Result[] processMultiGet(ByteBuffer tableName, ByteBuffer regionName, List<Get> gets)
         throws IOException, IOError {
-      HTable table = getTable(tableName);
-      return table.get(gets);
+      return getTable(tableName).get(gets);
     }
 
     protected void processMultiPut(ByteBuffer tableName, ByteBuffer regionName, List<Put> puts)
         throws IOException, IOError {
-      HTable table = getTable(tableName);
-      table.put(puts);
+      getTable(tableName).put(puts);
+    }
+
+    protected void processMultiDelete(ByteBuffer tableName, ByteBuffer regionName,
+        List<Delete> deletes) throws IOException, IOError {
+      getTable(tableName).delete(deletes);
     }
 
     @Override
@@ -1575,4 +1527,35 @@ public class ThriftServerRunner implements Runnable {
     }
     return HConstants.EMPTY_BYTE_ARRAY;
   }
+
+  /**
+   * Update the given delete object.
+   * 
+   * @param delete the delete object to update
+   * @param famAndQf family and qualifier. null or empty family means "delete from all CFs".
+   * @param timestamp Delete at this timestamp and older.
+   */
+  private static void updateDelete(Delete delete, byte[][] famAndQf, long timestamp) { 
+    if (famAndQf.length == 1) {
+      // Column qualifier not specified.
+      if (famAndQf[0].length == 0) {
+        // Delete from all column families in the row. 
+        delete.deleteRow(timestamp);
+      } else {
+        // Delete from all columns in the given column family
+        delete.deleteFamily(famAndQf[0], timestamp);
+      }
+    } else {
+      // Delete only from the specific column
+      delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
+    }
+  }
+
+  private static Delete createDelete(ByteBuffer row, ByteBuffer column, long timestamp) {
+    Delete delete  = new Delete(getBytes(row));
+    byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
+    updateDelete(delete, famAndQf, timestamp);
+    return delete;
+  }
+
 }
