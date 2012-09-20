@@ -33,6 +33,11 @@ public class CompatibilityFactory {
   public static final String EXCEPTION_START = "Could not create  ";
   public static final String EXCEPTION_END = " Is the hadoop compatibility jar on the classpath?";
 
+  /**
+   * This is a static only class don't let any instance be created.
+   */
+  protected CompatibilityFactory() {}
+
   public static synchronized <T> T getInstance(Class<T> klass) {
     T instance = null;
     try {

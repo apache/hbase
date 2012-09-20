@@ -32,8 +32,12 @@ import java.util.ServiceLoader;
  */
 public class CompatibilitySingletonFactory extends CompatibilityFactory {
   private static final Log LOG = LogFactory.getLog(CompatibilitySingletonFactory.class);
-
   private static final Map<Class, Object> instances = new HashMap<Class, Object>();
+
+  /**
+   * This is a static only class don't let anyone create an instance.
+   */
+  protected CompatibilitySingletonFactory() {  }
 
   /**
    * Get the singleton instance of Any classes defined by compatibiliy jar's

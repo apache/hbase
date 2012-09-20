@@ -72,7 +72,7 @@ public class MetricSampleQuantiles {
   private final MetricQuantile quantiles[];
 
   public MetricSampleQuantiles(MetricQuantile[] quantiles) {
-    this.quantiles = quantiles;
+    this.quantiles = Arrays.copyOf(quantiles, quantiles.length);
     this.samples = new LinkedList<SampleItem>();
   }
 

@@ -27,59 +27,59 @@ public interface MasterMetricsWrapper {
   /**
    * Get ServerName
    */
-  public String getServerName();
+  String getServerName();
 
   /**
    * Get Average Load
    * @return Average Load
    */
-  public double getAverageLoad();
+  double getAverageLoad();
 
   /**
    * Get the Cluster ID
    * @return Cluster ID
    */
-  public String getClusterId();
+  String getClusterId();
 
   /**
    * Get the Zookeeper Quorum Info
    * @return Zookeeper Quorum Info
    */
-  public String getZookeeperQuorum();
+  String getZookeeperQuorum();
 
   /**
    * Get the co-processors
    * @return Co-processors
    */
-  public String[] getCoprocessors();
+  String[] getCoprocessors();
 
   /**
    * Get hbase master start time
    * @return Start time of master in milliseconds
    */
-  public long getMasterStartTime();
+  long getMasterStartTime();
 
   /**
    * Get the hbase master active time
    * @return Time in milliseconds when master became active
    */
-  public long getMasterActiveTime();
+  long getMasterActiveTime();
 
   /**
    * Whether this master is the active master
    * @return True if this is the active master
    */
-  public boolean getIsActiveMaster();
+  boolean getIsActiveMaster();
 
   /**
    * Get the live region servers
    * @return Live region servers
    */
-  public int getRegionServers();
+  int getRegionServers();
 
   /**
    * Get the dead region servers
    * @return Dead region Servers
    */
-  public int getDeadRegionServers();
+  int getDeadRegionServers();
 }

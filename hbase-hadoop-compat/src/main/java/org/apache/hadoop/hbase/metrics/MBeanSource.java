@@ -32,7 +32,7 @@ public interface MBeanSource  {
    * @param theMbean the actual MBean
    * @return ObjectName from jmx
    */
-  public ObjectName register(String serviceName, String metricsName,
+  ObjectName register(String serviceName, String metricsName,
                              Object theMbean);
 
 }

@@ -23,6 +23,6 @@ package org.apache.hadoop.hbase.master.metrics;
  */
 public interface MasterMetricsSourceFactory {
 
-  public MasterMetricsSource create(MasterMetricsWrapper beanWrapper);
+  MasterMetricsSource create(MasterMetricsWrapper beanWrapper);
 
 }

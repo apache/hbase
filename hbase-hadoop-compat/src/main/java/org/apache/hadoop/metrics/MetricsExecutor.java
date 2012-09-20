@@ -25,8 +25,8 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public interface MetricsExecutor {
 
-  public ScheduledExecutorService getExecutor();
+  ScheduledExecutorService getExecutor();
 
-  public void stop();
+  void stop();
 
 }

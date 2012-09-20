@@ -19,35 +19,37 @@
 package org.apache.hadoop.hbase.metrics;
 
 import org.apache.hadoop.metrics2.MetricsBuilder;
-import org.apache.hadoop.metrics2.MetricsException;
-import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
-import org.apache.hadoop.metrics2.lib.MetricMutable;
 import org.apache.hadoop.metrics2.lib.MetricMutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MetricMutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MetricMutableHistogram;
 import org.apache.hadoop.metrics2.lib.MetricMutableQuantiles;
 import org.apache.hadoop.metrics2.source.JvmMetricsSource;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 /**
  * Hadoop 1 implementation of BaseMetricsSource (using metrics2 framework)
  */
 public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
 
+  private static enum DefaultMetricsSystemInitializer {
+    INSTANCE;
+    private boolean inited = false;
+    private JvmMetricsSource jvmMetricsSource;
+
+    synchronized void init(String name) {
+      if (inited) return;
+      inited = true;
+      DefaultMetricsSystem.initialize(HBASE_METRICS_SYSTEM_NAME);
+      jvmMetricsSource = JvmMetricsSource.create(name, "");
+
+    }
+  }
   private static boolean defaultMetricsSystemInited = false;
   public static final String HBASE_METRICS_SYSTEM_NAME = "hbase";
 
   protected final DynamicMetricsRegistry metricsRegistry;
-
-  private JvmMetricsSource jvmMetricsSource;
-
-
   protected final String metricsName;
   protected final String metricsDescription;
   protected final String metricsContext;
@@ -65,15 +67,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
     this.metricsJmxContext = metricsJmxContext;
 
     metricsRegistry = new DynamicMetricsRegistry(metricsName).setContext(metricsContext);
-
-    if (!defaultMetricsSystemInited) {
-      //Not too worried about mutli-threaded here as all it does is spam the logs.
-      defaultMetricsSystemInited = true;
-      DefaultMetricsSystem.initialize(HBASE_METRICS_SYSTEM_NAME);
-
-      //If this is the first time through register a jvm source.
-      jvmMetricsSource = JvmMetricsSource.create(metricsName, "");
-    }
+    DefaultMetricsSystemInitializer.INSTANCE.init(metricsName);
 
     //Register this instance.
     DefaultMetricsSystem.INSTANCE.registerSource(metricsJmxContext, metricsDescription, this);

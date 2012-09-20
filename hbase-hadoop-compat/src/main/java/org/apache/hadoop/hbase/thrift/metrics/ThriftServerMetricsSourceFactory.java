@@ -21,15 +21,15 @@ package org.apache.hadoop.hbase.thrift.metrics;
 /** Factory that will be used to create metrics sources for the two diffent types of thrift servers. */
 public interface ThriftServerMetricsSourceFactory {
 
-  public static final String METRICS_NAME = "Thrift";
-  public static final String METRICS_DESCRIPTION = "Thrift Server Metrics";
-  public static final String THRIFT_ONE_METRICS_CONTEXT = "thrift-one";
-  public static final String THRIFT_ONE_JMX_CONTEXT = "Thrift,sub=ThriftOne";
-  public static final String THRIFT_TWO_METRICS_CONTEXT = "thrift-two";
-  public static final String THRIFT_TWO_JMX_CONTEXT = "Thrift,sub=ThriftTwo";
+  static final String METRICS_NAME = "Thrift";
+  static final String METRICS_DESCRIPTION = "Thrift Server Metrics";
+  static final String THRIFT_ONE_METRICS_CONTEXT = "thrift-one";
+  static final String THRIFT_ONE_JMX_CONTEXT = "Thrift,sub=ThriftOne";
+  static final String THRIFT_TWO_METRICS_CONTEXT = "thrift-two";
+  static final String THRIFT_TWO_JMX_CONTEXT = "Thrift,sub=ThriftTwo";
 
-  public ThriftServerMetricsSource createThriftOneSource();
+  ThriftServerMetricsSource createThriftOneSource();
 
-  public ThriftServerMetricsSource createThriftTwoSource();
+  ThriftServerMetricsSource createThriftTwoSource();
 
 }

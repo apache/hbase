@@ -81,7 +81,7 @@ public class MasterMetricsSourceImpl
   }
 
   public void setRITOldestAge(long ritCount) {
-    ritCountOverThresholdGauge.set(ritCount);
+    ritOldestAgeGauge.set(ritCount);
   }
 
   @Override

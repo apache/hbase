@@ -43,6 +43,12 @@
        <Bug pattern="NP_BOOLEAN_RETURN_NULL" />
      </Match>
 
+      <!-- This is read by a thread from hadoop and findbugs never finds it -->
+     <Match>
+       <Bug code="UrF"/>
+       <Class name="org.apache.hadoop.hbase.metrics.BaseMetricsSourceImpl"/>
+     </Match>
+
     <Match>
        <Class name="org.apache.hadoop.hbase.regionserver.StoreFile$Writer" />
        <Bug pattern="NP_NULL_PARAM_DEREF" />

@@ -25,54 +25,54 @@ import org.apache.hadoop.hbase.metrics.BaseMetricsSource;
  */
 public interface ThriftServerMetricsSource extends BaseMetricsSource {
 
-  public static final String BATCH_GET_KEY = "batchGet";
-  public static final String BATCH_MUTATE_KEY = "batchMutate";
-  public static final String TIME_IN_QUEUE_KEY = "timeInQueue";
-  public static final String THRIFT_CALL_KEY = "thriftCall";
-  public static final String SLOW_THRIFT_CALL_KEY = "slowThriftCall";
-  public static final String CALL_QUEUE_LEN_KEY = "callQueueLen";
+  static final String BATCH_GET_KEY = "batchGet";
+  static final String BATCH_MUTATE_KEY = "batchMutate";
+  static final String TIME_IN_QUEUE_KEY = "timeInQueue";
+  static final String THRIFT_CALL_KEY = "thriftCall";
+  static final String SLOW_THRIFT_CALL_KEY = "slowThriftCall";
+  static final String CALL_QUEUE_LEN_KEY = "callQueueLen";
 
   /**
    * Add how long an operation was in the queue.
    * @param time
    */
-  public void incTimeInQueue(long time);
+  void incTimeInQueue(long time);
 
   /**
    * Set the call queue length.
    * @param len Time
    */
-  public void setCallQueueLen(int len);
+  void setCallQueueLen(int len);
 
   /**
    * Add how many keys were in a batch get.
    * @param diff Num Keys
    */
-  public void incNumRowKeysInBatchGet(int diff);
+  void incNumRowKeysInBatchGet(int diff);
 
   /**
    * Add how many keys were in a batch mutate.
    * @param diff Num Keys
    */
-  public void incNumRowKeysInBatchMutate(int diff);
+  void incNumRowKeysInBatchMutate(int diff);
 
   /**
    * Add how long a method took
    * @param name Method name
    * @param time Time
    */
-  public void incMethodTime(String name, long time);
+  void incMethodTime(String name, long time);
 
   /**
    * Add how long a call took
    * @param time Time
    */
-  public void incCall(long time);
+  void incCall(long time);
 
   /**
    * Increment how long a slow call took.
    * @param time Time
    */
-  public void incSlowCall(long time);
+  void incSlowCall(long time);
 
 }

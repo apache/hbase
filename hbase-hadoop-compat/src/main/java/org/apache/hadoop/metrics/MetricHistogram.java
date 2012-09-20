@@ -23,16 +23,15 @@ package org.apache.hadoop.metrics;
  */
 public interface MetricHistogram {
 
-  public static final String NUM_OPS_METRIC_NAME = "_num_ops";
-  public static final String MIN_METRIC_NAME = "_min";
-  public static final String MAX_METRIC_NAME = "_max";
-  public static final String MEAN_METRIC_NAME = "_mean";
-  public static final String STD_DEV_METRIC_NAME = "_std_dev";
-  public static final String MEDIAN_METRIC_NAME = "_median";
-  public static final String SEVENTY_FIFTH_PERCENTILE_METRIC_NAME = "_75th_percentile";
-  public static final String NINETY_FIFTH_PERCENTILE_METRIC_NAME = "_95th_percentile";
-  public static final String NINETY_NINETH_PERCENTILE_METRIC_NAME = "_99th_percentile";
+  static final String NUM_OPS_METRIC_NAME = "_num_ops";
+  static final String MIN_METRIC_NAME = "_min";
+  static final String MAX_METRIC_NAME = "_max";
+  static final String MEAN_METRIC_NAME = "_mean";
+  static final String MEDIAN_METRIC_NAME = "_median";
+  static final String SEVENTY_FIFTH_PERCENTILE_METRIC_NAME = "_75th_percentile";
+  static final String NINETY_FIFTH_PERCENTILE_METRIC_NAME = "_95th_percentile";
+  static final String NINETY_NINETH_PERCENTILE_METRIC_NAME = "_99th_percentile";
 
-  public void add(long value);
+  void add(long value);
 
 }
