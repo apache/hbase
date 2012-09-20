@@ -510,55 +510,54 @@ public class HBaseClient {
       DataOutputStream outOS = null;
       Compressor compressor = null;
       try {
-        //noinspection SynchronizeOnNonFinalField
-        synchronized (this.out) { // FindBugs IS2_INCONSISTENT_SYNC
-          if (LOG.isDebugEnabled())
-            LOG.debug(getName() + " sending #" + call.id);
+        if (LOG.isDebugEnabled())
+          LOG.debug(getName() + " sending #" + call.id);
 
-          ByteArrayOutputStream baos = new ByteArrayOutputStream();
-          uncompressedOS = new DataOutputStream(baos);
-          outOS = uncompressedOS;
-          try {
-            // 1. write the call id uncompressed
-            uncompressedOS.writeInt(call.id);
-            // 2. write RPC options uncompressed
-            if (call.version >= HBaseServer.VERSION_RPCOPTIONS) {
-              call.options.write(outOS);
-            }
-            // preserve backwards compatibility
-            if (call.options.getTxCompression() != Compression.Algorithm.NONE) {
-              // 3. setup the compressor
-              compressor = call.options.getTxCompression().getCompressor();
-              OutputStream compressedOutputStream =
-                call.options.getTxCompression().createCompressionStream(
-                  uncompressedOS, compressor, 0);
-              outOS = new DataOutputStream(compressedOutputStream);
-            }
-            // 4. write the output params with the correct compression type
-            call.param.write(outOS);
-            outOS.flush();
-            baos.flush();
-            call.startTime = System.currentTimeMillis();
-          } catch (IOException e) {
-            LOG.error("Failed to prepare request in in-mem buffers!", e);
-            markClosed(e);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        uncompressedOS = new DataOutputStream(baos);
+        outOS = uncompressedOS;
+        try {
+          // 1. write the call id uncompressed
+          uncompressedOS.writeInt(call.id);
+          // 2. write RPC options uncompressed
+          if (call.version >= HBaseServer.VERSION_RPCOPTIONS) {
+            call.options.write(outOS);
           }
-          byte[] data = baos.toByteArray();
-          int dataLength = data.length;
-          try {
+          // preserve backwards compatibility
+          if (call.options.getTxCompression() != Compression.Algorithm.NONE) {
+            // 3. setup the compressor
+            compressor = call.options.getTxCompression().getCompressor();
+            OutputStream compressedOutputStream =
+                call.options.getTxCompression().createCompressionStream(
+                    uncompressedOS, compressor, 0);
+            outOS = new DataOutputStream(compressedOutputStream);
+          }
+          // 4. write the output params with the correct compression type
+          call.param.write(outOS);
+          outOS.flush();
+          baos.flush();
+          call.startTime = System.currentTimeMillis();
+        } catch (IOException e) {
+          LOG.error("Failed to prepare request in in-mem buffers!", e);
+          markClosed(e);
+        }
+        byte[] data = baos.toByteArray();
+        int dataLength = data.length;
+        try {
+          synchronized (this.out) {
             out.writeInt(dataLength);      //first put the data length
             writeToSocket(out, data, 0, dataLength);
             out.flush();
-          } catch (IOException e) {
-            // It is not easy to get an exception here.
-            // The read is what always fails. Write gets accepted into
-            // the socket buffer. If the connection is already dead, even
-            // then read gets called first and fails first.
-            IOException rewrittenException =
-                new SyncFailedException("Failed to write to peer");
-            rewrittenException.initCause(e);
-            markClosed(rewrittenException);
           }
+        } catch (IOException e) {
+          // It is not easy to get an exception here.
+          // The read is what always fails. Write gets accepted into
+          // the socket buffer. If the connection is already dead, even
+          // then read gets called first and fails first.
+          IOException rewrittenException =
+              new SyncFailedException("Failed to write to peer");
+          rewrittenException.initCause(e);
+          markClosed(rewrittenException);
         }
       } finally {
         //the buffer is just an in-memory buffer, but it is still polite to
