@@ -171,7 +171,7 @@ public class MiniZooKeeperCluster {
           LOG.debug("Failed binding ZK Server to client port: " +
               tentativePort);
           // This port is already in use, try to use another.
-          tentativePort++;
+          tentativePort = selectClientPort();
           continue;
         }
         break;
