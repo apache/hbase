@@ -338,10 +338,6 @@ public class ReplicationSource extends Thread
         }
       } finally {
         try {
-          // if current path is null, it means we processEndOfFile hence
-          if (this.currentPath != null && !gotIOE) {
-            this.position = this.reader.getPosition();
-          }
           if (this.reader != null) {
             this.reader.close();
           }
@@ -391,7 +387,8 @@ public class ReplicationSource extends Thread
     if (this.position != 0) {
       this.reader.seek(this.position);
     }
-    HLog.Entry entry = this.reader.next(this.entriesArray[currentNbEntries]);
+    long startPosition = this.position;
+    HLog.Entry entry = readNextAndSetPosition();
     while (entry != null) {
       WALEdit edit = entry.getEdit();
       this.metrics.logEditsReadRate.inc(1);
@@ -420,13 +417,13 @@ public class ReplicationSource extends Thread
         }
       }
       // Stop if too many entries or too big
-      if ((this.reader.getPosition() - this.position)
+      if ((this.reader.getPosition() - startPosition)
           >= this.replicationQueueSizeCapacity ||
           currentNbEntries >= this.replicationQueueNbCapacity) {
         break;
       }
       try {
-        entry = this.reader.next(entriesArray[currentNbEntries]);
+        entry = readNextAndSetPosition();
       } catch (IOException ie) {
         LOG.debug("Break on IOE: " + ie.getMessage());
         break;
@@ -434,11 +431,21 @@ public class ReplicationSource extends Thread
     }
     LOG.debug("currentNbOperations:" + currentNbOperations +
         " and seenEntries:" + seenEntries +
-        " and size: " + (this.reader.getPosition() - this.position));
+        " and size: " + (this.reader.getPosition() - startPosition));
     // If we didn't get anything and the queue has an object, it means we
     // hit the end of the file for sure
     return seenEntries == 0 && processEndOfFile();
   }
+
+  private HLog.Entry readNextAndSetPosition() throws IOException {
+    HLog.Entry entry = this.reader.next(entriesArray[currentNbEntries]);
+    // Store the position so that in the future the reader can start
+    // reading from here. If the above call to next() throws an
+    // exception, the position won't be changed and retry will happen
+    // from the last known good position
+    this.position = this.reader.getPosition();
+    return entry;
+  } 
 
   private void connectToPeers() {
     // Connect to peer cluster first, unless we have to stop
