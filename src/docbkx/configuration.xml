@@ -272,10 +272,12 @@ to ensure well-formedness of your document after an edit session.
             <link xlink:href="http://praveen.kumar.in/2011/06/20/building-hadoop-and-hbase-for-hbase-maven-application-development/">Building Hadoop and HBase for HBase Maven application development</link>.
 </para></footnote><footnote>Cloudera have <varname>dfs.support.append</varname> set to true by default.</footnote>.
         Please use the most up-to-date Hadoop possible.</para>
-   <note><title>HBase 0.96.0 will require Hadoop 1.0.0 at a minimum</title>
+   <note><title>HBase 0.96.0 requires Hadoop 1.0.0 at a minimum</title>
+   <subtitle>HBase 0.96.0 supports Hadoop 2.0.x</subtitle>
    <para>As of HBase 0.96.x, Hadoop 1.0.x at least is required.  We will no
    longer run properly on older Hadoops such as <filename>0.20.205</filename> or <filename>branch-0.20-append</filename>.
-   Do not move to 0.96.x if you cannot upgrade your Hadoop<footnote><para>See <link xlink:href="http://search-hadoop.com/m/7vFVx4EsUb2">HBase, mail # dev - DISCUSS: Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?</link></para></footnote>.
+   Do not move to 0.96.x if you cannot upgrade your Hadoop<footnote><para>See <link xlink:href="http://search-hadoop.com/m/7vFVx4EsUb2">HBase, mail # dev - DISCUSS: Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?</link></para></footnote>.</para>
+   <para>HBase 0.96.0 runs on Hadoop 2.0.
    </para>
    </note>
 
