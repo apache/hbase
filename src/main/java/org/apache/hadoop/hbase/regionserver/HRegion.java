@@ -1827,11 +1827,11 @@ public class HRegion implements HeapSize { // , Writable{
         boolean shouldBlock = numReadyToWrite == 0;
         Integer acquiredLockId = null;
         try {
-          acquiredLockId = getLock(providedLockId, mutation.getRow(),
+          acquiredLockId = getLock(providedLockId, put.getRow(),
               shouldBlock);
         } catch (IOException ioe) {
           LOG.warn("Failed getting lock in batch put, row="
-                  + Bytes.toStringBinary(mutation.getRow()), ioe);
+                  + Bytes.toStringBinary(put.getRow()), ioe);
         }
         if (acquiredLockId == null) {
           // We failed to grab another lock
