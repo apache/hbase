@@ -85,6 +85,8 @@ import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.master.balancer.BalancerChore;
+import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
@@ -284,6 +286,7 @@ Server {
 
   private LoadBalancer balancer;
   private Thread balancerChore;
+  private Thread clusterStatusChore;
 
   private CatalogJanitor catalogJanitorChore;
   private LogCleaner logCleaner;
@@ -309,6 +312,7 @@ Server {
   private final boolean masterCheckCompression;
 
   private SpanReceiverHost spanReceiverHost;
+
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -700,6 +704,7 @@ Server {
       // Start balancer and meta catalog janitor after meta and regions have
       // been assigned.
       status.setStatus("Starting balancer and catalog janitor");
+      this.clusterStatusChore = getAndStartClusterStatusChore(this);
       this.balancerChore = getAndStartBalancerChore(this);
       this.catalogJanitorChore = new CatalogJanitor(this, this);
       startCatalogJanitorChore();
@@ -1083,23 +1088,26 @@ Server {
     if (this.executorService != null) this.executorService.shutdown();
   }
 
+  private static Thread getAndStartClusterStatusChore(HMaster master) {
+    if (master == null || master.balancer == null) {
+      return null;
+    }
+    Chore chore = new ClusterStatusChore(master, master.balancer);
+    return Threads.setDaemonThreadRunning(chore.getThread());
+  }
+
   private static Thread getAndStartBalancerChore(final HMaster master) {
-    String name = master.getServerName() + "-BalancerChore";
-    int balancerPeriod =
-      master.getConfiguration().getInt("hbase.balancer.period", 300000);
     // Start up the load balancer chore
-    Chore chore = new Chore(name, balancerPeriod, master) {
-      @Override
-      protected void chore() {
-        master.balance();
-      }
-    };
+    Chore chore = new BalancerChore(master);
     return Threads.setDaemonThreadRunning(chore.getThread());
   }
 
   private void stopChores() {
     if (this.balancerChore != null) {
       this.balancerChore.interrupt();
+    }
+    if (this.clusterStatusChore != null) {
+      this.clusterStatusChore.interrupt();
     }
     if (this.catalogJanitorChore != null) {
       this.catalogJanitorChore.interrupt();
