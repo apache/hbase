@@ -455,7 +455,7 @@ public class RegionStates {
     Map<String, Map<ServerName, List<HRegionInfo>>> result =
       new HashMap<String, Map<ServerName,List<HRegionInfo>>>();
     synchronized (this) {
-      if (!server.getConfiguration().getBoolean("hbase.master.loadbalance.bytable", true)) {
+      if (!server.getConfiguration().getBoolean("hbase.master.loadbalance.bytable", false)) {
         Map<ServerName, List<HRegionInfo>> svrToRegions =
           new HashMap<ServerName, List<HRegionInfo>>(serverHoldings.size());
         for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
