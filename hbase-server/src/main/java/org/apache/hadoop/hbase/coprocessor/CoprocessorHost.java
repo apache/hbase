@@ -189,7 +189,8 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
           java.io.File.separator +"." + pathPrefix +
           "." + className + "." + System.currentTimeMillis() + ".jar");
       fs.copyToLocalFile(path, dst);
-      fs.deleteOnExit(dst);
+      File tmpLocal = new File(dst.toString());
+      tmpLocal.deleteOnExit();
 
       // TODO: code weaving goes here
 
