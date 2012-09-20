@@ -189,10 +189,10 @@ public class TestRegionServerMetrics {
     assertTimeVaryingMetricCount(1, TABLE_NAME, cf, regionName, "append_");
 
     // One delete where the cf is known
-    assertTimeVaryingMetricCount(1, TABLE_NAME, cf, null, "delete_");
+    assertTimeVaryingMetricCount(1, TABLE_NAME, cf, null, "multidelete_");
 
     // two deletes in the region.
-    assertTimeVaryingMetricCount(2, TABLE_NAME, null, regionName, "delete_");
+    assertTimeVaryingMetricCount(2, TABLE_NAME, null, regionName, "multidelete_");
 
     // Three gets. one for gets. One for append. One for increment.
     assertTimeVaryingMetricCount(3, TABLE_NAME, cf, regionName, "get_");
