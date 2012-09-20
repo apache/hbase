@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.NavigableSet;
 
 import org.apache.commons.logging.Log;
@@ -329,8 +330,7 @@ class StoreScanner extends NonLazyKeyValueScanner
     }
     KeyValue kv;
     KeyValue prevKV = null;
-    List<KeyValue> results = new ArrayList<KeyValue>();
-
+    int numNewKeyValues = 0;
 
     Call call = HRegionServer.callContext.get();
     long quotaRemaining = (call == null) ? Long.MAX_VALUE
@@ -363,7 +363,6 @@ class StoreScanner extends NonLazyKeyValueScanner
                 this.countPerRow > (storeLimit + storeOffset)) {
               // do what SEEK_NEXT_ROW does.
               if (!matcher.moreRowsMayExistAfter(kv)) {
-                outResult.addAll(results);
                 return false;
               }
               reseek(matcher.getKeyForNextRow(kv));
@@ -381,12 +380,12 @@ class StoreScanner extends NonLazyKeyValueScanner
                 throw new DoNotRetryIOException("Result too large");
               }
 
-              results.add(copyKv);
+              outResult.add(copyKv);
+              numNewKeyValues++;
             }
 
             if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
               if (!matcher.moreRowsMayExistAfter(kv)) {
-                outResult.addAll(results);
                 return false;
               }
               reseek(matcher.getKeyForNextRow(kv));
@@ -396,21 +395,16 @@ class StoreScanner extends NonLazyKeyValueScanner
               this.heap.next();
             }
 
-            if (limit > 0 && (results.size() == limit)) {
+            if (limit > 0 && (numNewKeyValues == limit)) {
               break LOOP;
             }
             continue;
 
           case DONE:
-            // copy jazz
-            outResult.addAll(results);
             return true;
 
           case DONE_SCAN:
             close();
-
-            // copy jazz
-            outResult.addAll(results);
 
             return false;
 
@@ -418,7 +412,6 @@ class StoreScanner extends NonLazyKeyValueScanner
             // This is just a relatively simple end of scan fix, to short-cut end
             // us if there is an endKey in the scan.
             if (!matcher.moreRowsMayExistAfter(kv)) {
-              outResult.addAll(results);
               return false;
             }
 
@@ -446,6 +439,31 @@ class StoreScanner extends NonLazyKeyValueScanner
             throw new RuntimeException("UNEXPECTED");
         }
       }
+    } catch (IOException e) {
+      /*
+       * Function should not modify its outResult argument if
+       * exception was thrown. In ths case we should remove
+       * last numNewKeyValues elements from outResults.
+       */
+
+      final int length = outResult.size();
+
+      // this should be rare situation, we can use reflection
+      if (outResult instanceof ArrayList<?>){
+        // efficient code for ArrayList
+        ArrayList<?> asArrayList = (ArrayList<?>)outResult;
+        asArrayList.subList(length - numNewKeyValues, length).clear();
+      } else {
+        // generic case
+        ListIterator<?> iterator = outResult.listIterator(length);
+        while (numNewKeyValues-- > 0) {
+          iterator.previous();
+          iterator.remove();
+        }
+      }
+
+      throw e;
+
     } finally { 
       // update the counter 
       if (addedResultsSize > 0 && metric != null) {
@@ -459,9 +477,7 @@ class StoreScanner extends NonLazyKeyValueScanner
       }
     }
 
-    if (!results.isEmpty()) {
-      // copy jazz
-      outResult.addAll(results);
+    if (numNewKeyValues > 0) {
       return true;
     }
 

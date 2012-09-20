@@ -2985,8 +2985,7 @@ public class HRegion implements HeapSize {
     KeyValueHeap storeHeap = null;
     private final byte [] stopRow;
     private Filter filter;
-    private List<KeyValue> results = new ArrayList<KeyValue>();
-    private int batch;
+    private final int batch;
     private int isScan;
     private boolean filterClosed = false;
     private long readPt;
@@ -3043,7 +3042,7 @@ public class HRegion implements HeapSize {
     }
 
     @Override
-    public synchronized boolean next(List<KeyValue> outResults, int limit)
+    public boolean next(List<KeyValue> outResults, int limit)
         throws IOException {
       return next(outResults, limit, null);
     }
@@ -3066,10 +3065,17 @@ public class HRegion implements HeapSize {
       // This could be a new thread from the last time we called next().
       MultiVersionConsistencyControl.setThreadReadPoint(this.readPt);
 
-      results.clear();
-      boolean returnResult = nextInternal(limit, metric);
+      boolean returnResult;
+      if (outResults.isEmpty()) {
+         // Usually outResults is empty. This is true when next is called
+         // to handle scan or get operation.
+        returnResult = nextInternal(outResults, limit, metric);
+      } else {
+        List<KeyValue> tmpList = new ArrayList<KeyValue>();
+        returnResult = nextInternal(tmpList, limit, metric);
+        outResults.addAll(tmpList);
+      }
 
-      outResults.addAll(results);
       resetFilters();
       if (isFilterDone()) {
         return false;
@@ -3078,14 +3084,14 @@ public class HRegion implements HeapSize {
     }
 
     @Override
-    public synchronized boolean next(List<KeyValue> outResults)
+    public boolean next(List<KeyValue> outResults)
         throws IOException {
       // apply the batching limit by default
       return next(outResults, batch, null);
     }
 
     @Override
-    public synchronized boolean next(List<KeyValue> outResults, String metric)
+    public boolean next(List<KeyValue> outResults, String metric)
         throws IOException {
       // apply the batching limit by default
       return next(outResults, batch, metric);
@@ -3098,7 +3104,16 @@ public class HRegion implements HeapSize {
       return this.filter != null && this.filter.filterAllRemaining();
     }
 
-    private boolean nextInternal(int limit, String metric) throws IOException {
+    /**
+     * @param results empty list in which results will be stored
+     */
+    private boolean nextInternal(List<KeyValue> results, int limit, String metric)
+        throws IOException {
+
+      if (!results.isEmpty()) {
+        throw new IllegalArgumentException("First parameter should be an empty list");
+      }
+
       while (true) {
         byte [] currentRow = peekRow();
         if (isStopRow(currentRow)) {
@@ -3112,6 +3127,7 @@ public class HRegion implements HeapSize {
           return false;
         } else if (filterRowKey(currentRow)) {
           nextRow(currentRow);
+          results.clear();
         } else {
           byte [] nextRow;
           do {
@@ -3133,12 +3149,8 @@ public class HRegion implements HeapSize {
           }
 
           if (results.isEmpty() || filterRow()) {
-            // this seems like a redundant step - we already consumed the row
-            // there're no left overs.
-            // the reasons for calling this method are:
-            // 1. reset the filters.
-            // 2. provide a hook to fast forward the row (used by subclasses)
             nextRow(currentRow);
+            results.clear();
 
             // This row was totally filtered out, if this is NOT the last row,
             // we should continue on.
@@ -3163,7 +3175,6 @@ public class HRegion implements HeapSize {
       while (Bytes.equals(currentRow, peekRow())) {
         this.storeHeap.next(MOCKED_LIST);
       }
-      results.clear();
       resetFilters();
     }
 

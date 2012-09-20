@@ -2539,13 +2539,16 @@ public class HRegionServer implements HRegionInterface,
       List<Result> results = new ArrayList<Result>(nbRows);
       long currentScanResultSize = 0;
       List<KeyValue> values = new ArrayList<KeyValue>();
-      for (int i = 0; i < nbRows && currentScanResultSize < maxScannerResultSize; i++) {
-        requestCount.incrementAndGet();
+
+      int i = 0;
+      for (; i < nbRows && currentScanResultSize < maxScannerResultSize; i++) {
         // Collect values to be returned here
         boolean moreRows = s.next(values, HRegion.METRIC_NEXTSIZE);
         if (!values.isEmpty()) {
-          for (KeyValue kv : values) {
-            currentScanResultSize += kv.heapSize();
+          if (maxScannerResultSize < Long.MAX_VALUE){
+            for (KeyValue kv : values) {
+              currentScanResultSize += kv.heapSize();
+            }
           }
           results.add(new Result(values));
         }
@@ -2554,6 +2557,8 @@ public class HRegionServer implements HRegionInterface,
         }
         values.clear();
       }
+      requestCount.addAndGet(i);
+
       // Below is an ugly hack where we cast the InternalScanner to be a
       // HRegion.RegionScanner.  The alternative is to change InternalScanner
       // interface but its used everywhere whereas we just need a bit of info

@@ -90,12 +90,14 @@ public class Result implements Writable, WritableWithSize {
     }
   }
 
+  private static final KeyValue[] EMPTY_KEY_VALUE_ARRAY = new KeyValue[0];
+
   /**
    * Instantiate a Result with the specified List of KeyValues.
    * @param kvs List of KeyValues
    */
   public Result(List<KeyValue> kvs) {
-    this(kvs.toArray(new KeyValue[0]));
+    this(kvs.toArray(EMPTY_KEY_VALUE_ARRAY));
   }
 
   /**
