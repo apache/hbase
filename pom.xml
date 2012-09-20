@@ -610,8 +610,8 @@
         </plugin>
       </plugins>
     </pluginManagement>
-    <!-- Plugins inherited by all modules -->
     <plugins>
+      <!-- hbase parent only plugins -->
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>${maven.assembly.version}</version>
@@ -626,12 +626,7 @@
           </descriptors>
         </configuration>
       </plugin>
-      <!-- All submodules build their javadocs -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-      </plugin>
-      <!--The below plugins are about site generation.
+       <!--The below plugins are about site generation.
             They are all marked as not to be in herited by child
             modules.  The plugins are meant to run here in the
             parent project only.
@@ -797,7 +792,13 @@
           </execution>
         </executions>
       </plugin>
-    </plugins>
+      <!-- Plugins inherited by all modules -->
+      <!-- All submodules build their javadocs -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+     </plugins>
   </build>
   <properties>
     <tar.name>${project.build.finalName}.tar.gz</tar.name>

@@ -22,112 +22,26 @@
  */
 -->
 
-  <!--This 'all' id is not appended to the produced bundle because 
-  we do this: http://maven.apache.org/plugins/maven-assembly-plugin/faq.html#required-classifiers -->
+  <!--This 'all' id is not appended to the produced bundle because we do this: http://maven.apache.org/plugins/maven-assembly-plugin/faq.html#required-classifiers -->
   <id>all</id>
   <formats>
     <format>tar.gz</format>
   </formats>
-  <fileSets>
-    <!--Copy over the site if built as docs dir-->
-    <fileSet>
-      <directory>target/site</directory>
-      <outputDirectory>docs</outputDirectory>
-    </fileSet>
-    <!-- Include top level text files -->
-    <fileSet>
-      <outputDirectory>/</outputDirectory>
-      <includes>
-        <include>*.txt</include>
-        <include>pom.xml</include>
-      </includes>
-    </fileSet>
-    <!-- Include the top level conf directory -->
-    <fileSet>
-      <directory>conf</directory>
-      <outputDirectory>conf</outputDirectory>
-      <fileMode>0644</fileMode>
-      <directoryMode>0755</directoryMode>
-    </fileSet>
-    <!-- Include top level bin directory -->
-    <fileSet>
-      <directory>bin</directory>
-      <outputDirectory>bin</outputDirectory>
-      <fileMode>0755</fileMode>
-      <directoryMode>0755</directoryMode>
-    </fileSet>
-    <fileSet>
-      <directory>conf</directory>
-      <outputDirectory>conf</outputDirectory>
-      <fileMode>0644</fileMode>
-      <directoryMode>0755</directoryMode>
-    </fileSet>
-    <!--Include top-level src.  Module src done down below-->
-    <fileSet>
-      <directory>src</directory>
-      <outputDirectory>src</outputDirectory>
-      <fileMode>0644</fileMode>
-      <directoryMode>0755</directoryMode>
-    </fileSet>
-    <!-- Include dev-support directory -->
-    <fileSet>
-      <directory>dev-support</directory>
-      <outputDirectory>dev-support</outputDirectory>
-      <fileMode>0755</fileMode>
-      <directoryMode>0755</directoryMode>
-    </fileSet>
-    <!-- Move the ruby code over -->
-    <fileSet>
-      <directory>hbase-server/src/main/ruby</directory>
-      <outputDirectory>lib/ruby</outputDirectory>
-      <fileMode>0644</fileMode>
-      <directoryMode>0755</directoryMode>
-    </fileSet>
-    <!-- Move the webapps to the webapp dir -->
-    <fileSet>
-      <directory>hbase-server/target/hbase-webapps</directory>
-      <outputDirectory>hbase-webapps</outputDirectory>
-      <fileMode>0644</fileMode>
-      <directoryMode>0755</directoryMode>
-    </fileSet>
-    <!-- Include native libraries -->
-    <fileSet>
-      <directory>hbase-server/target/native</directory>
-      <outputDirectory>native</outputDirectory>
-      <fileMode>0755</fileMode>
-      <directoryMode>0755</directoryMode>
-      <includes>
-        <include>*.so</include>
-      </includes>
-    </fileSet>
-    <!-- This is only necessary until maven fixes the intra-project dependency bug 
-      in maven 3.0. Until then, we have to include the test jars for sub-projects. When 
-      fixed, the below dependencySet stuff is sufficient for pulling in the test jars as 
-      well, as long as they are added as dependencies in this project. Right now, we only 
-      have 1 submodule to accumulate, but we can copy/paste as necessary until maven is 
-      fixed. -->
-    <fileSet>
-      <directory>${parent.basedir}/hbase-server/target/</directory>
-      <outputDirectory>lib</outputDirectory>
-      <includes>
-        <include>${server.test.jar}</include>
-      </includes>
-      <fileMode>0644</fileMode>
-    </fileSet>
-  </fileSets>
+  <componentDescriptors>
+    <componentDescriptor>src/assembly/components.xml</componentDescriptor>
+  </componentDescriptors>
   <moduleSets>
     <moduleSet>
       <!-- Enable access to all projects in the current multimodule build. Eclipse 
         says this is an error, but builds from the command line just fine. -->
       <useAllReactorProjects>true</useAllReactorProjects>
       <!-- This should work with more than 1 source module -->
-      <!-- Now, select which projects to include in this module-set. -->
-      <!-- Just add future modules here assuming the wildcare doesn't match -->
+      <!-- For now, select which projects to include in this module-set. -->
       <includes>
         <include>org.apache.hbase:hbase-common</include>
         <include>org.apache.hbase:hbase-hadoop-compat</include>
-        <include>org.apache.hbase:hbase-hadoop1-compat</include>
         <include>org.apache.hbase:hbase-server</include>
+        <include>org.apache.hbase:hbase-hadoop1-compat</include>
       </includes>
       <!-- Include all the sources in the top directory -->
       <sources>
@@ -143,12 +57,12 @@
           </fileSet>
         </fileSets>
       </sources>
-      <!-- Binaries for the dependencies also go in the hbase-jars directory -->
+      <!-- Binaries for the dependencies also go in the lib directory -->
       <binaries>
         <outputDirectory>lib</outputDirectory>
         <unpack>false</unpack>
         <dependencySets>
-          <dependencySet/>
+          <dependencySet />
         </dependencySets>
       </binaries>
     </moduleSet>
