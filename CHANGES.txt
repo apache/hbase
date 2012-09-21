@@ -1,10 +1,11 @@
 HBase Change Log
 
-Release 0.94.2 - 9/13/2012
+Release 0.94.2 - 9/21/2012
 Sub-task
 
     [HBASE-6257] - Avoid unnecessary flush & compact on Meta in admin.rb.
     [HBASE-6496] - Example ZK based scan policy
+    [HBASE-6792] - Remove interface audience annotations in 0.94/0.92 introduced by HBASE-6516
 
 Bug
 
@@ -22,12 +23,15 @@ Bug
     [HBASE-6378] - the javadoc of setEnabledTable maybe not describe accurately
     [HBASE-6432] - HRegionServer doesn't properly set clusterId in conf
     [HBASE-6437] - Avoid admin.balance during master initialize
+    [HBASE-6438] - RegionAlreadyInTransitionException needs to give more info to avoid assignment inconsistencies
     [HBASE-6447] - Common TestZooKeeper failures on jenkins: testMasterSessionExpired and testCreateSilentIsReallySilent
     [HBASE-6450] - HBase startup should be with MALLOC_MAX_ARENA set
     [HBASE-6460] - hbck "-repairHoles" usage inconsistent with "-fixHdfsOrphans"
     [HBASE-6471] - Performance regression caused by HBASE-4054
     [HBASE-6478] - TestClassLoading.testClassLoadingFromLibDirInJar occasionally fails
+    [HBASE-6488] - HBase wont run on IPv6 on OSes that use zone-indexes
     [HBASE-6503] - HBase Shell Documentation For DROP Is Outdated
+    [HBASE-6504] - Adding GC details prevents HBase from starting in non-distributed mode
     [HBASE-6512] - Incorrect OfflineMetaRepair log class name
     [HBASE-6514] - unknown metrics type: org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram
     [HBASE-6516] - hbck cannot detect any IOException while ".tableinfo" file is missing
@@ -69,6 +73,11 @@ Bug
     [HBASE-6757] - Very inefficient behaviour of scan using FilterList
     [HBASE-6762] - HBASE-6340 broke SecureRPCEngine
     [HBASE-6769] - HRS.multi eats NoSuchColumnFamilyException since HBASE-5021
+    [HBASE-6803] - script hbase should add JAVA_LIBRARY_PATH to LD_LIBRARY_PATH
+    [HBASE-6839] - Operations may be executed without holding rowLock
+    [HBASE-6842] - the jar used in coprocessor is not deleted in local which will exhaust the space of /tmp
+    [HBASE-6844] - upgrade 0.23 version dependency in 0.94
+    [HBASE-6847] - HBASE-6649 broke replication
 
 Improvement
 
