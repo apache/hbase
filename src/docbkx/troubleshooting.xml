@@ -530,6 +530,18 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
             <para>See <xref linkend="perf.hbase.client.caching"/>.
             </para>
        </section>    
+       <section xml:id="trouble.client.lease.exception">
+            <title><classname>LeaseException</classname> when calling <classname>Scanner.next</classname></title>
+            <para>
+In some situations clients that fetch data from a RegionServer get a LeaseException instead of the usual
+<xref linkend="trouble.client.scantimeout" />.  Usually the source of the exception is
+<classname>org.apache.hadoop.hbase.regionserver.Leases.removeLease(Leases.java:230)</classname> (line number may vary).
+It tends to happen in the context of a slow/freezing RegionServer#next call.
+It can be prevented by having <varname>hbase.rpc.timeout</varname> > <varname>hbase.regionserver.lease.period</varname>.
+Harsh J investigated the issue as part of the mailing list thread
+<link xlink:href="http://mail-archives.apache.org/mod_mbox/hbase-user/201209.mbox/%3CCAOcnVr3R-LqtKhFsk8Bhrm-YW2i9O6J6Fhjz2h7q6_sxvwd2yw%40mail.gmail.com%3E">HBase, mail # user - Lease does not exist exceptions</link>
+            </para>
+       </section>
        <section xml:id="trouble.client.scarylogs">
             <title>Shell or client application throws lots of scary exceptions during normal operation</title>
             <para>Since 0.20.0 the default log level for <code>org.apache.hadoop.hbase.*</code>is DEBUG. </para>
