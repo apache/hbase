@@ -691,9 +691,14 @@ mvn compile
 
        <section xml:id="submitting.patches">
           <title>Submitting Patches</title>
+          <para>If you are new to submitting patches to open source or new to submitting patches to Apache,
+          I'd suggest you start by reading the <link xlink:href="http://commons.apache.org/patches.html">On Contributing Patches</link>
+          page from <link xlink:href="http://commons.apache.org/">Apache Commons Project</link>.  Its a nice overview that
+          applies equally to the HBase Project.</para>
           <section xml:id="submitting.patches.create">
             <title>Create Patch</title>
-          <para>Patch files can be easily generated from Eclipse, for example by selecting "Team -&gt; Create Patch".
+          <para>See the aforementioned Apache Commons link for how to make patches against a checked out subversion
+          repository.  Patch files can also be easily generated from Eclipse, for example by selecting "Team -&gt; Create Patch".
           Patches can also be created by git diff and svn diff.
           </para>
           <para>Please submit one patch-file per Jira.  For example, if multiple files are changed make sure the 
