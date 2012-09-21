@@ -101,7 +101,7 @@ public class ExecutorService {
      * @return Conflation of the executor type and the passed servername.
      */
     String getExecutorName(String serverName) {
-      return this.toString() + "-" + serverName;
+      return this.toString() + "-" + serverName.replace("%", "%%");
     }
   }
 
