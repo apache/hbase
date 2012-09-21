@@ -28,7 +28,7 @@
 -->
     <title>Community</title>
     <section xml:id="decisions">
-      <title>Descisions</title>
+      <title>Decisions</title>
       <section xml:id="feature_branches">
         <title>Feature Branches</title>
         <para>Feature Branches are easy to make.  You do not have to be a committer to make one.  Just request the name of your branch be added to JIRA up on the
@@ -40,7 +40,33 @@
       <section xml:id="patchplusonepolicy">
         <title>Patch +1 Policy</title>
         <para>
+The below policy is something we put in place 09/2012.  It is a
+suggested policy rather than a hard requirement.  We want to try it
+first to see if it works before we cast it in stone.
         </para>
+<para>
+HBase is made of
+<link xlink:href="https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel">components</link>.
+Components have one or more <xref linkend="OWNER" />s.  See the 'Description' field on the 
+<link xlink:href="https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel">components</link>
+JIRA page for who the current owners are by component.
+</para>
+<para>
+Patches that fit within the scope of a single HBase component require,
+at least, a +1 by one of the component's owners before commit. If
+owners are absent -- busy or otherwise -- two +1s by non-owners will
+suffice.
+</para>
+<para>
+Patches that span components need at least two +1s before they can be
+committed, preferably +1s by owners of components touched by the
+x-component patch (TODO: This needs tightening up but I think fine for
+first pass).
+</para>
+<para>
+Any -1 on a patch by anyone vetos a patch; it cannot be committed
+until the justification for the -1 is addressed.
+</para>
       </section>         
     </section>    
     <section xml:id="community.roles">
@@ -48,7 +74,37 @@
       <section xml:id="OWNER">
         <title>Component Owner</title>
         <para>
+Component owners are listed in the description field on this JIRA HBase
+<link xlink:href="https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel">components</link>
+page.  The owners are listed in the 'Description' field rather than in the 'Component
+Lead' field because the latter only allows us list one individual
+whereas it is encouraged that components have multiple owners.
         </para>
+<para>
+Owners are volunteers who are (usually, but not necessarily) expert in
+their component domain and may have an agenda on how they think their
+HBase component should evolve.
+</para>
+<para>
+Duties include:
+<orderedlist>
+<listitem>
+<para>
+Owners will try and review patches that land within their component's scope.
+</para>
+</listitem>
+<listitem>
+<para>
+If applicable, if an owner has an agenda, they will publish their
+goals or the design toward which they are driving their component
+</para>
+</listitem>
+</orderedlist>
+</para>
+<para>
+If you would like to be volunteer as a component owner, just write the
+dev list and we'll sign you up. Owners do not need to be committers.
+</para>
       </section>         
     </section>    
     </chapter>
