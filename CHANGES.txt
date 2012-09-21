@@ -79,7 +79,6 @@ Bug
     [HBASE-6842] - the jar used in coprocessor is not deleted in local which will exhaust the space of /tmp
     [HBASE-6844] - upgrade 0.23 version dependency in 0.94
     [HBASE-6847] - HBASE-6649 broke replication
-    [HBASE-6858] - Fix the incorrect BADVERSION checking in the recoverable zookeeper
 
 Improvement
 
