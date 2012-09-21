@@ -21,7 +21,7 @@
 
 # Instructions:
 # 1. Run Thrift to generate the php module HBase
-#    thrift -php ../../../src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
+#    thrift --gen php ../../../src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
 # 2. Modify the import string below to point to {$THRIFT_HOME}/lib/php/src.
 # 3. Execute {php DemoClient.php}.  Note that you must use php5 or higher.
 # 4. See {$THRIFT_HOME}/lib/php/README for additional help.
@@ -112,7 +112,7 @@ asort( $descriptors );
 foreach ( $descriptors as $col ) {
   echo( "  column: {$col->name}, maxVer: {$col->maxVersions}\n" );
 }
-
+$dummy_attributes = array();
 #
 # Test UTF-8 handling
 #
@@ -126,7 +126,7 @@ $mutations = array(
     'value' => $invalid
   ) ),
 );
-$client->mutateRow( $t, "foo", $mutations );
+$client->mutateRow( $t, "foo", $mutations, $dummy_attributes );
 
 # try empty strings
 $mutations = array(
@@ -135,7 +135,7 @@ $mutations = array(
     'value' => ""
   ) ),
 );
-$client->mutateRow( $t, "", $mutations );
+$client->mutateRow( $t, "", $mutations, $dummy_attributes );
 
 # this row name is valid utf8
 $mutations = array(
@@ -144,7 +144,7 @@ $mutations = array(
     'value' => $valid
   ) ),
 );
-$client->mutateRow( $t, $valid, $mutations );
+$client->mutateRow( $t, $valid, $mutations, $dummy_attributes );
 
 # non-utf8 is not allowed in row names
 try {
@@ -154,7 +154,7 @@ try {
       'value' => $invalid
     ) ),
   );
-  $client->mutateRow( $t, $invalid, $mutations );
+  $client->mutateRow( $t, $invalid, $mutations, $dummy_attributes );
   throw new Exception( "shouldn't get here!" );
 } catch ( IOError $e ) {
   echo( "expected error: {$e->message}\n" );
@@ -162,7 +162,7 @@ try {
 
 # Run a scanner on the rows we just created
 echo( "Starting scanner...\n" );
-$scanner = $client->scannerOpen( $t, "", array( "entry:" ) );
+$scanner = $client->scannerOpen( $t, "", array( "entry:" ), $dummy_attributes );
 try {
   while (true) printRow( $client->scannerGet( $scanner ) );
 } catch ( NotFound $nf ) {
@@ -184,9 +184,9 @@ for ($e=100; $e>=0; $e--) {
       'value' => "DELETE_ME"
     ) ),
   );
-  $client->mutateRow( $t, $row, $mutations);
-  printRow( $client->getRow( $t, $row ));
-  $client->deleteAllRow( $t, $row );
+  $client->mutateRow( $t, $row, $mutations, $dummy_attributes );
+  printRow( $client->getRow( $t, $row, $dummy_attributes ));
+  $client->deleteAllRow( $t, $row, $dummy_attributes );
 
   $mutations = array(
     new Mutation( array(
@@ -198,8 +198,8 @@ for ($e=100; $e>=0; $e--) {
       'value' => "FOO"
     ) ),
   );
-  $client->mutateRow( $t, $row, $mutations );
-  printRow( $client->getRow( $t, $row ));
+  $client->mutateRow( $t, $row, $mutations, $dummy_attributes );
+  printRow( $client->getRow( $t, $row, $dummy_attributes ));
 
   $mutations = array(
     new Mutation( array(
@@ -211,8 +211,8 @@ for ($e=100; $e>=0; $e--) {
       'value' => '-1'
     ) ),
   );
-  $client->mutateRow( $t, $row, $mutations );
-  printRow( $client->getRow( $t, $row ) );
+  $client->mutateRow( $t, $row, $mutations, $dummy_attributes );
+  printRow( $client->getRow( $t, $row, $dummy_attributes ) );
 
   $mutations = array(
     new Mutation( array(
@@ -224,8 +224,8 @@ for ($e=100; $e>=0; $e--) {
       'value' => $e * $e
     ) ),
   );
-  $client->mutateRow( $t, $row, $mutations );
-  printRow( $client->getRow( $t, $row ));
+  $client->mutateRow( $t, $row, $mutations, $dummy_attributes );
+  printRow( $client->getRow( $t, $row, $dummy_attributes ));
   
   $mutations = array(
     new Mutation( array(
@@ -237,15 +237,15 @@ for ($e=100; $e>=0; $e--) {
       'isDelete' => 1
     ) ),
   );
-  $client->mutateRowTs( $t, $row, $mutations, 1 ); # shouldn't override latest
-  printRow( $client->getRow( $t, $row ) );
+  $client->mutateRowTs( $t, $row, $mutations, 1, $dummy_attributes ); # shouldn't override latest
+  printRow( $client->getRow( $t, $row, $dummy_attributes ) );
 
-  $versions = $client->getVer( $t, $row, "entry:num", 10 );
+  $versions = $client->getVer( $t, $row, "entry:num", 10, $dummy_attributes );
   echo( "row: {$row}, values: \n" );
   foreach ( $versions as $v ) echo( "  {$v->value};\n" );
   
   try {
-    $client->get( $t, $row, "entry:foo");
+    $client->get( $t, $row, "entry:foo", $dummy_attributes );
     throw new Exception ( "shouldn't get here! " );
   } catch ( NotFound $nf ) {
     # blank
@@ -260,7 +260,7 @@ foreach ( $client->getColumnDescriptors($t) as $col=>$desc ) {
 }
 
 echo( "Starting scanner...\n" );
-$scanner = $client->scannerOpenWithStop( $t, "00020", "00040", $columns );
+$scanner = $client->scannerOpenWithStop( $t, "00020", "00040", $columns, $dummy_attributes );
 try {
   while (true) printRow( $client->scannerGet( $scanner ) );
 } catch ( NotFound $nf ) {

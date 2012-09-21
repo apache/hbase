@@ -88,6 +88,8 @@ client.getColumnDescriptors(t).sort.each do |key, col|
   puts "  column: #{col.name}, maxVer: #{col.maxVersions}"
 end
 
+dummy_attributes = {}
+
 #
 # Test UTF-8 handling
 #
@@ -100,7 +102,7 @@ m = Apache::Hadoop::Hbase::Thrift::Mutation.new
 m.column = "entry:foo"
 m.value = invalid
 mutations << m
-client.mutateRow(t, "foo", mutations)
+client.mutateRow(t, "foo", mutations, dummy_attributes)
 
 # try empty strings
 mutations = []
@@ -108,7 +110,7 @@ m = Apache::Hadoop::Hbase::Thrift::Mutation.new
 m.column = "entry:"
 m.value = ""
 mutations << m
-client.mutateRow(t, "", mutations)
+client.mutateRow(t, "", mutations, dummy_attributes)
 
 # this row name is valid utf8
 mutations = []
@@ -116,7 +118,7 @@ m = Apache::Hadoop::Hbase::Thrift::Mutation.new
 m.column = "entry:foo"
 m.value = valid
 mutations << m
-client.mutateRow(t, valid, mutations)
+client.mutateRow(t, valid, mutations, dummy_attributes)
 
 # non-utf8 is not allowed in row names
 begin
@@ -125,7 +127,7 @@ begin
   m.column = "entry:foo"
   m.value = invalid
   mutations << m
-  client.mutateRow(t, invalid, mutations)
+  client.mutateRow(t, invalid, mutations, dummy_attributes)
   raise "shouldn't get here!"
 rescue Apache::Hadoop::Hbase::Thrift::IOError => e
   puts "expected error: #{e.message}"
@@ -133,7 +135,7 @@ end
 
 # Run a scanner on the rows we just created
 puts "Starting scanner..."
-scanner = client.scannerOpen(t, "", ["entry:"])
+scanner = client.scannerOpen(t, "", ["entry:"], dummy_attributes)
 begin
   while (true) 
     printRow(client.scannerGet(scanner))
@@ -155,9 +157,9 @@ end
   m.column = "unused:"
   m.value = "DELETE_ME"
   mutations << m
-  client.mutateRow(t, row, mutations)
-  printRow(client.getRow(t, row))
-  client.deleteAllRow(t, row)
+  client.mutateRow(t, row, mutations, dummy_attributes)
+  printRow(client.getRow(t, row, dummy_attributes))
+  client.deleteAllRow(t, row, dummy_attributes)
 
   mutations = []
   m = Apache::Hadoop::Hbase::Thrift::Mutation.new
@@ -168,8 +170,8 @@ end
   m.column = "entry:foo"
   m.value = "FOO"
   mutations << m
-  client.mutateRow(t, row, mutations)
-  printRow(client.getRow(t, row))
+  client.mutateRow(t, row, mutations, dummy_attributes)
+  printRow(client.getRow(t, row, dummy_attributes))
 
   mutations = []
   m = Apache::Hadoop::Hbase::Thrift::Mutation.new
@@ -180,8 +182,8 @@ end
   m.column = "entry:num"
   m.value = "-1"
   mutations << m
-  client.mutateRow(t, row, mutations)
-  printRow(client.getRow(t, row));
+  client.mutateRow(t, row, mutations, dummy_attributes)
+  printRow(client.getRow(t, row, dummy_attributes));
 
   mutations = []
   m = Apache::Hadoop::Hbase::Thrift::Mutation.new
@@ -192,8 +194,8 @@ end
   m.column = "entry:sqr"
   m.value = (e*e).to_s
   mutations << m
-  client.mutateRow(t, row, mutations)
-  printRow(client.getRow(t, row))
+  client.mutateRow(t, row, mutations, dummy_attributes, dummy_attributes)
+  printRow(client.getRow(t, row, dummy_attributes))
   
   mutations = []
   m = Apache::Hadoop::Hbase::Thrift::Mutation.new
@@ -204,10 +206,10 @@ end
   m.column = "entry:sqr"
   m.isDelete = 1
   mutations << m
-  client.mutateRowTs(t, row, mutations, 1) # shouldn't override latest
-  printRow(client.getRow(t, row));
+  client.mutateRowTs(t, row, mutations, 1, dummy_attributes) # shouldn't override latest
+  printRow(client.getRow(t, row, dummy_attributes, dummy_attributes));
 
-  versions = client.getVer(t, row, "entry:num", 10)
+  versions = client.getVer(t, row, "entry:num", 10, dummy_attributes)
   print "row: #{row}, values: "
   versions.each do |v|
     print "#{v.value}; "
@@ -215,7 +217,7 @@ end
   puts ""    
   
   begin
-    client.get(t, row, "entry:foo")
+    client.get(t, row, "entry:foo", dummy_attributes)
     raise "shouldn't get here!"
   rescue Apache::Hadoop::Hbase::Thrift::NotFound => nf
     # blank
@@ -231,10 +233,10 @@ client.getColumnDescriptors(t).each do |col, desc|
 end
 
 puts "Starting scanner..."
-scanner = client.scannerOpenWithStop(t, "00020", "00040", columns)
+scanner = client.scannerOpenWithStop(t, "00020", "00040", columns, dummy_attributes)
 begin
   while (true) 
-    printRow(client.scannerGet(scanner))
+    printRow(client.scannerGet(scanner, dummy_attributes))
   end
 rescue Apache::Hadoop::Hbase::Thrift::NotFound => nf
   client.scannerClose(scanner)

@@ -123,6 +123,8 @@ foreach my $col (sort keys %{$descriptors})
 	printf ("  column: {%s}, maxVer: {%s}\n", $descriptors->{$col}->{name}, $descriptors->{$col}->{maxVersions} );
 }
 
+my %dummy_attributes = ();
+
 #
 # Test UTF-8 handling
 #
@@ -132,12 +134,12 @@ my $valid = "foo-\xE7\x94\x9F\xE3\x83\x93\xE3\x83\xBC\xE3\x83\xAB";
 # non-utf8 is fine for data
 my $key = "foo";
 my $mutations = [ Hbase::Mutation->new ( { column => "entry:$key", value => $invalid } ) ];
-$client->mutateRow ( $demo_table, $key, $mutations );
+$client->mutateRow ( $demo_table, $key, $mutations, %dummy_attributes );
 
 # try emptry strings
 $key = "";
 $mutations = [ Hbase::Mutation->new ( { column => "entry:$key", value => "" } ) ];
-$client->mutateRow ( $demo_table, $key, $mutations );
+$client->mutateRow ( $demo_table, $key, $mutations, %dummy_attributes );
 
 # this row name is valid utf8
 $key = "foo";
@@ -146,13 +148,13 @@ my $mutation = Hbase::Mutation->new ();
 $mutation->{column} = "entry:$key";
 $mutation->{value} = $valid;
 $mutations = [ $mutation ];
-$client->mutateRow ( $demo_table, $key, $mutations );
+$client->mutateRow ( $demo_table, $key, $mutations, %dummy_attributes );
 
 # non-utf8 is not allowed in row names
 eval {
 	$mutations = [ Hbase::Mutation->new ( { column => "entry:$key", value => $invalid } ) ];
 	# this can throw a TApplicationException (HASH) error
-	$client->mutateRow ($demo_table, $key, $mutations);
+	$client->mutateRow ($demo_table, $key, $mutations, %dummy_attributes);
 	die ("shouldn't get here!");
 };
 if ($@)
@@ -168,7 +170,7 @@ $key = "";
 # scannerOpen expects ( table, key, <column descriptors> )
 # if key is empty, it searches for all entries in the table
 # if column descriptors is empty, it searches for all column descriptors within the table
-my $scanner = $client->scannerOpen ( $demo_table, $key, [ "entry:" ] );
+my $scanner = $client->scannerOpen ( $demo_table, $key, [ "entry:" ], %dummy_attributes );
 eval {
 
 	# scannerGet returns an empty arrayref (instead of an undef) to indicate no results
@@ -197,7 +199,7 @@ for (my $e = 100; $e > 0; $e--)
 	my $row = sprintf ("%05d", $e);
 
 	$mutations = [ Hbase::Mutation->new ( { column => "unused:", value => "DELETE_ME" } ) ];
-	$client->mutateRow ( $demo_table, $row, $mutations );
+	$client->mutateRow ( $demo_table, $row, $mutations, %dummy_attributes );
 	printRow ( $client->getRow ( $demo_table, $row ) );
 	$client->deleteAllRow ( $demo_table, $row );
 
@@ -205,22 +207,22 @@ for (my $e = 100; $e > 0; $e--)
 		Hbase::Mutation->new ( { column => "entry:num", value => "0" } ),
 		Hbase::Mutation->new ( { column => "entry:foo", value => "FOO" } ),
 		];	
-	$client->mutateRow ( $demo_table, $row, $mutations );
-	printRow ( $client->getRow ( $demo_table, $row ) );
+	$client->mutateRow ( $demo_table, $row, $mutations, %dummy_attributes );
+	printRow ( $client->getRow ( $demo_table, $row, %dummy_attributes ) );
 
 	$mutations = [
 		Hbase::Mutation->new ( { column => "entry:foo", isDelete => 1 } ),
 		Hbase::Mutation->new ( { column => "entry:num", value => -1 } ),
 		];	
-	$client->mutateRow ( $demo_table, $row, $mutations );
-	printRow ( $client->getRow ( $demo_table, $row ) );
+	$client->mutateRow ( $demo_table, $row, $mutations, %dummy_attributes );
+	printRow ( $client->getRow ( $demo_table, $row, %dummy_attributes ) );
 
 	$mutations = [
 		Hbase::Mutation->new ( { column => "entry:num", value => $e } ),
 		Hbase::Mutation->new ( { column => "entry:sqr", value => $e * $e } ),
 		];
-	$client->mutateRow ( $demo_table, $row, $mutations );
-	printRow ( $client->getRow ( $demo_table, $row ) );
+	$client->mutateRow ( $demo_table, $row, $mutations, %dummy_attributes );
+	printRow ( $client->getRow ( $demo_table, $row, %dummy_attributes ) );
 
 	$mutations = [ 
 		Hbase::Mutation->new ( { column => "entry:num", value => -999 } ),
@@ -228,10 +230,10 @@ for (my $e = 100; $e > 0; $e--)
 		];
 
 	# mutateRowTs => modify the row entry at the specified timestamp (ts)
-	$client->mutateRowTs ( $demo_table, $row, $mutations, 1 ); # shouldn't override latest
-	printRow ( $client->getRow ( $demo_table, $row ) );
+	$client->mutateRowTs ( $demo_table, $row, $mutations, 1, %dummy_attributes ); # shouldn't override latest
+	printRow ( $client->getRow ( $demo_table, $row, %dummy_attributes ) );
 
-	my $versions = $client->getVer ( $demo_table, $row, "entry:num", 10 );
+	my $versions = $client->getVer ( $demo_table, $row, "entry:num", 10, %dummy_attributes );
 	printf ( "row: {%s}, values: \n", $row );
 	foreach my $v ( @{$versions} )
 	{
@@ -240,7 +242,7 @@ for (my $e = 100; $e > 0; $e--)
 
 	eval {
 
-		my $result = $client->get ( $demo_table, $row, "entry:foo" );
+		my $result = $client->get ( $demo_table, $row, "entry:foo", %dummy_attributes );
 
 		# Unfortunately, the API returns an empty arrayref instead of undef
 		# to signify a "not found", which makes it slightly inconvenient.
@@ -267,7 +269,7 @@ foreach my $col ( keys %{$column_descriptor} )
 }
 
 print "Starting scanner...\n";
-$scanner = $client->scannerOpenWithStop ( $demo_table, "00020", "00040", $columns );
+$scanner = $client->scannerOpenWithStop ( $demo_table, "00020", "00040", $columns, %dummy_attributes );
 eval {
 
 	# scannerGet returns an empty arrayref (instead of an undef) to indicate no results

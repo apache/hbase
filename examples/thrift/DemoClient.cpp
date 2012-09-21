@@ -88,12 +88,19 @@ main(int argc, char** argv)
     std::cerr << "Invalid arguments!\n" << "Usage: DemoClient host port" << std::endl;
     return -1;
   }
+  bool isFramed = false;
+  boost::shared_ptr<TTransport> socket(new TSocket(argv[1], boost::lexical_cast<int>(argv[2])));
+  boost::shared_ptr<TTransport> transport;
 
-  boost::shared_ptr<TTransport> socket(new TSocket("localhost", boost::lexical_cast<int>(argv[2])));
-  boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+  if (isFramed) {
+    transport.reset(new TFramedTransport(socket));
+  } else {
+    transport.reset(new TBufferedTransport(socket));
+  }
   boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
-  HbaseClient client(protocol);
 
+  const std::map<Text, Text>  dummyAttributes; // see HBASE-6806 HBASE-4658
+  HbaseClient client(protocol);
   try {
     transport->open();
 
@@ -152,35 +159,35 @@ main(int argc, char** argv)
     mutations.push_back(Mutation());
     mutations.back().column = "entry:foo";
     mutations.back().value = invalid;
-    client.mutateRow(t, "foo", mutations);
+    client.mutateRow(t, "foo", mutations, dummyAttributes);
 
     // try empty strings
     mutations.clear();
     mutations.push_back(Mutation());
     mutations.back().column = "entry:";
     mutations.back().value = "";
-    client.mutateRow(t, "", mutations);
+    client.mutateRow(t, "", mutations, dummyAttributes);
 
     // this row name is valid utf8
     mutations.clear();
     mutations.push_back(Mutation());
     mutations.back().column = "entry:foo";
     mutations.back().value = valid;
-    client.mutateRow(t, valid, mutations);
+    client.mutateRow(t, valid, mutations, dummyAttributes);
 
     // non-utf8 is now allowed in row names because HBase stores values as binary
     mutations.clear();
     mutations.push_back(Mutation());
     mutations.back().column = "entry:foo";
     mutations.back().value = invalid;
-    client.mutateRow(t, invalid, mutations);
+    client.mutateRow(t, invalid, mutations, dummyAttributes);
 
     // Run a scanner on the rows we just created
     StrVec columnNames;
     columnNames.push_back("entry:");
 
     std::cout << "Starting scanner..." << std::endl;
-    int scanner = client.scannerOpen(t, "", columnNames);
+    int scanner = client.scannerOpen(t, "", columnNames, dummyAttributes);
     try {
       while (true) {
         std::vector<TRowResult> value;
@@ -210,10 +217,10 @@ main(int argc, char** argv)
       mutations.push_back(Mutation());
       mutations.back().column = "unused:";
       mutations.back().value = "DELETE_ME";
-      client.mutateRow(t, row, mutations);
-      client.getRow(rowResult, t, row);
+      client.mutateRow(t, row, mutations, dummyAttributes);
+      client.getRow(rowResult, t, row, dummyAttributes);
       printRow(rowResult);
-      client.deleteAllRow(t, row);
+      client.deleteAllRow(t, row, dummyAttributes);
 
       mutations.clear();
       mutations.push_back(Mutation());
@@ -222,8 +229,8 @@ main(int argc, char** argv)
       mutations.push_back(Mutation());
       mutations.back().column = "entry:foo";
       mutations.back().value = "FOO";
-      client.mutateRow(t, row, mutations);
-      client.getRow(rowResult, t, row);
+      client.mutateRow(t, row, mutations, dummyAttributes);
+      client.getRow(rowResult, t, row, dummyAttributes);
       printRow(rowResult);
 
       // sleep to force later timestamp 
@@ -236,8 +243,8 @@ main(int argc, char** argv)
       mutations.push_back(Mutation());
       mutations.back().column = "entry:num";
       mutations.back().value = "-1";
-      client.mutateRow(t, row, mutations);
-      client.getRow(rowResult, t, row);
+      client.mutateRow(t, row, mutations, dummyAttributes);
+      client.getRow(rowResult, t, row, dummyAttributes);
       printRow(rowResult);
 
       mutations.clear();
@@ -247,8 +254,8 @@ main(int argc, char** argv)
       mutations.push_back(Mutation());
       mutations.back().column = "entry:sqr";
       mutations.back().value = boost::lexical_cast<std::string>(i*i);
-      client.mutateRow(t, row, mutations);
-      client.getRow(rowResult, t, row);
+      client.mutateRow(t, row, mutations, dummyAttributes);
+      client.getRow(rowResult, t, row, dummyAttributes);
       printRow(rowResult);
 
       mutations.clear();
@@ -258,19 +265,19 @@ main(int argc, char** argv)
       mutations.push_back(Mutation());
       mutations.back().column = "entry:sqr";
       mutations.back().isDelete = true;
-      client.mutateRowTs(t, row, mutations, 1); // shouldn't override latest
-      client.getRow(rowResult, t, row);
+      client.mutateRowTs(t, row, mutations, 1, dummyAttributes); // shouldn't override latest
+      client.getRow(rowResult, t, row, dummyAttributes);
       printRow(rowResult);
 
       CellVec versions;
-      client.getVer(versions, t, row, "entry:num", 10);
+      client.getVer(versions, t, row, "entry:num", 10, dummyAttributes);
       printVersions(row, versions);
       assert(versions.size());
       std::cout << std::endl;
 
       try {
         std::vector<TCell> value;
-        client.get(value, t, row, "entry:foo");
+        client.get(value, t, row, "entry:foo", dummyAttributes);
         if (value.size()) {
           std::cerr << "FATAL: shouldn't get here!" << std::endl;
           return -1;
@@ -292,7 +299,7 @@ main(int argc, char** argv)
     std::cout << std::endl;
 
     std::cout << "Starting scanner..." << std::endl;
-    scanner = client.scannerOpenWithStop(t, "00020", "00040", columnNames);
+    scanner = client.scannerOpenWithStop(t, "00020", "00040", columnNames, dummyAttributes);
     try {
       while (true) {
         std::vector<TRowResult> value;

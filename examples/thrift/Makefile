@@ -29,7 +29,7 @@ GEN_SRC = ./gen-cpp/Hbase.cpp \
 default: DemoClient
 
 DemoClient: DemoClient.cpp
-	g++ -o DemoClient -I${THRIFT_DIR}  -I./gen-cpp -L${LIB_DIR} -lthrift DemoClient.cpp ${GEN_SRC}
+	g++ -o DemoClient -I${THRIFT_DIR}  -I./gen-cpp -L${LIB_DIR} -Wl,-rpath,${LIB_DIR} -lthrift DemoClient.cpp ${GEN_SRC}
 
 clean:
 	rm -rf DemoClient

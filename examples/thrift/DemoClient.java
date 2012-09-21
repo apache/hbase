@@ -163,6 +163,9 @@ public class DemoClient {
             System.out.println("  column: " + utf8(col2.name.array()) + ", maxVer: " + Integer.toString(col2.maxVersions));
         }
 
+        Map<ByteBuffer, ByteBuffer> dummyAttributes = null;
+        boolean writeToWal = false;
+
         //
         // Test UTF-8 handling
         //
@@ -172,25 +175,25 @@ public class DemoClient {
         ArrayList<Mutation> mutations;
         // non-utf8 is fine for data
         mutations = new ArrayList<Mutation>();
-        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(invalid)));
-        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("foo")), mutations);
+        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(invalid), writeToWal));
+        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("foo")), mutations, dummyAttributes);
 
         // try empty strings
         mutations = new ArrayList<Mutation>();
-        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:")), ByteBuffer.wrap(bytes(""))));
-        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("")), mutations);
+        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:")), ByteBuffer.wrap(bytes("")), writeToWal));
+        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("")), mutations, dummyAttributes);
 
         // this row name is valid utf8
         mutations = new ArrayList<Mutation>();
-        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(valid)));
-        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(valid), mutations);
+        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(valid), writeToWal));
+        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(valid), mutations, dummyAttributes);
 
         // non-utf8 is now allowed in row names because HBase stores values as binary
         ByteBuffer bf = ByteBuffer.wrap(invalid);
 
         mutations = new ArrayList<Mutation>();
-        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(invalid)));
-        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(invalid), mutations);
+        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(invalid), writeToWal));
+        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(invalid), mutations, dummyAttributes);
 
 
         // Run a scanner on the rows we just created
@@ -198,7 +201,7 @@ public class DemoClient {
         columnNames.add(ByteBuffer.wrap(bytes("entry:")));
 
         System.out.println("Starting scanner...");
-        int scanner = client.scannerOpen(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("")), columnNames);
+        int scanner = client.scannerOpen(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("")), columnNames, dummyAttributes);
         
         while (true) {
             List<TRowResult> entry = client.scannerGet(scanner);
@@ -219,16 +222,16 @@ public class DemoClient {
             byte[] row = bytes(nf.format(i));
 
             mutations = new ArrayList<Mutation>();
-            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("unused:")), ByteBuffer.wrap(bytes("DELETE_ME"))));
-            client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations);
-            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row)));
-            client.deleteAllRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row));
+            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("unused:")), ByteBuffer.wrap(bytes("DELETE_ME")), writeToWal));
+            client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
+            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
+            client.deleteAllRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes);
 
             mutations = new ArrayList<Mutation>();
-            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:num")), ByteBuffer.wrap(bytes("0"))));
-            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(bytes("FOO"))));
-            client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations);
-            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row)));
+            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:num")), ByteBuffer.wrap(bytes("0")), writeToWal));
+            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(bytes("FOO")), writeToWal));
+            client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
+            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
 
             Mutation m = null;
             mutations = new ArrayList<Mutation>();
@@ -240,14 +243,14 @@ public class DemoClient {
             m.column = ByteBuffer.wrap(bytes("entry:num"));
             m.value = ByteBuffer.wrap(bytes("-1"));
             mutations.add(m);
-            client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations);
-            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row)));
+            client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
+            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
 
             mutations = new ArrayList<Mutation>();
-            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:num")), ByteBuffer.wrap(bytes(Integer.toString(i)))));
-            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:sqr")), ByteBuffer.wrap(bytes(Integer.toString(i * i)))));
-            client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations);
-            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row)));
+            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:num")), ByteBuffer.wrap(bytes(Integer.toString(i))), writeToWal));
+            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:sqr")), ByteBuffer.wrap(bytes(Integer.toString(i * i))), writeToWal));
+            client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, dummyAttributes);
+            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
 
             // sleep to force later timestamp
             try {
@@ -264,10 +267,10 @@ public class DemoClient {
             m = new Mutation();
             m.column = ByteBuffer.wrap(bytes("entry:sqr"));
             m.isDelete = true;
-            client.mutateRowTs(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, 1); // shouldn't override latest
-            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row)));
+            client.mutateRowTs(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, 1, dummyAttributes); // shouldn't override latest
+            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), dummyAttributes));
 
-            List<TCell> versions = client.getVer(ByteBuffer.wrap(t), ByteBuffer.wrap(row), ByteBuffer.wrap(bytes("entry:num")), 10);
+            List<TCell> versions = client.getVer(ByteBuffer.wrap(t), ByteBuffer.wrap(row), ByteBuffer.wrap(bytes("entry:num")), 10, dummyAttributes);
             printVersions(ByteBuffer.wrap(row), versions);
             if (versions.isEmpty()) {
                 System.out.println("FATAL: wrong # of versions");
@@ -275,7 +278,7 @@ public class DemoClient {
             }
 
             
-            List<TCell> result = client.get(ByteBuffer.wrap(t), ByteBuffer.wrap(row), ByteBuffer.wrap(bytes("entry:foo")));
+            List<TCell> result = client.get(ByteBuffer.wrap(t), ByteBuffer.wrap(row), ByteBuffer.wrap(bytes("entry:foo")), dummyAttributes);
             if (result.isEmpty() == false) {
                 System.out.println("FATAL: shouldn't get here");
                 System.exit(-1);
@@ -295,8 +298,7 @@ public class DemoClient {
         }
 
         System.out.println("Starting scanner...");
-        scanner = client.scannerOpenWithStop(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("00020")), ByteBuffer.wrap(bytes("00040")),
-                columnNames);
+        scanner = client.scannerOpenWithStop(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("00020")), ByteBuffer.wrap(bytes("00040")), columnNames, dummyAttributes);
 
         while (true) {
             List<TRowResult> entry = client.scannerGet(scanner);
