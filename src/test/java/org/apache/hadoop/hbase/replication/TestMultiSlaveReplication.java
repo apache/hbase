@@ -173,7 +173,10 @@ public class TestMultiSlaveReplication {
     deleteAndWait(row2, htable1, htable2, htable3);
     // Even if the log was rolled in the middle of the replication
     // "row" is still replication.
-    checkRow(row, 1, htable2, htable3);
+    checkRow(row, 1, htable2);
+    // Replication thread of cluster 2 may be sleeping, and since row2 is not there in it, 
+    // we should wait before checking.
+    checkWithWait(row, 1, htable3);
 
     // cleanup the rest
     deleteAndWait(row, htable1, htable2, htable3);
@@ -183,7 +186,29 @@ public class TestMultiSlaveReplication {
     utility2.shutdownMiniCluster();
     utility1.shutdownMiniCluster();
   }
-
+ 
+  private void checkWithWait(byte[] row, int count, HTable table) throws Exception {
+    Get get = new Get(row);
+    for (int i = 0; i < NB_RETRIES; i++) {
+      if (i == NB_RETRIES - 1) {
+        fail("Waited too much time while getting the row.");
+      }
+      boolean rowReplicated = false;
+      Result res = table.get(get);
+      if (res.size() >= 1) {
+        LOG.info("Row is replicated");
+        rowReplicated = true;
+        assertEquals(count, res.size());
+        break;
+      }
+      if (rowReplicated) {
+        break;
+      } else {
+        Thread.sleep(SLEEP_TIME);
+      }
+    }
+  }
+  
   private void checkRow(byte[] row, int count, HTable... tables) throws IOException {
     Get get = new Get(row);
     for (HTable table : tables) {
