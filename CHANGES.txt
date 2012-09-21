@@ -79,6 +79,7 @@ Bug
     [HBASE-6842] - the jar used in coprocessor is not deleted in local which will exhaust the space of /tmp
     [HBASE-6844] - upgrade 0.23 version dependency in 0.94
     [HBASE-6847] - HBASE-6649 broke replication
+    [HBASE-6858] - Fix the incorrect BADVERSION checking in the recoverable zookeeper
 
 Improvement
 
@@ -96,6 +97,7 @@ Improvement
     [HBASE-6586] - Quarantine Corrupted HFiles with hbck
     [HBASE-6643] - Accept encoded region name in compacting/spliting region from shell
     [HBASE-6644] - HBaseAdmin.createTable should wait more till table is enabled.
+    [HBASE-6860] - [replication] HBASE-6550 is too aggressive, DDOSes .META.
 
 New Feature
 
