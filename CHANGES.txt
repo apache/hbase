@@ -69,6 +69,7 @@ Bug
     [HBASE-6710] - 0.92/0.94 compatibility issues due to HBASE-5206
     [HBASE-6711] - Avoid local results copy in StoreScanner
     [HBASE-6713] - Stopping META/ROOT RS may take 50mins when some region is splitting
+    [HBASE-6714] - TestMultiSlaveReplication#testMultiSlaveReplication may fail
     [HBASE-6734] - Code duplication in LoadIncrementalHFiles
     [HBASE-6757] - Very inefficient behaviour of scan using FilterList
     [HBASE-6762] - HBASE-6340 broke SecureRPCEngine
