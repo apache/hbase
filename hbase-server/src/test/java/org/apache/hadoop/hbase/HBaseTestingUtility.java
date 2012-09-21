@@ -481,6 +481,42 @@ public class HBaseTestingUtility {
     createDirAndSetProperty("mapred_local", "mapred.local.dir");
     createDirAndSetProperty("mapred_system", "mapred.system.dir");
     createDirAndSetProperty("mapred_temp", "mapred.temp.dir");
+    enableShortCircuit();
+
+  }
+
+
+  /**
+   *  Get the HBase setting for dfs.client.read.shortcircuit from the conf or a system property.
+   *  This allows to specify this parameter on the command line.
+   *   If not set, default is true.
+   */
+  public boolean isReadShortCircuitOn(){
+    final String propName = "hbase.tests.use.shortcircuit.reads";
+    String readOnProp = System.getProperty(propName);
+    if (readOnProp != null){
+      return  Boolean.parseBoolean(readOnProp);
+    } else {
+      return conf.getBoolean(propName, true);
+    }
+  }
+
+  /** Enable the short circuit read, unless configured differently.
+   * Set both HBase and HDFS settings, including skipping the hdfs checksum checks.
+   */
+  private void enableShortCircuit() {
+    if (isReadShortCircuitOn()) {
+      String curUser = System.getProperty("user.name");
+      LOG.info("read short circuit is ON for user " + curUser);
+      // read short circuit, for hdfs
+      conf.set("dfs.block.local-path-access.user", curUser);
+      // read short circuit, for hbase
+      conf.setBoolean("dfs.client.read.shortcircuit", true);
+      // Skip checking checksum, for the hdfs client and the datanode
+      conf.setBoolean("dfs.client.read.shortcircuit.skip.checksum", true);
+    } else {
+      LOG.info("read short circuit is OFF");
+    }
   }
 
   private String createDirAndSetProperty(final String relPath, String property) {
