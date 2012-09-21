@@ -98,9 +98,9 @@ public class ReplicationSink {
    */
   private void decorateConf() {
     this.conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-        this.conf.getInt("replication.sink.client.retries.number", 1));
+        this.conf.getInt("replication.sink.client.retries.number", 4));
     this.conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        this.conf.getInt("replication.sink.client.ops.timeout", 20));
+        this.conf.getInt("replication.sink.client.ops.timeout", 10000));
   }
 
   /**
