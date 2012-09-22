@@ -1420,7 +1420,9 @@ public class HRegion implements HeapSize {
     // end up in both snapshot and memstore (makes it difficult to do atomic
     // rows then)
     status.setStatus("Obtaining lock to block concurrent updates");
+    long t0, t1;
     this.updatesLock.writeLock().lock();
+    t0 = EnvironmentEdgeManager.currentTimeMillis();
     status.setStatus("Preparing to flush by snapshotting stores");
     final long currentMemStoreSize = this.memstoreSize.get();
     //copy the array of per column family memstore values
@@ -1440,6 +1442,9 @@ public class HRegion implements HeapSize {
       }
     } finally {
       this.updatesLock.writeLock().unlock();
+      t1 = EnvironmentEdgeManager.currentTimeMillis();
+      LOG.debug("Finished snapshotting. Held region-wide updates lock for "
+        + (t1-t0) + " ms.");
     }
 
     status.setStatus("Flushing stores");
