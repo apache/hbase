@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
@@ -356,5 +357,24 @@ public class TestTablePermissions {
                     Permission.Action.ADMIN, Permission.Action.READ, Permission.Action.CREATE
                  },
                  user3Perms.get(0).getActions());
+  }
+
+  @Test
+  public void testAuthManager() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    /* test a race condition causing TableAuthManager to sometimes fail global permissions checks
+     * when the global cache is being updated
+     */
+    TableAuthManager authManager = TableAuthManager.get(ZKW, conf);
+    // currently running user is the system user and should have global admin perms
+    User currentUser = User.getCurrent();
+    assertTrue(authManager.authorize(currentUser, Permission.Action.ADMIN));
+    for (int i=1; i<=50; i++) {
+      AccessControlLists.addUserPermission(conf, new UserPermission(Bytes.toBytes("testauth"+i),
+          Permission.Action.ADMIN, Permission.Action.READ, Permission.Action.WRITE));
+      // make sure the system user still shows as authorized
+      assertTrue("Failed current user auth check on iter "+i,
+          authManager.authorize(currentUser, Permission.Action.ADMIN));
+    }
   }
 }

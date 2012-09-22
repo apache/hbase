@@ -41,20 +41,59 @@ import java.util.concurrent.ConcurrentSkipListMap;
  * Performs authorization checks for a given user's assigned permissions
  */
 public class TableAuthManager {
+  private static class PermissionCache<T extends Permission> {
+    /** Cache of user permissions */
+    private ListMultimap<String,T> userCache = ArrayListMultimap.create();
+    /** Cache of group permissions */
+    private ListMultimap<String,T> groupCache = ArrayListMultimap.create();
+
+    public List<T> getUser(String user) {
+      return userCache.get(user);
+    }
+
+    public void putUser(String user, T perm) {
+      userCache.put(user, perm);
+    }
+
+    public List<T> replaceUser(String user, Iterable<? extends T> perms) {
+      return userCache.replaceValues(user, perms);
+    }
+
+    public List<T> getGroup(String group) {
+      return groupCache.get(group);
+    }
+
+    public void putGroup(String group, T perm) {
+      groupCache.put(group, perm);
+    }
+
+    public List<T> replaceGroup(String group, Iterable<? extends T> perms) {
+      return groupCache.replaceValues(group, perms);
+    }
+
+    /**
+     * Returns a combined map of user and group permissions, with group names prefixed by
+     * {@link AccessControlLists#GROUP_PREFIX}.
+     */
+    public ListMultimap<String,T> getAllPermissions() {
+      ListMultimap<String,T> tmp = ArrayListMultimap.create();
+      tmp.putAll(userCache);
+      for (String group : groupCache.keySet()) {
+        tmp.putAll(AccessControlLists.GROUP_PREFIX + group, groupCache.get(group));
+      }
+      return tmp;
+    }
+  }
+
   private static Log LOG = LogFactory.getLog(TableAuthManager.class);
 
   private static TableAuthManager instance;
 
-  /** Cache of global user permissions */
-  private ListMultimap<String,Permission> USER_CACHE = ArrayListMultimap.create();
-  /** Cache of global group permissions */
-  private ListMultimap<String,Permission> GROUP_CACHE = ArrayListMultimap.create();
+  /** Cache of global permissions */
+  private volatile PermissionCache<Permission> globalCache;
 
-  private ConcurrentSkipListMap<byte[], ListMultimap<String,TablePermission>> TABLE_USER_CACHE =
-      new ConcurrentSkipListMap<byte[], ListMultimap<String,TablePermission>>(Bytes.BYTES_COMPARATOR);
-
-  private ConcurrentSkipListMap<byte[], ListMultimap<String,TablePermission>> TABLE_GROUP_CACHE =
-      new ConcurrentSkipListMap<byte[], ListMultimap<String,TablePermission>>(Bytes.BYTES_COMPARATOR);
+  private ConcurrentSkipListMap<byte[], PermissionCache<TablePermission>> tableCache =
+      new ConcurrentSkipListMap<byte[], PermissionCache<TablePermission>>(Bytes.BYTES_COMPARATOR);
 
   private Configuration conf;
   private ZKPermissionWatcher zkperms;
@@ -70,15 +109,20 @@ public class TableAuthManager {
     }
 
     // initialize global permissions based on configuration
-    initGlobal(conf);
+    globalCache = initGlobal(conf);
   }
 
-  private void initGlobal(Configuration conf) throws IOException {
+  /**
+   * Returns a new {@code PermissionCache} initialized with permission assignments
+   * from the {@code hbase.superuser} configuration key.
+   */
+  private PermissionCache<Permission> initGlobal(Configuration conf) throws IOException {
     User user = User.getCurrent();
     if (user == null) {
       throw new IOException("Unable to obtain the current user, " +
           "authorization checks for internal operations will not work correctly!");
     }
+    PermissionCache<Permission> newCache = new PermissionCache<Permission>();
     String currentUser = user.getShortName();
 
     // the system user is always included
@@ -87,13 +131,14 @@ public class TableAuthManager {
     if (superusers != null) {
       for (String name : superusers) {
         if (AccessControlLists.isGroupPrincipal(name)) {
-          GROUP_CACHE.put(AccessControlLists.getGroupName(name),
+          newCache.putGroup(AccessControlLists.getGroupName(name),
               new Permission(Permission.Action.values()));
         } else {
-          USER_CACHE.put(name, new Permission(Permission.Action.values()));
+          newCache.putUser(name, new Permission(Permission.Action.values()));
         }
       }
     }
+    return newCache;
   }
 
   public ZKPermissionWatcher getZKPermissionWatcher() {
@@ -127,21 +172,21 @@ public class TableAuthManager {
    * @param userPerms
    */
   private void updateGlobalCache(ListMultimap<String,TablePermission> userPerms) {
-    USER_CACHE.clear();
-    GROUP_CACHE.clear();
+    PermissionCache<Permission> newCache = null;
     try {
-      initGlobal(conf);
+      newCache = initGlobal(conf);
+      for (Map.Entry<String,TablePermission> entry : userPerms.entries()) {
+        if (AccessControlLists.isGroupPrincipal(entry.getKey())) {
+          newCache.putGroup(AccessControlLists.getGroupName(entry.getKey()),
+              new Permission(entry.getValue().getActions()));
+        } else {
+          newCache.putUser(entry.getKey(), new Permission(entry.getValue().getActions()));
+        }
+      }
+      globalCache = newCache;
     } catch (IOException e) {
       // Never happens
-      LOG.error("Error occured while updating the user cache", e);
-    }
-    for (Map.Entry<String,TablePermission> entry : userPerms.entries()) {
-      if (AccessControlLists.isGroupPrincipal(entry.getKey())) {
-        GROUP_CACHE.put(AccessControlLists.getGroupName(entry.getKey()),
-                        new Permission(entry.getValue().getActions()));
-      } else {
-        USER_CACHE.put(entry.getKey(), new Permission(entry.getValue().getActions()));
-      }
+      LOG.error("Error occured while updating the global cache", e);
     }
   }
 
@@ -154,39 +199,24 @@ public class TableAuthManager {
    * @param tablePerms
    */
   private void updateTableCache(byte[] table, ListMultimap<String,TablePermission> tablePerms) {
-    // split user from group assignments so we don't have to prepend the group
-    // prefix every time we query for groups
-    ListMultimap<String,TablePermission> userPerms = ArrayListMultimap.create();
-    ListMultimap<String,TablePermission> groupPerms = ArrayListMultimap.create();
+    PermissionCache<TablePermission> newTablePerms = new PermissionCache<TablePermission>();
 
     for (Map.Entry<String,TablePermission> entry : tablePerms.entries()) {
       if (AccessControlLists.isGroupPrincipal(entry.getKey())) {
-        groupPerms.put(AccessControlLists.getGroupName(entry.getKey()), entry.getValue());
+        newTablePerms.putGroup(AccessControlLists.getGroupName(entry.getKey()), entry.getValue());
       } else {
-        userPerms.put(entry.getKey(), entry.getValue());
+        newTablePerms.putUser(entry.getKey(), entry.getValue());
       }
     }
 
-    TABLE_GROUP_CACHE.put(table, groupPerms);
-    TABLE_USER_CACHE.put(table, userPerms);
+    tableCache.put(table, newTablePerms);
   }
 
-  private List<TablePermission> getUserPermissions(String username, byte[] table) {
-    ListMultimap<String, TablePermission> tablePerms = TABLE_USER_CACHE.get(table);
-    if (tablePerms != null) {
-      return tablePerms.get(username);
+  private PermissionCache<TablePermission> getTablePermissions(byte[] table) {
+    if (!tableCache.containsKey(table)) {
+      tableCache.putIfAbsent(table, new PermissionCache<TablePermission>());
     }
-
-    return null;
-  }
-
-  private List<TablePermission> getGroupPermissions(String groupName, byte[] table) {
-    ListMultimap<String, TablePermission> tablePerms = TABLE_GROUP_CACHE.get(table);
-    if (tablePerms != null) {
-      return tablePerms.get(groupName);
-    }
-
-    return null;
+    return tableCache.get(table);
   }
 
   /**
@@ -221,14 +251,14 @@ public class TableAuthManager {
       return false;
     }
 
-    if (authorize(USER_CACHE.get(user.getShortName()), action)) {
+    if (authorize(globalCache.getUser(user.getShortName()), action)) {
       return true;
     }
 
     String[] groups = user.getGroupNames();
     if (groups != null) {
       for (String group : groups) {
-        if (authorize(GROUP_CACHE.get(group), action)) {
+        if (authorize(globalCache.getGroup(group), action)) {
           return true;
         }
       }
@@ -257,22 +287,23 @@ public class TableAuthManager {
 
   public boolean authorize(User user, byte[] table, KeyValue kv,
       Permission.Action action) {
-    List<TablePermission> userPerms = getUserPermissions(
-        user.getShortName(), table);
-    if (authorize(userPerms, table, kv, action)) {
-      return true;
-    }
+    PermissionCache<TablePermission> tablePerms = tableCache.get(table);
+    if (tablePerms != null) {
+      List<TablePermission> userPerms = tablePerms.getUser(user.getShortName());
+      if (authorize(userPerms, table, kv, action)) {
+        return true;
+      }
 
-    String[] groupNames = user.getGroupNames();
-    if (groupNames != null) {
-      for (String group : groupNames) {
-        List<TablePermission> groupPerms = getGroupPermissions(group, table);
-        if (authorize(groupPerms, table, kv, action)) {
-          return true;
+      String[] groupNames = user.getGroupNames();
+      if (groupNames != null) {
+        for (String group : groupNames) {
+          List<TablePermission> groupPerms = tablePerms.getGroup(group);
+          if (authorize(groupPerms, table, kv, action)) {
+            return true;
+          }
         }
       }
     }
-
     return false;
   }
 
@@ -297,7 +328,7 @@ public class TableAuthManager {
    * stored user permissions.
    */
   public boolean authorizeUser(String username, Permission.Action action) {
-    return authorize(USER_CACHE.get(username), action);
+    return authorize(globalCache.getUser(username), action);
   }
 
   /**
@@ -321,7 +352,7 @@ public class TableAuthManager {
     if (authorizeUser(username, action)) {
       return true;
     }
-    return authorize(getUserPermissions(username, table), table, family,
+    return authorize(getTablePermissions(table).getUser(username), table, family,
         qualifier, action);
   }
 
@@ -331,7 +362,7 @@ public class TableAuthManager {
    * permissions.
    */
   public boolean authorizeGroup(String groupName, Permission.Action action) {
-    return authorize(GROUP_CACHE.get(groupName), action);
+    return authorize(globalCache.getGroup(groupName), action);
   }
 
   /**
@@ -349,7 +380,7 @@ public class TableAuthManager {
     if (authorizeGroup(groupName, action)) {
       return true;
     }
-    return authorize(getGroupPermissions(groupName, table), table, family, action);
+    return authorize(getTablePermissions(table).getGroup(groupName), table, family, action);
   }
 
   public boolean authorize(User user, byte[] table, byte[] family,
@@ -382,24 +413,26 @@ public class TableAuthManager {
    */
   public boolean matchPermission(User user,
       byte[] table, byte[] family, Permission.Action action) {
-    List<TablePermission> userPerms = getUserPermissions(
-        user.getShortName(), table);
-    if (userPerms != null) {
-      for (TablePermission p : userPerms) {
-        if (p.matchesFamily(table, family, action)) {
-          return true;
+    PermissionCache<TablePermission> tablePerms = tableCache.get(table);
+    if (tablePerms != null) {
+      List<TablePermission> userPerms = tablePerms.getUser(user.getShortName());
+      if (userPerms != null) {
+        for (TablePermission p : userPerms) {
+          if (p.matchesFamily(table, family, action)) {
+            return true;
+          }
         }
       }
-    }
 
-    String[] groups = user.getGroupNames();
-    if (groups != null) {
-      for (String group : groups) {
-        List<TablePermission> groupPerms = getGroupPermissions(group, table);
-        if (groupPerms != null) {
-          for (TablePermission p : groupPerms) {
-            if (p.matchesFamily(table, family, action)) {
-              return true;
+      String[] groups = user.getGroupNames();
+      if (groups != null) {
+        for (String group : groups) {
+          List<TablePermission> groupPerms = tablePerms.getGroup(group);
+          if (groupPerms != null) {
+            for (TablePermission p : groupPerms) {
+              if (p.matchesFamily(table, family, action)) {
+                return true;
+              }
             }
           }
         }
@@ -412,36 +445,36 @@ public class TableAuthManager {
   public boolean matchPermission(User user,
       byte[] table, byte[] family, byte[] qualifier,
       Permission.Action action) {
-    List<TablePermission> userPerms = getUserPermissions(
-        user.getShortName(), table);
-    if (userPerms != null) {
-      for (TablePermission p : userPerms) {
-        if (p.matchesFamilyQualifier(table, family, qualifier, action)) {
-          return true;
+    PermissionCache<TablePermission> tablePerms = tableCache.get(table);
+    if (tablePerms != null) {
+      List<TablePermission> userPerms = tablePerms.getUser(user.getShortName());
+      if (userPerms != null) {
+        for (TablePermission p : userPerms) {
+          if (p.matchesFamilyQualifier(table, family, qualifier, action)) {
+            return true;
+          }
         }
       }
-    }
 
-    String[] groups = user.getGroupNames();
-    if (groups != null) {
-      for (String group : groups) {
-        List<TablePermission> groupPerms = getGroupPermissions(group, table);
-        if (groupPerms != null) {
-          for (TablePermission p : groupPerms) {
-            if (p.matchesFamilyQualifier(table, family, qualifier, action)) {
-              return true;
+      String[] groups = user.getGroupNames();
+      if (groups != null) {
+        for (String group : groups) {
+          List<TablePermission> groupPerms = tablePerms.getGroup(group);
+          if (groupPerms != null) {
+            for (TablePermission p : groupPerms) {
+              if (p.matchesFamilyQualifier(table, family, qualifier, action)) {
+                return true;
+              }
             }
           }
         }
       }
     }
-
     return false;
   }
 
   public void remove(byte[] table) {
-    TABLE_USER_CACHE.remove(table);
-    TABLE_GROUP_CACHE.remove(table);
+    tableCache.remove(table);
   }
 
   /**
@@ -453,13 +486,9 @@ public class TableAuthManager {
    */
   public void setUserPermissions(String username, byte[] table,
       List<TablePermission> perms) {
-    ListMultimap<String,TablePermission> tablePerms = TABLE_USER_CACHE.get(table);
-    if (tablePerms == null) {
-      tablePerms = ArrayListMultimap.create();
-      TABLE_USER_CACHE.put(table, tablePerms);
-    }
-    tablePerms.replaceValues(username, perms);
-    writeToZooKeeper(table, tablePerms, TABLE_GROUP_CACHE.get(table));
+    PermissionCache<TablePermission> tablePerms = getTablePermissions(table);
+    tablePerms.replaceUser(username, perms);
+    writeToZooKeeper(table, tablePerms);
   }
 
   /**
@@ -471,29 +500,17 @@ public class TableAuthManager {
    */
   public void setGroupPermissions(String group, byte[] table,
       List<TablePermission> perms) {
-    ListMultimap<String,TablePermission> tablePerms = TABLE_GROUP_CACHE.get(table);
-    if (tablePerms == null) {
-      tablePerms = ArrayListMultimap.create();
-      TABLE_GROUP_CACHE.put(table, tablePerms);
-    }
-    tablePerms.replaceValues(group, perms);
-    writeToZooKeeper(table, TABLE_USER_CACHE.get(table), tablePerms);
+    PermissionCache<TablePermission> tablePerms = getTablePermissions(table);
+    tablePerms.replaceGroup(group, perms);
+    writeToZooKeeper(table, tablePerms);
   }
 
   public void writeToZooKeeper(byte[] table,
-      ListMultimap<String,TablePermission> userPerms,
-      ListMultimap<String,TablePermission> groupPerms) {
-    ListMultimap<String,TablePermission> tmp = ArrayListMultimap.create();
-    if (userPerms != null) {
-      tmp.putAll(userPerms);
+      PermissionCache<TablePermission> tablePerms) {
+    byte[] serialized = new byte[0];
+    if (tablePerms != null) {
+      serialized = AccessControlLists.writePermissionsAsBytes(tablePerms.getAllPermissions(), conf);
     }
-    if (groupPerms != null) {
-      for (String group : groupPerms.keySet()) {
-        tmp.putAll(AccessControlLists.GROUP_PREFIX + group,
-            groupPerms.get(group));
-      }
-    }
-    byte[] serialized = AccessControlLists.writePermissionsAsBytes(tmp, conf);
     zkperms.writeToZookeeper(table, serialized);
   }
 
