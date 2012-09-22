@@ -32,17 +32,24 @@ public class ProfilingData implements Writable {
   public static final String CLIENT_NETWORK_LATENCY_MS = "client_network_latency.ms";
   
   /**
-   *  number of block hits on get
+   *  number of block hits cnt on get
    */
-  public static String blockHitStr(BlockType.BlockCategory cat, String cf) {
+  public static String blockHitCntStr(BlockType.BlockCategory cat, String cf) {
     return "block_hit_cnt." + cat + "." + cf;
   }
   
   /**
-   *  number of block misses on get
+   *  number of block misses cnt on get
    */
-  public static String blockMissStr(BlockType.BlockCategory cat, String cf) {
+  public static String blockMissCntStr(BlockType.BlockCategory cat, String cf) {
     return "block_miss_cnt." + cat + "." + cf;
+  }
+  
+  /**
+   *  on-disk size for the block misses
+   */
+  public static String blockMissOnDiskSizeStr(BlockType.BlockCategory cat, String cf) {
+    return "block_miss_on_disk_size." + cat + "." + cf;
   }
   
   /**

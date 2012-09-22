@@ -324,9 +324,14 @@ public class HFileReaderV2 extends AbstractHFileReader {
       Call call = HRegionServer.callContext.get();
       ProfilingData pData = call == null ? null : call.getProfilingData();
       if (pData != null) {
-        pData.incInt(ProfilingData.blockMissStr(
+        pData.incInt(ProfilingData.blockMissCntStr(
             hfileBlock.getBlockType().getCategory(),
             hfileBlock.getColumnFamilyName()));
+        pData.incLong(
+            ProfilingData.blockMissOnDiskSizeStr(
+                hfileBlock.getBlockType().getCategory(),
+                hfileBlock.getColumnFamilyName()),
+            onDiskBlockSize);
         pData.incLong(ProfilingData.TOTAL_BLOCK_READ_TIME_NS, delta);
       }
       return hfileBlock;
@@ -364,7 +369,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
           Call call = HRegionServer.callContext.get();
           ProfilingData pData = call == null ? null : call.getProfilingData();
           if (pData != null) {
-            pData.incInt(ProfilingData.blockHitStr(
+            pData.incInt(ProfilingData.blockHitCntStr(
                 cachedBlock.getBlockType().getCategory(),
                 cachedBlock.getColumnFamilyName()));
           }
