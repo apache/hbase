@@ -88,6 +88,8 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   private static final String OPT_KEY_WINDOW = "key_window";
   private static final String OPT_WRITE = "write";
+  private static final String OPT_BATCHED_WRITES = "batch";
+  private static final String OPT_BATCHED_WRITES_CNT = "batch_cnt";
   private static final String OPT_MAX_READ_ERRORS = "max_read_errors";
   private static final String OPT_MULTIPUT = "multiput";
   private static final String OPT_NUM_KEYS = "num_keys";
@@ -132,6 +134,10 @@ public class LoadTestTool extends AbstractHBaseTool {
   private int maxReadErrors = MultiThreadedReader.DEFAULT_MAX_ERRORS;
   private int verifyPercent;
   private int profilePercent = 0;
+
+  private boolean isBatched;
+
+  private int batchSize;
 
   private String[] splitColonSeparated(String option,
       int minNumCols, int maxNumCols) {
@@ -197,6 +203,8 @@ public class LoadTestTool extends AbstractHBaseTool {
         "without port numbers");
     addOptWithArg(OPT_TABLE_NAME, "The name of the table to read or write");
     addOptWithArg(OPT_WRITE, OPT_USAGE_LOAD);
+    addOptWithArg(OPT_BATCHED_WRITES, "Use batched writes (with WAL)");
+    addOptWithArg(OPT_BATCHED_WRITES_CNT, "Size of a batch (if using batched writes)");
     addOptWithArg(OPT_READ, OPT_USAGE_READ);
     addOptWithArg(OPT_BLOOM, OPT_USAGE_BLOOM);
     addOptWithArg(OPT_COMPRESSION, OPT_USAGE_COMPRESSION);
@@ -261,8 +269,15 @@ public class LoadTestTool extends AbstractHBaseTool {
       }
 
       isMultiPut = cmd.hasOption(OPT_MULTIPUT);
+      isBatched = cmd.hasOption(OPT_BATCHED_WRITES);
+      if (cmd.hasOption(OPT_BATCHED_WRITES_CNT)) {
+        batchSize = parseInt(cmd.getOptionValue(OPT_BATCHED_WRITES_CNT),
+            1, Integer.MAX_VALUE);
+      }
 
       System.out.println("Multi-puts: " + isMultiPut);
+      System.out.println("isBatched: " + isBatched
+                        + (isBatched ? " batch size " + batchSize : "" ));
       System.out.println("Columns per key: " + minColsPerKey + ".."
           + maxColsPerKey);
       System.out.println("Data size per column: " + minColDataSize + ".."
@@ -345,6 +360,8 @@ public class LoadTestTool extends AbstractHBaseTool {
       writerThreads = new MultiThreadedWriter(conf, tableName, COLUMN_FAMILY, 
           profilePercent, this.txCompression, this.rxCompression);
       writerThreads.setMultiPut(isMultiPut);
+      writerThreads.setBatching(isBatched);
+      writerThreads.setBatchSize(batchSize);
       writerThreads.setColumnsPerKey(minColsPerKey, maxColsPerKey);
       writerThreads.setDataSize(minColDataSize, maxColDataSize);
     }

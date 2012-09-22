@@ -26,6 +26,11 @@ package org.apache.hadoop.hbase;
 public class HRegionLocation implements Comparable<HRegionLocation> {
   private HRegionInfo regionInfo;
   private HServerAddress serverAddress;
+  private long serverStartCode;
+
+  public long getServerStartCode() {
+    return serverStartCode;
+  }
 
   /**
    * Constructor
@@ -34,8 +39,13 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
    * @param serverAddress the HServerAddress for the region server
    */
   public HRegionLocation(HRegionInfo regionInfo, HServerAddress serverAddress) {
+    this(regionInfo, serverAddress, -1);
+  }
+  public HRegionLocation(HRegionInfo regionInfo, HServerAddress serverAddress,
+      long serverStartCode) {
     this.regionInfo = regionInfo;
     this.serverAddress = serverAddress;
+    this.serverStartCode = serverStartCode;
   }
 
   /**
@@ -43,8 +53,8 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
    */
   @Override
   public String toString() {
-    return "address: " + this.serverAddress.toString() + ", regioninfo: " +
-      this.regionInfo;
+    return "address: " + this.serverAddress.toString() + ", serverStartCode: " +
+      this.serverStartCode + ", regioninfo: " + this.regionInfo;
   }
 
   /**
@@ -71,6 +81,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   public int hashCode() {
     int result = this.regionInfo.hashCode();
     result ^= this.serverAddress.hashCode();
+    result ^= (int)this.serverStartCode;
     return result;
   }
 
@@ -92,6 +103,10 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
     int result = this.regionInfo.compareTo(o.regionInfo);
     if(result == 0) {
       result = this.serverAddress.compareTo(o.serverAddress);
+    }
+    if(result == 0) {
+      result = (this.serverStartCode > o.serverStartCode) ? 1 :
+      (this.serverStartCode < o.serverStartCode)? -1 :  0;
     }
     return result;
   }

@@ -2897,6 +2897,11 @@ public class HRegionServer implements HRegionInterface,
   }
 
   @Override
+  public long getStartCode() {
+    return this.serverInfo.getStartCode();
+  }
+
+  @Override
   public long getCurrentTimeMillis() {
     return EnvironmentEdgeManager.currentTimeMillis();
   }

@@ -109,6 +109,12 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable {
   public long getCurrentTimeMillis();
 
   /**
+   * Gets the current startCode at the region server
+   * @return startCode -- time in milli seconds when the regionserver started.
+   */
+  public long getStartCode();
+
+  /**
    * Get a list of store files for a particular CF in a particular region
    * @param region name
    * @param CF name

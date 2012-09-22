@@ -67,7 +67,7 @@ public class TestBatchedUpload {
     // start batch processing
     // do a bunch of puts
     // finish batch. Check for Exceptions.
-    int attempts = writeData(ht, NUM_ROWS);
+    int attempts = writeData(ht, NUM_ROWS, true);
     assert(attempts > 1);
 
     readData(ht, NUM_ROWS);
@@ -75,7 +75,39 @@ public class TestBatchedUpload {
     ht.close();
   }
 
-  public int writeData(HTable table, long numRows) throws IOException {
+  @Test
+  /*
+   * Test to make sure that if a region moves benignly, and both
+   * the source and dest region servers are alive, then the batch
+   * should succeed.
+   */
+  public void testBatchedUploadWithRegionMoves() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testBatchedUploadWithRegionMoves");
+    int NUM_REGIONS = 10;
+    HTable ht = TEST_UTIL.createTable(TABLE, new byte[][]{FAMILY},
+        3, Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
+    int NUM_ROWS = 1000;
+
+    // start batch processing
+    // do a bunch of puts
+    // finish batch. Check for Exceptions.
+    int attempts = writeData(ht, NUM_ROWS, false);
+    assert(attempts == 1);
+
+    readData(ht, NUM_ROWS);
+
+    ht.close();
+  }
+
+  /**
+   * Write data to the htable. While randomly killing/shutting down regionservers.
+   * @param table
+   * @param numRows
+   * @param killRS -- true to kill the RS. false to do a clean shutdown.
+   * @return number of attempts to complete the batch.
+   * @throws IOException
+   */
+  public int writeData(HTable table, long numRows, boolean killRS) throws IOException {
     int attempts = 0;
     int MAX = 10;
     MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
@@ -109,9 +141,15 @@ public class TestBatchedUpload {
             numRS = cluster.getRegionServerThreads().size();
             int idxToKill = Math.abs(rand.nextInt()) % numRS;
             LOG.debug("Try " + attempts + " written Puts : " + i);
-            LOG.info("Randomly killing region server " + idxToKill + ". Got probability " + prob
-                + " < " + killProb);
-            cluster.abortRegionServer(idxToKill);
+            if (killRS) {
+              LOG.info("Randomly killing region server " + idxToKill
+                  + ". Got probability " + prob + " < " + killProb);
+              cluster.abortRegionServer(idxToKill);
+            } else { // clean shutdown
+              LOG.info("Randomly shutting down region server " + idxToKill
+                  + ". Got probability " + prob + " < " + killProb);
+              cluster.stopRegionServer(idxToKill);
+            }
 
             // keep decreasing the probability of killing the RS
             killProb = killProb / 2;

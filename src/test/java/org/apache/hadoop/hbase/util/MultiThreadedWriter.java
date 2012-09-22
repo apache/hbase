@@ -83,6 +83,9 @@ public class MultiThreadedWriter extends MultiThreadedAction {
   /** RPC compression */
   private Compression.Algorithm txCompression;
   private Compression.Algorithm rxCompression;
+
+  private boolean isBatched = false;
+  private int batchSize = Integer.MAX_VALUE;
   
   public MultiThreadedWriter(Configuration conf, byte[] tableName,
       byte[] columnFamily) {
@@ -156,6 +159,10 @@ public class MultiThreadedWriter extends MultiThreadedAction {
     public void run() {
       try {
         long rowKey;
+        int count = 0;
+        if (isBatched) {
+          table.startBatchedLoad();
+        }
         while ((rowKey = nextKeyToInsert.getAndIncrement()) < endKey) {
           long numColumns = minColumnsPerKey + Math.abs(random.nextLong())
               % (maxColumnsPerKey - minColumnsPerKey);
@@ -170,6 +177,26 @@ public class MultiThreadedWriter extends MultiThreadedAction {
           }
           if (trackInsertedKeys) {
             insertedKeys.add(rowKey);
+          }
+
+          if (isBatched && ++count % batchSize == 0) {
+            try {
+              table.endBatchedLoad();
+              LOG.info("Count so far " + count + ". Batch ended");
+            } catch (IOException e) {
+              // log and continue.
+              LOG.info("Count so far " + count + ". Batch failed ", e);
+            }
+            table.startBatchedLoad();
+          }
+        }
+        if (isBatched && ++count % batchSize != 0) {
+          try {
+            table.endBatchedLoad();
+            LOG.info("Count so far " + count + ". Batch ended");
+          } catch (IOException e) {
+            // log and continue.
+            LOG.info("Count so far " + count + ". Batch failed ", e);
           }
         }
       } finally {
@@ -328,6 +355,14 @@ public class MultiThreadedWriter extends MultiThreadedAction {
    */
   void setTrackInsertedKeys(boolean enable) {
     trackInsertedKeys = enable;
+  }
+
+  public void setBatching(boolean isBatched) {
+    this.isBatched = isBatched;
+  }
+
+  public void setBatchSize(int batchSize) {
+    this.batchSize = batchSize;
   }
 
 }
