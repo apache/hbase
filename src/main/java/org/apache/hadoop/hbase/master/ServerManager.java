@@ -477,6 +477,9 @@ public class ServerManager {
     LOG.info("Removing server's info " + serverInfo.getServerName());
     this.serversToServerInfo.remove(serverInfo.getServerName());
     serversToLoad.removeServerLoad(serverInfo.getServerName());
+    if (this.master.getSplitLogManager() != null) {
+      this.master.getSplitLogManager().handleDeadServer(serverInfo.getServerName());
+    }
   }
 
   /*
