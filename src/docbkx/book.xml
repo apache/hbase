@@ -2318,65 +2318,6 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
       </section>  <!--  compaction -->
 
      </section>  <!--  store -->
-      
-     <section xml:id="blooms">
-     <title>Bloom Filters</title>
-         <para><link xlink:href="http://en.wikipedia.org/wiki/Bloom_filter">Bloom filters</link> were developed over in <link
-    xlink:href="https://issues.apache.org/jira/browse/HBASE-1200">HBase-1200
-    Add bloomfilters</link>.<footnote>
-        <para>For description of the development process -- why static blooms
-        rather than dynamic -- and for an overview of the unique properties
-        that pertain to blooms in HBase, as well as possible future
-        directions, see the <emphasis>Development Process</emphasis> section
-        of the document <link
-        xlink:href="https://issues.apache.org/jira/secure/attachment/12444007/Bloom_Filters_in_HBase.pdf">BloomFilters
-        in HBase</link> attached to <link
-        xlink:href="https://issues.apache.org/jira/browse/HBASE-1200">HBase-1200</link>.</para>
-      </footnote><footnote>
-        <para>The bloom filters described here are actually version two of
-        blooms in HBase. In versions up to 0.19.x, HBase had a dynamic bloom
-        option based on work done by the <link
-        xlink:href="http://www.one-lab.org">European Commission One-Lab
-        Project 034819</link>. The core of the HBase bloom work was later
-        pulled up into Hadoop to implement org.apache.hadoop.io.BloomMapFile.
-        Version 1 of HBase blooms never worked that well. Version 2 is a
-        rewrite from scratch though again it starts with the one-lab
-        work.</para>
-      </footnote></para>
-        <para>See also <xref linkend="schema.bloom" /> and <xref linkend="config.bloom" />.
-        </para>
-     
-     <section xml:id="bloom_footprint">
-      <title>Bloom StoreFile footprint</title>
-
-      <para>Bloom filters add an entry to the <classname>StoreFile</classname>
-      general <classname>FileInfo</classname> data structure and then two
-      extra entries to the <classname>StoreFile</classname> metadata
-      section.</para>
-
-      <section>
-        <title>BloomFilter in the <classname>StoreFile</classname>
-        <classname>FileInfo</classname> data structure</title>
-
-          <para><classname>FileInfo</classname> has a
-          <varname>BLOOM_FILTER_TYPE</varname> entry which is set to
-          <varname>NONE</varname>, <varname>ROW</varname> or
-          <varname>ROWCOL.</varname></para>
-      </section>
-
-      <section>
-        <title>BloomFilter entries in <classname>StoreFile</classname>
-        metadata</title>
-
-          <para><varname>BLOOM_FILTER_META</varname> holds Bloom Size, Hash
-          Function used, etc. Its small in size and is cached on
-          <classname>StoreFile.Reader</classname> load</para>
-          <para><varname>BLOOM_FILTER_DATA</varname> is the actual bloomfilter
-          data. Obtained on-demand. Stored in the LRU cache, if it is enabled
-          (Its enabled by default).</para>
-      </section>
-     </section>   
-     </section>   <!--  bloom  -->  
      
     </section>  <!--  regions -->
 	
@@ -2519,6 +2460,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="case_studies.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="ops_mgt.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="developer.xml" />
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="zookeeper.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="community.xml" />
 
 <appendix xml:id="faq">
