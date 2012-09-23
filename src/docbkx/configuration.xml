@@ -62,7 +62,7 @@ to ensure well-formedness of your document after an edit session.
         <para>Just like Hadoop, HBase requires java 6 from <link
         xlink:href="http://www.java.com/download/">Oracle</link>. Usually
         you'll want to use the latest version available except the problematic
-        u18 (u24 is the latest version as of this writing).</para>
+        u18.</para>
     </section>
     <section xml:id="os">
         <title>Operating System</title>        
@@ -73,7 +73,9 @@ to ensure well-formedness of your document after an edit session.
         <command>sshd</command> must be running to use Hadoop's scripts to
         manage remote Hadoop and HBase daemons. You must be able to ssh to all
         nodes, including your local node, using passwordless login (Google
-        "ssh passwordless login").</para>
+        "ssh passwordless login").  If on mac osx, see the section,
+        <link xlink:href="http://wiki.apache.org/hadoop/Running_Hadoop_On_OS_X_10.5_64-bit_%28Single-Node_Cluster%29">SSH: Setting up Remote Desktop and Enabling Self-Login</link>
+        on the hadoop wiki.</para>
       </section>
 
       <section xml:id="dns">
@@ -273,7 +275,6 @@ to ensure well-formedness of your document after an edit session.
 </para></footnote><footnote>Cloudera have <varname>dfs.support.append</varname> set to true by default.</footnote>.
         Please use the most up-to-date Hadoop possible.</para>
    <note><title>HBase 0.96.0 requires Hadoop 1.0.0 at a minimum</title>
-   <subtitle>HBase 0.96.0 supports Hadoop 2.0.x</subtitle>
    <para>As of HBase 0.96.x, Hadoop 1.0.x at least is required.  We will no
    longer run properly on older Hadoops such as <filename>0.20.205</filename> or <filename>branch-0.20-append</filename>.
    Do not move to 0.96.x if you cannot upgrade your Hadoop<footnote><para>See <link xlink:href="http://search-hadoop.com/m/7vFVx4EsUb2">HBase, mail # dev - DISCUSS: Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?</link></para></footnote>.</para>
