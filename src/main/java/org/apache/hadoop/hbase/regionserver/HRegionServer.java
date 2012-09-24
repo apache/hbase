@@ -284,14 +284,14 @@ public class HRegionServer implements HRegionInterface,
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
 
-  final Map<String, InternalScanner> scanners =
+  final ConcurrentHashMap<String, InternalScanner> scanners =
     new ConcurrentHashMap<String, InternalScanner>();
 
   private ZooKeeperWrapper zooKeeperWrapper;
 
   private final ExecutorService logCloseThreadPool;
   private final ExecutorService regionOpenCloseThreadPool;
-  
+
   // Log Splitting Worker
   private List<SplitLogWorker> splitLogWorkers;
 
@@ -424,7 +424,7 @@ public class HRegionServer implements HRegionInterface,
     }
     LOG.info("minCheckFSIntervalMillis=" + minCheckFSIntervalMillis);
     LOG.info("checkFSAbortTimeOutMillis=" + checkFSAbortTimeOutMillis);
-    
+
     int logCloseThreads =
         conf.getInt("hbase.hlog.split.close.threads", 20);
     logCloseThreadPool =
@@ -770,7 +770,7 @@ public class HRegionServer implements HRegionInterface,
     t.setDaemon(true);
     t.start();
 
-    
+
     // shutdown thriftserver
     if (thriftServer != null) {
       thriftServer.shutdown();
@@ -860,7 +860,7 @@ public class HRegionServer implements HRegionInterface,
       }
       else {
         // if we don't inform the master, then the master is going to detect the expired
-        // znode and cause log splitting. We need this for the region that we failed to 
+        // znode and cause log splitting. We need this for the region that we failed to
         // close (in case there were unflushed edits).
           LOG.info("Failed to close all regions"
               + " -- skip informing master that we are shutting down ");
@@ -1676,7 +1676,7 @@ public class HRegionServer implements HRegionInterface,
         // should retry indefinitely.
         master = (HMasterRegionInterface)HBaseRPC.getProxy(
           HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
-          masterAddress.getInetSocketAddress(), this.conf, this.rpcTimeout, 
+          masterAddress.getInetSocketAddress(), this.conf, this.rpcTimeout,
           HBaseRPCOptions.DEFAULT);
       } catch (IOException e) {
         LOG.warn("Unable to connect to master. Retrying. Error was:", e);
@@ -2472,12 +2472,18 @@ public class HRegionServer implements HRegionInterface,
   }
 
   protected long addScanner(InternalScanner s) throws LeaseStillHeldException {
-    long scannerId = -1L;
-    scannerId = rand.nextLong();
-    String scannerName = String.valueOf(scannerId);
-    scanners.put(scannerName, s);
-    this.leases.
-      createLease(scannerName, new ScannerListener(scannerName));
+    long scannerId = -1;
+    while (true) {
+      scannerId = rand.nextLong();
+      if (scannerId == -1)
+        continue;
+      String scannerName = String.valueOf(scannerId);
+      InternalScanner existing = scanners.putIfAbsent(scannerName, s);
+      if (existing == null) {
+        this.leases.createLease(scannerName, new ScannerListener(scannerName));
+        break;
+      }
+    }
     return scannerId;
   }
 
@@ -2740,10 +2746,10 @@ public class HRegionServer implements HRegionInterface,
   throws IOException {
     bulkLoadHFile(hfilePath, regionName, familyName, false);
   }
-  
+
   @Override
   public void bulkLoadHFile(
-      String hfilePath, byte[] regionName, byte[] familyName, 
+      String hfilePath, byte[] regionName, byte[] familyName,
       boolean assignSeqNum) throws IOException {
     HRegion region = getRegion(regionName);
     region.bulkLoadHFile(hfilePath, familyName, assignSeqNum);
@@ -3481,7 +3487,7 @@ public class HRegionServer implements HRegionInterface,
    * @return the main region server in this JVM or null if the address does not match
    */
   public static HRegionInterface getMainRS(HServerAddress address) {
-    if (mainRegionServer != null && 
+    if (mainRegionServer != null &&
         address.equals(mainRegionServer.serverInfo.getServerAddress()) &&
         mainRegionServer.isRpcServerRunning) {
       return mainRegionServer;
@@ -3500,7 +3506,7 @@ public class HRegionServer implements HRegionInterface,
       r.updateConfiguration();
     }
   }
-  
+
   public long getResponseQueueSize(){
     HBaseServer s = server;
     if (s != null) {
