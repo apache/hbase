@@ -39,7 +39,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.Server;
@@ -59,11 +58,9 @@ import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -78,6 +75,15 @@ import com.google.protobuf.ServiceException;
  * (hostname and port) as well as the startcode (timestamp from when the server
  * was started).  This is used to differentiate a restarted instance of a given
  * server from the original instance.
+ * <p>
+ * If a sever is known not to be running any more, it is called dead. The dead
+ * server needs to be handled by a ServerShutdownHandler.  If the handler is not
+ * enabled yet, the server can't be handled right away so it is queued up.
+ * After the handler is enabled, the server will be submitted to a handler to handle.
+ * However, the handler may be just partially enabled.  If so,
+ * the server cannot be fully processed, and be queued up for further processing.
+ * A server is fully processed only after the handler is fully enabled
+ * and has completed the handling.
  */
 @InterfaceAudience.Private
 public class ServerManager {
@@ -117,12 +123,39 @@ public class ServerManager {
   private final long warningSkew;
 
   /**
-   * Set of region servers which are dead but not expired immediately. If one
+   * Set of region servers which are dead but not processed immediately. If one
    * server died before master enables ServerShutdownHandler, the server will be
-   * added to set and will be expired through calling
-   * {@link ServerManager#expireDeadNotExpiredServers()} by master.
+   * added to this set and will be processed through calling
+   * {@link ServerManager#processQueuedDeadServers()} by master.
+   * <p>
+   * A dead server is a server instance known to be dead, not listed in the /hbase/rs
+   * znode any more. It may have not been submitted to ServerShutdownHandler yet
+   * because the handler is not enabled.
+   * <p>
+   * A dead server, which has been submitted to ServerShutdownHandler while the
+   * handler is not enabled, is queued up.
+   * <p>
+   * So this is a set of region servers known to be dead but not submitted to
+   * ServerShutdownHander for processing yet.
    */
-  private Set<ServerName> deadNotExpiredServers = new HashSet<ServerName>();
+  private Set<ServerName> queuedDeadServers = new HashSet<ServerName>();
+
+  /**
+   * Set of region servers which are dead and submitted to ServerShutdownHandler to
+   * process but not fully processed immediately.
+   * <p>
+   * If one server died before assignment manager finished the failover cleanup, the server
+   * will be added to this set and will be processed through calling
+   * {@link ServerManager#processQueuedDeadServers()} by assignment manager.
+   * <p>
+   * For all the region servers in this set, HLog split is already completed.
+   * <p>
+   * ServerShutdownHandler processes a dead server submitted to the handler after
+   * the handler is enabled. It may not be able to complete the processing because root/meta
+   * is not yet online or master is currently in startup mode.  In this case, the dead
+   * server will be parked in this set temporarily.
+   */
+  private Set<ServerName> requeuedDeadServers = new HashSet<ServerName>();
 
   /**
    * Constructor.
@@ -326,18 +359,6 @@ public class ServerManager {
   }
 
   /**
-   * @param address
-   * @return ServerLoad if serverName is known else null
-   * @deprecated Use {@link #getLoad(HServerAddress)}
-   */
-  public ServerLoad getLoad(final HServerAddress address) {
-    ServerName sn = new ServerName(address.toString(), ServerName.NON_STARTCODE);
-    ServerName actual =
-      ServerName.findServerWithSameHostnamePort(this.getOnlineServersList(), sn);
-    return actual == null? null: getLoad(actual);
-  }
-
-  /**
    * Compute the average load across all region servers.
    * Currently, this uses a very naive computation - just uses the number of
    * regions being served, ignoring stats about number of requests.
@@ -410,20 +431,19 @@ public class ServerManager {
   }
 
   /*
-   * Expire the passed server.  Add it to list of deadservers and queue a
+   * Expire the passed server.  Add it to list of dead servers and queue a
    * shutdown processing.
    */
   public synchronized void expireServer(final ServerName serverName) {
     if (!services.isServerShutdownHandlerEnabled()) {
       LOG.info("Master doesn't enable ServerShutdownHandler during initialization, "
           + "delay expiring server " + serverName);
-      this.deadNotExpiredServers.add(serverName);
+      this.queuedDeadServers.add(serverName);
       return;
     }
     if (!this.onlineServers.containsKey(serverName)) {
       LOG.warn("Received expiration of " + serverName +
         " but server is not currently online");
-      return;
     }
     if (this.deadservers.contains(serverName)) {
       // TODO: Can this happen?  It shouldn't be online in this case?
@@ -465,18 +485,45 @@ public class ServerManager {
         carryingRoot + ", meta=" + carryingMeta);
   }
 
-  /**
-   * Expire the servers which died during master's initialization. It will be
-   * called after HMaster#assignRootAndMeta.
-   * @throws IOException
-   * */
-  synchronized void expireDeadNotExpiredServers() throws IOException {
-    if (!services.isServerShutdownHandlerEnabled()) {
-      throw new IOException("Master hasn't enabled ServerShutdownHandler ");
+  public synchronized void processDeadServer(final ServerName serverName) {
+    // When assignment manager is cleaning up the zookeeper nodes and rebuilding the
+    // in-memory region states, region servers could be down. Root/meta table can and
+    // should be re-assigned, log splitting can be done too. However, it is better to
+    // wait till the cleanup is done before re-assigning user regions.
+    //
+    // We should not wait in the server shutdown handler thread since it can clog
+    // the handler threads and root/meta table could not be re-assigned in case
+    // the corresponding server is down. So we queue them up here instead.
+    if (!services.getAssignmentManager().isFailoverCleanupDone()) {
+      requeuedDeadServers.add(serverName);
+      return;
     }
-    Iterator<ServerName> serverIterator = deadNotExpiredServers.iterator();
+
+    this.deadservers.add(serverName);
+    this.services.getExecutorService().submit(new ServerShutdownHandler(
+      this.master, this.services, this.deadservers, serverName, false));
+  }
+
+  /**
+   * Process the servers which died during master's initialization. It will be
+   * called after HMaster#assignRootAndMeta and AssignmentManager#joinCluster.
+   * */
+  synchronized void processQueuedDeadServers() {
+    if (!services.isServerShutdownHandlerEnabled()) {
+      LOG.info("Master hasn't enabled ServerShutdownHandler");
+    }
+    Iterator<ServerName> serverIterator = queuedDeadServers.iterator();
     while (serverIterator.hasNext()) {
       expireServer(serverIterator.next());
+      serverIterator.remove();
+    }
+
+    if (!services.getAssignmentManager().isFailoverCleanupDone()) {
+      LOG.info("AssignmentManager hasn't finished failover cleanup");
+    }
+    serverIterator = requeuedDeadServers.iterator();
+    while (serverIterator.hasNext()) {
+      processDeadServer(serverIterator.next());
       serverIterator.remove();
     }
   }
@@ -713,11 +760,23 @@ public class ServerManager {
    * @return A copy of the internal set of deadNotExpired servers.
    */
   Set<ServerName> getDeadNotExpiredServers() {
-    return new HashSet<ServerName>(this.deadNotExpiredServers);
+    return new HashSet<ServerName>(this.queuedDeadServers);
   }
 
   public boolean isServerOnline(ServerName serverName) {
-    return onlineServers.containsKey(serverName);
+    return serverName != null && onlineServers.containsKey(serverName);
+  }
+
+  /**
+   * Check if a server is known to be dead.  A server can be online,
+   * or known to be dead, or unknown to this manager (i.e, not online,
+   * not known to be dead either. it is simply not tracked by the
+   * master any more, for example, a very old previous instance).
+   */
+  public synchronized boolean isServerDead(ServerName serverName) {
+    return serverName == null || deadservers.isDeadServer(serverName)
+      || queuedDeadServers.contains(serverName)
+      || requeuedDeadServers.contains(serverName);
   }
 
   public void shutdownCluster() {

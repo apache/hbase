@@ -397,12 +397,13 @@ public class TestZooKeeper {
     zk.close();
     ZKUtil.createAndFailSilent(zk2, aclZnode);
  }
-  
-  @Test
+
   /**
    * Test should not fail with NPE when getChildDataAndWatchForNewChildren
    * invoked with wrongNode
    */
+  @Test
+  @SuppressWarnings("deprecation")
   public void testGetChildDataAndWatchForNewChildrenShouldNotThrowNPE()
       throws Exception {
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
@@ -443,7 +444,7 @@ public class TestZooKeeper {
    * Tests whether the logs are split when master recovers from a expired zookeeper session and an
    * RS goes down.
    */
-  @Test(timeout = 60000)
+  @Test(timeout = 180000)
   public void testLogSplittingAfterMasterRecoveryDueToZKExpiry() throws IOException,
       KeeperException, InterruptedException {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();

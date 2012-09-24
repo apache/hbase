@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.AdminProtocol;
@@ -65,7 +64,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -78,6 +76,7 @@ import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
@@ -138,6 +137,7 @@ public class TestHBaseFsck {
     // point to a different region server
     HTable meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getName());
     ResultScanner scanner = meta.getScanner(new Scan());
+    HRegionInfo hri = null;
 
     resforloop:
     for (Result res : scanner) {
@@ -158,6 +158,7 @@ public class TestHBaseFsck {
           put.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
             Bytes.toBytes(sn.getStartcode()));
           meta.put(put);
+          hri = HRegionInfo.getHRegionInfo(res);
           break resforloop;
         }
       }
@@ -167,10 +168,8 @@ public class TestHBaseFsck {
     assertErrors(doFsck(conf, true), new ERROR_CODE[]{
         ERROR_CODE.SERVER_DOES_NOT_MATCH_META});
 
-    // fixing assignments require opening regions is not synchronous.  To make
-    // the test pass consistently so for now we bake in some sleep to let it
-    // finish.  1s seems sufficient.
-    Thread.sleep(1000);
+    TEST_UTIL.getHBaseCluster().getMaster()
+      .getAssignmentManager().waitForAssignment(hri);
 
     // Should be fixed now
     assertNoErrors(doFsck(conf, false));
@@ -318,18 +317,6 @@ public class TestHBaseFsck {
     }
     tbl.put(puts);
     tbl.flushCommits();
-    long endTime = System.currentTimeMillis() + 60000;
-    while (!TEST_UTIL.getHBaseAdmin().isTableEnabled(tablename)) {
-      try {
-        if (System.currentTimeMillis() > endTime) {
-          fail("Failed to enable table " + tablename + " after waiting for 60 sec");
-        }
-        Thread.sleep(100);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-        fail("Interrupted when waiting table " + tablename + " to be enabled");
-      }
-    }
     return tbl;
   }
 
@@ -1117,15 +1104,19 @@ public class TestHBaseFsck {
 
       // Region of disable table was opened on RS
       TEST_UTIL.getHBaseAdmin().disableTable(table);
+      // Mess up ZKTable state, otherwise, can't open the region
+      ZKTable zkTable = cluster.getMaster().getAssignmentManager().getZKTable();
+      zkTable.setEnabledTable(table);
       HRegionInfo region = disabledRegions.remove(0);
       ZKAssign.createNodeOffline(zkw, region, serverName);
       ProtobufUtil.openRegion(hrs, region);
 
       int iTimes = 0;
+      byte[] regionName = region.getRegionName();
       while (true) {
-        byte[] data = ZKAssign.getData(zkw, region.getEncodedName());
-        RegionTransition rt = data == null ? null : RegionTransition.parseFrom(data);
-        if (rt == null || rt.getEventType() == EventType.RS_ZK_REGION_OPENED) {
+        if (cluster.getServerWith(regionName) != -1) {
+          // Now, region is deployed, reset the table state back
+          zkTable.setDisabledTable(table);
           break;
         }
         Thread.sleep(100);

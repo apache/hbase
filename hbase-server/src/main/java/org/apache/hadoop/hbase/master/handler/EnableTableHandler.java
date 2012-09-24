@@ -208,7 +208,7 @@ public class EnableTableHandler extends EventHandler {
         }
       } else {
         try {
-          assignmentManager.assignUserRegionsToOnlineServers(regions);
+          assignmentManager.assign(regions);
         } catch (InterruptedException e) {
           LOG.warn("Assignment was interrupted");
           Thread.currentThread().interrupt();

@@ -155,7 +155,7 @@ public class TestHCM {
     table.put(put2);
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
 
-    // We can wait for all regions to be onlines, that makes log reading easier when debugging
+    // We can wait for all regions to be online, that makes log reading easier when debugging
     while (TEST_UTIL.getMiniHBaseCluster().getMaster().
       getAssignmentManager().getRegionStates().isRegionsInTransition()) {
     }

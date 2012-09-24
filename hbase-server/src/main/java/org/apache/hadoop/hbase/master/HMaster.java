@@ -30,11 +30,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -61,7 +58,6 @@ import org.apache.hadoop.hbase.MasterMonitorProtocol;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.PleaseHoldException;
-import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
@@ -661,7 +657,7 @@ Server {
 
     // Wait for region servers to report in.
     this.serverManager.waitForRegionServers(status);
-    // Check zk for regionservers that are up but didn't register
+    // Check zk for region servers that are up but didn't register
     for (ServerName sn: this.regionServerTracker.getOnlineServers()) {
       if (!this.serverManager.isServerOnline(sn)) {
         // Not registered; add it.
@@ -690,7 +686,7 @@ Server {
       .updateRootAndMetaIfNecessary(this);
 
     this.balancer.setMasterServices(this);
-    // Fixup assignment manager status
+    // Fix up assignment manager status
     status.setStatus("Starting assignment manager");
     this.assignmentManager.joinCluster();
 
@@ -765,12 +761,11 @@ Server {
   /**
    * If ServerShutdownHandler is disabled, we enable it and expire those dead
    * but not expired servers.
-   * @throws IOException
    */
-  private void enableServerShutdownHandler() throws IOException {
+  private void enableServerShutdownHandler() {
     if (!serverShutdownHandlerEnabled) {
       serverShutdownHandlerEnabled = true;
-      this.serverManager.expireDeadNotExpiredServers();
+      this.serverManager.processQueuedDeadServers();
     }
   }
 
@@ -845,7 +840,7 @@ Server {
       enableSSHandWaitForMeta();
       assigned++;
     } else {
-      // Region already assigned.  We didnt' assign it.  Add to in-memory state.
+      // Region already assigned.  We didn't assign it.  Add to in-memory state.
       this.assignmentManager.regionOnline(HRegionInfo.FIRST_META_REGIONINFO,
         this.catalogTracker.getMetaLocation());
     }
@@ -911,8 +906,11 @@ Server {
     // Now work on our list of found parents. See if any we can clean up.
     int fixups = 0;
     for (Map.Entry<HRegionInfo, Result> e : offlineSplitParents.entrySet()) {
-      fixups += ServerShutdownHandler.fixupDaughters(
+      ServerName sn = HRegionInfo.getServerName(e.getValue());
+      if (!serverManager.isServerDead(sn)) { // Otherwise, let SSH take care of it
+        fixups += ServerShutdownHandler.fixupDaughters(
           e.getValue(), assignmentManager, catalogTracker);
+      }
     }
     if (fixups != 0) {
       LOG.info("Scanned the catalog and fixed up " + fixups +
@@ -1484,7 +1482,7 @@ Server {
     }
 
     this.executorService.submit(new CreateTableHandler(this,
-      this.fileSystemManager, this.serverManager, hTableDescriptor, conf,
+      this.fileSystemManager, hTableDescriptor, conf,
       newRegions, catalogTracker, assignmentManager));
     if (cpHost != null) {
       cpHost.postCreateTable(hTableDescriptor, newRegions);

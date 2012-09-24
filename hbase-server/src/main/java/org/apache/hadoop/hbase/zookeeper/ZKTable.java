@@ -27,13 +27,10 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Helper class for table state tracking for use by {@link AssignmentManager}.
@@ -304,5 +301,68 @@ public class ZKTable {
       }
     }
     return disabledTables;
+  }
+
+  /**
+   * Gets a list of all the tables set as disabled in zookeeper.
+   * @return Set of disabled tables, empty Set if none
+   * @throws KeeperException
+   */
+  public static Set<String> getDisabledTables(ZooKeeperWatcher zkw)
+      throws KeeperException {
+    return getAllTables(zkw, ZooKeeperProtos.Table.State.DISABLED);
+  }
+
+  /**
+   * Gets a list of all the tables set as disabling in zookeeper.
+   * @return Set of disabling tables, empty Set if none
+   * @throws KeeperException
+   */
+  public static Set<String> getDisablingTables(ZooKeeperWatcher zkw)
+      throws KeeperException {
+    return getAllTables(zkw, ZooKeeperProtos.Table.State.DISABLING);
+  }
+
+  /**
+   * Gets a list of all the tables set as enabling in zookeeper.
+   * @return Set of enabling tables, empty Set if none
+   * @throws KeeperException
+   */
+  public static Set<String> getEnablingTables(ZooKeeperWatcher zkw)
+      throws KeeperException {
+    return getAllTables(zkw, ZooKeeperProtos.Table.State.ENABLING);
+  }
+
+  /**
+   * Gets a list of all the tables set as disabled in zookeeper.
+   * @return Set of disabled tables, empty Set if none
+   * @throws KeeperException
+   */
+  public static Set<String> getDisabledOrDisablingTables(ZooKeeperWatcher zkw)
+      throws KeeperException {
+    return getAllTables(zkw, ZooKeeperProtos.Table.State.DISABLED,
+      ZooKeeperProtos.Table.State.DISABLING);
+  }
+
+  /**
+   * Gets a list of all the tables of specified states in zookeeper.
+   * @return Set of tables of specified states, empty Set if none
+   * @throws KeeperException
+   */
+  static Set<String> getAllTables(final ZooKeeperWatcher zkw,
+      final ZooKeeperProtos.Table.State... states) throws KeeperException {
+    Set<String> allTables = new HashSet<String>();
+    List<String> children =
+      ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
+    for (String child: children) {
+      ZooKeeperProtos.Table.State state = ZKTableReadOnly.getTableState(zkw, child);
+      for (ZooKeeperProtos.Table.State expectedState: states) {
+        if (state == expectedState) {
+          allTables.add(child);
+          break;
+        }
+      }
+    }
+    return allTables;
   }
 }

@@ -63,7 +63,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -337,6 +336,7 @@ public class TestAssignmentManager {
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
       this.serverManager, ct, balancer, executor, null);
+    am.failoverCleanupDone.set(true);
     try {
       // Make sure our new AM gets callbacks; once registered, can't unregister.
       // Thats ok because we make a new zk watcher for each test.
@@ -451,9 +451,10 @@ public class TestAssignmentManager {
     // Create and startup an executor. This is used by AssignmentManager
     // handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("testSSHWhenSplitRegionInProgress");
-
     // We need a mocked catalog tracker.
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    ZKAssign.deleteAllNodes(this.watcher);
+
     // Create an AM.
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
       this.server, this.serverManager);
@@ -501,6 +502,8 @@ public class TestAssignmentManager {
     // We need a mocked catalog tracker.
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server.getConfiguration());
+    ZKAssign.deleteAllNodes(this.watcher);
+
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
       this.serverManager, ct, balancer, executor, null);
@@ -521,6 +524,7 @@ public class TestAssignmentManager {
     String node = ZKAssign.getNodeName(this.watcher, REGIONINFO.getEncodedName());
     // create znode in M_ZK_REGION_CLOSING state.
     ZKUtil.createAndWatch(this.watcher, node, data.toByteArray());
+
     try {
       processServerShutdownHandler(ct, am, false);
       // check znode deleted or not.
@@ -541,7 +545,7 @@ public class TestAssignmentManager {
       ZKAssign.deleteAllNodes(this.watcher);
     }
   }
-     
+
   private void processServerShutdownHandler(CatalogTracker ct, AssignmentManager am, boolean splitRegion)
       throws IOException, ServiceException {
     // Make sure our new AM gets callbacks; once registered, can't unregister.
@@ -588,6 +592,7 @@ public class TestAssignmentManager {
     Mockito.when(services.getZooKeeper()).thenReturn(this.watcher);
     ServerShutdownHandler handler = new ServerShutdownHandler(this.server,
       services, deadServers, SERVERNAME_A, false);
+    am.failoverCleanupDone.set(true);
     handler.process();
     // The region in r will have been assigned.  It'll be up in zk as unassigned.
   }
@@ -667,7 +672,7 @@ public class TestAssignmentManager {
     };
     ((ZooKeeperWatcher) zkw).registerListener(am);
     Mockito.doThrow(new InterruptedException()).when(recoverableZk)
-        .getChildren("/hbase/unassigned", zkw);
+        .getChildren("/hbase/unassigned", null);
     am.setWatcher((ZooKeeperWatcher) zkw);
     try {
       am.processDeadServersAndRegionsInTransition(null);
@@ -748,7 +753,7 @@ public class TestAssignmentManager {
       am.shutdown();
     }
   }
-  
+
   /**
    * Mocked load balancer class used in the testcase to make sure that the testcase waits until
    * random assignment is called and the gate variable is set to true.
@@ -774,7 +779,7 @@ public class TestAssignmentManager {
       return super.retainAssignment(regions, servers);
     }
   }
-  
+
   /**
    * Test the scenario when the master is in failover and trying to process a
    * region which is in Opening state on a dead RS. Master should immediately
@@ -791,8 +796,8 @@ public class TestAssignmentManager {
         EventType.RS_ZK_REGION_OPENING, version);
     RegionTransition rt = RegionTransition.createRegionTransition(EventType.RS_ZK_REGION_OPENING,
         REGIONINFO.getRegionName(), SERVERNAME_A, HConstants.EMPTY_BYTE_ARRAY);
-    Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers = 
-      new HashMap<ServerName, List<Pair<HRegionInfo, Result>>>();
+    Map<ServerName, List<HRegionInfo>> deadServers =
+      new HashMap<ServerName, List<HRegionInfo>>();
     deadServers.put(SERVERNAME_A, null);
     version = ZKAssign.getVersion(this.watcher, REGIONINFO);
     am.gate.set(false);
@@ -804,7 +809,7 @@ public class TestAssignmentManager {
     assertTrue("The region should be assigned immediately.", null != am.regionPlans.get(REGIONINFO
         .getEncodedName()));
   }
-  
+
   /**
    * Test verifies whether assignment is skipped for regions of tables in DISABLING state during
    * clean cluster startup. See HBASE-6281.
@@ -969,19 +974,11 @@ public class TestAssignmentManager {
     @Override
     boolean processRegionInTransition(String encodedRegionName,
         HRegionInfo regionInfo,
-        Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers)
+        Map<ServerName, List<HRegionInfo>> deadServers)
         throws KeeperException, IOException {
       this.processRITInvoked = true;
       return super.processRegionInTransition(encodedRegionName, regionInfo,
           deadServers);
-    }
-    @Override
-    void processRegionsInTransition(final RegionTransition rt,
-        final HRegionInfo regionInfo,
-        final Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers,
-        final int expectedVersion) throws KeeperException {
-      while (this.gate.get()) Threads.sleep(1);
-      super.processRegionsInTransition(rt, regionInfo, deadServers, expectedVersion);
     }
 
     @Override
@@ -992,16 +989,16 @@ public class TestAssignmentManager {
     }
 
     @Override
-    public void assign(java.util.List<HRegionInfo> regions, java.util.List<ServerName> servers) 
-    {
+    public void assign(List<HRegionInfo> regions)
+        throws IOException, InterruptedException {
       assignInvoked = true;
-    };
-    
+    }
+
     /** reset the watcher */
     void setWatcher(ZooKeeperWatcher watcher) {
       this.watcher = watcher;
     }
-    
+
     /**
      * @return ExecutorService used by this instance.
      */

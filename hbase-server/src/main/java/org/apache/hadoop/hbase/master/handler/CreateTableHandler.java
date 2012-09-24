@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
@@ -41,9 +40,7 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.zookeeper.KeeperException;
 
@@ -58,19 +55,15 @@ public class CreateTableHandler extends EventHandler {
   private Configuration conf;
   private final AssignmentManager assignmentManager;
   private final CatalogTracker catalogTracker;
-  private final ServerManager serverManager;
   private final HRegionInfo [] newRegions;
 
   public CreateTableHandler(Server server, MasterFileSystem fileSystemManager,
-    ServerManager serverManager, HTableDescriptor hTableDescriptor,
-    Configuration conf, HRegionInfo [] newRegions,
-    CatalogTracker catalogTracker, AssignmentManager assignmentManager)
-    throws NotAllMetaRegionsOnlineException, TableExistsException,
-    IOException {
+      HTableDescriptor hTableDescriptor, Configuration conf, HRegionInfo [] newRegions,
+      CatalogTracker catalogTracker, AssignmentManager assignmentManager)
+          throws NotAllMetaRegionsOnlineException, TableExistsException, IOException {
     super(server, EventType.C_M_CREATE_TABLE);
 
     this.fileSystemManager = fileSystemManager;
-    this.serverManager = serverManager;
     this.hTableDescriptor = hTableDescriptor;
     this.conf = conf;
     this.newRegions = newRegions;
@@ -173,11 +166,10 @@ public class CreateTableHandler extends EventHandler {
     }
 
     // 4. Trigger immediate assignment of the regions in round-robin fashion
-    List<ServerName> servers = serverManager.createDestinationServersList();
     try {
       List<HRegionInfo> regions = Arrays.asList(newRegions);
       assignmentManager.getRegionStates().createRegionStates(regions);
-      assignmentManager.assignUserRegions(regions, servers);
+      assignmentManager.assign(regions);
     } catch (InterruptedException ie) {
       LOG.error("Caught " + ie + " during round-robin assignment");
       throw new IOException(ie);

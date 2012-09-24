@@ -222,10 +222,13 @@ public class ServerShutdownHandler extends EventHandler {
       // The solution here is to resubmit a ServerShutdownHandler request to process
       // user regions on that server so that MetaServerShutdownHandler
       // executor pool is always available.
-      if (isCarryingRoot() || isCarryingMeta()) { // -ROOT- or .META.
-        this.services.getExecutorService().submit(new ServerShutdownHandler(
-          this.server, this.services, this.deadServers, serverName, false));
-        this.deadServers.add(serverName);
+      //
+      // If AssignmentManager hasn't finished rebuilding user regions,
+      // we are not ready to assign dead regions either. So we re-queue up
+      // the dead server for further processing too.
+      if (isCarryingRoot() || isCarryingMeta() // -ROOT- or .META.
+          || !services.getAssignmentManager().isFailoverCleanupDone()) {
+        this.services.getServerManager().processDeadServer(serverName);
         return;
       }
 
@@ -266,6 +269,9 @@ public class ServerShutdownHandler extends EventHandler {
           LOG.info("Received exception accessing META during server shutdown of " +
               serverName + ", retrying META read", ioe);
         }
+      }
+      if (this.server.isStopped()) {
+        throw new IOException("Server is stopped");
       }
 
       // Skip regions that were in transition unless CLOSING or PENDING_CLOSE
@@ -347,11 +353,12 @@ public class ServerShutdownHandler extends EventHandler {
             toAssignRegions.remove(hri);
           }
         }
-        // Get all available servers
-        List<ServerName> availableServers = services.getServerManager()
-            .createDestinationServersList();
-        this.services.getAssignmentManager().assign(toAssignRegions,
-            availableServers);
+        try {
+          this.services.getAssignmentManager().assign(toAssignRegions);
+        } catch (InterruptedException ie) {
+          LOG.error("Caught " + ie + " during round-robin assignment");
+          throw new IOException(ie);
+        }
       }
     } finally {
       this.deadServers.finish(serverName);
