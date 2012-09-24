@@ -1059,6 +1059,19 @@ you need to copy under <filename>hbase/lib</filename>, the <filename>commons-con
 in your Hadoop's <filename>lib</filename> directory.  That should fix the above complaint.
 </para>
 </section>
+
+          <section xml:id="trouble.versions.205">
+             <title>...cannot communicate with client version...</title>
+<para>If you see something like the following in your logs
+<computeroutput>...
+2012-09-24 10:20:52,168 FATAL org.apache.hadoop.hbase.master.HMaster: Unhandled exception. Starting shutdown.
+org.apache.hadoop.ipc.RemoteException: Server IPC version 7 cannot communicate with client version 4
+...</computeroutput>
+...are you trying to talk to an Hadoop 2.0.x from an HBase that has an Hadoop 1.0.x client?
+Use the HBase built against Hadoop 2.0 or rebuild your HBase passing the <command>-Dhadoop.profile=2.0</command>
+attribute to Maven (See <xref linkend="maven.build.hadoop" /> for more). 
+</para>
+
 </section>
 
     <section xml:id="trouble.casestudy">

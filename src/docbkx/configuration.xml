@@ -417,14 +417,15 @@ to ensure well-formedness of your document after an edit session.
           HBase. Do not use this configuration for production nor for
           evaluating HBase performance.</para>
 
-	      <para>First, confirm your local HDFS setup.  Below is an example <filename>conf/hdfs-site.xml</filename>.  Note
-	      that the replication is set to 1 because this is a pseudo-distributed setup.  The properties <varname>dfs.name.dir</varname>
-	      and <varname>dfs.data.dir</varname> are being set explicitly, the latter being where HDFS data will exist on your machine.
-   		  </para>
-	      <para>Next, configure HBase for usage.  Below is an example <filename>conf/hbase-site.xml</filename>.  Note
-	      that the <varname>hbase.rootdir</varname> property points to the local HDFS instance.  This is the file into
+	      <para>First, confirm your local HDFS setup.  Below is an example <filename>conf/hdfs-site.xml</filename>.
+	      The properties <varname>dfs.name.dir</varname> and <varname>dfs.data.dir</varname> are being set explicitly,
+              the latter being where HDFS data will exist on your machine.
+   	      </para>
+	      <para>Next, configure HBase for usage.  Below is an example <filename>conf/hbase-site.xml</filename>.
+          This is the file into
           which you add local customizations and overrides for
-          <xref linkend="hbase_default_configurations" /> and <xref linkend="hdfs_client_conf" />
+          <xref linkend="hbase_default_configurations" /> and <xref linkend="hdfs_client_conf" />.
+              Note that the <varname>hbase.rootdir</varname> property points to the local HDFS instance.
    		  </para>
 
           <para>Now skip to <xref linkend="confirm" /> for how to start and verify your
@@ -443,8 +444,7 @@ to ensure well-formedness of your document after an edit session.
 
           <note>
             <para>Above we bind to <varname>localhost</varname>. This means
-            that a remote client cannot connect. Amend accordingly, if you
-            want to connect from a remote location.</para>
+            that a remote client cannot connect.</para>
           </note>
 
 			
@@ -464,10 +464,6 @@ to ensure well-formedness of your document after an edit session.
     &lt;name&gt;dfs.data.dir&lt;/name&gt;
     &lt;value&gt;/Users/local/user.name/hdfs-data&lt;/value&gt;
   &lt;/property&gt;
-  &lt;property&gt;
-    &lt;name&gt;dfs.replication&lt;/name&gt;
-    &lt;value&gt;1&lt;/value&gt;
-  &lt;/property&gt;
   ...
 &lt;/configuration&gt;
 </programlisting>
@@ -481,12 +477,12 @@ to ensure well-formedness of your document after an edit session.
     &lt;value&gt;hdfs://localhost:8020/hbase&lt;/value&gt;
   &lt;/property&gt;
   &lt;property&gt;
-    &lt;name&gt;hbase.zookeeper.quorum&lt;/name&gt;
-    &lt;value&gt;localhost&lt;/value&gt;
-  &lt;/property&gt;
-  &lt;property&gt;
     &lt;name&gt;hbase.cluster.distributed&lt;/name&gt;
     &lt;value&gt;true&lt;/value&gt;
+  &lt;/property&gt;
+  &lt;property&gt;
+    &lt;name&gt;hbase.zookeeper.quorum&lt;/name&gt;
+    &lt;value&gt;localhost&lt;/value&gt;
   &lt;/property&gt;
   ...
 &lt;/configuration&gt;
