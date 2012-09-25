@@ -39,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -287,7 +288,7 @@ public class TestHCM {
     ThreadPoolExecutor pool = new ThreadPoolExecutor(1, 10,
         60, TimeUnit.SECONDS,
         new SynchronousQueue<Runnable>(),
-        new DaemonThreadFactory("test-hcm-pool"));
+        Threads.newDaemonThreadFactory("test-hcm"));
 
     HTable table = new HTable(TABLE_NAME1, conn, pool);
     table.close();

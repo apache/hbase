@@ -18,11 +18,21 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -38,17 +48,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.regionserver.metrics.ReplicationSinkMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.TreeMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * This class is responsible for replicating the edits coming
@@ -91,7 +91,7 @@ public class ReplicationSink {
     this.sharedThreadPool = new ThreadPoolExecutor(1,
         conf.getInt("hbase.htable.threads.max", Integer.MAX_VALUE),
         conf.getLong("hbase.htable.threads.keepalivetime", 60), TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(), new DaemonThreadFactory("hbase-repl"));
+        new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("hbase-repl"));
     ((ThreadPoolExecutor) this.sharedThreadPool).allowCoreThreadTimeOut(true);
   }
 

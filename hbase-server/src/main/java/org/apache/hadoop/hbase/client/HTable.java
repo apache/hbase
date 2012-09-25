@@ -48,7 +48,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -78,6 +77,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 
 import com.google.protobuf.ServiceException;
 
@@ -191,7 +191,7 @@ public class HTable implements HTableInterface {
     // we only create as many Runnables as there are region servers. It means
     // it also scales when new region servers are added.
     this.pool = new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(), new DaemonThreadFactory("hbase-table-pool"));
+        new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("hbase-table"));
     ((ThreadPoolExecutor) this.pool).allowCoreThreadTimeOut(true);
 
     this.finishSetup();
