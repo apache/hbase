@@ -62,7 +62,7 @@ public class LoadTest extends Configured implements Tool {
   // Since all tasks share the same jmx port, some tasks might fail since
   // they might run on the same machine and try to bind to the same jmx port.
   // Alleviating this situation by retrying tasks as long as we can.
-  public static final int MAX_REDUCE_TASK_ATTEMPTS = Integer.MAX_VALUE;
+  public static final int MAX_REDUCE_TASK_ATTEMPTS = 1000000;
 
   public static class Map
       extends Mapper<LongWritable, Text, LongWritable, Text> {
