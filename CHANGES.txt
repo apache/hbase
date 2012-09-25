@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.2 - 9/21/2012
+Release 0.94.2 - 9/25/2012
 Sub-task
 
     [HBASE-6257] - Avoid unnecessary flush & compact on Meta in admin.rb.
@@ -74,11 +74,14 @@ Bug
     [HBASE-6757] - Very inefficient behaviour of scan using FilterList
     [HBASE-6762] - HBASE-6340 broke SecureRPCEngine
     [HBASE-6769] - HRS.multi eats NoSuchColumnFamilyException since HBASE-5021
+    [HBASE-6784] - TestCoprocessorScanPolicy is sometimes flaky when run locally
     [HBASE-6803] - script hbase should add JAVA_LIBRARY_PATH to LD_LIBRARY_PATH
     [HBASE-6839] - Operations may be executed without holding rowLock
     [HBASE-6842] - the jar used in coprocessor is not deleted in local which will exhaust the space of /tmp
     [HBASE-6844] - upgrade 0.23 version dependency in 0.94
     [HBASE-6847] - HBASE-6649 broke replication
+    [HBASE-6851] - Race condition in TableAuthManager.updateGlobalCache()
+    [HBASE-6868] - Skip checksum is broke; are we double-checksumming by default?
 
 Improvement
 
