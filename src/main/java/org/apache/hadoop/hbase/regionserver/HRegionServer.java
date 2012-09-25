@@ -378,7 +378,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // do we use checksum verfication in the hbase? If hbase checksum verification
     // is enabled, then we automatically switch off hdfs checksum verification.
     this.useHBaseChecksum = conf.getBoolean(
-      HConstants.HBASE_CHECKSUM_VERIFICATION, true);
+      HConstants.HBASE_CHECKSUM_VERIFICATION, false);
 
     // Config'ed params
     this.numRetries = conf.getInt("hbase.client.retries.number", 10);
