@@ -38,6 +38,8 @@ import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
 import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 import java.io.IOException;
@@ -200,6 +202,12 @@ public class RegionServerMetrics implements Updater {
   public final MetricsTimeVaryingRate mvccWaitTime =
     new MetricsTimeVaryingRate("mvccWait", registry);
 
+  public final MetricsRate numReads =
+    new MetricsRate("numReads", registry);
+
+  public final MetricsRate numWrites =
+    new MetricsRate("numWrites", registry);
+
   /**
    * time each scheduled compaction takes
    */
@@ -286,6 +294,8 @@ public class RegionServerMetrics implements Updater {
       this.blockCacheEvictedMultiCount.pushMetric(this.metricsRecord);
       this.blockCacheEvictedMemoryCount.pushMetric(this.metricsRecord);
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
+      this.numReads.pushMetric(this.metricsRecord);
+      this.numWrites.pushMetric(this.metricsRecord);
 
       // Be careful. Here is code for MTVR from up in hadoop:
       // public synchronized void inc(final int numOps, final long time) {
@@ -422,6 +432,11 @@ public class RegionServerMetrics implements Updater {
       Integer.valueOf(this.memstoreSizeMB.get()));
     sb = Strings.appendKeyValue(sb, "compactionQueueSize",
       Integer.valueOf(this.compactionQueueSize.get()));
+    sb = Strings.appendKeyValue(sb, "numWrites",
+      Float.valueOf(this.numWrites.getPreviousIntervalValue()));
+    sb = Strings.appendKeyValue(sb, "numReads",
+      Float.valueOf(this.numReads.getPreviousIntervalValue()));
+
     // Duplicate from jvmmetrics because metrics are private there so
     // inaccessible.
     MemoryUsage memory =

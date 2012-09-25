@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,13 +34,12 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
     StoreMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -206,5 +205,22 @@ public class TestRegionServerMetrics {
     }
     assertSizeMetric(tableName, cfs,
         new int[] {kvLength, kvLength, kvLength, kvLength});
+  }
+
+  @Test
+  public void testNumReadsAndWrites() throws IOException, InterruptedException{
+    TEST_UTIL.createRandomTable(
+        "NumReadsWritesTest",
+        Arrays.asList(FAMILIES),
+        MAX_VERSIONS, NUM_COLS_PER_ROW, NUM_FLUSHES, NUM_REGIONS, 1000);
+    final HRegionServer rs =
+        TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+    rs.doMetrics();
+    for (HRegion r : rs.getOnlineRegions()) {
+      Get g = new Get(new byte[]{});
+      rs.get(r.getRegionName(), g);
+    }
+    Assert.assertEquals(rs.getOnlineRegions().size(), rs.getNumReads().get());
+    Assert.assertEquals(rs.getNumWrites().get(), 0);
   }
 }
