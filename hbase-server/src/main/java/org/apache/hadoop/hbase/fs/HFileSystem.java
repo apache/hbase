@@ -79,6 +79,7 @@ public class HFileSystem extends FilterFileSystem {
     this.useHBaseChecksum = useHBaseChecksum;
     
     fs.initialize(getDefaultUri(conf), conf);
+    addLocationsOrderInterceptor(conf);
 
     // If hbase checksum verification is switched on, then create a new
     // filesystem object that has cksum verification turned off.
@@ -89,12 +90,13 @@ public class HFileSystem extends FilterFileSystem {
     // This manifests itself in that incorrect data is read and HFileBlocks won't be able to read
     // their header magic numbers. See HBASE-5885
     if (useHBaseChecksum && !(fs instanceof LocalFileSystem)) {
+      conf = new Configuration(conf);
+      conf.setBoolean("dfs.client.read.shortcircuit.skip.checksum", true);
       this.noChecksumFs = newInstanceFileSystem(conf);
       this.noChecksumFs.setVerifyChecksum(false);
     } else {
       this.noChecksumFs = fs;
     }
-    addLocationsOrderInterceptor(conf);
   }
 
   /**
