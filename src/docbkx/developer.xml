@@ -57,7 +57,7 @@ git clone git://git.apache.org/hbase.git
             We encourage you to have this formatter in place in eclipse when editing HBase code.  To load it into eclipse:
 <orderedlist>
 <listitem><para>Go to Eclipse->Preferences...</para></listitem>
-<listitem><para>In Preferences, Go to Java-&gt;Code Style-&gt;>Formatter</para></listitem>
+<listitem><para>In Preferences, Go to Java-&gt;Code Style-&gt;Formatter</para></listitem>
 <listitem><para>Import... <filename>hbase_eclipse_formatter.xml</filename></para></listitem>
 <listitem><para>Click Apply</para></listitem>
 <listitem><para>Still in Preferences, Go to Java->Editor->Save Actions</para></listitem>
