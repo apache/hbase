@@ -1073,6 +1073,7 @@ attribute to Maven (See <xref linkend="maven.build.hadoop" /> for more).
 </para>
 
 </section>
+</section>
 
     <section xml:id="trouble.casestudy">
       <title>Case Studies</title>

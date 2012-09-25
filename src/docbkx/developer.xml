@@ -53,9 +53,24 @@ git clone git://git.apache.org/hbase.git
           <title>Eclipse</title>
             <section xml:id="eclipse.code.formatting">
             <title>Code Formatting</title>
-            <para>See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3678">HBASE-3678 Add Eclipse-based Apache Formatter to HBase Wiki</link>
-              for an Eclipse formatter to help ensure your code conforms to HBase'y coding convention.
-            The issue includes instructions for loading the attached formatter.</para>
+            <para>Under the <filename>dev-support</filename> folder, you will find <filename>hbase_eclipse_formatter.xml</filename>.
+            We encourage you to have this formatter in place in eclipse when editing HBase code.  To load it into eclipse:
+<orderedlist>
+<listitem><para>Go to Eclipse->Preferences...</para></listitem>
+<listitem><para>In Preferences, Go to Java-&gt;Code Style-&gt;>Formatter</para></listitem>
+<listitem><para>Import... <filename>hbase_eclipse_formatter.xml</filename></para></listitem>
+<listitem><para>Click Apply</para></listitem>
+<listitem><para>Still in Preferences, Go to Java->Editor->Save Actions</para></listitem>
+<listitem><para>Check the following:
+<orderedlist>
+<listitem><para>Perform the selected actions on save</para></listitem>
+<listitem><para>Format source code</para></listitem>
+<listitem><para>Format edited lines</para></listitem>
+</orderedlist>
+</para></listitem>
+<listitem><para>Click Apply</para></listitem>
+</orderedlist>
+</para>
             <para>In addition to the automatic formatting, make sure you follow the style guidelines explained in <xref linkend="common.patch.feedback"/></para>
             <para>Also, no @author tags - that's a rule.  Quality Javadoc comments are appreciated.  And include the Apache license.</para>
             </section>         
