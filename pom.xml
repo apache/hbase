@@ -131,6 +131,14 @@
       <organizationUrl>http://www.explorys.com</organizationUrl>
     </developer>
     <developer>
+      <id>enis</id>
+      <name>Enis Soztutar</name>
+      <email>enis@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Hortonworks</organization>
+      <organizationUrl>http://www.hortonworks.com</organizationUrl>
+    </developer>
+    <developer>
       <id>garyh</id>
       <name>Gary Helmling</name>
       <email>garyh@apache.org</email>
