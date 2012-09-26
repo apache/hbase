@@ -615,6 +615,7 @@
               <!-- auto-gen docs -->
               <!--It don't like freebsd license-->
               <exclude>**/src/site/resources/css/freebsd_docbook.css</exclude>
+              <exclude>**/hbase_eclipse_formatter.xml</exclude>
             </excludes>
           </configuration>
         </plugin>
