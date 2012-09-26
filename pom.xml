@@ -290,6 +290,14 @@
       <organization>Scaled Risk</organization>
       <organizationUrl>http://www.scaledrisk.com</organizationUrl>
     </developer>
+    <developer>
+      <id>eclark</id>
+      <name>Elliott Clark</name>
+      <email>eclark@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>StumbleUpon</organization>
+      <organizationUrl>http://www.stumbleupon.com/</organizationUrl>
+    </developer>
   </developers>
   <repositories>
     <repository>
