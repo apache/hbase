@@ -356,31 +356,35 @@ given the dependency tree).</para>
 
 <section xml:id="hbase.unittests">
 <title>Unit Tests</title>
-<para>HBase unit tests are subdivided into three categories: small, medium and large, with
-corresponding JUnit <link xlink:href="http://www.junit.org/node/581">categories</link>:
+<para>HBase unit tests are subdivided into four categories: small, medium, large, and
+integration with corresponding JUnit <link xlink:href="http://www.junit.org/node/581">categories</link>:
 <classname>SmallTests</classname>, <classname>MediumTests</classname>,
-<classname>LargeTests</classname>.  JUnit categories are denoted using java annotations
-and look like this in your unit test code.
+<classname>LargeTests</classname>, <classname>IntegrationTests</classname>.
+JUnit categories are denoted using java annotations and look like this in your unit test code.
 <programlisting>...
 @Category(SmallTests.class)
 public class TestHRegionInfo {
-
   @Test
   public void testCreateHRegionInfoName() throws Exception {
     // ...
   }
-...
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }</programlisting>
-The above example shows how to mark a test as belonging to the small category.  The <code>@org.junit.Rule</code>
-lines on the end are also necessary. Add them to each new unit test file.  They are needed by the categorization process.
-HBase uses a patched maven surefire plugin and maven profiles to implement its unit test characterizations.
+The above example shows how to mark a unit test as belonging to the small category.
+All unit tests in HBase have a categorization.
+</para>
+<para>
+The first three categories, small, medium, and large are for tests run when
+you type <code>$ mvn test</code>; i.e. these three categorizations are for
+HBase unit tests. The integration category is for not for unit tests but for integration
+tests.  These are run when you invoke <code>$ mvn verify</code>.  Integration tests
+are described TODO: POINTER_TO_INTEGRATION_TEST_SECTION and will not be discussed further
+in this section on HBase unit tests.</para>
+<para>Read the below to figure which annotation of the set small, medium, and large to
+put on your new HBase unit test.
 </para>
 
 <section xml:id="hbase.unittests.small">
-<title><indexterm><primary>SmallTests</primary></indexterm></title>
+<title>SmallTests<indexterm><primary>SmallTests</primary></indexterm></title>
 <para>
 <emphasis>Small</emphasis> tests are executed in a shared JVM. We put in this category all the tests that can
 be executed quickly in a shared JVM.  The maximum execution time for a small test is 15 seconds,
@@ -388,7 +392,7 @@ and small tests should not use a (mini)cluster.</para>
 </section>
 
 <section xml:id="hbase.unittests.medium">
-<title><indexterm><primary>MediumTests</primary></indexterm></title>
+<title>MediumTests<indexterm><primary>MediumTests</primary></indexterm></title>
 <para><emphasis>Medium</emphasis> tests represent tests that must be executed
 before proposing a patch. They are designed to run in less than 30 minutes altogether,
 and are quite stable in their results. They are designed to last less than 50 seconds
@@ -397,11 +401,16 @@ individually. They can use a cluster, and each of them is executed in a separate
 </section>
 
 <section xml:id="hbase.unittests.large">
-<title><indexterm><primary>LargeTests</primary></indexterm></title>
+<title>Large<indexterm><primary>LargeTests</primary></indexterm></title>
 <para><emphasis>Large</emphasis> tests are everything else. They are typically integration-like
 tests, regression tests for specific bugs, timeout tests, performance tests.
 They are executed before a commit on the pre-integration machines. They can be run on
 the developer machine as well.
+</para>
+</section>
+<para>
+HBase uses a patched maven surefire plugin and maven profiles to implement
+its unit test characterizations.
 </para>
 </section>
 
@@ -426,7 +435,7 @@ medium tests if they are executed.
 will execute small tests in a single JVM then medium and large tests in a separate JVM for each test.
 Medium and large tests are NOT executed if there is an error in a small test.
 Large tests are NOT executed if there is an error in a small or medium test.
-There is one report for small tests, and one report for medium and large tests if they are executed
+There is one report for small tests, and one report for medium and large tests if they are executed.
 </para>
 </section>
 
@@ -442,7 +451,8 @@ You can also pass a package, which will run all tests under the package:
 
 <para>
 The <code>-P localTests</code>  will remove the JUnit category effect (without this specific profile,
-the categories are taken into account).  It will actually use the official release of surefire
+the categories are taken into account).  It will actually use the official release of maven surefire,
+rather than our custom surefire plugin,
 and the old connector (The HBase build uses a patched version of the maven surefire plugin).
 Each junit tests is executed in a separate JVM (A fork per test class).  There is no
 parallelization when <code>localTests</code> profile is set.  You will see a new message at the end of the
@@ -460,6 +470,25 @@ report: "[INFO] Tests are skipped". It's harmless.
 </para>
 </section>
 
+<section xml:id="hbase.unittests.test.faster">
+<title>Running tests faster</title>
+<para>
+By default, <code>$ mvn test -P runAllTests</code> runs 5 tests in parallel.
+It can be increased on a developer's machine. Allowing that you can have 2
+tests in parallel per core, and you need about 2Gb of memory per test,
+if you have a 8 cores and 24Gb box, you can have 16 tests in parallel.
+To run 16 in parallel, do this:
+<command>mvn test -P runAllTests -Dsurefire.secondPartThreadCount=16</command>.
+To increase the speed, you can as well use a ramdisk. You will need 2Gb of memory
+to run all tests. You will also need to delete the files between two test run.
+The typical way to configure a ramdisk on Linux is:
+<programlisting>$ sudo mkdir /ram2G
+sudo mount -t tmpfs -o size=2048M tmpfs /ram2G</programlisting>
+You can then use it to run all HBase tests with the command:
+<command>mvn test -P runAllTests -Dsurefire.secondPartThreadCount=16 -Dtest.build.data.basedirectory=/ram2G</command>
+</para>
+</section>
+
 <section xml:id="hbase.unittests.cmds.test.hbasetests">
 <title><command>hbasetests.sh</command></title>
 <para>It's also possible to use the script <command>hbasetests.sh</command>. This script runs the medium and
@@ -472,6 +501,26 @@ It must be executed from the directory which contains the <filename>pom.xml</fil
 Running <programlisting>./dev-support/hbasetests.sh runAllTests</programlisting> will execute all tests.
 Running <programlisting>./dev-support/hbasetests.sh replayFailed</programlisting> will rerun the failed tests a
 second time, in a separate jvm and without parallelisation.
+</para>
+</section>
+<section xml:id="hbase.unittests.resource.checker">
+<title>Test Resource Checker<indexterm><primary>Test Resource Checker</primary></indexterm></title>
+<para>
+A custom Maven SureFire plugin listener checks a  number of resources before
+and after each HBase unit test runs and logs its findings at the end of the test
+output files which can be found in <filename>target/surefire-reports</filename>
+per Maven module (Tests write test reports named for the test class into this directory.  
+Check the <filename>*-out.txt</filename> files).  The resources counted are the number
+of threads, the number of file descriptors, etc. If the number has increased, it adds
+a <emphasis>LEAK?</emphasis> comment in the logs. As you can have an HBase instance
+running in the background, some threads can be deleted/created without any specific
+action in the test. However, if the test does not work as expected, or if the test
+should not impact these resources, it's worth checking these log lines
+<computeroutput>...hbase.ResourceChecker(157): before...</computeroutput> and 
+<computeroutput>...hbase.ResourceChecker(157): after...</computeroutput>. For example:
+<computeroutput>
+2012-09-26 09:22:15,315 INFO  [pool-1-thread-1] hbase.ResourceChecker(157): after: regionserver.TestColumnSeeking#testReseeking Thread=65 (was 65), OpenFileDescriptor=107 (was 107), MaxFileDescriptor=10240 (was 10240), ConnectionCount=1 (was 1)
+</computeroutput>
 </para>
 </section>
 </section>
@@ -529,7 +578,6 @@ Start/stopping a cluster cost around 10 seconds. They should not be started per 
 Started cluster must be shutdown using <methodname>HBaseTestingUtility#shutdownMiniCluster</methodname>, which cleans the directories.
 As most as possible, tests should use the default settings for the cluster. When they don't, they should document it. This will allow to share the cluster later.
 </para>
-</section>
 </section>
 </section>
 </section> <!-- tests -->
