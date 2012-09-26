@@ -389,7 +389,7 @@ public interface HTableInterface extends Closeable {
   void flushCommits() throws IOException;
 
   /**
-   * Releases any resources help or pending changes in internal buffers.
+   * Releases any resources held or pending changes in internal buffers.
    *
    * @throws IOException if a remote or network exception occurs.
    */
