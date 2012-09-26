@@ -97,6 +97,7 @@
                 <li><a href="/logs/">Local logs</a></li>
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/dump">Debug dump</a></li>
+                <li><a href="/jmx">Metrics Dump</a></li>
             </ul>
           </div><!--/.nav-collapse -->
         </div>
