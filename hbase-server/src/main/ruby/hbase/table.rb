@@ -129,6 +129,8 @@ EOF
         p.add(family, qualifier, value.to_s.to_java_bytes)
       end
       @table.put(p)
+      #return number of rows added/updated.
+      return p.size()
     end
 
     #----------------------------------------------------------------------------------------------
@@ -146,6 +148,8 @@ EOF
         d.deleteColumns(family, qualifier, timestamp)
       end
       @table.delete(d)
+      #return number of rows deleted.
+      return d.size()
     end
 
     #----------------------------------------------------------------------------------------------

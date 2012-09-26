@@ -146,25 +146,39 @@ module Shell
         end
       end
 
-      def footer(start_time = nil, row_count = nil)
+      def calculateRunTime(start_time = nil)
         return unless start_time
-        row_count ||= @row_count
-        # Only output elapsed time and row count if startTime passed
-        @out.puts("%d row(s) in %.4f seconds" % [row_count, Time.now - start_time])
+        return (Time.now - start_time)
       end
     end
-
-
-    class Console < Base
+    
+    #RowFormatter formats the return response with number of rows altered.
+    #Use this for operations (command groups) for which row count makes sense, eg: delete, add etc.
+    #Formatter is now defined at command group level.
+    class RowFormatter < Base
+      def footer(start_time = nil, row_count = nil)
+        timeSpent = calculateRunTime(start_time)
+        unless(row_count.is_a?(Integer))
+          row_count = nil
+        end
+        row_count ||= @row_count
+        # Only output elapsed time and row count if startTime passed
+        @out.puts("%d row(s) in %.4f seconds" % [row_count, timeSpent])
+      end
     end
-
-    class XHTMLFormatter < Base
-      # http://www.germane-software.com/software/rexml/doc/classes/REXML/Document.html
-      # http://www.crummy.com/writing/RubyCookbook/test_results/75942.html
+    
+    #AdminFormatter is used for all non row specific operations (command groups) such as version, status etc.
+    #Formatter is now defined at command group level.
+    class AdminFormatter < Base
+      def footer(start_time = nil, msg = "")
+        timeSpent = calculateRunTime(start_time)
+        if(msg.is_a?(Integer))
+          msg = msg, " rows"
+        end
+        @out.puts("Succeeded in %.4f seconds.\n%s" % [timeSpent, msg])
+      end
     end
-
-    class JSON < Base
-    end
+    
   end
 end
 

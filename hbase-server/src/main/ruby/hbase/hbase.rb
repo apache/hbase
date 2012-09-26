@@ -39,8 +39,8 @@ module Hbase
       end
     end
 
-    def admin(formatter)
-      ::Hbase::Admin.new(configuration, formatter)
+    def admin
+      ::Hbase::Admin.new(configuration)
     end
 
     # Create new one each time

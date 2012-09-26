@@ -26,14 +26,13 @@ module Hbase
   class Admin
     include HBaseConstants
 
-    def initialize(configuration, formatter)
+    def initialize(configuration)
       @admin = org.apache.hadoop.hbase.client.HBaseAdmin.new(configuration)
       connection = @admin.getConnection()
       @conf = configuration
       @zk_wrapper = connection.getZooKeeperWatcher()
       zk = @zk_wrapper.getRecoverableZooKeeper().getZooKeeper()
       @zk_main = org.apache.zookeeper.ZooKeeperMain.new(zk)
-      @formatter = formatter
     end
 
     #----------------------------------------------------------------------------------------------
