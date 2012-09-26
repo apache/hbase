@@ -314,9 +314,6 @@ public class TestRegionServerMetrics {
   }
 
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 
   private void assertSizeMetric(String table, String[] cfs, int[] metrics) {
     // we have getsize & nextsize for each column family

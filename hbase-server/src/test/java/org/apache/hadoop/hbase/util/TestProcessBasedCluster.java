@@ -90,7 +90,4 @@ public class TestProcessBasedCluster {
     assertTrue(pom.getPath() + " does not exist", pom.exists());
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

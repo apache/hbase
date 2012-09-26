@@ -260,9 +260,6 @@ public class TestChecksum {
     }
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 
   /**
    * A class that introduces hbase-checksum failures while 

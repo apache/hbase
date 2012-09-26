@@ -1492,9 +1492,6 @@ public class TestHBaseFsck {
     doQuarantineTest(table, hbck, 3, 0, 0, 0, 1);
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 
   @org.junit.Rule
   public TestName name = new TestName();

@@ -210,8 +210,5 @@ public class TestOpenedRegionHandler {
     LOG.debug("\n\nTRR: " + msg + "\n");
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

@@ -88,8 +88,5 @@ public class TestInclusiveStopFilter {
     assertFalse("Filter a null", filter.filterRowKey(null, 0, 0));
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

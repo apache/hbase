@@ -143,7 +143,4 @@ public class TestPriorityRpc {
     assertTrue (qosFunction.apply(rpcRequest) == HConstants.NORMAL_QOS);
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

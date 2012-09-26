@@ -200,9 +200,6 @@ public class TestResult extends TestCase {
     }
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 
   /**
    * Microbenchmark that compares {@link Result#getValue} and {@link Result#loadValue} performance.

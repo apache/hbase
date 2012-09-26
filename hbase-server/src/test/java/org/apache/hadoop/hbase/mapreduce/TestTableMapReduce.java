@@ -278,8 +278,5 @@ public class TestTableMapReduce {
     assertTrue(tmpjars.contains("guava"));
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

@@ -324,8 +324,5 @@ public class TestHRegionServerBulkLoad {
     UTIL = new HBaseTestingUtility(c);
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

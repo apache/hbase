@@ -193,8 +193,5 @@ public class TestAttributes {
     Assert.assertEquals("myId", scan.toMap().get("id"));
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

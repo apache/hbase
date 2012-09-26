@@ -990,8 +990,5 @@ public class TestScannersWithFilters {
     verifyScanFull(s, kvs);
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

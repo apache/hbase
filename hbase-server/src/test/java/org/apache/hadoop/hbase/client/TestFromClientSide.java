@@ -4899,8 +4899,5 @@ public class TestFromClientSide {
     assertEquals(1, regionsList.size());
   }
 
-   @org.junit.Rule
-   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

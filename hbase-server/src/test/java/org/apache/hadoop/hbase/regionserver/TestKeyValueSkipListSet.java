@@ -147,8 +147,5 @@ public class TestKeyValueSkipListSet extends TestCase {
     assertTrue(Bytes.equals(head.first().getValue(), value2));
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

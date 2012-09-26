@@ -78,7 +78,4 @@ public class TestFakeKeyInFilter extends BinaryComparator {
     region.close();
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

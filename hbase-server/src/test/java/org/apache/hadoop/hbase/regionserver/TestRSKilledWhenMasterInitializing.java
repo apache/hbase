@@ -262,7 +262,4 @@ public class TestRSKilledWhenMasterInitializing {
     LOG.debug("master isInitialized");
   }
   
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

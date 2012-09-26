@@ -16,30 +16,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.SmallTests;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+package org.apache.hadoop.hbase;
 
-import static junit.framework.Assert.assertEquals;
+import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 
 /**
- * Tests that the incrementing environment edge increments time instead of using
- * the default.
+ * Monitor the resources. use by the tests All resources in {@link ResourceCheckerJUnitListener}
+ *  plus the number of connection.
  */
-@Category(SmallTests.class)
-public class TestIncrementingEnvironmentEdge {
+public class ServerResourceCheckerJUnitListener extends ResourceCheckerJUnitListener {
 
-  @Test
-  public void testGetCurrentTimeUsesSystemClock() {
-    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
-    assertEquals(1, edge.currentTimeMillis());
-    assertEquals(2, edge.currentTimeMillis());
-    assertEquals(3, edge.currentTimeMillis());
-    assertEquals(4, edge.currentTimeMillis());
+  static class ConnectionCountResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
+    @Override
+    public int getVal() {
+      return HConnectionTestingUtility.getConnectionCount();
+    }
   }
 
+  @Override
+  protected void addResourceAnalyzer(ResourceChecker rc) {
+    rc.addResourceAnalyzer(new ConnectionCountResourceAnalyzer());
+  }
 }
-

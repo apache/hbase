@@ -390,8 +390,5 @@ public class TestRegionSplitCalculator {
       || (r1e.equals("E") && r2e.equals("C")));
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

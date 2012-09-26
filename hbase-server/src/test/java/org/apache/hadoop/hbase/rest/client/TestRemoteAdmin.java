@@ -69,8 +69,5 @@ public class TestRemoteAdmin {
     assertFalse(remoteAdmin.isTableAvailable(TABLE_1));
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

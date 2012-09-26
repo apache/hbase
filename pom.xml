@@ -902,6 +902,13 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-common</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-hadoop-compat</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -1543,7 +1550,6 @@
       </activation>
       <properties>
         <surefire.provider>surefire-junit4</surefire.provider>
-        <surefire.version>2.10</surefire.version>
         <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>

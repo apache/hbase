@@ -782,8 +782,5 @@ public class TestStore extends TestCase {
     store.getHRegion().clearSplit_TESTS_ONLY();
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

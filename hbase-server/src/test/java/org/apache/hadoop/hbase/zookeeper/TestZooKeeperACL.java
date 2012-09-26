@@ -265,8 +265,5 @@ public class TestZooKeeperACL {
     assertEquals(acls.get(0).getPerms(), ZooDefs.Perms.ALL);
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

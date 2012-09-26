@@ -348,8 +348,5 @@ public class TestZooKeeperNodeTracker {
     MasterAddressTracker.deleteIfEquals(zkw, sn.toString()); // must not throw an exception
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

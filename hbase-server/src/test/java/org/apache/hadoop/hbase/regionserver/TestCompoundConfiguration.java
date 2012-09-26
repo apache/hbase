@@ -110,7 +110,4 @@ public class TestCompoundConfiguration extends TestCase {
     assertNull(compoundConf.get("G"));
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }

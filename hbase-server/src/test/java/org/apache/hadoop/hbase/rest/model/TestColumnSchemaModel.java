@@ -102,8 +102,5 @@ public class TestColumnSchemaModel extends TestCase {
     checkModel(fromXML(AS_XML));
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

@@ -71,8 +71,5 @@ public class TestMemoryBoundedLogMessageBuffer {
     assertTrue(dump.contains(JP_TEXT));
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

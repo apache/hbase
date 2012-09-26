@@ -132,8 +132,5 @@ public class TestImmutableBytesWritable extends TestCase {
       -signum(comparator.compare(b, a)), expectedSignum);
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

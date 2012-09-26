@@ -34,6 +34,14 @@
     <plugins>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <properties>
+            <property>
+              <name>listener</name>
+              <value>org.apache.hadoop.hbase.ResourceCheckerJUnitListener</value>
+            </property>
+          </properties>
+        </configuration>
         <!-- Always skip the second part executions, since we only run
         simple unit tests in this module -->
         <executions>

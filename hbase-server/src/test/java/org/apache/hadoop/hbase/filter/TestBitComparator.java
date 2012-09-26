@@ -69,8 +69,5 @@ public class TestBitComparator {
     assertEquals(comparator.compareTo(data), expected);
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

@@ -42,8 +42,5 @@ public class TestZooKeeperMainServerArg {
     assertTrue(port, parser.parse(c).matches("example[1-3]\\.com:" + port));
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

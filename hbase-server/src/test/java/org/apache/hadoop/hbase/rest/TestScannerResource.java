@@ -343,8 +343,5 @@ public class TestScannerResource {
     assertEquals(response.getCode(), 404);
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

@@ -25,7 +25,11 @@ import java.util.Set;
 
 import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+import org.apache.hadoop.hbase.SmallTests;
+
+@Category(SmallTests.class)
 public class TestLoadTestKVGenerator {
 
   private static final int MIN_LEN = 10;

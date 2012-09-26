@@ -139,8 +139,5 @@ public class TestHQuorumPeer {
     assertEquals(2181, p.get("clientPort"));
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

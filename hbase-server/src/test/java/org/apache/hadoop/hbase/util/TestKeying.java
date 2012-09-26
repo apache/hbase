@@ -62,8 +62,5 @@ public class TestKeying extends TestCase {
     assertEquals(u, uri);
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

@@ -185,8 +185,5 @@ public class TestHRegionInfo {
     assertTrue(newer.compareTo(newer) == 0);
   }
   
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

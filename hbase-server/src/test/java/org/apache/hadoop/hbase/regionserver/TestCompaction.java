@@ -655,8 +655,5 @@ public class TestCompaction extends HBaseTestCase {
       request.isMajor());
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

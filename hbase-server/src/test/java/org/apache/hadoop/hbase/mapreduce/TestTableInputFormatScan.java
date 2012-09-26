@@ -387,8 +387,5 @@ public class TestTableInputFormatScan {
     LOG.info("After map/reduce completion - job " + jobName);
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

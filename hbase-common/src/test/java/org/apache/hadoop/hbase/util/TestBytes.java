@@ -26,7 +26,11 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 
 import junit.framework.TestCase;
+import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.SmallTests;
 
+
+@Category(SmallTests.class)
 public class TestBytes extends TestCase {
   public void testNullHashCode() {
     byte [] b = null;

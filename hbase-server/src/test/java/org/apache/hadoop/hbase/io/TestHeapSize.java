@@ -338,8 +338,5 @@ public class TestHeapSize extends TestCase {
     // any of these classes are modified without updating overhead sizes.
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

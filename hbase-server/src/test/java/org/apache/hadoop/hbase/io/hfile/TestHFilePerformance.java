@@ -390,8 +390,5 @@ public class TestHFilePerformance extends TestCase {
             " better number.");
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 

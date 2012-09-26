@@ -64,8 +64,5 @@ public class TestEnvironmentEdgeManager {
     assertEquals(expectation, result);
   }
 
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
 
