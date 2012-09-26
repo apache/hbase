@@ -255,8 +255,6 @@ public class HLog implements Syncable {
   private final List<LogEntryVisitor> logEntryVisitors =
       new CopyOnWriteArrayList<LogEntryVisitor>();
 
-  private boolean logRollPending = false;
-
   /**
    * Pattern used to validate a HLog file name
    */
@@ -512,25 +510,27 @@ public class HLog implements Syncable {
       long newFileNum = System.currentTimeMillis();
       Path newPath = computeFilename(newFileNum);
       Writer newWriter;
+      int newFileReplication;
+      OutputStream newOutStream = null;
       try {
         newWriter = createWriter(fs, newPath, HBaseConfiguration.create(conf));
+        newFileReplication = fs.getFileStatus(newPath).getReplication();
+        if (newWriter instanceof SequenceFileLogWriter) {
+          newOutStream = ((SequenceFileLogWriter) newWriter)
+              .getDFSCOutputStream();
+          // append a dummy entry and sync. So we perform the costly
+          // allocateBlock and sync before we get the lock to roll writers.
+          WALEdit edit = new WALEdit();
+          HLogKey key = makeKey(DUMMY /* regionName */, DUMMY /* tableName */,
+              0, System.currentTimeMillis());
+          newWriter.append(new HLog.Entry(key, edit));
+          syncWriter(newWriter);
+        }
       } catch (IOException ioe) {
         // If we fail to create a new writer, let us clean up the file.
+        // Do not worry if the delete fails.
         fs.delete(newPath, false);
         throw ioe;
-      }
-      int newFileReplication = fs.getFileStatus(newPath).getReplication();
-      OutputStream newOutStream = null;
-      if (newWriter instanceof SequenceFileLogWriter) {
-        newOutStream = ((SequenceFileLogWriter) newWriter)
-            .getDFSCOutputStream();
-        // append a dummy entry and sync. So we perform the costly
-        // allocateBlock and sync before we get the lock to roll writers.
-        WALEdit edit = new WALEdit();
-        HLogKey key = makeKey(DUMMY /* regionName */, DUMMY /* tableName */,
-            0, System.currentTimeMillis());
-        newWriter.append(new HLog.Entry(key, edit));
-        syncWriter(newWriter);
       }
 
       Writer oldWriter;
@@ -542,7 +542,6 @@ public class HLog implements Syncable {
           return regionsToFlush;
         }
 
-        this.logRollPending = true;
         // Clean up current writer.
         syncWriter(this.writer);
 
@@ -550,6 +549,7 @@ public class HLog implements Syncable {
         oldFileNum = this.filenum;
         oldWriter = this.writer;
         oldNumEntries = this.numEntries.get();
+        oldFileLogSeqNum = this.logSeqNum.get();
 
         this.filenum = newFileNum;
         this.writer = newWriter;
@@ -557,15 +557,17 @@ public class HLog implements Syncable {
         this.hdfs_out = newOutStream;
         this.numEntries.set(0);
 
-        // If there was an IOException before this point while the old file is being
-        // synched; LogRoller will keep retyring. Nothing can be appended to the logs
-        // when logRollPending is true
-        this.logRollPending = false;
-        oldFileLogSeqNum = this.logSeqNum.get();
         t1 = EnvironmentEdgeManager.currentTimeMillis();
       }
 
-      Path oldFile = closeWriter(oldWriter, oldFileNum, oldFileLogSeqNum);
+      Path oldFile = null;
+      try {
+        oldFile = closeWriter(oldWriter, oldFileNum, oldFileLogSeqNum);
+      } catch (IOException e) {
+        LOG.info("Ignoring Exception while closing old Log file "
+            + FSUtils.getPath(oldFile), e);
+      }
+
       LOG.info((oldFile != null ? "Roll " + FSUtils.getPath(oldFile)
           + ", entries=" + oldNumEntries + ", filesize="
           + this.fs.getFileStatus(oldFile).getLen() + ". " : "")
@@ -598,10 +600,6 @@ public class HLog implements Syncable {
       this.cacheFlushLock.unlock();
     }
     return regionsToFlush;
-  }
-
-  public boolean isLogRollPending() {
-    return this.logRollPending;
   }
 
   /**
@@ -942,9 +940,6 @@ public class HLog implements Syncable {
       if (this.closed) {
         throw new IOException("Cannot append; log is closed");
       }
-      if (this.logRollPending) {
-        throw new IOException("Cannot write; log unstable, roll pending");
-      }
       long seqNum = obtainSeqNum();
       logKey.setLogSeqNum(seqNum);
       // The 'lastSeqWritten' map holds the sequence number of the oldest
@@ -1001,9 +996,6 @@ public class HLog implements Syncable {
     synchronized (this.updateLock) {
       if (this.closed) {
         throw new IOException("Cannot append; log is closed");
-      }
-      if (this.logRollPending) {
-        throw new IOException("Cannot append; log unstable, roll pending");
       }
       long seqNum = obtainSeqNum();
       // The 'lastSeqWritten' map holds the sequence number of the oldest
@@ -1190,18 +1182,7 @@ public class HLog implements Syncable {
         try {
           long now = System.currentTimeMillis();
           long doneUpto = this.unflushedEntries.get();
-          if (!logRollPending) {
-            // if logRollPending is true then we know that the data in the old
-            // log file has been synced. We know that no more appends were done
-            // after logRollPending became true. So syncing here is not
-            // required.
-            //
-            // If log roll is pending then either the old log file has been
-            // synced but not closed. Or old log file has been successfully
-            // closed but a new one has not yet been created. In the latter
-            // case this.writer will be NULL
-            this.writer.sync();
-          }
+          this.writer.sync();
           // A better name for syncTillHere variable would have been
           // syncedAtLeastTillHere. Between the time unflushedEntries is
           // snapshotted and writer.sync() is called, append can append more
@@ -1394,11 +1375,6 @@ public class HLog implements Syncable {
           return;
         }
         try {
-          if (this.logRollPending) {
-            LOG.warn("Skipping write of cache-flush-done entry" +
-                     " to unstable hlog. Log roll is pending");
-            return;
-          }
           long now = System.currentTimeMillis();
           WALEdit edit = completeCacheFlushLogEdit();
           HLogKey key = makeKey(regionName, tableName, logSeqId,

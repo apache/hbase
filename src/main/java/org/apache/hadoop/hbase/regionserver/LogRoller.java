@@ -66,11 +66,7 @@ class LogRoller extends HasThread implements LogRollListener {
       boolean periodic = false;
       long modifiedRollPeriod;
       if (!rollLog.get()) {
-        if (server.getLog().isLogRollPending() == true) {
-          modifiedRollPeriod = server.threadWakeFrequency;
-        } else {
-          modifiedRollPeriod = this.rollperiod;
-        }
+        modifiedRollPeriod = this.rollperiod;
         periodic = (now - this.lastrolltime) > modifiedRollPeriod;
         if (!periodic) {
           synchronized (rollLog) {
