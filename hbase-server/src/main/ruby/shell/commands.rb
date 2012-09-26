@@ -20,10 +20,9 @@
 module Shell
   module Commands
     class Command
-      attr_reader :formatter
-      def initialize(shell, formatter)
+
+      def initialize(shell)
         @shell = shell
-        @formatter = formatter
       end
 
       #wrap an execution of cmd to catch hbase exceptions
@@ -61,18 +60,22 @@ module Shell
 
       #----------------------------------------------------------------------
 
+      def formatter
+        @shell.formatter
+      end
+
       def format_simple_command
         now = Time.now
-        ret = yield
-        @formatter.header
-        @formatter.footer(now, ret)
+        yield
+        formatter.header
+        formatter.footer(now)
       end
 
       def format_and_return_simple_command
         now = Time.now
         ret = yield
-        @formatter.header
-        @formatter.footer(now, ret)
+        formatter.header
+        formatter.footer(now)
         return ret
       end
 

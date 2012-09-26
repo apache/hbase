@@ -19,9 +19,7 @@
 
 # Shell commands module
 module Shell
-  require 'shell/formatter'
   @@commands = {}
-  @@formatters={}
   def self.commands
     @@commands
   end
@@ -31,17 +29,7 @@ module Shell
     @@command_groups
   end
 
-  def self.getFormatter (type = :RowFormatter)
-    type ||= :RowFormatter
-    format = @@formatters[type]
-    unless format
-      @@formatters[type] = eval("::Shell::Formatter::#{type}").new
-      return getFormatter type
-    end
-    return format
-  end
-
-  def self.load_command(name, group,formatter)
+  def self.load_command(name, group)
     return if commands[name]
 
     # Register command in the group
@@ -52,7 +40,7 @@ module Shell
     begin
       require "shell/commands/#{name}"
       klass_name = name.to_s.gsub(/(?:^|_)(.)/) { $1.upcase } # camelize
-      commands[name] = {:command => eval("Commands::#{klass_name}"), :formatter => formatter}
+      commands[name] = eval("Commands::#{klass_name}")
     rescue => e
       raise "Can't load hbase shell command: #{name}. Error: #{e}\n#{e.backtrace.join("\n")}"
     end
@@ -68,11 +56,8 @@ module Shell
       :comment => opts[:comment]
     }
 
-   formatterType = opts[:formatterType]
-   formatter = getFormatter formatterType
-
     opts[:commands].each do |command|
-      load_command(command, group, formatter)
+      load_command(command, group)
     end
   end
 
@@ -84,12 +69,13 @@ module Shell
     @debug = false
     attr_accessor :debug
 
-    def initialize(hbase)
+    def initialize(hbase, formatter)
       self.hbase = hbase
+      self.formatter = formatter
     end
 
     def hbase_admin
-      @hbase_admin ||= hbase.admin
+      @hbase_admin ||= hbase.admin(formatter)
     end
 
     def hbase_table(name)
@@ -121,8 +107,7 @@ module Shell
     end
 
     def command_instance(command)
-      commandObj = ::Shell.commands[command.to_s]
-      commandObj[:command].new(self, commandObj[:formatter])
+      ::Shell.commands[command.to_s].new(self)
     end
 
     #call the method 'command' on the specified command
@@ -265,8 +250,7 @@ Shell.load_command_group(
     alter_status
     alter_async
     get_table
-  ],
-  :formatterType => 'AdminFormatter'
+  ]
 )
 
 Shell.load_command_group(
@@ -282,8 +266,7 @@ Shell.load_command_group(
     put
     scan
     truncate
-  ],
-  :formatterType => 'RowFormatter'
+  ]
 )
 
 Shell.load_command_group(
