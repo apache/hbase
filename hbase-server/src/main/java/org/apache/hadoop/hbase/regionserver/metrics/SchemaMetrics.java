@@ -522,9 +522,13 @@ public class SchemaMetrics {
    * instantiating HFile readers/writers.
    */
   public static void configureGlobally(Configuration conf) {
-    final boolean useTableNameNew =
-        conf.getBoolean(SHOW_TABLE_NAME_CONF_KEY, false);
-    setUseTableName(useTableNameNew);
+    if (conf != null) {
+      final boolean useTableNameNew =
+          conf.getBoolean(SHOW_TABLE_NAME_CONF_KEY, false);
+      setUseTableName(useTableNameNew);
+    } else {
+      setUseTableName(false);
+    }
   }
 
   /**
