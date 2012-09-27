@@ -309,17 +309,6 @@
       <url>https://repository.apache.org/content/repositories/releases/</url>
     </repository>
     <repository>
-      <id>apache non-releases</id>
-      <name>Apache non-releases</name>
-      <url>http://people.apache.org/~stack/m2/repository</url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
-    <repository>
       <id>java.net</id>
       <name>Java.Net</name>
       <url>http://download.java.net/maven/2/</url>
@@ -828,14 +817,12 @@
     <hadoop-two.version>2.0.1-alpha</hadoop-two.version>
     <hadoop-one.version>1.0.3</hadoop-one.version>
     <commons-cli.version>1.2</commons-cli.version>
-    <commons-codec.version>1.4</commons-codec.version>
-    <commons-httpclient.version>3.1</commons-httpclient.version>
+    <commons-codec.version>1.7</commons-codec.version>
     <!-- pretty outdated -->
-    <commons-io.version>2.1</commons-io.version>
-    <commons-lang.version>2.5</commons-lang.version>
+    <commons-io.version>2.4</commons-io.version>
+    <commons-lang.version>2.6</commons-lang.version>
     <commons-logging.version>1.1.1</commons-logging.version>
     <commons-math.version>2.1</commons-math.version>
-    <commons-configuration.version>1.6</commons-configuration.version>
     <metrics-core.version>2.1.2</metrics-core.version>
     <guava.version>12.0.1</guava.version>
     <jackson.version>1.8.8</jackson.version>
@@ -844,15 +831,15 @@
     <jetty.version>6.1.26</jetty.version>
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <jersey.version>1.8</jersey.version>
-    <jruby.version>1.6.5</jruby.version>
+    <jruby.version>1.6.8</jruby.version>
     <junit.version>4.10-HBASE-1</junit.version>
     <slf4j.version>1.4.3</slf4j.version>
     <log4j.version>1.2.17</log4j.version>
-    <mockito-all.version>1.8.5</mockito-all.version>
-    <protobuf.version>2.4.0a</protobuf.version>
+    <mockito-all.version>1.9.0</mockito-all.version>
+    <protobuf.version>2.4.1</protobuf.version>
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.8.0</thrift.version>
-    <zookeeper.version>3.4.3</zookeeper.version>
+    <zookeeper.version>3.4.4</zookeeper.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
     <clover.version>2.6.3</clover.version>
     <jamon-runtime.version>2.3.1</jamon-runtime.version>
@@ -978,11 +965,6 @@
         <version>${commons-cli.version}</version>
       </dependency>
       <dependency>
-        <groupId>commons-configuration</groupId>
-        <artifactId>commons-configuration</artifactId>
-        <version>${commons-configuration.version}</version>
-      </dependency>
-      <dependency>
         <groupId>com.github.stephenc.high-scale-lib</groupId>
         <artifactId>high-scale-lib</artifactId>
         <version>1.1.1</version>
@@ -991,11 +973,6 @@
         <groupId>commons-codec</groupId>
         <artifactId>commons-codec</artifactId>
         <version>${commons-codec.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-httpclient</groupId>
-        <artifactId>commons-httpclient</artifactId>
-        <version>${commons-httpclient.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-io</groupId>
