@@ -29,8 +29,9 @@
 <title>Secure HBase</title>
 <section xml:id="hbase.secure.configuration">
     <title>Secure Client Access to HBase</title>
-    <para>Newer releases of HBase (&gt;= 0.92) support optional SASL authentication of clients.</para>
-    <para>This describes how to set up HBase and HBase clients for connection to secure HBase resources. </para>
+    <para>Newer releases of HBase (&gt;= 0.92) support optional SASL authentication of clients<footnote><para>See
+    also Matteo Bertozzi's article on <link xlink:href="http://www.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/">Understanding User Authentication and Authorization in Apache HBase</link>.</para></footnote>.</para>
+    <para>This describes how to set up HBase and HBase clients for connection to secure HBase resources.</para>
 
     <section><title>Prerequisites</title>
     <para>

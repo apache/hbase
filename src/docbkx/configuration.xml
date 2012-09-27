@@ -313,11 +313,12 @@ to ensure well-formedness of your document after an edit session.
         its hung up.</para>
 
        <section xml:id="hadoop.security">
-          <title>Hadoop Security</title>
+          <title>HBase on Secure Hadoop</title>
           <para>HBase will run on any Hadoop 0.20.x that incorporates Hadoop
           security features -- e.g. Y! 0.20S or CDH3B3 -- as long as you do as
           suggested above and replace the Hadoop jar that ships with HBase
-          with the secure version.</para>
+          with the secure version.  If you want to read more about how to setup
+          Secure HBase, see <xref linkend="hbase.secure.configuration" />.</para>
        </section>
            
        <section xml:id="dfs.datanode.max.xcievers">
