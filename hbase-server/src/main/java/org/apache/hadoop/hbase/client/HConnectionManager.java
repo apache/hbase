@@ -2450,7 +2450,7 @@ public class HConnectionManager {
       c.getInt("hbase.client.serverside.retries.multiplier", 10);
     int retries = hcRetries * serversideMultiplier;
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
-    log.debug("HConnection retries=" + retries);
+    log.debug("Set serverside HConnection retries=" + retries);
   }
 }
 
