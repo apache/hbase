@@ -37,6 +37,7 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
 
   private static final org.apache.thrift.protocol.TField MESSAGE_FIELD_DESC = new org.apache.thrift.protocol.TField("message", org.apache.thrift.protocol.TType.STRING, (short)1);
   private static final org.apache.thrift.protocol.TField BACKOFF_TIME_MILLIS_FIELD_DESC = new org.apache.thrift.protocol.TField("backoffTimeMillis", org.apache.thrift.protocol.TType.I64, (short)2);
+  private static final org.apache.thrift.protocol.TField EXCEPTION_CLASS_FIELD_DESC = new org.apache.thrift.protocol.TField("exceptionClass", org.apache.thrift.protocol.TType.STRING, (short)3);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -46,11 +47,13 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
 
   public String message; // required
   public long backoffTimeMillis; // required
+  public String exceptionClass; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     MESSAGE((short)1, "message"),
-    BACKOFF_TIME_MILLIS((short)2, "backoffTimeMillis");
+    BACKOFF_TIME_MILLIS((short)2, "backoffTimeMillis"),
+    EXCEPTION_CLASS((short)3, "exceptionClass");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -69,6 +72,8 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
           return MESSAGE;
         case 2: // BACKOFF_TIME_MILLIS
           return BACKOFF_TIME_MILLIS;
+        case 3: // EXCEPTION_CLASS
+          return EXCEPTION_CLASS;
         default:
           return null;
       }
@@ -118,6 +123,8 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
     tmpMap.put(_Fields.BACKOFF_TIME_MILLIS, new org.apache.thrift.meta_data.FieldMetaData("backoffTimeMillis", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
+    tmpMap.put(_Fields.EXCEPTION_CLASS, new org.apache.thrift.meta_data.FieldMetaData("exceptionClass", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(IOError.class, metaDataMap);
   }
@@ -127,12 +134,14 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
 
   public IOError(
     String message,
-    long backoffTimeMillis)
+    long backoffTimeMillis,
+    String exceptionClass)
   {
     this();
     this.message = message;
     this.backoffTimeMillis = backoffTimeMillis;
     setBackoffTimeMillisIsSet(true);
+    this.exceptionClass = exceptionClass;
   }
 
   /**
@@ -145,6 +154,9 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
       this.message = other.message;
     }
     this.backoffTimeMillis = other.backoffTimeMillis;
+    if (other.isSetExceptionClass()) {
+      this.exceptionClass = other.exceptionClass;
+    }
   }
 
   public IOError deepCopy() {
@@ -156,6 +168,7 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
     this.message = null;
     setBackoffTimeMillisIsSet(false);
     this.backoffTimeMillis = 0;
+    this.exceptionClass = null;
   }
 
   public String getMessage() {
@@ -205,6 +218,30 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
     __isset_bit_vector.set(__BACKOFFTIMEMILLIS_ISSET_ID, value);
   }
 
+  public String getExceptionClass() {
+    return this.exceptionClass;
+  }
+
+  public IOError setExceptionClass(String exceptionClass) {
+    this.exceptionClass = exceptionClass;
+    return this;
+  }
+
+  public void unsetExceptionClass() {
+    this.exceptionClass = null;
+  }
+
+  /** Returns true if field exceptionClass is set (has been assigned a value) and false otherwise */
+  public boolean isSetExceptionClass() {
+    return this.exceptionClass != null;
+  }
+
+  public void setExceptionClassIsSet(boolean value) {
+    if (!value) {
+      this.exceptionClass = null;
+    }
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case MESSAGE:
@@ -223,6 +260,14 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
       }
       break;
 
+    case EXCEPTION_CLASS:
+      if (value == null) {
+        unsetExceptionClass();
+      } else {
+        setExceptionClass((String)value);
+      }
+      break;
+
     }
   }
 
@@ -233,6 +278,9 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
 
     case BACKOFF_TIME_MILLIS:
       return Long.valueOf(getBackoffTimeMillis());
+
+    case EXCEPTION_CLASS:
+      return getExceptionClass();
 
     }
     throw new IllegalStateException();
@@ -249,6 +297,8 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
       return isSetMessage();
     case BACKOFF_TIME_MILLIS:
       return isSetBackoffTimeMillis();
+    case EXCEPTION_CLASS:
+      return isSetExceptionClass();
     }
     throw new IllegalStateException();
   }
@@ -281,6 +331,15 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
       if (!(this_present_backoffTimeMillis && that_present_backoffTimeMillis))
         return false;
       if (this.backoffTimeMillis != that.backoffTimeMillis)
+        return false;
+    }
+
+    boolean this_present_exceptionClass = true && this.isSetExceptionClass();
+    boolean that_present_exceptionClass = true && that.isSetExceptionClass();
+    if (this_present_exceptionClass || that_present_exceptionClass) {
+      if (!(this_present_exceptionClass && that_present_exceptionClass))
+        return false;
+      if (!this.exceptionClass.equals(that.exceptionClass))
         return false;
     }
 
@@ -320,6 +379,16 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetExceptionClass()).compareTo(typedOther.isSetExceptionClass());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetExceptionClass()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.exceptionClass, typedOther.exceptionClass);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -350,6 +419,14 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
     if (!first) sb.append(", ");
     sb.append("backoffTimeMillis:");
     sb.append(this.backoffTimeMillis);
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("exceptionClass:");
+    if (this.exceptionClass == null) {
+      sb.append("null");
+    } else {
+      sb.append(this.exceptionClass);
+    }
     first = false;
     sb.append(")");
     return sb.toString();
@@ -411,6 +488,14 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
+          case 3: // EXCEPTION_CLASS
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+              struct.exceptionClass = iprot.readString();
+              struct.setExceptionClassIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
           default:
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
         }
@@ -434,6 +519,11 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
       oprot.writeFieldBegin(BACKOFF_TIME_MILLIS_FIELD_DESC);
       oprot.writeI64(struct.backoffTimeMillis);
       oprot.writeFieldEnd();
+      if (struct.exceptionClass != null) {
+        oprot.writeFieldBegin(EXCEPTION_CLASS_FIELD_DESC);
+        oprot.writeString(struct.exceptionClass);
+        oprot.writeFieldEnd();
+      }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
@@ -458,19 +548,25 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
       if (struct.isSetBackoffTimeMillis()) {
         optionals.set(1);
       }
-      oprot.writeBitSet(optionals, 2);
+      if (struct.isSetExceptionClass()) {
+        optionals.set(2);
+      }
+      oprot.writeBitSet(optionals, 3);
       if (struct.isSetMessage()) {
         oprot.writeString(struct.message);
       }
       if (struct.isSetBackoffTimeMillis()) {
         oprot.writeI64(struct.backoffTimeMillis);
       }
+      if (struct.isSetExceptionClass()) {
+        oprot.writeString(struct.exceptionClass);
+      }
     }
 
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, IOError struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(2);
+      BitSet incoming = iprot.readBitSet(3);
       if (incoming.get(0)) {
         struct.message = iprot.readString();
         struct.setMessageIsSet(true);
@@ -478,6 +574,10 @@ public class IOError extends java.io.IOException implements org.apache.thrift.TB
       if (incoming.get(1)) {
         struct.backoffTimeMillis = iprot.readI64();
         struct.setBackoffTimeMillisIsSet(true);
+      }
+      if (incoming.get(2)) {
+        struct.exceptionClass = iprot.readString();
+        struct.setExceptionClassIsSet(true);
       }
     }
   }

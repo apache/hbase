@@ -887,7 +887,7 @@ public class ThriftServerRunner implements Runnable {
       }
       try {
         if (!getHBaseAdmin().tableExists(tableNameBytes)) {
-          throw new IOError("table does not exist", 0);
+          throw new IOError("table does not exist", 0, "");
         }
         getHBaseAdmin().deleteTable(tableNameBytes);
       } catch (IOException e) {
@@ -1433,7 +1433,7 @@ public class ThriftServerRunner implements Runnable {
 
         processMultiPut(tableName, regionName, puts);
       } catch (IOException e) {
-        throw new IOError(e.getMessage(), 0);
+        throw new IOError(e.getMessage(), 0, e.getClass().getName());
       }
     }
 
@@ -1518,7 +1518,7 @@ public class ThriftServerRunner implements Runnable {
     if (e instanceof IOError) {
       return (IOError) e;
     }
-    return new IOError(e.getMessage(), 0);
+    return new IOError(e.getMessage(), 0, e.getClass().getName());
   }
 
   private static byte[] getQualifier(byte[][] familyAndQualifier) {

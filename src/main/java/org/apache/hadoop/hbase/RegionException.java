@@ -38,11 +38,12 @@ public class RegionException extends IOError {
    * @param s message
    */
   public RegionException(String s) {
-    super(s, 0);
+    this(s, 0);
   }
 
   public RegionException(String s, long waitMillis) {
-    super(s, waitMillis);
+    super(s, waitMillis, "");
+    exceptionClass = getClass().getName();
   }
 
 }

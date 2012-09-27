@@ -131,13 +131,13 @@ public class HRegionThriftServer extends HasThread {
                                        qualifier, amount, true);
       } catch (NotServingRegionException e) {
         if (!redirect) {
-          throw new IOError(e.getMessage(), 0);
+          throw new IOError(e.getMessage(), 0, e.getClass().getName());
         }
         LOG.info("ThriftServer redirecting atomicIncrement");
         return super.atomicIncrement(tableName, row, family,
                                      qualifier, amount);
       } catch (IOException e) {
-        throw new IOError(e.getMessage(), 0);
+        throw new IOError(e.getMessage(), 0, e.getClass().getName());
       }
     }
 

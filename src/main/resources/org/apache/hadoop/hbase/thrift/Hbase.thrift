@@ -146,7 +146,8 @@ struct TScan {
  */
 exception IOError {
   1: string message,
-  2: i64 backoffTimeMillis
+  2: i64 backoffTimeMillis,
+  3: string exceptionClass
 }
 
 /**
