@@ -62,8 +62,8 @@ public class HBaseRpcMetrics implements Updater {
 
     metricsRecord.setTag("port", port);
 
-    LOG.info("Initializing RPC Metrics with hostName="
-        + hostName + ", port=" + port);
+    LOG.info("Initializing RPC Metrics for className="
+        + hostName + " on port=" + port);
 
     context.registerUpdater(this);
 

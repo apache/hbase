@@ -145,10 +145,11 @@ class ActiveMasterManager extends ZooKeeperListener {
             this.watcher.getMasterAddressZNode(), this.sn)) {
 
           // If we were a backup master before, delete our ZNode from the backup
-          // master directory since we are the active now
-          LOG.info("Deleting ZNode for " + backupZNode + " from backup master directory");
-          ZKUtil.deleteNodeFailSilent(this.watcher, backupZNode);
-
+          // master directory since we are the active now)
+          if (ZKUtil.checkExists(this.watcher, backupZNode) != -1) {
+            LOG.info("Deleting ZNode for " + backupZNode + " from backup master directory");
+            ZKUtil.deleteNodeFailSilent(this.watcher, backupZNode);
+          }
           // Save the znode in a file, this will allow to check if we crash in the launch scripts
           ZNodeClearer.writeMyEphemeralNodeOnDisk(this.sn.toString());
 

@@ -185,6 +185,7 @@ import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -324,6 +325,8 @@ Server {
   public HMaster(final Configuration conf)
   throws IOException, KeeperException, InterruptedException {
     this.conf = new Configuration(conf);
+    LOG.info("hbase.rootdir=" + FSUtils.getRootDir(this.conf) +
+      ", hbase.cluster.distributed=" + this.conf.getBoolean("hbase.cluster.distributed", false));
     // Disable the block cache on the master
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     // Set how many times to retry talking to another server over HConnection.
@@ -333,7 +336,7 @@ Server {
       conf.get("hbase.master.dns.interface", "default"),
       conf.get("hbase.master.dns.nameserver", "default")));
     int port = conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
-    // Creation of a HSA will force a resolve.
+    // Creation of a ISA will force a resolve.
     InetSocketAddress initialIsa = new InetSocketAddress(hostname, port);
     if (initialIsa.getAddress() == null) {
       throw new IllegalArgumentException("Failed resolve of " + initialIsa);
@@ -2291,7 +2294,7 @@ Server {
    * @see org.apache.hadoop.hbase.master.HMasterCommandLine
    */
   public static void main(String [] args) throws Exception {
-	VersionInfo.logVersion();
+    VersionInfo.logVersion();
     new HMasterCommandLine(HMaster.class).doMain(args);
   }
 
