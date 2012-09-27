@@ -2172,23 +2172,24 @@ public class HRegion implements HeapSize {
       Get get = new Get(row, lock);
       checkFamily(family);
       get.addColumn(family, qualifier);
-
       // Lock row
       Integer lid = getLock(lockId, get.getRow(), true);
       List<KeyValue> result = new ArrayList<KeyValue>();
       try {
         result = get(get);
-
         boolean matches = false;
-        if (result.size() == 0
-            && (expectedValue == null || expectedValue.length == 0)) {
-          matches = true;
+        
+        if (result.size() == 0) {
+          if (expectedValue == null ) {
+            matches = true;
+          }
         } else if (result.size() == 1) {
-          // Compare the expected value with the actual value without copying anything
-          KeyValue kv = result.get(0);
-          matches = Bytes.equals(
-              expectedValue, 0, expectedValue.length,
-              kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
+          if (expectedValue != null) {
+            // Compare the expected value with the actual value without copying anything
+            KeyValue kv = result.get(0);
+            matches = Bytes.equals(expectedValue, 0, expectedValue.length,
+                kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
+          }
         } else {
           throw new IOException("Internal error: more than one result returned for row/column");
         }
