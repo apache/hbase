@@ -525,6 +525,7 @@ public abstract class HBaseServer implements RpcServer {
         readers[i] = reader;
         readPool.execute(reader);
       }
+      LOG.info("Started " + readThreads + " reader(s) in Listener.");
 
       // Register accepts on the server socket with the selector.
       acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
@@ -541,7 +542,6 @@ public abstract class HBaseServer implements RpcServer {
         this.readSelector = Selector.open();
       }
       public void run() {
-        LOG.info("Starting " + getName());
         try {
           doRunLoop();
         } finally {

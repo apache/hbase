@@ -20,14 +20,12 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+
 import javax.net.SocketFactory;
 
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.hbase.security.User;
 
 /** An RPC implementation. */
 @InterfaceAudience.Private
