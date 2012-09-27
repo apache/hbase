@@ -539,7 +539,7 @@ public class SplitTransaction {
    * to create it.
    * @see #cleanupSplitDir(FileSystem, Path)
    */
-  private static void createSplitDir(final FileSystem fs, final Path splitdir)
+  void createSplitDir(final FileSystem fs, final Path splitdir)
   throws IOException {
     if (fs.exists(splitdir)) {
       LOG.info("The " + splitdir
