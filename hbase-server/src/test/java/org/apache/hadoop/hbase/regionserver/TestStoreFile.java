@@ -35,9 +35,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -52,6 +54,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
@@ -169,6 +172,40 @@ public class TestStoreFile extends HBaseTestCase {
       }
     }
     assertTrue(Bytes.equals(kv.getRow(), finalRow));
+  }
+
+  public void testHFileLink() throws IOException {
+    HRegionInfo hri = new HRegionInfo(Bytes.toBytes("table-link"));
+    Path storedir = new Path(new Path(FSUtils.getRootDir(conf),
+                             new Path(hri.getTableNameAsString(), hri.getEncodedName())), "cf");
+
+    // Make a store file and write data to it.
+    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf,
+         this.fs, 8 * 1024)
+            .withOutputDir(storedir)
+            .build();
+    Path storeFilePath = writer.getPath();
+    writeStoreFile(writer);
+    writer.close();
+
+    Path dstPath = new Path(FSUtils.getRootDir(conf), new Path("test-region", "cf"));
+    HFileLink.create(conf, this.fs, dstPath, hri, storeFilePath.getName());
+    Path linkFilePath = new Path(dstPath,
+                  HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
+
+    // Try to open store file from link
+    StoreFile hsf = new StoreFile(this.fs, linkFilePath, conf, cacheConf,
+        StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+    assertTrue(hsf.isLink());
+
+    // Now confirm that I can read from the link
+    int count = 1;
+    HFileScanner s = hsf.createReader().getScanner(false, false);
+    s.seekTo();
+    while (s.next()) {
+      count++;
+    }
+    assertEquals((LAST_CHAR - FIRST_CHAR + 1) * (LAST_CHAR - FIRST_CHAR + 1), count);
   }
 
   private void checkHalfHFile(final StoreFile f)

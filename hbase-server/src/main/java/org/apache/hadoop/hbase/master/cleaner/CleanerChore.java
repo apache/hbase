@@ -82,7 +82,10 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     if (logCleaners != null) {
       for (String className : logCleaners) {
         T logCleaner = newFileCleaner(className, conf);
-        if (logCleaner != null) this.cleanersChain.add(logCleaner);
+        if (logCleaner != null) {
+          LOG.debug("initialize cleaner=" + className);
+          this.cleanersChain.add(logCleaner);
+        }
       }
     }
   }
@@ -196,7 +199,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
    */
   private void checkAndDelete(Path filePath) throws IOException, IllegalArgumentException {
     if (!validate(filePath)) {
-      LOG.warn("Found a wrongly formatted file: " + filePath.getName() + "deleting it.");
+      LOG.warn("Found a wrongly formatted file: " + filePath.getName() + " deleting it.");
       if (!this.fs.delete(filePath, true)) {
         LOG.warn("Attempted to delete:" + filePath
             + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");

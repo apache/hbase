@@ -1112,6 +1112,25 @@ public abstract class FSUtils {
   }
 
   /**
+   * Given a particular region dir, return all the familydirs inside it
+   *
+   * @param fs A file system for the Path
+   * @param regionDir Path to a specific region directory
+   * @return List of paths to valid family directories in region dir.
+   * @throws IOException
+   */
+  public static List<Path> getFamilyDirs(final FileSystem fs, final Path regionDir) throws IOException {
+    // assumes we are in a region dir.
+    FileStatus[] fds = fs.listStatus(regionDir, new FamilyDirFilter(fs));
+    List<Path> familyDirs = new ArrayList<Path>(fds.length);
+    for (FileStatus fdfs: fds) {
+      Path fdPath = fdfs.getPath();
+      familyDirs.add(fdPath);
+    }
+    return familyDirs;
+  }
+
+  /**
    * Filter for HFiles that excludes reference files.
    */
   public static class HFileFilter implements PathFilter {
@@ -1209,7 +1228,7 @@ public abstract class FSUtils {
   
   /**
    * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
-   * This would accommodate difference in various hadoop versions
+   * This accommodates differences between hadoop versions
    * 
    * @param fs file system
    * @param dir directory
@@ -1228,7 +1247,19 @@ public abstract class FSUtils {
     if (status == null || status.length < 1) return null;
     return status;
   }
-  
+
+  /**
+   * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
+   * This would accommodates differences between hadoop versions
+   *
+   * @param fs file system
+   * @param dir directory
+   * @return null if tabledir doesn't exist, otherwise FileStatus array
+   */
+  public static FileStatus[] listStatus(final FileSystem fs, final Path dir) throws IOException {
+    return listStatus(fs, dir, null);
+  }
+
   /**
    * Calls fs.delete() and returns the value returned by the fs.delete()
    * 
