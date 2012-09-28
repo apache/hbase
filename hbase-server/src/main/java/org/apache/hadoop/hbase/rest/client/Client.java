@@ -42,6 +42,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * A wrapper around HttpClient which provides some useful function and
@@ -186,9 +187,9 @@ public class Client {
         method.addRequestHeader(header);
       }
     }
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTimeMillis();
     int code = httpClient.executeMethod(method);
-    long endTime = System.currentTimeMillis();
+    long endTime = EnvironmentEdgeManager.currentTimeMillis();
     if (LOG.isDebugEnabled()) {
       LOG.debug(method.getName() + " " + uri + " " + code + " " +
         method.getStatusText() + " in " + (endTime - startTime) + " ms");

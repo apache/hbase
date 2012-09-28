@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -211,7 +212,7 @@ public class RegionStates {
    */
   public synchronized RegionState updateRegionState(
       final HRegionInfo hri, final State state, final ServerName serverName) {
-    return updateRegionState(hri, state, System.currentTimeMillis(), serverName);
+    return updateRegionState(hri, state, EnvironmentEdgeManager.currentTimeMillis(), serverName);
   }
 
   /**

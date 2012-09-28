@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 
 import java.util.ConcurrentModificationException;
@@ -278,7 +279,7 @@ public class Leases extends HasThread {
     }
 
     public long getDelay(TimeUnit unit) {
-      return unit.convert(this.expirationTime - System.currentTimeMillis(),
+      return unit.convert(this.expirationTime - EnvironmentEdgeManager.currentTimeMillis(),
           TimeUnit.MILLISECONDS);
     }
 
@@ -293,7 +294,7 @@ public class Leases extends HasThread {
      * Resets the expiration time of the lease.
      */
     public void resetExpirationTime() {
-      this.expirationTime = System.currentTimeMillis() + this.leaseTimeoutPeriod;
+      this.expirationTime = EnvironmentEdgeManager.currentTimeMillis() + this.leaseTimeoutPeriod;
     }
   }
 }

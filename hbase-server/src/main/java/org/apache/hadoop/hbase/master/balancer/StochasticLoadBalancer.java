@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -106,7 +107,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private static final String MAX_MOVES_KEY = "hbase.master.balancer.stochastic.maxMoveRegions";
   private static final String KEEP_REGION_LOADS = "hbase.master.balancer.stochastic.numRegionLoadsToRemember";
 
-  private static final Random RANDOM = new Random(System.currentTimeMillis());
+  private static final Random RANDOM = new Random(EnvironmentEdgeManager.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(StochasticLoadBalancer.class);
   private final RegionLocationFinder regionFinder = new RegionLocationFinder();
   private ClusterStatus clusterStatus = null;
@@ -183,7 +184,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return null;
     }
 
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTimeMillis();
 
     // Keep track of servers to iterate through them.
     List<ServerName> servers = new ArrayList<ServerName>(clusterState.keySet());
@@ -248,7 +249,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     }
 
-    long endTime = System.currentTimeMillis();
+    long endTime = EnvironmentEdgeManager.currentTimeMillis();
 
     if (initCost > currentCost) {
       List<RegionPlan> plans = createRegionPlans(initialRegionMapping, clusterState);

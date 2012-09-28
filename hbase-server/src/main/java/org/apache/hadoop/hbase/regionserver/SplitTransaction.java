@@ -523,7 +523,7 @@ public class SplitTransaction {
 
     @Override
     public boolean progress() {
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTimeMillis();
       if (now - lastLog > this.interval) {
         LOG.info("Opening " + this.hri.getRegionNameAsString());
         this.lastLog = now;

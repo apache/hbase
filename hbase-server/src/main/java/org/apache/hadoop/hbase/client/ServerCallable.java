@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 
 import com.google.protobuf.ServiceException;
@@ -114,12 +115,12 @@ public abstract class ServerCallable<T> implements Callable<T> {
 
   public void beforeCall() {
     HBaseRPC.setRpcTimeout(this.callTimeout);
-    this.startTime = System.currentTimeMillis();
+    this.startTime = EnvironmentEdgeManager.currentTimeMillis();
   }
 
   public void afterCall() {
     HBaseRPC.resetRpcTimeout();
-    this.endTime = System.currentTimeMillis();
+    this.endTime = EnvironmentEdgeManager.currentTimeMillis();
   }
 
   public void shouldRetry(Throwable throwable) throws IOException {
@@ -182,7 +183,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
         }
         RetriesExhaustedException.ThrowableWithExtraContext qt =
           new RetriesExhaustedException.ThrowableWithExtraContext(t,
-            System.currentTimeMillis(), toString());
+            EnvironmentEdgeManager.currentTimeMillis(), toString());
         exceptions.add(qt);
         if (tries == numRetries - 1) {
           throw new RetriesExhaustedException(tries, exceptions);

@@ -164,6 +164,7 @@ import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -355,7 +356,7 @@ Server {
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
     this.serverName = new ServerName(this.isa.getHostName(),
-      this.isa.getPort(), System.currentTimeMillis());
+      this.isa.getPort(), EnvironmentEdgeManager.currentTimeMillis());
     this.rsFatals = new MemoryBoundedLogMessageBuffer(
         conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
 
@@ -431,7 +432,7 @@ Server {
     MonitoredTask startupStatus =
       TaskMonitor.get().createStatus("Master startup");
     startupStatus.setDescription("Master startup");
-    masterStartTime = System.currentTimeMillis();
+    masterStartTime = EnvironmentEdgeManager.currentTimeMillis();
     try {
       /*
        * Block on becoming the active master.
@@ -571,10 +572,10 @@ Server {
     long lastMsgTs = 0l;
     long now = 0l;
     while (!this.stopped) {
-      now = System.currentTimeMillis();
+      now = EnvironmentEdgeManager.currentTimeMillis();
       if ((now - lastMsgTs) >= this.msgInterval) {
         doMetrics();
-        lastMsgTs = System.currentTimeMillis();
+        lastMsgTs = EnvironmentEdgeManager.currentTimeMillis();
       }
       stopSleeper.sleep();
     }
@@ -625,7 +626,7 @@ Server {
      */
 
     status.setStatus("Initializing Master file system");
-    this.masterActiveTime = System.currentTimeMillis();
+    this.masterActiveTime = EnvironmentEdgeManager.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
     this.fileSystemManager = new MasterFileSystem(this, this, metrics, masterRecovery);
 
@@ -1265,7 +1266,7 @@ Server {
     if (!this.loadBalancerTracker.isBalancerOn()) return false;
     // Do this call outside of synchronized block.
     int maximumBalanceTime = getBalancerCutoffTime();
-    long cutoffTime = System.currentTimeMillis() + maximumBalanceTime;
+    long cutoffTime = EnvironmentEdgeManager.currentTimeMillis() + maximumBalanceTime;
     boolean balancerRan;
     synchronized (this.balancer) {
       // Only allow one balance run at at time.
@@ -1311,13 +1312,13 @@ Server {
       if (plans != null && !plans.isEmpty()) {
         for (RegionPlan plan: plans) {
           LOG.info("balance " + plan);
-          long balStartTime = System.currentTimeMillis();
+          long balStartTime = EnvironmentEdgeManager.currentTimeMillis();
           this.assignmentManager.balance(plan);
-          totalRegPlanExecTime += System.currentTimeMillis()-balStartTime;
+          totalRegPlanExecTime += EnvironmentEdgeManager.currentTimeMillis()-balStartTime;
           rpCount++;
           if (rpCount < plans.size() &&
               // if performing next balance exceeds cutoff time, exit the loop
-              (System.currentTimeMillis() + (totalRegPlanExecTime / rpCount)) > cutoffTime) {
+              (EnvironmentEdgeManager.currentTimeMillis() + (totalRegPlanExecTime / rpCount)) > cutoffTime) {
             LOG.debug("No more balancing till next balance run; maximumBalanceTime=" +
               maximumBalanceTime);
             break;

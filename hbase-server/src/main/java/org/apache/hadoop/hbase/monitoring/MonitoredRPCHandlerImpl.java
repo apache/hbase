@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.Writable;
 
 import org.codehaus.jackson.map.ObjectMapper;
@@ -191,7 +192,7 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl
       long queueTime) {
     this.methodName = methodName;
     this.params = params;
-    this.rpcStartTime = System.currentTimeMillis();
+    this.rpcStartTime = EnvironmentEdgeManager.currentTimeMillis();
     this.rpcQueueTime = queueTime;
     this.state = State.RUNNING;
   }

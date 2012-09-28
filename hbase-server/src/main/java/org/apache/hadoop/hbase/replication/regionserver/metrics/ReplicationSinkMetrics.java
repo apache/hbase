@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver.metrics;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * This class is for maintaining the various replication statistics for a sink and publishing them
@@ -44,7 +45,7 @@ public class ReplicationSinkMetrics {
    * @param timestamp The timestamp of the last operation applied.
    */
   public void setAgeOfLastAppliedOp(long timestamp) {
-    long age = System.currentTimeMillis() - timestamp;
+    long age = EnvironmentEdgeManager.currentTimeMillis() - timestamp;
     rms.setGauge(SINK_AGE_OF_LAST_APPLIED_OP, age);
   }
 

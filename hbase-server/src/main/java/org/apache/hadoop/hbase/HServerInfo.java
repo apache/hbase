@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.VersionedWritable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -56,7 +57,7 @@ implements WritableComparable<HServerInfo> {
    * @param webuiport Port the webui runs on.
    */
   public HServerInfo(final HServerAddress serverAddress, final int webuiport) {
-    this(serverAddress, System.currentTimeMillis(), webuiport);
+    this(serverAddress, EnvironmentEdgeManager.currentTimeMillis(), webuiport);
   }
 
   public HServerInfo(HServerAddress serverAddress, long startCode,

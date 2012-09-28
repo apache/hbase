@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Sleeper;
 
@@ -60,7 +61,7 @@ public abstract class Chore extends HasThread {
     try {
       boolean initialChoreComplete = false;
       while (!this.stopper.isStopped()) {
-        long startTime = System.currentTimeMillis();
+        long startTime = EnvironmentEdgeManager.currentTimeMillis();
         try {
           if (!initialChoreComplete) {
             initialChoreComplete = initialChore();

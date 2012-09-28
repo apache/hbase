@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslDigestCallbackHan
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslStatus;
 import org.apache.hadoop.hbase.util.ByteBufferOutputStream;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
@@ -333,7 +334,7 @@ public abstract class HBaseServer implements RpcServer {
       this.id = id;
       this.rpcRequestBody = rpcRequestBody;
       this.connection = connection;
-      this.timestamp = System.currentTimeMillis();
+      this.timestamp = EnvironmentEdgeManager.currentTimeMillis();
       this.response = null;
       this.delayResponse = false;
       this.responder = responder;
@@ -464,7 +465,7 @@ public abstract class HBaseServer implements RpcServer {
     @Override
     public void throwExceptionIfCallerDisconnected() throws CallerDisconnectedException {
       if (!connection.channel.isOpen()) {
-        long afterTime = System.currentTimeMillis() - timestamp;
+        long afterTime = EnvironmentEdgeManager.currentTimeMillis() - timestamp;
         throw new CallerDisconnectedException(
             "Aborting call " + this + " after " + afterTime + " ms, since " +
             "caller disconnected");
@@ -616,7 +617,7 @@ public abstract class HBaseServer implements RpcServer {
      */
     private void cleanupConnections(boolean force) {
       if (force || numConnections > thresholdIdleConnections) {
-        long currentTime = System.currentTimeMillis();
+        long currentTime = EnvironmentEdgeManager.currentTimeMillis();
         if (!force && (currentTime - lastCleanupRunTime) < cleanupInterval) {
           return;
         }
@@ -653,7 +654,7 @@ public abstract class HBaseServer implements RpcServer {
           }
           else i++;
         }
-        lastCleanupRunTime = System.currentTimeMillis();
+        lastCleanupRunTime = EnvironmentEdgeManager.currentTimeMillis();
       }
     }
 
@@ -751,7 +752,7 @@ public abstract class HBaseServer implements RpcServer {
         try {
           reader.startAdd();
           SelectionKey readKey = reader.registerChannel(channel);
-          c = getConnection(channel, System.currentTimeMillis());
+          c = getConnection(channel, EnvironmentEdgeManager.currentTimeMillis());
           readKey.attach(c);
           synchronized (connectionList) {
             connectionList.add(numConnections, c);
@@ -774,7 +775,7 @@ public abstract class HBaseServer implements RpcServer {
       if (c == null) {
         return;
       }
-      c.setLastContact(System.currentTimeMillis());
+      c.setLastContact(EnvironmentEdgeManager.currentTimeMillis());
 
       try {
         count = c.readAndProcess();
@@ -793,7 +794,7 @@ public abstract class HBaseServer implements RpcServer {
         // c = null;
       }
       else {
-        c.setLastContact(System.currentTimeMillis());
+        c.setLastContact(EnvironmentEdgeManager.currentTimeMillis());
       }
     }
 
@@ -867,7 +868,7 @@ public abstract class HBaseServer implements RpcServer {
               LOG.info(getName() + ": doAsyncWrite threw exception " + e);
             }
           }
-          long now = System.currentTimeMillis();
+          long now = EnvironmentEdgeManager.currentTimeMillis();
           if (now < lastPurgeTime + purgeTimeout) {
             continue;
           }
@@ -1022,7 +1023,7 @@ public abstract class HBaseServer implements RpcServer {
 
             if (inHandler) {
               // set the serve time when the response has to be sent later
-              call.timestamp = System.currentTimeMillis();
+              call.timestamp = EnvironmentEdgeManager.currentTimeMillis();
               if (enqueueInSelector(call))
                 done = true;
             }
@@ -1070,7 +1071,7 @@ public abstract class HBaseServer implements RpcServer {
     //
     void doRespond(Call call) throws IOException {
       // set the serve time when the response has to be sent later
-      call.timestamp = System.currentTimeMillis();
+      call.timestamp = EnvironmentEdgeManager.currentTimeMillis();
       responseQueueLen++;
 
       boolean doRegister = false;

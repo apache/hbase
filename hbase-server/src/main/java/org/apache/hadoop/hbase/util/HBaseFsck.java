@@ -170,7 +170,7 @@ public class HBaseFsck {
   private HBaseAdmin admin;
   private HTable meta;
   protected ExecutorService executor; // threads to retrieve data from regionservers
-  private long startMillis = System.currentTimeMillis();
+  private long startMillis = EnvironmentEdgeManager.currentTimeMillis();
   private HFileCorruptionChecker hfcc;
   private int retcode = 0;
 
@@ -1255,7 +1255,7 @@ public class HBaseFsck {
       throw new IOException(e);
     }
     MetaEntry m =
-      new MetaEntry(rootLocation.getRegionInfo(), sn, System.currentTimeMillis());
+      new MetaEntry(rootLocation.getRegionInfo(), sn, EnvironmentEdgeManager.currentTimeMillis());
     HbckInfo hbInfo = new HbckInfo(m);
     regionInfoMap.put(rootLocation.getRegionInfo().getEncodedName(), hbInfo);
     return true;
@@ -1508,7 +1508,7 @@ public class HBaseFsck {
       (hbi.metaEntry == null)? false: hbi.metaEntry.isSplit() && hbi.metaEntry.isOffline();
     boolean shouldBeDeployed = inMeta && !isTableDisabled(hbi.metaEntry);
     boolean recentlyModified = hbi.getHdfsRegionDir() != null &&
-      hbi.getModTime() + timelag > System.currentTimeMillis();
+      hbi.getModTime() + timelag > EnvironmentEdgeManager.currentTimeMillis();
 
     // ========== First the healthy cases =============
     if (hbi.containsOnlyHdfsEdits()) {
@@ -2321,7 +2321,7 @@ public class HBaseFsck {
    */
    HTableDescriptor[] getTables(AtomicInteger numSkipped) {
     List<String> tableNames = new ArrayList<String>();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTimeMillis();
 
     for (HbckInfo hbi : regionInfoMap.values()) {
       MetaEntry info = hbi.metaEntry;

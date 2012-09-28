@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -665,7 +666,7 @@ public class AssignmentManager extends ZooKeeperListener {
     Lock lock = locker.acquireLock(encodedName);
     try {
       // Printing if the event was created a long time ago helps debugging
-      boolean lateEvent = createTime < (System.currentTimeMillis() - 15000);
+      boolean lateEvent = createTime < (EnvironmentEdgeManager.currentTimeMillis() - 15000);
       RegionState regionState = regionStates.getRegionTransitionState(encodedName);
       LOG.debug("Handling transition=" + rt.getEventType() +
         ", server=" + sn + ", region=" +
@@ -1215,7 +1216,7 @@ public class AssignmentManager extends ZooKeeperListener {
     try {
       // Send OPEN RPC. If it fails on a IOE or RemoteException, the
       // TimeoutMonitor will pick up the pieces.
-      long maxWaitTime = System.currentTimeMillis() +
+      long maxWaitTime = EnvironmentEdgeManager.currentTimeMillis() +
         this.server.getConfiguration().
           getLong("hbase.regionserver.rpc.startup.waittime", 60000);
       while (!this.server.isStopped()) {
@@ -1244,7 +1245,7 @@ public class AssignmentManager extends ZooKeeperListener {
           } else if (decodedException instanceof ServerNotRunningYetException) {
             // This is the one exception to retry.  For all else we should just fail
             // the startup.
-            long now = System.currentTimeMillis();
+            long now = EnvironmentEdgeManager.currentTimeMillis();
             if (now > maxWaitTime) throw e;
             LOG.debug("Server is not yet up; waiting up to " +
                 (maxWaitTime - now) + "ms", e);
@@ -1338,7 +1339,7 @@ public class AssignmentManager extends ZooKeeperListener {
       // call to open risks our writing PENDING_OPEN after state has been moved
       // to OPENING by the regionserver.
       regionStates.updateRegionState(state.getRegion(),
-        RegionState.State.PENDING_OPEN, System.currentTimeMillis(),
+        RegionState.State.PENDING_OPEN, EnvironmentEdgeManager.currentTimeMillis(),
         destination);
       this.counter.addAndGet(1);
     }
@@ -1441,7 +1442,7 @@ public class AssignmentManager extends ZooKeeperListener {
           " to " + plan.getDestination().toString());
         // Transition RegionState to PENDING_OPEN
         regionStates.updateRegionState(state.getRegion(),
-          RegionState.State.PENDING_OPEN, System.currentTimeMillis(),
+          RegionState.State.PENDING_OPEN, EnvironmentEdgeManager.currentTimeMillis(),
           plan.getDestination());
         // Send OPEN RPC. This can fail if the server on other end is is not up.
         // Pass the version that was obtained while setting the node to OFFLINE.
@@ -2099,10 +2100,10 @@ public class AssignmentManager extends ZooKeeperListener {
     // that if it returns without an exception that there was a period of time
     // with no regions in transition from the point-of-view of the in-memory
     // state of the Master.
-    final long endTime = System.currentTimeMillis() + timeout;
+    final long endTime = EnvironmentEdgeManager.currentTimeMillis() + timeout;
 
     while (!this.server.isStopped() && regionStates.isRegionsInTransition()
-        && endTime > System.currentTimeMillis()) {
+        && endTime > EnvironmentEdgeManager.currentTimeMillis()) {
       regionStates.waitForUpdate(100);
     }
 
@@ -2299,7 +2300,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * on a frequent interval.
    */
   public void updateRegionsInTransitionMetrics() {
-    long currentTime = System.currentTimeMillis();
+    long currentTime = EnvironmentEdgeManager.currentTimeMillis();
     int totalRITs = 0;
     int totalRITsOverThreshold = 0;
     long oldestRITTime = 0;
@@ -2430,7 +2431,7 @@ public class AssignmentManager extends ZooKeeperListener {
       boolean noRSAvailable = this.serverManager.createDestinationServersList().isEmpty();
 
       // Iterate all regions in transition checking for time outs
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTimeMillis();
       // no lock concurrent access ok: we will be working on a copy, and it's java-valid to do
       //  a copy while another thread is adding/removing items
       for (RegionState regionState : regionStates.getRegionsInTransition().values()) {

@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * This class is for maintaining the various replication statistics for a source and publishing them
@@ -75,7 +76,7 @@ public class ReplicationSourceMetrics {
    * @param timestamp write time of the edit
    */
   public void setAgeOfLastShippedOp(long timestamp) {
-    long age = System.currentTimeMillis() - timestamp;
+    long age = EnvironmentEdgeManager.currentTimeMillis() - timestamp;
     rms.setGauge(ageOfLastShippedOpKey, age);
     rms.setGauge(SOURCE_AGE_OF_LAST_SHIPPED_OP, age);
     this.lastTimestamp = timestamp;

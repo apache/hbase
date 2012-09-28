@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.MetaNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -470,10 +471,10 @@ public class CatalogTracker {
    */
   public ServerName waitForMeta(long timeout)
   throws InterruptedException, IOException, NotAllMetaRegionsOnlineException {
-    long stop = System.currentTimeMillis() + timeout;
+    long stop = EnvironmentEdgeManager.currentTimeMillis() + timeout;
     long waitTime = Math.min(50, timeout);
     synchronized (metaAvailable) {
-      while(!stopped && (timeout == 0 || System.currentTimeMillis() < stop)) {
+      while(!stopped && (timeout == 0 || EnvironmentEdgeManager.currentTimeMillis() < stop)) {
         if (getMetaServerConnection() != null) {
           return metaLocation;
         }

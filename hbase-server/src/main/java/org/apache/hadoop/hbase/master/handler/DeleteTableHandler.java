@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 
@@ -59,8 +60,8 @@ public class DeleteTableHandler extends TableEventHandler {
     long waitTime = server.getConfiguration().
       getLong("hbase.master.wait.on.region", 5 * 60 * 1000);
     for (HRegionInfo region : regions) {
-      long done = System.currentTimeMillis() + waitTime;
-      while (System.currentTimeMillis() < done) {
+      long done = EnvironmentEdgeManager.currentTimeMillis() + waitTime;
+      while (EnvironmentEdgeManager.currentTimeMillis() < done) {
         if (!am.getRegionStates().isRegionInTransition(region)) break;
         Threads.sleep(waitingTimeForEvents);
         LOG.debug("Waiting on region to clear regions in transition; "

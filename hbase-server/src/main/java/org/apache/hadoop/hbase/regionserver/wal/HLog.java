@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
@@ -620,7 +621,7 @@ public class HLog implements Syncable {
       if (currentFilenum > 0) {
         oldPath = computeFilename(currentFilenum);
       }
-      this.filenum = System.currentTimeMillis();
+      this.filenum = EnvironmentEdgeManager.currentTimeMillis();
       Path newPath = computeFilename();
 
       // Tell our listeners that a new log is about to be created
@@ -1298,7 +1299,7 @@ public class HLog implements Syncable {
     }
     try {
       long doneUpto;
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTimeMillis();
       // First flush all the pending writes to HDFS. Then 
       // issue the sync to HDFS. If sync is successful, then update
       // syncedTillHere to indicate that transactions till this
@@ -1334,7 +1335,7 @@ public class HLog implements Syncable {
       }
       this.syncedTillHere = Math.max(this.syncedTillHere, doneUpto);
 
-      syncTime.inc(System.currentTimeMillis() - now);
+      syncTime.inc(EnvironmentEdgeManager.currentTimeMillis() - now);
       if (!this.logRollRunning) {
         checkLowReplication();
         try {
@@ -1461,13 +1462,13 @@ public class HLog implements Syncable {
       }
     }
     try {
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTimeMillis();
       // coprocessor hook:
       if (!coprocessorHost.preWALWrite(info, logKey, logEdit)) {
         // write to our buffer for the Hlog file.
         logSyncerThread.append(new HLog.Entry(logKey, logEdit));
       }
-      long took = System.currentTimeMillis() - now;
+      long took = EnvironmentEdgeManager.currentTimeMillis() - now;
       coprocessorHost.postWALWrite(info, logKey, logEdit);
       writeTime.inc(took);
       long len = 0;
@@ -1590,13 +1591,13 @@ public class HLog implements Syncable {
       }
       long txid = 0;
       synchronized (updateLock) {
-        long now = System.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTimeMillis();
         WALEdit edit = completeCacheFlushLogEdit();
         HLogKey key = makeKey(encodedRegionName, tableName, logSeqId,
-            System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
+            EnvironmentEdgeManager.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
         logSyncerThread.append(new Entry(key, edit));
         txid = this.unflushedEntries.incrementAndGet();
-        writeTime.inc(System.currentTimeMillis() - now);
+        writeTime.inc(EnvironmentEdgeManager.currentTimeMillis() - now);
         long len = 0;
         for (KeyValue kv : edit.getKeyValues()) {
           len += kv.getLength();
@@ -1618,7 +1619,7 @@ public class HLog implements Syncable {
 
   private WALEdit completeCacheFlushLogEdit() {
     KeyValue kv = new KeyValue(METAROW, METAFAMILY, null,
-      System.currentTimeMillis(), COMPLETE_CACHE_FLUSH);
+      EnvironmentEdgeManager.currentTimeMillis(), COMPLETE_CACHE_FLUSH);
     WALEdit e = new WALEdit();
     e.add(kv);
     return e;
@@ -1901,7 +1902,7 @@ public class HLog implements Syncable {
       final Path edits)
   throws IOException {
     Path moveAsideName = new Path(edits.getParent(), edits.getName() + "." +
-      System.currentTimeMillis());
+      EnvironmentEdgeManager.currentTimeMillis());
     if (!fs.rename(edits, moveAsideName)) {
       LOG.warn("Rename failed from " + edits + " to " + moveAsideName);
     }

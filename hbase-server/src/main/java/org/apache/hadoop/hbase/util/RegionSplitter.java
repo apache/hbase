@@ -426,7 +426,7 @@ public class RegionSplitter {
       daughterRegions.get(rsLocation).add(dr);
     }
     LOG.debug("Done with bucketing.  Split time!");
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTimeMillis();
 
     // open the split file and modify it as splits finish
     FSDataInputStream tmpIn = fs.open(splitFile);
@@ -544,7 +544,7 @@ public class RegionSplitter {
                 + " " + splitAlgo.rowToStr(region.getSecond()) + "\n");
             splitCount++;
             if (splitCount % 10 == 0) {
-              long tDiff = (System.currentTimeMillis() - startTime)
+              long tDiff = (EnvironmentEdgeManager.currentTimeMillis() - startTime)
                   / splitCount;
               LOG.debug("STATUS UPDATE: " + splitCount + " / " + origCount
                   + ". Avg Time / Split = "
@@ -570,7 +570,7 @@ public class RegionSplitter {
       }
       LOG.debug("All regions have been successfully split!");
     } finally {
-      long tDiff = System.currentTimeMillis() - startTime;
+      long tDiff = EnvironmentEdgeManager.currentTimeMillis() - startTime;
       LOG.debug("TOTAL TIME = "
           + org.apache.hadoop.util.StringUtils.formatTime(tDiff));
       LOG.debug("Splits = " + splitCount);

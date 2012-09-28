@@ -30,6 +30,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -140,12 +141,12 @@ public class TaskMonitor {
 
   private boolean canPurge(MonitoredTask stat) {
     long cts = stat.getCompletionTimestamp();
-    return (cts > 0 && System.currentTimeMillis() - cts > EXPIRATION_TIME);
+    return (cts > 0 && EnvironmentEdgeManager.currentTimeMillis() - cts > EXPIRATION_TIME);
   }
   
 
   public void dumpAsText(PrintWriter out) {
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTimeMillis();
     
     List<MonitoredTask> tasks = getTasks();
     for (MonitoredTask task : tasks) {

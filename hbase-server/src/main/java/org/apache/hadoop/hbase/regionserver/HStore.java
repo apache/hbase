@@ -1178,7 +1178,7 @@ public class HStore extends SchemaConfigured implements Store {
     }
     // TODO: Use better method for determining stamp of last major (HBASE-2990)
     long lowTimestamp = getLowestTimestamp(filesToCompact);
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTimeMillis();
     if (lowTimestamp > 0l && lowTimestamp < (now - mcTime)) {
       // Major compaction time has elapsed.
       if (filesToCompact.size() == 1) {

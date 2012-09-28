@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.monitoring;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;
@@ -37,7 +38,7 @@ class MonitoredTaskImpl implements MonitoredTask {
   protected volatile State state = State.RUNNING;
   
   public MonitoredTaskImpl() {
-    startTime = System.currentTimeMillis();
+    startTime = EnvironmentEdgeManager.currentTimeMillis();
     statusTime = startTime;
     stateTime = startTime;
   }
@@ -116,12 +117,12 @@ class MonitoredTaskImpl implements MonitoredTask {
   @Override
   public void setStatus(String status) {
     this.status = status;
-    statusTime = System.currentTimeMillis();
+    statusTime = EnvironmentEdgeManager.currentTimeMillis();
   }
 
   protected void setState(State state) {
     this.state = state;
-    stateTime = System.currentTimeMillis();
+    stateTime = EnvironmentEdgeManager.currentTimeMillis();
   }
 
   @Override

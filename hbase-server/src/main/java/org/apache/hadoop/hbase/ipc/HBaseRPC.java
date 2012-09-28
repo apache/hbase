@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -224,7 +225,7 @@ public class HBaseRPC {
                                                long timeout
                                                ) throws IOException {
     // HBase does limited number of reconnects which is different from hadoop.
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTimeMillis();
     IOException ioe;
     int reconnectAttempts = 0;
     while (true) {
@@ -257,7 +258,7 @@ public class HBaseRPC {
         }
       }
       // check if timed out
-      if (System.currentTimeMillis() - timeout >= startTime) {
+      if (EnvironmentEdgeManager.currentTimeMillis() - timeout >= startTime) {
         throw ioe;
       }
 

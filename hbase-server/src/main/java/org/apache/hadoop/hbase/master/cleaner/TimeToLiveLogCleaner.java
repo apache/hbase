@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.commons.logging.Log;
@@ -40,7 +41,7 @@ public class TimeToLiveLogCleaner extends BaseLogCleanerDelegate {
   @Override
   public boolean isLogDeletable(Path filePath) {
     long time = 0;
-    long currentTime = System.currentTimeMillis();
+    long currentTime = EnvironmentEdgeManager.currentTimeMillis();
     try {
       FileStatus fStat = filePath.getFileSystem(this.getConf()).getFileStatus(filePath);
       time = fStat.getModificationTime();

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
@@ -1211,7 +1212,7 @@ public class ZKUtil {
 
     byte[] data = null;
     boolean finished = false;
-    final long endTime = System.currentTimeMillis() + timeout;
+    final long endTime = EnvironmentEdgeManager.currentTimeMillis() + timeout;
     while (!finished) {
       try {
         data = ZKUtil.getData(zkw, znode);
@@ -1219,7 +1220,7 @@ public class ZKUtil {
         LOG.warn("Unexpected exception handling blockUntilAvailable", e);
       }
 
-      if (data == null && (System.currentTimeMillis() +
+      if (data == null && (EnvironmentEdgeManager.currentTimeMillis() +
         HConstants.SOCKET_RETRY_WAIT_MS < endTime)) {
         Thread.sleep(HConstants.SOCKET_RETRY_WAIT_MS);
       } else {

@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -269,7 +270,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
       SplitLogCounters.tot_wkr_task_acquired.incrementAndGet();
       getDataSetWatchAsync();
 
-      t = System.currentTimeMillis();
+      t = EnvironmentEdgeManager.currentTimeMillis();
       TaskExecutor.Status status;
 
       status = splitTaskExecutor.exec(ZKSplitLog.getFileName(currentTask),
@@ -314,7 +315,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     } finally {
       if (t > 0) {
         LOG.info("worker " + serverName + " done with task " + path +
-            " in " + (System.currentTimeMillis() - t) + "ms");
+            " in " + (EnvironmentEdgeManager.currentTimeMillis() - t) + "ms");
       }
       synchronized (grabTaskLock) {
         workerInGrabTask = false;

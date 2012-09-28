@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.master.BulkAssigner;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.zookeeper.KeeperException;
 import org.cloudera.htrace.Trace;
 
@@ -219,7 +220,7 @@ public class EnableTableHandler extends EventHandler {
     @Override
     protected boolean waitUntilDone(long timeout)
     throws InterruptedException {
-      long startTime = System.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTimeMillis();
       long remaining = timeout;
       List<HRegionInfo> regions = null;
       int lastNumberOfRegions = 0;
@@ -234,7 +235,7 @@ public class EnableTableHandler extends EventHandler {
           lastNumberOfRegions = regions.size();
           timeout += waitingTimeForEvents;
         }
-        remaining = timeout - (System.currentTimeMillis() - startTime);
+        remaining = timeout - (EnvironmentEdgeManager.currentTimeMillis() - startTime);
       }
       return isDone(regions);
     }

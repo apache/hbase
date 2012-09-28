@@ -266,7 +266,7 @@ public class HBaseClient {
 
     protected Call(RpcRequestBody param) {
       this.param = param;
-      this.startTime = System.currentTimeMillis();
+      this.startTime = EnvironmentEdgeManager.currentTimeMillis();
       synchronized (HBaseClient.this) {
         this.id = counter++;
       }
@@ -432,7 +432,7 @@ public class HBaseClient {
 
     /** Update lastActivity with the current time. */
     protected void touch() {
-      lastActivity.set(System.currentTimeMillis());
+      lastActivity.set(EnvironmentEdgeManager.currentTimeMillis());
     }
 
     /**
@@ -604,7 +604,7 @@ public class HBaseClient {
     protected synchronized boolean waitForWork() {
       if (calls.isEmpty() && !shouldCloseConnection.get()  && running.get())  {
         long timeout = maxIdleTime-
-              (System.currentTimeMillis()-lastActivity.get());
+              (EnvironmentEdgeManager.currentTimeMillis()-lastActivity.get());
         if (timeout>0) {
           try {
             wait(timeout);
@@ -634,7 +634,7 @@ public class HBaseClient {
      * since last I/O activity is equal to or greater than the ping interval
      */
     protected synchronized void sendPing() throws IOException {
-      long curTime = System.currentTimeMillis();
+      long curTime = EnvironmentEdgeManager.currentTimeMillis();
       if ( curTime - lastActivity.get() >= pingInterval) {
         lastActivity.set(curTime);
         //noinspection SynchronizeOnNonFinalField
@@ -1056,7 +1056,7 @@ public class HBaseClient {
       Iterator<Entry<Integer, Call>> itor = calls.entrySet().iterator();
       while (itor.hasNext()) {
         Call c = itor.next().getValue();
-        long waitTime = System.currentTimeMillis() - c.getStartTime();
+        long waitTime = EnvironmentEdgeManager.currentTimeMillis() - c.getStartTime();
         if (waitTime >= rpcTimeout) {
           if (this.closeException == null) {
             // There may be no exception in the case that there are many calls
@@ -1080,7 +1080,7 @@ public class HBaseClient {
       try {
         if (!calls.isEmpty()) {
           Call firstCall = calls.get(calls.firstKey());
-          long maxWaitTime = System.currentTimeMillis() - firstCall.getStartTime();
+          long maxWaitTime = EnvironmentEdgeManager.currentTimeMillis() - firstCall.getStartTime();
           if (maxWaitTime < rpcTimeout) {
             rpcTimeout -= maxWaitTime;
           }

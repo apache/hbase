@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDe
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Triple;
@@ -1446,7 +1447,7 @@ public class HConnectionManager {
         --keepAliveZookeeperUserCount;
         if (keepAliveZookeeperUserCount <=0 ){
           keepZooKeeperWatcherAliveUntil =
-            System.currentTimeMillis() + keepAlive;
+            EnvironmentEdgeManager.currentTimeMillis() + keepAlive;
         }
       }
     }
@@ -1484,7 +1485,7 @@ public class HConnectionManager {
       }
 
       protected void closeMasterProtocol(MasterProtocolState protocolState) {
-        if (System.currentTimeMillis() > protocolState.keepAliveUntil) {
+        if (EnvironmentEdgeManager.currentTimeMillis() > protocolState.keepAliveUntil) {
           hci.closeMasterProtocol(protocolState);
           protocolState.keepAliveUntil = Long.MAX_VALUE;
         }
@@ -1494,7 +1495,7 @@ public class HConnectionManager {
       protected void chore() {
         synchronized (hci.masterAndZKLock) {
           if (hci.canCloseZKW) {
-            if (System.currentTimeMillis() >
+            if (EnvironmentEdgeManager.currentTimeMillis() >
               hci.keepZooKeeperWatcherAliveUntil) {
 
               hci.closeZooKeeperWatcher();
@@ -1659,7 +1660,7 @@ public class HConnectionManager {
         --protocolState.userCount;
         if (protocolState.userCount <= 0) {
           protocolState.keepAliveUntil =
-            System.currentTimeMillis() + keepAlive;
+            EnvironmentEdgeManager.currentTimeMillis() + keepAlive;
         }
       }
     }
@@ -2096,12 +2097,12 @@ public class HConnectionManager {
         final Callable<MultiResponse> delegate = hci.createCallable(loc, multi, tableName);
 
         return new Callable<MultiResponse>() {
-          private final long creationTime = System.currentTimeMillis();
+          private final long creationTime = EnvironmentEdgeManager.currentTimeMillis();
 
           @Override
           public MultiResponse call() throws Exception {
             try {
-              final long waitingTime = delay + creationTime - System.currentTimeMillis();
+              final long waitingTime = delay + creationTime - EnvironmentEdgeManager.currentTimeMillis();
               if (waitingTime > 0) {
                 Thread.sleep(waitingTime);
               }

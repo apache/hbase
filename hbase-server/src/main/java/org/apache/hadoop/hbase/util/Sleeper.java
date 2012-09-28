@@ -55,7 +55,7 @@ public class Sleeper {
    * Sleep for period.
    */
   public void sleep() {
-    sleep(System.currentTimeMillis());
+    sleep(EnvironmentEdgeManager.currentTimeMillis());
   }
 
   /**
@@ -78,11 +78,11 @@ public class Sleeper {
     if (this.stopper.isStopped()) {
       return;
     }
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTimeMillis();
     long waitTime = this.period - (now - startTime);
     if (waitTime > this.period) {
       LOG.warn("Calculated wait time > " + this.period +
-        "; setting to this.period: " + System.currentTimeMillis() + ", " +
+        "; setting to this.period: " + EnvironmentEdgeManager.currentTimeMillis() + ", " +
         startTime);
       waitTime = this.period;
     }
@@ -93,7 +93,7 @@ public class Sleeper {
           if (triggerWake) break;
           sleepLock.wait(waitTime);
         }
-        woke = System.currentTimeMillis();
+        woke = EnvironmentEdgeManager.currentTimeMillis();
         long slept = woke - now;
         if (slept - this.period > MINIMAL_DELTA_FOR_LOGGING) {
           LOG.warn("We slept " + slept + "ms instead of " + this.period +
@@ -109,7 +109,7 @@ public class Sleeper {
         }
       }
       // Recalculate waitTime.
-      woke = (woke == -1)? System.currentTimeMillis(): woke;
+      woke = (woke == -1)? EnvironmentEdgeManager.currentTimeMillis(): woke;
       waitTime = this.period - (woke - startTime);
     }
     triggerWake = false;

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
@@ -168,7 +169,7 @@ public class OpenRegionHandler extends EventHandler {
     // Total timeout for meta edit.  If we fail adding the edit then close out
     // the region and let it be assigned elsewhere.
     long timeout = assignmentTimeout * 10;
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTimeMillis();
     long endTime = now + timeout;
     // Let our period at which we update OPENING state to be be 1/3rd of the
     // regions-in-transition timeout period.
@@ -190,7 +191,7 @@ public class OpenRegionHandler extends EventHandler {
           // Go to the loop check.
         }
       }
-      now = System.currentTimeMillis();
+      now = EnvironmentEdgeManager.currentTimeMillis();
     }
     // Is thread still alive?  We may have left above loop because server is
     // stopping or we timed out the edit.  Is so, interrupt it.

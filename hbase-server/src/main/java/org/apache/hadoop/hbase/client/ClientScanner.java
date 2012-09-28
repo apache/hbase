@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.DataOutputBuffer;
 
 /**
@@ -97,7 +98,7 @@ public class ClientScanner extends AbstractClientScanner {
       }
       this.scan = scan;
       this.tableName = tableName;
-      this.lastNext = System.currentTimeMillis();
+      this.lastNext = EnvironmentEdgeManager.currentTimeMillis();
       this.connection = connection;
       if (scan.getMaxResultSize() > 0) {
         this.maxScannerResultSize = scan.getMaxResultSize();
@@ -285,8 +286,8 @@ public class ClientScanner extends AbstractClientScanner {
               // If we are over the timeout, throw this exception to the client
               // Else, it's because the region moved and we used the old id
               // against the new region server; reset the scanner.
-              if (timeout < System.currentTimeMillis()) {
-                long elapsed = System.currentTimeMillis() - lastNext;
+              if (timeout < EnvironmentEdgeManager.currentTimeMillis()) {
+                long elapsed = EnvironmentEdgeManager.currentTimeMillis() - lastNext;
                 ScannerTimeoutException ex = new ScannerTimeoutException(
                     elapsed + "ms passed since the last invocation, " +
                         "timeout is currently set to " + scannerTimeout);
@@ -313,7 +314,7 @@ public class ClientScanner extends AbstractClientScanner {
             callable = null;
             continue;
           }
-          long currentTime = System.currentTimeMillis();
+          long currentTime = EnvironmentEdgeManager.currentTimeMillis();
           if (this.scanMetrics != null ) {
             this.scanMetrics.sumOfMillisSecBetweenNexts.inc(currentTime-lastNext);
           }

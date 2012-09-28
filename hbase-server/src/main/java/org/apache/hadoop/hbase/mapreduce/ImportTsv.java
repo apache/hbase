@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.hbase.util.Base64;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -417,7 +418,7 @@ public class ImportTsv {
 
     // If timestamp option is not specified, use current system time.
     long timstamp = conf
-        .getLong(TIMESTAMP_CONF_KEY, System.currentTimeMillis());
+        .getLong(TIMESTAMP_CONF_KEY, EnvironmentEdgeManager.currentTimeMillis());
 
     // Set it back to replace invalid timestamp (non-numeric) with current
     // system time

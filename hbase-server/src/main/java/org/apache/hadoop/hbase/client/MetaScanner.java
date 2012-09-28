@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 
 /**
@@ -409,7 +410,7 @@ public class MetaScanner {
         HRegionInfo splitB = daughters.getSecond();
 
         HTable metaTable = getMetaTable();
-        long start = System.currentTimeMillis();
+        long start = EnvironmentEdgeManager.currentTimeMillis();
         Result resultA = getRegionResultBlocking(metaTable, blockingTimeout,
             splitA.getRegionName());
         if (resultA != null) {
@@ -419,7 +420,7 @@ public class MetaScanner {
           throw new RegionOfflineException("Split daughter region " +
               splitA.getRegionNameAsString() + " cannot be found in META.");
         }
-        long rem = blockingTimeout - (System.currentTimeMillis() - start);
+        long rem = blockingTimeout - (EnvironmentEdgeManager.currentTimeMillis() - start);
 
         Result resultB = getRegionResultBlocking(metaTable, rem,
             splitB.getRegionName());
@@ -440,8 +441,8 @@ public class MetaScanner {
       if (LOG.isDebugEnabled()) {
         LOG.debug("blocking until region is in META: " + Bytes.toStringBinary(regionName));
       }
-      long start = System.currentTimeMillis();
-      while (System.currentTimeMillis() - start < timeout) {
+      long start = EnvironmentEdgeManager.currentTimeMillis();
+      while (EnvironmentEdgeManager.currentTimeMillis() - start < timeout) {
         Get get = new Get(regionName);
         Result result = metaTable.get(get);
         HRegionInfo info = getHRegionInfo(result);

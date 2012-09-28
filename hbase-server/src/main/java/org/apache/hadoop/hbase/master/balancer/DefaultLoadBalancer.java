@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.collect.MinMaxPriorityQueue;
 
@@ -56,7 +57,7 @@ import com.google.common.collect.MinMaxPriorityQueue;
 @InterfaceAudience.Private
 public class DefaultLoadBalancer extends BaseLoadBalancer {
   private static final Log LOG = LogFactory.getLog(DefaultLoadBalancer.class);
-  private static final Random RANDOM = new Random(System.currentTimeMillis());
+  private static final Random RANDOM = new Random(EnvironmentEdgeManager.currentTimeMillis());
 
   private RegionInfoComparator riComparator = new RegionInfoComparator();
   private RegionPlan.RegionPlanComparator rpComparator = new RegionPlan.RegionPlanComparator();
@@ -181,7 +182,7 @@ public class DefaultLoadBalancer extends BaseLoadBalancer {
   public List<RegionPlan> balanceCluster(
       Map<ServerName, List<HRegionInfo>> clusterMap) {
     boolean emptyRegionServerPresent = false;
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTimeMillis();
 
 
     ClusterLoadState cs = new ClusterLoadState(clusterMap);
@@ -318,7 +319,7 @@ public class DefaultLoadBalancer extends BaseLoadBalancer {
     // If none needed to fill all to min and none left to drain all to max,
     // we are done
     if (neededRegions == 0 && regionsToMove.isEmpty()) {
-      long endTime = System.currentTimeMillis();
+      long endTime = EnvironmentEdgeManager.currentTimeMillis();
       LOG.info("Calculated a load balance in " + (endTime-startTime) + "ms. " +
           "Moving " + totalNumMoved + " regions off of " +
           serversOverloaded + " overloaded servers onto " +
@@ -396,7 +397,7 @@ public class DefaultLoadBalancer extends BaseLoadBalancer {
       }
     }
 
-    long endTime = System.currentTimeMillis();
+    long endTime = EnvironmentEdgeManager.currentTimeMillis();
 
     if (!regionsToMove.isEmpty() || neededRegions != 0) {
       // Emit data so can diagnose how balancer went astray.

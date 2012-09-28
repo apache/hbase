@@ -175,13 +175,13 @@ public class JVMClusterUtil {
     // Wait for an active master
     //  having an active master before starting the region threads allows
     //  then to succeed on their connection to master
-    long startTime = System.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTimeMillis();
     while (findActiveMaster(masters) == null) {
       try {
         Thread.sleep(100);
       } catch (InterruptedException ignored) {
       }
-      if (System.currentTimeMillis() > startTime + 30000) {
+      if (EnvironmentEdgeManager.currentTimeMillis() > startTime + 30000) {
         throw new RuntimeException("Master not active after 30 seconds");
       }
     }
@@ -197,13 +197,13 @@ public class JVMClusterUtil {
 
     // Wait for an active master to be initialized (implies being master)
     //  with this, when we return the cluster is complete
-    startTime = System.currentTimeMillis();
+    startTime = EnvironmentEdgeManager.currentTimeMillis();
     while (true) {
       JVMClusterUtil.MasterThread t = findActiveMaster(masters);
       if (t != null && t.master.isInitialized()) {
         return t.master.getServerName().toString();
       }
-      if (System.currentTimeMillis() > startTime + 200000) {
+      if (EnvironmentEdgeManager.currentTimeMillis() > startTime + 200000) {
         throw new RuntimeException("Master not initialized after 200 seconds");
       }
       try {

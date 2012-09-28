@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * State and utility processing {@link HRegion#getClosestRowBefore(byte[], byte[])}.
@@ -72,7 +73,7 @@ class GetClosestRowBeforeTracker {
         HConstants.DELIMITER) - this.rowoffset;
     }
     this.tablenamePlusDelimiterLength = metaregion? l + 1: -1;
-    this.oldestts = System.currentTimeMillis() - ttl;
+    this.oldestts = EnvironmentEdgeManager.currentTimeMillis() - ttl;
     this.kvcomparator = c;
     KeyValue.RowComparator rc = new KeyValue.RowComparator(this.kvcomparator);
     this.deletes = new TreeMap<KeyValue, NavigableSet<KeyValue>>(rc);
