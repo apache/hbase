@@ -45,6 +45,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import java.util.Iterator;
+import java.util.Map;
 
 @Category(MediumTests.class)
 public class TestImportExport {
@@ -82,6 +84,27 @@ public class TestImportExport {
   }
 
   /**
+   * When running on Hadoop 2, we need to copy (or add) configuration values for keys
+   * that start with "yarn." (from the map reduce minicluster) to the
+   * configuration that will be used during the test (from the HBase minicluster). 
+   * YARN configuration values are set properly in the map reduce minicluster, 
+   * but not necessarily in the HBase mini cluster.
+   * @param srcConf the configuration to copy from (the map reduce minicluster version)
+   * @param destConf the configuration to copy to (the HBase minicluster version)
+   */
+  private void copyConfigurationValues(Configuration srcConf, Configuration destConf) {
+    Iterator<Map.Entry<String,String>> it = srcConf.iterator();
+    while (it.hasNext()) {
+      Map.Entry<String, String> entry = it.next();
+      String key = entry.getKey();
+      String value = entry.getValue();
+      if (key.startsWith("yarn.") && !value.isEmpty()) {
+        destConf.set(key, value);
+      }
+    }
+  }
+
+  /**
    * Test simple replication case with column mapping
    * @throws Exception
    */
@@ -109,6 +132,9 @@ public class TestImportExport {
 
     GenericOptionsParser opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
+
+    // copy or add the necessary configuration values from the map reduce config to the hbase config
+    copyConfigurationValues(UTIL.getConfiguration(), conf);
     args = opts.getRemainingArgs();
 
     Job job = Export.createSubmittableJob(conf, args);
@@ -127,6 +153,9 @@ public class TestImportExport {
 
     opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
     conf = opts.getConfiguration();
+
+    // copy or add the necessary configuration values from the map reduce config to the hbase config
+    copyConfigurationValues(UTIL.getConfiguration(), conf);
     args = opts.getRemainingArgs();
 
     job = Import.createSubmittableJob(conf, args);
@@ -156,6 +185,9 @@ public class TestImportExport {
     GenericOptionsParser opts = new GenericOptionsParser(new Configuration(
         cluster.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
+
+    // copy or add the necessary configuration values from the map reduce config to the hbase config
+    copyConfigurationValues(UTIL.getConfiguration(), conf);
     args = opts.getRemainingArgs();
 
     Job job = Export.createSubmittableJob(conf, args);
@@ -199,6 +231,9 @@ public class TestImportExport {
 
     GenericOptionsParser opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
+
+    // copy or add the necessary configuration values from the map reduce config to the hbase config
+    copyConfigurationValues(UTIL.getConfiguration(), conf);
     args = opts.getRemainingArgs();
 
     Job job = Export.createSubmittableJob(conf, args);
@@ -223,6 +258,9 @@ public class TestImportExport {
 
     opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
     conf = opts.getConfiguration();
+
+    // copy or add the necessary configuration values from the map reduce config to the hbase config
+    copyConfigurationValues(UTIL.getConfiguration(), conf);
     args = opts.getRemainingArgs();
 
     job = Import.createSubmittableJob(conf, args);
