@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 /**
@@ -241,6 +243,13 @@ public class HFile {
   public static abstract class WriterFactory {
     protected Configuration conf;
     protected CacheConfig cacheConf;
+    protected FileSystem fs;
+    protected Path path;
+    protected FSDataOutputStream ostream;
+    protected int blockSize = HColumnDescriptor.DEFAULT_BLOCKSIZE;
+    protected Compression.Algorithm compression =
+      HFile.DEFAULT_COMPRESSION_ALGORITHM;
+    protected KeyComparator comparator;
 
     WriterFactory(Configuration conf, CacheConfig cacheConf) {
       this.conf = conf;
@@ -265,6 +274,27 @@ public class HFile {
     public abstract Writer createWriter(final FSDataOutputStream ostream,
         final int blockSize, final Compression.Algorithm compress,
         final KeyComparator c) throws IOException;
+
+    public WriterFactory withBlockSize(int blockSize) {
+      this.blockSize = blockSize;
+      return this;
+    }
+    public WriterFactory withPath(FileSystem fs, Path path) {
+      Preconditions.checkNotNull(fs);
+      Preconditions.checkNotNull(path);
+      this.fs = fs;
+      this.path = path;
+      return this;
+    }
+
+    public Writer create() throws IOException {
+      if ((path != null ? 1 : 0) + (ostream != null ? 1 : 0) != 1) {
+        throw new AssertionError("Please specify exactly one of " +
+            "filesystem/path or path");
+      }
+      return createWriter(fs, path, blockSize,
+          compression, comparator);
+    }
   }
 
   /** The configuration key for HFile version to use for new files */

@@ -718,7 +718,7 @@ public class HFileBlockIndex {
      * @throws IOException
      */
     public long writeIndexBlocks(FSDataOutputStream out) throws IOException {
-      if (curInlineChunk.getNumEntries() != 0) {
+      if (curInlineChunk != null && curInlineChunk.getNumEntries() != 0) {
         throw new IOException("Trying to write a multi-level block index, " +
             "but are " + curInlineChunk.getNumEntries() + " entries in the " +
             "last inline chunk.");
@@ -729,9 +729,11 @@ public class HFileBlockIndex {
       byte[] midKeyMetadata = numLevels > 1 ? rootChunk.getMidKeyMetadata()
           : null;
 
-      while (rootChunk.getRootSize() > maxChunkSize) {
-        rootChunk = writeIntermediateLevel(out, rootChunk);
-        numLevels += 1;
+      if (curInlineChunk != null) {
+        while (rootChunk.getRootSize() > maxChunkSize) {
+          rootChunk = writeIntermediateLevel(out, rootChunk);
+          numLevels += 1;
+        }
       }
 
       // write the root level
@@ -890,11 +892,18 @@ public class HFileBlockIndex {
      */
     @Override
     public boolean shouldWriteBlock(boolean closing) {
-      if (singleLevelOnly)
+      if (singleLevelOnly) {
         throw new UnsupportedOperationException(INLINE_BLOCKS_NOT_ALLOWED);
+      }
 
-      if (curInlineChunk.getNumEntries() == 0)
+      if (curInlineChunk == null) {
+        throw new IllegalStateException("curInlineChunk is null; has shouldWriteBlock been " +
+            "called with closing=true and then called again?");
+      }
+
+      if (curInlineChunk.getNumEntries() == 0) {
         return false;
+      }
 
       // We do have some entries in the current inline chunk.
       if (closing) {
@@ -904,7 +913,7 @@ public class HFileBlockIndex {
 
           expectNumLevels(1);
           rootChunk = curInlineChunk;
-          curInlineChunk = new BlockIndexChunk();
+          curInlineChunk = null;  // Disallow adding any more index entries.
           return false;
         }
 
