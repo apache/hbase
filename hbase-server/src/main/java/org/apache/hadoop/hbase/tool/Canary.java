@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * HBase Canary Tool, that that can be used to do
@@ -235,9 +234,9 @@ public final class Canary implements Tool {
       get.addFamily(column.getName());
 
       try {
-        long startTime = EnvironmentEdgeManager.currentTimeMillis();
+        long startTime = System.currentTimeMillis();
         table.get(get);
-        long time = EnvironmentEdgeManager.currentTimeMillis() - startTime;
+        long time = System.currentTimeMillis() - startTime;
 
         sink.publishReadTiming(region, column, time);
       } catch (Exception e) {

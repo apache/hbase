@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils;
 
@@ -93,7 +92,7 @@ public class TableRecordReaderImpl {
     }
     if (logScannerActivity) {
       LOG.info("Current scan=" + currentScan.toString());
-      timestamp = EnvironmentEdgeManager.currentTimeMillis();
+      timestamp = System.currentTimeMillis();
       rowcount = 0;
     }
   }
@@ -198,7 +197,7 @@ public class TableRecordReaderImpl {
         if (logScannerActivity) {
           rowcount ++;
           if (rowcount >= logPerRowCount) {
-            long now = EnvironmentEdgeManager.currentTimeMillis();
+            long now = System.currentTimeMillis();
             LOG.info("Mapper took " + (now-timestamp)
               + "ms to process " + rowcount + " rows");
             timestamp = now;
@@ -233,7 +232,7 @@ public class TableRecordReaderImpl {
       return false;
     } catch (IOException ioe) {
       if (logScannerActivity) {
-        long now = EnvironmentEdgeManager.currentTimeMillis();
+        long now = System.currentTimeMillis();
         LOG.info("Mapper took " + (now-timestamp)
           + "ms to process " + rowcount + " rows");
         LOG.info(ioe);

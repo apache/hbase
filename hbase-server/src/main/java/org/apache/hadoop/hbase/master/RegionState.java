@@ -27,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * State of a Region while undergoing transitions.
@@ -56,11 +55,11 @@ public class RegionState implements org.apache.hadoop.io.Writable {
   private volatile State state;
 
   public RegionState() {
-    this.stamp = new AtomicLong(EnvironmentEdgeManager.currentTimeMillis());
+    this.stamp = new AtomicLong(System.currentTimeMillis());
   }
 
   public RegionState(HRegionInfo region, State state) {
-    this(region, state, EnvironmentEdgeManager.currentTimeMillis(), null);
+    this(region, state, System.currentTimeMillis(), null);
   }
 
   public RegionState(HRegionInfo region,
@@ -72,7 +71,7 @@ public class RegionState implements org.apache.hadoop.io.Writable {
   }
 
   public void updateTimestampToNow() {
-    this.stamp.set(EnvironmentEdgeManager.currentTimeMillis());
+    this.stamp.set(System.currentTimeMillis());
   }
 
   public State getState() {
@@ -140,7 +139,7 @@ public class RegionState implements org.apache.hadoop.io.Writable {
    */
   public String toDescriptiveString() {
     long lstamp = stamp.get();
-    long relTime = EnvironmentEdgeManager.currentTimeMillis() - lstamp;
+    long relTime = System.currentTimeMillis() - lstamp;
     
     return region.getRegionNameAsString()
       + " state=" + state

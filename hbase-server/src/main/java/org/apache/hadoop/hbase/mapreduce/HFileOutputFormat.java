@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.WritableUtils;
@@ -127,7 +126,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       private final Map<byte [], WriterLength> writers =
         new TreeMap<byte [], WriterLength>(Bytes.BYTES_COMPARATOR);
       private byte [] previousRow = HConstants.EMPTY_BYTE_ARRAY;
-      private final byte [] now = Bytes.toBytes(EnvironmentEdgeManager.currentTimeMillis());
+      private final byte [] now = Bytes.toBytes(System.currentTimeMillis());
       private boolean rollRequested = false;
 
       public void write(ImmutableBytesWritable row, KeyValue kv)
@@ -214,7 +213,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       private void close(final HFile.Writer w) throws IOException {
         if (w != null) {
           w.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY,
-              Bytes.toBytes(EnvironmentEdgeManager.currentTimeMillis()));
+              Bytes.toBytes(System.currentTimeMillis()));
           w.appendFileInfo(StoreFile.BULKLOAD_TASK_KEY,
               Bytes.toBytes(context.getTaskAttemptID().toString()));
           w.appendFileInfo(StoreFile.MAJOR_COMPACTION_KEY,

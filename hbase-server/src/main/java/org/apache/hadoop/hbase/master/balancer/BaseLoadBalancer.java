@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
@@ -50,7 +49,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   // slop for regions
   private float slop;
   private Configuration config;
-  private static final Random RANDOM = new Random(EnvironmentEdgeManager.currentTimeMillis());
+  private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(BaseLoadBalancer.class);
 
   protected MasterServices services;

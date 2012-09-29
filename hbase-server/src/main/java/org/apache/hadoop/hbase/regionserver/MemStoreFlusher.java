@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
 
@@ -347,7 +346,7 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
     if (!fqe.region.getRegionInfo().isMetaRegion() &&
         isTooManyStoreFiles(region)) {
       if (fqe.isMaximumWait(this.blockingWaitTime)) {
-        LOG.info("Waited " + (EnvironmentEdgeManager.currentTimeMillis() - fqe.createTime) +
+        LOG.info("Waited " + (System.currentTimeMillis() - fqe.createTime) +
           "ms on a compaction to clean up 'too many store files'; waited " +
           "long enough... proceeding with flush of " +
           region.getRegionNameAsString());
@@ -526,7 +525,7 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
 
     FlushRegionEntry(final HRegion r) {
       this.region = r;
-      this.createTime = EnvironmentEdgeManager.currentTimeMillis();
+      this.createTime = System.currentTimeMillis();
       this.whenToExpire = this.createTime;
     }
 
@@ -535,7 +534,7 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
      * @return True if we have been delayed > <code>maximumWait</code> milliseconds.
      */
     public boolean isMaximumWait(final long maximumWait) {
-      return (EnvironmentEdgeManager.currentTimeMillis() - this.createTime) > maximumWait;
+      return (System.currentTimeMillis() - this.createTime) > maximumWait;
     }
 
     /**
@@ -548,19 +547,19 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
 
     /**
      * @param when When to expire, when to come up out of the queue.
-     * Specify in milliseconds.  This method adds EnvironmentEdgeManager.currentTimeMillis()
+     * Specify in milliseconds.  This method adds System.currentTimeMillis()
      * to whatever you pass.
      * @return This.
      */
     public FlushRegionEntry requeue(final long when) {
-      this.whenToExpire = EnvironmentEdgeManager.currentTimeMillis() + when;
+      this.whenToExpire = System.currentTimeMillis() + when;
       this.requeueCount++;
       return this;
     }
 
     @Override
     public long getDelay(TimeUnit unit) {
-      return unit.convert(this.whenToExpire - EnvironmentEdgeManager.currentTimeMillis(),
+      return unit.convert(this.whenToExpire - System.currentTimeMillis(),
           TimeUnit.MILLISECONDS);
     }
 

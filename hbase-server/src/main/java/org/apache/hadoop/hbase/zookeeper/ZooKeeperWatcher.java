@@ -33,7 +33,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -325,9 +324,9 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
       case SyncConnected:
         // Now, this callback can be invoked before the this.zookeeper is set.
         // Wait a little while.
-        long finished = EnvironmentEdgeManager.currentTimeMillis() +
+        long finished = System.currentTimeMillis() +
           this.conf.getLong("hbase.zookeeper.watcher.sync.connected.wait", 2000);
-        while (EnvironmentEdgeManager.currentTimeMillis() < finished) {
+        while (System.currentTimeMillis() < finished) {
           Threads.sleep(1);
           if (this.recoverableZooKeeper != null) break;
         }

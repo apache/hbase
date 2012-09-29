@@ -23,7 +23,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -127,7 +126,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
   throws InterruptedException {
     if (timeout < 0) throw new IllegalArgumentException();
     boolean notimeout = timeout == 0;
-    long startTime = EnvironmentEdgeManager.currentTimeMillis();
+    long startTime = System.currentTimeMillis();
     long remaining = timeout;
     if (refresh) {
       try {
@@ -166,7 +165,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
       // We expect a notification; but we wait with a
       //  a timeout to lower the impact of a race condition if any
       wait(100);
-      remaining = timeout - (EnvironmentEdgeManager.currentTimeMillis() - startTime);
+      remaining = timeout - (System.currentTimeMillis() - startTime);
     }
     return this.data;
   }

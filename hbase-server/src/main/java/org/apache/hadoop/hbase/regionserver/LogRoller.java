@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 
 import java.io.IOException;
@@ -49,7 +48,7 @@ class LogRoller extends HasThread implements WALActionsListener {
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
   private final Server server;
   private final RegionServerServices services;
-  private volatile long lastrolltime = EnvironmentEdgeManager.currentTimeMillis();
+  private volatile long lastrolltime = System.currentTimeMillis();
   // Period to roll log.
   private final long rollperiod;
   private final int threadWakeFrequency;
@@ -68,7 +67,7 @@ class LogRoller extends HasThread implements WALActionsListener {
   @Override
   public void run() {
     while (!server.isStopped()) {
-      long now = EnvironmentEdgeManager.currentTimeMillis();
+      long now = System.currentTimeMillis();
       boolean periodic = false;
       if (!rollLog.get()) {
         periodic = (now - this.lastrolltime) > this.rollperiod;

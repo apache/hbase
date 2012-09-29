@@ -38,7 +38,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
@@ -311,7 +310,7 @@ public class MiniZooKeeperCluster {
 
   // XXX: From o.a.zk.t.ClientBase
   private static boolean waitForServerDown(int port, long timeout) {
-    long start = EnvironmentEdgeManager.currentTimeMillis();
+    long start = System.currentTimeMillis();
     while (true) {
       try {
         Socket sock = new Socket("localhost", port);
@@ -326,7 +325,7 @@ public class MiniZooKeeperCluster {
         return true;
       }
 
-      if (EnvironmentEdgeManager.currentTimeMillis() > start + timeout) {
+      if (System.currentTimeMillis() > start + timeout) {
         break;
       }
       try {
@@ -340,7 +339,7 @@ public class MiniZooKeeperCluster {
 
   // XXX: From o.a.zk.t.ClientBase
   private static boolean waitForServerUp(int port, long timeout) {
-    long start = EnvironmentEdgeManager.currentTimeMillis();
+    long start = System.currentTimeMillis();
     while (true) {
       try {
         Socket sock = new Socket("localhost", port);
@@ -367,7 +366,7 @@ public class MiniZooKeeperCluster {
         LOG.info("server localhost:" + port + " not up " + e);
       }
 
-      if (EnvironmentEdgeManager.currentTimeMillis() > start + timeout) {
+      if (System.currentTimeMillis() > start + timeout) {
         break;
       }
       try {

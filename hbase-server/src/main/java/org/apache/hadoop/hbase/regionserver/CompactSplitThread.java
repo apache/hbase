@@ -33,7 +33,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.base.Preconditions;
 
@@ -84,7 +83,7 @@ public class CompactSplitThread implements CompactionRequestor {
           @Override
           public Thread newThread(Runnable r) {
             Thread t = new Thread(r);
-            t.setName(n + "-largeCompactions-" + EnvironmentEdgeManager.currentTimeMillis());
+            t.setName(n + "-largeCompactions-" + System.currentTimeMillis());
             return t;
           }
       });
@@ -96,7 +95,7 @@ public class CompactSplitThread implements CompactionRequestor {
           @Override
           public Thread newThread(Runnable r) {
             Thread t = new Thread(r);
-            t.setName(n + "-smallCompactions-" + EnvironmentEdgeManager.currentTimeMillis());
+            t.setName(n + "-smallCompactions-" + System.currentTimeMillis());
             return t;
           }
       });
@@ -108,7 +107,7 @@ public class CompactSplitThread implements CompactionRequestor {
           @Override
           public Thread newThread(Runnable r) {
             Thread t = new Thread(r);
-            t.setName(n + "-splits-" + EnvironmentEdgeManager.currentTimeMillis());
+            t.setName(n + "-splits-" + System.currentTimeMillis());
             return t;
           }
       });

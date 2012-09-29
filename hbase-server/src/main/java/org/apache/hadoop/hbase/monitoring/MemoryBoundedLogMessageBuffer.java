@@ -25,7 +25,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
@@ -55,7 +54,7 @@ public class MemoryBoundedLogMessageBuffer {
    * older messages until the desired memory limit is achieved.
    */
   public synchronized void add(String messageText) {
-    LogMessage message = new LogMessage(messageText, EnvironmentEdgeManager.currentTimeMillis());
+    LogMessage message = new LogMessage(messageText, System.currentTimeMillis());
     
     usage += message.estimateHeapUsage();
     messages.add(message);

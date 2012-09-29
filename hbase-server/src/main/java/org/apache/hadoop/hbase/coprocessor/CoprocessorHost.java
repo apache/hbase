@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.Server;
@@ -188,7 +187,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       FileSystem fs = path.getFileSystem(HBaseConfiguration.create());
       Path dst = new Path(System.getProperty("java.io.tmpdir") +
           java.io.File.separator +"." + pathPrefix +
-          "." + className + "." + EnvironmentEdgeManager.currentTimeMillis() + ".jar");
+          "." + className + "." + System.currentTimeMillis() + ".jar");
       fs.copyToLocalFile(path, dst);
       File tmpLocal = new File(dst.toString());
       tmpLocal.deleteOnExit();
@@ -214,7 +213,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         if (entry.getName().matches("/lib/[^/]+\\.jar")) {
           File file = new File(System.getProperty("java.io.tmpdir") +
               java.io.File.separator +"." + pathPrefix +
-              "." + className + "." + EnvironmentEdgeManager.currentTimeMillis() + "." + entry.getName().substring(5));
+              "." + className + "." + System.currentTimeMillis() + "." + entry.getName().substring(5));
           IOUtils.copyBytes(jarFile.getInputStream(entry), new FileOutputStream(file), conf, true);
           file.deleteOnExit();
           paths.add(file.toURL());

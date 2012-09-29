@@ -36,7 +36,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Run bulk assign.  Does one RCP per regionserver passing a
@@ -104,10 +103,10 @@ public class GeneralBulkAssigner extends BulkAssigner {
     pool.shutdown(); // no more task allowed
     int serverCount = bulkPlan.size();
     int regionCount = regionSet.size();
-    long startTime = EnvironmentEdgeManager.currentTimeMillis();
+    long startTime = System.currentTimeMillis();
     long rpcWaitTime = startTime + timeout;
     while (!server.isStopped() && !pool.isTerminated()
-        && rpcWaitTime > EnvironmentEdgeManager.currentTimeMillis()) {
+        && rpcWaitTime > System.currentTimeMillis()) {
       if (failedPlans.isEmpty()) {
         pool.awaitTermination(100, TimeUnit.MILLISECONDS);
       } else {
@@ -116,7 +115,7 @@ public class GeneralBulkAssigner extends BulkAssigner {
     }
     if (!pool.isTerminated()) {
       LOG.warn("bulk assigner is still running after "
-        + (EnvironmentEdgeManager.currentTimeMillis() - startTime) + "ms, shut it down now");
+        + (System.currentTimeMillis() - startTime) + "ms, shut it down now");
       // some assigner hangs, can't wait any more, shutdown the pool now
       List<Runnable> notStarted = pool.shutdownNow();
       if (notStarted != null && !notStarted.isEmpty()) {
@@ -134,11 +133,11 @@ public class GeneralBulkAssigner extends BulkAssigner {
     Configuration conf = server.getConfiguration();
     long perRegionOpenTimeGuesstimate =
       conf.getLong("hbase.bulk.assignment.perregion.open.time", 1000);
-    long endTime = Math.max(EnvironmentEdgeManager.currentTimeMillis(), rpcWaitTime)
+    long endTime = Math.max(System.currentTimeMillis(), rpcWaitTime)
       + perRegionOpenTimeGuesstimate * (reassigningRegions + 1);
     RegionStates regionStates = assignmentManager.getRegionStates();
     // We're not synchronizing on regionsInTransition now because we don't use any iterator.
-    while (!regionSet.isEmpty() && !server.isStopped() && endTime > EnvironmentEdgeManager.currentTimeMillis()) {
+    while (!regionSet.isEmpty() && !server.isStopped() && endTime > System.currentTimeMillis()) {
       Iterator<HRegionInfo> regionInfoIterator = regionSet.iterator();
       while (regionInfoIterator.hasNext()) {
         HRegionInfo hri = regionInfoIterator.next();
@@ -154,7 +153,7 @@ public class GeneralBulkAssigner extends BulkAssigner {
     }
 
     if (LOG.isDebugEnabled()) {
-      long elapsedTime = EnvironmentEdgeManager.currentTimeMillis() - startTime;
+      long elapsedTime = System.currentTimeMillis() - startTime;
       String status = "successfully";
       if (!regionSet.isEmpty()) {
         status = "with " + regionSet.size() + " regions still not assigned yet";

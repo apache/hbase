@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Objects;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -170,7 +169,7 @@ class ProtobufRpcEngine implements RpcEngine {
         throws ServiceException {
       long startTime = 0;
       if (LOG.isDebugEnabled()) {
-        startTime = EnvironmentEdgeManager.currentTimeMillis();
+        startTime = System.currentTimeMillis();
       }
 
       RpcRequestBody rpcRequest = constructRpcRequest(method, args);
@@ -179,7 +178,7 @@ class ProtobufRpcEngine implements RpcEngine {
         val = client.call(rpcRequest, address, protocol, ticket, rpcTimeout);
 
         if (LOG.isDebugEnabled()) {
-          long callTime = EnvironmentEdgeManager.currentTimeMillis() - startTime;
+          long callTime = System.currentTimeMillis() - startTime;
           if (LOG.isTraceEnabled()) LOG.trace("Call: " + method.getName() + " " + callTime);
         }
         return val;
@@ -351,7 +350,7 @@ class ProtobufRpcEngine implements RpcEngine {
           throw new HBaseRPC.UnknownProtocolException(protocol);
         }
 
-        long startTime = EnvironmentEdgeManager.currentTimeMillis();
+        long startTime = System.currentTimeMillis();
         if (method.getParameterTypes().length == 2) {
           // RpcController + Message in the method args
           // (generated code from RPC bits in .proto files have RpcController)
@@ -364,7 +363,7 @@ class ProtobufRpcEngine implements RpcEngine {
               + method.getName() + "]" + ", allowed (at most): 2, Actual: "
               + method.getParameterTypes().length);
         }
-        int processingTime = (int) (EnvironmentEdgeManager.currentTimeMillis() - startTime);
+        int processingTime = (int) (System.currentTimeMillis() - startTime);
         int qTime = (int) (startTime-receiveTime);
         if (TRACELOG.isDebugEnabled()) {
           TRACELOG.debug("Call #" + CurCall.get().id +

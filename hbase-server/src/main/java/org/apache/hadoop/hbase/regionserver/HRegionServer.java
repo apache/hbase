@@ -522,7 +522,7 @@ public class  HRegionServer implements ClientProtocol,
 
     this.rpcServer.setErrorHandler(this);
     this.rpcServer.setQosFunction((qosFunction = new QosFunction()));
-    this.startcode = EnvironmentEdgeManager.currentTimeMillis();
+    this.startcode = System.currentTimeMillis();
 
     // login the server principal (if using secure Hadoop)
     User.login(this.conf, "hbase.regionserver.keytab.file",
@@ -885,11 +885,11 @@ public class  HRegionServer implements ClientProtocol,
             LOG.debug("Waiting on " + getOnlineRegionsAsPrintableString());
           }
         }
-        long now = EnvironmentEdgeManager.currentTimeMillis();
+        long now = System.currentTimeMillis();
         if ((now - lastMsg) >= msgInterval) {
           doMetrics();
           tryRegionServerReport(lastMsg, now);
-          lastMsg = EnvironmentEdgeManager.currentTimeMillis();
+          lastMsg = System.currentTimeMillis();
         }
         if (!this.stopped) this.sleeper.sleep();
       } // for
@@ -1083,8 +1083,8 @@ public class  HRegionServer implements ClientProtocol,
       // Only print a message if the count of regions has changed.
       if (count != lastCount) {
         // Log every second at most
-        if (EnvironmentEdgeManager.currentTimeMillis() > (previousLogTime + 1000)) {
-          previousLogTime = EnvironmentEdgeManager.currentTimeMillis();
+        if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+          previousLogTime = System.currentTimeMillis();
           lastCount = count;
           LOG.info("Waiting on " + count + " regions to close");
           // Only print out regions still closing if a small number else will
@@ -1928,7 +1928,7 @@ public class  HRegionServer implements ClientProtocol,
           return null;
         }
         LOG.debug("No master found; retry");
-        previousLogTime = EnvironmentEdgeManager.currentTimeMillis();
+        previousLogTime = System.currentTimeMillis();
         refresh = true; // let's try pull it from ZK directly
 
         sleeper.sleep();
@@ -1952,14 +1952,14 @@ public class  HRegionServer implements ClientProtocol,
         e = e instanceof RemoteException ?
             ((RemoteException)e).unwrapRemoteException() : e;
         if (e instanceof ServerNotRunningYetException) {
-          if (EnvironmentEdgeManager.currentTimeMillis() > (previousLogTime+1000)){
+          if (System.currentTimeMillis() > (previousLogTime+1000)){
             LOG.info("Master isn't available yet, retrying");
-            previousLogTime = EnvironmentEdgeManager.currentTimeMillis();
+            previousLogTime = System.currentTimeMillis();
           }
         } else {
-          if (EnvironmentEdgeManager.currentTimeMillis() > (previousLogTime + 1000)) {
+          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
             LOG.warn("Unable to connect to master. Retrying. Error was:", e);
-            previousLogTime = EnvironmentEdgeManager.currentTimeMillis();
+            previousLogTime = System.currentTimeMillis();
           }
         }
         try {
@@ -4043,7 +4043,7 @@ public class  HRegionServer implements ClientProtocol,
   }
 
   protected void addToMovedRegions(String encodedName, ServerName destination){
-    final  Long time = EnvironmentEdgeManager.currentTimeMillis();
+    final  Long time = System.currentTimeMillis();
 
     movedRegions.put(
       encodedName,
@@ -4054,7 +4054,7 @@ public class  HRegionServer implements ClientProtocol,
     Pair<Long, ServerName> dest = movedRegions.get(encodedRegionName);
 
     if (dest != null) {
-      if (dest.getFirst() > (EnvironmentEdgeManager.currentTimeMillis() - TIMEOUT_REGION_MOVED)) {
+      if (dest.getFirst() > (System.currentTimeMillis() - TIMEOUT_REGION_MOVED)) {
         return dest.getSecond();
       } else {
         movedRegions.remove(encodedRegionName);
@@ -4068,7 +4068,7 @@ public class  HRegionServer implements ClientProtocol,
    * Remove the expired entries from the moved regions list.
    */
   protected void cleanMovedRegions(){
-    final long cutOff = EnvironmentEdgeManager.currentTimeMillis() - TIMEOUT_REGION_MOVED;
+    final long cutOff = System.currentTimeMillis() - TIMEOUT_REGION_MOVED;
     Iterator<Entry<String, Pair<Long, ServerName>>> it = movedRegions.entrySet().iterator();
 
     while (it.hasNext()){

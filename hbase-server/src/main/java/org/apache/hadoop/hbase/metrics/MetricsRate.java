@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.metrics;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
@@ -44,7 +43,7 @@ public class MetricsRate extends MetricsBase {
     super(name, description);
     this.value = 0;
     this.prevRate = 0;
-    this.ts = EnvironmentEdgeManager.currentTimeMillis();
+    this.ts = System.currentTimeMillis();
     registry.add(name, this);
   }
 
@@ -61,7 +60,7 @@ public class MetricsRate extends MetricsBase {
   }
 
   public synchronized void intervalHeartBeat() {
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = System.currentTimeMillis();
     long diff = (now-ts) / 1000;
     if (diff < 1){
         // To make sure our averages aren't skewed by fast repeated calls,

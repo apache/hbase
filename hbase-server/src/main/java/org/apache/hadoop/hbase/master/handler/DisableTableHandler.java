@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.zookeeper.KeeperException;
 import org.cloudera.htrace.Trace;
 
@@ -179,14 +178,14 @@ public class DisableTableHandler extends EventHandler {
     @Override
     protected boolean waitUntilDone(long timeout)
     throws InterruptedException {
-      long startTime = EnvironmentEdgeManager.currentTimeMillis();
+      long startTime = System.currentTimeMillis();
       long remaining = timeout;
       List<HRegionInfo> regions = null;
       while (!server.isStopped() && remaining > 0) {
         Thread.sleep(waitingTimeForEvents);
         regions = assignmentManager.getRegionStates().getRegionsOfTable(tableName);
         if (regions.isEmpty()) break;
-        remaining = timeout - (EnvironmentEdgeManager.currentTimeMillis() - startTime);
+        remaining = timeout - (System.currentTimeMillis() - startTime);
       }
       return regions != null && regions.isEmpty();
     }

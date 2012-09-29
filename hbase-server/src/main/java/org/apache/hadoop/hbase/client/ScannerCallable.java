@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 
@@ -142,10 +141,10 @@ public class ScannerCallable extends ServerCallable<Result[]> {
             RequestConverter.buildScanRequest(scannerId, caching, false);
           try {
             ScanResponse response = server.scan(null, request);
-            long timestamp = EnvironmentEdgeManager.currentTimeMillis();
+            long timestamp = System.currentTimeMillis();
             rrs = ResponseConverter.getResults(response);
             if (logScannerActivity) {
-              long now = EnvironmentEdgeManager.currentTimeMillis();
+              long now = System.currentTimeMillis();
               if (now - timestamp > logCutOffLatency) {
                 int rows = rrs == null ? 0 : rrs.length;
                 LOG.info("Took " + (now-timestamp) + "ms to fetch "

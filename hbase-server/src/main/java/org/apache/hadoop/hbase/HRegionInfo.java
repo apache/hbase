@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
@@ -262,7 +261,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   public HRegionInfo(final byte[] tableName, final byte[] startKey, final byte[] endKey,
       final boolean split)
   throws IllegalArgumentException {
-    this(tableName, startKey, endKey, split, EnvironmentEdgeManager.currentTimeMillis());
+    this(tableName, startKey, endKey, split, System.currentTimeMillis());
   }
 
 

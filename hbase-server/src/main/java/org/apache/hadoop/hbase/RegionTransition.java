@@ -23,7 +23,6 @@ import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -109,7 +108,7 @@ public class RegionTransition {
     ZooKeeperProtos.RegionTransition.Builder builder = ZooKeeperProtos.RegionTransition.newBuilder().
       setEventTypeCode(type.getCode()).setRegionName(ByteString.copyFrom(regionName)).
         setOriginServerName(pbsn);
-    builder.setCreateTime(EnvironmentEdgeManager.currentTimeMillis());
+    builder.setCreateTime(System.currentTimeMillis());
     if (payload != null) builder.setPayload(ByteString.copyFrom(payload));
     return new RegionTransition(builder.build());
   }

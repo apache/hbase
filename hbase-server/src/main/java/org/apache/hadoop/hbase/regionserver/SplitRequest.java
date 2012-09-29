@@ -25,7 +25,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -60,14 +59,14 @@ class SplitRequest implements Runnable {
       return;
     }
     try {
-      final long startTime = EnvironmentEdgeManager.currentTimeMillis();
+      final long startTime = System.currentTimeMillis();
       SplitTransaction st = new SplitTransaction(parent, midKey);
       // If prepare does not return true, for some reason -- logged inside in
       // the prepare call -- we are not ready to split just now. Just return.
       if (!st.prepare()) return;
       try {
         st.execute(this.server, this.server);
-        this.server.getMetrics().incrementSplitSuccessCount(EnvironmentEdgeManager.currentTimeMillis() - startTime);
+        this.server.getMetrics().incrementSplitSuccessCount(System.currentTimeMillis() - startTime);
       } catch (Exception e) {
         if (this.server.isStopping() || this.server.isStopped()) {
           LOG.info(
@@ -99,7 +98,7 @@ class SplitRequest implements Runnable {
           + parent.getRegionInfo().getRegionNameAsString() + ", new regions: "
           + st.getFirstDaughter().getRegionNameAsString() + ", "
           + st.getSecondDaughter().getRegionNameAsString() + ". Split took "
-          + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTimeMillis(), startTime));
+          + StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
     } catch (IOException ex) {
       LOG.error("Split failed " + this, RemoteExceptionHandler
           .checkIOException(ex));

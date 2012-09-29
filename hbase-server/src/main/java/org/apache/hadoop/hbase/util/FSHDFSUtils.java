@@ -68,7 +68,7 @@ public class FSHDFSUtils extends FSUtils{
       return;
     }
     LOG.info("Recovering file " + p);
-    long startWaiting = EnvironmentEdgeManager.currentTimeMillis();
+    long startWaiting = System.currentTimeMillis();
 
     // Trying recovery
     boolean recovered = false;
@@ -95,7 +95,7 @@ public class FSHDFSUtils extends FSUtils{
           // within its soft limit, but if we get it past that, it means
           // that the RS is holding onto the file even though it lost its
           // znode. We could potentially abort after some time here.
-          long waitedFor = EnvironmentEdgeManager.currentTimeMillis() - startWaiting;
+          long waitedFor = System.currentTimeMillis() - startWaiting;
           if (waitedFor > LEASE_SOFTLIMIT_PERIOD) {
             LOG.warn("Waited " + waitedFor + "ms for lease recovery on " + p +
               ":" + e.getMessage());

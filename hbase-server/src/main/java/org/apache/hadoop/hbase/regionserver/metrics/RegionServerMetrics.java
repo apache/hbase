@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
 import org.apache.hadoop.hbase.metrics.PersistentMetricsTimeVaryingRate;
 import com.yammer.metrics.stats.Snapshot;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.metrics.ContextFactory;
@@ -62,8 +61,8 @@ public class RegionServerMetrics implements Updater {
   @SuppressWarnings({"FieldCanBeLocal"})
   private final Log LOG = LogFactory.getLog(this.getClass());
   private final MetricsRecord metricsRecord;
-  private long lastUpdate = EnvironmentEdgeManager.currentTimeMillis();
-  private long lastExtUpdate = EnvironmentEdgeManager.currentTimeMillis();
+  private long lastUpdate = System.currentTimeMillis();
+  private long lastExtUpdate = System.currentTimeMillis();
   private long extendedPeriod = 0;
   private static final int MB = 1024*1024;
   private MetricsRegistry registry = new MetricsRegistry();
@@ -350,7 +349,7 @@ public class RegionServerMetrics implements Updater {
    */
   public void doUpdates(MetricsContext caller) {
     synchronized (this) {
-      this.lastUpdate = EnvironmentEdgeManager.currentTimeMillis();
+      this.lastUpdate = System.currentTimeMillis();
 
       // has the extended period for long-living stats elapsed?
       if (this.extendedPeriod > 0 &&

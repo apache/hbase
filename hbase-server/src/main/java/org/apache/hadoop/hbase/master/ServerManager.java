@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.protobuf.ServiceException;
 
@@ -288,7 +287,7 @@ public class ServerManager {
    */
   private void checkClockSkew(final ServerName serverName, final long serverCurrentTime)
   throws ClockOutOfSyncException {
-    long skew = EnvironmentEdgeManager.currentTimeMillis() - serverCurrentTime;
+    long skew = System.currentTimeMillis() - serverCurrentTime;
     if (skew > maxSkew) {
       String message = "Server " + serverName + " has been " +
         "rejected; Reported time is too far out of sync with master.  " +
@@ -409,7 +408,7 @@ public class ServerManager {
     long previousLogTime = 0;
     while (!onlineServers.isEmpty()) {
 
-      if (EnvironmentEdgeManager.currentTimeMillis() > (previousLogTime + 1000)) {
+      if (System.currentTimeMillis() > (previousLogTime + 1000)) {
         StringBuilder sb = new StringBuilder();
         for (ServerName key : this.onlineServers.keySet()) {
           if (sb.length() > 0) {
@@ -418,7 +417,7 @@ public class ServerManager {
           sb.append(key);
         }
         LOG.info("Waiting on regionserver(s) to go down " + sb.toString());
-        previousLogTime = EnvironmentEdgeManager.currentTimeMillis();
+        previousLogTime = System.currentTimeMillis();
       }
 
       synchronized (onlineServers) {
@@ -695,7 +694,7 @@ public class ServerManager {
     final int maxToStart = this.master.getConfiguration().
     getInt("hbase.master.wait.on.regionservers.maxtostart", Integer.MAX_VALUE);
 
-    long now =  EnvironmentEdgeManager.currentTimeMillis();
+    long now =  System.currentTimeMillis();
     final long startTime = now;
     long slept = 0;
     long lastLogTime = 0;
@@ -724,7 +723,7 @@ public class ServerManager {
       // We sleep for some time
       final long sleepTime = 50;
       Thread.sleep(sleepTime);
-      now =  EnvironmentEdgeManager.currentTimeMillis();
+      now =  System.currentTimeMillis();
       slept = now - startTime;
 
       oldCount = count;

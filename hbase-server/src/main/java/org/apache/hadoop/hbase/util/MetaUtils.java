@@ -98,7 +98,7 @@ public class MetaUtils {
   public synchronized HLog getLog() throws IOException {
     if (this.log == null) {
       Path logdir = new Path(this.fs.getHomeDirectory(),
-          HConstants.HREGION_LOGDIR_NAME + "_" + EnvironmentEdgeManager.currentTimeMillis());
+          HConstants.HREGION_LOGDIR_NAME + "_" + System.currentTimeMillis());
       Path oldLogDir = new Path(this.fs.getHomeDirectory(),
           HConstants.HREGION_OLDLOGDIR_NAME);
       this.log = new HLog(this.fs, logdir, oldLogDir, this.conf);
