@@ -38,6 +38,7 @@ import org.junit.Test;
  * another entry to the root-level block, and that would prevent us from upgrading the leaf-level
  * chunk to the root chunk, thus not triggering the bug. 
  */
+@Category(SmallTests.class)
 public class TestHFileInlineToRootChunkConversion {
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
   private final Configuration conf = testUtil.getConfiguration();
