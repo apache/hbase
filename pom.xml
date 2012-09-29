@@ -871,8 +871,14 @@
 
                 <!-- Using Unix cp to preserve symlinks, using script to handle wildcards -->
                 <echo file="${project.build.directory}/copynativelibs.sh">
-                    if [ `ls ${project.build.directory}/nativelib | wc -l` -ne 0 ]; then
-                      cp -PR ${project.build.directory}/nativelib/lib* ${project.build.directory}/${project.build.finalName}/${project.build.finalName}/lib/native/${build.platform}
+					which cygpath 2&gt; /dev/null
+					if [ $? = 1 ]; then
+						BUILD_DIR="${project.build.directory}"
+					else
+						BUILD_DIR=`cygpath --unix '${project.build.directory}'`
+					fi
+                    if [ `ls $BUILD_DIR/nativelib | wc -l` -ne 0 ]; then
+                      cp -PR $BUILD_DIR/nativelib/lib* $BUILD_DIR/${project.build.finalName}/${project.build.finalName}/lib/native/${build.platform}
                     fi
                 </echo>
                 <exec executable="sh" dir="${project.build.directory}" failonerror="true">
@@ -880,11 +886,19 @@
                 </exec>
 
                 <!-- Using Unix tar to preserve symlinks -->
-                <exec executable="tar" failonerror="yes"
-                  dir="${project.build.directory}/${project.build.finalName}">
-                    <arg value="czf"/>
-                    <arg value="${project.build.directory}/${project.build.finalName}.tar.gz"/>
-                    <arg value="${project.build.finalName}/" />
+				<echo file="${project.build.directory}/maketar.sh">
+					which cygpath 2&gt; /dev/null
+					if [ $? = 1 ]; then
+						BUILD_DIR="${project.build.directory}"
+					else
+						BUILD_DIR=`cygpath --unix '${project.build.directory}'`
+					fi
+					
+					cd $BUILD_DIR/${project.build.finalName}
+					tar czf $BUILD_DIR/${project.build.finalName}.tar.gz ${project.build.finalName}
+				</echo>
+                <exec executable="sh" dir="${project.build.directory}" failonerror="yes">
+                    <arg line="./maketar.sh"/>
                 </exec>
 
               </target>
@@ -1448,6 +1462,17 @@
             <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
         </properties>
     </profile>
+	<profile>
+		<id>os.windows</id>
+		<activation>
+			<os>
+				<family>Windows</family>
+			</os>
+		</activation>
+		<properties>
+			<build.platform>cygwin</build.platform>
+		</properties>
+	</profile>
 
     <!-- this profile should be activated for release builds -->
     <profile>
