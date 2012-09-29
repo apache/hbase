@@ -280,6 +280,12 @@ public class SplitTransaction {
       throw new IOException(exceptionToThrow);
     }
 
+        
+    if (hstoreFilesToSplit.size() == 0) {
+      String errorMsg = "No store files to split for the region "+this.parent.getRegionInfo();
+      LOG.error(errorMsg);
+      throw new IOException(errorMsg);
+    }
     if (!testing) {
       services.removeFromOnlineRegions(this.parent.getRegionInfo().getEncodedName(), null);
     }

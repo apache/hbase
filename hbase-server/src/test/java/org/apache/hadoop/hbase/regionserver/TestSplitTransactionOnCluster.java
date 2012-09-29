@@ -541,6 +541,46 @@ public class TestSplitTransactionOnCluster {
     testSplitBeforeSettingSplittingInZK(true);
     testSplitBeforeSettingSplittingInZK(false);
   }
+  
+  @Test
+  public void testShouldThrowIOExceptionIfStoreFileSizeIsEmptyAndSHouldSuccessfullyExecuteRollback()
+      throws Exception {
+    final byte[] tableName = Bytes.toBytes("testRollBackShudBeSuccessfulIfStoreFileIsEmpty");
+    // Create table then get the single region for our new table.
+    TESTING_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    List<HRegion> regions = cluster.getRegions(tableName);
+    HRegionInfo hri = getAndCheckSingleTableRegion(regions);
+    int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
+    int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
+    HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+    // Turn off balancer so it doesn't cut in and mess up our placements.
+    this.admin.setBalancerRunning(false, false);
+    // Turn off the meta scanner so it don't remove parent on us.
+    cluster.getMaster().setCatalogJanitorEnabled(false);
+    try {
+      HRegionServer server = cluster.getRegionServer(tableRegionIndex);
+      printOutRegions(server, "Initial regions: ");
+      // Now split.
+      SplitTransaction st = null;
+      st = new MockedSplitTransaction(regions.get(0), null);
+      try {
+        st.execute(regionServer, regionServer);
+      } catch (IOException e) {
+        List<HRegion> daughters = cluster.getRegions(tableName);
+        assertTrue(daughters.size() == 1);
+
+        String node = ZKAssign.getNodeName(regionServer.getZooKeeper(), regions.get(0)
+            .getRegionInfo().getEncodedName());
+        assertFalse(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
+        assertTrue(st.rollback(regionServer, regionServer));
+        assertTrue(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
+      }
+    } finally {
+      admin.setBalancerRunning(true, false);
+      cluster.getMaster().setCatalogJanitorEnabled(true);
+    }
+
+  }
 
   private void testSplitBeforeSettingSplittingInZK(boolean nodeCreated) throws IOException,
       KeeperException {
