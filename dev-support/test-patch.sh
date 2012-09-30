@@ -269,12 +269,12 @@ checkAuthor () {
   if [[ $authorTags != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 @author.  The patch appears to contain $authorTags @author tags which the Hadoop community has agreed to not allow in code contributions."
+    {color:red}-1 @author{color}.  The patch appears to contain $authorTags @author tags which the Hadoop community has agreed to not allow in code contributions."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 @author.  The patch does not contain any @author tags."
+    {color:green}+1 @author{color}.  The patch does not contain any @author tags."
   return 0
 }
 
@@ -299,20 +299,20 @@ checkTests () {
         echo "The patch appears to be a documentation patch that doesn't require tests."
         JIRA_COMMENT="$JIRA_COMMENT
 
-    +0 tests included.  The patch appears to be a documentation patch that doesn't require tests."
+    {color:green}+0 tests included{color}.  The patch appears to be a documentation patch that doesn't require tests."
         return 0
       fi
     fi
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 tests included.  The patch doesn't appear to include any new or modified tests.
+    {color:red}-1 tests included{color}.  The patch doesn't appear to include any new or modified tests.
                         Please justify why no new tests are needed for this patch.
                         Also please list what manual steps were performed to verify this patch."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 tests included.  The patch appears to include $testReferences new or modified tests."
+    {color:green}+1 tests included{color}.  The patch appears to include $testReferences new or modified tests."
   return 0
 }
 
@@ -335,7 +335,7 @@ applyPatch () {
     echo "PATCH APPLICATION FAILED"
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 patch.  The patch command could not apply the patch."
+    {color:red}-1 patch{color}.  The patch command could not apply the patch."
     return 1
   fi
   return 0
@@ -360,12 +360,12 @@ checkHadoop20Compile () {
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 hadoop2.0.  The patch failed to compile against the hadoop 2.0 profile."
+    {color:red}-1 hadoop2.0{color}.  The patch failed to compile against the hadoop 2.0 profile."
     cleanupAndExit 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 hadoop2.0.  The patch compiles against the hadoop 2.0 profile."
+    {color:green}+1 hadoop2.0{color}.  The patch compiles against the hadoop 2.0 profile."
   return 0
 }
 
@@ -394,12 +394,12 @@ checkJavadocWarnings () {
   if [[ $javadocWarnings -gt $OK_JAVADOC_WARNINGS ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 javadoc.  The javadoc tool appears to have generated `expr $(($javadocWarnings-$OK_JAVADOC_WARNINGS))` warning messages."
+    {color:red}-1 javadoc{color}.  The javadoc tool appears to have generated `expr $(($javadocWarnings-$OK_JAVADOC_WARNINGS))` warning messages."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 javadoc.  The javadoc tool did not generate any warning messages."
+    {color:green}+1 javadoc{color}.  The javadoc tool did not generate any warning messages."
   return 0
 }
 
@@ -421,7 +421,7 @@ checkJavacWarnings () {
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 javac.  The patch appears to cause mvn compile goal to fail."
+    {color:red}-1 javac{color}.  The patch appears to cause mvn compile goal to fail."
     return 1
   fi
   ### Compare trunk and patch javac warning numbers
@@ -433,14 +433,14 @@ checkJavacWarnings () {
       if [[ $patchJavacWarnings -gt $trunkJavacWarnings ]] ; then
         JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 javac.  The applied patch generated $patchJavacWarnings javac compiler warnings (more than the trunk's current $trunkJavacWarnings warnings)."
+    {color:red}-1 javac{color}.  The applied patch generated $patchJavacWarnings javac compiler warnings (more than the trunk's current $trunkJavacWarnings warnings)."
         return 1
       fi
     fi
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 javac.  The applied patch does not increase the total number of javac compiler warnings."
+    {color:green}+1 javac{color}.  The applied patch does not increase the total number of javac compiler warnings."
   return 0
 }
 
@@ -471,7 +471,7 @@ checkReleaseAuditWarnings () {
       if [[ $patchReleaseAuditWarnings -gt $OK_RELEASEAUDIT_WARNINGS ]] ; then
         JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 release audit.  The applied patch generated $patchReleaseAuditWarnings release audit warnings (more than the trunk's current $OK_RELEASEAUDIT_WARNINGS warnings)."
+    {color:red}-1 release audit{color}.  The applied patch generated $patchReleaseAuditWarnings release audit warnings (more than the trunk's current $OK_RELEASEAUDIT_WARNINGS warnings)."
         $GREP '\!?????' $PATCH_DIR/patchReleaseAuditWarnings.txt > $PATCH_DIR/patchReleaseAuditProblems.txt
         echo "Lines that start with ????? in the release audit report indicate files that do not have an Apache license header." >> $PATCH_DIR/patchReleaseAuditProblems.txt
         JIRA_COMMENT_FOOTER="Release audit warnings: $BUILD_URL/artifact/trunk/patchprocess/patchReleaseAuditProblems.txt
@@ -482,7 +482,7 @@ $JIRA_COMMENT_FOOTER"
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 release audit.  The applied patch does not increase the total number of release audit warnings."
+    {color:green}+1 release audit{color}.  The applied patch does not increase the total number of release audit warnings."
   return 0
 }
 
@@ -512,12 +512,12 @@ $JIRA_COMMENT_FOOTER"
 #  if [[ $patchStyleErrors != 0 ]] ; then
 #    JIRA_COMMENT="$JIRA_COMMENT
 #
-#    -1 checkstyle.  The patch generated $patchStyleErrors code style errors."
+#    {color:red}-1 checkstyle{color}.  The patch generated $patchStyleErrors code style errors."
 #    return 1
 #  fi
 #  JIRA_COMMENT="$JIRA_COMMENT
 #
-#    +1 checkstyle.  The patch generated 0 code style errors."
+#    {color:green}+1 checkstyle{color}.  The patch generated 0 code style errors."
   return 0
 }
 
@@ -541,7 +541,7 @@ checkFindbugsWarnings () {
   if [ $? != 0 ] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 findbugs.  The patch appears to cause Findbugs (version ${findbugs_version}) to fail."
+    {color:red}-1 findbugs{color}.  The patch appears to cause Findbugs (version ${findbugs_version}) to fail."
     return 1
   fi
     
@@ -573,12 +573,12 @@ $JIRA_COMMENT_FOOTER"
   if [[ $findbugsWarnings -gt $OK_FINDBUGS_WARNINGS ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 findbugs.  The patch appears to introduce `expr $(($findbugsWarnings-$OK_FINDBUGS_WARNINGS))` new Findbugs (version ${findbugs_version}) warnings."
+    {color:red}-1 findbugs{color}.  The patch appears to introduce `expr $(($findbugsWarnings-$OK_FINDBUGS_WARNINGS))` new Findbugs (version ${findbugs_version}) warnings."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 findbugs.  The patch does not introduce any new Findbugs (version ${findbugs_version}) warnings."
+    {color:green}+1 findbugs{color}.  The patch does not introduce any new Findbugs (version ${findbugs_version}) warnings."
   return 0
 }
 
@@ -608,13 +608,13 @@ runTests () {
  
      JIRA_COMMENT="$JIRA_COMMENT
 
-     -1 core tests.  The patch failed these unit tests:
+     {color:red}-1 core tests{color}.  The patch failed these unit tests:
      $failed_tests"
      return 1
   else
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 core tests.  The patch passed unit tests in $modules."
+    {color:green}+1 core tests{color}.  The patch passed unit tests in $modules."
   return 0
   fi
 }
@@ -642,12 +642,12 @@ checkInjectSystemFaults () {
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 system test framework.  The patch failed system test framework compile."
+    {color:red}-1 system test framework{color}.  The patch failed system test framework compile."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 system test framework.  The patch passed system test framework compile."
+    {color:green}+1 system test framework{color}.  The patch passed system test framework compile."
   return 0
 }
 
@@ -660,11 +660,11 @@ submitJiraComment () {
     JIRA_COMMENT_FOOTER=""
   fi
   if [[ $result == 0 ]] ; then
-    comment="+1 overall.  $JIRA_COMMENT
+    comment="{color:green}+1 overall{color}.  $JIRA_COMMENT
 
 $JIRA_COMMENT_FOOTER"
   else
-    comment="-1 overall.  $JIRA_COMMENT
+    comment="{color:red}-1 overall{color}.  $JIRA_COMMENT
 
 $JIRA_COMMENT_FOOTER"
   fi
