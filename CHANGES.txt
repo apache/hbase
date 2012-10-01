@@ -4,6 +4,7 @@ Release 0.92.3 - Unreleased
    HBASE-6649  [0.92 UNIT TESTS] TestReplication.queueFailover occasionally fails [Part-1]
                (Devaraj Das via Stack)
    HBASE-6847  HBASE-6649 broke replication (Devaraj Das via JD)
+   HBASE-6906  TestHBaseFsck#testQuarantine* tests are flakey due to TableNotEnabledException
 
   IMPROVEMENTS
 

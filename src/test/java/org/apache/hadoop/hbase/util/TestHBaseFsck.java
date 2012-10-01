@@ -1372,6 +1372,9 @@ public class TestHBaseFsck {
     }
   }
 
+  /**
+  * Test that use this should have a timeout, because this method could potentially wait forever.
+  */
   private void doQuarantineTest(String table, HBaseFsck hbck, int check, int corrupt, int fail,
       int quar, int missing) throws Exception {
     try {
@@ -1394,7 +1397,16 @@ public class TestHBaseFsck {
       assertEquals(hfcc.getMissing().size(), missing);
 
       // its been fixed, verify that we can enable
-      TEST_UTIL.getHBaseAdmin().enableTable(table);
+      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      admin.enableTableAsync(table);
+      while (!admin.isTableEnabled(table)) {
+        try {
+          Thread.sleep(250);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+          fail("Interrupted when trying to enable table " + table);
+        }
+      }
     } finally {
       deleteTable(table);
     }
