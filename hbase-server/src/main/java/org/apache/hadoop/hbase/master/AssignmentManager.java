@@ -1493,6 +1493,15 @@ public class AssignmentManager extends ZooKeeperListener {
             return;
           }
         }
+        if (t instanceof java.net.SocketTimeoutException 
+            && this.serverManager.isServerOnline(plan.getDestination())) {
+          LOG.warn("Call openRegion() to " + plan.getDestination()
+              + " has timed out when trying to assign "
+              + region.getRegionNameAsString()
+              + ", but the region might already be opened on "
+              + plan.getDestination() + ".", t);
+          return;
+        }
         LOG.warn("Failed assignment of "
           + state.getRegion().getRegionNameAsString()
           + " to "
