@@ -1399,13 +1399,15 @@ public class AssignmentManager extends ZooKeeperListener {
       final boolean setOfflineInZK, final boolean forceNewPlan,
       boolean hijack) {
     boolean regionAlreadyInTransitionException = false;
+    boolean serverNotRunningYet = false;
+    RegionState currentState = state;
+    long maxRegionServerStartupWaitTime = -1;
     for (int i = 0; i < this.maximumAssignmentAttempts; i++) {
       int versionOfOfflineNode = -1;
       if (setOfflineInZK) {
         // get the version of the znode after setting it to OFFLINE.
         // versionOfOfflineNode will be -1 if the znode was not set to OFFLINE
-        versionOfOfflineNode = setOfflineInZooKeeper(state, hijack,
-            regionAlreadyInTransitionException);
+        versionOfOfflineNode = setOfflineInZooKeeper(currentState, hijack);
         if (versionOfOfflineNode != -1) {
           if (isDisabledorDisablingRegionInRIT(region)) {
             return;
@@ -1430,7 +1432,8 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.debug("Server stopped; skipping assign of " + state);
         return;
       }
-      RegionPlan plan = getRegionPlan(state, !regionAlreadyInTransitionException && forceNewPlan);
+      RegionPlan plan = getRegionPlan(state,
+        !regionAlreadyInTransitionException && !serverNotRunningYet && forceNewPlan);
       if (plan == null) {
         LOG.debug("Unable to determine a plan to assign " + state);
         this.timeoutMonitor.setAllRegionServersOffline(true);
@@ -1440,7 +1443,7 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.info("Assigning region " + state.getRegion().getRegionNameAsString() +
           " to " + plan.getDestination().toString());
         // Transition RegionState to PENDING_OPEN
-        regionStates.updateRegionState(state.getRegion(),
+        currentState = regionStates.updateRegionState(state.getRegion(),
           RegionState.State.PENDING_OPEN, System.currentTimeMillis(),
           plan.getDestination());
         // Send OPEN RPC. This can fail if the server on other end is is not up.
@@ -1457,34 +1460,64 @@ public class AssignmentManager extends ZooKeeperListener {
       } catch (Throwable t) {
         if (t instanceof RemoteException) {
           t = ((RemoteException) t).unwrapRemoteException();
-          if (t instanceof RegionAlreadyInTransitionException) {
-            regionAlreadyInTransitionException = true;
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Failed assignment in: " + plan.getDestination() + " due to "
-                  + t.getMessage());
+        }
+        regionAlreadyInTransitionException = false;
+        serverNotRunningYet = false;
+        if (t instanceof RegionAlreadyInTransitionException) {
+          regionAlreadyInTransitionException = true;
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Failed assignment in: " + plan.getDestination() + " due to "
+                + t.getMessage());
+          }
+        } else if (t instanceof ServerNotRunningYetException) {
+          if (maxRegionServerStartupWaitTime < 0) {
+            maxRegionServerStartupWaitTime = System.currentTimeMillis() +
+              this.server.getConfiguration().
+                getLong("hbase.regionserver.rpc.startup.waittime", 60000);
+          }
+          try {
+            long now = System.currentTimeMillis();
+            if (now < maxRegionServerStartupWaitTime) {
+              LOG.debug("Server is not yet up; waiting up to " +
+                (maxRegionServerStartupWaitTime - now) + "ms", t);
+              serverNotRunningYet = true;
+              Thread.sleep(100);
+              i--; // reset the try count
+            } else {
+              LOG.debug("Server is not up for a while; try a new one", t);
             }
+          } catch (InterruptedException ie) {
+            LOG.warn("Failed to assign "
+              + state.getRegion().getRegionNameAsString() + " since interrupted", ie);
+            Thread.currentThread().interrupt();
+            return;
           }
         }
         LOG.warn("Failed assignment of "
-            + state.getRegion().getRegionNameAsString()
-            + " to "
-            + plan.getDestination()
-            + ", trying to assign "
-            + (regionAlreadyInTransitionException ? "to the same region server"
-                + " because of RegionAlreadyInTransitionException;" : "elsewhere instead; ")
-            + "retry=" + i, t);
+          + state.getRegion().getRegionNameAsString()
+          + " to "
+          + plan.getDestination()
+          + ", trying to assign "
+          + (regionAlreadyInTransitionException || serverNotRunningYet
+            ? "to the same region server because of "
+            + "RegionAlreadyInTransitionException/ServerNotRunningYetException;"
+            : "elsewhere instead; ")
+          + "retry=" + i, t);
         // Clean out plan we failed execute and one that doesn't look like it'll
         // succeed anyways; we need a new plan!
         // Transition back to OFFLINE
-        regionStates.updateRegionState(
+        currentState = regionStates.updateRegionState(
           state.getRegion(), RegionState.State.OFFLINE);
         // If region opened on destination of present plan, reassigning to new
         // RS may cause double assignments. In case of RegionAlreadyInTransitionException
         // reassigning to same RS.
         RegionPlan newPlan = plan;
-        if (!regionAlreadyInTransitionException) {
+        if (!regionAlreadyInTransitionException && !serverNotRunningYet) {
           // Force a new plan and reassign. Will return null if no servers.
-          newPlan = getRegionPlan(state, plan.getDestination(), true);
+          // The new plan could be the same as the existing plan since we don't
+          // exclude the server of the original plan, which should not be
+          // excluded since it could be the only server up now.
+          newPlan = getRegionPlan(state, true);
         }
         if (newPlan == null) {
           this.timeoutMonitor.setAllRegionServersOffline(true);
@@ -1537,24 +1570,16 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param state
    * @param hijack
    *          - true if needs to be hijacked and reassigned, false otherwise.
-   * @param regionAlreadyInTransitionException  
-   *          - true if we need to retry assignment because of RegionAlreadyInTransitionException.       
    * @return the version of the offline node if setting of the OFFLINE node was
    *         successful, -1 otherwise.
    */
-  int setOfflineInZooKeeper(final RegionState state, boolean hijack,
-      boolean regionAlreadyInTransitionException) {
+  int setOfflineInZooKeeper(final RegionState state, boolean hijack) {
     // In case of reassignment the current state in memory need not be
     // OFFLINE. 
     if (!hijack && !state.isClosed() && !state.isOffline()) {
-      if (!regionAlreadyInTransitionException ) {
-        String msg = "Unexpected state : " + state + " .. Cannot transit it to OFFLINE.";
-        this.server.abort(msg, new IllegalStateException(msg));
-        return -1;
-      } else {
-        LOG.debug("Unexpected state : " + state
-            + " but retrying to assign because RegionAlreadyInTransitionException.");
-      }
+      String msg = "Unexpected state : " + state + " .. Cannot transit it to OFFLINE.";
+      this.server.abort(msg, new IllegalStateException(msg));
+      return -1;
     }
     boolean allowZNodeCreation = false;
     // Under reassignment if the current state is PENDING_OPEN
