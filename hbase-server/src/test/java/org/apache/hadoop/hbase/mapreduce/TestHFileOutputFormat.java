@@ -671,12 +671,85 @@ public class TestHFileOutputFormat  {
     }
   }
 
+  /**
+   * This test is to test the scenario happened in HBASE-6901.
+   * All files are bulk loaded and excluded from minor compaction.
+   * Without the fix of HBASE-6901, an ArrayIndexOutOfBoundsException
+   * will be thrown.
+   */
+  @Test
+  public void testExcludeAllFromMinorCompaction() throws Exception {
+    Configuration conf = util.getConfiguration();
+    conf.setInt("hbase.hstore.compaction.min", 2);
+    generateRandomStartKeys(5);
+
+    try {
+      util.startMiniCluster();
+      final FileSystem fs = util.getDFSCluster().getFileSystem();
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      HTable table = util.createTable(TABLE_NAME, FAMILIES);
+      assertEquals("Should start with empty table", 0, util.countRows(table));
+
+      // deep inspection: get the StoreFile dir
+      final Path storePath = HStore.getStoreHomedir(
+          HTableDescriptor.getTableDir(FSUtils.getRootDir(conf), TABLE_NAME),
+          admin.getTableRegions(TABLE_NAME).get(0).getEncodedName(),
+          FAMILIES[0]);
+      assertEquals(0, fs.listStatus(storePath).length);
+
+      // Generate two bulk load files
+      conf.setBoolean("hbase.mapreduce.hfileoutputformat.compaction.exclude",
+          true);
+      util.startMiniMapReduceCluster();
+
+      for (int i = 0; i < 2; i++) {
+        Path testDir = util.getDataTestDir("testExcludeAllFromMinorCompaction_" + i);
+        runIncrementalPELoad(conf, table, testDir);
+        // Perform the actual load
+        new LoadIncrementalHFiles(conf).doBulkLoad(testDir, table);
+      }
+
+      // Ensure data shows up
+      int expectedRows = 2 * NMapInputFormat.getNumMapTasks(conf) * ROWSPERSPLIT;
+      assertEquals("LoadIncrementalHFiles should put expected data in table",
+          expectedRows, util.countRows(table));
+
+      // should have a second StoreFile now
+      assertEquals(2, fs.listStatus(storePath).length);
+
+      // minor compactions shouldn't get rid of the file
+      admin.compact(TABLE_NAME);
+      try {
+        quickPoll(new Callable<Boolean>() {
+          public Boolean call() throws Exception {
+            return fs.listStatus(storePath).length == 1;
+          }
+        }, 5000);
+        throw new IOException("SF# = " + fs.listStatus(storePath).length);
+      } catch (AssertionError ae) {
+        // this is expected behavior
+      }
+
+      // a major compaction should work though
+      admin.majorCompact(TABLE_NAME);
+      quickPoll(new Callable<Boolean>() {
+        public Boolean call() throws Exception {
+          return fs.listStatus(storePath).length == 1;
+        }
+      }, 5000);
+
+    } finally {
+      util.shutdownMiniMapReduceCluster();
+      util.shutdownMiniCluster();
+    }
+  }
+
   @Test
   public void testExcludeMinorCompaction() throws Exception {
     Configuration conf = util.getConfiguration();
     conf.setInt("hbase.hstore.compaction.min", 2);
     Path testDir = util.getDataTestDir("testExcludeMinorCompaction");
-    byte[][] startKeys = generateRandomStartKeys(5);
+    generateRandomStartKeys(5);
 
     try {
       util.startMiniCluster();
