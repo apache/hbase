@@ -1402,6 +1402,15 @@ public class Store extends SchemaConfigured implements HeapSize {
       int start = 0;
       double r = compactSelection.getCompactSelectionRatio();
 
+      // remove bulk import files that request to be excluded from minors
+      compactSelection.getFilesToCompact().removeAll(Collections2.filter(
+          compactSelection.getFilesToCompact(),
+          new Predicate<StoreFile>() {
+            public boolean apply(StoreFile input) {
+              return input.excludeFromMinorCompaction();
+            }
+          }));
+
       // skip selection algorithm if we don't have enough files
       if (compactSelection.getFilesToCompact().size() < this.minFilesToCompact) {
         if(LOG.isDebugEnabled()) {
@@ -1412,15 +1421,6 @@ public class Store extends SchemaConfigured implements HeapSize {
         compactSelection.emptyFileList();
         return compactSelection;
       }
-
-      // remove bulk import files that request to be excluded from minors
-      compactSelection.getFilesToCompact().removeAll(Collections2.filter(
-          compactSelection.getFilesToCompact(),
-          new Predicate<StoreFile>() {
-            public boolean apply(StoreFile input) {
-              return input.excludeFromMinorCompaction();
-            }
-          }));
 
       /* TODO: add sorting + unit test back in when HBASE-2856 is fixed
       // Sort files by size to correct when normal skew is altered by bulk load.
