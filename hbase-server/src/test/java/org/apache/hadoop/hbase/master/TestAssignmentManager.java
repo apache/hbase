@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.DefaultLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
+import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
@@ -78,6 +79,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -96,6 +98,8 @@ public class TestAssignmentManager {
   private static final HRegionInfo REGIONINFO =
     new HRegionInfo(Bytes.toBytes("t"),
       HConstants.EMPTY_START_ROW, HConstants.EMPTY_START_ROW);
+  private static int assignmentCount;
+  private static boolean enabling = false;
 
   // Mocked objects or; get redone for each test.
   private Server server;
@@ -399,11 +403,9 @@ public class TestAssignmentManager {
 
     // We need a mocked catalog tracker.
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
-    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server
-        .getConfiguration());
     // Create an AM.
-    AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, ct, balancer, executor, null);
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
+        this.server, this.serverManager);
     try {
       processServerShutdownHandler(ct, am, false);
     } finally {
@@ -855,6 +857,42 @@ public class TestAssignmentManager {
   }
 
   /**
+   * Test verifies whether all the enabling table regions assigned only once during master startup.
+   * 
+   * @throws KeeperException
+   * @throws IOException
+   * @throws Exception
+   */
+  @Test
+  public void testMasterRestartWhenTableInEnabling() throws KeeperException, IOException, Exception {
+    enabling = true;
+    List<ServerName> destServers = new ArrayList<ServerName>(1);
+    destServers.add(SERVERNAME_A);
+    Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(destServers);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
+    HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
+    Server server = new HMaster(HTU.getConfiguration());
+    Whitebox.setInternalState(server, "serverManager", this.serverManager);
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
+        this.serverManager);
+    try {
+      // set table in enabling state.
+      am.getZKTable().setEnablingTable(REGIONINFO.getTableNameAsString());
+      new EnableTableHandler(server, REGIONINFO.getTableName(), am.getCatalogTracker(), am, true)
+          .process();
+      assertEquals("Number of assignments should be 1.", 1, assignmentCount);
+      assertTrue("Table should be enabled.",
+          am.getZKTable().isEnabledTable(REGIONINFO.getTableNameAsString()));
+    } finally {
+      enabling = false;
+      assignmentCount = 0;
+      am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
+      am.shutdown();
+      ZKAssign.deleteAllNodes(this.watcher);
+    }
+  }
+
+  /**
    * Creates a new ephemeral node in the SPLITTING state for the specified region.
    * Create it ephemeral in case regionserver dies mid-split.
    *
@@ -928,9 +966,15 @@ public class TestAssignmentManager {
     ScanResponse.Builder builder = ScanResponse.newBuilder();
     builder.setMoreResults(true);
     builder.addResult(ProtobufUtil.toResult(r));
-    Mockito.when(ri.scan(
-      (RpcController)Mockito.any(), (ScanRequest)Mockito.any())).
-        thenReturn(builder.build());
+    if (enabling) {
+      Mockito.when(ri.scan((RpcController) Mockito.any(), (ScanRequest) Mockito.any()))
+          .thenReturn(builder.build()).thenReturn(builder.build()).thenReturn(builder.build())
+          .thenReturn(builder.build()).thenReturn(builder.build())
+          .thenReturn(ScanResponse.newBuilder().setMoreResults(false).build());
+    } else {
+      Mockito.when(ri.scan((RpcController) Mockito.any(), (ScanRequest) Mockito.any())).thenReturn(
+          builder.build());
+    }
     // If a get, return the above result too for REGIONINFO
     GetResponse.Builder getBuilder = GetResponse.newBuilder();
     getBuilder.setResult(ProtobufUtil.toResult(r));
@@ -984,8 +1028,13 @@ public class TestAssignmentManager {
     @Override
     public void assign(HRegionInfo region, boolean setOfflineInZK, boolean forceNewPlan,
         boolean hijack) {
-      super.assign(region, setOfflineInZK, forceNewPlan, hijack);
-      this.gate.set(true);
+      if (enabling) {
+        assignmentCount++;
+        this.regionOnline(region, SERVERNAME_A);
+      } else {
+        super.assign(region, setOfflineInZK, forceNewPlan, hijack);
+        this.gate.set(true);
+      }
     }
 
     @Override
