@@ -7,6 +7,7 @@ Release 0.92.3 - Unreleased
    HBASE-6906  TestHBaseFsck#testQuarantine* tests are flakey due to TableNotEnabledException
 
   IMPROVEMENTS
+   HBASE-6914  Scans/Gets/Mutations don't give a good error if the table is disabled.
 
   NEW FEATURE
 
