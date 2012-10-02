@@ -240,9 +240,7 @@ public class TestAdmin {
     boolean ok = false;
     try {
       ht.get(get);
-    } catch (NotServingRegionException e) {
-      ok = true;
-    } catch (RetriesExhaustedException e) {
+    } catch (DoNotRetryIOException e) {
       ok = true;
     }
     assertTrue(ok);
@@ -288,23 +286,22 @@ public class TestAdmin {
     try {
       ht1.get(get);
       ht2.get(get);
-    } catch (NotServingRegionException e) {
-      ok = true;
-    } catch (RetriesExhaustedException e) {
+    } catch (DoNotRetryIOException e) {
       ok = true;
     }
+
     assertTrue(ok);
     this.admin.enableTables("testDisableAndEnableTable.*");
 
     // Test that tables are enabled
     try {
       ht1.get(get);
-    } catch (RetriesExhaustedException e) {
+    } catch (IOException e) {
       ok = false;
     }
     try {
       ht2.get(get);
-    } catch (RetriesExhaustedException e) {
+    } catch (IOException e) {
       ok = false;
     }
     assertTrue(ok);
@@ -1014,9 +1011,10 @@ public class TestAdmin {
     this.admin.disableTable(tableName);
     try {
       new HTable(TEST_UTIL.getConfiguration(), tableName);
-    } catch (org.apache.hadoop.hbase.client.RegionOfflineException e) {
-      // Expected
+    } catch (DoNotRetryIOException e) {
+      //expected
     }
+
     this.admin.addColumn(tableName, new HColumnDescriptor("col2"));
     this.admin.enableTable(tableName);
     try {
