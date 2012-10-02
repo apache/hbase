@@ -563,7 +563,7 @@ public class HLogSplitter {
     }
 
     for (Path p : processedLogs) {
-      Path newPath = HLog.getHLogArchivePath(oldLogDir, p);
+      Path newPath = FSHLog.getHLogArchivePath(oldLogDir, p);
       if (fs.exists(p)) {
         if (!fs.rename(p, newPath)) {
           LOG.warn("Unable to move  " + p + " to " + newPath);
@@ -598,7 +598,7 @@ public class HLogSplitter {
     Path tableDir = HTableDescriptor.getTableDir(rootDir, logEntry.getKey().getTablename());
     Path regiondir = HRegion.getRegionDir(tableDir,
       Bytes.toString(logEntry.getKey().getEncodedRegionName()));
-    Path dir = HLog.getRegionDirRecoveredEditsDir(regiondir);
+    Path dir = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
 
     if (!fs.exists(regiondir)) {
       LOG.info("This region's directory doesn't exist: "
@@ -777,7 +777,7 @@ public class HLogSplitter {
    */
   protected Writer createWriter(FileSystem fs, Path logfile, Configuration conf)
       throws IOException {
-    return HLog.createWriter(fs, logfile, conf);
+    return HLogFactory.createWriter(fs, logfile, conf);
   }
 
   /**
@@ -785,7 +785,7 @@ public class HLogSplitter {
    */
   protected Reader getReader(FileSystem fs, Path curLogFile, Configuration conf)
       throws IOException {
-    return HLog.getReader(fs, curLogFile, conf);
+    return HLogFactory.createReader(fs, curLogFile, conf);
   }
 
   /**

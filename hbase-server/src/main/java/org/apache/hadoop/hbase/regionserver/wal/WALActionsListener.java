@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
 /**
- * Get notification of {@link HLog}/WAL log events. The invocations are inline
+ * Get notification of {@link FSHLog}/WAL log events. The invocations are inline
  * so make sure your implementation is fast else you'll slow hbase.
  */
 @InterfaceAudience.Private

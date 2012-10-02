@@ -43,7 +43,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
   private final FileSystem fs;
   private final Path oldFileDir;
   private final Configuration conf;
-  private List<T> cleanersChain;
+  protected List<T> cleanersChain;
 
   /**
    * @param name name of the chore being run

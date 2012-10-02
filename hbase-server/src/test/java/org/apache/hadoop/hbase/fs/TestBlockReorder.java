@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -397,7 +398,7 @@ public class TestBlockReorder {
 
       // Check that it will be possible to extract a ServerName from our construction
       Assert.assertNotNull("log= " + pseudoLogFile,
-          HLog.getServerNameFromHLogDirectoryName(dfs.getConf(), pseudoLogFile));
+          HLogUtil.getServerNameFromHLogDirectoryName(dfs.getConf(), pseudoLogFile));
 
       // And check we're doing the right reorder.
       lrb.reorderBlocks(conf, l, pseudoLogFile);

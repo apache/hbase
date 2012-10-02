@@ -240,9 +240,9 @@ public class HLogPrettyPrinter {
       out.print("[");
       firstTxn = true;
     }
-    Reader log = HLog.getReader(fs, p, conf);
+    Reader log = HLogFactory.createReader(fs, p, conf);
     try {
-      HLog.Entry entry;
+      FSHLog.Entry entry;
       while ((entry = log.next()) != null) {
         HLogKey key = entry.getKey();
         WALEdit edit = entry.getEdit();

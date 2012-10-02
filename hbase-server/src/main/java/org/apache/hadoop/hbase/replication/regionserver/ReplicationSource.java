@@ -52,10 +52,13 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.replication.regionserver.metrics.ReplicationSourceMetrics;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -393,7 +396,7 @@ public class ReplicationSource extends Thread
       this.reader.seek(this.position);
     }
     long startPosition = this.position;
-    HLog.Entry entry = readNextAndSetPosition();
+    HLog.Entry entry = readNextAndSetPosition(); 
     while (entry != null) {
       WALEdit edit = entry.getEdit();
       this.metrics.incrLogEditsRead();
@@ -493,7 +496,8 @@ public class ReplicationSource extends Thread
           " at " + this.position);
       try {
        this.reader = null;
-       this.reader = HLog.getReader(this.fs, this.currentPath, this.conf);
+       this.reader = HLogFactory.createReader(this.fs, 
+           this.currentPath, this.conf);
       } catch (FileNotFoundException fnfe) {
         if (this.queueRecovered) {
           // We didn't find the log in the archive directory, look if it still

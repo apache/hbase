@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 
 /**
  * This Chore, every time it runs, will attempt to delete the HLogs in the old logs folder. The HLog
@@ -51,6 +52,6 @@ public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
 
   @Override
   protected boolean validate(Path file) {
-    return HLog.validateHLogFilename(file.getName());
+    return HLogUtil.validateHLogFilename(file.getName());
   }
 }

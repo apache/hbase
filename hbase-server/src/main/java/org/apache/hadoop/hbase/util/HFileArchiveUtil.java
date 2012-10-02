@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
  * Helper class for all utilities related to archival/retrieval of HFiles
  */
 public class HFileArchiveUtil {
-  static final String DEFAULT_HFILE_ARCHIVE_DIRECTORY = ".archive";
+  public static final String DEFAULT_HFILE_ARCHIVE_DIRECTORY = ".archive";
 
   private HFileArchiveUtil() {
     // non-external instantiation - util class

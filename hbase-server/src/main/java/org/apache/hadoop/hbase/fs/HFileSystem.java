@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -316,7 +317,7 @@ public class HFileSystem extends FilterFileSystem {
     public void reorderBlocks(Configuration conf, LocatedBlocks lbs, String src)
         throws IOException {
 
-      ServerName sn = HLog.getServerNameFromHLogDirectoryName(conf, src);
+      ServerName sn = HLogUtil.getServerNameFromHLogDirectoryName(conf, src);
       if (sn == null) {
         // It's not an HLOG
         return;

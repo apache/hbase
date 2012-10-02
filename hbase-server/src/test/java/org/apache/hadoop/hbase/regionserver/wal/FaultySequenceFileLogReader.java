@@ -24,6 +24,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 
 public class FaultySequenceFileLogReader extends SequenceFileLogReader {
 
@@ -45,7 +46,7 @@ public class FaultySequenceFileLogReader extends SequenceFileLogReader {
 
     if (nextQueue.isEmpty()) { // Read the whole thing at once and fake reading
       while (b == true) {
-        HLogKey key = HLog.newKey(conf);
+        HLogKey key = HLogUtil.newKey(conf);
         WALEdit val = new WALEdit();
         HLog.Entry e = new HLog.Entry(key, val);
         b = this.reader.next(e.getKey(), e.getEdit());

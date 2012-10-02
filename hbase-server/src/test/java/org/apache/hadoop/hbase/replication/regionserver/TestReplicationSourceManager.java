@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -88,6 +89,8 @@ public class TestReplicationSourceManager {
 
   private static FileSystem fs;
 
+  private static String logName;
+
   private static Path oldLogDir;
 
   private static Path logDir;
@@ -122,6 +125,7 @@ public class TestReplicationSourceManager {
         HConstants.HREGION_OLDLOGDIR_NAME);
     logDir = new Path(utility.getDataTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
+    logName = HConstants.HREGION_LOGDIR_NAME;
 
     manager.addSource(slaveId);
 
@@ -164,8 +168,8 @@ public class TestReplicationSourceManager {
 
     List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
     listeners.add(replication);
-    HLog hlog = new HLog(fs, logDir, oldLogDir, conf, listeners,
-      URLEncoder.encode("regionserver:60020", "UTF8"));
+    HLog hlog = HLogFactory.createHLog(fs, utility.getDataTestDir(), logName,
+        conf, listeners, URLEncoder.encode("regionserver:60020", "UTF8"));
 
     manager.init();
     HTableDescriptor htd = new HTableDescriptor();

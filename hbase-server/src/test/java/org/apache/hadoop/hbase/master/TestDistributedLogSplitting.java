@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -132,7 +134,7 @@ public class TestDistributedLogSplitting {
       regions = ProtobufUtil.getOnlineRegions(hrs);
       if (regions.size() != 0) break;
     }
-    final Path logDir = new Path(rootdir, HLog.getHLogDirectoryName(hrs
+    final Path logDir = new Path(rootdir, HLogUtil.getHLogDirectoryName(hrs
         .getServerName().toString()));
 
     LOG.info("#regions = " + regions.size());
@@ -153,7 +155,7 @@ public class TestDistributedLogSplitting {
 
       Path tdir = HTableDescriptor.getTableDir(rootdir, table);
       Path editsdir =
-        HLog.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
+        HLogUtil.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
       LOG.debug("checking edits dir " + editsdir);
       FileStatus[] files = fs.listStatus(editsdir);
       assertEquals(1, files.length);
@@ -185,7 +187,7 @@ public class TestDistributedLogSplitting {
     HRegionServer hrs = rsts.get(0).getRegionServer();
     Path rootdir = FSUtils.getRootDir(conf);
     final Path logDir = new Path(rootdir,
-        HLog.getHLogDirectoryName(hrs.getServerName().toString()));
+        HLogUtil.getHLogDirectoryName(hrs.getServerName().toString()));
 
     installTable(new ZooKeeperWatcher(conf, "table-creation", null),
         "table", "family", 40);
@@ -433,7 +435,7 @@ public class TestDistributedLogSplitting {
   private int countHLog(Path log, FileSystem fs, Configuration conf)
   throws IOException {
     int count = 0;
-    HLog.Reader in = HLog.getReader(fs, log, conf);
+    HLog.Reader in = HLogFactory.createReader(fs, log, conf);
     while (in.next() != null) {
       count++;
     }

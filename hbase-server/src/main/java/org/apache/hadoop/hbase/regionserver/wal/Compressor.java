@@ -25,7 +25,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -78,7 +78,7 @@ public class Compressor {
       conf.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, !compress);
       out.init(outFS, output, conf);
 
-      Entry e = null;
+      HLog.Entry e = null;
       while ((e = in.next()) != null) out.append(e);
     } finally {
       in.close();

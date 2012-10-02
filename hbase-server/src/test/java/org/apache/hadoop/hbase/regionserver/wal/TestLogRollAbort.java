@@ -138,7 +138,7 @@ public class TestLogRollAbort {
     HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
     HLog log = server.getWAL();
 
-    assertTrue("Need HDFS-826 for this test", log.canGetCurReplicas());
+    assertTrue("Need HDFS-826 for this test", ((FSHLog) log).canGetCurReplicas());
     // don't run this test without append support (HDFS-200 & HDFS-142)
     assertTrue("Need append support for this test",
         FSUtils.isAppendSupported(TEST_UTIL.getConfiguration()));
@@ -156,13 +156,13 @@ public class TestLogRollAbort {
     dfsCluster.restartDataNodes();
     LOG.info("Restarted datanodes");
 
-    assertTrue("Should have an outstanding WAL edit", log.hasDeferredEntries());
+    assertTrue("Should have an outstanding WAL edit", ((FSHLog) log).hasDeferredEntries());
     try {
       log.rollWriter(true);
       fail("Log roll should have triggered FailedLogCloseException");
     } catch (FailedLogCloseException flce) {
       assertTrue("Should have deferred flush log edits outstanding",
-          log.hasDeferredEntries());
+          ((FSHLog) log).hasDeferredEntries());
     }
   }
 

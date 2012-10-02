@@ -40,7 +40,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 
 /**
- * Implementation of {@link HLog.Writer} that delegates to
+ * Implementation of {@link FSHLog.Writer} that delegates to
  * SequenceFile.Writer.
  */
 @InterfaceAudience.Private
@@ -140,7 +140,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
     }
 
     if (null == keyClass) {
-      keyClass = HLog.getKeyClass(conf);
+      keyClass = HLogUtil.getKeyClass(conf);
     }
 
     // Create a SF.Writer instance.
@@ -152,7 +152,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
             Configuration.class, Path.class, Class.class, Class.class,
             Integer.TYPE, Short.TYPE, Long.TYPE, Boolean.TYPE,
             CompressionType.class, CompressionCodec.class, Metadata.class})
-        .invoke(null, new Object[] {fs, conf, path, HLog.getKeyClass(conf),
+        .invoke(null, new Object[] {fs, conf, path, HLogUtil.getKeyClass(conf),
             WALEdit.class,
             Integer.valueOf(fs.getConf().getInt("io.file.buffer.size", 4096)),
             Short.valueOf((short)
@@ -175,7 +175,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
     if (this.writer == null) {
       LOG.debug("new createWriter -- HADOOP-6840 -- not available");
       this.writer = SequenceFile.createWriter(fs, conf, path,
-        HLog.getKeyClass(conf), WALEdit.class,
+        HLogUtil.getKeyClass(conf), WALEdit.class,
         fs.getConf().getInt("io.file.buffer.size", 4096),
         (short) conf.getInt("hbase.regionserver.hlog.replication",
           fs.getDefaultReplication()),

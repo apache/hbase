@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 
 /**
  * Contains utility methods for manipulating HBase meta tables.
@@ -97,11 +98,10 @@ public class MetaUtils {
    */
   public synchronized HLog getLog() throws IOException {
     if (this.log == null) {
-      Path logdir = new Path(this.fs.getHomeDirectory(),
-          HConstants.HREGION_LOGDIR_NAME + "_" + System.currentTimeMillis());
-      Path oldLogDir = new Path(this.fs.getHomeDirectory(),
-          HConstants.HREGION_OLDLOGDIR_NAME);
-      this.log = new HLog(this.fs, logdir, oldLogDir, this.conf);
+      String logName = 
+          HConstants.HREGION_LOGDIR_NAME + "_" + System.currentTimeMillis();
+      this.log = HLogFactory.createHLog(this.fs, this.fs.getHomeDirectory(),
+                                        logName, this.conf);
     }
     return this.log;
   }

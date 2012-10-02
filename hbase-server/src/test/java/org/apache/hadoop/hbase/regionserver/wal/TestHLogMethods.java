@@ -56,7 +56,7 @@ public class TestHLogMethods {
     Path regiondir = util.getDataTestDir("regiondir");
     fs.delete(regiondir, true);
     fs.mkdirs(regiondir);
-    Path recoverededits = HLog.getRegionDirRecoveredEditsDir(regiondir);
+    Path recoverededits = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
     String first = HLogSplitter.formatRecoveredEditsFileName(-1);
     createFile(fs, recoverededits, first);
     createFile(fs, recoverededits, HLogSplitter.formatRecoveredEditsFileName(0));
@@ -70,7 +70,10 @@ public class TestHLogMethods {
     createFile(fs, recoverededits, last);
     createFile(fs, recoverededits,
       Long.toString(Long.MAX_VALUE) + "." + System.currentTimeMillis());
-    NavigableSet<Path> files = HLog.getSplitEditFilesSorted(fs, regiondir);
+
+    HLog log = HLogFactory.createHLog(fs, regiondir,
+                                      "dummyLogName", util.getConfiguration());
+    NavigableSet<Path> files = HLogUtil.getSplitEditFilesSorted(fs, regiondir);
     assertEquals(7, files.size());
     assertEquals(files.pollFirst().getName(), first);
     assertEquals(files.pollLast().getName(), last);

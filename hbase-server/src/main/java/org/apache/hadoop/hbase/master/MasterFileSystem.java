@@ -47,7 +47,9 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.OrphanHLogAfterSplitException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -262,7 +264,7 @@ public class MasterFileSystem {
     long splitTime = 0, splitLogSize = 0;
     List<Path> logDirs = new ArrayList<Path>();
     for (ServerName serverName: serverNames) {
-      Path logDir = new Path(this.rootdir, HLog.getHLogDirectoryName(serverName.toString()));
+      Path logDir = new Path(this.rootdir, HLogUtil.getHLogDirectoryName(serverName.toString()));
       Path splitDir = logDir.suffix(HLog.SPLITTING_EXT);
       // Rename the directory so a rogue RS doesn't create more HLogs
       if (fs.exists(logDir)) {

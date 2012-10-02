@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.collect.Lists;
@@ -73,7 +74,8 @@ public class TestCompactSelection extends TestCase {
 
     //Setting up a Store
     Path basedir = new Path(DIR);
-    Path logdir = new Path(DIR+"/logs");
+    String logName = "logs";
+    Path logdir = new Path(DIR, logName);
     Path oldLogDir = new Path(basedir, HConstants.HREGION_OLDLOGDIR_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes("family"));
     FileSystem fs = FileSystem.get(conf);
@@ -84,7 +86,8 @@ public class TestCompactSelection extends TestCase {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
 
-    HLog hlog = new HLog(fs, logdir, oldLogDir, conf);
+    HLog hlog = HLogFactory.createHLog(fs, basedir, 
+        logName, conf);
     HRegion region = HRegion.createHRegion(info, basedir, conf, htd);
     HRegion.closeHRegion(region);
     Path tableDir = new Path(basedir, Bytes.toString(htd.getName()));

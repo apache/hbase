@@ -80,7 +80,10 @@ import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.HLogMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -214,7 +217,7 @@ public class TestHRegion extends HBaseTestCase {
       FileSystem fs = region.getFilesystem();
       byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
 
-      Path recoveredEditsDir = HLog.getRegionDirRecoveredEditsDir(regiondir);
+      Path recoveredEditsDir = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
 
       long maxSeqId = 1050;
       long minSeqId = 1000;
@@ -222,7 +225,8 @@ public class TestHRegion extends HBaseTestCase {
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
         Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
         fs.create(recoveredEdits);
-        HLog.Writer writer = HLog.createWriter(fs, recoveredEdits, conf);
+        HLog.Writer writer = HLogFactory.createWriter(fs, 
+            recoveredEdits, conf);
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
@@ -265,7 +269,7 @@ public class TestHRegion extends HBaseTestCase {
       FileSystem fs = region.getFilesystem();
       byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
 
-      Path recoveredEditsDir = HLog.getRegionDirRecoveredEditsDir(regiondir);
+      Path recoveredEditsDir = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
 
       long maxSeqId = 1050;
       long minSeqId = 1000;
@@ -273,7 +277,8 @@ public class TestHRegion extends HBaseTestCase {
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
         Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", i));
         fs.create(recoveredEdits);
-        HLog.Writer writer = HLog.createWriter(fs, recoveredEdits, conf);
+        HLog.Writer writer = HLogFactory.createWriter(fs, 
+            recoveredEdits, conf);
 
         long time = System.nanoTime();
         WALEdit edit = new WALEdit();
@@ -320,7 +325,7 @@ public class TestHRegion extends HBaseTestCase {
       Path regiondir = region.getRegionDir();
       FileSystem fs = region.getFilesystem();
 
-      Path recoveredEditsDir = HLog.getRegionDirRecoveredEditsDir(regiondir);
+      Path recoveredEditsDir = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
       for (int i = 1000; i < 1050; i += 10) {
         Path recoveredEdits = new Path(
             recoveredEditsDir, String.format("%019d", i));
@@ -594,8 +599,8 @@ public class TestHRegion extends HBaseTestCase {
     byte[] val = Bytes.toBytes("val");
     this.region = initHRegion(b, getName(), cf);
     try {
-      HLog.getSyncTime(); // clear counter from prior tests
-      assertEquals(0, HLog.getSyncTime().count);
+      HLogMetrics.getSyncTime(); // clear counter from prior tests
+      assertEquals(0, HLogMetrics.getSyncTime().count);
 
       LOG.info("First a batch put with all valid puts");
       final Put[] puts = new Put[10];
@@ -610,7 +615,7 @@ public class TestHRegion extends HBaseTestCase {
         assertEquals(OperationStatusCode.SUCCESS, codes[i]
             .getOperationStatusCode());
       }
-      assertEquals(1, HLog.getSyncTime().count);
+      assertEquals(1, HLogMetrics.getSyncTime().count);
 
       LOG.info("Next a batch put with one invalid family");
       puts[5].add(Bytes.toBytes("BAD_CF"), qual, val);
@@ -620,7 +625,7 @@ public class TestHRegion extends HBaseTestCase {
         assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
           OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
       }
-      assertEquals(1, HLog.getSyncTime().count);
+      assertEquals(1, HLogMetrics.getSyncTime().count);
 
       LOG.info("Next a batch put that has to break into two batches to avoid a lock");
       Integer lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
@@ -641,7 +646,7 @@ public class TestHRegion extends HBaseTestCase {
   
       LOG.info("...waiting for put thread to sync first time");
       long startWait = System.currentTimeMillis();
-      while (HLog.getSyncTime().count == 0) {
+      while (HLogMetrics.getSyncTime().count == 0) {
         Thread.sleep(100);
         if (System.currentTimeMillis() - startWait > 10000) {
           fail("Timed out waiting for thread to sync first minibatch");
@@ -652,7 +657,7 @@ public class TestHRegion extends HBaseTestCase {
       LOG.info("...joining on thread");
       ctx.stop();
       LOG.info("...checking that next batch was synced");
-      assertEquals(1, HLog.getSyncTime().count);
+      assertEquals(1, HLogMetrics.getSyncTime().count);
       codes = retFromThread.get();
       for (int i = 0; i < 10; i++) {
         assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
@@ -676,7 +681,7 @@ public class TestHRegion extends HBaseTestCase {
           OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
       }
       // Make sure we didn't do an extra batch
-      assertEquals(1, HLog.getSyncTime().count);
+      assertEquals(1, HLogMetrics.getSyncTime().count);
   
       // Make sure we still hold lock
       assertTrue(region.isRowLocked(lockedRow));
@@ -702,8 +707,8 @@ public class TestHRegion extends HBaseTestCase {
     this.region = initHRegion(b, getName(), conf, cf);
 
     try{
-      HLog.getSyncTime(); // clear counter from prior tests
-      assertEquals(0, HLog.getSyncTime().count);
+      HLogMetrics.getSyncTime(); // clear counter from prior tests
+      assertEquals(0, HLogMetrics.getSyncTime().count);
 
       final Put[] puts = new Put[10];
       for (int i = 0; i < 10; i++) {
@@ -717,7 +722,7 @@ public class TestHRegion extends HBaseTestCase {
         assertEquals(OperationStatusCode.SANITY_CHECK_FAILURE, codes[i]
             .getOperationStatusCode());
       }
-      assertEquals(0, HLog.getSyncTime().count);
+      assertEquals(0, HLogMetrics.getSyncTime().count);
 
 
     } finally {

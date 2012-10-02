@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.zookeeper.KeeperException;
@@ -73,9 +74,9 @@ public class TestSplitTransaction {
     this.fs = FileSystem.get(TEST_UTIL.getConfiguration());
     TEST_UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, CustomObserver.class.getName());
     this.fs.delete(this.testdir, true);
-    this.wal = new HLog(fs, new Path(this.testdir, "logs"),
-      new Path(this.testdir, "archive"),
+    this.wal = HLogFactory.createHLog(fs, this.testdir, "logs",
       TEST_UTIL.getConfiguration());
+    
     this.parent = createRegion(this.testdir, this.wal);
     RegionCoprocessorHost host = new RegionCoprocessorHost(this.parent, null, TEST_UTIL.getConfiguration());
     this.parent.setCoprocessorHost(host);

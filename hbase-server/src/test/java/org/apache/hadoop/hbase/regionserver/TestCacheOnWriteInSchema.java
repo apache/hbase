@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.TestHFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.junit.After;
@@ -157,11 +158,13 @@ public class TestCacheOnWriteInSchema {
 
     // Create a store based on the schema
     Path basedir = new Path(DIR);
-    Path logdir = new Path(DIR+"/logs");
-    Path oldLogDir = new Path(basedir, HConstants.HREGION_OLDLOGDIR_NAME);
+    String logName = "logs";
+    Path logdir = new Path(DIR, logName);
     fs.delete(logdir, true);
+
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
-    HLog hlog = new HLog(fs, logdir, oldLogDir, conf);
+    HLog hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
+    
     HRegion region = new HRegion(basedir, hlog, fs, conf, info, htd, null);
     store = new HStore(basedir, region, hcd, fs, conf);
   }

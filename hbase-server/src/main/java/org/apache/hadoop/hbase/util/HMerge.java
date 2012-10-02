@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 
 /**
  * A non-instantiable class that has a static method capable of compacting
@@ -155,10 +156,9 @@ class HMerge {
           Bytes.toString(tableName)
       );
       this.htd = FSTableDescriptors.getTableDescriptor(this.fs, this.tabledir);
-      Path logdir = new Path(tabledir, "merge_" + System.currentTimeMillis() +
-          HConstants.HREGION_LOGDIR_NAME);
-      Path oldLogDir = new Path(tabledir, HConstants.HREGION_OLDLOGDIR_NAME);
-      this.hlog = new HLog(fs, logdir, oldLogDir, conf);
+      String logname = "merge_" + System.currentTimeMillis() + HConstants.HREGION_LOGDIR_NAME;
+
+      this.hlog = HLogFactory.createHLog(fs, tabledir, logname, conf);
     }
 
     void process() throws IOException {

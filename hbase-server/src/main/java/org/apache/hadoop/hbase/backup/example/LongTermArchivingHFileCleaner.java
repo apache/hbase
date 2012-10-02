@@ -44,7 +44,7 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
 
   private static final Log LOG = LogFactory.getLog(LongTermArchivingHFileCleaner.class);
 
-  private TableHFileArchiveTracker archiveTracker;
+  TableHFileArchiveTracker archiveTracker;
   private FileSystem fs;
 
   @Override

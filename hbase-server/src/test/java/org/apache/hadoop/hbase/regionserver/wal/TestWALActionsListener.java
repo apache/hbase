@@ -50,6 +50,7 @@ public class TestWALActionsListener {
   private static FileSystem fs;
   private static Path oldLogDir;
   private static Path logDir;
+  private static String logName;
   private static Configuration conf;
 
   @BeforeClass
@@ -59,8 +60,9 @@ public class TestWALActionsListener {
     fs = FileSystem.get(conf);
     oldLogDir = new Path(TEST_UTIL.getDataTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
+    logName = HConstants.HREGION_LOGDIR_NAME;
     logDir = new Path(TEST_UTIL.getDataTestDir(),
-        HConstants.HREGION_LOGDIR_NAME);
+        logName);
   }
 
   @Before
@@ -85,7 +87,8 @@ public class TestWALActionsListener {
     List<WALActionsListener> list = new ArrayList<WALActionsListener>();
     list.add(observer);
     DummyWALActionsListener laterobserver = new DummyWALActionsListener();
-    HLog hlog = new HLog(fs, logDir, oldLogDir, conf, list, null);
+    HLog hlog = HLogFactory.createHLog(fs, TEST_UTIL.getDataTestDir(), logName,
+                                       conf, list, null);
     HRegionInfo hri = new HRegionInfo(SOME_BYTES,
              SOME_BYTES, SOME_BYTES, false);
 

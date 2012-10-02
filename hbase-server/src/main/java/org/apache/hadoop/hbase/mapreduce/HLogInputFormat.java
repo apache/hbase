@@ -33,7 +33,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -143,7 +145,8 @@ public class HLogInputFormat extends InputFormat<HLogKey, WALEdit> {
       Configuration conf = context.getConfiguration();
       LOG.info("Opening reader for "+split);
       try {
-        this.reader = HLog.getReader(logFile.getFileSystem(conf), logFile, conf);
+        this.reader = HLogFactory.createReader(logFile.getFileSystem(conf), 
+            logFile, conf);
       } catch (EOFException x) {
         LOG.info("Ignoring corrupted HLog file: " + logFile
             + " (This is normal when a RegionServer crashed.)");

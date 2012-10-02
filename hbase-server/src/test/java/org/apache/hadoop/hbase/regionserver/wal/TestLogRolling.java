@@ -192,7 +192,7 @@ public class TestLogRolling  {
   public void testLogRolling() throws FailedLogCloseException, IOException {
     this.tableName = getName();
       startAndWriteData();
-      LOG.info("after writing there are " + log.getNumLogFiles() + " log files");
+      LOG.info("after writing there are " + ((FSHLog) log).getNumLogFiles() + " log files");
 
       // flush all regions
 
@@ -205,9 +205,9 @@ public class TestLogRolling  {
       // Now roll the log
       log.rollWriter();
 
-      int count = log.getNumLogFiles();
+      int count = ((FSHLog) log).getNumLogFiles();
       LOG.info("after flushing all regions and rolling logs there are " +
-          log.getNumLogFiles() + " log files");
+                                      ((FSHLog) log).getNumLogFiles() + " log files");
       assertTrue(("actual count: " + count), count <= 2);
   }
 
@@ -268,7 +268,7 @@ public class TestLogRolling  {
    */
   DatanodeInfo[] getPipeline(HLog log) throws IllegalArgumentException,
       IllegalAccessException, InvocationTargetException {
-    OutputStream stm = log.getOutputStream();
+    OutputStream stm = ((FSHLog) log).getOutputStream();
     Method getPipeline = null;
     for (Method m : stm.getClass().getDeclaredMethods()) {
       if (m.getName().endsWith("getPipeline")) {
@@ -315,7 +315,7 @@ public class TestLogRolling  {
     server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
     this.log = server.getWAL();
 
-    assertTrue("Need HDFS-826 for this test", log.canGetCurReplicas());
+    assertTrue("Need HDFS-826 for this test", ((FSHLog) log).canGetCurReplicas());
     // don't run this test without append support (HDFS-200 & HDFS-142)
     assertTrue("Need append support for this test", FSUtils
         .isAppendSupported(TEST_UTIL.getConfiguration()));
@@ -342,12 +342,12 @@ public class TestLogRolling  {
     writeData(table, 2);
 
     long curTime = System.currentTimeMillis();
-    long oldFilenum = log.getFilenum();
+    long oldFilenum = ((FSHLog) log).getFilenum();
     assertTrue("Log should have a timestamp older than now",
         curTime > oldFilenum && oldFilenum != -1);
 
     assertTrue("The log shouldn't have rolled yet",
-      oldFilenum == log.getFilenum());
+      oldFilenum == ((FSHLog) log).getFilenum());
     final DatanodeInfo[] pipeline = getPipeline(log);
     assertTrue(pipeline.length == fs.getDefaultReplication());
 
@@ -357,7 +357,7 @@ public class TestLogRolling  {
 
     // this write should succeed, but trigger a log roll
     writeData(table, 2);
-    long newFilenum = log.getFilenum();
+    long newFilenum = ((FSHLog) log).getFilenum();
 
     assertTrue("Missing datanode should've triggered a log roll",
         newFilenum > oldFilenum && newFilenum > curTime);
@@ -365,7 +365,7 @@ public class TestLogRolling  {
     // write some more log data (this should use a new hdfs_out)
     writeData(table, 3);
     assertTrue("The log should not roll again.",
-      log.getFilenum() == newFilenum);
+      ((FSHLog) log).getFilenum() == newFilenum);
     // kill another datanode in the pipeline, so the replicas will be lower than
     // the configured value 2.
     assertTrue(dfsCluster.stopDataNode(pipeline[1].getName()) != null);
@@ -382,8 +382,8 @@ public class TestLogRolling  {
     log.rollWriter(true);
     batchWriteAndWait(table, 13, true, 10000);
     assertTrue("New log file should have the default replication instead of " +
-      log.getLogReplication(),
-      log.getLogReplication() == fs.getDefaultReplication());
+      ((FSHLog) log).getLogReplication(),
+      ((FSHLog) log).getLogReplication() == fs.getDefaultReplication());
     assertTrue("LowReplication Roller should've been enabled",
         log.isLowReplicationRollEnabled());
   }
@@ -417,7 +417,7 @@ public class TestLogRolling  {
     this.log = server.getWAL();
     final List<Path> paths = new ArrayList<Path>();
     final List<Integer> preLogRolledCalled = new ArrayList<Integer>();
-    paths.add(log.computeFilename());
+    paths.add(((FSHLog) log).computeFilename());
     log.registerWALActionsListener(new WALActionsListener() {
       @Override
       public void preLogRoll(Path oldFile, Path newFile)  {
@@ -444,7 +444,7 @@ public class TestLogRolling  {
           WALEdit logEdit) {}
     });
 
-    assertTrue("Need HDFS-826 for this test", log.canGetCurReplicas());
+    assertTrue("Need HDFS-826 for this test", ((FSHLog) log).canGetCurReplicas());
     // don't run this test without append support (HDFS-200 & HDFS-142)
     assertTrue("Need append support for this test", FSUtils
         .isAppendSupported(TEST_UTIL.getConfiguration()));
@@ -498,7 +498,8 @@ public class TestLogRolling  {
       LOG.debug("Reading HLog "+FSUtils.getPath(p));
       HLog.Reader reader = null;
       try {
-        reader = HLog.getReader(fs, p, TEST_UTIL.getConfiguration());
+        reader = HLogFactory.createReader(fs, p, 
+            TEST_UTIL.getConfiguration());
         HLog.Entry entry;
         while ((entry = reader.next()) != null) {
           LOG.debug("#"+entry.getKey().getLogSeqNum()+": "+entry.getEdit().getKeyValues());

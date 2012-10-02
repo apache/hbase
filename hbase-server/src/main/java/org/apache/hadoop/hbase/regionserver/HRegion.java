@@ -122,7 +122,9 @@ import org.apache.hadoop.hbase.regionserver.metrics.OperationMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -2739,7 +2741,8 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
     long seqid = minSeqIdForTheRegion;
-    NavigableSet<Path> files = HLog.getSplitEditFilesSorted(this.fs, regiondir);
+    
+    NavigableSet<Path> files = HLogUtil.getSplitEditFilesSorted(fs, regiondir);
     if (files == null || files.isEmpty()) return seqid;
 
     for (Path edits: files) {
@@ -2774,7 +2777,7 @@ public class HRegion implements HeapSize { // , Writable{
               HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS + " instead.");
         }
         if (skipErrors) {
-          Path p = HLog.moveAsideBadEditsFile(fs, edits);
+          Path p = HLogUtil.moveAsideBadEditsFile(fs, edits);
           LOG.error(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS
               + "=true so continuing. Renamed " + edits +
               " as " + p, e);
@@ -2822,7 +2825,7 @@ public class HRegion implements HeapSize { // , Writable{
     status.setStatus("Opening logs");
     HLog.Reader reader = null;
     try {
-      reader = HLog.getReader(this.fs, edits, conf);
+      reader = HLogFactory.createReader(this.fs, edits, conf);
       long currentEditSeqId = -1;
       long firstSeqIdInLog = -1;
       long skippedEdits = 0;
@@ -2922,7 +2925,7 @@ public class HRegion implements HeapSize { // , Writable{
           }
         }
       } catch (EOFException eof) {
-        Path p = HLog.moveAsideBadEditsFile(fs, edits);
+        Path p = HLogUtil.moveAsideBadEditsFile(fs, edits);
         msg = "Encountered EOF. Most likely due to Master failure during " +
             "log spliting, so we have this data in another edit.  " +
             "Continuing, but renaming " + edits + " as " + p;
@@ -2932,7 +2935,7 @@ public class HRegion implements HeapSize { // , Writable{
         // If the IOE resulted from bad file format,
         // then this problem is idempotent and retrying won't help
         if (ioe.getCause() instanceof ParseException) {
-          Path p = HLog.moveAsideBadEditsFile(fs, edits);
+          Path p = HLogUtil.moveAsideBadEditsFile(fs, edits);
           msg = "File corruption encountered!  " +
               "Continuing, but renaming " + edits + " as " + p;
           LOG.warn(msg, ioe);
@@ -3734,8 +3737,8 @@ public class HRegion implements HeapSize { // , Writable{
     fs.mkdirs(regionDir);
     HLog effectiveHLog = hlog;
     if (hlog == null && !ignoreHLog) {
-      effectiveHLog = new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME),
-          new Path(regionDir, HConstants.HREGION_OLDLOGDIR_NAME), conf);
+      effectiveHLog = HLogFactory.createHLog(fs, regionDir,
+                                             HConstants.HREGION_LOGDIR_NAME, conf);
     }
     HRegion region = HRegion.newHRegion(tableDir,
         effectiveHLog, fs, conf, info, hTableDescriptor, null);
@@ -5455,12 +5458,11 @@ public class HRegion implements HeapSize { // , Writable{
     final Path tableDir = new Path(args[0]);
     final Configuration c = HBaseConfiguration.create();
     final FileSystem fs = FileSystem.get(c);
-    final Path logdir = new Path(c.get("hbase.tmp.dir"),
-        "hlog" + tableDir.getName()
-        + EnvironmentEdgeManager.currentTimeMillis());
-    final Path oldLogDir = new Path(c.get("hbase.tmp.dir"),
-        HConstants.HREGION_OLDLOGDIR_NAME);
-    final HLog log = new HLog(fs, logdir, oldLogDir, c);
+    final Path logdir = new Path(c.get("hbase.tmp.dir"));
+    final String logname = "hlog" + tableDir.getName()
+      + EnvironmentEdgeManager.currentTimeMillis();
+
+    final HLog log = HLogFactory.createHLog(fs, logdir, logname, c);
     try {
       processTable(fs, tableDir, log, c, majorCompact);
     } finally {

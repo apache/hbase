@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 /**
@@ -178,8 +180,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       // Initialize Table Descriptor
       HTableDescriptor htd = createHTableDescriptor(numFamilies);
       final long whenToRoll = roll;
-      HLog hlog = new HLog(fs, new Path(rootRegionDir, "wals"),
-          new Path(rootRegionDir, "old.wals"), getConf()) {
+      HLog hlog = new FSHLog(fs, rootRegionDir, "wals", getConf()) {
         int appends = 0;
         protected void doWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit,
             HTableDescriptor htd)
@@ -204,7 +205,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           region = null;
         }
         if (verify) {
-          Path dir = hlog.getDir();
+          Path dir = ((FSHLog) hlog).getDir();
           long editCount = 0;
           for (FileStatus fss: fs.listStatus(dir)) {
             editCount += verify(fss.getPath(), verbose);
@@ -244,7 +245,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
    * @throws IOException
    */
   private long verify(final Path wal, final boolean verbose) throws IOException {
-    HLog.Reader reader = HLog.getReader(wal.getFileSystem(getConf()), wal, getConf());
+    HLog.Reader reader = HLogFactory.createReader(wal.getFileSystem(getConf()), 
+        wal, getConf());
     long previousSeqid = -1;
     long count = 0;
     try {

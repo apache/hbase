@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -78,6 +79,7 @@ public class TestWALObserver {
   private FileSystem fs;
   private Path dir;
   private Path hbaseRootDir;
+  private String logName;
   private Path oldLogDir;
   private Path logDir;
 
@@ -112,6 +114,7 @@ public class TestWALObserver {
     this.dir = new Path(this.hbaseRootDir, TestWALObserver.class.getName());
     this.oldLogDir = new Path(this.hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     this.logDir = new Path(this.hbaseRootDir, HConstants.HREGION_LOGDIR_NAME);
+    this.logName = HConstants.HREGION_LOGDIR_NAME;
 
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseRootDir)) {
       TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseRootDir, true);
@@ -138,7 +141,8 @@ public class TestWALObserver {
     deleteDir(basedir);
     fs.mkdirs(new Path(basedir, hri.getEncodedName()));
 
-    HLog log = new HLog(this.fs, this.dir, this.oldLogDir, this.conf);
+    HLog log = HLogFactory.createHLog(this.fs, hbaseRootDir, 
+        TestWALObserver.class.getName(), this.conf);
     SampleRegionWALObserver cp = getCoprocessor(log);
 
     // TEST_FAMILY[0] shall be removed from WALEdit.
@@ -285,7 +289,8 @@ public class TestWALObserver {
    */
   @Test
   public void testWALObserverLoaded() throws Exception {
-    HLog log = new HLog(fs, dir, oldLogDir, conf);
+    HLog log = HLogFactory.createHLog(fs, hbaseRootDir,
+                                      TestWALObserver.class.getName(), conf);
     assertNotNull(getCoprocessor(log));
   }
 
@@ -357,8 +362,7 @@ public class TestWALObserver {
     return splits.get(0);
   }
   private HLog createWAL(final Configuration c) throws IOException {
-    HLog wal = new HLog(FileSystem.get(c), logDir, oldLogDir, c);
-    return wal;
+    return HLogFactory.createHLog(FileSystem.get(c), hbaseRootDir, logName, c);
   }
   private void addWALEdits (final byte [] tableName, final HRegionInfo hri,
       final byte [] rowName, final byte [] family,
