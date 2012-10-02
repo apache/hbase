@@ -554,6 +554,8 @@ implements WritableComparable<HRegionInfo> {
    @Deprecated
   public HTableDescriptor getTableDesc() {
     Configuration c = HBaseConfiguration.create();
+    c.set("fs.defaultFS", c.get(HConstants.HBASE_DIR));
+    c.set("fs.default.name", c.get(HConstants.HBASE_DIR));
     FileSystem fs;
     try {
       fs = FileSystem.get(c);
