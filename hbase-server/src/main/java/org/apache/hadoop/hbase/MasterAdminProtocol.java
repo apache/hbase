@@ -153,7 +153,7 @@ public interface MasterAdminProtocol extends
   /**
    * Unassign a region from current hosting regionserver.  Region will then be
    * assigned to a regionserver chosen at random.  Region could be reassigned
-   * back to the same server.  Use {@link #moveRegion(RpcController,MoveRegionRequest}
+   * back to the same server.  Use {@link #moveRegion(RpcController,MoveRegionRequest)}
    * if you want to control the region movement.
    * @param controller Unused (set to null).
    * @param req The request that contains:<br>

@@ -58,7 +58,7 @@ public class ClusterId {
    * @param bytes A pb serialized {@link ClusterId} instance with pb magic prefix
    * @return An instance of {@link ClusterId} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray()
    */
   public static ClusterId parseFrom(final byte [] bytes) throws DeserializationException {
     if (ProtobufUtil.isPBMagicPrefix(bytes)) {

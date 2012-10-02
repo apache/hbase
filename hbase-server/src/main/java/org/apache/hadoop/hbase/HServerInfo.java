@@ -33,11 +33,11 @@ import org.apache.hadoop.io.WritableComparable;
  * {@link HServerAddress}, its webui port, and its server startcode.  It was
  * used to pass meta info about a server across an RPC but we've since made
  * it so regionserver info is up in ZooKeeper and so this class is on its
- * way out. It used to carry {@link HServerLoad} but as off HBase 0.92.0, the
+ * way out. It used to carry HServerLoad but as off HBase 0.92.0, the
  * HServerLoad is passed independent of this class. Also, we now no longer pass
  * the webui from regionserver to master (TODO: Fix).
  * @deprecated Use {@link InetSocketAddress} and or {@link ServerName} and or
- * {@link HServerLoad}
+ * HServerLoad
  */
 public class HServerInfo extends VersionedWritable
 implements WritableComparable<HServerInfo> {

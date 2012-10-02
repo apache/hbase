@@ -414,7 +414,6 @@ public class DynamicMetricsRegistry {
    *
    * @param gaugeName              name of the gauge to create or get.
    * @param potentialStartingValue value of the new gauge if we have to create it.
-   * @return
    */
   public MutableGaugeLong getLongGauge(String gaugeName, long potentialStartingValue) {
     //Try and get the guage.
@@ -450,7 +449,6 @@ public class DynamicMetricsRegistry {
    *
    * @param counterName            Name of the counter to get
    * @param potentialStartingValue starting value if we have to create a new counter
-   * @return
    */
   public MutableCounterLong getLongCounter(String counterName, long potentialStartingValue) {
     //See getLongGauge for description on how this works.

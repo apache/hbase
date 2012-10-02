@@ -252,7 +252,6 @@ public interface HConnection extends Abortable, Closeable {
    * @return an object of type T
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
-   * @deprecated Use {@link HConnectionManager#withoutRetries(ServerCallable)}
    */
   @Deprecated
   public <T> T getRegionServerWithRetries(ServerCallable<T> callable)
@@ -266,7 +265,6 @@ public interface HConnection extends Abortable, Closeable {
    * @return an object of type T
    * @throws IOException if a remote or network exception occurs
    * @throws RuntimeException other unspecified error
-   * @deprecated Use {@link HConnectionManager#withoutRetries(ServerCallable)}
    */
   @Deprecated
   public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)

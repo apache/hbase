@@ -41,30 +41,25 @@ import org.apache.hadoop.io.Writable;
 import com.google.common.primitives.Longs;
 
 /**
- * An HBase Key/Value.  This is the fundamental HBase Type.
- *
- * <p>If being used client-side, the primary methods to access individual fields
- * are {@link #getRow()}, {@link #getFamily()}, {@link #getQualifier()},
- * {@link #getTimestamp()}, and {@link #getValue()}.  These methods allocate new
- * byte arrays and return copies. Avoid their use server-side.
- *
- * <p>Instances of this class are immutable.  They do not implement Comparable
- * but Comparators are provided.  Comparators change with context,
- * whether user table or a catalog table comparison.  Its critical you use the
- * appropriate comparator.  There are Comparators for KeyValue instances and
- * then for just the Key portion of a KeyValue used mostly by {@link HFile}.
- *
- * <p>KeyValue wraps a byte array and takes offsets and lengths into passed
- * array at where to start interpreting the content as KeyValue.  The KeyValue
- * format inside a byte array is:
- * <code>&lt;keylength> &lt;valuelength> &lt;key> &lt;value></code>
- * Key is further decomposed as:
+ * An HBase Key/Value. This is the fundamental HBase Type.
+ * <p>
+ * If being used client-side, the primary methods to access individual fields are {@link #getRow()},
+ * {@link #getFamily()}, {@link #getQualifier()}, {@link #getTimestamp()}, and {@link #getValue()}.
+ * These methods allocate new byte arrays and return copies. Avoid their use server-side.
+ * <p>
+ * Instances of this class are immutable. They do not implement Comparable but Comparators are
+ * provided. Comparators change with context, whether user table or a catalog table comparison. Its
+ * critical you use the appropriate comparator. There are Comparators for KeyValue instances and
+ * then for just the Key portion of a KeyValue used mostly by HFile.
+ * <p>
+ * KeyValue wraps a byte array and takes offsets and lengths into passed array at where to start
+ * interpreting the content as KeyValue. The KeyValue format inside a byte array is:
+ * <code>&lt;keylength> &lt;valuelength> &lt;key> &lt;value></code> Key is further decomposed as:
  * <code>&lt;rowlength> &lt;row> &lt;columnfamilylength> &lt;columnfamily> &lt;columnqualifier> &lt;timestamp> &lt;keytype></code>
- * The <code>rowlength</code> maximum is <code>Short.MAX_SIZE</code>,
- * column family length maximum is
- * <code>Byte.MAX_SIZE</code>, and column qualifier + key length must
- * be < <code>Integer.MAX_SIZE</code>.
- * The column does not contain the family/qualifier delimiter, {@link #COLUMN_FAMILY_DELIMITER}
+ * The <code>rowlength</code> maximum is <code>Short.MAX_SIZE</code>, column family length maximum
+ * is <code>Byte.MAX_SIZE</code>, and column qualifier + key length must be <
+ * <code>Integer.MAX_SIZE</code>. The column does not contain the family/qualifier delimiter,
+ * {@link #COLUMN_FAMILY_DELIMITER}
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

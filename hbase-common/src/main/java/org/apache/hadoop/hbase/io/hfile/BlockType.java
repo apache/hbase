@@ -29,9 +29,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Various types of {@link HFile} blocks. Ordinal values of these enum constants
- * must not be relied upon. The values in the enum appear in the order they
- * appear in a version 2 {@link HFile}.
+ * Various types of HFile blocks. Ordinal values of these enum constants must not be relied upon.
+ * The values in the enum appear in the order they appear in a version 2 HFile.
  */
 @InterfaceAudience.Private
 public enum BlockType {

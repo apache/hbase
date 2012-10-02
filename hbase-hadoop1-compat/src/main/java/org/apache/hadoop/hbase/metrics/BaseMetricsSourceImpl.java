@@ -167,7 +167,7 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
 
   /**
    * Used to get at the DynamicMetricsRegistry.
-   * @return
+   * @return DynamicMetricsRegistry
    */
   protected DynamicMetricsRegistry getMetricsRegistry() {
     return metricsRegistry;

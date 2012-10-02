@@ -21,7 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Base checked exception in HBase.
- * @see https://issues.apache.org/jira/browse/HBASE-5796
+ * @see <a href="https://issues.apache.org/jira/browse/HBASE-5796">HBASE-5796</a>
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Private

@@ -731,8 +731,8 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * @deprecated Use protobuf deserialization instead. See {@link #parseFrom(byte[])} and
-   * {@link #parseFrom(FSDataInputStream)}
+   * @deprecated Use protobuf deserialization instead. 
+   * @see #parseFrom(byte[])
    */
   @Deprecated
   public void readFields(DataInput in) throws IOException {
@@ -914,7 +914,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   /**
    * @return This instance serialized as protobuf w/ a magic pb prefix.
-   * @see #parseFrom(byte[]);
+   * @see #parseFrom(byte[])
    */
   public byte [] toByteArray() {
     byte [] bytes = convert().toByteArray();
@@ -924,7 +924,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   /**
    * @param bytes
    * @return A deserialized {@link HRegionInfo} or null if we failed deserialize or passed bytes null
-   * @see {@link #toByteArray()}
+   * @see #toByteArray()
    */
   public static HRegionInfo parseFromOrNull(final byte [] bytes) {
     if (bytes == null || bytes.length <= 0) return null;
@@ -939,7 +939,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param bytes A pb RegionInfo serialized with a pb magic prefix.
    * @return A deserialized {@link HRegionInfo}
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray()
    */
   public static HRegionInfo parseFrom(final byte [] bytes) throws DeserializationException {
     if (ProtobufUtil.isPBMagicPrefix(bytes)) {
@@ -967,7 +967,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * the pb mergeDelimitedFrom (w/o the delimiter, pb reads to EOF which may not be what you want).
    * @return This instance serialized as a delimited protobuf w/ a magic pb prefix.
    * @throws IOException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray()
    */
   public byte [] toDelimitedByteArray() throws IOException {
     return ProtobufUtil.toDelimitedByteArray(convert());
@@ -1096,7 +1096,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param infos HRegionInfo objects to serialize
    * @return This instance serialized as a delimited protobuf w/ a magic pb prefix.
    * @throws IOException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray()
    */
   public static byte[] toDelimitedByteArray(HRegionInfo... infos) throws IOException {
     byte[][] bytes = new byte[infos.length][];

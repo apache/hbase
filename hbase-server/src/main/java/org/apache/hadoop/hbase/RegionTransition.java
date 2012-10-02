@@ -31,7 +31,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * Current state of a region in transition.  Holds state of a region as it moves through the
  * steps that take it from offline to open, etc.  Used by regionserver, master, and zk packages.
  * Encapsulates protobuf serialization/deserialization so we don't leak generated pb outside this
- * class.  Create an instance using {@link #createRegionTransition(EventType, byte[], ServerName)}.
+ * class.  Create an instance using createRegionTransition(EventType, byte[], ServerName).
  * <p>Immutable
  */
 @InterfaceAudience.Private
@@ -85,7 +85,6 @@ public class RegionTransition {
    * @param regionName
    * @param sn
    * @return a serialized pb {@link RegionTransition}
-   * @see #parseRegionTransition(byte[])
    */
   public static RegionTransition createRegionTransition(final EventType type,
       final byte [] regionName, final ServerName sn) {
@@ -98,7 +97,6 @@ public class RegionTransition {
    * @param sn
    * @param payload May be null
    * @return a serialized pb {@link RegionTransition}
-   * @see #parseRegionTransition(byte[])
    */
   public static RegionTransition createRegionTransition(final EventType type,
       final byte [] regionName, final ServerName sn, final byte [] payload) {

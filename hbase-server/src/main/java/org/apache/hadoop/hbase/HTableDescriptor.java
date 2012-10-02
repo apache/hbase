@@ -899,7 +899,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * <em> INTERNAL </em> This method is a part of {@link WritableComparable} interface 
    * and is used for serialization of the HTableDescriptor over RPC
-   * @deprecated Writables are going away.  Use pb {@link #toByteArray()(byte[])} instead.
+   * @deprecated Writables are going away.  Use pb {@link #toByteArray(byte[])} instead.
    */
   @Deprecated
   @Override
@@ -1231,7 +1231,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * @return This instance serialized with pb with pb magic prefix
-   * @see {@link #parseFrom(byte[])}
+   * @see #parseFrom(byte[])
    */
   public byte [] toByteArray() {
     return ProtobufUtil.prependPBMagic(convert().toByteArray());
@@ -1242,7 +1242,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @return An instance of {@link HTableDescriptor} made from <code>bytes</code>
    * @throws DeserializationException
    * @throws IOException 
-   * @see {@link #toByteArray()}
+   * @see #toByteArray()
    */
   public static HTableDescriptor parseFrom(final byte [] bytes)
   throws DeserializationException, IOException {

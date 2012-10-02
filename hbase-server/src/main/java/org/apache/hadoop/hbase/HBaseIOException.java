@@ -35,23 +35,14 @@ public class HBaseIOException extends IOException {
     super();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public HBaseIOException(String message) {
     super(message);
   }
 
-  /**
-   * {@inheritDoc}
-   **/
   public HBaseIOException(String message, Throwable cause) {
       super(message, cause);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public HBaseIOException(Throwable cause) {
       super(cause);
   }}
