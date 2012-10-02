@@ -20,13 +20,13 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 
 /**
  * Class for determining the "size" of a class, an attempt to calculate the
@@ -101,6 +101,20 @@ public class ClassSize {
   /** Overhead for CopyOnWriteArrayList */
   public static final int COPYONWRITE_ARRAYLIST;
 
+  /* Are we running on jdk7? */
+  private static final boolean JDK7;
+  static {
+    final String version = System.getProperty("java.version");
+    // Verify String looks like this: 1.6.0_29
+    if (!version.matches("\\d\\.\\d\\..*")) {
+      throw new RuntimeException("Unexpected version format: " + version);
+    }
+    // Convert char to int
+    int major = (int)(version.charAt(0) - '0');
+    int minor = (int)(version.charAt(2) - '0');
+    JDK7 = major == 1 && minor == 7;
+  }
+
   /**
    * Method for reading the arc settings and setting overheads according
    * to 32-bit or 64-bit architecture.
@@ -131,9 +145,9 @@ public class ClassSize {
 
     TREEMAP = align(OBJECT + (2 * Bytes.SIZEOF_INT) + align(7 * REFERENCE));
 
-    STRING = align(OBJECT + ARRAY + REFERENCE + 3 * Bytes.SIZEOF_INT);
+    STRING = align(OBJECT + ARRAY + REFERENCE + ((JDK7? 2: 3) * Bytes.SIZEOF_INT));
 
-    CONCURRENT_HASHMAP = align((2 * Bytes.SIZEOF_INT) + ARRAY +
+    CONCURRENT_HASHMAP = align(((JDK7? 3: 2) * Bytes.SIZEOF_INT) + ARRAY +
         (6 * REFERENCE) + OBJECT);
 
     CONCURRENT_HASHMAP_ENTRY = align(REFERENCE + OBJECT + (3 * REFERENCE) +
