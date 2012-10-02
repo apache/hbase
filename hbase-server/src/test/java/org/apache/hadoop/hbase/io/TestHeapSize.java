@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.experimental.categories.Category;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 
@@ -65,8 +65,8 @@ public class TestHeapSize extends TestCase {
   // BatchOperation, BatchUpdate, BlockIndex, Entry, Entry<K,V>, HStoreKey
   // KeyValue, LruBlockCache, LruHashMap<K,V>, Put, HLogKey
   
-  @Before
-  public void setUp() throws Exception {
+  @BeforeClass
+  public void beforeClass() throws Exception {
     // Print detail on jvm so we know what is different should below test fail.
     RuntimeMXBean b = ManagementFactory.getRuntimeMXBean();
     LOG.info("name=" + b.getName()); 
