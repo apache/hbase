@@ -684,8 +684,9 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
   @Override
   public DataInput getGeneralBloomFilterMetadata() throws IOException {
-    // Always cache Bloom filter blocks.
-    ByteBuffer buf = getMetaBlock(HFileWriterV1.BLOOM_FILTER_META_KEY, true);
+    // Shouldn't cache Bloom filter blocks, otherwise server would abort when
+    // splitting, see HBASE-6479
+    ByteBuffer buf = getMetaBlock(HFileWriterV1.BLOOM_FILTER_META_KEY, false);
     if (buf == null)
       return null;
     ByteArrayInputStream bais = new ByteArrayInputStream(buf.array(),
