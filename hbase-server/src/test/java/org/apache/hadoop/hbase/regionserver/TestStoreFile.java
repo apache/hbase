@@ -80,13 +80,14 @@ public class TestStoreFile extends HBaseTestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    startingMetrics = SchemaMetrics.getMetricsSnapshot();
+    this.startingMetrics = SchemaMetrics.getMetricsSnapshot();
   }
 
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
-    SchemaMetrics.validateMetricChanges(startingMetrics);
+    LOG.info("Verifying metrics for " + getName() + ": " + this.startingMetrics);
+    SchemaMetrics.validateMetricChanges(this.startingMetrics);
   }
 
   /**
