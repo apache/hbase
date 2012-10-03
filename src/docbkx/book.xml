@@ -1884,11 +1884,11 @@ rs.close();
          <section>
          <title><varname>hbase.hlog.split.skip.errors</varname></title>
 
-        <para>When set to <constant>true</constant>, the default, any error
+        <para>When set to <constant>true</constant>, any error
         encountered splitting will be logged, the problematic WAL will be
         moved into the <filename>.corrupt</filename> directory under the hbase
         <varname>rootdir</varname>, and processing will continue. If set to
-        <constant>false</constant>, the exception will be propagated and the
+        <constant>false</constant>, the default, the exception will be propagated and the
         split logged as failed.<footnote>
             <para>See <link
             xlink:href="https://issues.apache.org/jira/browse/HBASE-2958">HBASE-2958
