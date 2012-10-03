@@ -137,17 +137,21 @@ public class ThriftUtilities {
       if(result_ == null || result_.isEmpty()) {
         continue;
       }
-      TRowResult result = new TRowResult();
-      result.row = ByteBuffer.wrap(result_.getRow());
-      // No reason to use TreeMap because this will become a HashMap on the client side anyway.
-      result.columns = new HashMap<ByteBuffer, TCell>();
-      for(KeyValue kv : result_.raw()) {
-        result.columns.put(ByteBuffer.wrap(kv.makeColumn()),
-            new TCell(ByteBuffer.wrap(kv.getValue()), kv.getTimestamp()));
-      }
-      results.add(result);
+      results.add(oneRowResult(result_));
     }
     return results;
+  }
+
+  static TRowResult oneRowResult(Result result_) {
+    TRowResult result = new TRowResult();
+    result.row = ByteBuffer.wrap(result_.getRow());
+    // No reason to use TreeMap because this will become a HashMap on the client side anyway.
+    result.columns = new HashMap<ByteBuffer, TCell>();
+    for(KeyValue kv : result_.raw()) {
+      result.columns.put(ByteBuffer.wrap(kv.makeColumn()),
+          new TCell(ByteBuffer.wrap(kv.getValue()), kv.getTimestamp()));
+    }
+    return result;
   }
 
   static public List<TRowResult> rowResultFromHBase(Result in) {
