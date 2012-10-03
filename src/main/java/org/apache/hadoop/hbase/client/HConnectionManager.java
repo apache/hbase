@@ -2083,7 +2083,10 @@ public class HConnectionManager {
       // exception reporting.  We keep HRegionLocation to save on parsing.
       // Later below when we use lastServers, we'll pull what we need from
       // lastServers.
+      // Sort the puts based on the row key in order to optimize the row lock acquiring
+      // in the server side.
       List<Mutation> workingList = orig_list;
+      Collections.sort(workingList);
 
       for (int tries = 0;
            workingList != null && !workingList.isEmpty() && tries < numRetries;
@@ -2555,7 +2558,11 @@ public class HConnectionManager {
       int tries;
       long serverRequestedWaitTime = 0;
       int serverRequestedRetries = 0;
-
+      
+      // Sort the puts based on the row key in order to optimize the row lock acquiring
+      // in the server side.
+      Collections.sort(list);
+      
       for ( tries = 0 ; tries < numRetries && !list.isEmpty(); ++tries) {
         // If server requested wait. We will wait for that time, and start
         // again. Do not count this time/tries against the client retries.

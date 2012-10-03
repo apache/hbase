@@ -2014,6 +2014,10 @@ public class HRegion implements HeapSize {
       // we acquire at least one.
       // ----------------------------------
       int numReadyToWrite = 0;
+      byte[] previousRow = null;
+      Integer previousLockID = null;
+      Integer currentLockID = null;
+      
       while (lastIndexExclusive < batchOp.operations.length) {
         Pair<Mutation, Integer> nextPair = batchOp.operations[lastIndexExclusive];
         Mutation op = nextPair.getFirst();
@@ -2024,22 +2028,30 @@ public class HRegion implements HeapSize {
           checkFamilies(op.getFamilyMap().keySet());
           checkTimestamps(op, now);
         }
-
-        // If we haven't got any rows in our batch, we should block to
-        // get the next one.
-        boolean shouldBlock = numReadyToWrite == 0;
-        Integer acquiredLockId = getLock(providedLockId, op.getRow(), shouldBlock);
-        if (acquiredLockId == null) {
-          // We failed to grab another lock
-          assert !shouldBlock : "Should never fail to get lock when blocking";
-          break; // stop acquiring more rows for this batch
-        }
-        if (providedLockId == null) {
-          acquiredLocks.add(acquiredLockId);
+        
+        if (previousRow == null || !Bytes.equals(previousRow, op.getRow()) ||
+            (providedLockId != null && !previousLockID.equals(providedLockId))) {
+          // If we haven't got any rows in our batch, we should block to
+          // get the next one.
+          boolean shouldBlock = numReadyToWrite == 0;
+          currentLockID = getLock(providedLockId, op.getRow(), shouldBlock);
+          if (currentLockID == null) {
+            // We failed to grab another lock
+            assert !shouldBlock : "Should never fail to get lock when blocking";
+            break; // stop acquiring more rows for this batch
+          }
+          
+          if (providedLockId == null) {
+            acquiredLocks.add(currentLockID);
+          }
+          
+          // reset the previous row and lockID with the current one
+          previousRow = op.getRow();
+          previousLockID = currentLockID;
         }
         lastIndexExclusive++;
         numReadyToWrite++;
-
+        
         // if first time around, designate expected signature for metric
         // else, if all have been consistent so far, check if it still holds
         // all else, designate failure signature and mark as unclear
@@ -2115,12 +2127,11 @@ public class HRegion implements HeapSize {
       success = true;
       return addedSize;
     } finally {
-      if (locked)
+      if (locked) {
         this.updatesLock.readLock().unlock();
-
-      for (Integer toRelease : acquiredLocks) {
-        releaseRowLock(toRelease);
       }
+      
+      releaseRowLocks(acquiredLocks);
 
       // do after lock
       long after = EnvironmentEdgeManager.currentTimeMillis();
@@ -2878,6 +2889,20 @@ public class HRegion implements HeapSize {
       lockedRows.remove(row);
       lockedRows.notifyAll();
     }
+  }
+  
+  /**
+   * Release the row locks!
+   * @param lockidList The list of the lock ID to release.
+   */
+  void releaseRowLocks(final List<Integer> lockidList) {
+    synchronized (lockedRows) {
+      for (Integer lockid : lockidList) {
+        byte[] row = lockIds.remove(lockid);
+        lockedRows.remove(row);
+      }
+    }
+    lockedRows.notifyAll();
   }
 
   /**
