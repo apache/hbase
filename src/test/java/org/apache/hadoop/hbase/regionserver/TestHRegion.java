@@ -456,7 +456,6 @@ public class TestHRegion extends HBaseTestCase {
     byte [] row1 = Bytes.toBytes("row1");
     byte [] fam1 = Bytes.toBytes("fam1");
     byte [] qf1  = Bytes.toBytes("qualifier");
-    byte [] emptyVal  = new byte[] {};
     byte [] val1  = Bytes.toBytes("value1");
     byte [] val2  = Bytes.toBytes("value2");
     Integer lockId = null;
@@ -469,17 +468,17 @@ public class TestHRegion extends HBaseTestCase {
     put.add(fam1, qf1, val1);
 
     //checkAndPut with correct value
-    boolean res = region.checkAndMutate(row1, fam1, qf1, emptyVal, put, lockId,
+    boolean res = region.checkAndMutate(row1, fam1, qf1, null, put, lockId,
         true);
     assertTrue(res);
 
     // not empty anymore
-    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, put, lockId, true);
+    res = region.checkAndMutate(row1, fam1, qf1, null, put, lockId, true);
     assertFalse(res);
 
     Delete delete = new Delete(row1);
     delete.deleteColumn(fam1, qf1);
-    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId,
+    res = region.checkAndMutate(row1, fam1, qf1, null, delete, lockId,
         true);
     assertFalse(res);
 
@@ -497,7 +496,7 @@ public class TestHRegion extends HBaseTestCase {
     assertTrue(res);
 
     delete = new Delete(row1);
-    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId,
+    res = region.checkAndMutate(row1, fam1, qf1, null, delete, lockId,
         true);
     assertTrue(res);
   }
@@ -618,7 +617,6 @@ public class TestHRegion extends HBaseTestCase {
     byte [] val1  = Bytes.toBytes("value1");
     byte [] val2  = Bytes.toBytes("value2");
     byte [] val3  = Bytes.toBytes("value3");
-    byte[] emptyVal = new byte[] { };
     Integer lockId = null;
 
     byte [][] families = {fam1, fam2};
@@ -662,7 +660,7 @@ public class TestHRegion extends HBaseTestCase {
     //Family delete
     delete = new Delete(row1);
     delete.deleteFamily(fam2);
-    res = region.checkAndMutate(row1, fam2, qf1, emptyVal, delete, lockId,
+    res = region.checkAndMutate(row1, fam2, qf1, null, delete, lockId,
         true);
     assertEquals(true, res);
 
