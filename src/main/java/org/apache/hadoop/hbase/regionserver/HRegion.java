@@ -2901,8 +2901,8 @@ public class HRegion implements HeapSize {
         byte[] row = lockIds.remove(lockid);
         lockedRows.remove(row);
       }
+      lockedRows.notifyAll();
     }
-    lockedRows.notifyAll();
   }
 
   /**

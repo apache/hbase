@@ -1060,6 +1060,11 @@ public class ThriftServerRunner implements Runnable {
         }
         byte[][] famAndQfCheck = KeyValue.parseColumn(getBytes(columnCheck));
         byte[] valueCheckBytes = getBytes(valueCheck);
+        if (valueCheck == null) {
+          // This means we are not expecting to see an existing value. An empty array would mean
+          // we are looking for an zero-length existing value.
+          valueCheckBytes = null;
+        }
 
         if (!delete.isEmpty() && !put.isEmpty()) {
           // can't do both, not atomic, not good idea!

@@ -407,10 +407,11 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
     // Apply timestamped Mutations to rowA
     long time1 = System.currentTimeMillis();
-    handler.checkAndMutateRowTs(tableAname, rowAname, columnAname, null,
-        getMutations(), time1, null);
+    assertTrue(handler.checkAndMutateRowTs(tableAname, rowAname, columnAname, null,
+        getMutations(), time1, null));
 
     List<TRowResult> res1 = handler.getRow(tableAname, rowAname, null);
+    assertEquals(1, res1.size());
     // Check that all went according to plan
     assertEquals(res1.get(0).columns.get(columnAname).value, valueAname);
     assertEquals(res1.get(0).columns.get(columnBname).value, valueBname);
