@@ -110,7 +110,7 @@ public class MasterFileSystem {
       conf.getBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, true);
     if (this.distributedLogSplitting) {
       this.splitLogManager = new SplitLogManager(master.getZooKeeper(),
-          master.getConfiguration(), master, master.getServerName());
+          master.getConfiguration(), master, services, master.getServerName());
       this.splitLogManager.finishInitialization(masterRecovery);
     } else {
       this.splitLogManager = null;

@@ -98,12 +98,13 @@ import org.apache.zookeeper.data.Stat;
 public class SplitLogManager extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(SplitLogManager.class);
 
-  public static final int DEFAULT_TIMEOUT = 25000; // 25 sec
+  public static final int DEFAULT_TIMEOUT = 120000;
   public static final int DEFAULT_ZK_RETRIES = 3;
   public static final int DEFAULT_MAX_RESUBMIT = 3;
   public static final int DEFAULT_UNASSIGNED_TIMEOUT = (3 * 60 * 1000); //3 min
 
   private final Stoppable stopper;
+  private final MasterServices master;
   private final ServerName serverName;
   private final TaskFinisher taskFinisher;
   private FileSystem fs;
@@ -116,11 +117,11 @@ public class SplitLogManager extends ZooKeeperListener {
   private long lastNodeCreateTime = Long.MAX_VALUE;
   public boolean ignoreZKDeleteForTesting = false;
 
-  private ConcurrentMap<String, Task> tasks = new ConcurrentHashMap<String, Task>();
+  private final ConcurrentMap<String, Task> tasks = new ConcurrentHashMap<String, Task>();
   private TimeoutMonitor timeoutMonitor;
 
   private volatile Set<ServerName> deadWorkers = null;
-  private Object deadWorkersLock = new Object();
+  private final Object deadWorkersLock = new Object();
 
   /**
    * Wrapper around {@link #SplitLogManager(ZooKeeperWatcher, Configuration,
@@ -135,8 +136,8 @@ public class SplitLogManager extends ZooKeeperListener {
    * @param serverName
    */
   public SplitLogManager(ZooKeeperWatcher zkw, final Configuration conf,
-      Stoppable stopper, ServerName serverName) {
-    this(zkw, conf, stopper, serverName, new TaskFinisher() {
+       Stoppable stopper, MasterServices master, ServerName serverName) {
+    this(zkw, conf, stopper,  master, serverName, new TaskFinisher() {
       @Override
       public Status finish(ServerName workerName, String logfile) {
         try {
@@ -162,18 +163,19 @@ public class SplitLogManager extends ZooKeeperListener {
    * @param tf task finisher 
    */
   public SplitLogManager(ZooKeeperWatcher zkw, Configuration conf,
-      Stoppable stopper, ServerName serverName, TaskFinisher tf) {
+        Stoppable stopper, MasterServices master, ServerName serverName, TaskFinisher tf) {
     super(zkw);
     this.taskFinisher = tf;
     this.conf = conf;
     this.stopper = stopper;
+    this.master = master;
     this.zkretries = conf.getLong("hbase.splitlog.zk.retries", DEFAULT_ZK_RETRIES);
     this.resubmit_threshold = conf.getLong("hbase.splitlog.max.resubmit", DEFAULT_MAX_RESUBMIT);
     this.timeout = conf.getInt("hbase.splitlog.manager.timeout", DEFAULT_TIMEOUT);
     this.unassignedTimeout =
       conf.getInt("hbase.splitlog.manager.unassigned.timeout", DEFAULT_UNASSIGNED_TIMEOUT);
-    LOG.debug("timeout = " + timeout);
-    LOG.debug("unassigned timeout = " + unassignedTimeout);
+    LOG.info("timeout = " + timeout);
+    LOG.info("unassigned timeout = " + unassignedTimeout);
 
     this.serverName = serverName;
     this.timeoutMonitor =
@@ -551,8 +553,18 @@ public class SplitLogManager extends ZooKeeperListener {
     }
     int version;
     if (directive != FORCE) {
-      if ((EnvironmentEdgeManager.currentTimeMillis() - task.last_update) <
-          timeout) {
+      // We're going to resubmit:
+      //  1) immediately if the worker server is now marked as dead
+      //  2) after a configurable timeout if the server is not marked as dead but has still not
+      //       finished the task. This allows to continue if the worker cannot actually handle it,
+      //       for any reason.
+      final long time = EnvironmentEdgeManager.currentTimeMillis() - task.last_update;
+      final boolean alive = master.getServerManager() != null ?
+          master.getServerManager().isServerOnline(task.cur_worker_name) : true;
+      if (alive && time < timeout) {
+        LOG.trace("Skipping the resubmit of " + task.toString() + "  because the server " +
+            task.cur_worker_name + " is not marked as dead, we waited for " + time +
+            " while the timeout is " + timeout);
         return false;
       }
       if (task.unforcedResubmits >= resubmit_threshold) {
