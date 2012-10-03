@@ -1492,7 +1492,7 @@ public abstract class HBaseServer {
    * done in chunks of this size. Most RPC requests and responses would be
    * be smaller.
    */
-  private static int NIO_BUFFER_LIMIT = 8*1024; //should not be more than 64KB.
+  private static int NIO_BUFFER_LIMIT = 64*1024; //should not be more than 64KB.
 
   /**
    * This is a wrapper around {@link WritableByteChannel#write(ByteBuffer)}.
