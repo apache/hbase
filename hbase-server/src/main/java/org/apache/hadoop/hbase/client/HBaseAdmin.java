@@ -1105,16 +1105,16 @@ public class HBaseAdmin implements Abortable, Closeable {
       if (serverName != null) {
         Pair<HRegionInfo, ServerName> pair = MetaReader.getRegion(ct, regionname);
         if (pair == null || pair.getFirst() == null) {
-          LOG.info("No region in .META. for " +
-            Bytes.toStringBinary(regionname) + "; pair=" + pair);
+          throw new UnknownRegionException(Bytes.toStringBinary(regionname));
         } else {
           closeRegion(new ServerName(serverName), pair.getFirst());
         }
       } else {
         Pair<HRegionInfo, ServerName> pair = MetaReader.getRegion(ct, regionname);
-        if (pair == null || pair.getSecond() == null) {
-          LOG.info("No server in .META. for " +
-            Bytes.toStringBinary(regionname) + "; pair=" + pair);
+        if (pair == null) {
+          throw new UnknownRegionException(Bytes.toStringBinary(regionname));
+        } else if (pair.getSecond() == null) {
+          throw new NoServerForRegionException(Bytes.toStringBinary(regionname));
         } else {
           closeRegion(pair.getSecond(), pair.getFirst());
         }
@@ -1223,8 +1223,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         = getRegion(tableNameOrRegionName, ct);
       if (regionServerPair != null) {
         if (regionServerPair.getSecond() == null) {
-          LOG.info("No server in .META. for " +
-            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + regionServerPair);
+          throw new NoServerForRegionException(Bytes.toStringBinary(tableNameOrRegionName));
         } else {
           flush(regionServerPair.getSecond(), regionServerPair.getFirst());
         }
@@ -1333,8 +1332,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         = getRegion(tableNameOrRegionName, ct);
       if (regionServerPair != null) {
         if (regionServerPair.getSecond() == null) {
-          LOG.info("No server in .META. for " +
-            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + regionServerPair);
+          throw new NoServerForRegionException(Bytes.toStringBinary(tableNameOrRegionName));
         } else {
           compact(regionServerPair.getSecond(), regionServerPair.getFirst(), major);
         }
@@ -1615,8 +1613,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         = getRegion(tableNameOrRegionName, ct);
       if (regionServerPair != null) {
         if (regionServerPair.getSecond() == null) {
-          LOG.info("No server in .META. for " +
-            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + regionServerPair);
+            throw new NoServerForRegionException(Bytes.toStringBinary(tableNameOrRegionName));
         } else {
           split(regionServerPair.getSecond(), regionServerPair.getFirst(), splitPoint);
         }
@@ -1976,8 +1973,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         = getRegion(tableNameOrRegionName, ct);
       if (regionServerPair != null) {
         if (regionServerPair.getSecond() == null) {
-          LOG.info("No server in .META. for " +
-            Bytes.toStringBinary(tableNameOrRegionName) + "; pair=" + regionServerPair);
+          throw new NoServerForRegionException(Bytes.toStringBinary(tableNameOrRegionName));
         } else {
           ServerName sn = regionServerPair.getSecond();
           AdminProtocol admin =

@@ -163,17 +163,6 @@ module Hbase
 
     #-------------------------------------------------------------------------------
 
-    define_test "close should work without region server name" do
-      if admin.exists?(@create_test_name)
-        admin.disable(@create_test_name)
-        admin.drop(@create_test_name)
-      end
-      admin.create(@create_test_name, 'foo')
-      admin.close_region(@create_test_name + ',,0', nil)
-    end
-
-    #-------------------------------------------------------------------------------
-
     define_test "describe should fail for non-existent tables" do
       assert_raise(ArgumentError) do
         admin.describe('.NOT.EXISTS.')
