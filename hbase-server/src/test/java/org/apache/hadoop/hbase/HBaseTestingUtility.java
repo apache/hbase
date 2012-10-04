@@ -571,6 +571,10 @@ public class HBaseTestingUtility {
     return startMiniZKCluster(dir,1);
   }
 
+  /**
+   * Start a mini ZK cluster. If the property "test.hbase.zookeeper.property.clientPort" is set
+   *  the port mentionned is used as the default port for ZooKeeper.
+   */
   private MiniZooKeeperCluster startMiniZKCluster(final File dir,
       int zooKeeperServerNum)
   throws Exception {
@@ -579,6 +583,11 @@ public class HBaseTestingUtility {
     }
     this.passedZkCluster = false;
     this.zkCluster = new MiniZooKeeperCluster(this.getConfiguration());
+    final int defPort = this.conf.getInt("test.hbase.zookeeper.property.clientPort", 0);
+    if (defPort > 0){
+      // If there is a port in the config file, we use it.
+      this.zkCluster.setDefaultClientPort(defPort);
+    }
     int clientPort =   this.zkCluster.startup(dir,zooKeeperServerNum);
     this.conf.set(HConstants.ZOOKEEPER_CLIENT_PORT,
       Integer.toString(clientPort));
