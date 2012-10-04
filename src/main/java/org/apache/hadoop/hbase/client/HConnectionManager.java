@@ -2655,6 +2655,18 @@ public class HConnectionManager {
     }
 
     private Throwable translateException(Throwable t) throws IOException {
+      if (t instanceof NoSuchMethodError) {
+        // We probably can't recover from this exception by retrying.
+        LOG.error(t);
+        throw (NoSuchMethodError) t;
+      }
+
+      if (t instanceof NullPointerException) {
+        // The same here. This is probably a bug.
+        LOG.error(t);
+        throw (NullPointerException) t;
+      }
+
       if (t instanceof UndeclaredThrowableException) {
         t = t.getCause();
       }

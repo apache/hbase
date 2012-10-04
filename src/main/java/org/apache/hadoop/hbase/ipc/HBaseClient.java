@@ -353,6 +353,12 @@ public class HBaseClient {
         close();
 
         throw e;
+      } catch (Throwable e) {
+        IOException ioe = new IOException("Unexpected connection error", e);
+        markClosed(ioe);
+        close();
+
+        throw ioe;
       }
     }
 
