@@ -176,9 +176,10 @@ public class TestStoreFile extends HBaseTestCase {
   }
 
   public void testHFileLink() throws IOException {
+    final String columnFamily = "f";
     HRegionInfo hri = new HRegionInfo(Bytes.toBytes("table-link"));
     Path storedir = new Path(new Path(FSUtils.getRootDir(conf),
-                             new Path(hri.getTableNameAsString(), hri.getEncodedName())), "cf");
+      new Path(hri.getTableNameAsString(), hri.getEncodedName())), columnFamily);
 
     // Make a store file and write data to it.
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf,
@@ -189,7 +190,7 @@ public class TestStoreFile extends HBaseTestCase {
     writeStoreFile(writer);
     writer.close();
 
-    Path dstPath = new Path(FSUtils.getRootDir(conf), new Path("test-region", "cf"));
+    Path dstPath = new Path(FSUtils.getRootDir(conf), new Path("test-region", columnFamily));
     HFileLink.create(conf, this.fs, dstPath, hri, storeFilePath.getName());
     Path linkFilePath = new Path(dstPath,
                   HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
