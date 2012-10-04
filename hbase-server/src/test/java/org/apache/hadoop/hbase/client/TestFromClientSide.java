@@ -4899,5 +4899,31 @@ public class TestFromClientSide {
     assertEquals(1, regionsList.size());
   }
 
+  @Test
+  public void testJira6912() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testJira6912");
+    HTable foo = TEST_UTIL.createTable(TABLE, new byte[][] {FAMILY}, 10);
+
+    List<Put> puts = new ArrayList<Put>();
+    for (int i=0;i !=100; i++){
+      Put put = new Put(Bytes.toBytes(i));
+      put.add(FAMILY, FAMILY, Bytes.toBytes(i));
+      puts.add(put);
+    }
+    foo.put(puts);
+    // If i comment this out it works
+    TEST_UTIL.flush();
+
+    Scan scan = new Scan();
+    scan.setStartRow(Bytes.toBytes(1));
+    scan.setStopRow(Bytes.toBytes(3));
+    scan.addColumn(FAMILY, FAMILY);
+    scan.setFilter(new RowFilter(CompareFilter.CompareOp.NOT_EQUAL, new BinaryComparator(Bytes.toBytes(1))));
+
+    ResultScanner scanner = foo.getScanner(scan);
+    Result[] bar = scanner.next(100);
+    assertEquals(1, bar.length);
+  }
+
 }
 
