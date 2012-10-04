@@ -36,25 +36,9 @@ import org.mockito.Mockito;
 public class TestHFileArchiveUtil {
 
   @Test
-  public void testGetConfiguredArchiveDir() {
-    assertEquals(HFileArchiveUtil.DEFAULT_HFILE_ARCHIVE_DIRECTORY,
-      HFileArchiveUtil.getConfiguredArchiveDirName(null));
-    Configuration conf = new Configuration();
-    assertEquals(HFileArchiveUtil.DEFAULT_HFILE_ARCHIVE_DIRECTORY,
-      HFileArchiveUtil.getConfiguredArchiveDirName(conf));
-    conf.set(HConstants.HFILE_ARCHIVE_DIRECTORY, "");
-    assertEquals("", HFileArchiveUtil.getConfiguredArchiveDirName(conf));
-    String archiveDir = "somearchive";
-    conf.set(HConstants.HFILE_ARCHIVE_DIRECTORY, archiveDir);
-    assertEquals(archiveDir, HFileArchiveUtil.getConfiguredArchiveDirName(conf));
-  }
-
-  @Test
   public void testGetTableArchivePath() {
-    assertNotNull(HFileArchiveUtil.getTableArchivePath(null, new Path("table")));
-    Configuration conf = new Configuration();
-    conf.set(HConstants.HFILE_ARCHIVE_DIRECTORY, "");
-    assertNotNull(HFileArchiveUtil.getTableArchivePath(conf, new Path("root", new Path("table"))));
+    assertNotNull(HFileArchiveUtil.getTableArchivePath(new Path("table")));
+    assertNotNull(HFileArchiveUtil.getTableArchivePath(new Path("root", new Path("table"))));
   }
 
   @Test
@@ -62,10 +46,6 @@ public class TestHFileArchiveUtil {
     Configuration conf = new Configuration();
     FSUtils.setRootDir(conf, new Path("root"));
     assertNotNull(HFileArchiveUtil.getArchivePath(conf));
-    String archiveDir = "somearchive";
-    conf.set(HConstants.HFILE_ARCHIVE_DIRECTORY, archiveDir);
-    assertEquals(new Path(FSUtils.getRootDir(conf), archiveDir),
-      HFileArchiveUtil.getArchivePath(conf));
   }
   
   @Test
@@ -84,8 +64,6 @@ public class TestHFileArchiveUtil {
     assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, region, tabledir, family));
     conf = new Configuration();
     assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, region, tabledir, family));
-    conf.set(HConstants.HFILE_ARCHIVE_DIRECTORY, "archiveDir");
-    assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, region, tabledir, family));
 
     // do a little mocking of a region to get the same results
     HRegion mockRegion = Mockito.mock(HRegion.class);
@@ -95,8 +73,5 @@ public class TestHFileArchiveUtil {
     assertNotNull(HFileArchiveUtil.getStoreArchivePath(null, mockRegion, family));
     conf = new Configuration();
     assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, mockRegion, family));
-    conf.set(HConstants.HFILE_ARCHIVE_DIRECTORY, "archiveDir");
-    assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, mockRegion, family));
-
   }
 }

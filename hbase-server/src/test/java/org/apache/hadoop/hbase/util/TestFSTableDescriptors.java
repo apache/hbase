@@ -252,5 +252,18 @@ public class TestFSTableDescriptors {
     }
   }
 
+  @Test
+  public void testReadingArchiveDirectoryFromFS() throws IOException {
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    try {
+      new FSTableDescriptors(fs, FSUtils.getRootDir(UTIL.getConfiguration()))
+          .get(HConstants.HFILE_ARCHIVE_DIRECTORY);
+      fail("Shouldn't be able to read a table descriptor for the archive directory.");
+    } catch (IOException e) {
+      LOG.debug("Correctly got error when reading a table descriptor from the archive directory: "
+          + e.getMessage());
+    }
+  }
+
 }
 

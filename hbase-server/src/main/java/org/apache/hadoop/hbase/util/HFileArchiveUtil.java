@@ -33,8 +33,6 @@ import org.apache.hadoop.hbase.regionserver.HStore;
  * Helper class for all utilities related to archival/retrieval of HFiles
  */
 public class HFileArchiveUtil {
-  public static final String DEFAULT_HFILE_ARCHIVE_DIRECTORY = ".archive";
-
   private HFileArchiveUtil() {
     // non-external instantiation - util class
   }
@@ -78,7 +76,7 @@ public class HFileArchiveUtil {
    */
   public static Path getStoreArchivePath(Configuration conf, HRegionInfo region, Path tabledir,
       byte[] family) {
-    Path tableArchiveDir = getTableArchivePath(conf, tabledir);
+    Path tableArchiveDir = getTableArchivePath(tabledir);
     return HStore.getStoreHomedir(tableArchiveDir,
       HRegionInfo.encodeRegionName(region.getRegionName()), family);
   }
@@ -93,7 +91,7 @@ public class HFileArchiveUtil {
    */
   public static Path getRegionArchiveDir(Configuration conf, Path tabledir, Path regiondir) {
     // get the archive directory for a table
-    Path archiveDir = getTableArchivePath(conf, tabledir);
+    Path archiveDir = getTableArchivePath(tabledir);
 
     // then add on the region path under the archive
     String encodedRegionName = regiondir.getName();
@@ -103,19 +101,15 @@ public class HFileArchiveUtil {
   /**
    * Get the path to the table archive directory based on the configured archive directory.
    * <p>
-   * Assumed that the table should already be archived.
-   * @param conf {@link Configuration} to read the archive directory property. Can be null
+   * Get the path to the table's archive directory.
+   * <p>
+   * Generally of the form: /hbase/.archive/[tablename]
    * @param tabledir directory of the table to be archived. Cannot be null.
    * @return {@link Path} to the archive directory for the table
    */
-  public static Path getTableArchivePath(Configuration conf, Path tabledir) {
-    String archiveName = getConfiguredArchiveDirName(conf);
+  public static Path getTableArchivePath(Path tabledir) {
     Path root = tabledir.getParent();
-    // now build the archive directory path
-    // first the top-level archive directory
-    // generally "/hbase/.archive/[table]
-    return archiveName.length() == 0 ? new Path(root, tabledir) : new Path(new Path(root,
-        archiveName), tabledir.getName());
+    return new Path(new Path(root,HConstants.HFILE_ARCHIVE_DIRECTORY), tabledir.getName());
   }
 
   /**
@@ -132,18 +126,6 @@ public class HFileArchiveUtil {
   }
 
   /**
-   * Get the archive directory as per the configuration
-   * @param conf {@link Configuration} to read the archive directory from (can be null, in which
-   *          case you get the default value). Can be null.
-   * @return the configured archived directory or the default specified by
-   *         {@value HFileArchiveUtil#DEFAULT_HFILE_ARCHIVE_DIRECTORY}
-   */
-  public static String getConfiguredArchiveDirName(Configuration conf) {
-    return conf == null ? HFileArchiveUtil.DEFAULT_HFILE_ARCHIVE_DIRECTORY : conf.get(
-      HConstants.HFILE_ARCHIVE_DIRECTORY, HFileArchiveUtil.DEFAULT_HFILE_ARCHIVE_DIRECTORY);
-  }
-
-  /**
    * Get the full path to the archive directory on the configured {@link FileSystem}
    * @param conf to look for archive directory name and root directory. Cannot be null. Notes for
    *          testing: requires a FileSystem root directory to be specified.
@@ -151,6 +133,6 @@ public class HFileArchiveUtil {
    * @throws IOException if an unexpected error occurs
    */
   public static Path getArchivePath(Configuration conf) throws IOException {
-    return new Path(FSUtils.getRootDir(conf), getConfiguredArchiveDirName(conf));
+    return new Path(FSUtils.getRootDir(conf), HConstants.HFILE_ARCHIVE_DIRECTORY);
   }
 }

@@ -21,34 +21,28 @@ package org.apache.hadoop.hbase.io;
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
-import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 
 /**
  * HFileLink describes a link to an hfile.
  *
- * An hfile can be served from a region or from the hfile archive directory as
- * specified by {@value HConstants.HFILE_ARCHIVE_DIRECTORY} conf property.
+ * An hfile can be served from a region or from the hfile archive directory (/hbase/.archive)
  * HFileLink allows to access the referenced hfile regardless of the location where it is.
  *
  * <p>Searches for hfiles in the following order and locations:
  * <ul>
  *  <li>/hbase/table/region/cf/hfile</li>
- *  <li>/hbase/archive/table/region/cf/hfile</li>
+ *  <li>/hbase/.archive/table/region/cf/hfile</li>
  * </ul>
  *
  * The link checks first in the original path if it is not present
@@ -145,7 +139,7 @@ public class HFileLink extends FileLink {
 
   /**
    * The returned path can be the "original" file path like: /hbase/table/region/cf/hfile
-   * or a path to the archived file like: /hbase/archive/table/region/cf/hfile
+   * or a path to the archived file like: /hbase/.archive/table/region/cf/hfile
    *
    * @param fs {@link FileSystem} on which to check the HFileLink
    * @param conf {@link Configuration} from which to extract specific archive locations
@@ -161,7 +155,7 @@ public class HFileLink extends FileLink {
 
   /**
    * The returned path can be the "original" file path like: /hbase/table/region/cf/hfile
-   * or a path to the archived file like: /hbase/archive/table/region/cf/hfile
+   * or a path to the archived file like: /hbase/.archive/table/region/cf/hfile
    *
    * @param fs {@link FileSystem} on which to check the HFileLink
    * @param rootdir root hbase directory

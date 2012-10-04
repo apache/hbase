@@ -619,12 +619,6 @@ public final class HConstants {
     */
   public static final float HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD = 0.2f;
 
-  public static final List<String> HBASE_NON_USER_TABLE_DIRS = new ArrayList<String>(
-      Arrays.asList(new String[]{ HREGION_LOGDIR_NAME, HREGION_OLDLOGDIR_NAME,
-          CORRUPT_DIR_NAME, Bytes.toString(META_TABLE_NAME),
-          Bytes.toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME,
-          HBCK_SIDELINEDIR_NAME }));
-
   public static final Pattern CP_HTD_ATTR_KEY_PATTERN = Pattern.compile
       ("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
   public static final Pattern CP_HTD_ATTR_VALUE_PATTERN =
@@ -699,9 +693,6 @@ public final class HConstants {
   /** delimiter used between portions of a region name */
   public static final int DELIMITER = ',';
 
-  /** Configuration key for the directory to backup HFiles for a table */
-  public static final String HFILE_ARCHIVE_DIRECTORY = "hbase.table.archive.directory";
-
   /**
    * QOS attributes: these attributes are used to demarcate RPC call processing
    * by different set of handlers. For example, HIGH_QOS tagged methods are
@@ -711,6 +702,14 @@ public final class HConstants {
   public static final int QOS_THRESHOLD = 10;
   public static final int HIGH_QOS = 100;
   public static final int REPLICATION_QOS = 5; // normal_QOS < replication_QOS < high_QOS
+
+  /** Directory under /hbase where archived hfiles are stored */
+  public static final String HFILE_ARCHIVE_DIRECTORY = ".archive";
+
+  public static final List<String> HBASE_NON_USER_TABLE_DIRS = new ArrayList<String>(
+      Arrays.asList(new String[] { HREGION_LOGDIR_NAME, HREGION_OLDLOGDIR_NAME, CORRUPT_DIR_NAME,
+          Bytes.toString(META_TABLE_NAME), Bytes.toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME,
+          HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY }));
   
   private HConstants() {
     // Can't be instantiated with this ctor.
