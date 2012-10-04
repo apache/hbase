@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -30,13 +29,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.
-    StoreMetricType;
+import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Assert;
@@ -136,7 +133,7 @@ public class TestRegionServerMetrics {
     // we have getsize & nextsize for each column family
     assertEquals(cfs.length * 2, metrics.length);
 
-    for (int i =0; i < cfs.length; ++i) {
+    for (int i = 0; i < cfs.length; ++i) {
       String prefix = SchemaMetrics.generateSchemaMetricsPrefix(table, cfs[i]);
       String getMetric = prefix + HRegion.METRIC_GETSIZE;
       String nextMetric = prefix + HRegion.METRIC_NEXTSIZE;
@@ -152,6 +149,7 @@ public class TestRegionServerMetrics {
     }
   }
 
+  @SuppressWarnings("unused")
   @Test
   public void testGetNextSize() throws IOException, InterruptedException {
     String rowName = "row1";
@@ -166,7 +164,6 @@ public class TestRegionServerMetrics {
 
     long ts = 1234;
     HTable hTable = TEST_UTIL.createTable(TABLE, new byte[][]{CF1, CF2});
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
 
     Put p = new Put(ROW);
     p.add(CF1, CF1, ts, CF1);
@@ -189,12 +186,14 @@ public class TestRegionServerMetrics {
     // only cf2.nextsize is set
     for (Result res : hTable.getScanner(CF2)) {
     }
+
     assertSizeMetric(tableName, cfs,
         new int[] {kvLength, kvLength, 0, kvLength});
 
     // only cf2.nextsize is set
     for (Result res : hTable.getScanner(CF1)) {
     }
+
     assertSizeMetric(tableName, cfs,
         new int[] {kvLength, kvLength, kvLength, kvLength});
 
@@ -215,12 +214,16 @@ public class TestRegionServerMetrics {
         MAX_VERSIONS, NUM_COLS_PER_ROW, NUM_FLUSHES, NUM_REGIONS, 1000);
     final HRegionServer rs =
         TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
-    rs.doMetrics();
+
+    // This may not be necessary since we verify the number of reads and writes from atomic
+    // variables and not from collected metrics.
+    rs.doMetrics(); 
+    
     for (HRegion r : rs.getOnlineRegions()) {
       Get g = new Get(new byte[]{});
       rs.get(r.getRegionName(), g);
     }
     Assert.assertEquals(rs.getOnlineRegions().size(), rs.getNumReads().get());
-    Assert.assertEquals(rs.getNumWrites().get(), 0);
+    Assert.assertEquals(0, rs.getNumWrites().get());
   }
 }

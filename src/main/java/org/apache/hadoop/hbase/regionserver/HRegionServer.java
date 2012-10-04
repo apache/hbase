@@ -645,8 +645,6 @@ public class HRegionServer implements HRegionInterface,
             }
             // XXX add a field in serverInfo to report to fsOK to master?
             this.serverInfo.setLoad(hsl);
-            numReads.set(0);
-            numWrites.set(0);
             addOutboundMsgs(outboundMessages);
             HMsg msgs[] = this.hbaseMaster.regionServerReport(
               serverInfo, outboundMessages.toArray(EMPTY_HMSG_ARRAY),
@@ -1300,7 +1298,10 @@ public class HRegionServer implements HRegionInterface,
 
   protected void metrics() {
     int numReads = this.numReads.get();
+    this.numReads.addAndGet(-numReads);
+
     int numWrites = this.numWrites.get();
+    this.numWrites.addAndGet(-numWrites);
 
     this.metrics.regions.set(this.onlineRegions.size());
     this.metrics.incrementRequests(numReads + numWrites);
