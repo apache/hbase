@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -204,6 +205,40 @@ public class TestHRegion extends HBaseTestCase {
     scanner3.next(results);
     System.out.println(results);
     assertEquals(0, results.size());
+  }
+  
+  @Test
+  public void testToShowNPEOnRegionScannerReseek() throws Exception{
+    String method = "testToShowNPEOnRegionScannerReseek";
+    byte[] tableName = Bytes.toBytes(method);
+    byte[] family = Bytes.toBytes("family");
+    Configuration conf = HBaseConfiguration.create();
+    this.region = initHRegion(tableName, method, conf, family);
+
+    Put put = new Put(Bytes.toBytes("r1"));
+    put.add(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
+    region.put(put);
+    put = new Put(Bytes.toBytes("r2"));
+    put.add(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
+    region.put(put);
+    region.flushcache();
+
+
+    Scan scan = new Scan();
+    scan.setMaxVersions(3);
+    // open the first scanner
+    RegionScanner scanner1 = region.getScanner(scan);
+
+    System.out.println("Smallest read point:" + region.getSmallestReadPoint());
+    
+    region.compactStores(true);
+
+    scanner1.reseek(Bytes.toBytes("r2"));
+    List<KeyValue> results = new ArrayList<KeyValue>();
+    scanner1.next(results);
+    KeyValue keyValue = results.get(0);
+    Assert.assertTrue(Bytes.compareTo(keyValue.getRow(), Bytes.toBytes("r2")) == 0);
+    scanner1.close();
   }
 
   public void testSkipRecoveredEditsReplay() throws Exception {

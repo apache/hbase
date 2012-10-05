@@ -561,8 +561,10 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
   @Override
   public synchronized boolean reseek(KeyValue kv) throws IOException {
-    //Heap cannot be null, because this is only called from next() which
-    //guarantees that heap will never be null before this call.
+    //Heap will not be null, if this is called from next() which.
+    //If called from RegionScanner.reseek(...) make sure the scanner
+    //stack is reset if needed.
+    checkReseek();
     if (explicitColumnQuery && lazySeekEnabledGlobally) {
       return heap.requestSeek(kv, true, useRowColBloom);
     } else {
