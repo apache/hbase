@@ -9,6 +9,7 @@ Release 0.92.3 - Unreleased
 
   IMPROVEMENTS
    HBASE-6914  Scans/Gets/Mutations don't give a good error if the table is disabled.
+   HBASE-5582  "No HServerInfo found for" should be a WARNING message (Kevin Odell via JD)
 
   NEW FEATURE
 
