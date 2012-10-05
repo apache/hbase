@@ -616,6 +616,23 @@ public class HConnectionManager {
       return this.conf;
     }
 
+    /**
+     * Log failure of getMaster attempt
+     * @return true if should retry
+     */
+    private boolean shouldRetryGetMaster(int tries, Exception e) {
+      if (tries == numRetries - 1) {
+        // This was our last chance - don't bother sleeping
+        LOG.info("getMaster attempt " + tries + " of " + numRetries +
+          " failed; no more retrying.", e);
+        return false;
+      }
+      LOG.info("getMaster attempt " + tries + " of " + numRetries +
+        " failed; retrying after sleep of " +
+        ConnectionUtils.getPauseTime(this.pause, tries), e);
+      return true;
+    }
+
     public HMasterInterface getMaster()
     throws MasterNotRunningException, ZooKeeperConnectionException {
       // TODO: REMOVE.  MOVE TO HBaseAdmin and redo as a Callable!!!
@@ -673,15 +690,9 @@ public class HConnectionManager {
             }
 
           } catch (IOException e) {
-            if (tries == numRetries - 1) {
-              // This was our last chance - don't bother sleeping
-              LOG.info("getMaster attempt " + tries + " of " + numRetries +
-                " failed; no more retrying.", e);
-              break;
-            }
-            LOG.info("getMaster attempt " + tries + " of " + numRetries +
-              " failed; retrying after sleep of " +
-              ConnectionUtils.getPauseTime(this.pause, tries), e);
+            if (!shouldRetryGetMaster(tries, e)) break;
+          } catch (UndeclaredThrowableException ute) {
+            if (!shouldRetryGetMaster(tries, ute)) break;
           }
 
           // Cannot connect to master or it is not running. Sleep & retry
