@@ -129,7 +129,7 @@ public class HBaseRPC {
   }
 
   // return the RpcEngine that handles a proxy object
-  private static synchronized RpcEngine getProxyEngine(Object proxy) {
+  static synchronized RpcEngine getProxyEngine(Object proxy) {
     return PROXY_ENGINES.get(proxy.getClass());
   }
 
