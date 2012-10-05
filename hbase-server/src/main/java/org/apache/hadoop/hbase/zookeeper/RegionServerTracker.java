@@ -95,7 +95,8 @@ public class RegionServerTracker extends ZooKeeperListener {
         serverName + "]");
       ServerName sn = ServerName.parseServerName(serverName);
       if (!serverManager.isServerOnline(sn)) {
-        LOG.info(serverName.toString() + " is not online");
+        LOG.warn(serverName.toString() + " is not online or isn't known to the master."+
+         "The latter could be caused by a DNS misconfiguration.");
         return;
       }
       remove(sn);
