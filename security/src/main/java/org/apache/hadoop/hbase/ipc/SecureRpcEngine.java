@@ -196,7 +196,7 @@ public class SecureRpcEngine implements RpcEngine {
   public VersionedProtocol getProxy(
       Class<? extends VersionedProtocol> protocol, long clientVersion,
       InetSocketAddress addr, User ticket,
-      Configuration conf, SocketFactory factory, int rpcTimeout, InvocationHandler handler)
+      Configuration conf, SocketFactory factory, int rpcTimeout)
   throws IOException {
     if (User.isSecurityEnabled()) {
       HBaseSaslRpcServer.init(conf);
@@ -204,7 +204,7 @@ public class SecureRpcEngine implements RpcEngine {
     VersionedProtocol proxy =
         (VersionedProtocol) Proxy.newProxyInstance(
             protocol.getClassLoader(), new Class[] { protocol },
-            handler);
+            new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
     long serverVersion = proxy.getProtocolVersion(protocol.getName(),
                                                   clientVersion);
     if (serverVersion != clientVersion) {
@@ -212,14 +212,6 @@ public class SecureRpcEngine implements RpcEngine {
                                 serverVersion);
     }
     return proxy;
-  }
-
-  public VersionedProtocol getProxy(Class<? extends VersionedProtocol> protocol,
-      long clientVersion, InetSocketAddress addr,
-      User ticket, Configuration conf,
-      SocketFactory factory, int rpcTimeout) throws IOException {
-    return getProxy(protocol, clientVersion, addr, ticket, conf, factory, rpcTimeout,
-        new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
   }
 
   /**

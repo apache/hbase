@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -37,13 +36,6 @@ interface RpcEngine {
                   long clientVersion, InetSocketAddress addr,
                   User ticket, Configuration conf,
                   SocketFactory factory, int rpcTimeout) throws IOException;
-
-  /** Construct a client-side proxy object, specifying an InvocationHandler for testing purposes */
-  VersionedProtocol getProxy(Class<? extends VersionedProtocol> protocol,
-                  long clientVersion, InetSocketAddress addr,
-                  User ticket, Configuration conf,
-                  SocketFactory factory, int rpcTimeout, InvocationHandler handler)
-  throws IOException;
 
   /** Stop this proxy. */
   void stopProxy(VersionedProtocol proxy);
