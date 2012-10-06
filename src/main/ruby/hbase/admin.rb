@@ -467,6 +467,7 @@ module Hbase
       family.setScope(JInteger.valueOf(arg[REPLICATION_SCOPE])) if arg.include?(HColumnDescriptor::REPLICATION_SCOPE)
       family.setInMemory(JBoolean.valueOf(arg[IN_MEMORY])) if arg.include?(HColumnDescriptor::IN_MEMORY)
       family.setTimeToLive(JInteger.valueOf(arg[HColumnDescriptor::TTL])) if arg.include?(HColumnDescriptor::TTL)
+      family.setFlashBackQueryLimit(JInteger.valueOf(arg[HColumnDescriptor::FLASHBACK_QUERY_LIMIT])) if arg.include?(HColumnDescriptor::FLASHBACK_QUERY_LIMIT)
       family.setCompressionType(Compression::Algorithm.valueOf(arg[HColumnDescriptor::COMPRESSION])) if arg.include?(HColumnDescriptor::COMPRESSION)
       family.setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::DATA_BLOCK_ENCODING])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::DATA_BLOCK_ENCODING)
       family.setEncodeOnDisk(JBoolean.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::ENCODE_ON_DISK])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::ENCODE_ON_DISK)

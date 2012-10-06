@@ -536,6 +536,29 @@ public class HBaseTestingUtility {
   }
 
   /**
+   * Create a table
+   *
+   * @param tableName
+   * @param columnDescriptors
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(byte[] tableName,
+      HColumnDescriptor[] columnDescriptors) throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    for (HColumnDescriptor columnDescriptor : columnDescriptors) {
+      desc.addFamily(columnDescriptor);
+    }
+    HBaseAdmin admin = new HBaseAdmin(getConfiguration());
+    try {
+      admin.createTable(desc);
+      return new HTable(getConfiguration(), tableName);
+    } finally {
+      admin.close();
+    }
+  }
+
+  /**
    * Create a table.
    * @param tableName
    * @param family

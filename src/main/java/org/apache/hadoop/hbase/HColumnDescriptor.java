@@ -57,7 +57,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   // Version 7 -- add new compression and hfile blocksize to HColumnDescriptor (HBASE-1217)
   // Version 8 -- reintroduction of bloom filters, changed from boolean to enum
   // Version 9 -- add data block encoding
-  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte) 9;
+  // Version 10 -- add flash back time
+  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte) 10;
 
   // These constants are used as FileInfo keys
   public static final String COMPRESSION = "COMPRESSION";
@@ -87,6 +88,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String BLOCKSIZE = "BLOCKSIZE";
   public static final String LENGTH = "LENGTH";
   public static final String TTL = "TTL";
+  // The amount of time in seconds in the past upto which we support FlashBack
+  // queries. Ex. 60 * 60 * 24 indicates we support FlashBack queries upto 1 day
+  // ago.
+  public static final String FLASHBACK_QUERY_LIMIT = "FLASHBACK_QUERY_LIMIT";
   public static final String BLOOMFILTER = "BLOOMFILTER";
   public static final String BLOOMFILTER_ERRORRATE = "BLOOMFILTER_ERRORRATE";
   public static final String FOREVER = "FOREVER";
@@ -153,6 +158,12 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final int DEFAULT_TTL = HConstants.FOREVER;
 
   /**
+   * Default flash back time. Flash back time is the number of seconds in the
+   * past upto which we support flash back queries.
+   */
+  public static final int DEFAULT_FLASHBACK_QUERY_LIMIT = 0;
+
+  /**
    * Default scope.
    */
   public static final int DEFAULT_REPLICATION_SCOPE = HConstants.REPLICATION_SCOPE_LOCAL;
@@ -169,6 +180,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       DEFAULT_VALUES.put(HConstants.VERSIONS, String.valueOf(DEFAULT_VERSIONS));
       DEFAULT_VALUES.put(COMPRESSION, DEFAULT_COMPRESSION);
       DEFAULT_VALUES.put(TTL, String.valueOf(DEFAULT_TTL));
+      DEFAULT_VALUES.put(FLASHBACK_QUERY_LIMIT,
+        String.valueOf(DEFAULT_FLASHBACK_QUERY_LIMIT));
       DEFAULT_VALUES.put(BLOCKSIZE, String.valueOf(DEFAULT_BLOCKSIZE));
       DEFAULT_VALUES.put(HConstants.IN_MEMORY, String.valueOf(DEFAULT_IN_MEMORY));
       DEFAULT_VALUES.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
@@ -627,6 +640,27 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
+   * @return the time in seconds for how far back in the past we support flash
+   *         back queries.
+   */
+  public int getFlashBackQueryLimit() {
+    String value = getValue(FLASHBACK_QUERY_LIMIT);
+    return (value != null) ? Integer.valueOf(value).intValue()
+        : DEFAULT_FLASHBACK_QUERY_LIMIT;
+  }
+
+  /**
+   * @param flashBackQueryLimit
+   *          the time in seconds for how far back in the past we support flash
+   *          back queries.
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setFlashBackQueryLimit(int flashBackQueryLimit) {
+    return setValue(FLASHBACK_QUERY_LIMIT,
+        Integer.toString(flashBackQueryLimit));
+  }
+
+  /**
    * @return True if MapFile blocks should be cached.
    */
   public boolean isBlockCacheEnabled() {
@@ -715,7 +749,6 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   public String toStringCustomizedValues() {
-    Map<String, String> defaults = getDefaultValues();
     StringBuilder s = new StringBuilder();
     s.append('{');
     s.append(HConstants.NAME);

@@ -34,6 +34,7 @@ BLOOMFILTER = HColumnDescriptor::BLOOMFILTER
 BLOOMFILTER_ERRORRATE = HColumnDescriptor::BLOOMFILTER_ERRORRATE
 REPLICATION_SCOPE = HColumnDescriptor::REPLICATION_SCOPE
 TTL = HColumnDescriptor::TTL
+FLASHBACK_QUERY_LIMIT = HColumnDescriptor::FLASHBACK_QUERY_LIMIT
 COMPRESSION = HColumnDescriptor::COMPRESSION
 BLOCKSIZE = HColumnDescriptor::BLOCKSIZE
 
@@ -51,6 +52,7 @@ def getHCD(arg, htd)
   family.setScope(JInteger.valueOf(arg[REPLICATION_SCOPE])) if arg.include?(REPLICATION_SCOPE)
   family.setInMemory(JBoolean.valueOf(arg[IN_MEMORY])) if arg.include?(IN_MEMORY)
   family.setTimeToLive(JInteger.valueOf(arg[TTL])) if arg.include?(TTL)
+  family.setFlashBackQueryLimit(JInteger.valueOf(arg[FLASHBACK_QUERY_LIMIT])) if arg.include?(FLASHBACK_QUERY_LIMIT)
   family.setCompressionType(Compression::Algorithm.valueOf(arg[COMPRESSION])) if arg.include?(COMPRESSION)
   family.setBlocksize(JInteger.valueOf(arg[BLOCKSIZE])) if arg.include?(BLOCKSIZE)
   family.setMaxVersions(JInteger.valueOf(arg[VERSIONS])) if arg.include?(VERSIONS)

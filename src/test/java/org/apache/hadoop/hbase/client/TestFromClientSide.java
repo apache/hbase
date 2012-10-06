@@ -129,6 +129,24 @@ public class TestFromClientSide {
     // Nothing to do.
   }
 
+  @Test
+  public void testFlashBackTime() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testFlashBackTime");
+    HColumnDescriptor[] expected = new HColumnDescriptor[10];
+    for (int i = 0; i < expected.length; i++) {
+      byte[] FAMILY = Bytes.toBytes("foo" + i);
+      HColumnDescriptor desc = new HColumnDescriptor(FAMILY);
+      int fbt = random.nextInt();
+      desc.setFlashBackQueryLimit(fbt);
+      expected[i] = desc;
+    }
+    TEST_UTIL.createTable(TABLE, expected);
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    HTableDescriptor tdesc = admin.getTableDescriptor(TABLE);
+    HColumnDescriptor[] actual = tdesc.getColumnFamilies();
+    assertTrue(Arrays.equals(expected, actual));
+  }
+
   /**
    * Verifies that getConfiguration returns the same Configuration object used
    * to create the HTable instance.
