@@ -37,7 +37,7 @@ public class TimeToLiveHFileCleaner extends BaseHFileCleanerDelegate {
 
   public static final Log LOG = LogFactory.getLog(TimeToLiveHFileCleaner.class.getName());
   public static final String TTL_CONF_KEY = "hbase.master.hfilecleaner.ttl";
-  // default ttl = 5 minute
+  // default ttl = 5 minutes
   private static final long DEFAULT_TTL = 60000 * 5;
   // Configured time a hfile can be kept after it was moved to the archive
   private long ttl;
@@ -65,7 +65,7 @@ public class TimeToLiveHFileCleaner extends BaseHFileCleanerDelegate {
       return false;
     }
     long life = currentTime - time;
-    LOG.debug("Life:" + life + ", tt:" + ttl + ", current:" + currentTime + ", from: " + time);
+    LOG.debug("Life:" + life + ", ttl:" + ttl + ", current:" + currentTime + ", from: " + time);
     if (life < 0) {
       LOG.warn("Found a log (" + filePath + ") newer than current time (" + currentTime + " < "
           + time + "), probably a clock skew");
