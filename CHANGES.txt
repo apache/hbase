@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.2 - 9/25/2012
+Release 0.94.2 - 10/05/2012
 Sub-task
 
     [HBASE-6257] - Avoid unnecessary flush & compact on Meta in admin.rb.
@@ -9,6 +9,7 @@ Sub-task
 
 Bug
 
+    [HBASE-4565] - Maven HBase build broken on cygwin with copynativelib.sh call.
     [HBASE-5292] - getsize per-CF metric incorrectly counts compaction related reads as well
     [HBASE-5549] - Master can fail if ZooKeeper session expires
     [HBASE-5997] - Fix concerns raised in HBASE-5922 related to HalfStoreFileReader
@@ -16,6 +17,7 @@ Bug
     [HBASE-6211] - Put latencies in jmx
     [HBASE-6263] - Use default mode for HBase Thrift gateway if not specified
     [HBASE-6268] - Can't enable a table on a 0.94 cluster from a 0.92 client
+    [HBASE-6299] - RS starting region open while failing ack to HMaster.sendRegionOpen() causes inconsistency in HMaster's region state and a series of successive problems
     [HBASE-6321] - ReplicationSource dies reading the peer's id
     [HBASE-6340] - HBase RPC should allow protocol extension with common interfaces.
     [HBASE-6359] - KeyValue may return incorrect values after readFields()
@@ -41,7 +43,6 @@ Bug
     [HBASE-6537] - Race between balancer and disable table can lead to inconsistent cluster
     [HBASE-6552] - TestAcidGuarantees system test should flush more aggressively
     [HBASE-6561] - Gets/Puts with many columns send the RegionServer into an "endless" loop
-    [HBASE-6562] - Fake KVs are sometimes passed to filters
     [HBASE-6565] - Coprocessor exec result Map is not thread safe
     [HBASE-6576] - HBaseAdmin.createTable should wait until the table is enabled
     [HBASE-6579] - Unnecessary KV order check in StoreScanner
@@ -64,8 +65,10 @@ Bug
     [HBASE-6662] - Region server incorrectly reports its own address as master's address
     [HBASE-6663] - NPE race in HConnection if zookeeper is reset
     [HBASE-6671] - Kerberos authenticated super user should be able to retrieve proxied delegation tokens
+    [HBASE-6679] - RegionServer aborts due to race between compaction and split
     [HBASE-6685] - Thrift DemoClient.pl got NullPointerException
     [HBASE-6686] - HFile Quarantine fails with missing dirs in hadoop 2.0
+    [HBASE-6688] - folder referred by thrift demo app instructions is outdated
     [HBASE-6710] - 0.92/0.94 compatibility issues due to HBASE-5206
     [HBASE-6711] - Avoid local results copy in StoreScanner
     [HBASE-6713] - Stopping META/ROOT RS may take 50mins when some region is splitting
@@ -81,11 +84,24 @@ Bug
     [HBASE-6844] - upgrade 0.23 version dependency in 0.94
     [HBASE-6847] - HBASE-6649 broke replication
     [HBASE-6851] - Race condition in TableAuthManager.updateGlobalCache()
+    [HBASE-6854] - Deletion of SPLITTING node on split rollback should clear the region from RIT
     [HBASE-6868] - Skip checksum is broke; are we double-checksumming by default?
+    [HBASE-6871] - HFileBlockIndex Write Error in HFile V2 due to incorrect split into intermediate index blocks
+    [HBASE-6888] - HBase scripts ignore any HBASE_OPTS set in the environment
+    [HBASE-6889] - Ignore source control files with apache-rat
+    [HBASE-6900] - RegionScanner.reseek() creates NPE when a flush or compaction happens before the reseek.
+    [HBASE-6901] - Store file compactSelection throws ArrayIndexOutOfBoundsException
+    [HBASE-6906] - TestHBaseFsck#testQuarantine* tests are flakey due to TableNotEnabledException
+    [HBASE-6912] - Filters are not properly applied in certain cases
+    [HBASE-6916] - HBA logs at info level errors that won't show in the shell
+    [HBASE-6920] - On timeout connecting to master, client can get stuck and never make progress
+    [HBASE-6927] - WrongFS using HRegionInfo.getTableDesc() and different fs for hbase.root and fs.defaultFS
+    [HBASE-6946] - JavaDoc missing from release tarballs
 
 Improvement
 
     [HBASE-3271] - Allow .META. table to be exported
+    [HBASE-5582] - "No HServerInfo found for" should be a WARNING message
     [HBASE-5631] - hbck should handle case where .tableinfo file is missing.
     [HBASE-5714] - Add write permissions check before any hbck run that modifies hdfs.
     [HBASE-5728] - Methods Missing in HTableInterface
@@ -100,6 +116,7 @@ Improvement
     [HBASE-6643] - Accept encoded region name in compacting/spliting region from shell
     [HBASE-6644] - HBaseAdmin.createTable should wait more till table is enabled.
     [HBASE-6860] - [replication] HBASE-6550 is too aggressive, DDOSes .META.
+    [HBASE-6914] - Scans/Gets/Mutations don't give a good error if the table is disabled.
 
 New Feature
 
