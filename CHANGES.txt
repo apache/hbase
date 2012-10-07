@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.2 - 10/05/2012
+Release 0.94.2 - 10/08/2012
 Sub-task
 
     [HBASE-6257] - Avoid unnecessary flush & compact on Meta in admin.rb.
@@ -84,6 +84,7 @@ Bug
     [HBASE-6844] - upgrade 0.23 version dependency in 0.94
     [HBASE-6847] - HBASE-6649 broke replication
     [HBASE-6851] - Race condition in TableAuthManager.updateGlobalCache()
+    [HBASE-6853] - IllegalArgument Exception is thrown when an empty region is spliitted.
     [HBASE-6854] - Deletion of SPLITTING node on split rollback should clear the region from RIT
     [HBASE-6868] - Skip checksum is broke; are we double-checksumming by default?
     [HBASE-6871] - HFileBlockIndex Write Error in HFile V2 due to incorrect split into intermediate index blocks

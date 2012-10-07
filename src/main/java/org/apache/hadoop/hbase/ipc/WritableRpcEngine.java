@@ -121,7 +121,7 @@ class WritableRpcEngine implements RpcEngine {
 
   protected final static ClientCache CLIENTS = new ClientCache();
 
-  static class Invoker implements InvocationHandler {
+  private static class Invoker implements InvocationHandler {
     private Class<? extends VersionedProtocol> protocol;
     private InetSocketAddress address;
     private User ticket;
@@ -172,12 +172,13 @@ class WritableRpcEngine implements RpcEngine {
   public VersionedProtocol getProxy(
       Class<? extends VersionedProtocol> protocol, long clientVersion,
       InetSocketAddress addr, User ticket,
-      Configuration conf, SocketFactory factory, int rpcTimeout, InvocationHandler handler)
+      Configuration conf, SocketFactory factory, int rpcTimeout)
     throws IOException {
 
       VersionedProtocol proxy =
           (VersionedProtocol) Proxy.newProxyInstance(
-              protocol.getClassLoader(), new Class[] { protocol }, handler);
+              protocol.getClassLoader(), new Class[] { protocol },
+              new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
     if (proxy instanceof VersionedProtocol) {
       long serverVersion = ((VersionedProtocol)proxy)
         .getProtocolVersion(protocol.getName(), clientVersion);
@@ -187,14 +188,6 @@ class WritableRpcEngine implements RpcEngine {
       }
     }
     return proxy;
-  }
-
-  public VersionedProtocol getProxy(Class<? extends VersionedProtocol> protocol,
-      long clientVersion, InetSocketAddress addr,
-      User ticket, Configuration conf,
-      SocketFactory factory, int rpcTimeout) throws IOException {
-    return getProxy(protocol, clientVersion, addr, ticket, conf, factory, rpcTimeout,
-      new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
   }
 
   /**
