@@ -167,7 +167,7 @@ public abstract class AbstractHBaseTool implements Tool {
   }
 
   /** Call this from the concrete tool class's main function. */
-  protected void doStaticMain(String args[]) {
+  protected int doStaticMain(String args[]) {
     int ret;
     try {
       ret = ToolRunner.run(HBaseConfiguration.create(), this, args);
@@ -175,7 +175,7 @@ public abstract class AbstractHBaseTool implements Tool {
       LOG.error("Error running command-line tool", ex);
       ret = EXIT_FAILURE;
     }
-    System.exit(ret);
+    return ret;
   }
 
 }

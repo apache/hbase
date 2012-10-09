@@ -43,15 +43,15 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   /** Table name for the test */
   private byte[] tableName;
+  
+  /** cf name for the test */
+  private byte[] columnFamily;
 
   /** Table name to use of not overridden on the command line */
   private static final String DEFAULT_TABLE_NAME = "cluster_test";
 
-  /** Column family used by the test */
-  static byte[] COLUMN_FAMILY = Bytes.toBytes("test_cf");
-
-  /** Column families used by the test */
-  static final byte[][] COLUMN_FAMILIES = { COLUMN_FAMILY };
+  /** Default column family used by the test */
+  private static String DEFAULT_CF_NAME = "test_cf";
 
   /** The number of reader/writer threads if not specified */
   private static final int DEFAULT_NUM_THREADS = 20;
@@ -96,11 +96,15 @@ public class LoadTestTool extends AbstractHBaseTool {
   private static final String OPT_READ = "read";
   private static final String OPT_START_KEY = "start_key";
   private static final String OPT_TABLE_NAME = "tn";
+  private static final String OPT_CF_NAME = "cf";
   private static final String OPT_ZK_QUORUM = "zk";
   private static final String OPT_PROFILING = "profiling";
   private static final String OPT_RPC_COMPRESSION = "rpc_compression";
 
   private static final long DEFAULT_START_KEY = 0;
+
+  /** Column families used by the test */
+  private byte[][] COLUMN_FAMILIES;
 
   /** This will be removed as we factor out the dependency on command line */
   private CommandLine cmd;
@@ -134,7 +138,12 @@ public class LoadTestTool extends AbstractHBaseTool {
   private int maxReadErrors = MultiThreadedReader.DEFAULT_MAX_ERRORS;
   private int verifyPercent;
   private int profilePercent = 0;
-
+  
+  public LoadTestTool() {
+    if (columnFamily == null) columnFamily = Bytes.toBytes(DEFAULT_CF_NAME);
+    COLUMN_FAMILIES = new byte[][] { columnFamily };
+  }
+  
   private boolean isBatched;
 
   private int batchSize;
@@ -202,6 +211,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptWithArg(OPT_ZK_QUORUM, "ZK quorum as comma-separated host names " +
         "without port numbers");
     addOptWithArg(OPT_TABLE_NAME, "The name of the table to read or write");
+    addOptWithArg(OPT_CF_NAME, "The column family to read or write");
     addOptWithArg(OPT_WRITE, OPT_USAGE_LOAD);
     addOptWithArg(OPT_BATCHED_WRITES, "Use batched writes (with WAL)");
     addOptWithArg(OPT_BATCHED_WRITES_CNT, "Size of a batch (if using batched writes)");
@@ -236,6 +246,8 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     tableName = Bytes.toBytes(cmd.getOptionValue(OPT_TABLE_NAME,
         DEFAULT_TABLE_NAME));
+    columnFamily = Bytes.toBytes(cmd.getOptionValue(OPT_CF_NAME,
+        DEFAULT_CF_NAME));
     startKey = parseLong(cmd.getOptionValue(OPT_START_KEY,
         String.valueOf(DEFAULT_START_KEY)), 0, Long.MAX_VALUE);
     long numKeys = parseLong(cmd.getOptionValue(OPT_NUM_KEYS), 1,
@@ -353,11 +365,11 @@ public class LoadTestTool extends AbstractHBaseTool {
     }
 
     HBaseTestingUtility.createPreSplitLoadTestTable(conf, tableName,
-        COLUMN_FAMILY, compressAlgo, dataBlockEncodingAlgo);
+        columnFamily, compressAlgo, dataBlockEncodingAlgo);
     applyColumnFamilyOptions(tableName, COLUMN_FAMILIES);
 
     if (isWrite) {
-      writerThreads = new MultiThreadedWriter(conf, tableName, COLUMN_FAMILY, 
+      writerThreads = new MultiThreadedWriter(conf, tableName, columnFamily, 
           profilePercent, this.txCompression, this.rxCompression);
       writerThreads.setMultiPut(isMultiPut);
       writerThreads.setBatching(isBatched);
@@ -367,7 +379,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     }
 
     if (isRead) {
-      readerThreads = new MultiThreadedReader(conf, tableName, COLUMN_FAMILY,
+      readerThreads = new MultiThreadedReader(conf, tableName, columnFamily,
           verifyPercent, profilePercent, this.txCompression, this.rxCompression);
       readerThreads.setMaxErrors(maxReadErrors);
       readerThreads.setKeyWindow(keyWindow);
@@ -397,9 +409,14 @@ public class LoadTestTool extends AbstractHBaseTool {
       readerThreads.waitForFinish();
     }
   }
+  
+  public static int doMain(String[] args) {
+    return new LoadTestTool().doStaticMain(args);
+  }
 
   public static void main(String[] args) {
-    new LoadTestTool().doStaticMain(args);
+    int ret = doMain(args);
+    System.exit(ret);
   }
 
 }

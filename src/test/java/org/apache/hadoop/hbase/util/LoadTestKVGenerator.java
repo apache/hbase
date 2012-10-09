@@ -65,10 +65,11 @@ public class LoadTestKVGenerator {
    */
   public static String md5PrefixedKey(long key) {
     String stringKey = Long.toString(key);
-    String md5hash = MD5Hash.getMD5AsHex(Bytes.toBytes(stringKey));
-
+    // use a 4 byte md5 hash prefix (gives 65K regions)
+    String md5hash = 
+      MD5Hash.getMD5AsHex(Bytes.toBytes(stringKey)).substring(0, 4);
     // flip the key to randomize
-    return md5hash + "-" + stringKey;
+    return md5hash + ":" + stringKey;
   }
 
   /**
@@ -80,8 +81,11 @@ public class LoadTestKVGenerator {
    */
   public byte[] generateRandomSizeValue(long key, String qual) {
     String rowKey = md5PrefixedKey(key);
-    int dataSize = minValueSize + randomForValueSize.nextInt(
+    int dataSize = minValueSize;
+    if (minValueSize != maxValueSize) {
+      dataSize += randomForValueSize.nextInt(
         Math.abs(maxValueSize - minValueSize));
+    }
     return getValueForRowColumn(rowKey, qual, dataSize);
   }
 
