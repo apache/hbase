@@ -27,6 +27,9 @@
  */
 -->
     <title>Upgrading</title>
+    <para>You cannot skip major verisons upgrading.  If you are upgrading from
+    version 0.20.x to 0.92.x, you must first go from 0.20.x to 0.90.x and then go
+    from 0.90.x to 0.92.x.</para>
     <para>
         Review <xref linkend="configuration" />, in particular the section on Hadoop version.
     </para>
