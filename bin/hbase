@@ -153,7 +153,7 @@ add_maven_deps_to_classpath() {
   f="${HBASE_HOME}/target/cached_classpath.txt"
   if [ ! -f "${f}" ]
   then
-    ${MVN} -f "${HBASE_HOME}/pom.xml" dependency:build-classpath -Dmdep.outputFile="${f}" &> /dev/null
+    ${MVN} -f "${HBASE_HOME}/pom.xml" package dependency:build-classpath -DskipTests -Dmdep.outputFile="${f}" &> /dev/null
   fi
   CLASSPATH=${CLASSPATH}:`cat "${f}"`
 }
@@ -179,9 +179,9 @@ add_maven_test_classes_to_classpath(){
 
 #Add the development env class path stuff
 if $in_dev_env; then
-  add_maven_deps_to_classpath
   add_maven_main_classes_to_classpath
   add_maven_test_classes_to_classpath
+  add_maven_deps_to_classpath
 fi
 
 #add the hbase jars for each module
