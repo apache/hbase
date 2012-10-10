@@ -286,8 +286,15 @@ public class ReplicationSource extends Thread
         }
         continue;
       }
+      Path oldPath = getCurrentPath(); //note that in the current scenario,
+                                       //oldPath will be null when a log roll
+                                       //happens.
       // Get a new path
-      if (!getNextPath()) {
+      boolean hasCurrentPath = getNextPath();
+      if (getCurrentPath() != null && oldPath == null) {
+        sleepMultiplier = 1; //reset the sleepMultiplier on a path change
+      }
+      if (!hasCurrentPath) {
         if (sleepForRetries("No log to process", sleepMultiplier)) {
           sleepMultiplier++;
         }
