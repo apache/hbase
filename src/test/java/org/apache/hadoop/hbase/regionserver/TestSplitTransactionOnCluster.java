@@ -643,7 +643,7 @@ public class TestSplitTransactionOnCluster {
     }
   }
   
-  @Test
+  @Test(timeout = 15000)
   public void testShouldThrowIOExceptionIfStoreFileSizeIsEmptyAndSHouldSuccessfullyExecuteRollback()
       throws Exception {
     final byte[] tableName = Bytes
@@ -654,6 +654,9 @@ public class TestSplitTransactionOnCluster {
       HTableDescriptor htd = new HTableDescriptor(tableName);
       htd.addFamily(new HColumnDescriptor("cf"));
       admin.createTable(htd);
+      while (!(cluster.getRegions(tableName).size() == 1)) {
+        Thread.sleep(100);
+      }
       List<HRegion> regions = cluster.getRegions(tableName);
       HRegionInfo hri = getAndCheckSingleTableRegion(regions);
       int tableRegionIndex = ensureTableRegionNotOnSameServerAsMeta(admin, hri);
