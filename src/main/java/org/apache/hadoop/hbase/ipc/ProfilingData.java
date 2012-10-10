@@ -68,6 +68,11 @@ public class ProfilingData implements Writable {
   public static final String HLOG_SYNC_TIME_MS = "hlog_sync_time.ms";
   
   /**
+   *  time spend rolling HLog
+   */
+  public static final String HLOG_ROLL_TIME_MS = "hlog_roll_time.ms";
+
+  /**
    *  name of the rpc method called
    */
   public static final String RPC_METHOD_NAME = "rpc_method_name";

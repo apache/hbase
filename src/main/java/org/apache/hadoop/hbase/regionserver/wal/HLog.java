@@ -255,6 +255,9 @@ public class HLog implements Syncable {
   private final List<LogEntryVisitor> logEntryVisitors =
       new CopyOnWriteArrayList<LogEntryVisitor>();
 
+  private volatile long lastLogRollStartTimeMillis = 0;
+  private volatile long lastLogRollDurationMillis = 0;
+
   /**
    * Pattern used to validate a HLog file name
    */
@@ -558,6 +561,8 @@ public class HLog implements Syncable {
         this.numEntries.set(0);
 
         t1 = EnvironmentEdgeManager.currentTimeMillis();
+        lastLogRollStartTimeMillis = t0;
+        lastLogRollDurationMillis = (t1 - t0);
       }
 
       Path oldFile = null;
@@ -1022,9 +1027,18 @@ public class HLog implements Syncable {
     // sync txn to file system
     start = System.currentTimeMillis();
     this.sync(info.isMetaRegion(), txid);
-    time = System.currentTimeMillis() - start;
+    long end= System.currentTimeMillis();
+    time = end - start;
     gsyncTime.inc(time);
     if (pData != null) {
+      if (this.lastLogRollStartTimeMillis > start
+          && end > this.lastLogRollStartTimeMillis) {
+        // We also had a log roll in between
+        pData.addLong(ProfilingData.HLOG_ROLL_TIME_MS, this.lastLogRollDurationMillis);
+        // Do not account for this as the sync time.
+        time = time - this.lastLogRollDurationMillis;
+      }
+      // update sync time
       pData.addLong(ProfilingData.HLOG_SYNC_TIME_MS, time);
     }
   }
