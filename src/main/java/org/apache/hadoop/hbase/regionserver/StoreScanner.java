@@ -31,11 +31,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+
+
+import static org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 
 /**
  * Scanner scans both the memstore and the HStore. Coalesce KeyValue stream
@@ -59,6 +61,7 @@ class StoreScanner extends NonLazyKeyValueScanner
   private final boolean explicitColumnQuery;
   private final boolean useRowColBloom;
   private final Scan scan;
+  private final KeyValueAggregator keyValueAggregator;
   private final NavigableSet<byte[]> columns;
   private final long oldestUnexpiredTS;
 
@@ -82,6 +85,7 @@ class StoreScanner extends NonLazyKeyValueScanner
     int numCol = columns == null ? 0 : columns.size();
     explicitColumnQuery = numCol > 0;
     this.scan = scan;
+    this.keyValueAggregator = DefaultKeyValueAggregator.getInstance();
     this.columns = columns;
     oldestUnexpiredTS = EnvironmentEdgeManager.currentTimeMillis() - ttl;
 
@@ -147,7 +151,7 @@ class StoreScanner extends NonLazyKeyValueScanner
    * @param scanners ancillary scanners
    * @param smallestReadPoint the readPoint that we should use for tracking
    *          versions
-   * @param retainDeletesInOutput should we retain deletes after compaction?
+   * @param retainDeletesInOutputUntil should we retain deletes after compaction?
    */
   StoreScanner(Store store, Scan scan,
       List<? extends KeyValueScanner> scanners, long smallestReadPoint,
@@ -331,7 +335,7 @@ class StoreScanner extends NonLazyKeyValueScanner
     KeyValue kv;
     KeyValue prevKV = null;
     int numNewKeyValues = 0;
-
+    keyValueAggregator.reset();
     Call call = HRegionServer.callContext.get();
     long quotaRemaining = (call == null) ? Long.MAX_VALUE
         : HRegionServer.getResponseSizeLimit() - call.getPartialResponseSize();
@@ -354,6 +358,18 @@ class StoreScanner extends NonLazyKeyValueScanner
         prevKV = kv;
         ScanQueryMatcher.MatchCode qcode = matcher.match(copyKv);
 
+        if ((qcode == MatchCode.INCLUDE) ||
+          (qcode == MatchCode.INCLUDE_AND_SEEK_NEXT_COL) ||
+          (qcode == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW)) {
+          copyKv = keyValueAggregator.process(copyKv);
+          // A null return is an indication to skip the KV.
+          if (copyKv == null) {
+            qcode = MatchCode.SKIP;
+          } else {
+            qcode = keyValueAggregator.nextAction(qcode);
+          }
+        }
+
         switch(qcode) {
           case INCLUDE:
           case INCLUDE_AND_SEEK_NEXT_ROW:
@@ -363,6 +379,7 @@ class StoreScanner extends NonLazyKeyValueScanner
                 this.countPerRow > (storeLimit + storeOffset)) {
               // do what SEEK_NEXT_ROW does.
               if (!matcher.moreRowsMayExistAfter(kv)) {
+                numNewKeyValues += processLastKeyValue(outResult);
                 return false;
               }
               reseek(matcher.getKeyForNextRow(kv));
@@ -379,13 +396,13 @@ class StoreScanner extends NonLazyKeyValueScanner
                     + HRegionServer.getResponseSizeLimit() + " bytes.");
                 throw new DoNotRetryIOException("Result too large");
               }
-
               outResult.add(copyKv);
               numNewKeyValues++;
             }
 
             if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
               if (!matcher.moreRowsMayExistAfter(kv)) {
+                numNewKeyValues += processLastKeyValue(outResult);
                 return false;
               }
               reseek(matcher.getKeyForNextRow(kv));
@@ -401,17 +418,19 @@ class StoreScanner extends NonLazyKeyValueScanner
             continue;
 
           case DONE:
+            numNewKeyValues += processLastKeyValue(outResult);
             return true;
 
           case DONE_SCAN:
             close();
-
+            numNewKeyValues += processLastKeyValue(outResult);
             return false;
 
           case SEEK_NEXT_ROW:
             // This is just a relatively simple end of scan fix, to short-cut end
             // us if there is an endKey in the scan.
             if (!matcher.moreRowsMayExistAfter(kv)) {
+              numNewKeyValues += processLastKeyValue(outResult);
               return false;
             }
 
@@ -464,12 +483,12 @@ class StoreScanner extends NonLazyKeyValueScanner
 
       throw e;
 
-    } finally { 
-      // update the counter 
+    } finally {
+      // update the counter
       if (addedResultsSize > 0 && metric != null) {
-        HRegion.incrNumericMetric(this.metricNamePrefix + metric, 
+        HRegion.incrNumericMetric(this.metricNamePrefix + metric,
             addedResultsSize);
-      } 
+      }
       // update the partial results size
       if (call != null) {
         call.setPartialResponseSize(call.getPartialResponseSize()
@@ -477,6 +496,7 @@ class StoreScanner extends NonLazyKeyValueScanner
       }
     }
 
+    numNewKeyValues += processLastKeyValue(outResult);
     if (numNewKeyValues > 0) {
       return true;
     }
@@ -484,6 +504,15 @@ class StoreScanner extends NonLazyKeyValueScanner
     // No more keys
     close();
     return false;
+  }
+
+  private byte processLastKeyValue(List<KeyValue> outResult){
+    KeyValue lastKV = keyValueAggregator.finalizeKeyValues();
+    if (lastKV != null) {
+      outResult.add(lastKV);
+      return 1;
+    }
+    return 0;
   }
 
   @Override
