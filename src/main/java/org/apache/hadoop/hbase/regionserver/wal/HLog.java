@@ -516,7 +516,7 @@ public class HLog implements Syncable {
       int newFileReplication;
       OutputStream newOutStream = null;
       try {
-        newWriter = createWriter(fs, newPath, HBaseConfiguration.create(conf));
+        newWriter = createWriter(fs, newPath, conf);
         newFileReplication = fs.getFileStatus(newPath).getReplication();
         if (newWriter instanceof SequenceFileLogWriter) {
           newOutStream = ((SequenceFileLogWriter) newWriter)

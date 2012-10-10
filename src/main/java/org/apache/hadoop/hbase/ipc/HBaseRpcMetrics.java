@@ -81,10 +81,14 @@ public class HBaseRpcMetrics implements Updater {
     return new MetricsTimeVaryingRate(key, this.registry);
   }
 
-  public synchronized void inc(String name, int amt) {
+  public void inc(String name, int amt) {
     MetricsTimeVaryingRate m = get(name);
     if (m == null) {
-      m = create(name);
+      synchronized (this) {
+        if ((m = get(name)) == null) {
+          m = create(name);
+        }
+      }
     }
     m.inc(amt);
   }

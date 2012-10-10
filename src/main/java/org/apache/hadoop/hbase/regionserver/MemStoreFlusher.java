@@ -287,8 +287,8 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
    * to the lower limit. This method blocks callers until we're down to a safe
    * amount of memstore consumption.
    */
-  public synchronized void reclaimMemStoreMemory() {
-    if ( this.server.getGlobalMemstoreSize().get() >= globalMemStoreLimit) {
+  public void reclaimMemStoreMemory() {
+    if (this.server.getGlobalMemstoreSize().get() >= globalMemStoreLimit) {
       flushSomeRegions();
     }
   }
@@ -297,6 +297,10 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
    * Emergency!  Need to flush memory.
    */
   private synchronized void flushSomeRegions() {
+    if (this.server.getGlobalMemstoreSize().get() < globalMemStoreLimit) {
+      return; // double check the global memstore size inside of the synchronized block.
+    }
+    
     // keep flushing until we hit the low water mark
     long globalMemStoreSize = -1;
     ArrayList<HRegion> regionsToCompact = new ArrayList<HRegion>();
