@@ -63,7 +63,7 @@ public class TestLoadTestKVGenerator {
     for (int i = 0; i < 1000; ++i) {
       String k = LoadTestKVGenerator.md5PrefixedKey(i);
       assertFalse(keys.contains(k));
-      assertTrue(k.endsWith("-" + i));
+      assertTrue(k.endsWith(":" + i));
       keys.add(k);
     }
   }
