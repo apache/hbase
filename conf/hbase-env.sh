@@ -36,10 +36,11 @@
 # see http://wiki.apache.org/hadoop/PerformanceTuning
 export HBASE_OPTS="$HBASE_OPTS -XX:+UseConcMarkSweepGC"
 
-export HBASE_USE_GC_LOGFILE=true
+# Uncomment below to enable java garbage collection logging in the .out file.
+# export HBASE_OPTS="$HBASE_OPTS -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps $HBASE_GC_OPTS" 
 
-# Comment below to disable java garbage collection logging
-export HBASE_OPTS="$HBASE_OPTS -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps $HBASE_GC_OPTS" 
+# Uncomment below (along with above GC logging) to put GC information in its own logfile (will set HBASE_GC_OPTS)
+# export HBASE_USE_GC_LOGFILE=true
 
 
 # Uncomment below if you intend to use the EXPERIMENTAL off heap cache.
