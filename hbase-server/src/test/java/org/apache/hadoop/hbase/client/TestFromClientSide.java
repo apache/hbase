@@ -4295,6 +4295,59 @@ public class TestFromClientSide {
     }
   }
 
+  @Test
+  public void testIncrementInvalidArguments() throws Exception {
+    LOG.info("Starting testIncrementInvalidArguments");
+    final byte[] TABLENAME = Bytes.toBytes("testIncrementInvalidArguments");
+    HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    final byte[] COLUMN = Bytes.toBytes("column");
+    try {
+      // try null row
+      ht.incrementColumnValue(null, FAMILY, COLUMN, 5);
+      fail("Should have thrown IOException");
+    } catch (IOException iox) {
+      // success
+    }
+    try {
+      // try null family
+      ht.incrementColumnValue(ROW, null, COLUMN, 5);
+      fail("Should have thrown IOException");
+    } catch (IOException iox) {
+      // success
+    }
+    try {
+      // try null qualifier
+      ht.incrementColumnValue(ROW, FAMILY, null, 5);
+      fail("Should have thrown IOException");
+    } catch (IOException iox) {
+      // success
+    }
+    // try null row
+    try {
+      Increment incNoRow = new Increment(null);
+      incNoRow.addColumn(FAMILY, COLUMN, 5);
+      fail("Should have thrown IllegalArgumentException");
+    } catch (IllegalArgumentException iax) {
+      // success
+    }
+    // try null family
+    try {
+      Increment incNoFamily = new Increment(ROW);
+      incNoFamily.addColumn(null, COLUMN, 5);
+      fail("Should have thrown IllegalArgumentException");
+    } catch (IllegalArgumentException iax) {
+      // success
+    }
+    // try null qualifier
+    try {
+      Increment incNoQualifier = new Increment(ROW);
+      incNoQualifier.addColumn(FAMILY, null, 5);
+      fail("Should have thrown IllegalArgumentException");
+    } catch (IllegalArgumentException iax) {
+      // success
+    }
+  }
+
 
 
   @Test

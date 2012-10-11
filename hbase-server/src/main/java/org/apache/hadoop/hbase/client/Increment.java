@@ -78,6 +78,9 @@ public class Increment implements Row {
    * @param rowLock previously acquired row lock, or null
    */
   public Increment(byte [] row, RowLock rowLock) {
+    if (row == null) {
+      throw new IllegalArgumentException("Cannot increment a null row");
+    }
     this.row = row;
     if(rowLock != null) {
       this.lockId = rowLock.getLockId();
@@ -95,6 +98,12 @@ public class Increment implements Row {
    * @return the Increment object
    */
   public Increment addColumn(byte [] family, byte [] qualifier, long amount) {
+    if (family == null) {
+      throw new IllegalArgumentException("family cannot be null");
+    }
+    if (qualifier == null) {
+      throw new IllegalArgumentException("qualifier cannot be null");
+    }
     NavigableMap<byte [], Long> set = familyMap.get(family);
     if(set == null) {
       set = new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);

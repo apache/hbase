@@ -921,7 +921,9 @@ public class HTable implements HTableInterface {
     if (row == null) {
       npe = new NullPointerException("row is null");
     } else if (family == null) {
-      npe = new NullPointerException("column is null");
+      npe = new NullPointerException("family is null");
+    } else if (qualifier == null) {
+      npe = new NullPointerException("qualifier is null");
     }
     if (npe != null) {
       throw new IOException(

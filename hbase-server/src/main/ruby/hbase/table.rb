@@ -154,6 +154,9 @@ EOF
     def _incr_internal(row, column, value = nil)
       value ||= 1
       family, qualifier = parse_column_name(column)
+      if qualifier.nil?
+	  raise ArgumentError, "Failed to provide both column family and column qualifier for incr"
+      end
       @table.incrementColumnValue(row.to_s.to_java_bytes, family, qualifier, value)
     end
 
