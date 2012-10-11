@@ -380,16 +380,12 @@ public class MasterFileSystem {
     if (!FSUtils.rootRegionExists(fs, rd)) {
       bootstrap(rd, c);
     }
-    createRootTableInfo(rd);
-    return rd;
-  }
 
-  private void createRootTableInfo(Path rd) throws IOException {
-    // Create ROOT tableInfo if required.
-    if (!FSTableDescriptors.isTableInfoExists(fs, rd,
-        Bytes.toString(HRegionInfo.ROOT_REGIONINFO.getTableName()))) {
-      FSTableDescriptors.createTableDescriptor(HTableDescriptor.ROOT_TABLEDESC, this.conf);
-    }
+    // Create tableinfo-s for ROOT and META if not already there.
+    FSTableDescriptors.createTableDescriptor(fs, rd, HTableDescriptor.ROOT_TABLEDESC, false);
+    FSTableDescriptors.createTableDescriptor(fs, rd, HTableDescriptor.META_TABLEDESC, false);
+
+    return rd;
   }
 
   private static void bootstrap(final Path rd, final Configuration c)
