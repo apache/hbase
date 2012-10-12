@@ -662,7 +662,7 @@ public class ReplicationSource extends Thread
             // This exception means we waited for more than 60s and nothing
             // happened, the cluster is alive and calling it right away
             // even for a test just makes things worse.
-            sleepForRetries("Encountered a SocketTimeoutException. Since the" +
+            sleepForRetries("Encountered a SocketTimeoutException. Since the " +
               "call to the remote cluster timed out, which is usually " +
               "caused by a machine failure or a massive slowdown",
               this.socketTimeoutMultiplier);
