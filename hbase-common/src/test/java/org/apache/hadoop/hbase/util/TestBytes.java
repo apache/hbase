@@ -302,5 +302,10 @@ public class TestBytes extends TestCase {
       fail("Illegal string access: " + ex.getMessage());
     }
   }
+
+  public void testToStringBinary_toBytesBinary_Reversable() throws Exception {
+    String bytes = Bytes.toStringBinary(Bytes.toBytes(2.17));
+    assertEquals(2.17, Bytes.toDouble(Bytes.toBytesBinary(bytes)), 0);        
+  }
 }
 
