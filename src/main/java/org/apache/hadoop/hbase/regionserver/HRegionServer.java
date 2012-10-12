@@ -634,12 +634,12 @@ public class HRegionServer implements HRegionInterface,
         // on poll of the outboundMsgs blockingqueue.
         if ((now - lastMsg) >= msgInterval || !outboundMessages.isEmpty()) {
           try {
-            doMetrics();
             MemoryUsage memory =
               ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
             HServerLoad hsl = new HServerLoad((numReads.get() + numWrites.get()),
               (int)(memory.getUsed()/1024/1024),
               (int)(memory.getMax()/1024/1024));
+            doMetrics();
             for (HRegion r: onlineRegions.values()) {
               hsl.addRegionInfo(createRegionLoad(r));
             }
