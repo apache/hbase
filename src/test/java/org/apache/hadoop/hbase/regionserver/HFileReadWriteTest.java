@@ -49,7 +49,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -61,7 +60,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
-import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
@@ -696,8 +694,8 @@ public class HFileReadWriteTest {
       // accumulate them here. HRegion metrics publishing thread should not
       // be running in this tool, so no one else should be resetting these
       // metrics.
-      totalSeekAndReads += HFile.getReadOps();
-      totalPositionalReads += HFile.getPreadOps();
+      totalSeekAndReads += HFile.getReadOpsAndReset();
+      totalPositionalReads += HFile.getPreadOpsAndReset();
       long totalBlocksRead = totalSeekAndReads + totalPositionalReads;
 
       double blkReadPerSec = totalBlocksRead / timeSec;

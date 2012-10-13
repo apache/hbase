@@ -38,14 +38,11 @@ import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
 import org.apache.hadoop.metrics.util.MetricsLongValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -161,10 +158,16 @@ public class RegionServerMetrics implements Updater {
     new MetricsIntValue("compactionQueueSize", registry);
 
   /**
-   * filesystem read latency
+   * filesystem read latency for seek-and-read operations
    */
   public final MetricsTimeVaryingRate fsReadLatency =
     new MetricsTimeVaryingRate("fsReadLatency", registry);
+
+  /**
+   * filesystem read latency for positional read operations
+   */
+  public final MetricsTimeVaryingRate fsPreadLatency =
+      new MetricsTimeVaryingRate("fsPreadLatency", registry);
 
   /**
    * filesystem write latency
@@ -310,9 +313,13 @@ public class RegionServerMetrics implements Updater {
       addHLogMetric(HLog.getWriteSize(), this.fsWriteSize);
       addHLogMetric(HLog.getSyncTime(), this.fsSyncLatency);
       addHLogMetric(HLog.getGSyncTime(), this.fsGroupSyncLatency);
+
       // HFile metrics
-      int ops = HFile.getReadOps();
-      if (ops != 0) this.fsReadLatency.inc(ops, HFile.getReadTimeMs());
+      collectHFileMetric(fsReadLatency,
+          HFile.getReadOpsAndReset(), HFile.getReadTimeMsAndReset());
+      collectHFileMetric(fsPreadLatency,
+          HFile.getPreadOpsAndReset(), HFile.getPreadTimeMsAndReset());
+
       /* NOTE: removed HFile write latency.  2 reasons:
        * 1) Mixing HLog latencies are far higher priority since they're
        *      on-demand and HFile is used in background (compact/flush)
@@ -342,6 +349,20 @@ public class RegionServerMetrics implements Updater {
       this.flushSize.pushMetric(this.metricsRecord);
     }
     this.metricsRecord.update();
+  }
+
+  /**
+   * Increment the given latency metric using the number of operations and total read time
+   * obtained from HFile.
+   * @param latencyMetric latency metric to increment
+   * @param readOps the number of this type of read operations during the collection period
+   * @param readTimeMs the amount of total read time of this type in milliseconds during the period
+   */
+  private static void collectHFileMetric(MetricsTimeVaryingRate latencyMetric, int readOps,
+      long readTimeMs) {
+    if (readOps != 0) {
+      latencyMetric.inc(readOps, readTimeMs);
+    }
   }
 
   private void addHLogMetric(HLog.Metric logMetric,

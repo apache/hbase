@@ -170,32 +170,33 @@ public class HFile {
   static final AtomicInteger preadOps = new AtomicInteger();
   static final AtomicLong preadTimeNano = new AtomicLong();
 
-  // number of sequential reads
-  public static final int getReadOps() {
+  /**
+   * Get the number of sequential read (seek-and-read) operations and reset it to zero.
+   */
+  public static final int getReadOpsAndReset() {
     return readOps.getAndSet(0);
   }
 
-  public static final long getReadTimeMs() {
+  /**
+   * Get the total time of sequential reads in milliseconds and reset it to zero.
+   */
+  public static final long getReadTimeMsAndReset() {
     return readTimeNano.getAndSet(0) / 1000000;
   }
 
-  // number of positional reads
-  public static final int getPreadOps() {
+  /**
+   * Get the number of positional read operations and reset it to zero.
+   */
+  public static final int getPreadOpsAndReset() {
     return preadOps.getAndSet(0);
   }
 
-  public static final long getPreadTimeMs() {
+  /**
+   * Get the total time of positional reads in milliseconds and reset it to zero.
+   */
+  public static final long getPreadTimeMsAndReset() {
     return preadTimeNano.getAndSet(0) / 1000000;
   }
-
-  public static final int getWriteOps() {
-    return writeOps.getAndSet(0);
-  }
-
-  public static final long getWriteTimeMs() {
-    return writeTimeNano.getAndSet(0) / 1000000;
-  }
-
 
   /**
    * Get the configured bytes per checksum for HFile
@@ -361,9 +362,9 @@ public class HFile {
   }
 
   /**
-   * Returns the factory to be used to create {@link HFile} writers. Should
-   * always be {@link HFileWriterV2#WRITER_FACTORY_V2} in production, but
-   * can also be {@link HFileWriterV1#WRITER_FACTORY_V1} in testing.
+   * Returns the factory to be used to create {@link HFile} writers. Should always be an instance of
+   * {@link HFileWriterV2.WriterFactoryV2} in production, but can also be
+   * {@link HFileWriterV1.WriterFactoryV1} in testing.
    */
   public static final WriterFactory getWriterFactory(Configuration conf,
       CacheConfig cacheConf) {
