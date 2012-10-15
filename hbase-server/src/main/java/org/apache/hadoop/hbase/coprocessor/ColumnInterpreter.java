@@ -25,7 +25,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter;
-import org.apache.hadoop.io.Writable;
+
+import com.google.protobuf.ByteString;
 
 /**
  * Defines how value for specific column is interpreted and provides utility
@@ -48,7 +49,7 @@ import org.apache.hadoop.io.Writable;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface ColumnInterpreter<T, S> extends Writable {
+public interface ColumnInterpreter<T, S> {
 
   /**
    * @param colFamily
@@ -114,4 +115,50 @@ public interface ColumnInterpreter<T, S> extends Writable {
    * @return Average
    */
   double divideForAvg(S o, Long l);
+
+  /**
+   * This method should return any additional data that is needed on the
+   * server side to construct the ColumnInterpreter. The server
+   * will pass this to the {@link #initialize(org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.ColumnInterpreter)}
+   * method. If there is no ColumnInterpreter specific data (for e.g.,
+   * {@link LongColumnInterpreter}) then null should be returned.
+   * @return the PB message
+   */
+  ByteString columnInterpreterSpecificData();
+
+  /**
+   * Return the PB for type T
+   * @param t
+   * @return PB-message
+   */
+  ByteString getProtoForCellType(T t);
+
+  /**
+   * Return the PB for type S
+   * @param s
+   * @return PB-message
+   */
+  ByteString getProtoForPromotedType(S s);
+
+  /**
+   * This method should initialize any field(s) of the ColumnInterpreter with
+   * a parsing of the passed message bytes (used on the server side).
+   * @param bytes
+   */
+  void initialize(ByteString bytes);
+  
+  /**
+   * Converts the bytes in the server's response to the expected type S
+   * @param response
+   * @return response of type S constructed from the message
+   */
+  S parseResponseAsPromotedType(byte[] response);
+  
+  /**
+   * The response message comes as type S. This will convert/cast it to T.
+   * In some sense, performs the opposite of {@link #castToReturnType(Object)}
+   * @param response
+   * @return cast
+   */
+  T castToCellType(S response);
 }

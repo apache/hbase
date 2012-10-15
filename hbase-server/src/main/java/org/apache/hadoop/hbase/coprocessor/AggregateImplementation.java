@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
@@ -27,45 +28,59 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.coprocessor.AggregationClient;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
-import org.apache.hadoop.hbase.ipc.ProtocolSignature;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument;
+import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateService;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.util.Pair;
+
+import com.google.protobuf.ByteString;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 
 /**
  * A concrete AggregateProtocol implementation. Its system level coprocessor
  * that computes the aggregate function at a region level.
+ * @param <T>
+ * @param <S>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class AggregateImplementation extends BaseEndpointCoprocessor implements
-    AggregateProtocol {
+public class AggregateImplementation<T, S> extends AggregateService implements
+    CoprocessorService, Coprocessor {
   protected static Log log = LogFactory.getLog(AggregateImplementation.class);
+  private RegionCoprocessorEnvironment env;
 
+  /**
+   * Gives the maximum for a given combination of column qualifier and column
+   * family, in the given row range as defined in the Scan object. In its
+   * current implementation, it takes one column family and one column qualifier
+   * (if provided). In case of null column qualifier, maximum value for the
+   * entire column family will be returned.
+   */
   @Override
-  public ProtocolSignature getProtocolSignature(
-      String protocol, long version, int clientMethodsHashCode)
-  throws IOException {
-    if (AggregateProtocol.class.getName().equals(protocol)) {
-      return new ProtocolSignature(AggregateProtocol.VERSION, null);
-    }
-    throw new IOException("Unknown protocol: " + protocol);
-  }
-
-  @Override
-  public <T, S> T getMax(ColumnInterpreter<T, S> ci, Scan scan)
-      throws IOException {
-    T temp;
+  public void getMax(RpcController controller, AggregateArgument request,
+      RpcCallback<AggregateResponse> done) {
+    InternalScanner scanner = null;
+    AggregateResponse response = null;
     T max = null;
-    InternalScanner scanner = ((RegionCoprocessorEnvironment) getEnvironment())
-        .getRegion().getScanner(scan);
-    List<KeyValue> results = new ArrayList<KeyValue>();
-    byte[] colFamily = scan.getFamilies()[0];
-    byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
-    // qualifier can be null.
     try {
+      ColumnInterpreter<T, S> ci = constructColumnInterpreterFromRequest(request);
+      T temp;
+      Scan scan = ProtobufUtil.toScan(request.getScan());
+      scanner = env.getRegion().getScanner(scan);
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      byte[] colFamily = scan.getFamilies()[0];
+      byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+      // qualifier can be null.
       boolean hasMoreRows = false;
       do {
         hasMoreRows = scanner.next(results);
@@ -75,26 +90,46 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
         }
         results.clear();
       } while (hasMoreRows);
+      if (max != null) {
+        AggregateResponse.Builder builder = AggregateResponse.newBuilder();
+        builder.addFirstPart(ci.getProtoForCellType(max));
+        response = builder.build();
+      }
+    } catch (IOException e) {
+      ResponseConverter.setControllerException(controller, e);
     } finally {
-      scanner.close();
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (IOException ignored) {}
+      }
     }
     log.info("Maximum from this region is "
-        + ((RegionCoprocessorEnvironment) getEnvironment()).getRegion()
-            .getRegionNameAsString() + ": " + max);
-    return max;
+        + env.getRegion().getRegionNameAsString() + ": " + max);
+    done.run(response);
   }
 
+  /**
+   * Gives the minimum for a given combination of column qualifier and column
+   * family, in the given row range as defined in the Scan object. In its
+   * current implementation, it takes one column family and one column qualifier
+   * (if provided). In case of null column qualifier, minimum value for the
+   * entire column family will be returned.
+   */
   @Override
-  public <T, S> T getMin(ColumnInterpreter<T, S> ci, Scan scan)
-      throws IOException {
+  public void getMin(RpcController controller, AggregateArgument request,
+      RpcCallback<AggregateResponse> done) {
+    AggregateResponse response = null;
+    InternalScanner scanner = null;
     T min = null;
-    T temp;
-    InternalScanner scanner = ((RegionCoprocessorEnvironment) getEnvironment())
-        .getRegion().getScanner(scan);
-    List<KeyValue> results = new ArrayList<KeyValue>();
-    byte[] colFamily = scan.getFamilies()[0];
-    byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
     try {
+      ColumnInterpreter<T, S> ci = constructColumnInterpreterFromRequest(request);
+      T temp;
+      Scan scan = ProtobufUtil.toScan(request.getScan());
+      scanner = env.getRegion().getScanner(scan);
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      byte[] colFamily = scan.getFamilies()[0];
+      byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
       boolean hasMoreRows = false;
       do {
         hasMoreRows = scanner.next(results);
@@ -104,27 +139,46 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
         }
         results.clear();
       } while (hasMoreRows);
+      if (min != null) {
+        response = AggregateResponse.newBuilder().addFirstPart( 
+          ci.getProtoForCellType(min)).build();
+      }
+    } catch (IOException e) {
+      ResponseConverter.setControllerException(controller, e);
     } finally {
-      scanner.close();
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (IOException ignored) {}
+      }
     }
     log.info("Minimum from this region is "
-        + ((RegionCoprocessorEnvironment) getEnvironment()).getRegion()
-            .getRegionNameAsString() + ": " + min);
-    return min;
+        + env.getRegion().getRegionNameAsString() + ": " + min);
+    done.run(response);
   }
 
+  /**
+   * Gives the sum for a given combination of column qualifier and column
+   * family, in the given row range as defined in the Scan object. In its
+   * current implementation, it takes one column family and one column qualifier
+   * (if provided). In case of null column qualifier, sum for the entire column
+   * family will be returned.
+   */
   @Override
-  public <T, S> S getSum(ColumnInterpreter<T, S> ci, Scan scan)
-      throws IOException {
+  public void getSum(RpcController controller, AggregateArgument request,
+      RpcCallback<AggregateResponse> done) {
+    AggregateResponse response = null;
+    InternalScanner scanner = null;
     long sum = 0l;
-    S sumVal = null;
-    T temp;
-    InternalScanner scanner = ((RegionCoprocessorEnvironment) getEnvironment())
-        .getRegion().getScanner(scan);
-    byte[] colFamily = scan.getFamilies()[0];
-    byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
-    List<KeyValue> results = new ArrayList<KeyValue>();
     try {
+      ColumnInterpreter<T, S> ci = constructColumnInterpreterFromRequest(request);
+      S sumVal = null;
+      T temp;
+      Scan scan = ProtobufUtil.toScan(request.getScan());
+      scanner = env.getRegion().getScanner(scan);
+      byte[] colFamily = scan.getFamilies()[0];
+      byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+      List<KeyValue> results = new ArrayList<KeyValue>();
       boolean hasMoreRows = false;
       do {
         hasMoreRows = scanner.next(results);
@@ -135,27 +189,43 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
         }
         results.clear();
       } while (hasMoreRows);
+      if (sumVal != null) {
+        response = AggregateResponse.newBuilder().addFirstPart( 
+          ci.getProtoForPromotedType(sumVal)).build();
+      }
+    } catch (IOException e) {
+      ResponseConverter.setControllerException(controller, e);
     } finally {
-      scanner.close();
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (IOException ignored) {}
+      }
     }
     log.debug("Sum from this region is "
-        + ((RegionCoprocessorEnvironment) getEnvironment()).getRegion()
-            .getRegionNameAsString() + ": " + sum);
-    return sumVal;
+        + env.getRegion().getRegionNameAsString() + ": " + sum);
+    done.run(response);
   }
 
+  /**
+   * Gives the row count for the given column family and column qualifier, in
+   * the given row range as defined in the Scan object.
+   * @throws IOException
+   */
   @Override
-  public <T, S> long getRowNum(ColumnInterpreter<T, S> ci, Scan scan)
-      throws IOException {
+  public void getRowNum(RpcController controller, AggregateArgument request,
+      RpcCallback<AggregateResponse> done) {
+    AggregateResponse response = null;
     long counter = 0l;
     List<KeyValue> results = new ArrayList<KeyValue>();
-    byte[] colFamily = scan.getFamilies()[0];
-    byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
-    if (scan.getFilter() == null && qualifier == null)
-      scan.setFilter(new FirstKeyOnlyFilter());
-    InternalScanner scanner = ((RegionCoprocessorEnvironment) getEnvironment())
-        .getRegion().getScanner(scan);
+    InternalScanner scanner = null;
     try {
+      Scan scan = ProtobufUtil.toScan(request.getScan());
+      byte[] colFamily = scan.getFamilies()[0];
+      byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+      if (scan.getFilter() == null && qualifier == null)
+        scan.setFilter(new FirstKeyOnlyFilter());
+      scanner = env.getRegion().getScanner(scan);
       boolean hasMoreRows = false;
       do {
         hasMoreRows = scanner.next(results);
@@ -164,27 +234,53 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
         }
         results.clear();
       } while (hasMoreRows);
+      ByteBuffer bb = ByteBuffer.allocate(8).putLong(counter);
+      bb.rewind();
+      response = AggregateResponse.newBuilder().addFirstPart( 
+          ByteString.copyFrom(bb)).build();
+    } catch (IOException e) {
+      ResponseConverter.setControllerException(controller, e);
     } finally {
-      scanner.close();
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (IOException ignored) {}
+      }
     }
     log.info("Row counter from this region is "
-        + ((RegionCoprocessorEnvironment) getEnvironment()).getRegion()
-            .getRegionNameAsString() + ": " + counter);
-    return counter;
+        + env.getRegion().getRegionNameAsString() + ": " + counter);
+    done.run(response);
   }
 
+  /**
+   * Gives a Pair with first object as Sum and second object as row count,
+   * computed for a given combination of column qualifier and column family in
+   * the given row range as defined in the Scan object. In its current
+   * implementation, it takes one column family and one column qualifier (if
+   * provided). In case of null column qualifier, an aggregate sum over all the
+   * entire column family will be returned.
+   * <p>
+   * The average is computed in
+   * {@link AggregationClient#avg(byte[], ColumnInterpreter, Scan)} by
+   * processing results from all regions, so its "ok" to pass sum and a Long
+   * type.
+   */
   @Override
-  public <T, S> Pair<S, Long> getAvg(ColumnInterpreter<T, S> ci, Scan scan)
-      throws IOException {
-    S sumVal = null;
-    Long rowCountVal = 0l;
-    InternalScanner scanner = ((RegionCoprocessorEnvironment) getEnvironment())
-        .getRegion().getScanner(scan);
-    byte[] colFamily = scan.getFamilies()[0];
-    byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
-    List<KeyValue> results = new ArrayList<KeyValue>();
-    boolean hasMoreRows = false;
+  public void getAvg(RpcController controller, AggregateArgument request,
+      RpcCallback<AggregateResponse> done) {
+    AggregateResponse response = null;
+    InternalScanner scanner = null;
     try {
+      ColumnInterpreter<T, S> ci = constructColumnInterpreterFromRequest(request);
+      S sumVal = null;
+      Long rowCountVal = 0l;
+      Scan scan = ProtobufUtil.toScan(request.getScan());
+      scanner = env.getRegion().getScanner(scan);
+      byte[] colFamily = scan.getFamilies()[0];
+      byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      boolean hasMoreRows = false;
+    
       do {
         results.clear();
         hasMoreRows = scanner.next(results);
@@ -194,26 +290,53 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
         }
         rowCountVal++;
       } while (hasMoreRows);
+      if (sumVal != null) {
+        ByteString first = ci.getProtoForPromotedType(sumVal);
+        AggregateResponse.Builder pair = AggregateResponse.newBuilder();
+        pair.addFirstPart(first);
+        ByteBuffer bb = ByteBuffer.allocate(8).putLong(rowCountVal);
+        bb.rewind();
+        pair.setSecondPart(ByteString.copyFrom(bb));
+        response = pair.build();
+      }
+    } catch (IOException e) {
+      ResponseConverter.setControllerException(controller, e);
     } finally {
-      scanner.close();
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (IOException ignored) {}
+      }
     }
-    Pair<S, Long> pair = new Pair<S, Long>(sumVal, rowCountVal);
-    return pair;
+    done.run(response);
   }
 
+  /**
+   * Gives a Pair with first object a List containing Sum and sum of squares,
+   * and the second object as row count. It is computed for a given combination of
+   * column qualifier and column family in the given row range as defined in the
+   * Scan object. In its current implementation, it takes one column family and
+   * one column qualifier (if provided). The idea is get the value of variance first:
+   * the average of the squares less the square of the average a standard
+   * deviation is square root of variance.
+   */
   @Override
-  public <T, S> Pair<List<S>, Long> getStd(ColumnInterpreter<T, S> ci, Scan scan)
-      throws IOException {
-    S sumVal = null, sumSqVal = null, tempVal = null;
-    long rowCountVal = 0l;
-    InternalScanner scanner = ((RegionCoprocessorEnvironment) getEnvironment())
-        .getRegion().getScanner(scan);
-    byte[] colFamily = scan.getFamilies()[0];
-    byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
-    List<KeyValue> results = new ArrayList<KeyValue>();
-
-    boolean hasMoreRows = false;
+  public void getStd(RpcController controller, AggregateArgument request,
+      RpcCallback<AggregateResponse> done) {
+    InternalScanner scanner = null;
+    AggregateResponse response = null;
     try {
+      ColumnInterpreter<T, S> ci = constructColumnInterpreterFromRequest(request);
+      S sumVal = null, sumSqVal = null, tempVal = null;
+      long rowCountVal = 0l;
+      Scan scan = ProtobufUtil.toScan(request.getScan());
+      scanner = env.getRegion().getScanner(scan);
+      byte[] colFamily = scan.getFamilies()[0];
+      byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+      List<KeyValue> results = new ArrayList<KeyValue>();
+
+      boolean hasMoreRows = false;
+    
       do {
         tempVal = null;
         hasMoreRows = scanner.next(results);
@@ -226,32 +349,56 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
         sumSqVal = ci.add(sumSqVal, ci.multiply(tempVal, tempVal));
         rowCountVal++;
       } while (hasMoreRows);
+      if (sumVal != null) {
+        ByteString first_sumVal = ci.getProtoForPromotedType(sumVal);
+        ByteString first_sumSqVal = ci.getProtoForPromotedType(sumSqVal);
+        AggregateResponse.Builder pair = AggregateResponse.newBuilder();
+        pair.addFirstPart(first_sumVal);
+        pair.addFirstPart(first_sumSqVal);
+        ByteBuffer bb = ByteBuffer.allocate(8).putLong(rowCountVal);
+        bb.rewind();
+        pair.setSecondPart(ByteString.copyFrom(bb));
+        response = pair.build();
+      }
+    } catch (IOException e) {
+      ResponseConverter.setControllerException(controller, e);
     } finally {
-      scanner.close();
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (IOException ignored) {}
+      }
     }
-    List<S> l = new ArrayList<S>();
-    l.add(sumVal);
-    l.add(sumSqVal);
-    Pair<List<S>, Long> p = new Pair<List<S>, Long>(l, rowCountVal);
-    return p;
+    done.run(response);
   }
 
+  /**
+   * Gives a List containing sum of values and sum of weights.
+   * It is computed for the combination of column
+   * family and column qualifier(s) in the given row range as defined in the
+   * Scan object. In its current implementation, it takes one column family and
+   * two column qualifiers. The first qualifier is for values column and 
+   * the second qualifier (optional) is for weight column.
+   */
   @Override
-  public <T, S> List<S> getMedian(ColumnInterpreter<T, S> ci, Scan scan)
-  throws IOException {
-    S sumVal = null, sumWeights = null, tempVal = null, tempWeight = null;
-
-    InternalScanner scanner = ((RegionCoprocessorEnvironment) getEnvironment())
-    .getRegion().getScanner(scan);
-    byte[] colFamily = scan.getFamilies()[0];
-    NavigableSet<byte[]> quals = scan.getFamilyMap().get(colFamily);
-    byte[] valQualifier = quals.pollFirst();
-    // if weighted median is requested, get qualifier for the weight column
-    byte[] weightQualifier = quals.size() > 1 ? quals.pollLast() : null;
-    List<KeyValue> results = new ArrayList<KeyValue>();
-
-    boolean hasMoreRows = false;
+  public void getMedian(RpcController controller, AggregateArgument request,
+      RpcCallback<AggregateResponse> done) {
+    AggregateResponse response = null;
+    InternalScanner scanner = null;
     try {
+      ColumnInterpreter<T, S> ci = constructColumnInterpreterFromRequest(request);
+      S sumVal = null, sumWeights = null, tempVal = null, tempWeight = null;
+      Scan scan = ProtobufUtil.toScan(request.getScan());
+      scanner = env.getRegion().getScanner(scan);
+      byte[] colFamily = scan.getFamilies()[0];
+      NavigableSet<byte[]> quals = scan.getFamilyMap().get(colFamily);
+      byte[] valQualifier = quals.pollFirst();
+      // if weighted median is requested, get qualifier for the weight column
+      byte[] weightQualifier = quals.size() > 1 ? quals.pollLast() : null;
+      List<KeyValue> results = new ArrayList<KeyValue>();
+
+      boolean hasMoreRows = false;
+    
       do {
         tempVal = null;
         tempWeight = null;
@@ -268,13 +415,73 @@ public class AggregateImplementation extends BaseEndpointCoprocessor implements
         sumVal = ci.add(sumVal, tempVal);
         sumWeights = ci.add(sumWeights, tempWeight);
       } while (hasMoreRows);
+      ByteString first_sumVal = ci.getProtoForPromotedType(sumVal);
+      S s = sumWeights == null ? ci.castToReturnType(ci.getMinValue()) : sumWeights;
+      ByteString first_sumWeights = ci.getProtoForPromotedType(s);
+      AggregateResponse.Builder pair = AggregateResponse.newBuilder();
+      pair.addFirstPart(first_sumVal);
+      pair.addFirstPart(first_sumWeights); 
+      response = pair.build();
+    } catch (IOException e) {
+      ResponseConverter.setControllerException(controller, e);
     } finally {
-      scanner.close();
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (IOException ignored) {}
+      }
     }
-    List<S> l = new ArrayList<S>();
-    l.add(sumVal);
-    l.add(sumWeights == null ? ci.castToReturnType(ci.getMinValue()) : sumWeights);
-    return l;
+    done.run(response);
+  }
+
+  @SuppressWarnings("unchecked")
+  ColumnInterpreter<T,S> constructColumnInterpreterFromRequest(
+      AggregateArgument request) throws IOException {
+    String className = request.getInterpreterClassName();
+    Class<?> cls;
+    try {
+      cls = Class.forName(className);
+      ColumnInterpreter<T,S> ci = (ColumnInterpreter<T, S>) cls.newInstance();
+      if (request.hasInterpreterSpecificBytes()) {
+        ci.initialize(request.getInterpreterSpecificBytes());
+      }
+      return ci;
+    } catch (ClassNotFoundException e) {
+      throw new IOException(e);
+    } catch (InstantiationException e) {
+      throw new IOException(e);
+    } catch (IllegalAccessException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public Service getService() {
+    return this;
+  }
+
+  /**
+   * Stores a reference to the coprocessor environment provided by the
+   * {@link org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost} from the region where this
+   * coprocessor is loaded.  Since this is a coprocessor endpoint, it always expects to be loaded
+   * on a table region, so always expects this to be an instance of
+   * {@link RegionCoprocessorEnvironment}.
+   * @param env the environment provided by the coprocessor host
+   * @throws IOException if the provided environment is not an instance of
+   * {@code RegionCoprocessorEnvironment}
+   */
+  @Override
+  public void start(CoprocessorEnvironment env) throws IOException {
+    if (env instanceof RegionCoprocessorEnvironment) {
+      this.env = (RegionCoprocessorEnvironment)env;
+    } else {
+      throw new CoprocessorException("Must be loaded on a table region!");
+    }
+  }
+
+  @Override
+  public void stop(CoprocessorEnvironment env) throws IOException {
+    // nothing to do
   }
   
 }

@@ -18,15 +18,16 @@
  */
 package org.apache.hadoop.hbase.client.coprocessor;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.protobuf.ByteString;
 
 /**
  * a concrete column interpreter implementation. The cell value is a Long value
@@ -86,16 +87,6 @@ public class LongColumnInterpreter implements ColumnInterpreter<Long, Long> {
   }
 
   @Override
-  public void readFields(DataInput arg0) throws IOException {
-    // nothing to serialize
-  }
-
-  @Override
-  public void write(DataOutput arg0) throws IOException {
-     // nothing to serialize
-  }
-
-  @Override
   public double divideForAvg(Long l1, Long l2) {
     return (l2 == null || l1 == null) ? Double.NaN : (l1.doubleValue() / l2
         .doubleValue());
@@ -106,4 +97,45 @@ public class LongColumnInterpreter implements ColumnInterpreter<Long, Long> {
     return o;
   }
 
+
+  @Override
+  public Long parseResponseAsPromotedType(byte[] response) {
+    ByteBuffer b = ByteBuffer.allocate(8).put(response);
+    b.rewind();
+    long l = b.getLong();
+    return l;
+  }
+
+  @Override
+  public Long castToCellType(Long l) {
+    return l;
+  }
+
+  @Override
+  public ByteString columnInterpreterSpecificData() {
+    // nothing
+    return null;
+  }
+
+  @Override
+  public void initialize(ByteString bytes) {
+    // nothing
+  }
+
+  @Override
+  public ByteString getProtoForCellType(Long t) {
+    return getProtoForPromotedOrCellType(t);
+  }
+
+  @Override
+  public ByteString getProtoForPromotedType(Long s) {
+    return getProtoForPromotedOrCellType(s);
+  }
+
+  private ByteString getProtoForPromotedOrCellType(Long s) {
+    ByteBuffer bb = ByteBuffer.allocate(8).putLong(s);
+    bb.rewind();
+    ByteString bs = ByteString.copyFrom(bb);
+    return bs;
+  }
 }

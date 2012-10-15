@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.client.coprocessor;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,16 +40,23 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.AggregateProtocol;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument;
+import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateService;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
+import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
+import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
+import com.google.protobuf.ByteString;
+
 /**
  * This client class is for invoking the aggregate functions deployed on the
- * Region Server side via the AggregateProtocol. This class will implement the
+ * Region Server side via the AggregateService. This class will implement the
  * supporting functionality for summing/processing the individual results
- * obtained from the AggregateProtocol for each region.
+ * obtained from the AggregateService for each region.
  * <p>
  * This will serve as the client side handler for invoking the aggregate
  * functions.
@@ -92,7 +100,7 @@ public class AggregationClient {
    */
   public <R, S> R max(final byte[] tableName, final ColumnInterpreter<R, S> ci,
       final Scan scan) throws Throwable {
-    validateParameters(scan);
+    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
     class MaxCallBack implements Batch.Callback<R> {
       R max = null;
 
@@ -109,11 +117,24 @@ public class AggregationClient {
     HTable table = null;
     try {
       table = new HTable(conf, tableName);
-      table.coprocessorExec(AggregateProtocol.class, scan.getStartRow(),
-          scan.getStopRow(), new Batch.Call<AggregateProtocol, R>() {
+      table.coprocessorService(AggregateService.class, scan.getStartRow(),
+          scan.getStopRow(), new Batch.Call<AggregateService, R>() {
             @Override
-            public R call(AggregateProtocol instance) throws IOException {
-              return instance.getMax(ci, scan);
+            public R call(AggregateService instance) throws IOException {
+              ServerRpcController controller = new ServerRpcController();
+              BlockingRpcCallback<AggregateResponse> rpcCallback =
+                  new BlockingRpcCallback<AggregateResponse>();
+              instance.getMax(controller, requestArg, rpcCallback);
+              AggregateResponse response = rpcCallback.get();
+              if (controller.failedOnException()) {
+                throw controller.getFailedOn();
+              }
+              if (response.getFirstPartCount() > 0) {
+                return ci.castToCellType(
+                          ci.parseResponseAsPromotedType(
+                              getBytesFromResponse(response.getFirstPart(0))));
+              }
+              return null;
             }
           }, aMaxCallBack);
     } finally {
@@ -149,7 +170,7 @@ public class AggregationClient {
    */
   public <R, S> R min(final byte[] tableName, final ColumnInterpreter<R, S> ci,
       final Scan scan) throws Throwable {
-    validateParameters(scan);
+    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
     class MinCallBack implements Batch.Callback<R> {
 
       private R min = null;
@@ -167,12 +188,25 @@ public class AggregationClient {
     HTable table = null;
     try {
       table = new HTable(conf, tableName);
-      table.coprocessorExec(AggregateProtocol.class, scan.getStartRow(),
-          scan.getStopRow(), new Batch.Call<AggregateProtocol, R>() {
+      table.coprocessorService(AggregateService.class, scan.getStartRow(),
+          scan.getStopRow(), new Batch.Call<AggregateService, R>() {
 
             @Override
-            public R call(AggregateProtocol instance) throws IOException {
-              return instance.getMin(ci, scan);
+            public R call(AggregateService instance) throws IOException {
+              ServerRpcController controller = new ServerRpcController();
+              BlockingRpcCallback<AggregateResponse> rpcCallback =
+                  new BlockingRpcCallback<AggregateResponse>();
+              instance.getMin(controller, requestArg, rpcCallback);
+              AggregateResponse response = rpcCallback.get();
+              if (controller.failedOnException()) {
+                throw controller.getFailedOn();
+              }
+              if (response.getFirstPartCount() > 0) {
+                return ci.castToCellType(
+                  ci.parseResponseAsPromotedType(
+                      getBytesFromResponse(response.getFirstPart(0))));
+              }
+              return null;
             }
           }, minCallBack);
     } finally {
@@ -199,7 +233,7 @@ public class AggregationClient {
    */
   public <R, S> long rowCount(final byte[] tableName,
       final ColumnInterpreter<R, S> ci, final Scan scan) throws Throwable {
-    validateParameters(scan);
+    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
     class RowNumCallback implements Batch.Callback<Long> {
       private final AtomicLong rowCountL = new AtomicLong(0);
 
@@ -216,11 +250,22 @@ public class AggregationClient {
     HTable table = null;
     try {
       table = new HTable(conf, tableName);
-      table.coprocessorExec(AggregateProtocol.class, scan.getStartRow(),
-          scan.getStopRow(), new Batch.Call<AggregateProtocol, Long>() {
+      table.coprocessorService(AggregateService.class, scan.getStartRow(),
+          scan.getStopRow(), new Batch.Call<AggregateService, Long>() {
             @Override
-            public Long call(AggregateProtocol instance) throws IOException {
-              return instance.getRowNum(ci, scan);
+            public Long call(AggregateService instance) throws IOException {
+              ServerRpcController controller = new ServerRpcController();
+              BlockingRpcCallback<AggregateResponse> rpcCallback =
+                  new BlockingRpcCallback<AggregateResponse>();
+              instance.getRowNum(controller, requestArg, rpcCallback);
+              AggregateResponse response = rpcCallback.get();
+              if (controller.failedOnException()) {
+                throw controller.getFailedOn();
+              }
+              byte[] bytes = getBytesFromResponse(response.getFirstPart(0));
+              ByteBuffer bb = ByteBuffer.allocate(8).put(bytes);
+              bb.rewind();
+              return bb.getLong();
             }
           }, rowNum);
     } finally {
@@ -242,7 +287,8 @@ public class AggregationClient {
    */
   public <R, S> S sum(final byte[] tableName, final ColumnInterpreter<R, S> ci,
       final Scan scan) throws Throwable {
-    validateParameters(scan);
+    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
+    
     class SumCallBack implements Batch.Callback<S> {
       S sumVal = null;
 
@@ -259,11 +305,23 @@ public class AggregationClient {
     HTable table = null;
     try {
       table = new HTable(conf, tableName);
-      table.coprocessorExec(AggregateProtocol.class, scan.getStartRow(),
-          scan.getStopRow(), new Batch.Call<AggregateProtocol, S>() {
+      table.coprocessorService(AggregateService.class, scan.getStartRow(),
+          scan.getStopRow(), new Batch.Call<AggregateService, S>() {
             @Override
-            public S call(AggregateProtocol instance) throws IOException {
-              return instance.getSum(ci, scan);
+            public S call(AggregateService instance) throws IOException {
+              ServerRpcController controller = new ServerRpcController();
+              BlockingRpcCallback<AggregateResponse> rpcCallback =
+                  new BlockingRpcCallback<AggregateResponse>();
+              instance.getSum(controller, requestArg, rpcCallback);
+              AggregateResponse response = rpcCallback.get();
+              if (controller.failedOnException()) {
+                throw controller.getFailedOn();
+              }
+              if (response.getFirstPartCount() == 0) {
+                return null;
+              }
+              return ci.parseResponseAsPromotedType(
+                  getBytesFromResponse(response.getFirstPart(0)));
             }
           }, sumCallBack);
     } finally {
@@ -284,7 +342,7 @@ public class AggregationClient {
    */
   private <R, S> Pair<S, Long> getAvgArgs(final byte[] tableName,
       final ColumnInterpreter<R, S> ci, final Scan scan) throws Throwable {
-    validateParameters(scan);
+    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
     class AvgCallBack implements Batch.Callback<Pair<S, Long>> {
       S sum = null;
       Long rowCount = 0l;
@@ -303,13 +361,31 @@ public class AggregationClient {
     HTable table = null;
     try {
       table = new HTable(conf, tableName);
-      table.coprocessorExec(AggregateProtocol.class, scan.getStartRow(),
+      table.coprocessorService(AggregateService.class, scan.getStartRow(),
           scan.getStopRow(),
-          new Batch.Call<AggregateProtocol, Pair<S, Long>>() {
+          new Batch.Call<AggregateService, Pair<S, Long>>() {
             @Override
-            public Pair<S, Long> call(AggregateProtocol instance)
+            public Pair<S, Long> call(AggregateService instance)
                 throws IOException {
-              return instance.getAvg(ci, scan);
+              ServerRpcController controller = new ServerRpcController();
+              BlockingRpcCallback<AggregateResponse> rpcCallback =
+                  new BlockingRpcCallback<AggregateResponse>();
+              instance.getAvg(controller, requestArg, rpcCallback);
+              AggregateResponse response = rpcCallback.get();
+              if (controller.failedOnException()) {
+                throw controller.getFailedOn();
+              }
+              Pair<S,Long> pair = new Pair<S, Long>(null, 0L);
+              if (response.getFirstPartCount() == 0) {
+                return pair;
+              }
+              pair.setFirst(ci.parseResponseAsPromotedType(
+                  getBytesFromResponse(response.getFirstPart(0))));
+              ByteBuffer bb = ByteBuffer.allocate(8).put(
+                  getBytesFromResponse(response.getSecondPart()));
+              bb.rewind();
+              pair.setSecond(bb.getLong());
+              return pair;
             }
           }, avgCallBack);
     } finally {
@@ -351,7 +427,7 @@ public class AggregationClient {
    */
   private <R, S> Pair<List<S>, Long> getStdArgs(final byte[] tableName,
       final ColumnInterpreter<R, S> ci, final Scan scan) throws Throwable {
-    validateParameters(scan);
+    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
     class StdCallback implements Batch.Callback<Pair<List<S>, Long>> {
       long rowCountVal = 0l;
       S sumVal = null, sumSqVal = null;
@@ -366,24 +442,48 @@ public class AggregationClient {
 
       @Override
       public synchronized void update(byte[] region, byte[] row, Pair<List<S>, Long> result) {
-        sumVal = ci.add(sumVal, result.getFirst().get(0));
-        sumSqVal = ci.add(sumSqVal, result.getFirst().get(1));
-        rowCountVal += result.getSecond();
+        if (result.getFirst().size() > 0) {
+          sumVal = ci.add(sumVal, result.getFirst().get(0));
+          sumSqVal = ci.add(sumSqVal, result.getFirst().get(1));
+          rowCountVal += result.getSecond();
+        }
       }
     }
     StdCallback stdCallback = new StdCallback();
     HTable table = null;
     try {
       table = new HTable(conf, tableName);
-      table.coprocessorExec(AggregateProtocol.class, scan.getStartRow(),
+      table.coprocessorService(AggregateService.class, scan.getStartRow(),
           scan.getStopRow(),
-          new Batch.Call<AggregateProtocol, Pair<List<S>, Long>>() {
+          new Batch.Call<AggregateService, Pair<List<S>, Long>>() {
             @Override
-            public Pair<List<S>, Long> call(AggregateProtocol instance)
+            public Pair<List<S>, Long> call(AggregateService instance)
                 throws IOException {
-              return instance.getStd(ci, scan);
+              ServerRpcController controller = new ServerRpcController();
+              BlockingRpcCallback<AggregateResponse> rpcCallback =
+                  new BlockingRpcCallback<AggregateResponse>();
+              instance.getStd(controller, requestArg, rpcCallback);
+              AggregateResponse response = rpcCallback.get();
+              if (controller.failedOnException()) {
+                throw controller.getFailedOn();
+              }
+              Pair<List<S>,Long> pair = 
+                  new Pair<List<S>, Long>(new ArrayList<S>(), 0L);
+              if (response.getFirstPartCount() == 0) {
+                return pair;
+              }
+              List<S> list = new ArrayList<S>();
+              for (int i = 0; i < response.getFirstPartCount(); i++) {
+                list.add(ci.parseResponseAsPromotedType(
+                    getBytesFromResponse(response.getFirstPart(i))));
+              }
+              pair.setFirst(list);
+              ByteBuffer bb = ByteBuffer.allocate(8).put(
+                  getBytesFromResponse(response.getSecondPart()));
+              bb.rewind();
+              pair.setSecond(bb.getLong());
+              return pair;
             }
-
           }, stdCallback);
     } finally {
       if (table != null) {
@@ -431,7 +531,7 @@ public class AggregationClient {
   private <R, S> Pair<NavigableMap<byte[], List<S>>, List<S>>
   getMedianArgs(final byte[] tableName,
       final ColumnInterpreter<R, S> ci, final Scan scan) throws Throwable {
-    validateParameters(scan);
+    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
     final NavigableMap<byte[], List<S>> map =
       new TreeMap<byte[], List<S>>(Bytes.BYTES_COMPARATOR);
     class StdCallback implements Batch.Callback<List<S>> {
@@ -457,11 +557,25 @@ public class AggregationClient {
     HTable table = null;
     try {
       table = new HTable(conf, tableName);
-      table.coprocessorExec(AggregateProtocol.class, scan.getStartRow(),
-          scan.getStopRow(), new Batch.Call<AggregateProtocol, List<S>>() {
+      table.coprocessorService(AggregateService.class, scan.getStartRow(),
+          scan.getStopRow(), new Batch.Call<AggregateService, List<S>>() {
             @Override
-            public List<S> call(AggregateProtocol instance) throws IOException {
-              return instance.getMedian(ci, scan);
+            public List<S> call(AggregateService instance) throws IOException {
+              ServerRpcController controller = new ServerRpcController();
+              BlockingRpcCallback<AggregateResponse> rpcCallback =
+                  new BlockingRpcCallback<AggregateResponse>();
+              instance.getMedian(controller, requestArg, rpcCallback);
+              AggregateResponse response = rpcCallback.get();
+              if (controller.failedOnException()) {
+                throw controller.getFailedOn();
+              }
+
+              List<S> list = new ArrayList<S>();
+              for (int i = 0; i < response.getFirstPartCount(); i++) {
+                list.add(ci.parseResponseAsPromotedType(
+                    getBytesFromResponse(response.getFirstPart(i))));
+              }
+              return list;
             }
 
           }, stdCallback);
@@ -556,5 +670,31 @@ public class AggregationClient {
       }
     }
     return null;
+  }
+
+  <R,S>AggregateArgument validateArgAndGetPB(Scan scan, ColumnInterpreter<R,S> ci)
+      throws IOException {
+    validateParameters(scan);
+    final AggregateArgument.Builder requestBuilder = 
+        AggregateArgument.newBuilder();
+    requestBuilder.setInterpreterClassName(ci.getClass().getCanonicalName());
+    if (ci.columnInterpreterSpecificData() != null) {
+      requestBuilder.setInterpreterSpecificBytes(
+        ci.columnInterpreterSpecificData());
+    }
+    requestBuilder.setScan(ProtobufUtil.toScan(scan));
+    return requestBuilder.build();
+  }
+
+  byte[] getBytesFromResponse(ByteString response) {
+    ByteBuffer bb = response.asReadOnlyByteBuffer();
+    bb.rewind();
+    byte[] bytes;
+    if (bb.hasArray()) {
+      bytes = bb.array();
+    } else {
+      bytes = response.toByteArray();
+    }
+    return bytes;
   }
 }
