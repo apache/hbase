@@ -4230,6 +4230,9 @@ public class HRegion implements HeapSize { // , Writable{
       Collection<byte[]> rowsToLock) throws IOException {
     boolean flush = false;
 
+    checkReadOnly();
+    checkResources();
+
     startRegionOperation();
     List<Integer> acquiredLocks = null;
     try {
