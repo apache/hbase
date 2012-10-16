@@ -1320,7 +1320,8 @@ public class ServerManager {
         // re-check - just in case the server reported
         if (curTime > load.expireAfter) {  // debug
           LOG.info("Expiring server " + si.getServerName() +
-              " no report for last " + (curTime - load.lastLoadRefreshTime));
+              " no report for last " + (curTime - load.lastLoadRefreshTime)
+              + " (no znode expired yet)");
           this.expireServer(si);
         }
       }
