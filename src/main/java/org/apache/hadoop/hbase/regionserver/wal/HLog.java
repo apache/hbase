@@ -898,22 +898,6 @@ public class HLog implements Syncable {
     }
   }
 
-   /** Append an entry to the log.
-   *
-   * @param regionInfo
-   * @param logEdit
-   * @param now Time of this edit write.
-   * @throws IOException
-   */
-  public void append(HRegionInfo regionInfo, WALEdit logEdit,
-    final long now,
-    final boolean isMetaRegion)
-  throws IOException {
-    byte [] regionName = regionInfo.getRegionName();
-    byte [] tableName = regionInfo.getTableDesc().getName();
-    this.append(regionInfo, makeKey(regionName, tableName, -1, now), logEdit);
-  }
-
   /**
    * @param now
    * @param regionName
@@ -922,44 +906,6 @@ public class HLog implements Syncable {
    */
   protected HLogKey makeKey(byte[] regionName, byte[] tableName, long seqnum, long now) {
     return new HLogKey(regionName, tableName, seqnum, now);
-  }
-
-
-
-  /** Append an entry to the log.
-   *
-   * @param regionInfo
-   * @param logEdit
-   * @param logKey
-   * @throws IOException
-   */
-  public void append(HRegionInfo regionInfo, HLogKey logKey, WALEdit logEdit)
-  throws IOException {
-    if (logSyncerThread.syncerShuttingDown) {
-      // can't acquire lock for the duration of append()
-      // so this is just a best-effort check
-      throw new IOException("Cannot append; logSyncer shutting down");
-    }
-    byte [] regionName = regionInfo.getRegionName();
-    synchronized (updateLock) {
-      if (this.closed) {
-        throw new IOException("Cannot append; log is closed");
-      }
-      long seqNum = obtainSeqNum();
-      logKey.setLogSeqNum(seqNum);
-      // The 'lastSeqWritten' map holds the sequence number of the oldest
-      // write for each region (i.e. the first edit added to the particular
-      // memstore). When the cache is flushed, the entry for the
-      // region being flushed is removed if the sequence number of the flush
-      // is greater than or equal to the value in lastSeqWritten.
-      this.lastSeqWritten.putIfAbsent(regionName, Long.valueOf(seqNum));
-      doWrite(regionInfo, logKey, logEdit);
-      this.unflushedEntries.incrementAndGet();
-      this.numEntries.incrementAndGet();
-    }
-
-    // sync txn to file system
-    this.sync(regionInfo.isMetaRegion());
   }
 
   /**
@@ -988,16 +934,21 @@ public class HLog implements Syncable {
   public void append(HRegionInfo info, byte [] tableName, WALEdit edits,
     final long now)
   throws IOException {
-    if (edits.isEmpty()) return;
-
+    if (!this.enabled || edits.isEmpty()) {
+      return;
+    }
     if (logSyncerThread.syncerShuttingDown) {
       // can't acquire lock for the duration of append()
       // so this is just a best-effort check
       throw new IOException("Cannot append; logSyncer shutting down");
     }
-    byte[] regionName = info.getRegionName();
+
+    long len = edits.getTotalKeyValueLength();
     long txid = 0;
+    
     long start = System.currentTimeMillis();
+    byte[] regionName = info.getRegionName();
+    
     synchronized (this.updateLock) {
       if (this.closed) {
         throw new IOException("Cannot append; log is closed");
@@ -1010,14 +961,24 @@ public class HLog implements Syncable {
       // is greater than or equal to the value in lastSeqWritten.
       this.lastSeqWritten.putIfAbsent(regionName, seqNum);
       HLogKey logKey = makeKey(regionName, tableName, seqNum, now);
+      
       doWrite(info, logKey, edits);
-      this.numEntries.incrementAndGet();
-
       // Only count 1 row as an unflushed entry.
       txid = this.unflushedEntries.incrementAndGet();
     }
     long time = System.currentTimeMillis() - start;
+    
+    // Update the metrics and log the outliers
+    this.numEntries.incrementAndGet();
+    writeSize.inc(len);
     writeTime.inc(time);
+    if (time > 1000) {
+      LOG.warn(String.format(
+        "%s took %d ms appending an edit to hlog; editcount=%d, len~=%s",
+        Thread.currentThread().getName(), time, this.numEntries.get(),
+        StringUtils.humanReadableInt(len)));
+    }
+    
     Call call = HRegionServer.callContext.get();
     ProfilingData pData = call == null ? null : call.getProfilingData();
     if (pData != null) {
@@ -1027,8 +988,9 @@ public class HLog implements Syncable {
     // sync txn to file system
     start = System.currentTimeMillis();
     this.sync(info.isMetaRegion(), txid);
-    long end= System.currentTimeMillis();
+    long end = System.currentTimeMillis();
     time = end - start;
+    
     gsyncTime.inc(time);
     if (pData != null) {
       if (this.lastLogRollStartTimeMillis > start
@@ -1272,29 +1234,8 @@ public class HLog implements Syncable {
 
   protected void doWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit)
   throws IOException {
-    if (!this.enabled) {
-      return;
-    }
-    if (!this.logEntryVisitors.isEmpty()) {
-      for (LogEntryVisitor visitor : this.logEntryVisitors) {
-        visitor.visitLogEntryBeforeWrite(info, logKey, logEdit);
-      }
-    }
     try {
-      long now = System.currentTimeMillis();
       this.writer.append(new HLog.Entry(logKey, logEdit));
-      long took = System.currentTimeMillis() - now;
-      long len = 0;
-      for(KeyValue kv : logEdit.getKeyValues()) {
-        len += kv.getLength();
-      }
-      writeSize.inc(len);
-      if (took > 1000) {
-        LOG.warn(String.format(
-          "%s took %d ms appending an edit to hlog; editcount=%d, len~=%s",
-          Thread.currentThread().getName(), took, this.numEntries.get(),
-          StringUtils.humanReadableInt(len)));
-      }
     } catch (IOException e) {
       LOG.fatal("Could not append. Requesting close of hlog", e);
       requestLogRoll();

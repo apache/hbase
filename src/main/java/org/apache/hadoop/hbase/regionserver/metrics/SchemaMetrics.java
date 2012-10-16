@@ -577,15 +577,17 @@ public class SchemaMetrics {
         tableName == null || tableName.length() == 0)
       return "";
 
+    if (families.size() == 1) {
+      return SchemaMetrics.generateSchemaMetricsPrefix(tableName, 
+          Bytes.toString(families.iterator().next()));
+    }
+    
     tableName = getEffectiveTableName(tableName);
-    List<byte[]> sortedFamilies = new ArrayList<byte[]>(families);
-    Collections.sort(sortedFamilies, Bytes.BYTES_COMPARATOR);
 
     StringBuilder sb = new StringBuilder();
-
     int MAX_SIZE = 256;
     int limit = families.size();
-    for (byte[] family : sortedFamilies) {
+    for (byte[] family : families) {
       if (sb.length() > MAX_SIZE) {
         sb.append("__more");
         break;

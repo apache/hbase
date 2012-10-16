@@ -73,16 +73,22 @@ public class WALEdit implements Writable, HeapSize {
 
   private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
   private NavigableMap<byte[], Integer> scopes;
-
+  
+  private long length = 0;
   public WALEdit() {
   }
 
   public void add(KeyValue kv) {
     this.kvs.add(kv);
+    length += kv.getLength();
   }
 
   public boolean isEmpty() {
     return kvs.isEmpty();
+  }
+  
+  public long getTotalKeyValueLength() {
+    return length;
   }
 
   public int size() {

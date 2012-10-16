@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -234,7 +235,7 @@ public class TestSchemaMetrics {
       expected.append(".");
     }
     expected.append(SchemaMetrics.CF_PREFIX);
-    Set<byte[]> families = new HashSet<byte[]>();
+    Set<byte[]> families = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     for (int i = 1; i <= numCF; i++) {
       String cf = "cf" + i;
       families.add(Bytes.toBytes(cf));
