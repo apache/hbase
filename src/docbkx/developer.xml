@@ -36,18 +36,18 @@
       <section xml:id="svn">
         <title>SVN</title>
         <programlisting>
-svn co http://svn.apache.org/repos/asf/hbase/trunk hbase-core-trunk 
+svn co http://svn.apache.org/repos/asf/hbase/trunk hbase-core-trunk
         </programlisting>
-      </section>         
+      </section>
       <section xml:id="git">
         <title>Git</title>
         <programlisting>
 git clone git://git.apache.org/hbase.git
         </programlisting>
-      </section>         
-    </section>    
-             
-    <section xml:id="ides"> 
+      </section>
+    </section>
+
+    <section xml:id="ides">
         <title>IDEs</title>
         <section xml:id="eclipse">
           <title>Eclipse</title>
@@ -73,12 +73,12 @@ git clone git://git.apache.org/hbase.git
 </para>
             <para>In addition to the automatic formatting, make sure you follow the style guidelines explained in <xref linkend="common.patch.feedback"/></para>
             <para>Also, no @author tags - that's a rule.  Quality Javadoc comments are appreciated.  And include the Apache license.</para>
-            </section>         
+            </section>
             <section xml:id="eclipse.svn">
             <title>Subversive Plugin</title>
             <para>Download and install the Subversive plugin.</para>
             <para>Set up an SVN Repository target from <xref linkend="svn"/>, then check out the code.</para>
-            </section>         
+            </section>
             <section xml:id="eclipse.git.plugin">
             <title>Git Plugin</title>
             <para>If you cloned the project via git, download and install the Git plugin (EGit). Attach to your local git repo (via the Git Repositories window) and you'll be able to see file revision history, generate patches, etc.</para>
@@ -91,54 +91,54 @@ git clone git://git.apache.org/hbase.git
             Remove <filename>target</filename> folder, add <filename>target/generated-jamon</filename>
             and <filename>target/generated-sources/java</filename> folders. You may also remove from your Build Path
             the exclusions on the <filename>src/main/resources</filename> and <filename>src/test/resources</filename>
-            to avoid error message in the console 'Failed to execute goal org.apache.maven.plugins:maven-antrun-plugin:1.6:run (default) on project hbase: 
+            to avoid error message in the console 'Failed to execute goal org.apache.maven.plugins:maven-antrun-plugin:1.6:run (default) on project hbase:
             'An Ant BuildException has occured: Replace: source file .../target/classes/hbase-default.xml doesn't exist'. This will also
             reduce the eclipse build cycles and make your life easier when developing.</para>
             </section>
             <section xml:id="eclipse.commandline">
             <title>Import into eclipse with the command line</title>
-            <para>For those not inclined to use m2eclipse, you can generate the Eclipse files from the command line. First, run (you should only have to do this once): 
+            <para>For those not inclined to use m2eclipse, you can generate the Eclipse files from the command line. First, run (you should only have to do this once):
             <programlisting>mvn clean install -DskipTests</programlisting>
             and then close Eclipse and execute...
             <programlisting>mvn eclipse:eclipse</programlisting>
-            ... from your local HBase project directory in your workspace to generate some new <filename>.project</filename> 
+            ... from your local HBase project directory in your workspace to generate some new <filename>.project</filename>
             and <filename>.classpath</filename>files.  Then reopen Eclipse, or refresh your eclipse project (F5), and import
             the .project file in the HBase directory to a workspace.
             </para>
             </section>
             <section xml:id="eclipse.maven.class">
             <title>Maven Classpath Variable</title>
-            <para>The <varname>M2_REPO</varname> classpath variable needs to be set up for the project.  This needs to be set to 
+            <para>The <varname>M2_REPO</varname> classpath variable needs to be set up for the project.  This needs to be set to
             your local Maven repository, which is usually <filename>~/.m2/repository</filename></para>
             If this classpath variable is not configured, you will see compile errors in Eclipse like this...
             <programlisting>
 Description	Resource	Path	Location	Type
-The project cannot be built until build path errors are resolved	hbase		Unknown	Java Problem 
+The project cannot be built until build path errors are resolved	hbase		Unknown	Java Problem
 Unbound classpath variable: 'M2_REPO/asm/asm/3.1/asm-3.1.jar' in project 'hbase'	hbase		Build path	Build Path Problem
-Unbound classpath variable: 'M2_REPO/com/github/stephenc/high-scale-lib/high-scale-lib/1.1.1/high-scale-lib-1.1.1.jar' in project 'hbase'	hbase		Build path	Build Path Problem 
+Unbound classpath variable: 'M2_REPO/com/github/stephenc/high-scale-lib/high-scale-lib/1.1.1/high-scale-lib-1.1.1.jar' in project 'hbase'	hbase		Build path	Build Path Problem
 Unbound classpath variable: 'M2_REPO/com/google/guava/guava/r09/guava-r09.jar' in project 'hbase'	hbase		Build path	Build Path Problem
 Unbound classpath variable: 'M2_REPO/com/google/protobuf/protobuf-java/2.3.0/protobuf-java-2.3.0.jar' in project 'hbase'	hbase		Build path	Build Path Problem Unbound classpath variable:
-            </programlisting>            
+            </programlisting>
             </section>
             <section xml:id="eclipse.issues">
             <title>Eclipse Known Issues</title>
             <para>Eclipse will currently complain about <filename>Bytes.java</filename>.  It is not possible to turn these errors off.</para>
-            <programlisting>            
+            <programlisting>
 Description	Resource	Path	Location	Type
 Access restriction: The method arrayBaseOffset(Class) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar	Bytes.java	/hbase/src/main/java/org/apache/hadoop/hbase/util	line 1061	Java Problem
 Access restriction: The method arrayIndexScale(Class) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar	Bytes.java	/hbase/src/main/java/org/apache/hadoop/hbase/util	line 1064	Java Problem
 Access restriction: The method getLong(Object, long) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar	Bytes.java	/hbase/src/main/java/org/apache/hadoop/hbase/util	line 1111	Java Problem
-             </programlisting>   
+             </programlisting>
              </section>
              <section xml:id="eclipse.more">
              <title>Eclipse - More Information</title>
-             <para>For additional information on setting up Eclipse for HBase development on Windows, see 
+             <para>For additional information on setting up Eclipse for HBase development on Windows, see
              <link xlink:href="http://michaelmorello.blogspot.com/2011/09/hbase-subversion-eclipse-windows.html">Michael Morello's blog</link> on the topic.
              </para>
              </section>
         </section>
-    </section> 
-    
+    </section>
+
         <section xml:id="build">
        <title>Building HBase</title>
       <section xml:id="build.basic">
@@ -151,7 +151,7 @@ mvn package -DskipTests
        <programlisting>
 mvn clean package -DskipTests
        </programlisting>
-       With Eclipse set up as explained above in <xref linkend="eclipse"/>, you can also simply use the build command in Eclipse. To create the full installable HBase package takes a little bit more work, so read on. 
+       With Eclipse set up as explained above in <xref linkend="eclipse"/>, you can also simply use the build command in Eclipse. To create the full installable HBase package takes a little bit more work, so read on.
        </para>
       </section>
       <section xml:id="build.snappy">
@@ -170,7 +170,7 @@ mvn clean package -DskipTests
 
 
       <section xml:id="build.gotchas"><title>Build Gotchas</title>
-			<para>If you see <code>Unable to find resource 'VM_global_library.vm'</code>, ignore it.  
+			<para>If you see <code>Unable to find resource 'VM_global_library.vm'</code>, ignore it.
 			Its not an error.  It is <link xlink:href="http://jira.codehaus.org/browse/MSITE-286">officially ugly</link> though.
            </para>
       </section>
@@ -179,28 +179,32 @@ mvn clean package -DskipTests
         <title>Adding an HBase release to Apache's Maven Repository</title>
         <para>Follow the instructions at
         <link xlink:href="http://www.apache.org/dev/publishing-maven-artifacts.html">Publishing Maven Artifacts</link> after
-        reading the below.
+        reading the below miscellaney.
         </para>
-        <para>You must use maven 3.0.x.
+        <para>You must use maven 3.0.x (Check by running <command>mvn -version</command>).
         </para>
         <para>Let me list out the commands I used first.  The sections that follow dig in more
         on what is going on.  In this example, we are releasing the 0.92.2 jar to the apache
         maven repository.
         <programlisting>
+  # First make a copy of the tag we want to release; presumes the release has been tagged already
+  # We do this because we need to make some commits for the mvn release plugin to work.
   853  svn copy -m "Publishing 0.92.2 to mvn"  https://svn.apache.org/repos/asf/hbase/tags/0.92.2 https://svn.apache.org/repos/asf/hbase/tags/0.92.2mvn
   857  svn checkout https://svn.apache.org/repos/asf/hbase/tags/0.92.2mvn
   858  cd 0.92.2mvn/
-  860  vi pom.xml 
-  861  svn commit -m "Add SNAPSHOT to the version" pom.xml 
+  # Edit the version making it release version with a '-SNAPSHOT' suffix (See below for more on this)
+  860  vi pom.xml
+  861  svn commit -m "Add SNAPSHOT to the version" pom.xml
   862  ~/bin/mvn/bin/mvn release:clean
   863  ~/bin/mvn/bin/mvn release:perform
   865  ~/bin/mvn/bin/mvn release:prepare
-  866  # Answer questions and then ^C to kill the build
-  867  vi release.properties 
-       # Change the references to trunk svn to be 0.92.2mvn
+  866  # Answer questions and then ^C to kill the build after the last question. See below for more on this.
+  867  vi release.properties
+       # Change the references to trunk svn to be 0.92.2mvn; the release plugin presumes trunk
        # Then restart the release:prepare -- it won't ask questions
        # because the properties file exists.
   868  ~/bin/mvn/bin/mvn release:prepare
+  # The apache-release profile comes from the apache parent pom and does signing of artifacts published
   869  ~/bin/mvn/bin/mvn release:perform  -Papache-release
        # When done copying up to apache staging repository,
        # browse to repository.apache.org, login and finish
@@ -208,10 +212,11 @@ mvn clean package -DskipTests
        # "Publishing Maven Artifacts.
         </programlisting>
         </para>
+        <para>Below is more detail on the commmands listed above.</para>
         <para>At the <command>mvn release:perform</command> step, before starting, if you are for example
         releasing hbase 0.92.2, you need to make sure the pom.xml version is 0.92.2-SNAPSHOT.  This needs
         to be checked in.  Since we do the maven release after actual release, I've been doing this
-        checkin into a particular tag that is a copy of the release rather than into the actual release tag.
+        checkin into a copy of the release tag rather than into the actual release tag itself (presumes the release has been properly tagged in svn).
         So, say we released hbase 0.92.2 and now we want to do the release to the maven repository, in svn, the 0.92.2
         release will be tagged 0.92.2.  Making the maven release, copy the 0.92.2 tag to 0.92.2mvn.
         Check out this tag and change the version therein and commit.
@@ -219,16 +224,17 @@ mvn clean package -DskipTests
         <para>
             Currently, the mvn release wants to go against trunk.  I haven't figured how to tell it to do otherwise
             so I do the below hack.  The hack comprises answering the questions put to you by the mvn release plugin properly,
-            then immediately control-C'ing the build.  You'll notice a release.properties in your build dir.  Review it.
+            then immediately control-C'ing the build after the last question asked as the build release step starts to run.
+            After control-C'ing it, You'll notice a release.properties in your build dir.  Review it.
             Make sure it is using the proper branch -- it tends to use trunk rather than the 0.92.2mvn or whatever
             that you want it to use -- so hand edit the release.properties file that was put under <varname>${HBASE_HOME}</varname>
             by the <command>release:perform</command> invocation.  When done, resstart the
-            <command>release:perform</command> invocation.
+            <command>release:perform</command>.
         </para>
         <para>Here is how I'd answer the questions at <command>release:prepare</command> time:
-        <programlisting>What is the release version for "HBase"? (org.apache.hbase:hbase) 0.92.2: : 
+        <programlisting>What is the release version for "HBase"? (org.apache.hbase:hbase) 0.92.2: :
 What is SCM release tag or label for "HBase"? (org.apache.hbase:hbase) hbase-0.92.2: : 0.92.2mvn
-What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3-SNAPSHOT: : 
+What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3-SNAPSHOT: :
 [INFO] Transforming 'HBase'...</programlisting>
         </para>
         <para>When you run <command>release:perform</command>, pass <command>-Papache-release</command>
@@ -239,6 +245,10 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
         not release.  See <link xlink:href="https://issues.apache.org/jira/browse/INFRA-4482">INFRA-4482 Why is my upload to mvn spread across multiple repositories?</link>.</para>
 
         <para xml:id="mvn.settings.file">Here is my <filename>~/.m2/settings.xml</filename>.
+        This is read by the release plugin.  The apache-release profile will pick up your
+        gpg key setup from here if you've specified it into the file.  The password
+        can be maven encrypted as suggested in the "Publishing Maven Artifacts" but plain
+        text password works too (just don't let anyone see your local settings.xml).
         <programlisting>&lt;settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
@@ -324,7 +334,7 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
     <title>Tests</title>
 
 <para> Developers, at a minimum, should familiarize themselves with the unit test detail; unit tests in
-HBase have a character not usually seen in other projects.</para> 
+HBase have a character not usually seen in other projects.</para>
 
 <section xml:id="hbase.moduletests">
 <title>HBase Modules</title>
@@ -349,7 +359,7 @@ given the dependency tree).</para>
   can specify to skip tests in multiple modules as well as just for a single module. For example, to skip
   the tests in <classname>hbase-server</classname> and <classname>hbase-common</classname>, you would run:
   <programlisting>mvn clean test -Dskip-server-tests -Dskip-common-tests</programlisting>
-  <para>Also, keep in mind that if you are running tests in the <classname>hbase-server</classname> module you will need to 
+  <para>Also, keep in mind that if you are running tests in the <classname>hbase-server</classname> module you will need to
   apply the maven profiles discussed in <xref linkend="hbase.unittests.cmds"/> to get the tests to run properly.</para>
   </section>
 </section>
@@ -425,7 +435,7 @@ its unit test characterizations.
 (no fork) and then medium tests in a separate JVM for each test instance.
 Medium tests are NOT executed if there is an error in a small test.
 Large tests are NOT executed.  There is one report for small tests, and one report for
-medium tests if they are executed. 
+medium tests if they are executed.
 </para>
 </section>
 
@@ -510,14 +520,14 @@ second time, in a separate jvm and without parallelisation.
 A custom Maven SureFire plugin listener checks a  number of resources before
 and after each HBase unit test runs and logs its findings at the end of the test
 output files which can be found in <filename>target/surefire-reports</filename>
-per Maven module (Tests write test reports named for the test class into this directory.  
+per Maven module (Tests write test reports named for the test class into this directory.
 Check the <filename>*-out.txt</filename> files).  The resources counted are the number
 of threads, the number of file descriptors, etc. If the number has increased, it adds
 a <emphasis>LEAK?</emphasis> comment in the logs. As you can have an HBase instance
 running in the background, some threads can be deleted/created without any specific
 action in the test. However, if the test does not work as expected, or if the test
 should not impact these resources, it's worth checking these log lines
-<computeroutput>...hbase.ResourceChecker(157): before...</computeroutput> and 
+<computeroutput>...hbase.ResourceChecker(157): before...</computeroutput> and
 <computeroutput>...hbase.ResourceChecker(157): after...</computeroutput>. For example:
 <computeroutput>
 2012-09-26 09:22:15,315 INFO  [pool-1-thread-1] hbase.ResourceChecker(157): after: regionserver.TestColumnSeeking#testReseeking Thread=65 (was 65), OpenFileDescriptor=107 (was 107), MaxFileDescriptor=10240 (was 10240), ConnectionCount=1 (was 1)
@@ -582,29 +592,29 @@ As most as possible, tests should use the default settings for the cluster. When
 </section>
 </section>
 </section> <!-- tests -->
-    
-    <section xml:id="maven.build.commands"> 
+
+    <section xml:id="maven.build.commands">
        <title>Maven Build Commands</title>
        <para>All commands executed from the local HBase project directory.
        </para>
        <para>Note: use Maven 3 (Maven 2 may work but we suggest you use Maven 3).
        </para>
-       <section xml:id="maven.build.commands.compile"> 
+       <section xml:id="maven.build.commands.compile">
           <title>Compile</title>
           <programlisting>
 mvn compile
           </programlisting>
-       </section>       
+       </section>
 
-       <section xml:id="maven.build.commands.unitall"> 
+       <section xml:id="maven.build.commands.unitall">
           <title>Running all or individual Unit Tests</title>
           <para>See the <xref linkend="hbase.unittests.cmds" /> section
           above in <xref linkend="hbase.unittests" /></para>
-       </section>       
+       </section>
 
-       <section xml:id="maven.build.hadoop"> 
+       <section xml:id="maven.build.hadoop">
           <title>Building against various hadoop versions.</title>
-          <para>As of 0.96, HBase supports building against hadoop versions: 1.0.3, 2.0.0-alpha and 3.0.0-SNAPSHOT. 
+          <para>As of 0.96, HBase supports building against hadoop versions: 1.0.3, 2.0.0-alpha and 3.0.0-SNAPSHOT.
           By default, we will build with Hadoop-1.0.3. To change the version to run with Hadoop-2.0.0-alpha, you would run:</para>
          <programlisting>mvn -Dhadoop.profile=2.0 ...</programlisting>
          <para>
@@ -620,8 +630,8 @@ mvn compile
           <programlisting>mvn -Dhadoop.profile=22 ...</programlisting>
       </section>
     </section>
-  
-    <section xml:id="getting.involved"> 
+
+    <section xml:id="getting.involved">
         <title>Getting Involved</title>
         <para>HBase gets better only when people contribute!
         </para>
@@ -629,16 +639,16 @@ mvn compile
         </para>
         <section xml:id="mailing.list">
           <title>Mailing Lists</title>
-          <para>Sign up for the dev-list and the user-list.  See the 
+          <para>Sign up for the dev-list and the user-list.  See the
           <link xlink:href="http://hbase.apache.org/mail-lists.html">mailing lists</link> page.
-          Posing questions - and helping to answer other people's questions - is encouraged!  
-          There are varying levels of experience on both lists so patience and politeness are encouraged (and please 
-          stay on topic.)  
+          Posing questions - and helping to answer other people's questions - is encouraged!
+          There are varying levels of experience on both lists so patience and politeness are encouraged (and please
+          stay on topic.)
           </para>
         </section>
         <section xml:id="jira">
           <title>Jira</title>
-          <para>Check for existing issues in <link xlink:href="https://issues.apache.org/jira/browse/HBASE">Jira</link>.  
+          <para>Check for existing issues in <link xlink:href="https://issues.apache.org/jira/browse/HBASE">Jira</link>.
           If it's either a new feature request, enhancement, or a bug, file a ticket.
           </para>
           <section xml:id="jira.priorities"><title>Jira Priorities</title>
@@ -648,10 +658,10 @@ mvn compile
                 <listitem>Critical: The issue described can cause data loss or cluster instability in some cases.</listitem>
                 <listitem>Major: Important but not tragic issues, like updates to the client API that will add a lot of much-needed functionality or significant
                 bugs that need to be fixed but that don't cause data loss.</listitem>
-                <listitem>Minor: Useful enhancements and annoying but not damaging bugs.</listitem> 
-                <listitem>Trivial: Useful enhancements but generally cosmetic.</listitem> 
-                </itemizedlist>  
-             </para> 
+                <listitem>Minor: Useful enhancements and annoying but not damaging bugs.</listitem>
+                <listitem>Trivial: Useful enhancements but generally cosmetic.</listitem>
+                </itemizedlist>
+             </para>
         </section>
         <section xml:id="submitting.patches.jira.code">
           <title>Code Blocks in Jira Comments</title>
@@ -666,15 +676,15 @@ mvn compile
         </section>
        </section>  <!--  jira -->
       </section>  <!--  getting involved -->
-      
+
       <section xml:id="developing">
         <title>Developing</title>
         <section xml:id="codelines"><title>Codelines</title>
           <para>Most development is done on TRUNK.  However, there are branches for minor releases (e.g., 0.90.1, 0.90.2, and 0.90.3 are on the 0.90 branch).</para>
           <para>If you have any questions on this just send an email to the dev dist-list.</para>
         </section>
-  
-        <section xml:id="unit.tests"> 
+
+        <section xml:id="unit.tests">
           <title>Unit Tests</title>
           <para>In HBase we use <link xlink:href="http://junit.org">JUnit</link> 4.
             If you need to run miniclusters of HDFS, ZooKeeper, HBase, or MapReduce testing,
@@ -697,7 +707,7 @@ mvn compile
               </programlisting>
            </para>
          </section>
-        </section>   <!--  unit tests  -->       
+        </section>   <!--  unit tests  -->
 
           <section xml:id="code.standards">
            <title>Code Standards</title>
@@ -711,7 +721,7 @@ mvn compile
            <para>If the <classname>InterfaceAudience</classname> is <varname>Private</varname>,
            we can change the class (and we do not need to include a <classname>InterfaceStability</classname> mark).
            If a class is marked <varname>Public</varname> but its <classname>InterfaceStability</classname>
-           is marked <varname>Unstable</varname>, we can change it. If it's 
+           is marked <varname>Unstable</varname>, we can change it. If it's
            marked <varname>Public</varname>/<varname>Evolving</varname>, we're allowed to change it
            but should try not to. If it's <varname>Public</varname> and <varname>Stable</varname>
            we can't change it without a deprecation path or with a really GREAT reason.</para>
@@ -765,7 +775,7 @@ mvn compile
           repository.  Patch files can also be easily generated from Eclipse, for example by selecting "Team -&gt; Create Patch".
           Patches can also be created by git diff and svn diff.
           </para>
-          <para>Please submit one patch-file per Jira.  For example, if multiple files are changed make sure the 
+          <para>Please submit one patch-file per Jira.  For example, if multiple files are changed make sure the
           selected resource when generating the patch is a directory.  Patch files can reflect changes in multiple files. </para>
           <para>Make sure you review <xref linkend="eclipse.code.formatting"/> for code style. </para>
           </section>
@@ -784,7 +794,7 @@ mvn compile
             <para>Also, see <xref linkend="mockito"/>.</para>
             <para>If you are creating a new unit test class, notice how other unit test classes have classification/sizing
             annotations at the top and a static method on the end.  Be sure to include these in any new unit test files
-            you generate.  See <xref linkend="hbase.tests" /> for more on how the annotations work. 
+            you generate.  See <xref linkend="hbase.tests" /> for more on how the annotations work.
             </para>
           </section>
           <section xml:id="submitting.patches.jira">
@@ -792,20 +802,20 @@ mvn compile
             <para>The patch should be attached to the associated Jira ticket "More Actions -&gt; Attach Files".  Make sure you click the
             ASF license inclusion, otherwise the patch can't be considered for inclusion.
             </para>
-            <para>Once attached to the ticket, click "Submit Patch" and 
+            <para>Once attached to the ticket, click "Submit Patch" and
             the status of the ticket will change.  Committers will review submitted patches for inclusion into the codebase.  Please
             understand that not every patch may get committed, and that feedback will likely be provided on the patch.  Fear not, though,
             because the HBase community is helpful!
             </para>
          </section>
-          
+
         <section xml:id="common.patch.feedback">
             <title>Common Patch Feedback</title>
           <para>The following items are representative of common patch feedback. Your patch process will go faster if these are
           taken into account <emphasis>before</emphasis> submission.
           </para>
           <para>
-          See the <link xlink:href="http://www.oracle.com/technetwork/java/codeconv-138413.html">Java coding standards</link> 
+          See the <link xlink:href="http://www.oracle.com/technetwork/java/codeconv-138413.html">Java coding standards</link>
           for more information on coding conventions in Java.
           </para>
           <section xml:id="common.patch.feedback.space.invaders">
@@ -814,7 +824,7 @@ mvn compile
 <programlisting>
 if ( foo.equals( bar ) ) {     // don't do this
 </programlisting>
-			... do this instead...        
+			... do this instead...
 <programlisting>
 if (foo.equals(bar)) {
 </programlisting>
@@ -823,9 +833,9 @@ if (foo.equals(bar)) {
 <programlisting>
 foo = barArray[ i ];     // don't do this
 </programlisting>
-			... do this instead...        
+			... do this instead...
 <programlisting>
-foo = barArray[i];   
+foo = barArray[i];
 </programlisting>
           </para>
           </section>
@@ -836,7 +846,7 @@ foo = barArray[i];
  public void readFields(DataInput arg0) throws IOException {    // don't do this
    foo = arg0.readUTF();                                       // don't do this
 </programlisting>
-			... do this instead ...        
+			... do this instead ...
 <programlisting>
  public void readFields(DataInput di) throws IOException {
    foo = di.readUTF();
@@ -851,10 +861,10 @@ foo = barArray[i];
 <programlisting>
 Bar bar = foo.veryLongMethodWithManyArguments(argument1, argument2, argument3, argument4, argument5, argument6, argument7, argument8, argument9);  // don't do this
 </programlisting>
-			... do something like this instead ...        
+			... do something like this instead ...
 <programlisting>
 Bar bar = foo.veryLongMethodWithManyArguments(
- argument1, argument2, argument3,argument4, argument5, argument6, argument7, argument8, argument9); 
+ argument1, argument2, argument3,argument4, argument5, argument6, argument7, argument8, argument9);
 </programlisting>
            </para>
           </section>
@@ -866,9 +876,9 @@ Bar bar = foo.veryLongMethodWithManyArguments(
 Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the semicolon instead of a line break.
 </programlisting>
             Make sure there's a line-break after the end of your code, and also avoid lines that have nothing
-            but whitespace. 
+            but whitespace.
             </para>
-         </section> 
+         </section>
           <section xml:id="common.patch.feedback.writable">
             <title>Implementing Writable</title>
             <para>Every class returned by RegionServers must implement <code>Writable</code>.  If you
@@ -885,32 +895,32 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
             <para>Don't just leave the @param arguments the way your IDE generated them.  Don't do this...
 <programlisting>
   /**
-   * 
+   *
    * @param bar             &lt;---- don't do this!!!!
    * @return                &lt;---- or this!!!!
    */
   public Foo getFoo(Bar bar);
-</programlisting> 
-            ... either add something descriptive to the @param and @return lines, or just remove them. 
-            But the preference is to add something descriptive and useful.          
+</programlisting>
+            ... either add something descriptive to the @param and @return lines, or just remove them.
+            But the preference is to add something descriptive and useful.
             </para>
           </section>
           <section xml:id="common.patch.feedback.onething">
             <title>One Thing At A Time, Folks</title>
             <para>If you submit a patch for one thing, don't do auto-reformatting or unrelated reformatting of code on a completely
-            different area of code. 
+            different area of code.
             </para>
-            <para>Likewise, don't add unrelated cleanup or refactorings outside the scope of your Jira. 
+            <para>Likewise, don't add unrelated cleanup or refactorings outside the scope of your Jira.
             </para>
           </section>
           <section xml:id="common.patch.feedback.tests">
             <title>Ambigious Unit Tests</title>
-            <para>Make sure that you're clear about what you are testing in your unit tests and why. 
+            <para>Make sure that you're clear about what you are testing in your unit tests and why.
             </para>
           </section>
 
         </section>   <!--  patch feedback -->
- 
+
          <section xml:id="reviewboard">
             <title>ReviewBoard</title>
           <para>Larger patches should go through <link xlink:href="http://reviews.apache.org">ReviewBoard</link>.
@@ -918,7 +928,7 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
           <para>For more information on how to use ReviewBoard, see
            <link xlink:href="http://www.reviewboard.org/docs/manual/1.5/">the ReviewBoard documentation</link>.
           </para>
-        </section> 
+        </section>
         <section xml:id="committing.patches">
           <title>Committing Patches</title>
           <para>
@@ -929,6 +939,6 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
         </section>
 
        </section>   <!--  submitting patches -->
-       
-    
+
+
     </chapter>
