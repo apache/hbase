@@ -543,6 +543,28 @@
     </description>
   </property>
 
+  <!-- Thrift proxy configuration -->
+  <property>
+    <name>hbase.thrift.selector.threads</name>
+    <value>64</value>
+  </property>
+
+  <property>
+    <name>hbase.thrift.worker.threads</name>
+    <value>64</value>
+  </property>
+
+  <!-- Embedded Thrift server configuration -->
+  <property>
+    <name>hbase.regionserver.thrift.selector.threads</name>
+    <value>64</value>
+  </property>
+
+  <property>
+    <name>hbase.regionserver.thrift.worker.threads</name>
+    <value>64</value>
+  </property>
+
   <!--
   The following three properties are used together to create the list of
   host:peer_port:leader_port quorum servers for ZooKeeper.
