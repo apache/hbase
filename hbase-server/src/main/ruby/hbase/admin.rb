@@ -218,7 +218,7 @@ module Hbase
             splits = Java::byte[][arg[SPLITS].size].new
             idx = 0
             arg[SPLITS].each do |split|
-              splits[idx] = split.to_java_bytes
+              splits[idx] = org.apache.hadoop.hbase.util.Bytes.toBytesBinary(split)
               idx = idx + 1
             end
           elsif (arg.has_key?(NUMREGIONS) or arg.has_key?(SPLITALGO))
