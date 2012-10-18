@@ -310,6 +310,18 @@ public class RegionServerMetrics implements Updater {
   public final MetricsLongValue checksumFailuresCount =
     new MetricsLongValue("checksumFailuresCount", registry);
 
+  /**
+   * time blocked on lack of resources
+   */
+  public final MetricsHistogram updatesBlockedSeconds = new MetricsHistogram(
+      "updatesBlockedSeconds", registry);
+
+  /**
+   * time blocked on memstoreHW
+   */
+  public final MetricsHistogram updatesBlockedSecondsHighWater = new MetricsHistogram(
+      "updatesBlockedSecondsHighWater",registry);
+
   public RegionServerMetrics() {
     MetricsContext context = MetricsUtil.getContext("hbase");
     metricsRecord = MetricsUtil.createRecord(context, "regionserver");
@@ -449,6 +461,8 @@ public class RegionServerMetrics implements Updater {
       this.regionSplitSuccessCount.pushMetric(this.metricsRecord);
       this.regionSplitFailureCount.pushMetric(this.metricsRecord);
       this.checksumFailuresCount.pushMetric(this.metricsRecord);
+      this.updatesBlockedSeconds.pushMetric(this.metricsRecord);
+      this.updatesBlockedSecondsHighWater.pushMetric(this.metricsRecord);
     }
     this.metricsRecord.update();
   }

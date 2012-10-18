@@ -245,6 +245,7 @@ public class HRegion implements HeapSize { // , Writable{
   final Counter checkAndMutateChecksFailed = new Counter();
   final Counter readRequestsCount = new Counter();
   final Counter writeRequestsCount = new Counter();
+  final Counter updatesBlockedMs = new Counter();
 
   /**
    * The directory for the table this region is part of.
@@ -2493,9 +2494,11 @@ public class HRegion implements HeapSize { // , Writable{
     if (this.getRegionInfo().isMetaRegion()) return;
 
     boolean blocked = false;
+    long startTime = 0;
     while (this.memstoreSize.get() > this.blockingMemStoreSize) {
       requestFlush();
       if (!blocked) {
+        startTime = EnvironmentEdgeManager.currentTimeMillis();
         LOG.info("Blocking updates for '" + Thread.currentThread().getName() +
           "' on region " + Bytes.toStringBinary(getRegionName()) +
           ": memstore size " +
@@ -2508,11 +2511,16 @@ public class HRegion implements HeapSize { // , Writable{
         try {
           wait(threadWakeFrequency);
         } catch (InterruptedException e) {
-          // continue;
+          Thread.currentThread().interrupt();
         }
       }
     }
     if (blocked) {
+      // Add in the blocked time if appropriate
+      final long totalTime = EnvironmentEdgeManager.currentTimeMillis() - startTime;
+      if(totalTime > 0 ){
+        this.updatesBlockedMs.add(totalTime);
+      }
       LOG.info("Unblocking updates for region " + this + " '"
           + Thread.currentThread().getName() + "'");
     }
@@ -4932,7 +4940,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      39 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
+      40 * ClassSize.REFERENCE + Bytes.SIZEOF_INT +
       (7 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
