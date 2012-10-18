@@ -223,7 +223,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
       Long value = countersMap.remove(key);
       if (value == null) {
         // There was nothing there, create a new value
-        value = new Long(currentAmount);
+        value = Long.valueOf(currentAmount);
       } else {
         value += currentAmount;
         successfulCoalescings.incrementAndGet();

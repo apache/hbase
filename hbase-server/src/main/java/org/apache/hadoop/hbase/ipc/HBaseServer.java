@@ -1133,7 +1133,7 @@ public abstract class HBaseServer implements RpcServer {
     SaslServer saslServer;
     private boolean useWrap = false;
     // Fake 'call' for failed authorization response
-    private final int AUTHROIZATION_FAILED_CALLID = -1;
+    private static final int AUTHROIZATION_FAILED_CALLID = -1;
     private final Call authFailedCall = new Call(AUTHROIZATION_FAILED_CALLID,
         null, this, null, 0, null);
     private ByteArrayOutputStream authFailedResponse =

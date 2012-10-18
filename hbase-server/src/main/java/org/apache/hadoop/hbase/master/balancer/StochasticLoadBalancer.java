@@ -557,11 +557,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     double value = 0;
 
     // Compute the min, value, and max.
-    for (String tableName : tableRegionsTotal.keySet()) {
-      max += tableRegionsTotal.get(tableName).doubleValue();
-      min += tableRegionsTotal.get(tableName).doubleValue() / (double) clusterState.size();
-      value += tableCostSeenSoFar.get(tableName).doubleValue();
-
+    for (Entry<String, MutableInt> currentEntry : tableRegionsTotal.entrySet()) {
+      max += tableRegionsTotal.get(currentEntry.getKey()).doubleValue();
+      min += tableRegionsTotal.get(currentEntry.getKey()).doubleValue() / clusterState.size();
+      value += tableCostSeenSoFar.get(currentEntry.getKey()).doubleValue();
     }
     return scale(min, max, value);
   }

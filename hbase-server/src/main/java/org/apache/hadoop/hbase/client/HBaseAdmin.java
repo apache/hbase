@@ -963,12 +963,11 @@ public class HBaseAdmin implements Abortable, Closeable {
     return execute(new MasterMonitorCallable<Pair<Integer, Integer>>() {
       @Override
       public Pair<Integer, Integer> call() throws ServiceException {
-        GetSchemaAlterStatusRequest req =
-          RequestConverter.buildGetSchemaAlterStatusRequest(tableName);
-        GetSchemaAlterStatusResponse ret = masterMonitor.getSchemaAlterStatus(null,req);
-        Pair<Integer,Integer> pair =
-          new Pair<Integer,Integer>(
-            new Integer(ret.getYetToUpdateRegions()),new Integer(ret.getTotalRegions()));
+        GetSchemaAlterStatusRequest req = RequestConverter
+            .buildGetSchemaAlterStatusRequest(tableName);
+        GetSchemaAlterStatusResponse ret = masterMonitor.getSchemaAlterStatus(null, req);
+        Pair<Integer, Integer> pair = new Pair<Integer, Integer>(Integer.valueOf(ret
+            .getYetToUpdateRegions()), Integer.valueOf(ret.getTotalRegions()));
         return pair;
       }
     });
