@@ -71,7 +71,7 @@ public abstract class HBaseTestCase extends TestCase {
   protected static final byte [][] COLUMNS = {fam1, fam2, fam3};
 
   private boolean localfs = false;
-  protected Path testDir = null;
+  protected static Path testDir = null;
   protected FileSystem fs = null;
   protected HRegion root = null;
   protected HRegion meta = null;
@@ -180,8 +180,14 @@ public abstract class HBaseTestCase extends TestCase {
    * @return An {@link HRegion}
    * @throws IOException
    */
-  protected HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
+  public HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
       byte [] endKey)
+  throws IOException {
+    return createNewHRegion(desc, startKey, endKey, this.conf);
+  }
+
+  public HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
+      byte [] endKey, Configuration conf)
   throws IOException {
     FileSystem filesystem = FileSystem.get(conf);
     HRegionInfo hri = new HRegionInfo(desc.getName(), startKey, endKey);
@@ -248,10 +254,11 @@ public abstract class HBaseTestCase extends TestCase {
    * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
    * @param r
    * @param columnFamily
+   * @param column
    * @throws IOException
    * @return count of what we added.
    */
-  protected static long addContent(final HRegion r, final byte [] columnFamily)
+  public static long addContent(final HRegion r, final byte [] columnFamily, final byte[] column)
   throws IOException {
     byte [] startKey = r.getRegionInfo().getStartKey();
     byte [] endKey = r.getRegionInfo().getEndKey();
@@ -259,8 +266,22 @@ public abstract class HBaseTestCase extends TestCase {
     if (startKeyBytes == null || startKeyBytes.length == 0) {
       startKeyBytes = START_KEY_BYTES;
     }
-    return addContent(new HRegionIncommon(r), Bytes.toString(columnFamily), null,
+    return addContent(new HRegionIncommon(r), Bytes.toString(columnFamily), Bytes.toString(column),
       startKeyBytes, endKey, -1);
+  }
+
+  /**
+   * Add content to region <code>r</code> on the passed column
+   * <code>column</code>.
+   * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
+   * @param r
+   * @param columnFamily
+   * @throws IOException
+   * @return count of what we added.
+   */
+  protected static long addContent(final HRegion r, final byte [] columnFamily)
+  throws IOException {
+    return addContent(r, columnFamily, null);
   }
 
   /**
@@ -273,12 +294,12 @@ public abstract class HBaseTestCase extends TestCase {
    * @return count of what we added.
    */
   protected static long addContent(final Incommon updater,
-                                   final String columnFamily) throws IOException {
+      final String columnFamily) throws IOException {
     return addContent(updater, columnFamily, START_KEY_BYTES, null);
   }
 
   protected static long addContent(final Incommon updater, final String family,
-                                   final String column) throws IOException {
+      final String column) throws IOException {
     return addContent(updater, family, column, START_KEY_BYTES, null);
   }
 

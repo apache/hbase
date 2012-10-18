@@ -380,8 +380,8 @@ public class TestHFileBlockIndex {
       // Now test we can get the offset and the on-disk-size using a
       // higher-level API function.s
       boolean locateBlockResult =
-        BlockIndexReader.locateNonRootIndexEntry(nonRootIndex, arrayHoldingKey,
-            searchKey.length / 2, searchKey.length, Bytes.BYTES_RAWCOMPARATOR);
+        (BlockIndexReader.locateNonRootIndexEntry(nonRootIndex, arrayHoldingKey,
+            searchKey.length / 2, searchKey.length, Bytes.BYTES_RAWCOMPARATOR) != -1);
 
       if (i == 0) {
         assertFalse(locateBlockResult);

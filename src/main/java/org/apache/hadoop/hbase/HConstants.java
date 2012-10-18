@@ -79,7 +79,7 @@ public final class HConstants {
   /** Cluster is fully-distributed */
   public static final boolean CLUSTER_IS_DISTRIBUTED = true;
 
-  /** Default value for cluster distributed mode */  
+  /** Default value for cluster distributed mode */
   public static final boolean DEFAULT_CLUSTER_DISTRIBUTED = CLUSTER_IS_LOCAL;
 
   /** default host address */
@@ -187,13 +187,13 @@ public final class HConstants {
 
   /** Default value for thread wake frequency */
   public static final int DEFAULT_THREAD_WAKE_FREQUENCY = 10 * 1000;
-  
+
   /** Parameter name for how often we should try to write a version file, before failing */
   public static final String VERSION_FILE_WRITE_ATTEMPTS = "hbase.server.versionfile.writeattempts";
 
   /** Parameter name for how often we should try to write a version file, before failing */
   public static final int DEFAULT_VERSION_FILE_WRITE_ATTEMPTS = 3;
-  
+
   /** Parameter name for how often a region should should perform a major compaction */
   public static final String MAJOR_COMPACTION_PERIOD = "hbase.hregion.majorcompaction";
 
@@ -618,10 +618,10 @@ public final class HConstants {
   /** File permission umask to use when creating hbase data files */
   public static final String DATA_FILE_UMASK_KEY = "hbase.data.umask";
 
-  /** 
+  /**
    * If this parameter is set to true, then hbase will read
-   * data and then verify checksums. Checksum verification 
-   * inside hdfs will be switched off.  However, if the hbase-checksum 
+   * data and then verify checksums. Checksum verification
+   * inside hdfs will be switched off.  However, if the hbase-checksum
    * verification fails, then it will switch back to using
    * hdfs checksums for verifiying data that is being read from storage.
    *
@@ -629,7 +629,7 @@ public final class HConstants {
    * verify any checksums, instead it will depend on checksum verification
    * being done in the hdfs client.
    */
-  public static final String HBASE_CHECKSUM_VERIFICATION = 
+  public static final String HBASE_CHECKSUM_VERIFICATION =
       "hbase.regionserver.checksum.verify";
 
   /**
@@ -661,7 +661,12 @@ public final class HConstants {
   public static final int HIGH_QOS = 100;
   public static final int REPLICATION_QOS = 5; // normal_QOS < replication_QOS < high_QOS
 
-  
+  /**
+   * The byte array represents for NO_NEXT_INDEXED_KEY;
+   * The actual value is irrelevant because this is always compared by reference.
+   */
+  public static final byte [] NO_NEXT_INDEXED_KEY = Bytes.toBytes("NO_NEXT_INDEXED_KEY");
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
