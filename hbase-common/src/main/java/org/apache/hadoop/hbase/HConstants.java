@@ -277,7 +277,7 @@ public final class HConstants {
   public static final int DEFAULT_SIZE_RESERVATION_BLOCK = 1024 * 1024 * 5;
 
   /** Maximum value length, enforced on KeyValue construction */
-  public static final int MAXIMUM_VALUE_LENGTH = Integer.MAX_VALUE;
+  public static final int MAXIMUM_VALUE_LENGTH = Integer.MAX_VALUE - 1;
 
   /** name of the file for unique cluster ID */
   public static final String CLUSTER_ID_FILE_NAME = "hbase.id";
