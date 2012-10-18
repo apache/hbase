@@ -4190,8 +4190,8 @@ public class TestFromClientSide {
     Mutate m2 = ProtobufUtil.toMutate(MutateType.PUT, p);
 
     MultiMutateRequest.Builder mrmBuilder = MultiMutateRequest.newBuilder();
-    mrmBuilder.addMutatationRequest(m1);
-    mrmBuilder.addMutatationRequest(m2);
+    mrmBuilder.addMutationRequest(m1);
+    mrmBuilder.addMutationRequest(m2);
     MultiMutateRequest mrm = mrmBuilder.build();
     CoprocessorRpcChannel channel = t.coprocessorService(ROW);
     MultiRowMutationService.BlockingInterface service = 

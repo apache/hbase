@@ -23,7 +23,7 @@ option java_generic_services = true;
 option optimize_for = SPEED;
 
 message MultiMutateRequest {
-  repeated Mutate mutatationRequest = 1;
+  repeated Mutate mutationRequest = 1;
 }
 
 message MultiMutateResponse {

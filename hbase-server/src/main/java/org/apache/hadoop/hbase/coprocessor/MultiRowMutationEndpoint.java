@@ -67,8 +67,8 @@ import com.google.protobuf.Service;
  * Mutate m1 = ProtobufUtil.toMutate(MutateType.PUT, p1);
  * Mutate m2 = ProtobufUtil.toMutate(MutateType.PUT, p2);
  * MultiMutateRequest.Builder mrmBuilder = MultiMutateRequest.newBuilder();
- * mrmBuilder.addMutatationRequest(m1);
- * mrmBuilder.addMutatationRequest(m2);
+ * mrmBuilder.addMutationRequest(m1);
+ * mrmBuilder.addMutationRequest(m2);
  * CoprocessorRpcChannel channel = t.coprocessorService(ROW);
  * MultiRowMutationService.BlockingInterface service = 
  *    MultiRowMutationService.newBlockingStub(channel);
@@ -88,7 +88,7 @@ CoprocessorService, Coprocessor {
     try {
       // set of rows to lock, sorted to avoid deadlocks
       SortedSet<byte[]> rowsToLock = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-      List<Mutate> mutateRequestList = request.getMutatationRequestList();
+      List<Mutate> mutateRequestList = request.getMutationRequestList();
       List<Mutation> mutations = new ArrayList<Mutation>(mutateRequestList.size());
       for (Mutate m : mutateRequestList) {
         mutations.add(ProtobufUtil.toMutation(m));
