@@ -42,8 +42,10 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
+import org.cliffc.high_scale_lib.Counter;
 
 import com.google.common.base.Preconditions;
 
@@ -82,6 +84,7 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
     "hbase.regionserver.global.memstore.lowerLimit";
   private long blockingStoreFilesNumber;
   private long blockingWaitTime;
+  private final Counter updatesBlockedMsHighWater = new Counter();
 
   /**
    * @param conf
@@ -142,6 +145,10 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
       effectiveLimit = defaultLimit;
     }
     return (long)(max * effectiveLimit);
+  }
+
+  public Counter getUpdatesBlockedMsHighWater() {
+    return this.updatesBlockedMsHighWater;
   }
 
   /**
@@ -450,11 +457,22 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
    * to the lower limit. This method blocks callers until we're down to a safe
    * amount of memstore consumption.
    */
-  public synchronized void reclaimMemStoreMemory() {
+  public void reclaimMemStoreMemory() {
     if (isAboveHighWaterMark()) {
       lock.lock();
       try {
+        boolean blocked = false;
+        long startTime = 0;
         while (isAboveHighWaterMark() && !server.isStopped()) {
+          if(!blocked){
+            startTime = EnvironmentEdgeManager.currentTimeMillis();
+            LOG.info("Blocking updates on " + server.toString() +
+            ": the global memstore size " +
+            StringUtils.humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreSize()) +
+            " is >= than blocking " +
+            StringUtils.humanReadableInt(globalMemStoreLimit) + " size");
+          }
+          blocked = true;
           wakeupFlushThread();
           try {
             // we should be able to wait forever, but we've seen a bug where
@@ -463,6 +481,13 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
           } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
           }
+        }
+        if(blocked){
+          final long totalTime = EnvironmentEdgeManager.currentTimeMillis() - startTime;
+          if(totalTime > 0){
+            this.updatesBlockedMsHighWater.add(totalTime);
+          }
+          LOG.info("Unblocking updates for server " + server.toString());
         }
       } finally {
         lock.unlock();
