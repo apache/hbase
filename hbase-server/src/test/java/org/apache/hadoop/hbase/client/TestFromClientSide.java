@@ -46,10 +46,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
-import org.apache.hadoop.hbase.coprocessor.MultiRowMutationProtocol;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -64,6 +64,12 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Mutate.MutateType;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiRowMutationService;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
@@ -4175,16 +4181,22 @@ public class TestFromClientSide {
     final byte [] ROW1 = Bytes.toBytes("testRow1");
 
     HTable t = TEST_UTIL.createTable(TABLENAME, FAMILY);
-    List<Mutation> mrm = new ArrayList<Mutation>();
     Put p = new Put(ROW);
     p.add(FAMILY, QUALIFIER, VALUE);
-    mrm.add(p);
+    Mutate m1 = ProtobufUtil.toMutate(MutateType.PUT, p);
+
     p = new Put(ROW1);
     p.add(FAMILY, QUALIFIER, VALUE);
-    mrm.add(p);
-    MultiRowMutationProtocol mr = t.coprocessorProxy(
-        MultiRowMutationProtocol.class, ROW);
-    mr.mutateRows(mrm);
+    Mutate m2 = ProtobufUtil.toMutate(MutateType.PUT, p);
+
+    MultiMutateRequest.Builder mrmBuilder = MultiMutateRequest.newBuilder();
+    mrmBuilder.addMutatationRequest(m1);
+    mrmBuilder.addMutatationRequest(m2);
+    MultiMutateRequest mrm = mrmBuilder.build();
+    CoprocessorRpcChannel channel = t.coprocessorService(ROW);
+    MultiRowMutationService.BlockingInterface service = 
+       MultiRowMutationService.newBlockingStub(channel);
+    service.mutateRows(null, mrm);
     Get g = new Get(ROW);
     Result r = t.get(g);
     assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIER)));

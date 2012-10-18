@@ -531,6 +531,27 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Convert a MutateRequest to Mutation
+   * 
+   * @param proto the protocol buffer Mutate to convert
+   * @return the converted Mutation
+   * @throws IOException 
+   */
+  public static Mutation toMutation(final Mutate proto) throws IOException {
+    MutateType type = proto.getMutateType();
+    if (type == MutateType.APPEND) {
+      return toAppend(proto);
+    }
+    if (type == MutateType.DELETE) {
+      return toDelete(proto);
+    }
+    if (type == MutateType.PUT) {
+      return toPut(proto);
+    }
+    throw new IOException("Not an understood mutate type " + type);
+  }
+
+  /**
    * Convert a protocol buffer Mutate to an Increment
    *
    * @param proto the protocol buffer Mutate to convert
