@@ -1358,6 +1358,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     long totalStaticBloomSize = 0;
     long numPutsWithoutWAL = 0;
     long dataInMemoryWithoutWAL = 0;
+    long updatesBlockedMs = 0;
 
     // Note that this is a map of Doubles instead of Longs. This is because we
     // do effective integer division, which would perhaps truncate more than it
@@ -1374,6 +1375,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       dataInMemoryWithoutWAL += r.dataInMemoryWithoutWAL.get();
       readRequestsCount += r.readRequestsCount.get();
       writeRequestsCount += r.writeRequestsCount.get();
+      updatesBlockedMs += r.updatesBlockedMs.get();
       synchronized (r.stores) {
         stores += r.stores.size();
         for (Map.Entry<byte[], Store> ee : r.stores.entrySet()) {
@@ -1451,6 +1453,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         .getCompactionQueueSize());
     this.metrics.flushQueueSize.set(cacheFlusher
         .getFlushQueueSize());
+    this.metrics.updatesBlockedSeconds.update(updatesBlockedMs > 0 ? 
+        updatesBlockedMs/1000: 0);
+    final long updatesBlockedMsHigherWater = cacheFlusher.getUpdatesBlockedMsHighWater().get();
+    this.metrics.updatesBlockedSecondsHighWater.update(updatesBlockedMsHigherWater > 0 ? 
+        updatesBlockedMsHigherWater/1000: 0);
 
     BlockCache blockCache = cacheConfig.getBlockCache();
     if (blockCache != null) {
