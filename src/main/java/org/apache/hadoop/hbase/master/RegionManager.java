@@ -967,6 +967,23 @@ public class RegionManager {
   }
 
   /**
+   * Force the rootScannerThread, and the metaScannerThread to scan the
+   * root/meta region at once.
+   *
+   * These threads are supposed to scan ROOT/META regions every so often
+   * (typically 1 min). This function is used to force the scan to happen
+   * immediately.
+   */
+  public void forceScans() {
+    if (!stoppedScanners) {
+      LOG.debug("Going to trigger a metaScan for -ROOT-");
+      this.rootScannerThread.triggerNow();
+      LOG.debug("Going to trigger a metaScan for .META.");
+      this.metaScannerThread.triggerNow();
+    }
+  }
+
+  /**
    * Terminate all threads but don't clean up any state.
    */
   public void joinThreads() {

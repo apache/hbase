@@ -298,6 +298,9 @@ public class ZKClusterStateRecovery {
 
     if (reassignRoot) {
       regionManager.reassignRootRegion();
+      // Let us not wait for (max) 1 min to assign META and other
+      // user regions.
+      regionManager.forceScans();
     }
   }
 
