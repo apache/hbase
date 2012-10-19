@@ -119,8 +119,8 @@
       <name>Andrew Purtell</name>
       <email>apurtell@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Trend Micro</organization>
-      <organizationUrl>http://www.trendmicro.com</organizationUrl>
+      <organization>Intel</organization>
+      <organizationUrl>http://www.intel.com</organizationUrl>
     </developer>
     <developer>
       <id>dmeil</id>
