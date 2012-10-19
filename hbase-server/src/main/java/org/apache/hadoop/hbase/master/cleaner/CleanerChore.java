@@ -121,7 +121,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
       // loop over the found files and see if they should be deleted
       for (FileStatus file : files) {
         try {
-          if (file.isDir()) checkDirectory(file.getPath());
+          if (file.isDir()) checkAndDeleteDirectory(file.getPath());
           else checkAndDelete(file.getPath());
         } catch (IOException e) {
           e = RemoteExceptionHandler.checkIOException(e);
@@ -135,59 +135,40 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
   }
 
   /**
-   * Check to see if we can delete a directory (and all the children files of that directory).
+   * Attempt to delete a directory and all files under that directory. Each child file is passed
+   * through the delegates to see if it can be deleted. If the directory has no children when the
+   * cleaners have finished it is deleted.
    * <p>
-   * A directory will not be deleted if it has children that are subsequently deleted since that
-   * will require another set of lookups in the filesystem, which is semantically same as waiting
-   * until the next time the chore is run, so we might as well wait.
-   * @param fs {@link FileSystem} where he directory resides
+   * If new children files are added between checks of the directory, the directory will <b>not</b>
+   * be deleted.
    * @param toCheck directory to check
-   * @throws IOException
+   * @return <tt>true</tt> if the directory was deleted, <tt>false</tt> otherwise.
+   * @throws IOException if there is an unexpected filesystem error
    */
-  private void checkDirectory(Path toCheck) throws IOException {
+  private boolean checkAndDeleteDirectory(Path toCheck) throws IOException {
     LOG.debug("Checking directory: " + toCheck);
-    FileStatus[] files = checkAndDeleteDirectory(toCheck);
+    FileStatus[] children = FSUtils.listStatus(fs, toCheck);
     // if the directory doesn't exist, then we are done
-    if (files == null) return;
+    if (children == null) return true;
 
-    // otherwise we need to check each of the child files
-    for (FileStatus file : files) {
-      Path filePath = file.getPath();
-      // if its a directory, then check to see if it should be deleted
-      if (file.isDir()) {
-        // check the subfiles to see if they can be deleted
-        checkDirectory(filePath);
-        continue;
+    boolean canDeleteThis = true;
+    for (FileStatus child : children) {
+      Path path = child.getPath();
+      // attempt to delete all the files under the directory
+      if (child.isDir()) {
+        if (!checkAndDeleteDirectory(path)) {
+          canDeleteThis = false;
+        }
       }
       // otherwise we can just check the file
-      checkAndDelete(filePath);
+      else if (!checkAndDelete(path)) {
+        canDeleteThis = false;
+      }
     }
 
-    // recheck the directory to see if we can delete it this time
-    checkAndDeleteDirectory(toCheck);
-  }
-
-  /**
-   * Check and delete the passed directory if the directory is empty
-   * @param toCheck full path to the directory to check (and possibly delete)
-   * @return <tt>null</tt> if the directory was empty (and possibly deleted) and otherwise an array
-   *         of <code>FileStatus</code> for the files in the directory
-   * @throws IOException
-   */
-  private FileStatus[] checkAndDeleteDirectory(Path toCheck) throws IOException {
-    LOG.debug("Attempting to delete directory:" + toCheck);
-    // if it doesn't exist, we are done
-    if (!fs.exists(toCheck)) return null;
-    // get the files below the directory
-    FileStatus[] files = FSUtils.listStatus(fs, toCheck, null);
-    // if there are no subfiles, then we can delete the directory
-    if (files == null) {
-      checkAndDelete(toCheck);
-      return null;
-    }
-
-    // return the status of the files in the directory
-    return files;
+    // if all the children have been deleted, then we should try to delete this directory. However,
+    // don't do so recursively so we don't delete files that have been added since we checked.
+    return canDeleteThis ? fs.delete(toCheck, false) : false;
   }
 
   /**
@@ -197,34 +178,40 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
    * @throws IOException if cann't delete a file because of a filesystem issue
    * @throws IllegalArgumentException if the file is a directory and has children
    */
-  private void checkAndDelete(Path filePath) throws IOException, IllegalArgumentException {
+  private boolean checkAndDelete(Path filePath) throws IOException, IllegalArgumentException {
+    // first check to see if the path is valid
     if (!validate(filePath)) {
       LOG.warn("Found a wrongly formatted file: " + filePath.getName() + " deleting it.");
-      if (!this.fs.delete(filePath, true)) {
+      boolean success = this.fs.delete(filePath, true);
+      if(!success)
         LOG.warn("Attempted to delete:" + filePath
             + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
-      }
-      return;
+
+      return success;
     }
+
+    // check each of the cleaners for the file
     for (T cleaner : cleanersChain) {
-      if (cleaner.isStopped()) {
+      if (cleaner.isStopped() || this.stopper.isStopped()) {
         LOG.warn("A file cleaner" + this.getName() + " is stopped, won't delete any file in:"
             + this.oldFileDir);
-        return;
+        return false;
       }
 
       if (!cleaner.isFileDeletable(filePath)) {
         // this file is not deletable, then we are done
         LOG.debug(filePath + " is not deletable according to:" + cleaner);
-        return;
+        return false;
       }
     }
     // delete this file if it passes all the cleaners
     LOG.debug("Removing:" + filePath + " from archive");
-    if (!this.fs.delete(filePath, false)) {
+    boolean success = this.fs.delete(filePath, false);
+    if (!success) {
       LOG.warn("Attempted to delete:" + filePath
           + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
     }
+    return success;
   }
 
 
