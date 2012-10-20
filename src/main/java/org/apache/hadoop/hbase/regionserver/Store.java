@@ -2011,9 +2011,9 @@ public class Store extends SchemaConfigured implements HeapSize {
         KeyValue firstKey = KeyValue.createKeyValueFromKey(fk, 0, fk.length);
         byte [] lk = r.getLastKey();
         KeyValue lastKey = KeyValue.createKeyValueFromKey(lk, 0, lk.length);
-        // if the midkey is the same as the first and last keys, then we cannot
+        // if the midkey is the same as the first or last keys, then we cannot
         // (ever) split this region.
-        if (this.comparator.compareRows(mk, firstKey) == 0 &&
+        if (this.comparator.compareRows(mk, firstKey) == 0 ||
             this.comparator.compareRows(mk, lastKey) == 0) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("cannot split because midkey is the same as first or " +
