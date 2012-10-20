@@ -42,7 +42,7 @@ public class AssignCallable implements Callable<Object> {
 
   @Override
   public Object call() throws Exception {
-    assignmentManager.assign(hri, true, true, true);
+    assignmentManager.assign(hri, true, true);
     return null;
   }
 }

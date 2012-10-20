@@ -133,7 +133,7 @@ public class ZKAssign {
    *
    * @param zkw zk reference
    * @param region region to be created as offline
-   * @param serverName server event originates from
+   * @param serverName server transition will happen on
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NodeExistsException if node already exists
    */
@@ -163,7 +163,7 @@ public class ZKAssign {
    *
    * @param zkw zk reference
    * @param region region to be created as offline
-   * @param serverName server event originates from
+   * @param serverName server transition will happen on
    * @param cb
    * @param ctx
    * @throws KeeperException if unexpected zookeeper exception
@@ -182,35 +182,6 @@ public class ZKAssign {
   }
 
   /**
-   * Forces an existing unassigned node to the OFFLINE state for the specified
-   * region.
-   *
-   * <p>Does not create a new node.  If a node does not already exist for this
-   * region, a {@link NoNodeException} will be thrown.
-   *
-   * <p>Sets a watcher on the unassigned region node if the method is
-   * successful.
-   *
-   * <p>This method should only be used during recovery of regionserver failure.
-   *
-   * @param zkw zk reference
-   * @param region region to be forced as offline
-   * @param serverName server event originates from
-   * @throws KeeperException if unexpected zookeeper exception
-   * @throws KeeperException.NoNodeException if node does not exist
-   */
-  public static void forceNodeOffline(ZooKeeperWatcher zkw, HRegionInfo region,
-      ServerName serverName)
-  throws KeeperException, KeeperException.NoNodeException {
-    LOG.debug(zkw.prefix("Forcing existing unassigned node for " +
-      region.getEncodedName() + " to OFFLINE state"));
-    RegionTransition rt =
-      RegionTransition.createRegionTransition(EventType.M_ZK_REGION_OFFLINE, region.getRegionName(), serverName);
-    String node = getNodeName(zkw, region.getEncodedName());
-    ZKUtil.setData(zkw, node, rt.toByteArray());
-  }
-
-  /**
    * Creates or force updates an unassigned node to the OFFLINE state for the
    * specified region.
    * <p>
@@ -224,7 +195,7 @@ public class ZKAssign {
    *
    * @param zkw zk reference
    * @param region region to be created as offline
-   * @param serverName server event originates from
+   * @param serverName server transition will happen on
    * @return the version of the znode created in OFFLINE state, -1 if
    *         unsuccessful.
    * @throws KeeperException if unexpected zookeeper exception
@@ -232,76 +203,17 @@ public class ZKAssign {
    */
   public static int createOrForceNodeOffline(ZooKeeperWatcher zkw,
       HRegionInfo region, ServerName serverName) throws KeeperException {
-    return createOrForceNodeOffline(zkw, region, serverName, false, true);
-  }
-
-  /**
-   * Creates or force updates an unassigned node to the OFFLINE state for the
-   * specified region.
-   * <p>
-   * Attempts to create the node but if it exists will force it to transition to
-   * and OFFLINE state.
-   * <p>
-   * Sets a watcher on the unassigned region node if the method is successful.
-   * 
-   * <p>
-   * This method should be used when assigning a region.
-   * 
-   * @param zkw
-   *          zk reference
-   * @param region
-   *          region to be created as offline
-   * @param serverName
-   *          server event originates from
-   * @param hijack
-   *          - true if to be hijacked and reassigned, false otherwise
-   * @param allowCreation
-   *          - true if the node has to be created newly, false otherwise
-   * @throws KeeperException
-   *           if unexpected zookeeper exception
-   * @return the version of the znode created in OFFLINE state, -1 if
-   *         unsuccessful.
-   * @throws KeeperException.NodeExistsException
-   *           if node already exists
-   */
-  public static int createOrForceNodeOffline(ZooKeeperWatcher zkw,
-      HRegionInfo region, ServerName serverName,
-      boolean hijack, boolean allowCreation)
-  throws KeeperException {
     LOG.debug(zkw.prefix("Creating (or updating) unassigned node for " +
       region.getEncodedName() + " with OFFLINE state"));
     RegionTransition rt = RegionTransition.createRegionTransition(EventType.M_ZK_REGION_OFFLINE,
       region.getRegionName(), serverName, HConstants.EMPTY_BYTE_ARRAY);
     byte [] data = rt.toByteArray();
     String node = getNodeName(zkw, region.getEncodedName());
-    Stat stat = new Stat();
     zkw.sync(node);
     int version = ZKUtil.checkExists(zkw, node);
     if (version == -1) {
-      // While trying to transit a node to OFFLINE that was in previously in 
-      // OPENING state but before it could transit to OFFLINE state if RS had 
-      // opened the region then the Master deletes the assigned region znode. 
-      // In that case the znode will not exist. So we should not
-      // create the znode again which will lead to double assignment.
-      if (hijack && !allowCreation) {
-        return -1;
-      }
       return ZKUtil.createAndWatch(zkw, node, data);
     } else {
-      byte [] curDataInZNode = ZKAssign.getDataNoWatch(zkw, region.getEncodedName(), stat);
-      RegionTransition curRt = getRegionTransition(curDataInZNode);
-      // Do not move the node to OFFLINE if znode is in any of the following
-      // state.
-      // Because these are already executed states.
-      if (hijack && curRt != null) {
-        EventType eventType = curRt.getEventType();
-        if (eventType.equals(EventType.M_ZK_REGION_CLOSING)
-            || eventType.equals(EventType.RS_ZK_REGION_CLOSED)
-            || eventType.equals(EventType.RS_ZK_REGION_OPENED)) {
-          return -1;
-        }
-      }
-
       boolean setData = false;
       try {
         setData = ZKUtil.setData(zkw, node, data, version);
@@ -327,7 +239,7 @@ public class ZKAssign {
         }
       }
     }
-    return stat.getVersion() + 1;
+    return version + 1;
   }
 
   /**
@@ -558,7 +470,7 @@ public class ZKAssign {
    *
    * @param zkw zk reference
    * @param region region to be created as closing
-   * @param serverName server event originates from
+   * @param serverName server transition will happen on
    * @return version of node after transition, -1 if unsuccessful transition
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NodeExistsException if node already exists
@@ -596,7 +508,7 @@ public class ZKAssign {
    *
    * @param zkw zk reference
    * @param region region to be transitioned to closed
-   * @param serverName server event originates from
+   * @param serverName server transition happens on
    * @return version of node after transition, -1 if unsuccessful transition
    * @throws KeeperException if unexpected zookeeper exception
    */
@@ -630,7 +542,7 @@ public class ZKAssign {
    *
    * @param zkw zk reference
    * @param region region to be transitioned to opening
-   * @param serverName server event originates from
+   * @param serverName server transition happens on
    * @return version of node after transition, -1 if unsuccessful transition
    * @throws KeeperException if unexpected zookeeper exception
    */
@@ -670,7 +582,7 @@ public class ZKAssign {
    *
    * @param zkw zk reference
    * @param region region to be transitioned to opening
-   * @param serverName server event originates from
+   * @param serverName server transition happens on
    * @return version of node after transition, -1 if unsuccessful transition
    * @throws KeeperException if unexpected zookeeper exception
    */
@@ -706,7 +618,7 @@ public class ZKAssign {
    *
    * @param zkw zk reference
    * @param region region to be transitioned to opened
-   * @param serverName server event originates from
+   * @param serverName server transition happens on
    * @return version of node after transition, -1 if unsuccessful transition
    * @throws KeeperException if unexpected zookeeper exception
    */
@@ -739,7 +651,7 @@ public class ZKAssign {
    *
    * @param zkw zk reference
    * @param region region to be transitioned to opened
-   * @param serverName server event originates from
+   * @param serverName server transition happens on
    * @param endState state to transition node to if all checks pass
    * @param beginState state the node must currently be in to do transition
    * @param expectedVersion expected version of data before modification, or -1

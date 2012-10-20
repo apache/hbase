@@ -114,9 +114,13 @@ public class TestOpenRegionHandler {
           return region;
         }
       };
+      rss.getRegionsInTransitionInRS().put(
+        hri.getEncodedNameAsBytes(), Boolean.TRUE);
       // Call process without first creating OFFLINE region in zk, see if
       // exception or just quiet return (expected).
       handler.process();
+      rss.getRegionsInTransitionInRS().put(
+        hri.getEncodedNameAsBytes(), Boolean.TRUE);
       ZKAssign.createNodeOffline(server.getZooKeeper(), hri, server.getServerName());
       // Call process again but this time yank the zk znode out from under it
       // post OPENING; again will expect it to come back w/o NPE or exception.
@@ -143,6 +147,8 @@ public class TestOpenRegionHandler {
           return null;
         }
     };
+    rsServices.getRegionsInTransitionInRS().put(
+      TEST_HRI.getEncodedNameAsBytes(), Boolean.TRUE);
     handler.process();
 
     // Handler should have transitioned it to FAILED_OPEN
@@ -168,6 +174,8 @@ public class TestOpenRegionHandler {
           return false;
         }
     };
+    rsServices.getRegionsInTransitionInRS().put(
+      TEST_HRI.getEncodedNameAsBytes(), Boolean.TRUE);
     handler.process();
 
     // Handler should have transitioned it to FAILED_OPEN

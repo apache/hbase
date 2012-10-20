@@ -192,6 +192,11 @@ public class TestAssignmentManager {
       createRegionPlanAndBalance(am, SERVERNAME_A, SERVERNAME_B, REGIONINFO);
       startFakeFailedOverMasterAssignmentManager(am, this.watcher);
       while (!am.processRITInvoked) Thread.sleep(1);
+      // As part of the failover cleanup, the balancing region plan is removed.
+      // So a random server will be used to open the region. For testing purpose,
+      // let's assume it is going to open on server b:
+      am.addPlan(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, null, SERVERNAME_B));
+
       // Now fake the region closing successfully over on the regionserver; the
       // regionserver will have set the region in CLOSED state. This will
       // trigger callback into AM. The below zk close call is from the RS close
@@ -208,7 +213,7 @@ public class TestAssignmentManager {
       assertNotSame(-1, versionid);
       // This uglyness below is what the openregionhandler on RS side does.
       versionid = ZKAssign.transitionNode(server.getZooKeeper(), REGIONINFO,
-        SERVERNAME_A, EventType.M_ZK_REGION_OFFLINE,
+        SERVERNAME_B, EventType.M_ZK_REGION_OFFLINE,
         EventType.RS_ZK_REGION_OPENING, versionid);
       assertNotSame(-1, versionid);
       // Move znode from OPENING to OPENED as RS does on successful open.
@@ -233,6 +238,11 @@ public class TestAssignmentManager {
       createRegionPlanAndBalance(am, SERVERNAME_A, SERVERNAME_B, REGIONINFO);
       startFakeFailedOverMasterAssignmentManager(am, this.watcher);
       while (!am.processRITInvoked) Thread.sleep(1);
+      // As part of the failover cleanup, the balancing region plan is removed.
+      // So a random server will be used to open the region. For testing purpose,
+      // let's assume it is going to open on server b:
+      am.addPlan(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, null, SERVERNAME_B));
+
       // Now fake the region closing successfully over on the regionserver; the
       // regionserver will have set the region in CLOSED state. This will
       // trigger callback into AM. The below zk close call is from the RS close
@@ -250,7 +260,7 @@ public class TestAssignmentManager {
       assertNotSame(-1, versionid);
       // This uglyness below is what the openregionhandler on RS side does.
       versionid = ZKAssign.transitionNode(server.getZooKeeper(), REGIONINFO,
-          SERVERNAME_A, EventType.M_ZK_REGION_OFFLINE,
+          SERVERNAME_B, EventType.M_ZK_REGION_OFFLINE,
           EventType.RS_ZK_REGION_OPENING, versionid);
       assertNotSame(-1, versionid);
       // Move znode from OPENING to OPENED as RS does on successful open.
@@ -275,6 +285,11 @@ public class TestAssignmentManager {
       createRegionPlanAndBalance(am, SERVERNAME_A, SERVERNAME_B, REGIONINFO);
       startFakeFailedOverMasterAssignmentManager(am, this.watcher);
       while (!am.processRITInvoked) Thread.sleep(1);
+      // As part of the failover cleanup, the balancing region plan is removed.
+      // So a random server will be used to open the region. For testing purpose,
+      // let's assume it is going to open on server b:
+      am.addPlan(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, null, SERVERNAME_B));
+
       // Now fake the region closing successfully over on the regionserver; the
       // regionserver will have set the region in CLOSED state. This will
       // trigger callback into AM. The below zk close call is from the RS close
@@ -292,7 +307,7 @@ public class TestAssignmentManager {
       assertNotSame(-1, versionid);
       // This uglyness below is what the openregionhandler on RS side does.
       versionid = ZKAssign.transitionNode(server.getZooKeeper(), REGIONINFO,
-          SERVERNAME_A, EventType.M_ZK_REGION_OFFLINE,
+          SERVERNAME_B, EventType.M_ZK_REGION_OFFLINE,
           EventType.RS_ZK_REGION_OPENING, versionid);
       assertNotSame(-1, versionid);
       // Move znode from OPENING to OPENED as RS does on successful open.
@@ -798,12 +813,11 @@ public class TestAssignmentManager {
         EventType.RS_ZK_REGION_OPENING, version);
     RegionTransition rt = RegionTransition.createRegionTransition(EventType.RS_ZK_REGION_OPENING,
         REGIONINFO.getRegionName(), SERVERNAME_A, HConstants.EMPTY_BYTE_ARRAY);
-    Map<ServerName, List<HRegionInfo>> deadServers =
-      new HashMap<ServerName, List<HRegionInfo>>();
-    deadServers.put(SERVERNAME_A, null);
     version = ZKAssign.getVersion(this.watcher, REGIONINFO);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(false);
+    am.getRegionStates().createRegionState(REGIONINFO);
     am.gate.set(false);
-    am.processRegionsInTransition(rt, REGIONINFO, deadServers, version);
+    am.processRegionsInTransition(rt, REGIONINFO, version);
     // Waiting for the assignment to get completed.
     while (!am.gate.get()) {
       Thread.sleep(10);
@@ -1017,22 +1031,18 @@ public class TestAssignmentManager {
 
     @Override
     boolean processRegionInTransition(String encodedRegionName,
-        HRegionInfo regionInfo,
-        Map<ServerName, List<HRegionInfo>> deadServers)
-        throws KeeperException, IOException {
+        HRegionInfo regionInfo) throws KeeperException, IOException {
       this.processRITInvoked = true;
-      return super.processRegionInTransition(encodedRegionName, regionInfo,
-          deadServers);
+      return super.processRegionInTransition(encodedRegionName, regionInfo);
     }
 
     @Override
-    public void assign(HRegionInfo region, boolean setOfflineInZK, boolean forceNewPlan,
-        boolean hijack) {
+    public void assign(HRegionInfo region, boolean setOfflineInZK, boolean forceNewPlan) {
       if (enabling) {
         assignmentCount++;
         this.regionOnline(region, SERVERNAME_A);
       } else {
-        super.assign(region, setOfflineInZK, forceNewPlan, hijack);
+        super.assign(region, setOfflineInZK, forceNewPlan);
         this.gate.set(true);
       }
     }
@@ -1097,5 +1107,4 @@ public class TestAssignmentManager {
     t.start();
     while (!t.isAlive()) Threads.sleep(1);
   }
-
 }

@@ -210,6 +210,7 @@ public class TestCloseRegionHandler {
        // Create it OFFLINE node, which is what Master set before sending OPEN RPC
        ZKAssign.createNodeOffline(server.getZooKeeper(), hri, server.getServerName());
        OpenRegionHandler openHandler = new OpenRegionHandler(server, rss, hri, htd);
+       rss.getRegionsInTransitionInRS().put(hri.getEncodedNameAsBytes(), Boolean.TRUE);
        openHandler.process();
        // This parse is not used?
        RegionTransition.parseFrom(ZKAssign.getData(server.getZooKeeper(), hri.getEncodedName()));

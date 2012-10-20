@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -61,26 +60,13 @@ public class GeneralBulkAssigner extends BulkAssigner {
   }
 
   @Override
-  public boolean bulkAssign(boolean sync) throws InterruptedException,
-      IOException {
-    // Disable timing out regions in transition up in zk while bulk assigning.
-    this.assignmentManager.timeoutMonitor.bulkAssign(true);
-    try {
-      return super.bulkAssign(sync);
-    } finally {
-      // Re-enable timing out regions in transition up in zk.
-      this.assignmentManager.timeoutMonitor.bulkAssign(false);
-    }
- }
-
-  @Override
   protected String getThreadNamePrefix() {
     return this.server.getServerName() + "-GeneralBulkAssigner";
   }
 
   @Override
   protected void populatePool(ExecutorService pool) {
-    this.pool = pool; // shut it down later in case some assigner hangs 
+    this.pool = pool; // shut it down later in case some assigner hangs
     for (Map.Entry<ServerName, List<HRegionInfo>> e: this.bulkPlan.entrySet()) {
       pool.execute(new SingleServerBulkAssigner(e.getKey(), e.getValue(),
         this.assignmentManager, this.failedPlans));
@@ -204,7 +190,7 @@ public class GeneralBulkAssigner extends BulkAssigner {
       reassigningRegions.addAll(failedPlans.remove(e.getKey()));
     }
     for (HRegionInfo region : reassigningRegions) {
-      assignmentManager.assign(region, true, true);
+      assignmentManager.invokeAssign(region);
     }
     return reassigningRegions.size();
   }

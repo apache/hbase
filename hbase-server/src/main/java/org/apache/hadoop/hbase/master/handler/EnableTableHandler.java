@@ -228,12 +228,7 @@ public class EnableTableHandler extends EventHandler {
           final HRegionInfo hri = region;
           pool.execute(Trace.wrap(new Runnable() {
             public void run() {
-              if (retainAssignment) {
-                // Already plan is populated.
-                assignmentManager.assign(hri, true, false, false);
-              } else {
-                assignmentManager.assign(hri, true);
-              }
+              assignmentManager.assign(hri, true);
             }
           }));
         }

@@ -62,7 +62,8 @@ message RegionTransition {
   // Full regionname in bytes
   required bytes regionName = 2;
   required uint64 createTime = 3;
-  optional ServerName originServerName = 4;
+  // The region server where the transition will happen or is happening
+  required ServerName serverName = 4;
   optional bytes payload = 5;
 }
 

@@ -54,7 +54,7 @@ public class RegionTransition {
   }
 
   public ServerName getServerName() {
-    return ProtobufUtil.toServerName(this.rt.getOriginServerName());
+    return ProtobufUtil.toServerName(this.rt.getServerName());
   }
 
   public long getCreateTime() {
@@ -105,7 +105,7 @@ public class RegionTransition {
         setHostName(sn.getHostname()).setPort(sn.getPort()).setStartCode(sn.getStartcode()).build();
     ZooKeeperProtos.RegionTransition.Builder builder = ZooKeeperProtos.RegionTransition.newBuilder().
       setEventTypeCode(type.getCode()).setRegionName(ByteString.copyFrom(regionName)).
-        setOriginServerName(pbsn);
+        setServerName(pbsn);
     builder.setCreateTime(System.currentTimeMillis());
     if (payload != null) builder.setPayload(ByteString.copyFrom(payload));
     return new RegionTransition(builder.build());

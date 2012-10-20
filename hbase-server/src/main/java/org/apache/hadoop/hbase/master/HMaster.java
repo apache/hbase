@@ -673,6 +673,7 @@ Server {
     if (!masterRecovery) {
       this.assignmentManager.startTimeOutMonitor();
     }
+
     // TODO: Should do this in background rather than block master startup
     status.setStatus("Splitting logs after master startup");
     splitLogAfterStartup(this.fileSystemManager);
@@ -2136,12 +2137,12 @@ Server {
           return arr;
         }
       }
-      assignRegion(regionInfo);
-     if (cpHost != null) {
-       cpHost.postAssign(regionInfo);
-     }
+      assignmentManager.assign(regionInfo, true, true);
+      if (cpHost != null) {
+        cpHost.postAssign(regionInfo);
+      }
 
-     return arr;
+      return arr;
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

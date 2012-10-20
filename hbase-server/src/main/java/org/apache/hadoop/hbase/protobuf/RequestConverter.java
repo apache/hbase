@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoReque
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
@@ -82,6 +83,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
@@ -90,17 +92,16 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTable
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -115,6 +116,7 @@ import com.google.protobuf.ByteString;
  * or build components for protocol buffer requests.
  */
 @InterfaceAudience.Private
+@SuppressWarnings("deprecation")
 public final class RequestConverter {
 
   private RequestConverter() {
@@ -612,27 +614,19 @@ public final class RequestConverter {
  /**
   * Create a protocol buffer OpenRegionRequest to open a list of regions
   *
-  * @param regions the list of regions to open
+  * @param regionOpenInfos info of a list of regions to open
   * @return a protocol buffer OpenRegionRequest
   */
  public static OpenRegionRequest
-     buildOpenRegionRequest(final List<HRegionInfo> regions) {
+     buildOpenRegionRequest(final List<Pair<HRegionInfo, Integer>> regionOpenInfos) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-   for (HRegionInfo region: regions) {
-     builder.addRegion(HRegionInfo.convert(region));
+   for (Pair<HRegionInfo, Integer> regionOpenInfo: regionOpenInfos) {
+     Integer second = regionOpenInfo.getSecond();
+     int versionOfOfflineNode = second == null ? -1 : second.intValue();
+     builder.addOpenInfo(buildRegionOpenInfo(
+       regionOpenInfo.getFirst(), versionOfOfflineNode));
    }
    return builder.build();
- }
-
- /**
-  * Create a protocol buffer OpenRegionRequest for a given region
-  *
-  * @param region the region to open
-  * @return a protocol buffer OpenRegionRequest
-  */
- public static OpenRegionRequest
-     buildOpenRegionRequest(final HRegionInfo region) {
-   return buildOpenRegionRequest(region, -1);
  }
 
  /**
@@ -645,10 +639,7 @@ public final class RequestConverter {
  public static OpenRegionRequest buildOpenRegionRequest(
      final HRegionInfo region, final int versionOfOfflineNode) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-   builder.addRegion(HRegionInfo.convert(region));
-   if (versionOfOfflineNode >= 0) {
-     builder.setVersionOfOfflineNode(versionOfOfflineNode);
-   }
+   builder.addOpenInfo(buildRegionOpenInfo(region, versionOfOfflineNode));
    return builder.build();
  }
 
@@ -669,32 +660,15 @@ public final class RequestConverter {
    return builder.build();
  }
 
- /**
-  * Create a CloseRegionRequest for a given region name
-  *
-  * @param regionName the name of the region to close
-  * @param versionOfClosingNode
-  *   the version of znode to compare when RS transitions the znode from
-  *   CLOSING state.
-  * @return a CloseRegionRequest
-  */
- public static CloseRegionRequest buildCloseRegionRequest(
-     final byte[] regionName, final int versionOfClosingNode) {
-   CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
-   RegionSpecifier region = buildRegionSpecifier(
-     RegionSpecifierType.REGION_NAME, regionName);
-   builder.setRegion(region);
-   builder.setVersionOfClosingNode(versionOfClosingNode);
-   return builder.build();
- }
-
   public static CloseRegionRequest buildCloseRegionRequest(
-    final byte[] regionName, final int versionOfClosingNode, ServerName destinationServer) {
+    final byte[] regionName, final int versionOfClosingNode,
+    ServerName destinationServer, final boolean transitionInZK) {
     CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
     builder.setVersionOfClosingNode(versionOfClosingNode);
+    builder.setTransitionInZK(transitionInZK);
     if (destinationServer != null){
       builder.setDestinationServer(ProtobufUtil.toServerName( destinationServer) );
     }
@@ -1152,5 +1126,18 @@ public final class RequestConverter {
       byte[] regionName) {
     return GetLastFlushedSequenceIdRequest.newBuilder().setRegionName(
         ByteString.copyFrom(regionName)).build();
+  }
+
+  /**
+   * Create a RegionOpenInfo based on given region info and version of offline node
+   */
+  private static RegionOpenInfo buildRegionOpenInfo(
+      final HRegionInfo region, final int versionOfOfflineNode) {
+    RegionOpenInfo.Builder builder = RegionOpenInfo.newBuilder();
+    builder.setRegion(HRegionInfo.convert(region));
+    if (versionOfOfflineNode >= 0) {
+      builder.setVersionOfOfflineNode(versionOfOfflineNode);
+    }
+    return builder.build();
   }
 }

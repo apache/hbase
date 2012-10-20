@@ -64,8 +64,12 @@ message GetOnlineRegionResponse {
 }
 
 message OpenRegionRequest {
-  repeated RegionInfo region = 1;
-  optional uint32 versionOfOfflineNode = 2;
+  repeated RegionOpenInfo openInfo = 1;
+
+  message RegionOpenInfo {
+    required RegionInfo region = 1;
+    optional uint32 versionOfOfflineNode = 2;
+  }
 }
 
 message OpenRegionResponse {

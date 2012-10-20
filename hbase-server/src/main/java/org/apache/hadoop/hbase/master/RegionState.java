@@ -126,6 +126,14 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     return state == State.SPLIT;
   }
 
+  public boolean isPendingOpenOrOpeningOnServer(final ServerName sn) {
+    return isOnServer(sn) && (isPendingOpen() || isOpening());
+  }
+
+  public boolean isPendingCloseOrClosingOnServer(final ServerName sn) {
+    return isOnServer(sn) && (isPendingClose() || isClosing());
+  }
+
   @Override
   public String toString() {
     return "{" + region.getRegionNameAsString()
@@ -232,6 +240,10 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     }
 
     return new RegionState(HRegionInfo.convert(proto.getRegionInfo()),state,proto.getStamp(),null);
+  }
+
+  private boolean isOnServer(final ServerName sn) {
+    return serverName != null && serverName.equals(sn);
   }
 
   /**

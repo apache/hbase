@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.ServiceException;
 
@@ -602,11 +603,11 @@ public class ServerManager {
    * Open should not fail but can if server just crashed.
    * <p>
    * @param server server to open a region
-   * @param regions regions to open
+   * @param regionOpenInfos info of a list of regions to open
    * @return a list of region opening states
    */
   public List<RegionOpeningState> sendRegionOpen(ServerName server,
-      List<HRegionInfo> regions)
+      List<Pair<HRegionInfo, Integer>> regionOpenInfos)
   throws IOException {
     AdminProtocol admin = getServerConnection(server);
     if (admin == null) {
@@ -615,8 +616,14 @@ public class ServerManager {
       return null;
     }
 
-    OpenRegionResponse response = ProtobufUtil.openRegion(admin, regions);
-    return ResponseConverter.getRegionOpeningStateList(response);
+    OpenRegionRequest request =
+      RequestConverter.buildOpenRegionRequest(regionOpenInfos);
+    try {
+      OpenRegionResponse response = admin.openRegion(null, request);
+      return ResponseConverter.getRegionOpeningStateList(response);
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
   }
 
   /**
@@ -634,7 +641,7 @@ public class ServerManager {
    * @throws IOException
    */
   public boolean sendRegionClose(ServerName server, HRegionInfo region,
-    int versionOfClosingNode, ServerName dest) throws IOException {
+    int versionOfClosingNode, ServerName dest, boolean transitionInZK) throws IOException {
     if (server == null) throw new NullPointerException("Passed server is null");
     AdminProtocol admin = getServerConnection(server);
     if (admin == null) {
@@ -644,12 +651,12 @@ public class ServerManager {
         " failed because no RPC connection found to this server");
     }
     return ProtobufUtil.closeRegion(admin, region.getRegionName(),
-      versionOfClosingNode, dest);
+      versionOfClosingNode, dest, transitionInZK);
   }
 
-  public boolean sendRegionClose(ServerName server, HRegionInfo region,
-                                 int versionOfClosingNode) throws IOException {
-    return sendRegionClose(server, region, versionOfClosingNode, null);
+  public boolean sendRegionClose(ServerName server,
+      HRegionInfo region, int versionOfClosingNode) throws IOException {
+    return sendRegionClose(server, region, versionOfClosingNode, null, true);
   }
 
     /**

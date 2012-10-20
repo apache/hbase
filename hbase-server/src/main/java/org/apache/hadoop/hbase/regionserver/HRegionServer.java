@@ -135,6 +135,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetStoreFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
@@ -171,7 +172,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -228,7 +228,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.base.Function;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
@@ -2595,14 +2594,13 @@ public class  HRegionServer implements ClientProtocol,
     }
   }
 
-  protected void checkIfRegionInTransition(HRegionInfo region,
+  protected void checkIfRegionInTransition(byte[] regionEncodedName,
       String currentAction) throws RegionAlreadyInTransitionException {
-    byte[] encodedName = region.getEncodedNameAsBytes();
-    if (this.regionsInTransitionInRS.containsKey(encodedName)) {
-      boolean openAction = this.regionsInTransitionInRS.get(encodedName);
+    if (this.regionsInTransitionInRS.containsKey(regionEncodedName)) {
+      boolean openAction = this.regionsInTransitionInRS.get(regionEncodedName);
       // The below exception message will be used in master.
       throw new RegionAlreadyInTransitionException("Received:" + currentAction +
-        " for the region:" + region.getRegionNameAsString() +
+        " for the region:" + Bytes.toString(regionEncodedName) +
         " ,which we are already trying to " +
         (openAction ? OPEN : CLOSE)+ ".");
     }
@@ -3568,12 +3566,8 @@ public class  HRegionServer implements ClientProtocol,
    */
   @Override
   @QosPriority(priority=HConstants.HIGH_QOS)
-  public OpenRegionResponse openRegion(final RpcController controller, final OpenRegionRequest request)
-  throws ServiceException {
-    int versionOfOfflineNode = -1;
-    if (request.hasVersionOfOfflineNode()) {
-      versionOfOfflineNode = request.getVersionOfOfflineNode();
-    }
+  public OpenRegionResponse openRegion(final RpcController controller,
+      final OpenRegionRequest request) throws ServiceException {
     try {
       checkOpen();
     } catch (IOException ie) {
@@ -3581,13 +3575,18 @@ public class  HRegionServer implements ClientProtocol,
     }
     requestCount.incrementAndGet();
     OpenRegionResponse.Builder builder = OpenRegionResponse.newBuilder();
-    Map<String, HTableDescriptor> htds = new HashMap<String, HTableDescriptor>(
-        request.getRegionList().size());
-    boolean isBulkAssign = request.getRegionList().size() > 1;
-    for (RegionInfo regionInfo : request.getRegionList()) {
-      HRegionInfo region = HRegionInfo.convert(regionInfo);
+    int regionCount = request.getOpenInfoCount();
+    Map<String, HTableDescriptor> htds =
+      new HashMap<String, HTableDescriptor>(regionCount);
+    boolean isBulkAssign = regionCount > 1;
+    for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
+      HRegionInfo region = HRegionInfo.convert(regionOpenInfo.getRegion());
+      int versionOfOfflineNode = -1;
+      if (regionOpenInfo.hasVersionOfOfflineNode()) {
+        versionOfOfflineNode = regionOpenInfo.getVersionOfOfflineNode();
+      }
       try {
-        checkIfRegionInTransition(region, OPEN);
+        checkIfRegionInTransition(region.getEncodedNameAsBytes(), OPEN);
         HRegion onlineRegion = getFromOnlineRegions(region.getEncodedName());
         if (null != onlineRegion) {
           // See HBASE-5094. Cross check with META if still this RS is owning
@@ -3643,7 +3642,6 @@ public class  HRegionServer implements ClientProtocol,
       }
     }
     return builder.build();
-
   }
 
   /**
@@ -3668,17 +3666,26 @@ public class  HRegionServer implements ClientProtocol,
     try {
       checkOpen();
       requestCount.incrementAndGet();
-      HRegion region = getRegion(request.getRegion());
-      CloseRegionResponse.Builder
-        builder = CloseRegionResponse.newBuilder();
+      String encodedRegionName =
+        ProtobufUtil.getRegionEncodedName(request.getRegion());
+      byte[] encodedName = Bytes.toBytes(encodedRegionName);
+      Boolean openAction = regionsInTransitionInRS.get(encodedName);
+      if (openAction != null) {
+        if (openAction.booleanValue()) {
+          regionsInTransitionInRS.replace(encodedName, openAction, Boolean.FALSE);
+        }
+        checkIfRegionInTransition(encodedName, CLOSE);
+      }
+      HRegion region = getRegionByEncodedName(encodedRegionName);
       LOG.info("Received close region: " + region.getRegionNameAsString() +
         ". Version of ZK closing node:" + versionOfClosingNode +
         ". Destination server:" + sn);
       HRegionInfo regionInfo = region.getRegionInfo();
-      checkIfRegionInTransition(regionInfo, CLOSE);
+      checkIfRegionInTransition(encodedName, CLOSE);
       boolean closed = closeRegion(
         regionInfo, false, zk, versionOfClosingNode, sn);
-      builder.setClosed(closed);
+      CloseRegionResponse.Builder builder =
+        CloseRegionResponse.newBuilder().setClosed(closed);
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
@@ -3874,18 +3881,8 @@ public class  HRegionServer implements ClientProtocol,
    */
   protected HRegion getRegion(
       final RegionSpecifier regionSpecifier) throws IOException {
-    byte[] value = regionSpecifier.getValue().toByteArray();
-    RegionSpecifierType type = regionSpecifier.getType();
-    checkOpen();
-    switch (type) {
-      case REGION_NAME:
-        return getRegion(value);
-      case ENCODED_REGION_NAME:
-        return getRegionByEncodedName(Bytes.toString(value));
-      default:
-        throw new DoNotRetryIOException(
-          "Unsupported region specifier type: " + type);
-    }
+    return getRegionByEncodedName(
+      ProtobufUtil.getRegionEncodedName(regionSpecifier));
   }
 
   /**

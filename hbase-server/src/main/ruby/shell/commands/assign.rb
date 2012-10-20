@@ -22,9 +22,8 @@ module Shell
     class Assign < Command
       def help
         return <<-EOF
-Assign a region.Use with caution.If region already assigned,
-this command will just go ahead and reassign
-the region anyways. For experts only.
+Assign a region. Use with caution. If region already assigned,
+this command will do a force reassign. For experts only.
 EOF
       end
 

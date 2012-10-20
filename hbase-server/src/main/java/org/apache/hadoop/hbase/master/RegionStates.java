@@ -208,15 +208,6 @@ public class RegionStates {
   /**
    * Update a region state. If it is not splitting,
    * it will be put in transition if not already there.
-   */
-  public synchronized RegionState updateRegionState(
-      final HRegionInfo hri, final State state, final ServerName serverName) {
-    return updateRegionState(hri, state, System.currentTimeMillis(), serverName);
-  }
-
-  /**
-   * Update a region state. If it is not splitting,
-   * it will be put in transition if not already there.
    *
    * If we can't find the region info based on the region name in
    * the transition, log a warning and return null.
@@ -234,15 +225,15 @@ public class RegionStates {
       return null;
     }
     return updateRegionState(regionInfo, state,
-      transition.getCreateTime(), transition.getServerName());
+      transition.getServerName());
   }
 
   /**
    * Update a region state. If it is not splitting,
    * it will be put in transition if not already there.
    */
-  public synchronized RegionState updateRegionState(final HRegionInfo hri,
-      final State state, final long stamp, final ServerName serverName) {
+  public synchronized RegionState updateRegionState(
+      final HRegionInfo hri, final State state, final ServerName serverName) {
     ServerName newServerName = serverName;
     if (serverName != null &&
         (state == State.CLOSED || state == State.OFFLINE)) {
@@ -252,7 +243,8 @@ public class RegionStates {
     }
 
     String regionName = hri.getEncodedName();
-    RegionState regionState = new RegionState(hri, state, stamp, newServerName);
+    RegionState regionState = new RegionState(
+      hri, state, System.currentTimeMillis(), newServerName);
     RegionState oldState = regionStates.put(regionName, regionState);
     LOG.info("Region " + hri + " transitioned from " + oldState + " to " + regionState);
     if (state != State.SPLITTING && (newServerName != null

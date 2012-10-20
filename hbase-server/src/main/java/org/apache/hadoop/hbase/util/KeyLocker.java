@@ -19,13 +19,17 @@
 package org.apache.hadoop.hbase.util;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * A utility class to manage a set of locks. Each lock is identified by a String which serves
@@ -44,7 +48,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * }
  * </p>
  */
-public class KeyLocker<K> {
+public class KeyLocker<K extends Comparable<? super K>> {
   private static final Log LOG = LogFactory.getLog(KeyLocker.class);
 
   // The number of lock we want to easily support. It's not a maximum.
@@ -79,6 +83,19 @@ public class KeyLocker<K> {
   }
 
   /**
+   * Acquire locks for a set of keys. The keys will be
+   * sorted internally to avoid possible deadlock.
+   */
+  public Map<K, Lock> acquireLocks(final Set<K> keys) {
+    Map<K, Lock> locks = new HashMap<K, Lock>(keys.size());
+    SortedSet<K> sortedKeys = new TreeSet<K>(keys);
+    for (K key : sortedKeys) {
+      locks.put(key, acquireLock(key));
+    }
+    return locks;
+  }
+
+  /**
    * Free the lock for the given key.
    */
   private synchronized void releaseLock(K key) {
@@ -95,7 +112,9 @@ public class KeyLocker<K> {
     }
   }
 
-  static class KeyLock<K> extends ReentrantLock {
+  static class KeyLock<K extends Comparable<? super K>> extends ReentrantLock {
+    private static final long serialVersionUID = -12432857283423584L;
+
     private final KeyLocker<K> locker;
     private final K lockId;
 

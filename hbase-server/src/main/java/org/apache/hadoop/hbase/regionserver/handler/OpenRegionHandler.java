@@ -134,6 +134,14 @@ public class OpenRegionHandler extends EventHandler {
         cleanupFailedOpen(region);
         return;
       }
+
+      // One more check to make sure we are opening instead of closing
+      if (!isRegionStillOpening()) {
+        LOG.warn("Open region aborted since it isn't opening any more");
+        cleanupFailedOpen(region);
+        return;
+      }
+
       // Successful region open, and add it to OnlineRegions
       this.rsServices.addToOnlineRegions(region);
 
@@ -269,6 +277,10 @@ public class OpenRegionHandler extends EventHandler {
    * @throws IOException
    */
   private boolean transitionToOpened(final HRegion r) throws IOException {
+    if (!isRegionStillOpening()) {
+      LOG.warn("Open region aborted since it isn't opening any more");
+      return false;
+    }
     boolean result = false;
     HRegionInfo hri = r.getRegionInfo();
     final String name = hri.getRegionNameAsString();
@@ -364,6 +376,12 @@ public class OpenRegionHandler extends EventHandler {
     if (region != null) region.close();
   }
 
+  private boolean isRegionStillOpening() {
+    byte[] encodedName = regionInfo.getEncodedNameAsBytes();
+    Boolean action = rsServices.getRegionsInTransitionInRS().get(encodedName);
+    return action != null && action.booleanValue();
+  }
+
   /**
    * Transition ZK node from OFFLINE to OPENING.
    * @param encodedName Name of the znode file (Region encodedName is the znode
@@ -374,6 +392,10 @@ public class OpenRegionHandler extends EventHandler {
    */
   boolean transitionZookeeperOfflineToOpening(final String encodedName,
       int versionOfOfflineNode) {
+    if (!isRegionStillOpening()) {
+      LOG.warn("Open region aborted since it isn't opening any more");
+      return false;
+    }
     // TODO: should also handle transition from CLOSED?
     try {
       // Initialize the znode version.
@@ -399,6 +421,10 @@ public class OpenRegionHandler extends EventHandler {
    * @return True if successful transition.
    */
   boolean tickleOpening(final String context) {
+    if (!isRegionStillOpening()) {
+      LOG.warn("Open region aborted since it isn't opening any more");
+      return false;
+    }
     // If previous checks failed... do not try again.
     if (!isGoodVersion()) return false;
     String encodedName = this.regionInfo.getEncodedName();

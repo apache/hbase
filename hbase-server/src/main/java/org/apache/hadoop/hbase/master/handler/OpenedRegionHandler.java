@@ -100,8 +100,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
     RegionState regionState = this.assignmentManager.getRegionStates()
       .getRegionTransitionState(regionInfo.getEncodedName());
     boolean openedNodeDeleted = false;
-    if (regionState != null
-        && regionState.getState().equals(RegionState.State.OPEN)) {
+    if (regionState != null && regionState.isOpened()) {
       openedNodeDeleted = deleteOpenedNode(expectedVersion);
       if (!openedNodeDeleted) {
         LOG.error("The znode of region " + regionInfo.getRegionNameAsString()

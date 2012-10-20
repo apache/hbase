@@ -1385,10 +1385,10 @@ public final class ZooKeeperProtos {
     boolean hasCreateTime();
     long getCreateTime();
     
-    // optional .ServerName originServerName = 4;
-    boolean hasOriginServerName();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getOriginServerName();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getOriginServerNameOrBuilder();
+    // required .ServerName serverName = 4;
+    boolean hasServerName();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder();
     
     // optional bytes payload = 5;
     boolean hasPayload();
@@ -1453,17 +1453,17 @@ public final class ZooKeeperProtos {
       return createTime_;
     }
     
-    // optional .ServerName originServerName = 4;
-    public static final int ORIGINSERVERNAME_FIELD_NUMBER = 4;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName originServerName_;
-    public boolean hasOriginServerName() {
+    // required .ServerName serverName = 4;
+    public static final int SERVERNAME_FIELD_NUMBER = 4;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_;
+    public boolean hasServerName() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getOriginServerName() {
-      return originServerName_;
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName() {
+      return serverName_;
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getOriginServerNameOrBuilder() {
-      return originServerName_;
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder() {
+      return serverName_;
     }
     
     // optional bytes payload = 5;
@@ -1480,7 +1480,7 @@ public final class ZooKeeperProtos {
       eventTypeCode_ = 0;
       regionName_ = com.google.protobuf.ByteString.EMPTY;
       createTime_ = 0L;
-      originServerName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       payload_ = com.google.protobuf.ByteString.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
@@ -1500,11 +1500,13 @@ public final class ZooKeeperProtos {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (hasOriginServerName()) {
-        if (!getOriginServerName().isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
+      if (!hasServerName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getServerName().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
       }
       memoizedIsInitialized = 1;
       return true;
@@ -1523,7 +1525,7 @@ public final class ZooKeeperProtos {
         output.writeUInt64(3, createTime_);
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeMessage(4, originServerName_);
+        output.writeMessage(4, serverName_);
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeBytes(5, payload_);
@@ -1551,7 +1553,7 @@ public final class ZooKeeperProtos {
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(4, originServerName_);
+          .computeMessageSize(4, serverName_);
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
@@ -1595,10 +1597,10 @@ public final class ZooKeeperProtos {
         result = result && (getCreateTime()
             == other.getCreateTime());
       }
-      result = result && (hasOriginServerName() == other.hasOriginServerName());
-      if (hasOriginServerName()) {
-        result = result && getOriginServerName()
-            .equals(other.getOriginServerName());
+      result = result && (hasServerName() == other.hasServerName());
+      if (hasServerName()) {
+        result = result && getServerName()
+            .equals(other.getServerName());
       }
       result = result && (hasPayload() == other.hasPayload());
       if (hasPayload()) {
@@ -1626,9 +1628,9 @@ public final class ZooKeeperProtos {
         hash = (37 * hash) + CREATETIME_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getCreateTime());
       }
-      if (hasOriginServerName()) {
-        hash = (37 * hash) + ORIGINSERVERNAME_FIELD_NUMBER;
-        hash = (53 * hash) + getOriginServerName().hashCode();
+      if (hasServerName()) {
+        hash = (37 * hash) + SERVERNAME_FIELD_NUMBER;
+        hash = (53 * hash) + getServerName().hashCode();
       }
       if (hasPayload()) {
         hash = (37 * hash) + PAYLOAD_FIELD_NUMBER;
@@ -1742,7 +1744,7 @@ public final class ZooKeeperProtos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getOriginServerNameFieldBuilder();
+          getServerNameFieldBuilder();
         }
       }
       private static Builder create() {
@@ -1757,10 +1759,10 @@ public final class ZooKeeperProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         createTime_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000004);
-        if (originServerNameBuilder_ == null) {
-          originServerName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+        if (serverNameBuilder_ == null) {
+          serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
         } else {
-          originServerNameBuilder_.clear();
+          serverNameBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000008);
         payload_ = com.google.protobuf.ByteString.EMPTY;
@@ -1818,10 +1820,10 @@ public final class ZooKeeperProtos {
         if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
           to_bitField0_ |= 0x00000008;
         }
-        if (originServerNameBuilder_ == null) {
-          result.originServerName_ = originServerName_;
+        if (serverNameBuilder_ == null) {
+          result.serverName_ = serverName_;
         } else {
-          result.originServerName_ = originServerNameBuilder_.build();
+          result.serverName_ = serverNameBuilder_.build();
         }
         if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
           to_bitField0_ |= 0x00000010;
@@ -1852,8 +1854,8 @@ public final class ZooKeeperProtos {
         if (other.hasCreateTime()) {
           setCreateTime(other.getCreateTime());
         }
-        if (other.hasOriginServerName()) {
-          mergeOriginServerName(other.getOriginServerName());
+        if (other.hasServerName()) {
+          mergeServerName(other.getServerName());
         }
         if (other.hasPayload()) {
           setPayload(other.getPayload());
@@ -1875,11 +1877,13 @@ public final class ZooKeeperProtos {
           
           return false;
         }
-        if (hasOriginServerName()) {
-          if (!getOriginServerName().isInitialized()) {
-            
-            return false;
-          }
+        if (!hasServerName()) {
+          
+          return false;
+        }
+        if (!getServerName().isInitialized()) {
+          
+          return false;
         }
         return true;
       }
@@ -1924,11 +1928,11 @@ public final class ZooKeeperProtos {
             }
             case 34: {
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder();
-              if (hasOriginServerName()) {
-                subBuilder.mergeFrom(getOriginServerName());
+              if (hasServerName()) {
+                subBuilder.mergeFrom(getServerName());
               }
               input.readMessage(subBuilder, extensionRegistry);
-              setOriginServerName(subBuilder.buildPartial());
+              setServerName(subBuilder.buildPartial());
               break;
             }
             case 42: {
@@ -2008,94 +2012,94 @@ public final class ZooKeeperProtos {
         return this;
       }
       
-      // optional .ServerName originServerName = 4;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName originServerName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      // required .ServerName serverName = 4;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> originServerNameBuilder_;
-      public boolean hasOriginServerName() {
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverNameBuilder_;
+      public boolean hasServerName() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getOriginServerName() {
-        if (originServerNameBuilder_ == null) {
-          return originServerName_;
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName() {
+        if (serverNameBuilder_ == null) {
+          return serverName_;
         } else {
-          return originServerNameBuilder_.getMessage();
+          return serverNameBuilder_.getMessage();
         }
       }
-      public Builder setOriginServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
-        if (originServerNameBuilder_ == null) {
+      public Builder setServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
+        if (serverNameBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          originServerName_ = value;
+          serverName_ = value;
           onChanged();
         } else {
-          originServerNameBuilder_.setMessage(value);
+          serverNameBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000008;
         return this;
       }
-      public Builder setOriginServerName(
+      public Builder setServerName(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
-        if (originServerNameBuilder_ == null) {
-          originServerName_ = builderForValue.build();
+        if (serverNameBuilder_ == null) {
+          serverName_ = builderForValue.build();
           onChanged();
         } else {
-          originServerNameBuilder_.setMessage(builderForValue.build());
+          serverNameBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000008;
         return this;
       }
-      public Builder mergeOriginServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
-        if (originServerNameBuilder_ == null) {
+      public Builder mergeServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
+        if (serverNameBuilder_ == null) {
           if (((bitField0_ & 0x00000008) == 0x00000008) &&
-              originServerName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance()) {
-            originServerName_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder(originServerName_).mergeFrom(value).buildPartial();
+              serverName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance()) {
+            serverName_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder(serverName_).mergeFrom(value).buildPartial();
           } else {
-            originServerName_ = value;
+            serverName_ = value;
           }
           onChanged();
         } else {
-          originServerNameBuilder_.mergeFrom(value);
+          serverNameBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000008;
         return this;
       }
-      public Builder clearOriginServerName() {
-        if (originServerNameBuilder_ == null) {
-          originServerName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      public Builder clearServerName() {
+        if (serverNameBuilder_ == null) {
+          serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
           onChanged();
         } else {
-          originServerNameBuilder_.clear();
+          serverNameBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getOriginServerNameBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getServerNameBuilder() {
         bitField0_ |= 0x00000008;
         onChanged();
-        return getOriginServerNameFieldBuilder().getBuilder();
+        return getServerNameFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getOriginServerNameOrBuilder() {
-        if (originServerNameBuilder_ != null) {
-          return originServerNameBuilder_.getMessageOrBuilder();
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder() {
+        if (serverNameBuilder_ != null) {
+          return serverNameBuilder_.getMessageOrBuilder();
         } else {
-          return originServerName_;
+          return serverName_;
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
-          getOriginServerNameFieldBuilder() {
-        if (originServerNameBuilder_ == null) {
-          originServerNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+          getServerNameFieldBuilder() {
+        if (serverNameBuilder_ == null) {
+          serverNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder>(
-                  originServerName_,
+                  serverName_,
                   getParentForChildren(),
                   isClean());
-          originServerName_ = null;
+          serverName_ = null;
         }
-        return originServerNameBuilder_;
+        return serverNameBuilder_;
       }
       
       // optional bytes payload = 5;
@@ -4960,25 +4964,24 @@ public final class ZooKeeperProtos {
       "\n\017ZooKeeper.proto\032\013hbase.proto\"/\n\020RootRe" +
       "gionServer\022\033\n\006server\030\001 \002(\0132\013.ServerName\"" +
       "%\n\006Master\022\033\n\006master\030\001 \002(\0132\013.ServerName\"\036" +
-      "\n\tClusterUp\022\021\n\tstartDate\030\001 \002(\t\"\211\001\n\020Regio" +
+      "\n\tClusterUp\022\021\n\tstartDate\030\001 \002(\t\"\203\001\n\020Regio" +
       "nTransition\022\025\n\reventTypeCode\030\001 \002(\r\022\022\n\nre" +
-      "gionName\030\002 \002(\014\022\022\n\ncreateTime\030\003 \002(\004\022%\n\020or" +
-      "iginServerName\030\004 \001(\0132\013.ServerName\022\017\n\007pay" +
-      "load\030\005 \001(\014\"\230\001\n\014SplitLogTask\022\"\n\005state\030\001 \002" +
-      "(\0162\023.SplitLogTask.State\022\037\n\nserverName\030\002 " +
-      "\002(\0132\013.ServerName\"C\n\005State\022\016\n\nUNASSIGNED\020",
-      "\000\022\t\n\005OWNED\020\001\022\014\n\010RESIGNED\020\002\022\010\n\004DONE\020\003\022\007\n\003" +
-      "ERR\020\004\"n\n\005Table\022$\n\005state\030\001 \002(\0162\014.Table.St" +
-      "ate:\007ENABLED\"?\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DI" +
-      "SABLED\020\001\022\r\n\tDISABLING\020\002\022\014\n\010ENABLING\020\003\"%\n" +
-      "\017ReplicationPeer\022\022\n\nclusterkey\030\001 \002(\t\"^\n\020" +
-      "ReplicationState\022&\n\005state\030\001 \002(\0162\027.Replic" +
-      "ationState.State\"\"\n\005State\022\013\n\007ENABLED\020\000\022\014" +
-      "\n\010DISABLED\020\001\"+\n\027ReplicationHLogPosition\022" +
-      "\020\n\010position\030\001 \002(\003\"$\n\017ReplicationLock\022\021\n\t" +
-      "lockOwner\030\001 \002(\tBE\n*org.apache.hadoop.hba",
-      "se.protobuf.generatedB\017ZooKeeperProtosH\001" +
-      "\210\001\001\240\001\001"
+      "gionName\030\002 \002(\014\022\022\n\ncreateTime\030\003 \002(\004\022\037\n\nse" +
+      "rverName\030\004 \002(\0132\013.ServerName\022\017\n\007payload\030\005" +
+      " \001(\014\"\230\001\n\014SplitLogTask\022\"\n\005state\030\001 \002(\0162\023.S" +
+      "plitLogTask.State\022\037\n\nserverName\030\002 \002(\0132\013." +
+      "ServerName\"C\n\005State\022\016\n\nUNASSIGNED\020\000\022\t\n\005O",
+      "WNED\020\001\022\014\n\010RESIGNED\020\002\022\010\n\004DONE\020\003\022\007\n\003ERR\020\004\"" +
+      "n\n\005Table\022$\n\005state\030\001 \002(\0162\014.Table.State:\007E" +
+      "NABLED\"?\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISABLED" +
+      "\020\001\022\r\n\tDISABLING\020\002\022\014\n\010ENABLING\020\003\"%\n\017Repli" +
+      "cationPeer\022\022\n\nclusterkey\030\001 \002(\t\"^\n\020Replic" +
+      "ationState\022&\n\005state\030\001 \002(\0162\027.ReplicationS" +
+      "tate.State\"\"\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISA" +
+      "BLED\020\001\"+\n\027ReplicationHLogPosition\022\020\n\010pos" +
+      "ition\030\001 \002(\003\"$\n\017ReplicationLock\022\021\n\tlockOw" +
+      "ner\030\001 \002(\tBE\n*org.apache.hadoop.hbase.pro",
+      "tobuf.generatedB\017ZooKeeperProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -5014,7 +5017,7 @@ public final class ZooKeeperProtos {
           internal_static_RegionTransition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionTransition_descriptor,
-              new java.lang.String[] { "EventTypeCode", "RegionName", "CreateTime", "OriginServerName", "Payload", },
+              new java.lang.String[] { "EventTypeCode", "RegionName", "CreateTime", "ServerName", "Payload", },
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionTransition.class,
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionTransition.Builder.class);
           internal_static_SplitLogTask_descriptor =
