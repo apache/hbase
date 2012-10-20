@@ -30,10 +30,10 @@
     <para>This chapter is the Not-So-Quick start guide to HBase configuration.  It goes
     over system requirements, Hadoop setup, the different HBase run modes, and the
     various configurations in HBase.  Please read this chapter carefully.  At a mimimum
-    ensure that all <xref linkend="basic.prerequisites" /> have 
+    ensure that all <xref linkend="basic.prerequisites" /> have
       been satisfied.  Failure to do so will cause you (and us) grief debugging strange errors
       and/or data loss.</para>
-    
+
     <para>
         HBase uses the same configuration system as Hadoop.
         To configure a deploy, edit a file of environment variables
@@ -57,7 +57,7 @@ to ensure well-formedness of your document after an edit session.
     content of the <filename>conf</filename> directory to
     all nodes of the cluster.  HBase will not do this for you.
     Use <command>rsync</command>.</para>
-    
+
     <section xml:id="basic.prerequisites">
     <title>Basic Prerequisites</title>
     <para>This section lists required services and some required system configuration.
@@ -69,7 +69,7 @@ to ensure well-formedness of your document after an edit session.
         xlink:href="http://www.java.com/download/">Oracle</link>.</para>
     </section>
     <section xml:id="os">
-        <title>Operating System</title>        
+        <title>Operating System</title>
       <section xml:id="ssh">
         <title>ssh</title>
 
@@ -151,9 +151,9 @@ to ensure well-formedness of your document after an edit session.
       2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Abandoning block blk_-6935524980745310745_1391901
       </programlisting> Do yourself a favor and change the upper bound on the
         number of file descriptors. Set it to north of 10k.  The math runs roughly as follows:  per ColumnFamily
-        there is at least one StoreFile and possibly up to 5 or 6 if the region is under load.  Multiply the 
+        there is at least one StoreFile and possibly up to 5 or 6 if the region is under load.  Multiply the
         average number of StoreFiles per ColumnFamily times the number of regions per RegionServer.  For example, assuming
-        that a schema had 3 ColumnFamilies per region with an average of 3 StoreFiles per ColumnFamily, 
+        that a schema had 3 ColumnFamilies per region with an average of 3 StoreFiles per ColumnFamily,
         and there are 100 regions per RegionServer, the JVM will open 3 * 3 * 100 = 900 file descriptors
         (not counting open jar files, config files, etc.)
         </para>
@@ -216,13 +216,13 @@ to ensure well-formedness of your document after an edit session.
         xlink:href="http://cygwin.com/">Cygwin</link> to have a *nix-like
         environment for the shell scripts. The full details are explained in
         the <link xlink:href="http://hbase.apache.org/cygwin.html">Windows
-        Installation</link> guide. Also 
+        Installation</link> guide. Also
         <link xlink:href="http://search-hadoop.com/?q=hbase+windows&amp;fc_project=HBase&amp;fc_type=mail+_hash_+dev">search our user mailing list</link> to pick
         up latest fixes figured by Windows users.</para>
       </section>
 
     </section>   <!--  OS -->
-    
+
     <section xml:id="hadoop">
         <title><link
         xlink:href="http://hadoop.apache.org">Hadoop</link><indexterm>
@@ -289,7 +289,7 @@ to ensure well-formedness of your document after an edit session.
     <link xlink:href="http://www.cloudera.com/">Cloudera</link> or
     <link xlink:href="http://www.mapr.com/">MapR</link> distributions.
     Cloudera' <link xlink:href="http://archive.cloudera.com/docs/">CDH3</link>
-    is Apache Hadoop 0.20.x plus patches including all of the 
+    is Apache Hadoop 0.20.x plus patches including all of the
     <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
     additions needed to add a durable sync. Use the released, most recent version of CDH3.  In CDH, append
     support is enabled by default so you do not need to make the above mentioned edits to
@@ -311,6 +311,16 @@ to ensure well-formedness of your document after an edit session.
         replace the jar in HBase everywhere on your cluster.  Hadoop version
         mismatch issues have various manifestations but often all looks like
         its hung up.</para>
+    <note xml:id="bigtop"><title>Packaging and Apache BigTop</title>
+        <para><link xlink:href="http://bigtop.apache.org">Apache Bigtop</link>
+            is an umbrella for packaging and tests of the Apache Hadoop
+            ecosystem, including Apache HBase. Bigtop performs testing at various
+            levels (packaging, platform, runtime, upgrade, etc...), developed by a
+            community, with a focus on the system as a whole, rather than individual
+            projects. We recommend installing Apache HBase packages as provided by a
+            Bigtop release rather than rolling your own piecemeal integration of
+            various component releases.</para>
+    </note>
 
        <section xml:id="hadoop.security">
           <title>HBase on Secure Hadoop</title>
@@ -320,7 +330,7 @@ to ensure well-formedness of your document after an edit session.
           with the secure version.  If you want to read more about how to setup
           Secure HBase, see <xref linkend="hbase.secure.configuration" />.</para>
        </section>
-           
+
        <section xml:id="dfs.datanode.max.xcievers">
         <title><varname>dfs.datanode.max.xcievers</varname><indexterm>
             <primary>xcievers</primary>
@@ -354,7 +364,7 @@ to ensure well-formedness of your document after an edit session.
        <para>See also <xref linkend="casestudies.xceivers"/>
        </para>
       </section>
-     
+
      </section>    <!--  hadoop -->
      </section>
 
@@ -418,7 +428,7 @@ to ensure well-formedness of your document after an edit session.
           HBase. Do not use this configuration for production nor for
           evaluating HBase performance.</para>
 
-	      <para>First, setup your HDFS in <link xlink:href="http://hadoop.apache.org/docs/r1.0.3/single_node_setup.html">pseudo-distributed mode</link>. 
+	      <para>First, setup your HDFS in <link xlink:href="http://hadoop.apache.org/docs/r1.0.3/single_node_setup.html">pseudo-distributed mode</link>.
    	      </para>
 	      <para>Next, configure HBase.  Below is an example <filename>conf/hbase-site.xml</filename>.
           This is the file into
@@ -501,10 +511,10 @@ to ensure well-formedness of your document after an edit session.
 	                </programlisting>
 				</para>
 			</section>
-		    		    
+
 		  </section>
 
-        </section>  
+        </section>
 
         <section xml:id="fully_dist">
           <title>Fully-distributed</title>
@@ -600,7 +610,7 @@ to ensure well-formedness of your document after an edit session.
       <section xml:id="confirm">
         <title>Running and Confirming Your Installation</title>
 
-         
+
 
         <para>Make sure HDFS is running first. Start and stop the Hadoop HDFS
         daemons by running <filename>bin/start-hdfs.sh</filename> over in the
@@ -610,31 +620,31 @@ to ensure well-formedness of your document after an edit session.
         not normally use the mapreduce daemons. These do not need to be
         started.</para>
 
-         
+
 
         <para><emphasis>If</emphasis> you are managing your own ZooKeeper,
         start it and confirm its running else, HBase will start up ZooKeeper
         for you as part of its start process.</para>
 
-         
+
 
         <para>Start HBase with the following command:</para>
 
-         
+
 
         <programlisting>bin/start-hbase.sh</programlisting>
 
-         Run the above from the 
+         Run the above from the
 
         <varname>HBASE_HOME</varname>
 
-         directory. 
+         directory.
 
         <para>You should now have a running HBase instance. HBase logs can be
         found in the <filename>logs</filename> subdirectory. Check them out
         especially if HBase had trouble starting.</para>
 
-         
+
 
         <para>HBase also puts up a UI listing vital attributes. By default its
         deployed on the Master host at port 60010 (HBase RegionServers listen
@@ -644,13 +654,13 @@ to ensure well-formedness of your document after an edit session.
         Master's homepage you'd point your browser at
         <filename>http://master.example.org:60010</filename>.</para>
 
-         
+
 
     <para>Once HBase has started, see the <xref linkend="shell_exercises" /> for how to
         create tables, add data, scan your insertions, and finally disable and
         drop your tables.</para>
 
-         
+
 
         <para>To stop HBase after exiting the HBase shell enter
         <programlisting>$ ./bin/stop-hbase.sh
@@ -660,15 +670,15 @@ stopping hbase...............</programlisting> Shutdown can take a moment to
         until HBase has shut down completely before stopping the Hadoop
         daemons.</para>
 
-         
+
       </section>
      </section>    <!--  run modes -->
-    
-    
-    
-    <section xml:id="config.files">    
+
+
+
+    <section xml:id="config.files">
          <title>Configuration Files</title>
-         
+
     <section xml:id="hbase.site">
     <title><filename>hbase-site.xml</filename> and <filename>hbase-default.xml</filename></title>
     <para>Just as in Hadoop where you add site-specific HDFS configuration
@@ -744,11 +754,11 @@ stopping hbase...............</programlisting> Shutdown can take a moment to
           Minimally, a client of HBase needs several libraries in its <varname>CLASSPATH</varname> when connecting to a cluster, including:
           <programlisting>
 commons-configuration (commons-configuration-1.6.jar)
-commons-lang (commons-lang-2.5.jar) 
-commons-logging (commons-logging-1.1.1.jar) 
-hadoop-core (hadoop-core-1.0.0.jar) 
+commons-lang (commons-lang-2.5.jar)
+commons-logging (commons-logging-1.1.1.jar)
+hadoop-core (hadoop-core-1.0.0.jar)
 hbase (hbase-0.92.0.jar)
-log4j (log4j-1.2.16.jar) 
+log4j (log4j-1.2.16.jar)
 slf4j-api (slf4j-api-1.5.8.jar)
 slf4j-log4j (slf4j-log4j12-1.5.8.jar)
 zookeeper (zookeeper-3.4.2.jar)</programlisting>
@@ -769,7 +779,7 @@ zookeeper (zookeeper-3.4.2.jar)</programlisting>
 </configuration>
 ]]></programlisting>
         </para>
-        
+
         <section xml:id="java.client.config">
         <title>Java client configuration</title>
         <para>The configuration used by a Java client is kept
@@ -778,15 +788,15 @@ zookeeper (zookeeper-3.4.2.jar)</programlisting>
         on invocation, will read in the content of the first <filename>hbase-site.xml</filename> found on
         the client's <varname>CLASSPATH</varname>, if one is present
         (Invocation will also factor in any <filename>hbase-default.xml</filename> found;
-        an hbase-default.xml ships inside the <filename>hbase.X.X.X.jar</filename>). 
+        an hbase-default.xml ships inside the <filename>hbase.X.X.X.jar</filename>).
         It is also possible to specify configuration directly without having to read from a
         <filename>hbase-site.xml</filename>.  For example, to set the ZooKeeper
         ensemble for the cluster programmatically do as follows:
         <programlisting>Configuration config = HBaseConfiguration.create();
-config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zookeeper locally</programlisting>    
+config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zookeeper locally</programlisting>
         If multiple ZooKeeper instances make up your ZooKeeper ensemble,
         they may be specified in a comma-separated list (just as in the <filename>hbase-site.xml</filename> file).
-        This populated <classname>Configuration</classname> instance can then be passed to an 
+        This populated <classname>Configuration</classname> instance can then be passed to an
         <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>,
         and so on.
         </para>
@@ -794,7 +804,7 @@ config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zooke
         </section>
 
       </section>  <!--  config files -->
-      
+
       <section xml:id="example_config">
       <title>Example Configurations</title>
 
@@ -886,7 +896,7 @@ config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zooke
           1G.</para>
 
           <programlisting>
-    
+
 $ git diff hbase-env.sh
 diff --git a/conf/hbase-env.sh b/conf/hbase-env.sh
 index e70ebc6..96f8c27 100644
@@ -894,11 +904,11 @@ index e70ebc6..96f8c27 100644
 +++ b/conf/hbase-env.sh
 @@ -31,7 +31,7 @@ export JAVA_HOME=/usr/lib//jvm/java-6-sun/
  # export HBASE_CLASSPATH=
- 
+
  # The maximum amount of heap to use, in MB. Default is 1000.
 -# export HBASE_HEAPSIZE=1000
 +export HBASE_HEAPSIZE=4096
- 
+
  # Extra Java runtime options.
  # Below are what we set by default.  May only work with SUN JVM.
 
@@ -910,8 +920,8 @@ index e70ebc6..96f8c27 100644
         </section>
       </section>
      </section>       <!-- example config -->
-      
-      
+
+
       <section xml:id="important_configurations">
       <title>The Important Configurations</title>
       <para>Below we list what the <emphasis>important</emphasis>
@@ -935,7 +945,7 @@ index e70ebc6..96f8c27 100644
               configuration under control otherwise, a long garbage collection that lasts
               beyond the ZooKeeper session timeout will take out
               your RegionServer (You might be fine with this -- you probably want recovery to start
-          on the server if a RegionServer has been in GC for a long period of time).</para> 
+          on the server if a RegionServer has been in GC for a long period of time).</para>
 
       <para>To change this configuration, edit <filename>hbase-site.xml</filename>,
           copy the changed file around the cluster and restart.</para>
@@ -1011,7 +1021,7 @@ index e70ebc6..96f8c27 100644
       cluster (You can always later manually split the big Regions should one prove
       hot and you want to spread the request load over the cluster).  A lower number of regions is
        preferred, generally in the range of 20 to low-hundreds
-       per RegionServer.  Adjust the regionsize as appropriate to achieve this number. 
+       per RegionServer.  Adjust the regionsize as appropriate to achieve this number.
        </para>
        <para>For the 0.90.x codebase, the upper-bound of regionsize is about 4Gb, with a default of 256Mb.
        For 0.92.x codebase, due to the HFile v2 change much larger regionsizes can be supported (e.g., 20Gb).
@@ -1019,10 +1029,10 @@ index e70ebc6..96f8c27 100644
        <para>You may need to experiment with this setting based on your hardware configuration and application needs.
        </para>
        <para>Adjust <code>hbase.hregion.max.filesize</code> in your <filename>hbase-site.xml</filename>.
-       RegionSize can also be set on a per-table basis via 
+       RegionSize can also be set on a per-table basis via
        <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html">HTableDescriptor</link>.
       </para>
-      
+
       </section>
       <section xml:id="disable.splitting">
       <title>Managed Splitting</title>
@@ -1075,22 +1085,22 @@ of all regions.
 </para>
       </section>
       <section xml:id="managed.compactions"><title>Managed Compactions</title>
-      <para>A common administrative technique is to manage major compactions manually, rather than letting 
+      <para>A common administrative technique is to manage major compactions manually, rather than letting
       HBase do it.  By default, <varname>HConstants.MAJOR_COMPACTION_PERIOD</varname> is one day and major compactions
       may kick in when you least desire it - especially on a busy system.  To turn off automatic major compactions set
-      the value to <varname>0</varname>. 
+      the value to <varname>0</varname>.
       </para>
       <para>It is important to stress that major compactions are absolutely necessary for StoreFile cleanup, the only variant is when
-      they occur.  They can be administered through the HBase shell, or via 
+      they occur.  They can be administered through the HBase shell, or via
       <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html#majorCompact%28java.lang.String%29">HBaseAdmin</link>.
       </para>
       <para>For more information about compactions and the compaction file selection process, see <xref linkend="compaction"/></para>
       </section>
-      
+
       <section xml:id="spec.ex"><title>Speculative Execution</title>
-        <para>Speculative Execution of MapReduce tasks is on by default, and for HBase clusters it is generally advised to turn off 
+        <para>Speculative Execution of MapReduce tasks is on by default, and for HBase clusters it is generally advised to turn off
         Speculative Execution at a system-level unless you need it for a specific case, where it can be configured per-job.
-        Set the properties <varname>mapred.map.tasks.speculative.execution</varname> and 
+        Set the properties <varname>mapred.map.tasks.speculative.execution</varname> and
         <varname>mapred.reduce.tasks.speculative.execution</varname> to false.
         </para>
       </section>
@@ -1118,9 +1128,9 @@ of all regions.
       <link xlink:href="http://search-hadoop.com/m/pduLg2fydtE/Inconsistent+scan+performance+with+caching+set+&amp;subj=Re+Inconsistent+scan+performance+with+caching+set+to+1">Inconsistent scan performance with caching set to 1</link>
       and the issue cited therein where setting notcpdelay improved scan speeds.</para>
     </section>
-         
+
       </section>
-      
+
       </section> <!--  important config -->
 
   </chapter>
