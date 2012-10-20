@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.kvaggregator.DefaultKeyValueAggregator;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -63,8 +64,8 @@ public class TestMemStore extends TestCase {
     super.setUp();
     this.mvcc = new MultiVersionConsistencyControl();
     this.memstore = new MemStore();
-		SchemaMetrics.configureGlobally(HBaseConfiguration.create());
-	}
+    SchemaMetrics.configureGlobally(HBaseConfiguration.create());
+  }
 
   public void testPutSameKey() {
     byte [] bytes = Bytes.toBytes(getName());
@@ -90,7 +91,7 @@ public class TestMemStore extends TestCase {
     List<KeyValue> result = new ArrayList<KeyValue>();
     MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
     StoreScanner s = new StoreScanner(scan, null, HConstants.LATEST_TIMESTAMP,
-      this.memstore.comparator, null, memstorescanners);
+      this.memstore.comparator, null, memstorescanners, DefaultKeyValueAggregator.getInstance());
     int count = 0;
     try {
       while (s.next(result)) {
@@ -112,7 +113,7 @@ public class TestMemStore extends TestCase {
     memstorescanners = this.memstore.getScanners();
     // Now assert can count same number even if a snapshot mid-scan.
     s = new StoreScanner(scan, null, HConstants.LATEST_TIMESTAMP,
-      this.memstore.comparator, null, memstorescanners);
+      this.memstore.comparator, null, memstorescanners, DefaultKeyValueAggregator.getInstance());
     count = 0;
     try {
       while (s.next(result)) {
@@ -139,7 +140,7 @@ public class TestMemStore extends TestCase {
     // Assert that new values are seen in kvset as we scan.
     long ts = System.currentTimeMillis();
     s = new StoreScanner(scan, null, HConstants.LATEST_TIMESTAMP,
-      this.memstore.comparator, null, memstorescanners);
+      this.memstore.comparator, null, memstorescanners, DefaultKeyValueAggregator.getInstance());
     count = 0;
     int snapshotIndex = 5;
     try {
@@ -556,7 +557,7 @@ public class TestMemStore extends TestCase {
       InternalScanner scanner =
           new StoreScanner(new Scan(Bytes.toBytes(startRowId)), FAMILY,
               Integer.MAX_VALUE, this.memstore.comparator, null,
-              memstore.getScanners());
+              memstore.getScanners(), DefaultKeyValueAggregator.getInstance());
       List<KeyValue> results = new ArrayList<KeyValue>();
       for (int i = 0; scanner.next(results); i++) {
         int rowId = startRowId + i;

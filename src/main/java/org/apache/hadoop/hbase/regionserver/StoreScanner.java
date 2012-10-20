@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.regionserver.kvaggregator.KeyValueAggregator;
 
 
 import static org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
@@ -43,7 +44,7 @@ import static org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
  * Scanner scans both the memstore and the HStore. Coalesce KeyValue stream
  * into List<KeyValue> for a single row.
  */
-class StoreScanner extends NonLazyKeyValueScanner
+public class StoreScanner extends NonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner, ChangedReadersObserver {
   static final Log LOG = LogFactory.getLog(StoreScanner.class);
   private Store store;
@@ -77,7 +78,7 @@ class StoreScanner extends NonLazyKeyValueScanner
 
   /** An internal constructor. */
   private StoreScanner(Store store, boolean cacheBlocks, Scan scan,
-      final NavigableSet<byte[]> columns, long ttl) {
+      final NavigableSet<byte[]> columns, long ttl, KeyValueAggregator keyValueAggregator) {
     this.store = store;
     initializeMetricNames();
     this.cacheBlocks = cacheBlocks;
@@ -85,7 +86,7 @@ class StoreScanner extends NonLazyKeyValueScanner
     int numCol = columns == null ? 0 : columns.size();
     explicitColumnQuery = numCol > 0;
     this.scan = scan;
-    this.keyValueAggregator = DefaultKeyValueAggregator.getInstance();
+    this.keyValueAggregator = keyValueAggregator;
     this.columns = columns;
     oldestUnexpiredTS = EnvironmentEdgeManager.currentTimeMillis() - ttl;
 
@@ -105,9 +106,9 @@ class StoreScanner extends NonLazyKeyValueScanner
    * @param columns which columns we are scanning
    * @throws IOException
    */
-  StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns)
-      throws IOException {
-    this(store, scan.getCacheBlocks(), scan, columns, store.ttl);
+  StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns,
+      KeyValueAggregator keyValueAggregator) throws IOException {
+    this(store, scan.getCacheBlocks(), scan, columns, store.ttl, keyValueAggregator);
     matcher =
         new ScanQueryMatcher(scan, store.getFamily().getName(), columns,
             store.comparator.getRawComparator(),
@@ -155,8 +156,8 @@ class StoreScanner extends NonLazyKeyValueScanner
    */
   StoreScanner(Store store, Scan scan,
       List<? extends KeyValueScanner> scanners, long smallestReadPoint,
-      long retainDeletesInOutputUntil) throws IOException {
-    this(store, false, scan, null, store.ttl);
+      long retainDeletesInOutputUntil, KeyValueAggregator keyValueAggregator) throws IOException {
+    this(store, false, scan, null, store.ttl, keyValueAggregator);
 
     matcher =
         new ScanQueryMatcher(scan, store.getFamily().getName(), null,
@@ -180,9 +181,10 @@ class StoreScanner extends NonLazyKeyValueScanner
   StoreScanner(final Scan scan, final byte [] colFamily, final long ttl,
       final KeyValue.KVComparator comparator,
       final NavigableSet<byte[]> columns,
-      final List<KeyValueScanner> scanners)
+      final List<KeyValueScanner> scanners,
+      final KeyValueAggregator keyValueAggregator)
         throws IOException {
-    this(scan, colFamily, ttl, comparator, columns, scanners, Long.MAX_VALUE);
+    this(scan, colFamily, ttl, comparator, columns, scanners, Long.MAX_VALUE, keyValueAggregator);
   }
 
   /** Constructor for testing. */
@@ -190,9 +192,10 @@ class StoreScanner extends NonLazyKeyValueScanner
       final KeyValue.KVComparator comparator,
       final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners,
-      final long retainDeletesInOutputUntil)
+      final long retainDeletesInOutputUntil,
+      final KeyValueAggregator keyValueAggregator)
         throws IOException {
-    this(null, scan.getCacheBlocks(), scan, columns, ttl);
+    this(null, scan.getCacheBlocks(), scan, columns, ttl, keyValueAggregator);
     this.matcher =
         new ScanQueryMatcher(scan, colFamily, columns,
             comparator.getRawComparator(), scan.getMaxVersions(),

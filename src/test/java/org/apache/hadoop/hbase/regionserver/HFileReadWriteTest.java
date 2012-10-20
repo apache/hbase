@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
+import org.apache.hadoop.hbase.regionserver.kvaggregator.DefaultKeyValueAggregator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
@@ -417,7 +418,8 @@ public class HFileReadWriteTest {
       Scan scan = new Scan();
 
       // Include deletes
-      scanner = new StoreScanner(store, scan, scanners, Long.MAX_VALUE, Long.MIN_VALUE);
+      scanner = new StoreScanner(store, scan, scanners, Long.MAX_VALUE,
+          Long.MIN_VALUE, DefaultKeyValueAggregator.getInstance());
       ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
 
       while (scanner.next(kvs) || kvs.size() != 0) {

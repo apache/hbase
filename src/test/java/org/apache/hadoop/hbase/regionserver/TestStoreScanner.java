@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.kvaggregator.DefaultKeyValueAggregator;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -79,7 +80,7 @@ public class TestStoreScanner extends TestCase {
     scanSpec.setMaxVersions();
     StoreScanner scan =
       new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
-        KeyValue.COMPARATOR, getCols("a"), scanners);
+        KeyValue.COMPARATOR, getCols("a"), scanners, DefaultKeyValueAggregator.getInstance());
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(5, results.size());
@@ -89,7 +90,7 @@ public class TestStoreScanner extends TestCase {
     scanSpec.setTimeRange(1, 3);
     scanSpec.setMaxVersions();
     scan = new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
-      KeyValue.COMPARATOR, getCols("a"), scanners);
+      KeyValue.COMPARATOR, getCols("a"), scanners, DefaultKeyValueAggregator.getInstance());
     results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
@@ -98,7 +99,7 @@ public class TestStoreScanner extends TestCase {
     scanSpec.setTimeRange(5, 10);
     scanSpec.setMaxVersions();
     scan = new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
-      KeyValue.COMPARATOR, getCols("a"), scanners);
+      KeyValue.COMPARATOR, getCols("a"), scanners, DefaultKeyValueAggregator.getInstance());
     results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
@@ -108,7 +109,7 @@ public class TestStoreScanner extends TestCase {
     scanSpec.setTimeRange(0, 10);
     scanSpec.setMaxVersions(3);
     scan = new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
-      KeyValue.COMPARATOR, getCols("a"), scanners);
+      KeyValue.COMPARATOR, getCols("a"), scanners, DefaultKeyValueAggregator.getInstance());
     results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(3, results.size());
@@ -130,7 +131,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan =
       new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
           KeyValue.COMPARATOR, getCols("a"),
-          scanners);
+          scanners, DefaultKeyValueAggregator.getInstance());
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
@@ -159,7 +160,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan =
       new StoreScanner(scanSpec, CF, Long.MAX_VALUE,
           KeyValue.COMPARATOR, getCols("a"),
-          scanners);
+          scanners, DefaultKeyValueAggregator.getInstance());
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     scan.next(results);
@@ -188,7 +189,7 @@ public class TestStoreScanner extends TestCase {
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     StoreScanner scan =
       new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          getCols("a"), scanners);
+          getCols("a"), scanners,  DefaultKeyValueAggregator.getInstance());
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertFalse(scan.next(results));
@@ -209,7 +210,7 @@ public class TestStoreScanner extends TestCase {
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     StoreScanner scan =
       new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          getCols("a"), scanners);
+          getCols("a"), scanners, DefaultKeyValueAggregator.getInstance());
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
@@ -237,7 +238,7 @@ public class TestStoreScanner extends TestCase {
 
     StoreScanner scan =
       new StoreScanner(new Scan(Bytes.toBytes("R1")), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          getCols("a"), scanners);
+          getCols("a"), scanners, DefaultKeyValueAggregator.getInstance());
     List<KeyValue> results = new ArrayList<KeyValue>();
     // the two put at ts=now will be masked by the 1 delete, and
     // since the scan default returns 1 version we'll return the newest
@@ -263,7 +264,7 @@ public class TestStoreScanner extends TestCase {
     Scan scanSpec = new Scan(Bytes.toBytes("R1")).setMaxVersions(2);
     StoreScanner scan =
       new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          getCols("a"), scanners);
+          getCols("a"), scanners, DefaultKeyValueAggregator.getInstance());
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
@@ -280,7 +281,7 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
       new StoreScanner(new Scan(Bytes.toBytes("R1")), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          null, scanners);
+          null, scanners, DefaultKeyValueAggregator.getInstance());
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
@@ -310,7 +311,7 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
       new StoreScanner(new Scan().setMaxVersions(2), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          null, scanners);
+          null, scanners, DefaultKeyValueAggregator.getInstance());
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(5, results.size());
@@ -339,7 +340,7 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
       new StoreScanner(new Scan().setMaxVersions(Integer.MAX_VALUE), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          null, scanners);
+          null, scanners, DefaultKeyValueAggregator.getInstance());
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(0, results.size());
@@ -389,7 +390,7 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scanner =
       new StoreScanner(new Scan().setMaxVersions(2), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          null, scanners, now - 200);
+          null, scanners, now - 200, DefaultKeyValueAggregator.getInstance());
     List<KeyValue> results = new ArrayList<KeyValue>();
     results = new ArrayList<KeyValue>();
     assertEquals(true, scanner.next(results));
@@ -413,7 +414,7 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
       new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          null, scanners);
+          null, scanners, DefaultKeyValueAggregator.getInstance());
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
@@ -437,7 +438,7 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
       new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          getCols("a", "d"), scanners);
+          getCols("a", "d"), scanners, DefaultKeyValueAggregator.getInstance());
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scan.next(results));
@@ -475,7 +476,7 @@ public class TestStoreScanner extends TestCase {
     scan.setMaxVersions(1);
     StoreScanner scanner =
       new StoreScanner(scan, CF, 500, KeyValue.COMPARATOR,
-          null, scanners);
+          null, scanners, DefaultKeyValueAggregator.getInstance());
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scanner.next(results));
@@ -498,7 +499,7 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan =
         new StoreScanner(new Scan(), CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-            getCols("a", "d"), scanners);
+            getCols("a", "d"), scanners, DefaultKeyValueAggregator.getInstance());
 
 
     // Previously a updateReaders twice in a row would cause an NPE.  In test this would also
@@ -525,7 +526,7 @@ public class TestStoreScanner extends TestCase {
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
     StoreScanner scan =
       new StoreScanner(scanSpec, CF, Long.MAX_VALUE, KeyValue.COMPARATOR,
-          getCols("a"), scanners);
+          getCols("a"), scanners, DefaultKeyValueAggregator.getInstance());
     assertNull(scan.peek());
   }
 
@@ -543,7 +544,7 @@ public class TestStoreScanner extends TestCase {
     // scanner with ttl equal to 500
     StoreScanner scanner =
         new StoreScanner(scan, CF, 500, KeyValue.COMPARATOR,
-            null, scanners);
+            null, scanners, DefaultKeyValueAggregator.getInstance());
 
     List<KeyValue> results = new ArrayList<KeyValue>();
     assertEquals(true, scanner.next(results));

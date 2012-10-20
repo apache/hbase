@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -60,6 +61,8 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.kvaggregator.DefaultKeyValueAggregator;
+import org.apache.hadoop.hbase.regionserver.kvaggregator.KeyValueAggregator;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -143,6 +146,8 @@ public class Store extends SchemaConfigured implements HeapSize {
   // Comparing KeyValues
   final KeyValue.KVComparator comparator;
 
+  private Class<KeyValueAggregator> aggregatorClass = null;
+
   /**
    * Constructor
    * @param basedir qualified path under which the region directory lives;
@@ -154,6 +159,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    * failed.  Can be null.
    * @throws IOException
    */
+  @SuppressWarnings("unchecked")
   protected Store(Path basedir, HRegion region, HColumnDescriptor family,
       FileSystem fs, Configuration confParam)
   throws IOException {
@@ -235,6 +241,16 @@ public class Store extends SchemaConfigured implements HeapSize {
 
     setCompactionPolicy(conf.get(HConstants.COMPACTION_MANAGER_CLASS,
                                  HConstants.DEFAULT_COMPACTION_MANAGER_CLASS));
+
+    String aggregatorString = conf.get("aggregator");
+    if (aggregatorString != null && !aggregatorString.isEmpty()) {
+      try {
+        this.aggregatorClass = ((Class<KeyValueAggregator>) Class
+            .forName(aggregatorString));
+      } catch (ClassNotFoundException e) {
+        throw new IllegalArgumentException(e);
+      }
+    }
   }
 
   /**
@@ -484,7 +500,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       srcPath = tmpPath;
     }
 
-    Path dstPath = StoreFile.getRandomFilename(fs, homedir, 
+    Path dstPath = StoreFile.getRandomFilename(fs, homedir,
         (sequenceId >= 0) ? ("_SeqId_" + sequenceId + "_") : null);
     LOG.info("Renaming bulk load file " + srcPath + " to " + dstPath);
     StoreFile.rename(fs, srcPath, dstPath);
@@ -637,7 +653,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     InternalScanner scanner = new StoreScanner(this, scan,
         MemStore.getSnapshotScanners(snapshot, this.comparator),
         this.region.getSmallestReadPoint(),
-        Long.MIN_VALUE); // include all deletes
+        Long.MIN_VALUE, getAggregator()); // include all deletes
 
     String fileName;
     try {
@@ -1151,7 +1167,7 @@ public class Store extends SchemaConfigured implements HeapSize {
              (System.currentTimeMillis() - this.timeToPurgeDeletes))
           : Long.MIN_VALUE;
         scanner = new StoreScanner(this, scan, scanners, smallestReadPoint,
-            retainDeletesUntil);
+            retainDeletesUntil, getAggregator());
         int bytesWritten = 0;
         // since scanner.next() can return 'false' but still be delivering data,
         // we have to use a do/while loop.
@@ -1620,7 +1636,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       final NavigableSet<byte []> targetCols) throws IOException {
     lock.readLock().lock();
     try {
-      return new StoreScanner(this, scan, targetCols);
+      return new StoreScanner(this, scan, targetCols, getAggregator());
     } finally {
       lock.readLock().unlock();
     }
@@ -1817,8 +1833,8 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   public static final long FIXED_OVERHEAD =
       ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-          + (17 * ClassSize.REFERENCE) + (5 * Bytes.SIZEOF_LONG)
-          + (4 * Bytes.SIZEOF_INT) + 2 * Bytes.SIZEOF_BOOLEAN);
+          + (18 * ClassSize.REFERENCE) + (5 * Bytes.SIZEOF_LONG)
+          + (4 * Bytes.SIZEOF_INT) + 2 * Bytes.SIZEOF_BOOLEAN) ;
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +
@@ -1839,4 +1855,23 @@ public class Store extends SchemaConfigured implements HeapSize {
                                  HConstants.DEFAULT_COMPACTION_MANAGER_CLASS));
   }
 
+  /**
+   * Gets the aggregator which is specified in the Configuration. If none is
+   * specified, returns the DefaultKeyValueAggregator
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   */
+  private KeyValueAggregator getAggregator() {
+   if (aggregatorClass == null) {
+     return DefaultKeyValueAggregator.getInstance();
+   } else {
+     try {
+      return aggregatorClass.newInstance();
+    } catch (InstantiationException e) {
+      throw new IllegalArgumentException(e);
+    } catch (IllegalAccessException e) {
+      throw new IllegalArgumentException(e);
+    }
+   }
+  }
 }
