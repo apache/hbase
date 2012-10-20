@@ -38,10 +38,14 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
+import org.apache.hadoop.hbase.ipc.ProfilingData;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
@@ -1058,12 +1062,23 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
             "-byte array at offset " + destOffset);
       }
 
+      Call callContext = HRegionServer.callContext.get();
+      ProfilingData pData = (callContext == null)? null : callContext.getProfilingData();
+
+      long t0, t1;
+      long timeToGrabLock, timeToSeek, timeToRead, timeToReadExtra;
       if (pread) {
         // Positional read. Better for random reads.
         int extraSize = peekIntoNextBlock ? HEADER_SIZE : 0;
 
+        t0 = EnvironmentEdgeManager.currentTimeMillis();
         numPositionalRead.incrementAndGet();
         int ret = istream.read(fileOffset, dest, destOffset, size + extraSize);
+        if (pData != null) {
+          t1 = EnvironmentEdgeManager.currentTimeMillis();
+          timeToRead = t1 - t0;
+          pData.addToHist(ProfilingData.HFILE_BLOCK_P_READ_TIME_MS, timeToRead);
+        }
         if (ret < size) {
           throw new IOException("Positional read of " + size + " bytes " +
               "failed at offset " + fileOffset + " (returned " + ret + ")");
@@ -1075,10 +1090,22 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         }
 
       } else {
+        t0 = EnvironmentEdgeManager.currentTimeMillis();
         // Seek + read. Better for scanning.
         synchronized (istream) {
+          if (pData != null) {
+            t1 = EnvironmentEdgeManager.currentTimeMillis();
+            timeToGrabLock = t1 - t0;
+            t0 = t1;
+            pData.addToHist(ProfilingData.HFILE_BLOCK_WAIT_FOR_LOCK_TIME_MS, timeToGrabLock);
+          }
           numSeekRead.incrementAndGet();
           istream.seek(fileOffset);
+          if (pData != null) {
+            t1 = EnvironmentEdgeManager.currentTimeMillis();
+            timeToSeek = t1 - t0;
+            pData.addToHist(ProfilingData.HFILE_BLOCK_SEEK_TIME_MS, timeToSeek);
+          }
 
           long realOffset = istream.getPos();
           if (realOffset != fileOffset) {
@@ -1088,12 +1115,24 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           }
 
           if (!peekIntoNextBlock) {
+            t0 = EnvironmentEdgeManager.currentTimeMillis();
             IOUtils.readFully(istream, dest, destOffset, size);
+            if (pData != null) {
+              t1 = EnvironmentEdgeManager.currentTimeMillis();
+              timeToRead = t1 - t0;
+              pData.addToHist(ProfilingData.HFILE_BLOCK_NO_P_READ_TIME_MS, timeToRead);
+            }
             return -1;
           }
 
           // Try to read the next block header.
+          t0 = EnvironmentEdgeManager.currentTimeMillis();
           if (!readWithExtra(istream, dest, destOffset, size, HEADER_SIZE))
+            if (pData != null) {
+              t1 = EnvironmentEdgeManager.currentTimeMillis();
+              timeToReadExtra = t1 - t0;
+              pData.addToHist(ProfilingData.HFILE_BLOCK_NO_P_READ_TIME_EXTRA_MS, timeToReadExtra);
+            }
             return -1;
         }
       }

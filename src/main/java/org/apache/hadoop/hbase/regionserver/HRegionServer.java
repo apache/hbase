@@ -342,6 +342,7 @@ public class HRegionServer implements HRegionInterface,
   // throw out an Exception. This is done to avoid OutOfMemory Errors, and
   // large GC issues.
   private static long responseSizeLimit;
+  public static boolean enableServerSideProfilingForAllCalls;
 
   public static long getResponseSizeLimit() {
     return responseSizeLimit;
@@ -400,6 +401,8 @@ public class HRegionServer implements HRegionInterface,
 
     this.responseSizeLimit = conf.getLong("hbase.regionserver.results.size.max",
         (long)Integer.MAX_VALUE); // set the max to 2G
+    this.enableServerSideProfilingForAllCalls = conf.getBoolean(
+        "hbase.regionserver.enable.serverside.profiling", false);
 
     reinitialize();
     SchemaMetrics.configureGlobally(conf);

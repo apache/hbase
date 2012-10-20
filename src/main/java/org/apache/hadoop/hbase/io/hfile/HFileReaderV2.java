@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -328,6 +329,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
       Call call = HRegionServer.callContext.get();
       ProfilingData pData = call == null ? null : call.getProfilingData();
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Read a block from FS. took " + (deltaNs) + " ns. For call " + call);
+      }
       if (pData != null) {
         pData.incInt(ProfilingData.blockMissCntStr(
             hfileBlock.getBlockType().getCategory(),
@@ -337,7 +341,13 @@ public class HFileReaderV2 extends AbstractHFileReader {
                 hfileBlock.getBlockType().getCategory(),
                 hfileBlock.getColumnFamilyName()),
             onDiskBlockSize);
-        pData.incLong(ProfilingData.TOTAL_BLOCK_READ_TIME_NS, deltaNs);
+        pData.incLong(ProfilingData.TOTAL_FS_BLOCK_READ_TIME_NS, deltaNs);
+        pData.addToHist(ProfilingData.FS_BLOCK_READ_TIME_NS, deltaNs);
+        // increment the count
+        pData.incLong(ProfilingData.TOTAL_FS_BLOCK_READ_CNT, 1);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Read a block from FS. took " + (deltaNs) + " ns. For call " + call);
+        }
       }
       return hfileBlock;
     } finally {

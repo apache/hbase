@@ -4,6 +4,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.mutable.MutableFloat;
@@ -55,7 +56,9 @@ public class ProfilingData implements Writable {
   /**
    *  total time spent reading data blocks into cache on misses
    */
-  public static final String TOTAL_BLOCK_READ_TIME_NS = "total_block_read_time.ns";
+  public static final String TOTAL_FS_BLOCK_READ_TIME_NS = "total_fs_block_read_time.ns";
+  public static final String TOTAL_FS_BLOCK_READ_CNT = "total_fs_block_read_cnt";
+  public static final String FS_BLOCK_READ_TIME_NS = "fs_block_read_time.ns";
   
   /**
    *  time spend writing to HLog
@@ -77,29 +80,58 @@ public class ProfilingData implements Writable {
    */
   public static final String RPC_METHOD_NAME = "rpc_method_name";
   
+  public static final String HFILE_BLOCK_NO_P_READ_TIME_MS = "hfile_block_no_p_read_time_ms";
+  public static final String HFILE_BLOCK_NO_P_READ_TIME_EXTRA_MS = "hfile_block_no_p_read_time_extra_ms";
+  public static final String HFILE_BLOCK_P_READ_TIME_MS = "hfile_block_p_read_time_ms";
+  public static final String HFILE_BLOCK_SEEK_TIME_MS = "hfile_block_seek_time_ms";
+  public static final String HFILE_BLOCK_WAIT_FOR_LOCK_TIME_MS = "hfile_block_wait_for_lock_time_ms";
+
   /**
    *  separator used when concatenating strings to be merged
    */
   public static final String STRING_MERGE_SEPARATOR = ",";
 
-	private Map<String, String> mapString = new HashMap<String, String>();
-	private Map<String, MutableLong> mapLong = new HashMap<String, MutableLong>();
-	private Map<String, MutableInt> mapInt = new HashMap<String, MutableInt>();
-	private Map<String, Boolean> mapBoolean = new HashMap<String, Boolean>();
-	private Map<String, MutableFloat> mapFloat = new HashMap<String, MutableFloat>();
 
-	public ProfilingData() {}
+  private Map<String, String> mapString = new HashMap<String, String>();
+  private Map<String, MutableLong> mapLong = new HashMap<String, MutableLong>();
+  private Map<String, MutableInt> mapInt = new HashMap<String, MutableInt>();
+  private Map<String, Boolean> mapBoolean = new HashMap<String, Boolean>();
+  private Map<String, MutableFloat> mapFloat = new HashMap<String, MutableFloat>();
+  private Map<String, int[]> mapHist = new HashMap<String, int[]>();
 
-	public void addString(String key, String val) {
-		mapString.put(key, val);
-	}
+  private static final int MAX_BUCKETS = 60; // Do not expect to see a delay value > 2^59
 
-	public String getString(String key) {
-	  return mapString.get(key);
-	}
-	
-	public void addLong(String key, long val) {
+  public ProfilingData() {}
+
+  public void addString(String key, String val) {
+    mapString.put(key, val);
+  }
+
+  public String getString(String key) {
+    return mapString.get(key);
+  }
+
+  public void addLong(String key, long val) {
     mapLong.put(key, new MutableLong(val));
+  }
+
+  public void addToHist(String key, long val) {
+    int dat[] = mapHist.get(key);
+    if (dat == null) {
+      dat = new int[MAX_BUCKETS];
+      mapHist.put(key, dat);
+    }
+
+    int bkt = 0;
+    if (val > 1) {
+      val = val >> 1;
+
+      while (val != 0) {
+        bkt++;
+        val = val >> 1;
+      }
+    }
+    dat[bkt]++;
   }
 
   public Long getLong(String key) {
@@ -252,15 +284,15 @@ public class ProfilingData implements Writable {
       }
     }
   }
-	
-	@Override
-	public void write(DataOutput out) throws IOException {
-	  out.writeInt(mapString.size());
-	  for (Map.Entry<String,String> entry : mapString.entrySet()) {
+
+  @Override
+  public void write(DataOutput out) throws IOException {
+    out.writeInt(mapString.size());
+    for (Map.Entry<String,String> entry : mapString.entrySet()) {
       out.writeUTF(entry.getKey());
       out.writeUTF(entry.getValue());
     }
-	  out.writeInt(mapBoolean.size());
+    out.writeInt(mapBoolean.size());
     for (Map.Entry<String,Boolean> entry : mapBoolean.entrySet()) {
       out.writeUTF(entry.getKey());
       out.writeBoolean(entry.getValue());
@@ -280,14 +312,20 @@ public class ProfilingData implements Writable {
       out.writeUTF(entry.getKey());
       out.writeFloat(entry.getValue().floatValue());
     }
-	}
-	  
-	@Override
-	public void readFields(DataInput in) throws IOException {
-	  int size;
-	  String key;
-	  size = in.readInt();
-	  mapString.clear();
+    out.writeInt(mapHist.size());
+    for (Map.Entry<String, int []> entry : mapHist.entrySet()) {
+      out.writeUTF(entry.getKey());
+      int [] values = entry.getValue();
+      writeArray(out, values);
+    }
+  }
+
+  @Override
+  public void readFields(DataInput in) throws IOException {
+    int size;
+    String key;
+    size = in.readInt();
+    mapString.clear();
     for (int i = 0; i < size; i ++) {
       key = in.readUTF();
       this.addString(key, in.readUTF());
@@ -316,10 +354,32 @@ public class ProfilingData implements Writable {
       key = in.readUTF();
       this.addFloat(key, in.readFloat());
     }
-	}
-	
-	public String toString(String delim) {
-	  StringBuilder sb = new StringBuilder ();
+    mapHist.clear();
+    size = in.readInt();
+    for (int i = 0; i < size; i ++) {
+      key = in.readUTF();
+      this.mapHist.put(key, readIntArray(in));
+    }
+  }
+
+  private void writeArray(DataOutput out, int[] values) throws IOException {
+      out.writeInt(values.length);
+      for (int i = 0; i < values.length; i++) {
+        out.writeInt(values[i]);
+      }
+  }
+
+  private int [] readIntArray(DataInput in) throws IOException {
+      int length  = in.readInt();
+      int [] values = new int[length];
+      for (int i = 0; i < values.length; i++) {
+        values[i] = in.readInt();
+      }
+      return values;
+  }
+
+  public String toString(String delim) {
+    StringBuilder sb = new StringBuilder ();
     for (Map.Entry<String, String> entry : mapString.entrySet()) {
       sb.append(entry.getKey() + ":" + entry.getValue() + delim);
     }
@@ -335,18 +395,30 @@ public class ProfilingData implements Writable {
     for (Map.Entry<String, MutableFloat> entry : mapFloat.entrySet()) {
       sb.append(entry.getKey() + ":" + entry.getValue() + delim);
     }
+    for (Map.Entry<String, int[]> entry : mapHist.entrySet()) {
+      int dat[] = entry.getValue();
+      long max = 2;
+      sb.append(entry.getKey() + ": [" );
+      for (int i = 0; i < dat.length; i++) {
+        if (dat[i] > 0) {
+          sb.append( "<" + max + ":" + dat[i] + delim);
+        }
+        max *= 2;
+      }
+      sb.append( " ]" + delim);
+    }
     if (sb.length() >= delim.length()) {
       sb.delete(sb.length() - delim.length(), sb.length());
     }
     return sb.toString();
-	}
-	
-	@Override
-	public String toString() {
-	  return this.toString(", ");
-	}
-	
-	public String toPrettyString() {
-	  return this.toString("\n");
+  }
+
+  @Override
+  public String toString() {
+    return this.toString(", ");
+  }
+
+  public String toPrettyString() {
+    return this.toString("\n");
   }
 }

@@ -666,6 +666,13 @@ public class HBaseRPC {
       responseInfo.put("client", clientAddress);
       responseInfo.put("class", instance.getClass().getSimpleName());
       responseInfo.put("method", call.getMethodName());
+
+      Call callContext = HRegionServer.callContext.get();
+      ProfilingData pData = callContext == null ? null : callContext.getProfilingData();
+      if (pData != null) {
+        responseInfo.put("profilingData", pData.toString());
+      }
+
       if (params.length == 2 && instance instanceof HRegionServer &&
           params[0] instanceof byte[] &&
           params[1] instanceof Operation) {

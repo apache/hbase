@@ -1226,7 +1226,8 @@ public abstract class HBaseServer {
           String error = null;
           Writable value = null;
 
-          if (call.shouldProfile) {
+          if (HRegionServer.enableServerSideProfilingForAllCalls
+              || call.shouldProfile) {
             call.profilingData = new ProfilingData ();
           } else {
             call.profilingData = null;
@@ -1249,7 +1250,8 @@ public abstract class HBaseServer {
           UserGroupInformation.setCurrentUser(previous);
           CurCall.set(null);
 
-          if (call.shouldProfile) {
+          if (HRegionServer.enableServerSideProfilingForAllCalls
+              || call.shouldProfile) {
             call.profilingData.addLong(
                 ProfilingData.TOTAL_SERVER_TIME_MS, total);
           }
