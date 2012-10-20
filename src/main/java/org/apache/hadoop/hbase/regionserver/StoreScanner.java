@@ -345,6 +345,11 @@ class StoreScanner extends NonLazyKeyValueScanner
         store != null ? store.getComparator() : null;
 
     long addedResultsSize = 0;
+    // set the responseSize so that it now can fetch records
+    // in terms of keyvalue's boundary rather than row's boundary
+    boolean partialRow = scan.getPartialRow();
+    long maxResponseSize = scan.getMaxResponseSize();
+    long partialResponseSize = scan.getCurrentPartialResponseSize();
     try {
       LOOP: while((kv = this.heap.peek()) != null) {
         // kv is no longer immutable due to KeyOnlyFilter! use copy for safety
@@ -395,6 +400,12 @@ class StoreScanner extends NonLazyKeyValueScanner
                     + " Cannot allow  operations that fetch more than "
                     + HRegionServer.getResponseSizeLimit() + " bytes.");
                 throw new DoNotRetryIOException("Result too large");
+              } else if (maxResponseSize != -1) {
+                // If the user is strict about the response size and allows
+                // partialRow scanning, we only return the number of keyvalue 
+                // pairs to fill up the request size. Otherwise when partialRow 
+                // is false, we just fetch the entire row
+                partialResponseSize += copyKv.getLength();
               }
               outResult.add(copyKv);
               numNewKeyValues++;
@@ -411,7 +422,9 @@ class StoreScanner extends NonLazyKeyValueScanner
             } else {
               this.heap.next();
             }
-
+            if (maxResponseSize != -1 && partialResponseSize >= maxResponseSize) {
+              break LOOP;
+            }
             if (limit > 0 && (numNewKeyValues == limit)) {
               break LOOP;
             }
@@ -483,8 +496,13 @@ class StoreScanner extends NonLazyKeyValueScanner
 
       throw e;
 
-    } finally {
-      // update the counter
+    } finally { 
+      // update the remaining response size
+      if (maxResponseSize != -1) {
+        partialResponseSize = Math.min(maxResponseSize, partialResponseSize);
+        scan.setCurrentPartialResponseSize(partialResponseSize);
+      }
+      // update the counter 
       if (addedResultsSize > 0 && metric != null) {
         HRegion.incrNumericMetric(this.metricNamePrefix + metric,
             addedResultsSize);

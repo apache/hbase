@@ -150,7 +150,8 @@ public class HRegion implements HeapSize {
   public static final Log LOG = LogFactory.getLog(HRegion.class);
   static final String SPLITDIR = "splits";
   static final String MERGEDIR = "merges";
-
+  private final long maxScannerResultSize;
+  
   static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
   final AtomicBoolean closed = new AtomicBoolean(false);
   /* Closing can take some time; use the closing flag if there is stuff we don't
@@ -440,6 +441,8 @@ public class HRegion implements HeapSize {
     this.threadWakeFrequency = 0L;
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
     this.openDate = 0;
+    this.maxScannerResultSize = 
+        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE; 
   }
 
   /**
@@ -449,7 +452,7 @@ public class HRegion implements HeapSize {
    */
   public HRegion(HRegion other) {
     this(other.getTableDir(), other.getLog(), other.getFilesystem(),
-        other.baseConf, other.getRegionInfo(), null);
+      other.baseConf, other.getRegionInfo(), null);
   }
 
   /**
@@ -526,6 +529,10 @@ public class HRegion implements HeapSize {
     this.waitOnMemstoreBlock =
         conf.getBoolean(HConstants.HREGION_MEMSTORE_WAIT_ON_BLOCK, true);
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
+
+    this.maxScannerResultSize = conf.getLong(
+            HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
+            HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
 
     this.readRequests =new RequestMetrics();
     this.writeRequests =new RequestMetrics();
@@ -2904,7 +2911,7 @@ public class HRegion implements HeapSize {
       lockedRows.notifyAll();
     }
   }
-
+  
   /**
    * See if row is currently locked.
    * @param lockid
@@ -3026,7 +3033,6 @@ public class HRegion implements HeapSize {
       //DebugPrint.println("HRegionScanner.<init>");
 
       this.originalScan = scan;
-
       this.filter = scan.getFilter();
       this.batch = scan.getBatch();
       if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
@@ -3077,41 +3083,104 @@ public class HRegion implements HeapSize {
         throws IOException {
       return next(outResults, limit, null);
     }
+    
+    /**
+     * A method to return all the rows that can fit in the response size.
+     * it respects the two stop conditions:
+     * 1) scan.getMaxResponseSize
+     * 2) scan.getCaching()
+     * the loop breaks whoever comes first. 
+     * @param outResults returns a list of rows to nextRows()
+     * @param outKeyValues returns a list of keyvalues to get()
+     * @return true if there are more rows to fetch. 
+     */
+    private boolean nextCombine(List<Result> outResults, List<KeyValue> outKeyValues,
+        int nbRows, String metric) throws IOException {
+      if ((outResults == null) == (outKeyValues == null)) {
+       throw new AssertionError("Exactly one of outResults and outKeyValues "
+           + "must be null: outResultsIsNull=" + (outResults == null) + ", "
+           + "outKeyValuesIsNull=" + (outKeyValues == null));
+      }
 
-    @Override
-    public synchronized boolean next(List<KeyValue> outResults, int limit,
-        String metric) throws IOException {
       readRequests.incrTotalRequstCount();
       if (this.filterClosed) {
-        throw new UnknownScannerException("Scanner was closed (timed out?) " +
-            "after we renewed it. Could be caused by a very slow scanner " +
-            "or a lengthy garbage collection");
+        throw new UnknownScannerException("Scanner was closed (timed out?) "
+            + "after we renewed it. Could be caused by a very slow scanner "
+            + "or a lengthy garbage collection");
       }
       if (closing.get() || closed.get()) {
         close();
-        throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
-          " is closing=" + closing.get() + " or closed=" + closed.get());
+        throw new NotServingRegionException(regionInfo.getRegionNameAsString()
+            + " is closing=" + closing.get() + " or closed=" + closed.get());
       }
-
       // This could be a new thread from the last time we called next().
       MultiVersionConsistencyControl.setThreadReadPoint(this.readPt);
-
-      boolean returnResult;
-      if (outResults.isEmpty()) {
-         // Usually outResults is empty. This is true when next is called
-         // to handle scan or get operation.
-        returnResult = nextInternal(outResults, limit, metric);
-      } else {
-        List<KeyValue> tmpList = new ArrayList<KeyValue>();
+      List<KeyValue> tmpList = (outKeyValues != null && outKeyValues.isEmpty()) ? 
+                  outKeyValues: new ArrayList<KeyValue>();
+      
+      int limit = this.getOriginalScan().getBatch();
+      int currentNbRows = 0;
+      long currentScanResultSize = 0;
+      boolean returnResult = true;
+      // This is necessary b/c partialResponseSize is not serialized through RPC
+      getOriginalScan().setCurrentPartialResponseSize(0);
+      long maxResponseSize = getOriginalScan().getMaxResponseSize();
+      while (true) {
         returnResult = nextInternal(tmpList, limit, metric);
-        outResults.addAll(tmpList);
+        if (!tmpList.isEmpty()) {
+          if (maxScannerResultSize < Long.MAX_VALUE) {
+            for (KeyValue kv : tmpList) {
+              currentScanResultSize += kv.heapSize();
+            }
+          }
+          if (outResults != null) {
+            outResults.add(new Result(tmpList)); 
+            tmpList.clear();
+          } else if (tmpList != outKeyValues) {
+            outKeyValues.addAll(tmpList); 
+          }
+        }
+        
+        resetFilters();
+        if (isFilterDone()) {
+          return false;
+        }
+        
+        if (!returnResult) {
+          return false;
+        }
+        // if response size hits the limit, break the loop
+        if (getOriginalScan().getCurrentPartialResponseSize() >= maxResponseSize) {
+          return returnResult;
+        }
+        // if the size of all the keyvalue pairs exceeds maxScannerResultSize,
+        // or in the case just fetch nbRows
+        if (currentScanResultSize >= maxScannerResultSize || 
+            (maxResponseSize == -1 && ++currentNbRows >= nbRows)) {
+          return returnResult;
+        }
       }
-
-      resetFilters();
-      if (isFilterDone()) {
-        return false;
-      }
-      return returnResult;
+    }
+    
+    /**
+     * A method to return all the rows that can fit in the response size.  
+     * @param limit a variable that specifies the number of keyvalue pairs can be 
+     * returned per row
+     * @param limit limit on row count to get
+     * @param maxScannerResultSize a variable that specifies the maximum response size
+     *  for all the scan/get ops
+     * @return a boolean that indicates whether scan.next reaches the end.
+     * @return true if there are more rows, false if all scanners are done
+     */
+    public synchronized boolean nextRows(List<Result> outResults, int nbRows,
+        String metric) throws IOException {
+      return nextCombine(outResults, null, nbRows, metric);
+    }
+    
+    @Override
+    public synchronized boolean next(List<KeyValue> outKeyValues, int nbRows,
+        String metric) throws IOException {
+      return nextCombine(null, outKeyValues, nbRows, metric);
     }
 
     @Override
@@ -3144,7 +3213,10 @@ public class HRegion implements HeapSize {
       if (!results.isEmpty()) {
         throw new IllegalArgumentException("First parameter should be an empty list");
       }
-
+      boolean partialRow = getOriginalScan().getPartialRow();
+      long maxResponseSize = getOriginalScan().getMaxResponseSize();
+      maxResponseSize = Math.min(maxScannerResultSize, maxResponseSize);
+      
       while (true) {
         byte [] currentRow = peekRow();
         if (isStopRow(currentRow)) {
@@ -3167,6 +3239,13 @@ public class HRegion implements HeapSize {
               if (this.filter != null && filter.hasFilterRow()) throw new IncompatibleFilterException(
                   "Filter with filterRow(List<KeyValue>) incompatible with scan with limit!");
               return true; // we are expecting more yes, but also limited to how many we can return.
+            }
+            // if partialRow == false, it will fetch the entire row
+            // if the response size is filled up, return true 
+            if (maxResponseSize != -1 && 
+                (partialRow && getOriginalScan().getCurrentPartialResponseSize()
+                    >= maxResponseSize)){
+              return true;
             }
           } while (Bytes.equals(currentRow, nextRow = peekRow()));
 
@@ -3946,7 +4025,6 @@ public class HRegion implements HeapSize {
     return result;
   }
 
-
   //
   // New HBASE-880 Helpers
   //
@@ -3962,7 +4040,7 @@ public class HRegion implements HeapSize {
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (2 * Bytes.SIZEOF_BOOLEAN) +
-      (6 * Bytes.SIZEOF_LONG) + 2 * ClassSize.ARRAY +
+      (7 * Bytes.SIZEOF_LONG) + 2 * ClassSize.ARRAY +
       (28 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
