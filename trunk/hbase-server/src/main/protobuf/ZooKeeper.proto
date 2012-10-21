@@ -1,0 +1,135 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// ZNode data in hbase are serialized protobufs with a four byte
+// 'magic' 'PBUF' prefix.
+
+option java_package = "org.apache.hadoop.hbase.protobuf.generated";
+option java_outer_classname = "ZooKeeperProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+option optimize_for = SPEED;
+
+import "hbase.proto";
+
+/**
+ * Content of the root-region-server znode.
+ */
+message RootRegionServer {
+  // The ServerName hosting the root region currently.
+  required ServerName server = 1;
+}
+
+/**
+ * Content of the master znode.
+ */
+message Master {
+  // The ServerName of the current Master
+  required ServerName master = 1;
+}
+
+/**
+ * Content of the '/hbase/shutdown', cluster state, znode.
+ */
+message ClusterUp {
+  // If this znode is present, cluster is up.  Currently
+  // the data is cluster startDate.
+  required string startDate = 1;
+}
+
+/**
+ * What we write under unassigned up in zookeeper as a region moves through
+ * open/close, etc., regions.  Details a region in transition.
+ */
+message RegionTransition {
+  // Code for EventType gotten by doing o.a.h.h.EventHandler.EventType.getCode()
+  required uint32 eventTypeCode = 1;
+  // Full regionname in bytes
+  required bytes regionName = 2;
+  required uint64 createTime = 3;
+  // The region server where the transition will happen or is happening
+  required ServerName serverName = 4;
+  optional bytes payload = 5;
+}
+
+/**
+ * WAL SplitLog directory znodes have this for content.  Used doing distributed
+ * WAL splitting.  Holds current state and name of server that originated split.
+ */
+message SplitLogTask {
+  enum State {
+    UNASSIGNED = 0;
+    OWNED = 1;
+    RESIGNED = 2;
+    DONE = 3;
+    ERR = 4;
+  }
+  required State state = 1;
+  required ServerName serverName = 2;
+}
+
+/**
+ * The znode that holds state of table.
+ */
+message Table {
+  // Table's current state
+  enum State {
+    ENABLED = 0;
+    DISABLED = 1;
+    DISABLING = 2;
+    ENABLING = 3;
+  }
+  // This is the table's state.  If no znode for a table,
+  // its state is presumed enabled.  See o.a.h.h.zookeeper.ZKTable class
+  // for more.
+  required State state = 1 [default = ENABLED];
+}
+
+/**
+ * Used by replication. Holds a replication peer key.
+ */
+message ReplicationPeer {
+  // clusterKey is the concatenation of the slave cluster's
+  // hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+  required string clusterkey = 1;
+}
+
+/**
+ * Used by replication. Holds whether enabled or disabled
+ */
+message ReplicationState {
+  enum State {
+    ENABLED = 0;
+    DISABLED = 1;
+  }
+  required State state = 1;
+}
+
+/**
+ * Used by replication. Holds the current position in an HLog file.
+ */
+message ReplicationHLogPosition {
+  required int64 position = 1;
+}
+
+/**
+ * Used by replication. Used to lock a region server during failover.
+ */
+message ReplicationLock {
+  required string lockOwner = 1;
+}
