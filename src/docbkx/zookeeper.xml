@@ -79,14 +79,14 @@
                 only but in production it is recommended that you run a
                 ZooKeeper ensemble of 3, 5 or 7 machines; the more members an
                 ensemble has, the more tolerant the ensemble is of host
-                failures. Also, run an odd number of machines. In ZooKeeper, 
-                an even number of peers is supported, but it is normally not used 
-                because an even sized ensemble requires, proportionally, more peers 
-                to form a quorum than an odd sized ensemble requires. For example, an 
-                ensemble with 4 peers requires 3 to form a quorum, while an ensemble with 
-                5 also requires 3 to form a quorum. Thus, an ensemble of 5 allows 2 peers to 
-                fail, and thus is more fault tolerant than the ensemble of 4, which allows 
-                only 1 down peer.                 
+                failures. Also, run an odd number of machines. In ZooKeeper,
+                an even number of peers is supported, but it is normally not used
+                because an even sized ensemble requires, proportionally, more peers
+                to form a quorum than an odd sized ensemble requires. For example, an
+                ensemble with 4 peers requires 3 to form a quorum, while an ensemble with
+                5 also requires 3 to form a quorum. Thus, an ensemble of 5 allows 2 peers to
+                fail, and thus is more fault tolerant than the ensemble of 4, which allows
+                only 1 down peer.
                 </para>
                 <para>Give each ZooKeeper server around 1GB of RAM, and if possible, its own
                 dedicated disk (A dedicated disk is the best thing you can do
@@ -137,6 +137,15 @@
     &lt;/property&gt;
     ...
   &lt;/configuration&gt;</programlisting></para>
+  <caution>
+      <title>ZooKeeper Maintenance</title>
+      <para>Be sure to set up the data dir cleaner described under
+          <link xlink:href="http://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#sc_maintenance">Zookeeper Maintenance</link> else you could
+          have 'interesting' problems a couple of months in; i.e. zookeeper could start
+          dropping sessions if it has to run through a directory of hundreds of thousands of
+          logs which is wont to do around leader reelection time -- a process rare but run on
+      occasion whether because a machine is dropped or happens to hiccup.</para>
+  </caution>
 
             <section>
               <title>Using existing ZooKeeper ensemble</title>
@@ -173,12 +182,12 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
               <para>For more information about running a distinct ZooKeeper
               cluster, see the ZooKeeper <link
               xlink:href="http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html">Getting
-              Started Guide</link>.  Additionally, see the <link xlink:href="http://wiki.apache.org/hadoop/ZooKeeper/FAQ#A7">ZooKeeper Wiki</link> or the 
-          <link xlink:href="http://zookeeper.apache.org/doc/r3.3.3/zookeeperAdmin.html#sc_zkMulitServerSetup">ZooKeeper documentation</link> 
+              Started Guide</link>.  Additionally, see the <link xlink:href="http://wiki.apache.org/hadoop/ZooKeeper/FAQ#A7">ZooKeeper Wiki</link> or the
+          <link xlink:href="http://zookeeper.apache.org/doc/r3.3.3/zookeeperAdmin.html#sc_zkMulitServerSetup">ZooKeeper documentation</link>
           for more information on ZooKeeper sizing.
             </para>
             </section>
-            
+
 
             <section xml:id="zk.sasl.auth">
               <title>SASL Authentication with ZooKeeper</title>
@@ -186,7 +195,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
               support connecting to a ZooKeeper Quorum that supports
               SASL authentication (which is available in Zookeeper
               versions 3.4.0 or later).</para>
-              
+
               <para>This describes how to set up HBase to mutually
               authenticate with a ZooKeeper Quorum. ZooKeeper/HBase
               mutual authentication (<link
@@ -294,7 +303,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
                     principal="hbase/$HOST";
                   };
                 </programlisting>
-                
+
                 where the <filename>$PATH_TO_HBASE_KEYTAB</filename> and
                 <filename>$PATH_TO_ZOOKEEPER_KEYTAB</filename> files are what
                 you created above, and <code>$HOST</code> is the hostname for that
@@ -387,7 +396,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
                   };
                 </programlisting>
 
-                where the <filename>$PATH_TO_HBASE_KEYTAB</filename> is the keytab 
+                where the <filename>$PATH_TO_HBASE_KEYTAB</filename> is the keytab
                 created above for HBase services to run on this host, and <code>$HOST</code> is the
                 hostname for that node. Put this in the HBase home's
                 configuration directory. We'll refer to this file's
@@ -453,7 +462,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
 
                 <para>
                   Start your Zookeepers on each Zookeeper Quorum host with:
-                  
+
                   <programlisting>
                     SERVER_JVMFLAGS="-Djava.security.auth.login.config=$ZK_SERVER_CONF" bin/zkServer start
                   </programlisting>
@@ -485,13 +494,13 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
 11/12/05 22:43:39 INFO zookeeper.Login: TGT expires:                  Tue Dec 06 22:43:39 UTC 2011
 11/12/05 22:43:39 INFO zookeeper.Login: TGT refresh sleeping until: Tue Dec 06 18:36:42 UTC 2011
 ..
-11/12/05 22:43:59 INFO auth.SaslServerCallbackHandler: 
-  Successfully authenticated client: authenticationID=hbase/ip-10-166-175-249.us-west-1.compute.internal@HADOOP.LOCALDOMAIN; 
+11/12/05 22:43:59 INFO auth.SaslServerCallbackHandler:
+  Successfully authenticated client: authenticationID=hbase/ip-10-166-175-249.us-west-1.compute.internal@HADOOP.LOCALDOMAIN;
   authorizationID=hbase/ip-10-166-175-249.us-west-1.compute.internal@HADOOP.LOCALDOMAIN.
 11/12/05 22:43:59 INFO auth.SaslServerCallbackHandler: Setting authorizedID: hbase
 11/12/05 22:43:59 INFO server.ZooKeeperServer: adding SASL authorization for authorizationID: hbase
                 </programlisting>
-                  
+
                 </para>
 
               </section>
@@ -524,7 +533,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
                 Linux AMI.  First setup KDC and principals as
                 described above. Next checkout code and run a sanity
                 check.
-                
+
                 <programlisting>
                 git clone git://git.apache.org/hbase.git
                 cd hbase
@@ -552,7 +561,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
                 file with the version containing the HADOOP-7070 fix. You can use the following script to do this:
 
                 <programlisting>
-                  echo `find ~/.m2 -name "*hadoop-core*7070*SNAPSHOT.jar"` ':' `cat target/cached_classpath.txt` | sed 's/ //g' > target/tmp.txt 
+                  echo `find ~/.m2 -name "*hadoop-core*7070*SNAPSHOT.jar"` ':' `cat target/cached_classpath.txt` | sed 's/ //g' > target/tmp.txt
                   mv target/tmp.txt target/cached_classpath.txt
                 </programlisting>
 
@@ -562,19 +571,19 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
 
                 <section>
                   <title>Set JAAS configuration
-                  programmatically</title> 
+                  programmatically</title>
 
 
                   This would avoid the need for a separate Hadoop jar
                   that fixes <link xlink:href="https://issues.apache.org/jira/browse/HADOOP-7070">HADOOP-7070</link>.
                 </section>
-                
+
                 <section>
-                  <title>Elimination of 
-                  <code>kerberos.removeHostFromPrincipal</code> and 
+                  <title>Elimination of
+                  <code>kerberos.removeHostFromPrincipal</code> and
                   <code>kerberos.removeRealmFromPrincipal</code></title>
                 </section>
-                
+
               </section>
 
 
