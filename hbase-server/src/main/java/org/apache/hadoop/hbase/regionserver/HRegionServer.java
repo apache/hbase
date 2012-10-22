@@ -53,6 +53,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.ObjectName;
 
+import com.google.protobuf.Message;
 import org.apache.commons.lang.mutable.MutableDouble;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -102,8 +103,8 @@ import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
-import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -112,7 +113,6 @@ import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
-import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -152,8 +152,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequ
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ExecCoprocessorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
@@ -198,8 +196,8 @@ import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -230,9 +228,11 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.base.Function;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+
+import static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
+import static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 
 /**
  * HRegionServer makes a set of HRegions available to clients. It checks in with
@@ -262,9 +262,6 @@ public class  HRegionServer implements ClientProtocol,
 
   protected long maxScannerResultSize;
 
-  // Server to handle client requests.
-  private HBaseServer server;
-  
   // Cache flushing
   protected MemStoreFlusher cacheFlusher;
 
@@ -521,7 +518,6 @@ public class  HRegionServer implements ClientProtocol,
         conf.getInt("hbase.regionserver.metahandler.count", 10),
         conf.getBoolean("hbase.rpc.verbose", false),
         conf, HConstants.QOS_THRESHOLD);
-    if (rpcServer instanceof HBaseServer) server = (HBaseServer) rpcServer;
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
 
@@ -1201,7 +1197,7 @@ public class  HRegionServer implements ClientProtocol,
       this.hlog = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
-      this.dynamicMetrics = RegionServerDynamicMetrics.newInstance(this);
+      this.dynamicMetrics = RegionServerDynamicMetrics.newInstance();
       startServiceThreads();
       LOG.info("Serving as " + this.serverNameFromMasterPOV +
         ", RPC listening on " + this.isa +
@@ -4134,12 +4130,5 @@ public class  HRegionServer implements ClientProtocol,
 
   private String getMyEphemeralNodePath() {
     return ZKUtil.joinZNode(this.zooKeeper.rsZNode, getServerName().toString());
-  }
-  
-  public long getResponseQueueSize(){
-    if (server != null) {
-      return server.getResponseQueueSize();
-    }
-    return 0;
   }
 }
