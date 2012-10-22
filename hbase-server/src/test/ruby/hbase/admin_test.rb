@@ -161,6 +161,11 @@ module Hbase
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
     end
 
+    define_test "create should work with SPLITALGO" do
+      drop_test_table(@create_test_name)
+      admin.create(@create_test_name, 'a', 'b', {NUMREGIONS => 10, SPLITALGO => 'HexStringSplit'})
+      assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
+    end
     #-------------------------------------------------------------------------------
 
     define_test "describe should fail for non-existent tables" do

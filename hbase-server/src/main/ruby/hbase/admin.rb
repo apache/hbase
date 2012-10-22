@@ -19,6 +19,7 @@
 
 include Java
 java_import org.apache.hadoop.hbase.util.Pair
+java_import org.apache.hadoop.hbase.util.RegionSplitter
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
