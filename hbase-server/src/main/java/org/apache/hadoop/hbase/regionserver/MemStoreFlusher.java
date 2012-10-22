@@ -350,7 +350,7 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
    */
   private boolean flushRegion(final FlushRegionEntry fqe) {
     HRegion region = fqe.region;
-    if (!fqe.region.getRegionInfo().isMetaRegion() &&
+    if (!region.getRegionInfo().isMetaRegion() &&
         isTooManyStoreFiles(region)) {
       if (fqe.isMaximumWait(this.blockingWaitTime)) {
         LOG.info("Waited " + (System.currentTimeMillis() - fqe.createTime) +
@@ -366,9 +366,9 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
           if (!this.server.compactSplitThread.requestSplit(region)) {
             try {
               this.server.compactSplitThread.requestCompaction(region, getName());
-            }  catch (IOException e) {
-              LOG.error("Cache flush failed" +
-                (region != null ? (" for region " + Bytes.toStringBinary(region.getRegionName())) : ""),
+            } catch (IOException e) {
+              LOG.error(
+                "Cache flush failed for region " + Bytes.toStringBinary(region.getRegionName()),
                 RemoteExceptionHandler.checkIOException(e));
             }
           }
