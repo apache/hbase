@@ -26,6 +26,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -52,12 +53,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
@@ -68,28 +69,29 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcException;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestBody;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcRequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RpcResponseHeader.Status;
-import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.AuthMethod;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslDigestCallbackHandler;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslStatus;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteBufferOutputStream;
+import org.apache.hadoop.hbase.util.SizeBasedThrottler;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -97,20 +99,19 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
+import org.cliffc.high_scale_lib.Counter;
+import org.cloudera.htrace.Sampler;
+import org.cloudera.htrace.Span;
+import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.TraceInfo;
+import org.cloudera.htrace.impl.NullSpan;
 
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.Message;
-
-import org.cliffc.high_scale_lib.Counter;
-import org.cloudera.htrace.Sampler;
-import org.cloudera.htrace.Span;
-import org.cloudera.htrace.TraceInfo;
-import org.cloudera.htrace.impl.NullSpan;
-import org.cloudera.htrace.Trace;
 
 /** A client for an IPC service.  IPC calls take a single Protobuf message as a
  * parameter, and return a single Protobuf message as their value.  A service runs on
@@ -255,6 +256,14 @@ public abstract class HBaseServer implements RpcServer {
   protected final boolean tcpNoDelay;   // if T then disable Nagle's Algorithm
   protected final boolean tcpKeepAlive; // if T then use keepalives
   protected final long purgeTimeout;    // in milliseconds
+
+  // responseQueuesSizeThrottler is shared among all responseQueues,
+  // it bounds memory occupied by responses in all responseQueues
+  final SizeBasedThrottler responseQueuesSizeThrottler;
+
+  // RESPONSE_QUEUE_MAX_SIZE limits total size of responses in every response queue
+  private static final long DEFAULT_RESPONSE_QUEUES_MAX_SIZE = 1024 * 1024 * 1024; // 1G
+  private static final String RESPONSE_QUEUES_MAX_SIZE = "ipc.server.response.queue.maxsize";
 
   volatile protected boolean running = true;         // true while server runs
   protected BlockingQueue<Call> callQueue; // queued calls
@@ -987,7 +996,7 @@ public abstract class HBaseServer implements RpcServer {
           //
           // Extract the first call
           //
-          call = responseQueue.removeFirst();
+          call = responseQueue.peek();
           SocketChannel channel = call.connection.channel;
           if (LOG.isDebugEnabled()) {
             LOG.debug(getName() + ": responding to #" + call.id + " from " +
@@ -998,9 +1007,13 @@ public abstract class HBaseServer implements RpcServer {
           //
           int numBytes = channelWrite(channel, call.response);
           if (numBytes < 0) {
+            // Error flag is set, so returning here closes connection and
+            // clears responseQueue.            
             return true;
           }
           if (!call.response.hasRemaining()) {
+            responseQueue.poll();
+            responseQueuesSizeThrottler.decrease(call.response.limit());            
             responseQueueLen--;
             call.connection.decRpcCount();
             //noinspection RedundantIfStatement
@@ -1014,12 +1027,6 @@ public abstract class HBaseServer implements RpcServer {
                         call.connection + " Wrote " + numBytes + " bytes.");
             }
           } else {
-            //
-            // If we were unable to write the entire response out, then
-            // insert in Selector queue.
-            //
-            call.connection.responseQueue.addFirst(call);
-
             if (inHandler) {
               // set the serve time when the response has to be sent later
               call.timestamp = System.currentTimeMillis();
@@ -1074,15 +1081,31 @@ public abstract class HBaseServer implements RpcServer {
       responseQueueLen++;
 
       boolean doRegister = false;
+      boolean closed;
+      try {
+        responseQueuesSizeThrottler.increase(call.response.remaining());
+      } catch (InterruptedException ie) {
+        throw new InterruptedIOException(ie.getMessage());
+      }
       synchronized (call.connection.responseQueue) {
-        call.connection.responseQueue.addLast(call);
-        if (call.connection.responseQueue.size() == 1) {
-          doRegister = !processResponse(call.connection.responseQueue, false);
+        closed = call.connection.closed;
+        if (!closed) {
+          call.connection.responseQueue.addLast(call);
+
+          if (call.connection.responseQueue.size() == 1) {
+            doRegister = !processResponse(call.connection.responseQueue, false);
+          }
         }
       }
       if (doRegister) {
         enqueueInSelector(call);
       }
+      if (closed) {
+        // Connection was closed when we tried to submit response, but we
+        // increased responseQueues size already. It shoud be
+        // decreased here.
+        responseQueuesSizeThrottler.decrease(call.response.remaining());
+      }      
     }
 
     private synchronized void incPending() {   // call waiting to be enqueued.
@@ -1107,6 +1130,8 @@ public abstract class HBaseServer implements RpcServer {
                                          //version are read
     private boolean headerRead = false;  //if the connection header that
                                          //follows version is read.
+
+    protected volatile boolean closed = false;    // indicates if connection was closed
     protected SocketChannel channel;
     private ByteBuffer data;
     private ByteBuffer dataLengthBuffer;
@@ -1691,6 +1716,7 @@ public abstract class HBaseServer implements RpcServer {
     }
 
     protected synchronized void close() {
+      closed = true;
       disposeSasl();
       data = null;
       dataLengthBuffer = null;
@@ -1946,6 +1972,9 @@ public abstract class HBaseServer implements RpcServer {
     this.delayedCalls = new AtomicInteger(0);
 
 
+    this.responseQueuesSizeThrottler = new SizeBasedThrottler(
+        conf.getLong(RESPONSE_QUEUES_MAX_SIZE, DEFAULT_RESPONSE_QUEUES_MAX_SIZE));
+
     // Create the responder here
     responder = new Responder();
     this.authorize =
@@ -1990,6 +2019,14 @@ public abstract class HBaseServer implements RpcServer {
       }
     }
     connection.close();
+    long bytes = 0;
+    synchronized (connection.responseQueue) {
+      for (Call c : connection.responseQueue) {
+        bytes += c.response.limit();
+      }
+      connection.responseQueue.clear();
+    }
+    responseQueuesSizeThrottler.decrease(bytes);    
     rpcMetrics.numOpenConnections.set(numConnections);
   }
 
@@ -2243,5 +2280,9 @@ public abstract class HBaseServer implements RpcServer {
    */
   public static RpcCallContext getCurrentCall() {
     return CurCall.get();
+  }
+
+  public long getResponseQueueSize(){
+    return responseQueuesSizeThrottler.getCurrentValue();
   }
 }
