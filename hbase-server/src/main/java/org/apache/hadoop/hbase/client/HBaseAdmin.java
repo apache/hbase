@@ -209,7 +209,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws ZooKeeperConnectionException
    * @throws MasterNotRunningException
    */
-   public boolean isMasterRunning()
+  public boolean isMasterRunning()
   throws MasterNotRunningException, ZooKeeperConnectionException {
     return connection.isMasterRunning();
   }
@@ -1845,16 +1845,8 @@ public class HBaseAdmin implements Abortable, Closeable {
         }
       }
 
-      // Check Master, same logic.
-      MasterAdminKeepAliveConnection master = null;
-      try {
-        master = connection.getKeepAliveMasterAdmin();
-        master.isMasterRunning(null,RequestConverter.buildIsMasterRunningRequest());
-      } finally {
-        if (master != null) {
-          master.close();
-        }
-      }
+      // Check Master
+      connection.isMasterRunning();
 
     } finally {
       connection.close();
