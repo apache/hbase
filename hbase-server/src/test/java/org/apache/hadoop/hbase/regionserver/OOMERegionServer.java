@@ -59,7 +59,7 @@ public class OOMERegionServer extends HRegionServer {
     }
   }
 
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) {
     new HRegionServerCommandLine(OOMERegionServer.class).doMain(args);
   }
 }

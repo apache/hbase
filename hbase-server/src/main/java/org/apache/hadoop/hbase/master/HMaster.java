@@ -2294,7 +2294,7 @@ Server {
   /**
    * @see org.apache.hadoop.hbase.master.HMasterCommandLine
    */
-  public static void main(String [] args) throws Exception {
+  public static void main(String [] args) {
     VersionInfo.logVersion();
     new HMasterCommandLine(HMaster.class).doMain(args);
   }

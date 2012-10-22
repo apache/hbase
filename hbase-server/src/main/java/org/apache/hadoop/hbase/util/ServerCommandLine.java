@@ -73,11 +73,15 @@ public abstract class ServerCommandLine extends Configured implements Tool {
    * Parse and run the given command line. This may exit the JVM if
    * a nonzero exit code is returned from <code>run()</code>.
    */
-  public void doMain(String args[]) throws Exception {
-    int ret = ToolRunner.run(
-      HBaseConfiguration.create(), this, args);
-    if (ret != 0) {
-      System.exit(ret);
+  public void doMain(String args[]) {
+    try {
+      int ret = ToolRunner.run(HBaseConfiguration.create(), this, args);
+      if (ret != 0) {
+        System.exit(ret);
+      }
+    } catch (Exception e) {
+      LOG.error("Failed to run", e);
+      System.exit(-1);
     }
   }
 }
