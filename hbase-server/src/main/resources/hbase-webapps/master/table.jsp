@@ -42,6 +42,7 @@
   String tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Requests</th></tr>";
   ServerName rl = master.getCatalogTracker().getRootLocation();
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
+  boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
   Map<String, Integer> frags = null;
   if (showFragmentation) {
       frags = FSUtils.getTableFragmentation(master);
@@ -62,7 +63,7 @@
 <%
   String action = request.getParameter("action");
   String key = request.getParameter("key");
-  if ( action != null ) {
+  if ( !readOnly && action != null ) {
 %>
   <head>
     <meta charset="utf-8">
@@ -320,6 +321,8 @@
 HConnectionManager.deleteConnection(hbadmin.getConfiguration(), false);
 %>
 
+
+<% if (!readOnly) { %>
 <p><hr><p>
 Actions:
 <p>
@@ -357,6 +360,7 @@ Actions:
 </center>
 <p>
 </div>
+<% } %>
 <%
 }
 %>
