@@ -155,6 +155,10 @@ public class LoadTestTool extends AbstractHBaseTool {
     admin.disableTable(tableName);
     for (byte[] cf : columnFamilies) {
       HColumnDescriptor columnDesc = tableDesc.getFamily(cf);
+      boolean isNewCf = columnDesc == null;
+      if (isNewCf) {
+        columnDesc = new HColumnDescriptor(cf);
+      }
       if (bloomType != null) {
         columnDesc.setBloomFilterType(bloomType);
       }
@@ -165,7 +169,11 @@ public class LoadTestTool extends AbstractHBaseTool {
         columnDesc.setDataBlockEncoding(dataBlockEncodingAlgo);
         columnDesc.setEncodeOnDisk(!encodeInCacheOnly);
       }
-      admin.modifyColumn(tableName, columnDesc);
+      if (isNewCf) {
+        admin.addColumn(tableName, columnDesc);
+      } else {
+        admin.modifyColumn(tableName, columnDesc);
+      }
     }
     LOG.info("Enabling table " + Bytes.toString(tableName));
     admin.enableTable(tableName);
