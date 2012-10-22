@@ -34,7 +34,7 @@
 #
 # Modelled after $HADOOP_HOME/bin/slaves.sh.
 
-usage="Usage: $0 [--config <hbase-confdir>] [--rs-only] [--master-only]"
+usage="Usage: $0 [--config <hbase-confdir>] [--rs-only] [--master-only] [--graceful]"
 
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
@@ -56,16 +56,24 @@ function usage() {
 
 RR_RS=1
 RR_MASTER=1
+RR_GRACEFUL=0
 
 for x in "$@" ; do
   case "$x" in
     --rs-only|-r)
       RR_RS=1
       RR_MASTER=0
+      RR_GRACEFUL=0
       ;;
     --master-only)
       RR_RS=0
       RR_MASTER=1
+      RR_GRACEFUL=0
+      ;;
+    --graceful)
+      RR_RS=0
+      RR_MASTER=0
+      RR_GRACEFUL=1
       ;;
     *)
       echo Bad argument: $x
@@ -85,6 +93,9 @@ if [ "$distMode" == 'false' ]; then
   fi
   "$bin"/hbase-daemon.sh restart master
 else 
+  zparent=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.parent`
+  if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
+
   if [ $RR_MASTER -eq 1 ]; then
     # stop all masters before re-start to avoid races for master znode
     "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" stop master 
@@ -92,8 +103,6 @@ else
       --hosts "${HBASE_BACKUP_MASTERS}" stop master-backup
 
     # make sure the master znode has been deleted before continuing
-    zparent=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.parent`
-    if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
     zmaster=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.master`
     if [ "$zmaster" == "null" ]; then zmaster="master"; fi
     zmaster=$zparent/$zmaster
@@ -136,5 +145,18 @@ else
     export HBASE_SLAVE_PARALLEL=false
     "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
       --hosts "${HBASE_REGIONSERVERS}" restart regionserver
+  fi
+
+  if [ $RR_GRACEFUL -eq 1 ]; then
+    # gracefully restart all online regionservers
+    online_regionservers=`$bin/hbase zkcli ls $zparent/rs 2>&1 | tail -1 | sed "s/\[//" | sed "s/\]//"`
+    for rs in $online_regionservers
+    do
+        rs_parts=(${rs//,/ })
+        hostname=${rs_parts[0]}
+        echo "Gracefully restarting: $hostname"
+        "$bin"/graceful_stop.sh --config "${HBASE_CONF_DIR}" --restart --reload --debug "$hostname"
+        sleep 1
+    done
   fi
 fi
