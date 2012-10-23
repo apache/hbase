@@ -1279,10 +1279,14 @@ public class ZooKeeperWrapper implements Watcher {
       return null;
     }
 
+    String createdZNode = null;
+
     try {
       // create the znode
-      recoverableZK.create(fullyQualifiedZNodeName, data, Ids.OPEN_ACL_UNSAFE, createMode);
-      LOG.debug("<" + instanceName + ">" + "Created ZNode " + fullyQualifiedZNodeName + " in ZooKeeper");
+      createdZNode = recoverableZK.create(fullyQualifiedZNodeName, data,
+          Ids.OPEN_ACL_UNSAFE, createMode);
+      LOG.debug("<" + instanceName + ">" + "Created ZNode " + createdZNode +
+          " in ZooKeeper");
     } catch (KeeperException.NodeExistsException nee) {
       LOG.debug("<" + instanceName + "> " + "ZNode " + fullyQualifiedZNodeName +
         " already exists" + (watch ? ", still setting watch" : ""));
@@ -1298,61 +1302,7 @@ public class ZooKeeperWrapper implements Watcher {
       watchZNode(zNodeName);
     }
 
-    return fullyQualifiedZNodeName;
-  }
-
-  /**
-   * Atomically create a ZNode, if and only if the ZNode doesn't exist.
-   * If watcher parameter is not null, and no exception is thrown, the
-   * supplied watcher will be set (to be triggered by the ZNode's deletion).
-   * @param zNodeName
-   * @param data
-   * @param createMode
-   * @param watcher Watcher to be set, or null to not set a watcher
-   * @throws IOException If there is an unrecoverable ZooKeeper error
-   * @throws NoNodeException If the node is deleted before watch can be set
-   * @return False if the ZNode already exists, true otherwise
-   */
-  public boolean checkExistsAndCreate(String zNodeName, byte[] data,
-    CreateMode createMode, Watcher watcher)
-  throws IOException, InterruptedException, NoNodeException {
-    String fullyQualifiedZNodeName = getZNode(parentZNode, zNodeName);
-    if (!ensureParentExists(fullyQualifiedZNodeName)) {
-      throw new IOException("Parent for " + zNodeName +
-        " does not exist and could not be created");
-    }
-    try {
-      if (watcher != null) {
-        registerListener(watcher);
-      }
-      recoverableZK.create(fullyQualifiedZNodeName, data, Ids.OPEN_ACL_UNSAFE,
-        createMode);
-    } catch (KeeperException.NodeExistsException e) {
-      if (watcher != null) {
-        boolean exists;
-        try {
-          exists = watchAndCheckExists(fullyQualifiedZNodeName);
-        } catch (KeeperException ke) {
-          LOG.error("Unrecoverable ZooKeeper error setting the watcher on " +
-          fullyQualifiedZNodeName, ke);
-          throw new IOException("Unrecoverable ZooKeeper error setting watcher",
-            ke);
-        }
-        if (!exists) {
-          throw new NoNodeException(fullyQualifiedZNodeName +
-            " deleted before watch could be set");
-        }
-      }
-      return false;
-    } catch (KeeperException e) {
-      LOG.error("Unrecoverable ZooKeeper error encountered on " +
-        fullyQualifiedZNodeName, e);
-      throw new IOException("Unrecoverable ZooKeeper error", e);
-    } catch(InterruptedException e) {
-      LOG.warn("Interrupted waiting for " + fullyQualifiedZNodeName, e);
-      throw e;
-    }
-    return true;
+    return createdZNode != null ? createdZNode : fullyQualifiedZNodeName;
   }
 
   public byte[] readZNode(String znodeName, Stat stat) throws IOException {
@@ -1640,6 +1590,28 @@ public class ZooKeeperWrapper implements Watcher {
       return false;
     } catch (InterruptedException e) {
       LOG.warn(this + " Unable to set watcher on znode " + znode, e);
+      interruptedException(e);
+      return false;
+    }
+  }
+
+  /**
+   * Watch the specified znode, but only if exists. Useful when watching
+   * for deletions. Uses .getData() (and handles NoNodeException) instead
+   * of .exists() to accomplish this, as .getData() will only set a watch if
+   * the znode exists.
+   * @param znode
+   * @return
+   * @throws KeeperException
+   */
+  public boolean setWatchIfNodeExists(String znode)
+  throws KeeperException {
+    try {
+      recoverableZK.getData(znode, this, null);
+      return true;
+    } catch (NoNodeException e) {
+      return false;
+    } catch (InterruptedException e) {
       interruptedException(e);
       return false;
     }
@@ -1982,4 +1954,7 @@ public class ZooKeeperWrapper implements Watcher {
     recoverableZK.delete(masterElectionZNode, -1);
   }
 
+  public String getIdentifier() {
+    return recoverableZK.getIdentifier();
+  }
 }

@@ -21,12 +21,13 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HLock;
+import org.apache.hadoop.hbase.HLock.MetadataHandler;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.TableLockTimeoutException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.DistributedLock;
-import org.apache.hadoop.hbase.zookeeper.DistributedLock.OwnerMetadataHandler;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.hbase.zookeeper.lock.HReadWriteLockImpl;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -40,10 +41,10 @@ public class TableLockManager {
 
   private static final Log LOG = LogFactory.getLog(TableLockManager.class);
 
-  private static final OwnerMetadataHandler METADATA_HANDLER =
-    new OwnerMetadataHandler() {
+  private static final MetadataHandler METADATA_HANDLER =
+    new MetadataHandler() {
       @Override
-      public void printOwnerMetadata(byte[] ownerMetadata) {
+      public void handleMetadata(byte[] ownerMetadata) {
         LOG.info("Table is locked: " + Bytes.toString(ownerMetadata));
       }
     };
@@ -52,7 +53,7 @@ public class TableLockManager {
    * Tables that are currently locked by this instance. Allows locks to
    * be released by table name.
    */
-  private final ConcurrentMap<String, DistributedLock> acquiredTableLocks;
+  private final ConcurrentMap<String, HLock> acquiredTableLocks;
 
   private final HServerAddress serverAddress;
 
@@ -73,7 +74,8 @@ public class TableLockManager {
     this.zkWrapper = zkWrapper;
     this.serverAddress = serverAddress;
     this.lockTimeoutMs = lockTimeoutMs;
-    this.acquiredTableLocks = new ConcurrentHashMap<String, DistributedLock>();
+    this.acquiredTableLocks =
+        new ConcurrentHashMap<String, HLock>();
   }
 
   /**
@@ -87,7 +89,7 @@ public class TableLockManager {
   public void lockTable(byte[] tableName, String purpose)
   throws IOException {
     String tableNameStr = Bytes.toString(tableName);
-    DistributedLock lock = createTableLock(tableNameStr, purpose);
+    HLock lock = createTableLock(tableNameStr, purpose);
     try {
       if (lockTimeoutMs == -1) {
         // Wait indefinitely
@@ -114,21 +116,21 @@ public class TableLockManager {
     }
   }
 
-  private DistributedLock createTableLock(String tableName, String purpose) {
+  private HLock createTableLock(String tableName, String purpose) {
     String tableLockZNode = zkWrapper.getZNode(zkWrapper.tableLockZNode,
       tableName);
     byte[] lockMetadata = Bytes.toBytes("[Table = " + tableName +
       "\nOwner server address = " + serverAddress +
       "\nOwner thread id = " + Thread.currentThread().getId() +
       "\nPurpose = " + purpose + "]");
-    return new DistributedLock(zkWrapper, tableLockZNode, lockMetadata,
-      METADATA_HANDLER);
+    return new HReadWriteLockImpl(zkWrapper, tableLockZNode,
+        METADATA_HANDLER).writeLock(lockMetadata);
   }
 
   public void unlockTable(byte[] tableName)
   throws IOException {
     String tableNameStr = Bytes.toString(tableName);
-    DistributedLock lock = acquiredTableLocks.get(tableNameStr);
+    HLock lock = acquiredTableLocks.get(tableNameStr);
     if (lock == null) {
       throw new IllegalStateException("Table " + tableNameStr +
         " is not locked!");

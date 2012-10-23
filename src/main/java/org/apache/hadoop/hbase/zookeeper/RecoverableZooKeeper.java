@@ -630,4 +630,7 @@ public class RecoverableZooKeeper {
     return "RZK{identifier=>" + identifier + "}";
   }
 
+  public String getIdentifier() {
+    return identifier;
+  }
 }
