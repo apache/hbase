@@ -31,14 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.RowMutations;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.experimental.categories.Category;
@@ -107,32 +100,6 @@ public class TestAtomicOperation extends HBaseTestCase {
     Result result = region.append(a, null, true);
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v1+v2), result.getValue(fam1, qual1)));
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2+v1), result.getValue(fam1, qual2)));
-  }
-
-  /**
-   * Test one increment command.
-   */
-  public void testIncrementColumnValue() throws IOException {
-    LOG.info("Starting test testIncrementColumnValue");
-    initHRegion(tableName, getName(), fam1);
-
-    long value = 1L;
-    long amount = 3L;
-
-    Put put = new Put(row);
-    put.add(fam1, qual1, Bytes.toBytes(value));
-    region.put(put);
-
-    long result = region.incrementColumnValue(row, fam1, qual1, amount, true);
-
-    assertEquals(value+amount, result);
-
-    HStore store = (HStore) region.getStore(fam1);
-    // ICV removes any extra values floating around in there.
-    assertEquals(1, store.memstore.kvset.size());
-    assertTrue(store.memstore.snapshot.isEmpty());
-
-    assertICV(row, fam1, qual1, value+amount);
   }
 
   /**
@@ -223,7 +190,7 @@ public class TestAtomicOperation extends HBaseTestCase {
 
     private int count;
 
-    public Incrementer(HRegion region, 
+    public Incrementer(HRegion region,
         int threadNumber, int amount, int numIncrements) {
       this.region = region;
       this.threadNumber = threadNumber;
@@ -237,7 +204,9 @@ public class TestAtomicOperation extends HBaseTestCase {
     public void run() {
       for (int i=0; i<numIncrements; i++) {
         try {
-          long result = region.incrementColumnValue(row, fam1, qual1, amount, true);
+          Increment inc = new Increment(row);
+          inc.addColumn(fam1, qual1, amount);
+          Result result = region.increment(inc, null, true);
           // LOG.info("thread:" + threadNumber + " iter:" + i);
         } catch (IOException e) {
           e.printStackTrace();
