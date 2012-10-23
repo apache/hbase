@@ -2,26 +2,19 @@ package org.apache.hadoop.hbase.benchmarks;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.loadtest.ColumnFamilyProperties;
 import org.apache.hadoop.hbase.loadtest.HBaseUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.LoadTestTool;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 
 /**
  * This test compares the performance of scan when all the data is in memory 
@@ -33,12 +26,12 @@ public class ScanBenchmark extends Benchmark {
   private static final long PRINT_INTERVAL_KVS = 1000000;
   private byte[] tableName = Bytes.toBytes("bench.ScanFromMemoryPerf");
   private static Integer[] SET_CACHING_VALUES = { 
-//    1000,  2000,  3000,  4000,
-//    5000,  6000,  7000,  8000, 
+    5000,  6000,  7000,  8000, 
     9000,  10000, 11000, 12000, 
-    13000, 14000, 
+    13000, 14000, 15000, 16000,
+    17000, 18000, 19000, 20000
   };
-  private static Integer[] SET_PREFETCH_VALUES = { 0 };  
+  private static Integer[] SET_PREFETCH_VALUES = { 0 };
   
   public void initBenchmarkResults() {
     List<String> header = new ArrayList<String>();
@@ -52,9 +45,12 @@ public class ScanBenchmark extends Benchmark {
   
   public void runBenchmark() throws Throwable {
     // populate the table
-    createTableAndLoadData(tableName, 50, 1000000);
-    // warm block cache 
-    runExperiment(false, 10000, 0);  
+    createTableAndLoadData(tableName, 50, 1000000, true);
+    // warm block cache, force jit compilation
+    System.out.println("Warming blockcache and forcing JIT compilation...");
+    for (int i = 0; i < 20; i++) {
+      runExperiment(false, 10000, 0);  
+    }
     for (int caching : SET_CACHING_VALUES) {  
       for (int prefetch : SET_PREFETCH_VALUES) {
         try { 
@@ -93,11 +89,15 @@ public class ScanBenchmark extends Benchmark {
 
       if (numKVs > printAfterNumKVs) {
         printAfterNumKVs += PRINT_INTERVAL_KVS;
-        if (printStats) printStats(numKVs, numBytes, startTime, caching, prefetch);
+        if (printStats) {
+          printStats(numKVs, numBytes, startTime, caching, prefetch);
+        }
       }
     }
 
-    if (printStats) printStats(numKVs, numBytes, startTime, caching, prefetch);
+    if (printStats) {
+      printStats(numKVs, numBytes, startTime, caching, prefetch);
+    }
     scanner.close();
   }
 

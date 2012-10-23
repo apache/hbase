@@ -6,6 +6,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.loadtest.ColumnFamilyProperties;
 import org.apache.hadoop.hbase.loadtest.HBaseUtils;
@@ -67,7 +68,7 @@ public abstract class Benchmark {
    * @throws IOException 
    */
   public HTable createTableAndLoadData(byte[] tableName, int kvSize, 
-      long numKVs) throws IOException {
+      long numKVs, boolean flushData) throws IOException {
     HTable htable = null;
     try {
       htable = new HTable(conf, tableName);
@@ -95,15 +96,27 @@ public abstract class Benchmark {
     LOG.info("Loading data for the table");
     String[] loadTestToolArgs = {
       "-zk", "localhost", 
-      "-tn", "bench.ScanFromMemoryPerf",
+      "-tn", new String(tableName),
       "-cf", familyProperty.familyName,
-      "-write", "1:50", 
+      "-write", "1:" + kvSize, 
       "-num_keys", "" + numKVs, 
       "-multiput",
       "-compression", "NONE",
     };
     LoadTestTool.doMain(loadTestToolArgs);
     LOG.info("Done loading data");
+    
+    if (flushData) {
+      LOG.info("Flush of data requested");
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      admin.flush(tableName);
+      try {
+        Thread.sleep(2*1000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      LOG.info("Done flushing data");
+    }
     
     htable = new HTable(conf, tableName);
     return htable;
