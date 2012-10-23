@@ -106,7 +106,7 @@ Arrays.sort(serverNames);
     long startcode = serverName.getStartcode();
 </%java>
 <tr>
-    <td><& serverNameLink; serverName=serverName; &></td>
+    <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
     <td><% new Date(startcode) %></td>
     <td><% requestsPerSecond %></td>
     <td><% numRegionsOnline %></td>
@@ -141,7 +141,7 @@ for (ServerName serverName: serverNames) {
     if (sl != null) {
 </%java>
 <tr>
-    <td><& serverNameLink; serverName=serverName; &></td>
+    <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
     <td><% sl.getUsedHeapMB() %>MB</td>
     <td><% sl.getMaxHeapMB() %>MB</td>
     <td><% sl.getMemstoreSizeInMB() %>MB</td>
@@ -177,7 +177,7 @@ ServerLoad sl = master.getServerManager().getLoad(serverName);
 if (sl != null) {
 </%java>
 <tr>
-<td><& serverNameLink; serverName=serverName; &></td>
+<td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
 <td><% sl.getRequestsPerSecond() %></td>
 <td><% sl.getReadRequestsCount() %></td>
 <td><% sl.getWriteRequestsCount() %></td>
@@ -215,7 +215,7 @@ ServerLoad sl = master.getServerManager().getLoad(serverName);
 if (sl != null) {
 </%java>
 <tr>
-<td><& serverNameLink; serverName=serverName; &></td>
+<td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
 <td><% sl.getStores() %></td>
 <td><% sl.getStorefiles() %></td>
 <td><% sl.getStoreUncompressedSizeMB() %>MB</td>
@@ -257,7 +257,7 @@ if  (sl.getTotalCompactingKVs() > 0) {
 }
 </%java>
 <tr>
-<td><& serverNameLink; serverName=serverName; &></td>
+<td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
 <td><% sl.getTotalCompactingKVs() %></td>
 <td><% sl.getCurrentCompactedKVs() %></td>
 <td><% percentDone %></td>
@@ -277,14 +277,20 @@ if  (sl.getTotalCompactingKVs() > 0) {
 <%def serverNameLink>
         <%args>
         ServerName serverName;
+        ServerLoad serverLoad;
         </%args>
         <%java>
-        // TODO: this is incorrect since this conf might differ from RS to RS
-        // or be set to 0 to get ephemeral ports
-        int infoPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
+        boolean useDefault = (serverLoad == null);
+        int defaultPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
+        int infoPort = useDefault?defaultPort:serverLoad.getInfoServerPort();
         String url = "http://" + serverName.getHostname() + ":" + infoPort + "/";
         </%java>
-        <a href="<% url %>"><% serverName.getHostname() %></a>
+
+        <%if (infoPort > 0) %>
+            <a href="<% url %>"><% serverName.getHostname() %></a>
+        <%else>
+            <% serverName.getHostname() %>
+        </%if>
 </%def>
 
 <%def emptyStat>
@@ -292,7 +298,7 @@ if  (sl.getTotalCompactingKVs() > 0) {
         ServerName serverName;
         </%args>
     <tr>
-    <td><& serverNameLink; serverName=serverName; &></td>
+    <td><& serverNameLink; serverName=serverName; serverLoad = null; &></td>
     <td></td>
     <td></td>
     <td></td>

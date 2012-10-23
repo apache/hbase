@@ -175,6 +175,10 @@ public class ServerLoad {
     return serverLoad.getRegionLoadsCount();
   }
 
+  public int getInfoServerPort() {
+    return serverLoad.getInfoServerPort();
+  }
+
   /**
    * Originally, this method factored in the effect of requests going to the
    * server as well. However, this does not interact very well with the current

@@ -5714,6 +5714,10 @@ public final class HBaseProtos {
     // optional uint64 reportEndTime = 8;
     boolean hasReportEndTime();
     long getReportEndTime();
+    
+    // optional uint32 infoServerPort = 9;
+    boolean hasInfoServerPort();
+    int getInfoServerPort();
   }
   public static final class ServerLoad extends
       com.google.protobuf.GeneratedMessage
@@ -5846,6 +5850,16 @@ public final class HBaseProtos {
       return reportEndTime_;
     }
     
+    // optional uint32 infoServerPort = 9;
+    public static final int INFOSERVERPORT_FIELD_NUMBER = 9;
+    private int infoServerPort_;
+    public boolean hasInfoServerPort() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    public int getInfoServerPort() {
+      return infoServerPort_;
+    }
+    
     private void initFields() {
       numberOfRequests_ = 0;
       totalNumberOfRequests_ = 0;
@@ -5855,6 +5869,7 @@ public final class HBaseProtos {
       coprocessors_ = java.util.Collections.emptyList();
       reportStartTime_ = 0L;
       reportEndTime_ = 0L;
+      infoServerPort_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -5904,6 +5919,9 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeUInt64(8, reportEndTime_);
       }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeUInt32(9, infoServerPort_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -5944,6 +5962,10 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(8, reportEndTime_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(9, infoServerPort_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -6002,6 +6024,11 @@ public final class HBaseProtos {
         result = result && (getReportEndTime()
             == other.getReportEndTime());
       }
+      result = result && (hasInfoServerPort() == other.hasInfoServerPort());
+      if (hasInfoServerPort()) {
+        result = result && (getInfoServerPort()
+            == other.getInfoServerPort());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -6042,6 +6069,10 @@ public final class HBaseProtos {
       if (hasReportEndTime()) {
         hash = (37 * hash) + REPORTENDTIME_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getReportEndTime());
+      }
+      if (hasInfoServerPort()) {
+        hash = (37 * hash) + INFOSERVERPORT_FIELD_NUMBER;
+        hash = (53 * hash) + getInfoServerPort();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -6185,6 +6216,8 @@ public final class HBaseProtos {
         bitField0_ = (bitField0_ & ~0x00000040);
         reportEndTime_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000080);
+        infoServerPort_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
       
@@ -6265,6 +6298,10 @@ public final class HBaseProtos {
           to_bitField0_ |= 0x00000020;
         }
         result.reportEndTime_ = reportEndTime_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.infoServerPort_ = infoServerPort_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -6351,6 +6388,9 @@ public final class HBaseProtos {
         if (other.hasReportEndTime()) {
           setReportEndTime(other.getReportEndTime());
         }
+        if (other.hasInfoServerPort()) {
+          setInfoServerPort(other.getInfoServerPort());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -6434,6 +6474,11 @@ public final class HBaseProtos {
             case 64: {
               bitField0_ |= 0x00000080;
               reportEndTime_ = input.readUInt64();
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000100;
+              infoServerPort_ = input.readUInt32();
               break;
             }
           }
@@ -6936,6 +6981,27 @@ public final class HBaseProtos {
       public Builder clearReportEndTime() {
         bitField0_ = (bitField0_ & ~0x00000080);
         reportEndTime_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint32 infoServerPort = 9;
+      private int infoServerPort_ ;
+      public boolean hasInfoServerPort() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      public int getInfoServerPort() {
+        return infoServerPort_;
+      }
+      public Builder setInfoServerPort(int value) {
+        bitField0_ |= 0x00000100;
+        infoServerPort_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearInfoServerPort() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        infoServerPort_ = 0;
         onChanged();
         return this;
       }
@@ -11169,30 +11235,31 @@ public final class HBaseProtos {
       "otalStaticIndexSizeKB\030\r \001(\r\022\036\n\026totalStat" +
       "icBloomSizeKB\030\016 \001(\r\022\"\n\014coprocessors\030\017 \003(" +
       "\0132\014.Coprocessor\022\032\n\022completeSequenceId\030\020 " +
-      "\001(\004\"\342\001\n\nServerLoad\022\030\n\020numberOfRequests\030\001" +
+      "\001(\004\"\372\001\n\nServerLoad\022\030\n\020numberOfRequests\030\001" +
       " \001(\r\022\035\n\025totalNumberOfRequests\030\002 \001(\r\022\022\n\nu" +
       "sedHeapMB\030\003 \001(\r\022\021\n\tmaxHeapMB\030\004 \001(\r\022 \n\013re" +
       "gionLoads\030\005 \003(\0132\013.RegionLoad\022\"\n\014coproces",
       "sors\030\006 \003(\0132\014.Coprocessor\022\027\n\017reportStartT" +
-      "ime\030\007 \001(\004\022\025\n\rreportEndTime\030\010 \001(\004\"%\n\tTime" +
-      "Range\022\014\n\004from\030\001 \001(\004\022\n\n\002to\030\002 \001(\004\"0\n\006Filte" +
-      "r\022\014\n\004name\030\001 \002(\t\022\030\n\020serializedFilter\030\002 \001(" +
-      "\014\"w\n\010KeyValue\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002" +
-      "(\014\022\021\n\tqualifier\030\003 \002(\014\022\021\n\ttimestamp\030\004 \001(\004" +
-      "\022\031\n\007keyType\030\005 \001(\0162\010.KeyType\022\r\n\005value\030\006 \001" +
-      "(\014\"?\n\nServerName\022\020\n\010hostName\030\001 \002(\t\022\014\n\004po" +
-      "rt\030\002 \001(\r\022\021\n\tstartCode\030\003 \001(\004\"\033\n\013Coprocess" +
-      "or\022\014\n\004name\030\001 \002(\t\"-\n\016NameStringPair\022\014\n\004na",
-      "me\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\",\n\rNameBytesPair" +
-      "\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001(\014\"/\n\016BytesBy" +
-      "tesPair\022\r\n\005first\030\001 \002(\014\022\016\n\006second\030\002 \002(\014*r" +
-      "\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL" +
-      "\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_" +
-      "OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*_\n\007Ke" +
-      "yType\022\013\n\007MINIMUM\020\000\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022" +
-      "\021\n\rDELETE_COLUMN\020\014\022\021\n\rDELETE_FAMILY\020\016\022\014\n" +
-      "\007MAXIMUM\020\377\001B>\n*org.apache.hadoop.hbase.p" +
-      "rotobuf.generatedB\013HBaseProtosH\001\240\001\001"
+      "ime\030\007 \001(\004\022\025\n\rreportEndTime\030\010 \001(\004\022\026\n\016info" +
+      "ServerPort\030\t \001(\r\"%\n\tTimeRange\022\014\n\004from\030\001 " +
+      "\001(\004\022\n\n\002to\030\002 \001(\004\"0\n\006Filter\022\014\n\004name\030\001 \002(\t\022" +
+      "\030\n\020serializedFilter\030\002 \001(\014\"w\n\010KeyValue\022\013\n" +
+      "\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021\n\tqualifier\030" +
+      "\003 \002(\014\022\021\n\ttimestamp\030\004 \001(\004\022\031\n\007keyType\030\005 \001(" +
+      "\0162\010.KeyType\022\r\n\005value\030\006 \001(\014\"?\n\nServerName" +
+      "\022\020\n\010hostName\030\001 \002(\t\022\014\n\004port\030\002 \001(\r\022\021\n\tstar" +
+      "tCode\030\003 \001(\004\"\033\n\013Coprocessor\022\014\n\004name\030\001 \002(\t",
+      "\"-\n\016NameStringPair\022\014\n\004name\030\001 \002(\t\022\r\n\005valu" +
+      "e\030\002 \002(\t\",\n\rNameBytesPair\022\014\n\004name\030\001 \002(\t\022\r" +
+      "\n\005value\030\002 \001(\014\"/\n\016BytesBytesPair\022\r\n\005first" +
+      "\030\001 \002(\014\022\016\n\006second\030\002 \002(\014*r\n\013CompareType\022\010\n" +
+      "\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n" +
+      "\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GR" +
+      "EATER\020\005\022\t\n\005NO_OP\020\006*_\n\007KeyType\022\013\n\007MINIMUM" +
+      "\020\000\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\rDELETE_COLUMN" +
+      "\020\014\022\021\n\rDELETE_FAMILY\020\016\022\014\n\007MAXIMUM\020\377\001B>\n*o" +
+      "rg.apache.hadoop.hbase.protobuf.generate",
+      "dB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -11260,7 +11327,7 @@ public final class HBaseProtos {
           internal_static_ServerLoad_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ServerLoad_descriptor,
-              new java.lang.String[] { "NumberOfRequests", "TotalNumberOfRequests", "UsedHeapMB", "MaxHeapMB", "RegionLoads", "Coprocessors", "ReportStartTime", "ReportEndTime", },
+              new java.lang.String[] { "NumberOfRequests", "TotalNumberOfRequests", "UsedHeapMB", "MaxHeapMB", "RegionLoads", "Coprocessors", "ReportStartTime", "ReportEndTime", "InfoServerPort", },
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.class,
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder.class);
           internal_static_TimeRange_descriptor =

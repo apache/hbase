@@ -1058,7 +1058,11 @@ public class  HRegionServer implements ClientProtocol,
     }
     serverLoad.setReportStartTime(reportStartTime);
     serverLoad.setReportEndTime(reportEndTime);
-
+    if (this.infoServer != null) {
+      serverLoad.setInfoServerPort(this.infoServer.getPort());
+    } else {
+      serverLoad.setInfoServerPort(-1);
+    }
     return serverLoad.build();
   }
 

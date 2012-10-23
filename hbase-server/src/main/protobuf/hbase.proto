@@ -175,6 +175,11 @@ message ServerLoad {
    * and midnight, January 1, 1970 UTC.
    */
   optional uint64 reportEndTime = 8;
+
+  /**
+   * The port number that this region server is hosing an info server on.
+   */
+  optional uint32 infoServerPort = 9;
 }
 
 /**
