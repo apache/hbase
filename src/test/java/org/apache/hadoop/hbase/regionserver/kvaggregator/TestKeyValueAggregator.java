@@ -6,6 +6,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
@@ -41,7 +42,7 @@ public class TestKeyValueAggregator {
         .setCompressionType(Compression.Algorithm.NONE));
     TEST_UTIL
         .getConfiguration()
-        .set("aggregator",
+        .set(HConstants.KV_AGGREGATOR,
             "org.apache.hadoop.hbase.regionserver.kvaggregator.LowerToUpperAggregator");
   }
 

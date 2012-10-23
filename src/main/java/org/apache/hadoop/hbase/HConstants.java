@@ -509,7 +509,7 @@ public final class HConstants {
    * pause between rpc or connect retries
    */
   public static String HBASE_CLIENT_PAUSE = "hbase.client.pause";
-  public static int DEFAULT_HBASE_CLIENT_PAUSE = 1000; 
+  public static int DEFAULT_HBASE_CLIENT_PAUSE = 1000;
 
   /**
    * compression for each RPC and its default value
@@ -581,10 +581,10 @@ public final class HConstants {
 
   /** Configuration key suffix for Thrift server port */
   public static final String THRIFT_PORT_SUFFIX = "port";
-  
-  /** 
+
+  /**
    * The byte array represents for NO_NEXT_INDEXED_KEY;
-   * The actual value is irrelevant because this is always compared by reference. 
+   * The actual value is irrelevant because this is always compared by reference.
    */
   public static final byte [] NO_NEXT_INDEXED_KEY = Bytes.toBytes("NO_NEXT_INDEXED_KEY");
 
@@ -593,6 +593,12 @@ public final class HConstants {
   public static final boolean[] BOOLEAN_VALUES = { false, true };
 
   public static final int IPC_CALL_PARAMETER_LENGTH_MAX = 1000;
+
+  /**
+   * used in Configuration to get/set the KV aggregator for compaction
+   * hooks
+   */
+  public static final String KV_AGGREGATOR = "kvaggregator";
 
   private HConstants() {
     // Can't be instantiated with this ctor.

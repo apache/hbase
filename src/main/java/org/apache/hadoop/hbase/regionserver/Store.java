@@ -242,7 +242,7 @@ public class Store extends SchemaConfigured implements HeapSize {
     setCompactionPolicy(conf.get(HConstants.COMPACTION_MANAGER_CLASS,
                                  HConstants.DEFAULT_COMPACTION_MANAGER_CLASS));
 
-    String aggregatorString = conf.get("aggregator");
+    String aggregatorString = conf.get(HConstants.KV_AGGREGATOR);
     if (aggregatorString != null && !aggregatorString.isEmpty()) {
       try {
         this.aggregatorClass = ((Class<KeyValueAggregator>) Class
