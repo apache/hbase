@@ -24,12 +24,12 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -58,6 +58,7 @@ public class RegionServerDynamicMetrics implements Updater {
   private MetricsContext context;
   private final RegionServerDynamicStatistics rsDynamicStatistics;
   private Method updateMbeanInfoIfMetricsListChanged = null;
+  private HRegionServer regionServer;
   private static final Log LOG =
     LogFactory.getLog(RegionServerDynamicStatistics.class);
   
@@ -73,13 +74,14 @@ public class RegionServerDynamicMetrics implements Updater {
    */
   public final MetricsRegistry registry = new MetricsRegistry();
 
-  private RegionServerDynamicMetrics() {
+  private RegionServerDynamicMetrics(HRegionServer regionServer) {
     this.context = MetricsUtil.getContext("hbase");
     this.metricsRecord = MetricsUtil.createRecord(
                             this.context,
                             "RegionServerDynamicStatistics");
     context.registerUpdater(this);
     this.rsDynamicStatistics = new RegionServerDynamicStatistics(this.registry);
+    this.regionServer = regionServer;
     try {
       updateMbeanInfoIfMetricsListChanged =
         this.rsDynamicStatistics.getClass().getSuperclass()
@@ -91,9 +93,9 @@ public class RegionServerDynamicMetrics implements Updater {
     }
   }
 
-  public static RegionServerDynamicMetrics newInstance() {
+  public static RegionServerDynamicMetrics newInstance(HRegionServer regionServer) {
     RegionServerDynamicMetrics metrics =
-      new RegionServerDynamicMetrics();
+      new RegionServerDynamicMetrics(regionServer);
     return metrics;
   }
 
@@ -183,6 +185,13 @@ public class RegionServerDynamicMetrics implements Updater {
     for (Entry<String, AtomicLong> entry : RegionMetricsStorage.getNumericMetrics().entrySet()) {
       this.setNumericMetric(entry.getKey(), entry.getValue().getAndSet(0));
     }
+
+    /* export estimated size of all response queues */
+    if (regionServer != null) {
+      long responseQueueSize = regionServer.getResponseQueueSize();
+      this.setNumericMetric("responseQueuesSize", responseQueueSize);
+    }
+
     /* get dynamically created numeric metrics, and push the metrics.
      * These ones aren't to be reset; they are cumulative. */
     for (Entry<String, AtomicLong> entry : RegionMetricsStorage.getNumericPersistentMetrics().entrySet()) {
