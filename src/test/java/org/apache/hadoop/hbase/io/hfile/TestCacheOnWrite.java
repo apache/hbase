@@ -338,10 +338,9 @@ public class TestCacheOnWrite {
       }
       region.flushcache();
     }
-    LruBlockCache blockCache =
-        (LruBlockCache) new CacheConfig(conf).getBlockCache();
+    BlockCache blockCache = TEST_UTIL.getBlockCache();
     blockCache.clearCache();
-    assertEquals(0, blockCache.getBlockTypeCountsForTest().size());
+    assertEquals(0, ((LruBlockCache) blockCache).getBlockTypeCountsForTest().size());
     Map<String, Long> metricsBefore = SchemaMetrics.getMetricsSnapshot();
     region.compactStores();
     LOG.debug("compactStores() returned");
@@ -350,7 +349,7 @@ public class TestCacheOnWrite {
         metricsBefore, SchemaMetrics.getMetricsSnapshot());
     LOG.debug(SchemaMetrics.formatMetrics(compactionMetrics));
     Map<BlockType, Integer> blockTypesInCache =
-        blockCache.getBlockTypeCountsForTest();
+        ((LruBlockCache) blockCache).getBlockTypeCountsForTest();
     LOG.debug("Block types in cache: " + blockTypesInCache);
     assertNull(blockTypesInCache.get(BlockType.DATA));
     region.close();

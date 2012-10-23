@@ -136,5 +136,10 @@ public class SimpleBlockCache implements BlockCache {
     // TODO: implement this if we ever actually use this block cache
     return 0;
   }
+
+  @Override
+  public void clearCache() {
+    cache.clear();
+  }
 }
 

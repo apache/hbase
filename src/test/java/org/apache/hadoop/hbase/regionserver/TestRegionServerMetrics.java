@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -26,12 +27,18 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -59,23 +66,26 @@ public class TestRegionServerMetrics {
   private static final SchemaMetrics ALL_METRICS =
       SchemaMetrics.ALL_SCHEMA_METRICS;
 
-  private final HBaseTestingUtility TEST_UTIL =
+  private final HBaseTestingUtility testUtil =
       new HBaseTestingUtility();
+  private final Configuration conf = testUtil.getConfiguration();
 
   private Map<String, Long> startingMetrics;
 
   private final int META_AND_ROOT = 2;
 
+  private final int NUM_ROWS = 10000;
+
   @Before
   public void setUp() throws Exception {
     SchemaMetrics.setUseTableNameInTest(true);
     startingMetrics = SchemaMetrics.getMetricsSnapshot();
-    TEST_UTIL.startMiniCluster();
+    testUtil.startMiniCluster();
   }
 
   @After
   public void tearDown() throws IOException {
-    TEST_UTIL.shutdownMiniCluster();
+    testUtil.shutdownMiniCluster();
     SchemaMetrics.validateMetricChanges(startingMetrics);
   }
 
@@ -93,13 +103,11 @@ public class TestRegionServerMetrics {
   @Test
   public void testMultipleRegions() throws IOException, InterruptedException {
 
-    TEST_UTIL.createRandomTable(
-        TABLE_NAME,
-        Arrays.asList(FAMILIES),
-        MAX_VERSIONS, NUM_COLS_PER_ROW, NUM_FLUSHES, NUM_REGIONS, 1000);
+    testUtil.createRandomTable(TABLE_NAME, Arrays.asList(FAMILIES), MAX_VERSIONS, NUM_COLS_PER_ROW,
+        NUM_FLUSHES, NUM_REGIONS, 1000);
 
     final HRegionServer rs =
-        TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+        testUtil.getMiniHBaseCluster().getRegionServer(0);
 
     assertEquals(NUM_REGIONS + META_AND_ROOT, rs.getOnlineRegions().size());
 
@@ -163,7 +171,7 @@ public class TestRegionServerMetrics {
     byte[] CF2 = Bytes.toBytes(cf2Name);
 
     long ts = 1234;
-    HTable hTable = TEST_UTIL.createTable(TABLE, new byte[][]{CF1, CF2});
+    HTable hTable = testUtil.createTable(TABLE, new byte[][]{CF1, CF2});
 
     Put p = new Put(ROW);
     p.add(CF1, CF1, ts, CF1);
@@ -198,7 +206,7 @@ public class TestRegionServerMetrics {
         new int[] {kvLength, kvLength, kvLength, kvLength});
 
     // getsize/nextsize should not be set on flush or compaction
-    for (HRegion hr : TEST_UTIL.getMiniHBaseCluster().getRegions(TABLE)) {
+    for (HRegion hr : testUtil.getMiniHBaseCluster().getRegions(TABLE)) {
       hr.flushcache();
       hr.compactStores();
     }
@@ -208,12 +216,10 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testNumReadsAndWrites() throws IOException, InterruptedException{
-    TEST_UTIL.createRandomTable(
-        "NumReadsWritesTest",
-        Arrays.asList(FAMILIES),
-        MAX_VERSIONS, NUM_COLS_PER_ROW, NUM_FLUSHES, NUM_REGIONS, 1000);
+    testUtil.createRandomTable("NumReadsWritesTest", Arrays.asList(FAMILIES), MAX_VERSIONS,
+        NUM_COLS_PER_ROW, NUM_FLUSHES, NUM_REGIONS, 1000);
     final HRegionServer rs =
-        TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+        testUtil.getMiniHBaseCluster().getRegionServer(0);
 
     // This may not be necessary since we verify the number of reads and writes from atomic
     // variables and not from collected metrics.
@@ -225,5 +231,63 @@ public class TestRegionServerMetrics {
     }
     Assert.assertEquals(rs.getOnlineRegions().size(), rs.getNumReads().get());
     Assert.assertEquals(0, rs.getNumWrites().get());
+  }
+
+  @Test
+  public void testEncodingInCache() throws Exception {
+    HTable t = null;
+    try {
+      HColumnDescriptor hcd = new HColumnDescriptor(HTestConst.DEFAULT_CF_BYTES)
+          .setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
+      testUtil.createTable(HTestConst.DEFAULT_TABLE_BYTES, new HColumnDescriptor[]{hcd});
+      t = new HTable(conf, HTestConst.DEFAULT_TABLE_BYTES);
+
+      // Write some test data
+      for (int iRow = 0; iRow < NUM_ROWS; ++iRow) {
+        String rowStr = "row" + iRow;
+        byte[] rowBytes = Bytes.toBytes(rowStr);
+        Put p = new Put(rowBytes);
+        for (int iQual = 0; iQual < NUM_COLS_PER_ROW; ++iQual) {
+          String qualStr = "q" + iQual;
+          byte[] qualBytes = Bytes.toBytes(qualStr);
+          String valueStr = "v" + Integer.toString(iRow + iQual);
+          byte[] valueBytes = Bytes.toBytes(valueStr);
+          p.add(HTestConst.DEFAULT_CF_BYTES, qualBytes, valueBytes);
+        }
+        t.put(p);
+      }
+      HBaseAdmin adm = new HBaseAdmin(conf);
+      adm.flush(HTestConst.DEFAULT_TABLE_STR);
+      adm.close();
+
+      LOG.info("Clearing cache and reading");
+      testUtil.getBlockCache().clearCache();
+      startingMetrics = SchemaMetrics.getMetricsSnapshot();
+      // Read all data to bring it into cache.
+      for (int iRow = 0; iRow < NUM_ROWS; ++iRow) {
+        Get g = new Get(Bytes.toBytes("row" + iRow));
+        g.addFamily(HTestConst.DEFAULT_CF_BYTES);
+        t.get(g);
+      }
+
+      // Check metrics
+      Map<String, Long> m = SchemaMetrics.diffMetrics(this.startingMetrics,
+          SchemaMetrics.getMetricsSnapshot());
+      LOG.info("Metrics after reading:\n" + SchemaMetrics.formatMetrics(m));
+      long dataBlockEncodedSize = SchemaMetrics.getLong(m,
+          SchemaMetrics.ALL_SCHEMA_METRICS.getBlockMetricName(
+          BlockType.BlockCategory.DATA, false, SchemaMetrics.BlockMetricType.CACHE_SIZE));
+      long dataBlockUnencodedSize = SchemaMetrics.getLong(m,
+          SchemaMetrics.ALL_SCHEMA_METRICS.getBlockMetricName(BlockType.BlockCategory.DATA, false,
+              SchemaMetrics.BlockMetricType.UNENCODED_CACHE_SIZE));
+      LOG.info("Data block encoded size in cache: " + dataBlockEncodedSize);
+      LOG.info("Data block unencoded size in cache: " + dataBlockEncodedSize);
+      assertTrue(dataBlockEncodedSize * 2 < dataBlockUnencodedSize);
+    } finally {
+      if (t != null) {
+        t.close();
+      }
+      testUtil.dropDefaultTable();
+    }
   }
 }

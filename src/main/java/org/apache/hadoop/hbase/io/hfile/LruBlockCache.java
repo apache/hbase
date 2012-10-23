@@ -138,7 +138,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
         .setDaemon(true)
         .build());
 
-  /** Current size of cache */
+  /** Current size of cache in bytes */
   private final AtomicLong size;
 
   /** Current number of cached elements */
@@ -335,17 +335,20 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * @param evict
    */
   protected long updateSizeMetrics(CachedBlock cb, boolean evict) {
-    long heapsize = cb.heapSize();
+    long heapSizeDelta = cb.heapSize();
+    long unencodedSizeDelta = cb.getUnencodedSize();
     if (evict) {
-      heapsize *= -1;
+      heapSizeDelta *= -1;
+      unencodedSizeDelta *= -1;
     }
     Cacheable cachedBlock = cb.getBuffer();
     SchemaMetrics schemaMetrics = cachedBlock.getSchemaMetrics();
     if (schemaMetrics != null) {
       schemaMetrics.updateOnCachePutOrEvict(
-          cachedBlock.getBlockType().getCategory(), heapsize);
+          cachedBlock.getBlockType().getCategory(), heapSizeDelta,
+          unencodedSizeDelta);
     }
-    return size.addAndGet(heapsize);
+    return size.addAndGet(heapSizeDelta);
   }
 
   /**
@@ -918,6 +921,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
   }
 
   /** Clears the cache. Updates per-block-category counts accordingly. Used in tests. */
+  @Override
   public void clearCache() {
     map.clear();
     SchemaMetrics.clearBlockCacheMetrics();

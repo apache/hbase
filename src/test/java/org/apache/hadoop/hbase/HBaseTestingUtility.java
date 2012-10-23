@@ -65,6 +65,8 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -106,6 +108,7 @@ import com.google.common.base.Preconditions;
 public class HBaseTestingUtility {
   private final static Log LOG = LogFactory.getLog(HBaseTestingUtility.class);
   private final Configuration conf;
+  private final CacheConfig cacheConf;
   private MiniZooKeeperCluster zkCluster = null;
 
   /**
@@ -188,6 +191,7 @@ public class HBaseTestingUtility {
 
   public HBaseTestingUtility(Configuration conf) {
     this.conf = conf;
+    cacheConf = new CacheConfig(conf);
   }
 
   /**
@@ -1208,7 +1212,6 @@ public class HBaseTestingUtility {
    * Wait until <code>countOfRegion</code> in .META. have a non-empty
    * info:server.  This means all regions have been deployed, master has been
    * informed and updated .META. with the regions deployed server.
-   * @param conf Configuration
    * @param countOfRegions How many regions in .META.
    * @throws IOException
    */
@@ -1597,5 +1600,18 @@ REGION_LOOP:
     for (HMaster master : hbaseCluster.getMasters()) {
       master.stop("killMiniHBaseCluster");
     }
+  }
+
+  public void dropDefaultTable() throws Exception {
+    HBaseAdmin admin = new HBaseAdmin(getConfiguration());
+    if (admin.tableExists(HTestConst.DEFAULT_TABLE_BYTES)) {
+      admin.disableTable(HTestConst.DEFAULT_TABLE_BYTES);
+      admin.deleteTable(HTestConst.DEFAULT_TABLE_BYTES);
+    }
+    admin.close();
+  }
+
+  public BlockCache getBlockCache() {
+    return cacheConf.getBlockCache();
   }
 }

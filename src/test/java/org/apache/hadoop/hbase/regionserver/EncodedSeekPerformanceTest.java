@@ -189,6 +189,6 @@ public class EncodedSeekPerformanceTest {
   }
 
   private void clearBlockCache() {
-    ((LruBlockCache) cacheConf.getBlockCache()).clearCache();
+    testingUtility.getBlockCache().clearCache();
   }
 }

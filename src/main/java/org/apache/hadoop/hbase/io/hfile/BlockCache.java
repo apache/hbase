@@ -109,6 +109,11 @@ public interface BlockCache {
   public long getBlockCount();
 
   /**
+   * Clear the cache. Used in unit tests. Don't call this in production.
+   */
+  public void clearCache();
+
+  /**
    * Performs a BlockCache summary and returns a List of BlockCacheColumnFamilySummary objects.
    * This method could be fairly heavyweight in that it evaluates the entire HBase file-system
    * against what is in the RegionServer BlockCache.

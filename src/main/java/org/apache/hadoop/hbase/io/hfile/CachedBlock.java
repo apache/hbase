@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
 public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
 
   public final static long PER_BLOCK_OVERHEAD = ClassSize.align(
-    ClassSize.OBJECT + (3 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) +
+    ClassSize.OBJECT + (3 * ClassSize.REFERENCE) + 3 * Bytes.SIZEOF_LONG +
     ClassSize.STRING + ClassSize.BYTE_BUFFER);
 
   static enum BlockPriority {
@@ -56,11 +56,8 @@ public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
   private final Cacheable buf;
   private volatile long accessTime;
   private long size;
+  private long unencodedSize;
   private BlockPriority priority;
-
-  public CachedBlock(BlockCacheKey cacheKey, Cacheable buf, long accessTime) {
-    this(cacheKey, buf, accessTime, false);
-  }
 
   public CachedBlock(BlockCacheKey cacheKey, Cacheable buf, long accessTime,
       boolean inMemory) {
@@ -72,8 +69,12 @@ public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
     // the base classes. We also include the base class
     // sizes in the PER_BLOCK_OVERHEAD variable rather than align()ing them with
     // their buffer lengths. This variable is used elsewhere in unit tests.
-    this.size = ClassSize.align(cacheKey.heapSize())
-        + ClassSize.align(buf.heapSize()) + PER_BLOCK_OVERHEAD;
+    // We assume that block size is under 2 GB.
+
+    long keyAndBlockOverhead = ClassSize.align(cacheKey.heapSize()) + PER_BLOCK_OVERHEAD;
+    this.size = keyAndBlockOverhead + ClassSize.align(buf.heapSize());;
+    this.unencodedSize = keyAndBlockOverhead + ClassSize.align(HFileBlock.getUnencodedSize(buf));
+
     if(inMemory) {
       this.priority = BlockPriority.MEMORY;
     } else {
@@ -110,5 +111,9 @@ public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
 
   public BlockPriority getPriority() {
     return this.priority;
+  }
+
+  public long getUnencodedSize() {
+    return unencodedSize;
   }
 }

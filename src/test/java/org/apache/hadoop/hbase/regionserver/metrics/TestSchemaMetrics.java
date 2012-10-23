@@ -31,7 +31,10 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
@@ -46,10 +49,15 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class TestSchemaMetrics {
 
+  private static final Log LOG = LogFactory.getLog(TestSchemaMetrics.class);
+
   private final String TABLE_NAME = "myTable";
   private final String CF_NAME = "myColumnFamily";
 
   private final boolean useTableName;
+  private final String metricPrefix;
+  private final SchemaMetrics schemaMetrics;
+
   private Map<String, Long> startingMetrics;
 
   @Parameters
@@ -60,6 +68,10 @@ public class TestSchemaMetrics {
   public TestSchemaMetrics(boolean useTableName) {
     this.useTableName = useTableName;
     SchemaMetrics.setUseTableNameInTest(useTableName);
+    metricPrefix = (useTableName ? SchemaMetrics.TABLE_PREFIX +
+        TABLE_NAME + "." : "") + SchemaMetrics.CF_PREFIX + CF_NAME + ".";
+    schemaMetrics = SchemaMetrics.getInstance(TABLE_NAME,
+        CF_NAME);
   }
 
   @Before
@@ -68,11 +80,45 @@ public class TestSchemaMetrics {
   };
 
   @Test
+  public void testPersistentMetric() {
+    for (BlockCategory blockCat : BlockCategory.values()) {
+      for (boolean isCompaction : HConstants.BOOLEAN_VALUES) {
+        for (BlockMetricType bmt : BlockMetricType.values()) {
+          if (!bmt.compactionAware() && isCompaction) {
+            continue;
+          }
+          String metricKey = schemaMetrics.getBlockMetricName(blockCat, isCompaction, bmt);
+          assertEquals("Incorrectly identified whether metric key is persistent: " + metricKey,
+              bmt.persistent(), SchemaMetrics.isPersistentMetricKey(metricKey));
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testRemoveBlockCategoryFromMetricKey() {
+    for (BlockCategory blockCat : BlockCategory.values()) {
+      if (blockCat == BlockCategory.ALL_CATEGORIES) {
+        continue;
+      }
+      for (boolean isCompaction : HConstants.BOOLEAN_VALUES) {
+        for (BlockMetricType bmt : BlockMetricType.values()) {
+          if (!bmt.compactionAware() && isCompaction) {
+            continue;
+          }
+          String metricKey = schemaMetrics.getBlockMetricName(blockCat, isCompaction, bmt);
+          String metricKeyNoBlockCat =
+              schemaMetrics.getBlockMetricName(BlockCategory.ALL_CATEGORIES, isCompaction, bmt);
+          assertEquals(metricKeyNoBlockCat,
+              SchemaMetrics.BLOCK_CATEGORY_RE.matcher(metricKey).replaceAll(""));
+        }
+      }
+    }
+
+  }
+
+  @Test
   public void testNaming() {
-    final String metricPrefix = (useTableName ? SchemaMetrics.TABLE_PREFIX +
-        TABLE_NAME + "." : "") + SchemaMetrics.CF_PREFIX + CF_NAME + ".";
-    SchemaMetrics schemaMetrics = SchemaMetrics.getInstance(TABLE_NAME,
-        CF_NAME);
     SchemaMetrics ALL_CF_METRICS = SchemaMetrics.ALL_SCHEMA_METRICS;
 
     // fsReadTimeMetric
@@ -182,12 +228,17 @@ public class TestSchemaMetrics {
     SchemaMetrics.validateMetricChanges(startingMetrics);
   }
 
+  private static final int NUM_TABLES = 3;
+  private static final int NUM_FAMILIES = 3;
+  private static final int BLOCK_SIZE_RANGE = 1024 * 1024;
+  private static final int READ_TIME_MS_RANGE = 1000;
+
   @Test
   public void testIncrements() {
     Random rand = new Random(23982737L);
-    for (int i = 1; i <= 3; ++i) {
+    for (int i = 1; i <= NUM_TABLES; ++i) {
       final String tableName = "table" + i;
-      for (int j = 1; j <= 3; ++j) {
+      for (int j = 1; j <= NUM_FAMILIES; ++j) {
         final String cfName = "cf" + j;
         SchemaMetrics sm = SchemaMetrics.getInstance(tableName, cfName);
         for (boolean isInBloom : BOOL_VALUES) {
@@ -203,13 +254,13 @@ public class TestSchemaMetrics {
           for (boolean isCompaction : BOOL_VALUES) {
             sm.updateOnCacheHit(blockCat, isCompaction);
             checkMetrics();
-            sm.updateOnCacheMiss(blockCat, isCompaction, rand.nextInt());
+            sm.updateOnCacheMiss(blockCat, isCompaction, rand.nextInt(READ_TIME_MS_RANGE));
             checkMetrics();
           }
 
           for (boolean isEviction : BOOL_VALUES) {
-            sm.updateOnCachePutOrEvict(blockCat, (isEviction ? -1 : 1)
-                * rand.nextInt(1024 * 1024));
+            int encodedDelta = (isEviction ? -1 : 1) * (rand.nextInt(BLOCK_SIZE_RANGE) + 1);
+            sm.updateOnCachePutOrEvict(blockCat, encodedDelta, 2 * encodedDelta);
           }
         }
       }

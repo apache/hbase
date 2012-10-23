@@ -40,6 +40,11 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
+  public int getUnencodedSize(ByteBuffer bufferWithoutHeader) {
+    return bufferWithoutHeader.capacity();
+  }
+
+  @Override
   public ByteBuffer decodeKeyValues(DataInputStream source,
       int preserveHeaderLength, boolean includesMemstoreTS, int totalEncodedSize)
       throws IOException {

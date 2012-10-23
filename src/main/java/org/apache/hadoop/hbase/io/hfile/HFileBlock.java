@@ -53,6 +53,8 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Reading {@link HFile} version 1 and 2 blocks, and writing version 2 blocks.
  * <ul>
@@ -74,7 +76,6 @@ import org.apache.hadoop.io.compress.Decompressor;
  * compression algorithm is the same for all the blocks in the {@link HFile},
  * similarly to what was done in version 1.
  * </ul>
- * </ul>
  * The version 2 block representation in the block cache is the same as above,
  * except that the data section is always uncompressed in the cache.
  */
@@ -87,13 +88,6 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
   public static final int HEADER_SIZE = MAGIC_LENGTH + 2 * Bytes.SIZEOF_INT
       + Bytes.SIZEOF_LONG;
 
-  /**
-   * The size of block header when blockType is {@link BlockType#ENCODED_DATA}.
-   * This extends normal header by adding the id of encoder.
-   */
-  public static final int ENCODED_HEADER_SIZE = HEADER_SIZE
-      + DataBlockEncoding.ID_SIZE;
-
   /** Just an array of bytes of the right size. */
   public static final byte[] DUMMY_HEADER = new byte[HEADER_SIZE];
 
@@ -103,6 +97,23 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
   // Static counters
   private static final AtomicLong numSeekRead = new AtomicLong();
   private static final AtomicLong numPositionalRead = new AtomicLong();
+
+  private static final int HFILE_BLOCK_OVERHEAD = ClassSize.align(
+      // Base class size, including object overhead.
+      SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
+
+      // Block type and byte buffer references
+      2 * ClassSize.REFERENCE +
+
+      // On-disk size, uncompressed size, and next block's on-disk size
+      3 * Bytes.SIZEOF_INT +
+
+      // This and previous block offset
+      2 * Bytes.SIZEOF_LONG +
+
+      // "Include memstore timestamp" flag
+      Bytes.SIZEOF_BOOLEAN
+  );
 
   // Instance variables
   private BlockType blockType;
@@ -164,8 +175,8 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
    * buffer position, but if you slice the buffer beforehand, it will rewind
    * to that point.
    *
-   * @param b
-   * @return
+   * @param b bytes to include in the block
+   * @return the new block
    * @throws IOException
    */
   private HFileBlock(ByteBuffer b) throws IOException {
@@ -403,18 +414,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
 
   @Override
   public long heapSize() {
-    long size = ClassSize.align(
-        // Base class size, including object overhead.
-        SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-        // Block type and byte buffer references
-        2 * ClassSize.REFERENCE +
-        // On-disk size, uncompressed size, and next block's on-disk size
-        3 * Bytes.SIZEOF_INT +
-        // This and previous block offset
-        2 * Bytes.SIZEOF_LONG +
-        // "Include memstore timestamp" flag
-        Bytes.SIZEOF_BOOLEAN
-    );
+    long size = HFILE_BLOCK_OVERHEAD;
 
     if (buf != null) {
       // Deep overhead of the byte buffer. Needs to be aligned separately.
@@ -471,6 +471,31 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
   }
 
   /**
+   * Used in maintaining total unencoded size stats in the block cache.
+   * @return unencoded size of the given cache block
+   */
+  public static long getUnencodedSize(Cacheable buf) {
+    Preconditions.checkNotNull(buf);
+
+    if (buf instanceof HFileBlock) {
+      HFileBlock b = (HFileBlock) buf;
+      if (b.blockType == BlockType.ENCODED_DATA) {
+        short encodingId = b.getDataBlockEncodingId();
+        DataBlockEncoding encoding = DataBlockEncoding.getEncodingById(encodingId);
+        Preconditions.checkNotNull(encoding);
+        DataBlockEncoder encoder = encoding.getEncoder();
+        Preconditions.checkNotNull(encoder);
+        int unencodedSize = encoder.getUnencodedSize(b.getBufferWithoutHeader());
+        Preconditions.checkState(unencodedSize >= -1);
+        if (unencodedSize >= 0) {
+          return ClassSize.align(HFILE_BLOCK_OVERHEAD + HEADER_SIZE + unencodedSize);
+        }
+      }
+    }
+    return buf.heapSize();
+  }
+
+  /**
    * Unified version 2 {@link HFile} block writer. The intended usage pattern
    * is as follows:
    * <ul>
@@ -479,8 +504,8 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
    * <li>Call {@link Writer#startWriting(BlockType)} and get a data stream to
    * write to
    * <li>Write your data into the stream
-   * <li>Call {@link Writer#writeHeaderAndData} as many times as you need to
-   * store the serialized block into an external stream, or call
+   * <li>Call {@link Writer#writeHeaderAndData(java.io.DataOutputStream)} as many times as you
+   * need to store the serialized block into an external stream, or call
    * {@link Writer#getHeaderAndData()} to get it as a byte array.
    * <li>Repeat to write more blocks
    * </ul>

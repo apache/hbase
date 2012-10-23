@@ -80,6 +80,9 @@ public interface DataBlockEncoder {
   public EncodedSeeker createSeeker(RawComparator<byte[]> comparator,
       boolean includesMemstoreTS);
 
+  /** @return unencoded size of the given encoded block or -1 if unknown */
+  public int getUnencodedSize(ByteBuffer bufferWithoutHeader);
+
   /**
    * Create an incremental writer
    * @param out Where to write encoded data

@@ -21,13 +21,14 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Base class for all data block encoders that use a buffer.
@@ -183,6 +184,11 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   @Override
   public abstract BufferedEncodedWriter createWriter(DataOutputStream out,
       boolean includesMemstoreTS) throws IOException;
+
+  @Override
+  public int getUnencodedSize(ByteBuffer bufferWithoutHeader) {
+    return bufferWithoutHeader.getInt(DataBlockEncoding.ID_SIZE);
+  }
 
   protected static class SeekerState {
     protected int valueOffset = -1;

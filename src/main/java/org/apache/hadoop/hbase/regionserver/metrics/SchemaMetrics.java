@@ -30,9 +30,11 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang.mutable.MutableDouble;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -106,27 +108,32 @@ public class SchemaMetrics {
 
   private static final Log LOG = LogFactory.getLog(SchemaMetrics.class);
 
-  public static enum BlockMetricType {
-    // Metric configuration: compactionAware, timeVarying
-    READ_TIME("Read",                   true, true),
-    READ_COUNT("BlockReadCnt",          true, false),
-    CACHE_HIT("BlockReadCacheHitCnt",   true, false),
-    CACHE_MISS("BlockReadCacheMissCnt", true, false),
+  private static final int COMPACTION_AWARE_METRIC_FLAG = 0x01;
+  private static final int TIME_VARYING_METRIC_FLAG = 0x02;
+  private static final int PERSISTENT_METRIC_FLAG = 0x04;
 
-    CACHE_SIZE("blockCacheSize",        false, false),
-    CACHE_NUM_BLOCKS("cacheNumBlocks",  false, false), 
-    CACHED("blockCacheNumCached",       false, false),
-    EVICTED("blockCacheNumEvicted",     false, false);
+  public static enum BlockMetricType {
+    READ_TIME("Read", COMPACTION_AWARE_METRIC_FLAG | TIME_VARYING_METRIC_FLAG),
+    READ_COUNT("BlockReadCnt", COMPACTION_AWARE_METRIC_FLAG),
+    CACHE_HIT("BlockReadCacheHitCnt", COMPACTION_AWARE_METRIC_FLAG),
+    CACHE_MISS("BlockReadCacheMissCnt", COMPACTION_AWARE_METRIC_FLAG),
+
+    CACHE_SIZE("blockCacheSize", PERSISTENT_METRIC_FLAG),
+    UNENCODED_CACHE_SIZE("blockCacheUnencodedSize", PERSISTENT_METRIC_FLAG),
+    CACHE_NUM_BLOCKS("cacheNumBlocks", PERSISTENT_METRIC_FLAG),
+    CACHED("blockCacheNumCached"),
+    EVICTED("blockCacheNumEvicted");
 
     private final String metricStr;
-    private final boolean compactionAware;
-    private final boolean timeVarying;
+    private final int flags;
 
-    BlockMetricType(String metricStr, boolean compactionAware,
-          boolean timeVarying) {
+    BlockMetricType(String metricStr) {
+      this(metricStr, 0);
+    }
+
+    BlockMetricType(String metricStr, int flags) {
       this.metricStr = metricStr;
-      this.compactionAware = compactionAware;
-      this.timeVarying = timeVarying;
+      this.flags = flags;
     }
 
     @Override
@@ -144,6 +151,18 @@ public class SchemaMetrics {
       }
       BLOCK_METRIC_TYPE_RE = sb.toString();
     }
+
+    final boolean compactionAware() {
+      return (flags & COMPACTION_AWARE_METRIC_FLAG) != 0;
+    }
+
+    private final boolean timeVarying() {
+      return (flags & TIME_VARYING_METRIC_FLAG) != 0;
+    }
+
+    final boolean persistent() {
+      return (flags & PERSISTENT_METRIC_FLAG) != 0;
+    }
   };
 
   public static enum StoreMetricType {
@@ -153,17 +172,27 @@ public class SchemaMetrics {
     STATIC_BLOOM_SIZE_KB("staticBloomSizeKB"),
     MEMSTORE_SIZE_MB("memstoreSizeMB"),
     STATIC_INDEX_SIZE_KB("staticIndexSizeKB"),
-    FLUSH_SIZE("flushSize");
+    FLUSH_SIZE("flushSize", PERSISTENT_METRIC_FLAG);
 
     private final String metricStr;
+    private final int flags;
 
-    StoreMetricType(String metricStr) {
+    private StoreMetricType(String metricStr) {
+      this(metricStr, 0);
+    }
+
+    private StoreMetricType(String metricStr, int flags) {
       this.metricStr = metricStr;
+      this.flags = flags;
     }
 
     @Override
     public String toString() {
       return metricStr;
+    }
+
+    private final boolean persistent() {
+      return (flags & PERSISTENT_METRIC_FLAG) != 0;
     }
   };
 
@@ -175,6 +204,7 @@ public class SchemaMetrics {
    * per-CF/table metrics.
    */
   public static final String UNKNOWN = "__unknown";
+
   public static final String TABLE_PREFIX = "tbl.";
   public static final String CF_PREFIX = "cf.";
   public static final String BLOCK_TYPE_PREFIX = "bt.";
@@ -217,19 +247,41 @@ public class SchemaMetrics {
   private static final String SHOW_TABLE_NAME_CONF_KEY =
       "hbase.metrics.showTableName";
 
+  private static final String WORD_BOUNDARY_RE_STR = "\\b";
+
+  private static final String COMPACTION_METRIC_PREFIX = "compaction";
+  private static final String NON_COMPACTION_METRIC_PREFIX = "fs";
+
   // Global variables
   /**
    * Maps a string key consisting of table name and column family name, with
    * table name optionally replaced with {@link #TOTAL_KEY} if per-table
    * metrics are disabled, to an instance of this class.
    */
-  private static final ConcurrentHashMap<String, SchemaMetrics>
+  private static final ConcurrentMap<String, SchemaMetrics>
       tableAndFamilyToMetrics = new ConcurrentHashMap<String, SchemaMetrics>();
 
   /** Metrics for all tables and column families. */
   // This has to be initialized after cfToMetrics.
   public static final SchemaMetrics ALL_SCHEMA_METRICS =
     getInstance(TOTAL_KEY, TOTAL_KEY);
+
+  private static final Pattern PERSISTENT_METRIC_RE;
+  static {
+    StringBuilder sb = new StringBuilder();
+    for (BlockMetricType bmt : BlockMetricType.values()) {
+      if (bmt.persistent()) {
+        sb.append((sb.length() == 0 ? "" : "|") + bmt);
+      }
+    }
+    for (StoreMetricType smt : StoreMetricType.values()) {
+      if (smt.persistent()) {
+        sb.append((sb.length() == 0 ? "" : "|") + smt);
+      }
+    }
+    PERSISTENT_METRIC_RE = Pattern.compile(".*" + WORD_BOUNDARY_RE_STR +
+        "(" + META_BLOCK_CATEGORY_STR + ")?(" + sb + ")$");
+  }
 
   /**
    * Whether to include table name in metric names. If this is null, it has not
@@ -257,7 +309,7 @@ public class SchemaMetrics {
     for (BlockCategory blockCategory : BlockCategory.values()) {
       for (boolean isCompaction : BOOL_VALUES) {
         for (BlockMetricType metricType : BlockMetricType.values()) {
-          if (!metricType.compactionAware && isCompaction) {
+          if (!metricType.compactionAware() && isCompaction) {
             continue;
           }
 
@@ -270,8 +322,8 @@ public class SchemaMetrics {
             sb.append(BLOCK_TYPE_PREFIX + categoryStr + ".");
           }
 
-          if (metricType.compactionAware) {
-            sb.append(isCompaction ? "compaction" : "fs");
+          if (metricType.compactionAware()) {
+            sb.append(isCompaction ? COMPACTION_METRIC_PREFIX : NON_COMPACTION_METRIC_PREFIX);
           }
 
           // A special-case for meta blocks for backwards-compatibility.
@@ -283,7 +335,7 @@ public class SchemaMetrics {
 
           int i = getBlockMetricIndex(blockCategory, isCompaction, metricType);
           blockMetricNames[i] = sb.toString().intern();
-          blockMetricTimeVarying[i] = metricType.timeVarying;
+          blockMetricTimeVarying[i] = metricType.timeVarying();
         }
       }
     }
@@ -342,7 +394,7 @@ public class SchemaMetrics {
 
   public String getBlockMetricName(BlockCategory blockCategory,
       boolean isCompaction, BlockMetricType metricType) {
-    if (isCompaction && !metricType.compactionAware) {
+    if (isCompaction && !metricType.compactionAware()) {
       throw new IllegalArgumentException("isCompaction cannot be true for "
           + metricType);
     }
@@ -430,6 +482,7 @@ public class SchemaMetrics {
    */
   public void updatePersistentStoreMetric(StoreMetricType storeMetricType,
       long value) {
+    Preconditions.checkArgument(storeMetricType.persistent());
     HRegion.incrNumericPersistentMetric(
         storeMetricNames[storeMetricType.ordinal()], value);
   }
@@ -471,17 +524,20 @@ public class SchemaMetrics {
    * metric is "persistent", i.e. it does not get reset when metrics are
    * collected.
    */
-  private void addToCacheSize(BlockCategory category, long cacheSizeDelta) {
+  private void addToCacheSize(BlockCategory category, long cacheSizeDelta,
+      long unencodedCacheSizeDelta) {
     if (category == null) {
       category = BlockCategory.ALL_CATEGORIES;
     }
     HRegion.incrNumericPersistentMetric(getBlockMetricName(category, DEFAULT_COMPACTION_FLAG,
         BlockMetricType.CACHE_SIZE), cacheSizeDelta);
     HRegion.incrNumericPersistentMetric(getBlockMetricName(category, DEFAULT_COMPACTION_FLAG,
+        BlockMetricType.UNENCODED_CACHE_SIZE), unencodedCacheSizeDelta);
+    HRegion.incrNumericPersistentMetric(getBlockMetricName(category, DEFAULT_COMPACTION_FLAG,
         BlockMetricType.CACHE_NUM_BLOCKS), cacheSizeDelta > 0 ? 1 : -1);
 
     if (category != BlockCategory.ALL_CATEGORIES) {
-      addToCacheSize(BlockCategory.ALL_CATEGORIES, cacheSizeDelta);
+      addToCacheSize(BlockCategory.ALL_CATEGORIES, cacheSizeDelta, unencodedCacheSizeDelta);
     }
   }
 
@@ -490,14 +546,19 @@ public class SchemaMetrics {
    * and all table/CFs (by calling the same method on {@link #ALL_SCHEMA_METRICS}), both the given
    * block category and all block categories aggregated, and the given block size.
    * @param blockCategory block category, e.g. index or data
-   * @param cacheSizeDelta the size of the block being cached (positive) or evicted (negative) 
+   * @param cacheSizeDelta the size of the block being cached (positive) or evicted (negative)
+   * @param unencodedCacheSizeDelta the amount to add to unencoded cache size. Must have the same
+   *                                sign as cacheSizeDelta.
    */
-  public void updateOnCachePutOrEvict(BlockCategory blockCategory, long cacheSizeDelta) {
-    addToCacheSize(blockCategory, cacheSizeDelta);
+  public void updateOnCachePutOrEvict(BlockCategory blockCategory, long cacheSizeDelta,
+      long unencodedCacheSizeDelta) {
+    Preconditions.checkState((cacheSizeDelta > 0) == (unencodedCacheSizeDelta > 0));
+    addToCacheSize(blockCategory, cacheSizeDelta, unencodedCacheSizeDelta);
     incrNumericMetric(blockCategory, DEFAULT_COMPACTION_FLAG,
         cacheSizeDelta > 0 ? BlockMetricType.CACHED : BlockMetricType.EVICTED);
     if (this != ALL_SCHEMA_METRICS) {
-      ALL_SCHEMA_METRICS.updateOnCachePutOrEvict(blockCategory, cacheSizeDelta);
+      ALL_SCHEMA_METRICS.updateOnCachePutOrEvict(blockCategory, cacheSizeDelta,
+          unencodedCacheSizeDelta);
     }
   }
 
@@ -638,22 +699,31 @@ public class SchemaMetrics {
 
   /** "tab.<table_name>." */
   private static final String TABLE_NAME_RE_STR =
-      "\\b" + regexEscape(TABLE_PREFIX) + WORD_AND_DOT_RE_STR;
+      WORD_BOUNDARY_RE_STR + regexEscape(TABLE_PREFIX) + WORD_AND_DOT_RE_STR;
 
   /** "cf.<cf_name>." */
   private static final String CF_NAME_RE_STR =
-      "\\b" + regexEscape(CF_PREFIX) + WORD_AND_DOT_RE_STR;
+      WORD_BOUNDARY_RE_STR + regexEscape(CF_PREFIX) + WORD_AND_DOT_RE_STR;
   private static final Pattern CF_NAME_RE = Pattern.compile(CF_NAME_RE_STR);
 
   /** "tab.<table_name>.cf.<cf_name>." */
   private static final Pattern TABLE_AND_CF_NAME_RE = Pattern.compile(
       TABLE_NAME_RE_STR + CF_NAME_RE_STR);
 
-  private static final Pattern BLOCK_CATEGORY_RE = Pattern.compile(
-      "\\b" + regexEscape(BLOCK_TYPE_PREFIX) + "[^.]+\\." +
+  private static final String COMPACTION_PREFIX_RE_STR = "(" +
+      NON_COMPACTION_METRIC_PREFIX + "|" + COMPACTION_METRIC_PREFIX + ")?";
+
+  static final Pattern BLOCK_CATEGORY_RE = Pattern.compile(
+      "(" +
+      WORD_BOUNDARY_RE_STR +
+      regexEscape(BLOCK_TYPE_PREFIX) + "[^.]+\\." +
       // Also remove the special-case block type marker for meta blocks
-      "|" + META_BLOCK_CATEGORY_STR + "(?=" +
-      BlockMetricType.BLOCK_METRIC_TYPE_RE + ")");
+      "|" +
+      // Note we are not using word boundary here because "fs" or "compaction" may precede "Meta"
+      META_BLOCK_CATEGORY_STR +
+      ")" +
+      // Positive lookahead for block metric types. Needed for both meta and non-meta metrics.
+      "(?=" + COMPACTION_PREFIX_RE_STR + "(" + BlockMetricType.BLOCK_METRIC_TYPE_RE + "))");
 
   /**
    * A suffix for the "number of operations" part of "time-varying metrics". We
@@ -701,9 +771,13 @@ public class SchemaMetrics {
     return allMetricNames;
   }
 
-  private static final boolean isTimeVaryingKey(String metricKey) {
+  private static final boolean isTimeVaryingMetricKey(String metricKey) {
     return metricKey.endsWith(NUM_OPS_SUFFIX)
         || metricKey.endsWith(TOTAL_SUFFIX);
+  }
+
+  static final boolean isPersistentMetricKey(String metricKey) {
+    return PERSISTENT_METRIC_RE.matcher(metricKey).matches();
   }
 
   private static final String stripTimeVaryingSuffix(String metricKey) {
@@ -715,11 +789,13 @@ public class SchemaMetrics {
     for (SchemaMetrics cfm : tableAndFamilyToMetrics.values()) {
       for (String metricName : cfm.getAllMetricNames()) {
         long metricValue;
-        if (isTimeVaryingKey(metricName)) {
+        if (isTimeVaryingMetricKey(metricName)) {
           Pair<Long, Integer> totalAndCount =
               HRegion.getTimeVaryingMetric(stripTimeVaryingSuffix(metricName));
           metricValue = metricName.endsWith(TOTAL_SUFFIX) ?
               totalAndCount.getFirst() : totalAndCount.getSecond();
+        } else if (isPersistentMetricKey(metricName)) {
+          metricValue = HRegion.getNumericPersistentMetric(metricName);
         } else {
           metricValue = HRegion.getNumericMetric(metricName);
         }
@@ -733,6 +809,10 @@ public class SchemaMetrics {
   public static long getLong(Map<String, Long> m, String k) {
     Long l = m.get(k);
     return l != null ? l : 0;
+  }
+
+  private static void incrLong(Map<String, Long> m, String k, long delta) {
+    putLong(m, k, getLong(m, k) + delta);
   }
 
   private static void putLong(Map<String, Long> m, String k, long v) {
@@ -758,7 +838,26 @@ public class SchemaMetrics {
     return diff;
   }
 
+  /**
+   * Checks whether metric changes between the given old state and the current state are consistent.
+   * If they are not, throws an {@link AssertionError}.
+   */
   public static void validateMetricChanges(Map<String, Long> oldMetrics) {
+    if (!validateMetricChangesInternal(oldMetrics, true)) {
+      // This will output diagnostic info and throw an assertion error.
+      validateMetricChangesInternal(oldMetrics, false);
+    }
+  }
+
+  /**
+   * Validates metric changes between the given set of old metric values and the current values.
+   * @param oldMetrics old metric value map
+   * @param quiet if true, don't output anything and return whether validation is successful;
+   *              if false, output diagnostic info and throw an assertion if validation fails
+   * @return whether validation is successful
+   */
+  private static boolean validateMetricChangesInternal(Map<String, Long> oldMetrics,
+      boolean quiet) {
     final Map<String, Long> newMetrics = getMetricsSnapshot();
     final Map<String, Long> allCfDeltas = new TreeMap<String, Long>();
     final Map<String, Long> allBlockCategoryDeltas =
@@ -772,39 +871,47 @@ public class SchemaMetrics {
     for (SchemaMetrics cfm : tableAndFamilyToMetrics.values()) {
       for (String metricName : cfm.getAllMetricNames()) {
         if (metricName.startsWith(CF_PREFIX + CF_PREFIX)) {
-          throw new AssertionError("Column family prefix used twice: " +
-              metricName);
+          if (quiet) {
+            return false;
+          } else {
+            throw new AssertionError("Column family prefix used twice: " +
+                metricName);
+          }
         }
 
         final long oldValue = getLong(oldMetrics, metricName);
         final long newValue = getLong(newMetrics, metricName);
         final long delta = newValue - oldValue;
 
+        if (delta == 0) {
+          continue;
+        }
+
         // Re-calculate values of metrics with no column family (or CF/table)
         // specified based on all metrics with CF (or CF/table) specified.
-        if (delta != 0) {
-          if (cfm != ALL_SCHEMA_METRICS) {
-            final String aggregateMetricName =
-                cfTableMetricRE.matcher(metricName).replaceAll("");
-            if (!aggregateMetricName.equals(metricName)) {
+        if (cfm != ALL_SCHEMA_METRICS) {
+          final String aggregateMetricName =
+              cfTableMetricRE.matcher(metricName).replaceAll("");
+          if (!aggregateMetricName.equals(metricName)) {
+            if (!quiet) {
               LOG.debug("Counting " + delta + " units of " + metricName
                   + " towards " + aggregateMetricName);
-
-              putLong(allCfDeltas, aggregateMetricName,
-                  getLong(allCfDeltas, aggregateMetricName) + delta);
             }
-          } else {
-            LOG.debug("Metric=" + metricName + ", delta=" + delta);
+
+            incrLong(allCfDeltas, aggregateMetricName, delta);
           }
         }
 
         Matcher matcher = BLOCK_CATEGORY_RE.matcher(metricName);
         if (matcher.find()) {
-           // Only process per-block-category metrics
+          // Only process per-block-category metrics
           String metricNoBlockCategory = matcher.replaceAll("");
+          if (!quiet) {
+            LOG.debug("Counting " + delta + " units of " + metricName + " towards " +
+                metricNoBlockCategory);
+          }
 
-          putLong(allBlockCategoryDeltas, metricNoBlockCategory,
-              getLong(allBlockCategoryDeltas, metricNoBlockCategory) + delta);
+          incrLong(allBlockCategoryDeltas, metricNoBlockCategory, delta);
         }
       }
     }
@@ -814,8 +921,9 @@ public class SchemaMetrics {
       long actual = getLong(deltas, key);
       long expected = getLong(allCfDeltas, key);
       if (actual != expected) {
-        if (errors.length() > 0)
+        if (errors.length() > 0) {
           errors.append("\n");
+        }
         errors.append("The all-CF metric " + key + " changed by "
             + actual + " but the aggregation of per-CF/table metrics "
             + "yields " + expected);
@@ -835,8 +943,9 @@ public class SchemaMetrics {
       long actual = getLong(deltas, key);
       long expected = getLong(allBlockCategoryDeltas, key);
       if (actual != expected) {
-        if (errors.length() > 0)
+        if (errors.length() > 0) {
           errors.append("\n");
+        }
         errors.append("The all-block-category metric " + key
             + " changed by " + actual + " but the aggregation of "
             + "per-block-category metrics yields " + expected);
@@ -846,8 +955,13 @@ public class SchemaMetrics {
     checkNumBlocksInCache();
 
     if (errors.length() > 0) {
-      throw new AssertionError(errors.toString());
+      if (quiet) {
+        return false;
+      } else {
+        throw new AssertionError(errors.toString());
+      }
     }
+    return true;
   }
 
   /**
