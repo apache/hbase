@@ -115,6 +115,7 @@ import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
+import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.Invocation;
@@ -232,6 +233,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // Server to handle client requests. Default access so can be accessed by
   // unit tests.
   RpcServer rpcServer;
+  
+  // Server to handle client requests.
+  private HBaseServer server;  
 
   private final InetSocketAddress isa;
 
@@ -422,6 +426,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         conf.getInt("hbase.regionserver.metahandler.count", 10),
         conf.getBoolean("hbase.rpc.verbose", false),
         conf, HConstants.QOS_THRESHOLD);
+    if (rpcServer instanceof HBaseServer) server = (HBaseServer) rpcServer;
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
 
@@ -1007,7 +1012,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       this.hlog = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
-      this.dynamicMetrics = RegionServerDynamicMetrics.newInstance();
+      this.dynamicMetrics = RegionServerDynamicMetrics.newInstance(this);
       startServiceThreads();
       LOG.info("Serving as " + this.serverNameFromMasterPOV +
         ", RPC listening on " + this.isa +
@@ -3763,5 +3768,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       HRegion region = getRegion(regionName);
       HRegionInfo info = region.getRegionInfo();
       return CompactionRequest.getCompactionState(info.getRegionId()).name();
+  }
+
+  public long getResponseQueueSize(){
+    if (server != null) {
+      return server.getResponseQueueSize();
+    }
+    return 0;
   }
 }
