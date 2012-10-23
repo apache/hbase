@@ -83,10 +83,8 @@ import java.util.TreeSet;
  * execute {@link #setCacheBlocks(boolean)}.
  */
 public class Scan extends Operation implements Writable {
-  private static final int VERSION_STORE_LIMIT = 2;
-  private static final int VERSION_STORE_OFFSET = 3;
-  private static final int VERSION_RESPONSE_SIZE = 4;
-  private static final byte SCAN_VERSION = VERSION_RESPONSE_SIZE;
+  private static final byte SCAN_VERSION = (byte)3;
+
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
@@ -94,9 +92,6 @@ public class Scan extends Operation implements Writable {
   private int storeLimit = -1;
   private int storeOffset = 0;
   private int caching = -1;
-  private long maxResponseSize = -1;
-  private long currentPartialResponseSize = 0;
-  private boolean partialRow = false;
   private boolean cacheBlocks = true;
   private Filter filter = null;
   private TimeRange tr = new TimeRange();
@@ -334,25 +329,6 @@ public class Scan extends Operation implements Writable {
   }
 
   /**
-   * This is technically not the max available memory setting, more of a hint. 
-   * We will add KV's till we exceed this setting if partialRow is true, 
-   * and add entire rows till we exceed this setting if partialRow is false.
-   */
-  public void setResponseSetting(long responseSize, boolean partialRow) {
-    this.maxResponseSize = responseSize;
-    this.partialRow = partialRow;
-  }
-  
-  /**
-   * Set currentPartialResponseSize to accumulated response size 
-   * for all the KeyValue pairs collected so far
-   * @param responseSize
-   */
-  public void setCurrentPartialResponseSize(long responseSize) {
-    this.currentPartialResponseSize = responseSize;
-  }
-  
-  /**
    * Apply the specified server-side filter when performing the Scan.
    * @param filter filter to run on the server
    * @return this
@@ -435,24 +411,6 @@ public class Scan extends Operation implements Writable {
     return this.batch;
   }
 
-  /**
-   * @return maximum response size that client can handle for a single call to next()
-   */
-  public long getMaxResponseSize() {
-    return this.maxResponseSize;
-  }
-  
-  public long getCurrentPartialResponseSize() {
-    return this.currentPartialResponseSize;
-  }
-  
-  /**
-   * @return whether the last row can be partially transferred for a single call to next()
-   */
-  public boolean getPartialRow() {
-      return this.partialRow;
-  }
-  
   /**
    * @return maximum number of values to return per row per CF
    */
@@ -565,8 +523,6 @@ public class Scan extends Operation implements Writable {
     map.put("caching", this.caching);
     map.put("cacheBlocks", this.cacheBlocks);
     map.put("storeLimit", this.storeLimit);
-    map.put("maxResponseSize", this.maxResponseSize);
-    map.put("partialRow", this.partialRow);
     List<Long> timeRange = new ArrayList<Long>();
     timeRange.add(this.tr.getMin());
     timeRange.add(this.tr.getMax());
@@ -623,15 +579,11 @@ public class Scan extends Operation implements Writable {
     this.stopRow = Bytes.readByteArray(in);
     this.maxVersions = in.readInt();
     this.batch = in.readInt();
-    if (version >= VERSION_STORE_LIMIT) {
+    if (version > 1) {
       this.storeLimit = in.readInt();
     }
-    if (version >= VERSION_STORE_OFFSET) {
+    if (version > 2) {
       this.storeOffset = in.readInt();
-    }
-    if (version >= VERSION_RESPONSE_SIZE) {
-      this.maxResponseSize = in.readLong();
-      this.partialRow = in.readBoolean();
     }
     this.caching = in.readInt();
     this.cacheBlocks = in.readBoolean();
@@ -659,29 +611,21 @@ public class Scan extends Operation implements Writable {
   public void write(final DataOutput out)
   throws IOException {
     byte version = (byte)1;
-    if (this.storeLimit != -1) {
-      version = (byte)Math.max(version, VERSION_STORE_LIMIT);
-    }
     if (this.storeOffset != 0) {
-      version = (byte)Math.max(version, VERSION_STORE_OFFSET);
-    }
-    if (this.maxResponseSize != -1) {
-      version = (byte)Math.max(version, VERSION_RESPONSE_SIZE);
+      version = SCAN_VERSION;
+    } else if (this.storeLimit != -1) {
+      version = 2;
     }
     out.writeByte(version);
     Bytes.writeByteArray(out, this.startRow);
     Bytes.writeByteArray(out, this.stopRow);
     out.writeInt(this.maxVersions);
     out.writeInt(this.batch);
-    if (version >= VERSION_STORE_LIMIT) {
+    if (version > 1) {
       out.writeInt(this.storeLimit);
     }
-    if (version >= VERSION_STORE_OFFSET) {
+    if (version > 2) {
       out.writeInt(this.storeOffset);
-    }
-    if (version >= VERSION_RESPONSE_SIZE) {
-      out.writeLong(this.maxResponseSize);
-      out.writeBoolean(this.partialRow);
     }
     out.writeInt(this.caching);
     out.writeBoolean(this.cacheBlocks);
