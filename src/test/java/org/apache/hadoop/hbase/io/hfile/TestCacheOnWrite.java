@@ -252,9 +252,18 @@ public class TestCacheOnWrite {
     String countByType = blockCountByType.toString();
     BlockType cachedDataBlockType =
         encoderType.encodeInCache ? BlockType.ENCODED_DATA : BlockType.DATA;
-    assertEquals("{" + cachedDataBlockType
-        + "=1379, LEAF_INDEX=173, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=24}",
-        countByType);
+
+    // Block size depends on whether encoding on disk has been enabled
+    // so number of blocks depends on this parameter as well.
+    if (encoder.getEncodingOnDisk() == DataBlockEncoding.PREFIX) {
+      assertEquals("{" + cachedDataBlockType
+          + "=965, LEAF_INDEX=121, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=17}",
+          countByType);
+    } else {
+      assertEquals("{" + cachedDataBlockType
+          + "=1379, LEAF_INDEX=173, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=24}",
+          countByType);
+    }
 
     reader.close();
   }

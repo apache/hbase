@@ -259,23 +259,6 @@ public class TestByteBufferUtils {
     assertFalse(ByteBufferUtils.arePartsEqual(buffer, 0, 3, 6, 3));
   }
 
-  /**
-   * Test serializing int to bytes
-   */
-  @Test
-  public void testPutInt() {
-    testPutInt(0);
-    testPutInt(Integer.MAX_VALUE);
-
-    for (int i = 0; i < 3; i++) {
-      testPutInt((128 << i) - 1);
-    }
-
-    for (int i = 0; i < 3; i++) {
-      testPutInt((128 << i));
-    }
-  }
-
   // Utility methods invoked from test methods
 
   private void testCompressedInt(int value) throws IOException {
@@ -291,20 +274,4 @@ public class TestByteBufferUtils {
     assertEquals(value, parsedValue);
   }
 
-  private void testPutInt(int value) {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    try {
-      ByteBufferUtils.putInt(baos, value);
-    } catch (IOException e) {
-      throw new RuntimeException("Bug in putIn()", e);
-    }
-
-    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-    DataInputStream dis = new DataInputStream(bais);
-    try {
-      assertEquals(dis.readInt(), value);
-    } catch (IOException e) {
-      throw new RuntimeException("Bug in test!", e);
-    }
-  }
 }

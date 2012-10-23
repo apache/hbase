@@ -88,7 +88,7 @@ public class EncodedDataBlock {
         if (decompressedData == null) {
           try {
             decompressedData = dataBlockEncoder.decodeKeyValues(
-                dis, includesMemstoreTS);
+                dis, 0, includesMemstoreTS, dis.available()); 
           } catch (IOException e) {
             throw new RuntimeException("Problem with data block encoder, " +
                 "most likely it requested more bytes than are available.", e);

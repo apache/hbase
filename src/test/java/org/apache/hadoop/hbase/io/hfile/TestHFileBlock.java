@@ -51,8 +51,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.DoubleOutputStream;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.WritableUtils;
@@ -60,8 +60,8 @@ import org.apache.hadoop.io.compress.Compressor;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
 public class TestHFileBlock {
@@ -105,11 +105,12 @@ public class TestHFileBlock {
 
   public void writeTestBlockContents(DataOutputStream dos) throws IOException {
     // This compresses really well.
-    for (int i = 0; i < 1000; ++i)
+    for (int i = 0; i < 1000; ++i) {
       dos.writeInt(i / 100);
+    }
   }
 
-  private int writeTestKeyValues(OutputStream dos, int seed)
+  private void writeTestKeyValues(OutputStream dos, Writer hbw, int seed)
       throws IOException {
     List<KeyValue> keyValues = new ArrayList<KeyValue>();
     Random randomizer = new Random(42l + seed); // just any fixed number
@@ -159,20 +160,19 @@ public class TestHFileBlock {
     }
 
     // sort it and write to stream
-    int totalSize = 0;
     Collections.sort(keyValues, KeyValue.COMPARATOR);
     DataOutputStream dataOutputStream = new DataOutputStream(dos);
     for (KeyValue kv : keyValues) {
-      totalSize += kv.getLength();
+      long memstoreTS = randomizer.nextLong();
+      hbw.appendEncodedKV(memstoreTS, kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength(),
+          kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
+
+      // Write raw key/value pair for validation.
       dataOutputStream.write(kv.getBuffer(), kv.getOffset(), kv.getLength());
       if (includesMemstoreTS) {
-        long memstoreTS = randomizer.nextLong();
         WritableUtils.writeVLong(dataOutputStream, memstoreTS);
-        totalSize += WritableUtils.getVIntSize(memstoreTS);
       }
     }
-
-    return totalSize;
   }
 
   public byte[] createTestV1Block(Compression.Algorithm algo)
@@ -194,7 +194,8 @@ public class TestHFileBlock {
     final BlockType blockType = BlockType.DATA;
     HFileBlock.Writer hbw = new HFileBlock.Writer(algo, null,
         includesMemstoreTS);
-    DataOutputStream dos = hbw.startWriting(blockType);
+    hbw.startWriting(blockType);
+    DataOutputStream dos = hbw.getUserDataStreamUnsafe();
     writeTestBlockContents(dos);
     byte[] headerAndData = hbw.getHeaderAndData();
     assertEquals(1000 * 4, hbw.getUncompressedSizeWithoutHeader());
@@ -290,9 +291,11 @@ public class TestHFileBlock {
             includesMemstoreTS);
         long totalSize = 0;
         for (int blockId = 0; blockId < 2; ++blockId) {
-          DataOutputStream dos = hbw.startWriting(BlockType.DATA);
-          for (int i = 0; i < 1234; ++i)
+          hbw.startWriting(BlockType.DATA);
+          DataOutputStream dos = hbw.getUserDataStreamUnsafe();
+          for (int i = 0; i < 1234; ++i) {
             dos.writeInt(i);
+          }
           hbw.writeHeaderAndData(os);
           totalSize += hbw.getOnDiskSizeWithHeader();
         }
@@ -343,6 +346,10 @@ public class TestHFileBlock {
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
         for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+          LOG.info("\n\nUsing includesMemstoreTS: " + includesMemstoreTS +
+              ", compression: " + algo +
+              ", pread: " + pread +
+              ", encoding: " + encoding + "\n");
           Path path = new Path(TEST_UTIL.getTestDir(), "blocks_v2_"
               + algo + "_" + encoding.toString());
           FSDataOutputStream os = fs.create(path);
@@ -359,6 +366,9 @@ public class TestHFileBlock {
 
             hbw.writeHeaderAndData(os);
             totalSize += hbw.getOnDiskSizeWithHeader();
+            LOG.info("Wrote block #" + blockId + ": " +
+                "onDiskSizeWithHeader=" + hbw.getOnDiskSizeWithHeader() + ", " +
+                "uncompressedSizeWithHeader=" + hbw.getUncompressedSizeWithHeader());
           }
           os.close();
 
@@ -370,19 +380,19 @@ public class TestHFileBlock {
 
           HFileBlock b;
           int pos = 0;
+          LOG.info("\n\nStarting to read blocks\n");
           for (int blockId = 0; blockId < numBlocks; ++blockId) {
             b = hbr.readBlockData(pos, -1, -1, pread);
             b.sanityCheck();
             pos += b.getOnDiskSizeWithHeader();
 
-            assertEquals((int) encodedSizes.get(blockId),
+            LOG.info("Read block #" + blockId + ": " + b);
+            assertEquals("Invalid encoded size:", (int) encodedSizes.get(blockId),
                 b.getUncompressedSizeWithoutHeader());
             ByteBuffer actualBuffer = b.getBufferWithoutHeader();
             if (encoding != DataBlockEncoding.NONE) {
               // We expect a two-byte big-endian encoding id.
-              assertEquals(0, actualBuffer.get(0));
-              assertEquals(encoding.getId(), actualBuffer.get(1));
-              actualBuffer.position(2);
+              assertEquals(encoding.getId(), actualBuffer.getShort());
               actualBuffer = actualBuffer.slice();
             }
 
@@ -390,8 +400,7 @@ public class TestHFileBlock {
             expectedBuffer.rewind();
 
             // test if content matches, produce nice message
-            assertBuffersEqual(expectedBuffer, actualBuffer, algo, encoding,
-                pread);
+            assertBuffersEqual(expectedBuffer, actualBuffer, algo, encoding, pread);
           }
           is.close();
         }
@@ -402,34 +411,24 @@ public class TestHFileBlock {
   private void writeEncodedBlock(DataBlockEncoding encoding,
       HFileBlock.Writer hbw, final List<Integer> encodedSizes,
       final List<ByteBuffer> encodedBlocks, int blockId) throws IOException {
-    DataOutputStream dos = hbw.startWriting(BlockType.DATA);
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    DoubleOutputStream doubleOutputStream =
-        new DoubleOutputStream(dos, baos);
+    hbw.startWriting(BlockType.DATA);
+    ByteArrayOutputStream rawKVBytes = new ByteArrayOutputStream();
 
-    final int rawBlockSize = writeTestKeyValues(doubleOutputStream,
-        blockId);
+    writeTestKeyValues(rawKVBytes, hbw, blockId);
 
-    ByteBuffer rawBuf = ByteBuffer.wrap(baos.toByteArray());
-    rawBuf.rewind();
+    byte[] rawBuf = rawKVBytes.toByteArray();
+    ByteArrayOutputStream encodedOut = new ByteArrayOutputStream();
+    encoding.getEncoder().encodeKeyValues(
+        new DataOutputStream(encodedOut),
+        ByteBuffer.wrap(rawBuf), includesMemstoreTS);
 
-    final int encodedSize;
-    final ByteBuffer encodedBuf;
-    if (encoding == DataBlockEncoding.NONE) {
-      encodedSize = rawBlockSize;
-      encodedBuf = rawBuf;
-    } else {
-      ByteArrayOutputStream encodedOut = new ByteArrayOutputStream();
-      encoding.getEncoder().encodeKeyValues(
-          new DataOutputStream(encodedOut),
-          rawBuf.duplicate(), includesMemstoreTS);
-      // We need to account for the two-byte encoding algorithm ID that
-      // comes after the 24-byte block header but before encoded KVs.
-      encodedSize = encodedOut.size() + DataBlockEncoding.ID_SIZE;
-      encodedBuf = ByteBuffer.wrap(encodedOut.toByteArray());
-    }
+    // We need to account for the two-byte encoding algorithm ID that
+    // comes after the 24-byte block header but before encoded KVs.
+    int encodedSize = encoding.encodingIdSize() + encodedOut.size();
+
+    LOG.info("Raw size: " + rawBuf.length + ", encoded size: " + encodedSize);
     encodedSizes.add(encodedSize);
-    encodedBlocks.add(encodedBuf);
+    encodedBlocks.add(ByteBuffer.wrap(encodedOut.toByteArray()));
   }
 
   private void assertBuffersEqual(ByteBuffer expectedBuffer,
@@ -442,25 +441,14 @@ public class TestHFileBlock {
           expectedBuffer.get(prefix) == actualBuffer.get(prefix)) {
         prefix++;
       }
-
-      fail(String.format(
-          "Content mismath for compression %s, encoding %s, " +
-          "pread %s, commonPrefix %d, expected %s, got %s",
+      assertEquals(String.format(
+          "Content mismatch for compression %s, encoding %s, " +
+          "pread %s, commonPrefix %d, expected length %d, actual length %d",
           compression, encoding, pread, prefix,
-          nextBytesToStr(expectedBuffer, prefix),
-          nextBytesToStr(actualBuffer, prefix)));
+          expectedBuffer.limit(), actualBuffer.limit()),
+          Bytes.toStringBinary(expectedBuffer),
+          Bytes.toStringBinary(actualBuffer));
     }
-  }
-
-  /**
-   * Convert a few next bytes in the given buffer at the given position to
-   * string. Used for error messages.
-   */
-  private static String nextBytesToStr(ByteBuffer buf, int pos) {
-    int maxBytes = buf.limit() - pos;
-    int numBytes = Math.min(16, maxBytes);
-    return Bytes.toStringBinary(buf.array(), buf.arrayOffset() + pos,
-        numBytes) + (numBytes < maxBytes ? "..." : "");
   }
 
   @Test
@@ -673,7 +661,8 @@ public class TestHFileBlock {
         blockTypeOrdinal = BlockType.DATA.ordinal();
       }
       BlockType bt = BlockType.values()[blockTypeOrdinal];
-      DataOutputStream dos = hbw.startWriting(bt);
+      hbw.startWriting(bt);
+      DataOutputStream dos = hbw.getUserDataStreamUnsafe(); 
       for (int j = 0; j < rand.nextInt(500); ++j) {
         // This might compress well.
         dos.writeShort(i + 1);

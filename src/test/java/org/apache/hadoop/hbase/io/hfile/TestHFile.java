@@ -114,14 +114,8 @@ public class TestHFile extends HBaseTestCase {
       ByteBuffer val = scanner.getValue();
       String keyStr = String.format(localFormatter, Integer.valueOf(i));
       String valStr = value + keyStr;
-      byte [] keyBytes = Bytes.toBytes(key);
-      assertTrue("bytes for keys do not match " + keyStr + " " +
-        Bytes.toString(Bytes.toBytes(key)),
-          Arrays.equals(Bytes.toBytes(keyStr), keyBytes));
-      byte [] valBytes = Bytes.toBytes(val);
-      assertTrue("bytes for vals do not match " + valStr + " " +
-        Bytes.toString(valBytes),
-        Arrays.equals(Bytes.toBytes(valStr), valBytes));
+      assertEquals("bytes for keys do not match", keyStr, Bytes.toStringBinaryRemaining(key));
+      assertEquals("bytes for vals do not match", valStr, Bytes.toStringBinaryRemaining(val));
       if (!scanner.next()) {
         break;
       }

@@ -2177,4 +2177,15 @@ public class KeyValue implements Writable, HeapSize {
     out.writeInt(this.length);
     out.write(this.bytes, this.offset, this.length);
   }
+
+  /**
+   * Returns the size of a key/value pair in bytes
+   * @param keyLength length of the key in bytes
+   * @param valueLength length of the value in bytes
+   * @return key/value pair size in bytes
+   */
+  public static int getKVSize(final int keyLength,
+      final int valueLength) {
+    return ROW_OFFSET + keyLength + valueLength;
+  }
 }

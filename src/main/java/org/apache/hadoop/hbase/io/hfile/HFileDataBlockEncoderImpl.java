@@ -209,4 +209,20 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
         inCache + ")";
   }
 
+  @Override
+  public DataBlockEncoder.EncodedWriter getEncodedWriter(DataOutputStream out,
+      boolean includesMemstoreTS) throws IOException {
+    if (onDisk != DataBlockEncoding.NONE) {
+      this.onDisk.writeIdInBytes(out);
+    }
+
+    return this.onDisk.getEncoder().createWriter(out, includesMemstoreTS);
+  }
+
+  @Override
+  public boolean finishEncoding(byte[] data, final int offset, final int length,
+      DataBlockEncoder.EncodedWriter writer) throws IOException {
+    int bytesToSkip = onDisk.encodingIdSize();
+    return writer.finishEncoding(data, offset + bytesToSkip, length - bytesToSkip);
+  }
 }

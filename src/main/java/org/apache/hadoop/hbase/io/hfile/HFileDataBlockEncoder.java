@@ -16,9 +16,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Pair;
@@ -82,4 +84,23 @@ public interface HFileDataBlockEncoder {
    */
   public DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction);
 
+  /**
+   * @return an incremental encoding writer that uses the given output stream
+   */
+  public DataBlockEncoder.EncodedWriter getEncodedWriter(DataOutputStream out,
+      boolean includesMemstoreTS) throws IOException;
+
+  /**
+   * Complete the encoding process
+   *
+   *
+   * @param data The encoded data so far
+   * @param offset Location of encoded bytes in data
+   * @param length Length of encoded bytes in data
+   * @param writer EncodedWriter used to insert encoded data
+   * @return true if the data was stored in an encoded format, false if unencoded
+   * @throws IOException
+   */
+  public boolean finishEncoding(byte[] data, final int offset, final int length,
+      DataBlockEncoder.EncodedWriter writer) throws IOException;
 }

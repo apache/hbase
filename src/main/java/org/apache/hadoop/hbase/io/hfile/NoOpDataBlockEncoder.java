@@ -16,8 +16,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Pair;
@@ -77,4 +80,16 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
     return getClass().getSimpleName();
   }
 
+  @Override
+  public DataBlockEncoder.EncodedWriter getEncodedWriter(DataOutputStream out,
+      boolean includesMemstoreTS) throws IOException {
+    return DataBlockEncoding.NONE.getEncoder().createWriter(out,
+        includesMemstoreTS);
+  }
+
+  @Override
+  public boolean finishEncoding(byte[] data, final int offset, final int length,
+      DataBlockEncoder.EncodedWriter writer) throws IOException {
+    return writer.finishEncoding(data, offset, length);
+  }
 }

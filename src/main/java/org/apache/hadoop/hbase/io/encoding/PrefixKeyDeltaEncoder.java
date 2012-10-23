@@ -16,14 +16,10 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.FilterOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -46,59 +42,12 @@ import org.apache.hadoop.io.RawComparator;
  */
 public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
-  private int addKV(int prevKeyOffset, DataOutputStream out,
-      ByteBuffer in, int prevKeyLength) throws IOException {
-    int keyLength = in.getInt();
-    int valueLength = in.getInt();
-
-    if (prevKeyOffset == -1) {
-      // copy the key, there is no common prefix with none
-      ByteBufferUtils.putCompressedInt(out, keyLength);
-      ByteBufferUtils.putCompressedInt(out, valueLength);
-      ByteBufferUtils.putCompressedInt(out, 0);
-      ByteBufferUtils.moveBufferToStream(out, in, keyLength + valueLength);
-    } else {
-      // find a common prefix and skip it
-      int common = ByteBufferUtils.findCommonPrefix(
-          in, prevKeyOffset + KeyValue.ROW_OFFSET,
-          in.position(),
-          Math.min(prevKeyLength, keyLength));
-
-      ByteBufferUtils.putCompressedInt(out, keyLength - common);
-      ByteBufferUtils.putCompressedInt(out, valueLength);
-      ByteBufferUtils.putCompressedInt(out, common);
-
-      ByteBufferUtils.skip(in, common);
-      ByteBufferUtils.moveBufferToStream(out, in, keyLength - common
-          + valueLength);
-    }
-
-    return keyLength;
-  }
-
   @Override
-  public void encodeKeyValues(DataOutputStream writeHere,
-      ByteBuffer in, boolean includesMemstoreTS) throws IOException {
-    in.rewind();
-    ByteBufferUtils.putInt(writeHere, in.limit());
-    int prevOffset = -1;
-    int offset = 0;
-    int keyLength = 0;
-    while (in.hasRemaining()) {
-      offset = in.position();
-      keyLength = addKV(prevOffset, writeHere, in, keyLength);
-      afterEncodingKeyValue(in, writeHere, includesMemstoreTS);
-      prevOffset = offset;
-    }
-  }
-
-  @Override
-  public ByteBuffer decodeKeyValues(DataInputStream source,
-      int allocHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
-          throws IOException {
+  public ByteBuffer decodeKeyValues(DataInputStream source, int allocHeaderLength,
+      boolean includesMemstoreTS, int totalEncodedSize) throws IOException {
+    int skipLastBytes = source.available() - totalEncodedSize;
     int decompressedSize = source.readInt();
-    ByteBuffer buffer = ByteBuffer.allocate(decompressedSize +
-        allocHeaderLength);
+    ByteBuffer buffer = ByteBuffer.allocate(decompressedSize + allocHeaderLength);
     buffer.position(allocHeaderLength);
     int prevKeyOffset = 0;
 
@@ -108,16 +57,15 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     }
 
     if (source.available() != skipLastBytes) {
-      throw new IllegalStateException("Read too many bytes.");
+      throw new IOException("Read too many bytes");
     }
 
     buffer.limit(buffer.position());
     return buffer;
   }
 
-  private int decodeKeyValue(DataInputStream source, ByteBuffer buffer,
-      int prevKeyOffset)
-          throws IOException, EncoderBufferTooSmallException {
+  private int decodeKeyValue(DataInputStream source, ByteBuffer buffer, int prevKeyOffset)
+      throws IOException, EncoderBufferTooSmallException {
     int keyLength = ByteBufferUtils.readCompressedInt(source);
     int valueLength = ByteBufferUtils.readCompressedInt(source);
     int commonLength = ByteBufferUtils.readCompressedInt(source);
@@ -162,8 +110,38 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public String toString() {
-    return PrefixKeyDeltaEncoder.class.getSimpleName();
+  public PrefixKeyDeltaEncoderWriter createWriter(DataOutputStream out,
+      boolean includesMemstoreTS) throws IOException {
+    return new PrefixKeyDeltaEncoderWriter(out, includesMemstoreTS);
+  }
+
+  /**
+   * A writer that incrementally performs Prefix Key Delta Encoding
+   */
+  private static class PrefixKeyDeltaEncoderWriter extends BufferedEncodedWriter<EncodingState> {
+    public PrefixKeyDeltaEncoderWriter(DataOutputStream out,
+        boolean includesMemstoreTS) throws IOException {
+      super(out, includesMemstoreTS);
+    }
+
+    @Override
+    EncodingState createState() {
+      return new EncodingState();
+    }
+
+    @Override
+    protected void updateInitial(byte[] key, int keyOffset, int keyLength, byte[] value,
+        int valueOffset, int valueLength) throws IOException {
+      int common = prevState == null ? 0 : getCommonPrefixLength(key, keyOffset, keyLength,
+          this.prevState.key, this.prevState.keyOffset, this.prevState.keyLength);
+
+      ByteBufferUtils.putCompressedInt(this.out, keyLength - common);
+      ByteBufferUtils.putCompressedInt(this.out, valueLength);
+      ByteBufferUtils.putCompressedInt(this.out, common);
+
+      this.out.write(key, keyOffset + common, keyLength - common);
+      this.out.write(value, valueOffset, valueLength);
+    }
   }
 
   @Override

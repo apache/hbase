@@ -48,27 +48,16 @@ public interface DataBlockEncoder {
 
   /**
    * Decode.
-   * @param source Encoded stream of KeyValues.
-   * @param includesMemstoreTS true if including memstore timestamp after every
-   *          key-value pair
-   * @return decoded block of KeyValues.
-   * @throws IOException If there is an error in source.
-   */
-  public ByteBuffer decodeKeyValues(DataInputStream source,
-      boolean includesMemstoreTS) throws IOException;
-
-  /**
-   * Decode.
    * @param source encoded stream of KeyValues.
    * @param allocateHeaderLength allocate this many bytes for the header.
-   * @param skipLastBytes Do not copy n last bytes.
    * @param includesMemstoreTS true if including memstore timestamp after every
    *          key-value pair
+   * @param totalEncodedSize the total size of the encoded data to read        
    * @return decoded block of KeyValues.
    * @throws IOException If there is an error in source.
    */
   public ByteBuffer decodeKeyValues(DataInputStream source,
-      int allocateHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
+      int allocateHeaderLength, boolean includesMemstoreTS, int totalEncodedSize)
       throws IOException;
 
   /**
@@ -90,6 +79,54 @@ public interface DataBlockEncoder {
    */
   public EncodedSeeker createSeeker(RawComparator<byte[]> comparator,
       boolean includesMemstoreTS);
+
+  /**
+   * Create an incremental writer
+   * @param out Where to write encoded data
+   * @param includesMemstoreTS True if including memstore timestamp after every
+   *          key-value pair
+   * @return
+   */
+  public EncodedWriter createWriter(DataOutputStream out,
+      boolean includesMemstoreTS) throws IOException;
+
+  /**
+   * An interface for performing incremental encoding
+   */
+  public static interface EncodedWriter {
+    /**
+     * Sets next key to insert for the writer and updates the encoded data
+     * in the stream if necessary.
+     * @param memstoreTS Current memstore timestamp
+     * @param key Source of key bytes
+     * @param keyOffset Offset of initial byte in key array
+     * @param keyLength Length of key bytes in key array
+     * @param value Source of value bytes
+     * @param valueOffset Offset of initial byte in value array
+     * @param valueLength Length of value bytes in value array
+     * @throws IOException
+     */
+    public void update(final long memstoreTS, final byte[] key,
+        final int keyOffset, final int keyLength, final byte[] value,
+        final int valueOffset, final int valueLength) throws IOException;
+
+    /**
+     * Completes the encoding process on the given byte array
+     * @param data The encoded stream as a byte array
+     * @param offset Offset of initial byte in data array
+     * @param length Length of the portion of the array containing encoded data
+     * @return True if encoding was performed
+     * @throws IOException
+     */
+    public boolean finishEncoding(byte[] data, final int offset,
+        final int length) throws IOException;
+
+    /**
+     * Called before writing anything to the stream to reserve space for the necessary metadata
+     * such as unencoded length.
+     */
+    void reserveMetadataSpace() throws IOException;
+  }
 
   /**
    * An interface which enable to seek while underlying data is encoded.

@@ -34,7 +34,18 @@ import org.apache.hadoop.hbase.util.Bytes;
 public enum DataBlockEncoding {
 
   /** Disable data block encoding. */
-  NONE(0, null),
+  NONE(0, new CopyKeyDataBlockEncoder()) {
+    @Override
+    public int inBlockMetadataSize() {
+      return 0; 
+    }
+
+    @Override
+    public int encodingIdSize() {
+      return 0;
+    }
+  },
+
   // id 1 is reserved for the BITSET algorithm to be added later
   PREFIX(2, new PrefixKeyDeltaEncoder()),
   DIFF(3, new DiffKeyDeltaEncoder()),
@@ -175,6 +186,18 @@ public enum DataBlockEncoding {
 
   public static DataBlockEncoding getEncodingById(short dataBlockEncodingId) {
     return idToEncoding.get(dataBlockEncodingId);
+  }
+
+  /**
+   * Size of metadata inside the encoded block. This metadata is not considered part of the block
+   * header, but is part of the block payload. It does not include the encoding id.
+   */
+  public int inBlockMetadataSize() {
+    return Bytes.SIZEOF_INT;  // unencoded size
+  }
+
+  public int encodingIdSize() {
+    return ID_SIZE;
   }
 
 }

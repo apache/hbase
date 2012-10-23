@@ -21,6 +21,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -35,11 +36,153 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
   private static int INITIAL_KEY_BUFFER_SIZE = 512;
 
-  @Override
-  public ByteBuffer decodeKeyValues(DataInputStream source,
-      boolean includesMemstoreTS) throws IOException {
-    return decodeKeyValues(source, 0, 0, includesMemstoreTS);
+  protected static int getCommonPrefixLength(byte[] a, int aOffset, int aLength,
+                                             byte[] b, int bOffset, int bLength) {
+    if (a == null || b == null) {
+      return 0;
+    }
+
+    int common = 0;
+    int minLength = Math.min(aLength, bLength);
+    while (common < minLength && a[aOffset + common] == b[bOffset + common]) {
+      common++;
+    }
+    return common;
   }
+
+  @Override
+  public void encodeKeyValues(DataOutputStream out,
+      ByteBuffer in, boolean includesMemstoreTS) throws IOException {
+    in.rewind();
+    if (shouldWriteUnencodedLength()) {
+      out.writeInt(in.remaining());
+    }
+    BufferedEncodedWriter writer = createWriter(out, includesMemstoreTS);
+    byte[] inputBytes = in.array();
+    int inputOffset = in.arrayOffset();
+
+    while (in.hasRemaining()) {
+      int keyLength = in.getInt();
+      int valueLength = in.getInt();
+      int inputPos = in.position();  // This is the buffer position after key/value length.
+      int keyOffset = inputOffset + inputPos;
+      int valueOffset = keyOffset + keyLength;
+
+      writer.updateInitial(inputBytes, keyOffset, keyLength, inputBytes, valueOffset, valueLength);
+      in.position(inputPos + keyLength + valueLength);
+
+      long memstoreTS = 0;
+      if (includesMemstoreTS) {
+        memstoreTS = ByteBufferUtils.readVLong(in);
+      }
+      writer.finishAddingKeyValue(memstoreTS, inputBytes, keyOffset, keyLength, inputBytes,
+          valueOffset, valueLength);
+    }
+  }
+
+  abstract static class BufferedEncodedWriter<STATE extends EncodingState>
+      implements EncodedWriter {
+
+    protected int unencodedLength;
+    protected final DataOutputStream out;
+    protected final boolean includesMemstoreTS;
+
+    protected STATE currentState;
+    protected STATE prevState;
+
+    /**
+     * Starts updating the writer with a new key/value pair. Unlike {@link #update(long, byte[],
+     * int, int, byte[], int, int)}, does not take a memstore timestamp.
+     */
+    protected abstract void updateInitial(final byte[] key,
+        final int keyOffset, final int keyLength, final byte[] value,
+        final int valueOffset, final int valueLength) throws IOException;
+
+    @Override
+    public void update(final long memstoreTS, final byte[] key,
+        final int keyOffset, final int keyLength, final byte[] value,
+        final int valueOffset, final int valueLength) throws IOException {
+      updateInitial(key, keyOffset, keyLength, value, valueOffset, valueLength);
+      finishAddingKeyValue(memstoreTS, key, keyOffset, keyLength, value, valueOffset, valueLength);
+    }
+
+    protected void finishAddingKeyValue(long memstoreTS, byte[] key, int keyOffset, int keyLength,
+        byte[] value, int valueOffset, int valueLength) throws IOException {
+      if (this.includesMemstoreTS) {
+        WritableUtils.writeVLong(this.out, memstoreTS);
+        unencodedLength += WritableUtils.getVIntSize(memstoreTS);
+      }
+      this.unencodedLength += KeyValue.getKVSize(keyLength, valueLength);
+
+      // Encoder state management.
+      // state may be null for the no-op encoder.
+      if (currentState != null) {
+        if (prevState == null) {
+          // Initially prevState is null, let us initialize it.
+          prevState = currentState;
+          currentState = createState();
+        } else {
+          // Both previous and current states exist. Swap them.
+          STATE tmp = currentState;
+          currentState = prevState;
+          prevState = tmp;
+        }
+
+        prevState.key = key;
+        prevState.value = value;
+        prevState.keyOffset = keyOffset;
+        prevState.valueOffset = valueOffset;
+        prevState.keyLength = keyLength;
+        prevState.valueLength = valueLength;
+      }
+    }
+
+    /**
+     * Forces writer to move all encoded data to a single stream and for all
+     * key/value pairs to agree on including the memstore timestamp
+     */
+    public BufferedEncodedWriter(DataOutputStream out, boolean includesMemstoreTS)
+        throws IOException {
+      Preconditions.checkNotNull(out);
+      this.unencodedLength = 0;
+      this.out = out;
+      this.includesMemstoreTS = includesMemstoreTS;
+      currentState = createState();
+      if (currentState == null &&
+          (Class) getClass() != CopyKeyDataBlockEncoder.UnencodedWriter.class) {
+        throw new NullPointerException("Encoder state is null for " + getClass().getName());
+      }
+    }
+
+    /**
+     * Reserves space for necessary metadata, such as unencoded size, in the encoded block. Called
+     * before we start writing encoded data.
+     */
+    @Override
+    public void reserveMetadataSpace() throws IOException {
+      out.writeInt(0);
+    }
+
+    /**
+     * @param data a byte array containing encoded data
+     * @param offset offset of encoded data in the given array
+     * @param length length of encoded data in the given array
+     * @return true if the resulting block is stored in the "encoded block" format
+     */
+    @Override
+    public boolean finishEncoding(byte[] data, final int offset, final int length)
+        throws IOException {
+      // Add unencoded length to front of array. This only happens for encoded blocks.
+      ByteBufferUtils.putInt(data, offset, length, this.unencodedLength);
+      return true;
+    }
+
+    abstract STATE createState();
+  }
+
+  @Override
+  public abstract BufferedEncodedWriter createWriter(DataOutputStream out,
+      boolean includesMemstoreTS) throws IOException;
 
   protected static class SeekerState {
     protected int valueOffset = -1;
@@ -297,6 +440,16 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
             memstoreTS + " after decoding a key/value");
       }
     }
+  }
+
+  /** Whether unencoded data length should be stored in the beginning of an encoded block */
+  boolean shouldWriteUnencodedLength() {
+    return true;
+  }
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName();
   }
 
 }

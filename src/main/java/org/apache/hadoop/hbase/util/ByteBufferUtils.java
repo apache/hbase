@@ -120,16 +120,24 @@ public final class ByteBufferUtils {
   }
 
    /**
-    * Put in output stream 32 bit integer (Big Endian byte order).
+    * Write a big-endian integer at a specific position in the output array
     * @param out Where to put integer.
+    * @param offset Offset in array.
+    * @param length Length of the part of the array we are allowed to write into, starting with the
+    *        specified offset.
     * @param value Value of integer.
-    * @throws IOException On stream error.
+    * @throws IOException When insufficient size to write.
     */
-   public static void putInt(OutputStream out, final int value)
-       throws IOException {
-     for (int i = Bytes.SIZEOF_INT - 1; i >= 0; --i) {
-       out.write((byte) (value >>> (i * 8)));
+   public static void putInt(byte[] out, final int offset, final int length,
+       final int v) throws IOException {
+     if (length < Bytes.SIZEOF_INT) {
+      throw new IOException("Not enough space to write an int: offset=" + offset + ", length="
+          + length);
      }
+     out[offset] = (byte) ((v >>> 24) & 0xFF);
+     out[offset + 1] = (byte) ((v >>> 16) & 0xFF);
+     out[offset + 2] = (byte) ((v >>> 8) & 0xFF);
+     out[offset + 3] = (byte) (v & 0xFF);
    }
 
   /**
@@ -156,8 +164,13 @@ public final class ByteBufferUtils {
   public static void copyBufferToStream(OutputStream out, ByteBuffer in,
       int offset, int length) throws IOException {
     if (in.hasArray()) {
-      out.write(in.array(), in.arrayOffset() + offset,
-          length);
+      try {
+        out.write(in.array(), in.arrayOffset() + offset,
+            length);
+      } catch (IndexOutOfBoundsException ex) {
+        throw new IOException("Array out of bounds: arrayOffset=" + in.arrayOffset() + ", " +
+            "offset=" + offset + ", length=" + in.array().length, ex); 
+      }
     } else {
       for (int i = 0; i < length; ++i) {
         out.write(in.get(offset + i));

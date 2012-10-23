@@ -72,8 +72,7 @@ public class TestDataBlockEncoders {
     // decode
     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
     DataInputStream dis = new DataInputStream(bais);
-    ByteBuffer actualDataset;
-    actualDataset = encoder.decodeKeyValues(dis, includesMemstoreTS);
+    ByteBuffer actualDataset = encoder.decodeKeyValues(dis, 0, includesMemstoreTS, dis.available());
 
     dataset.rewind();
     actualDataset.rewind();

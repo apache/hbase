@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Writes HFile format version 2.
@@ -282,9 +281,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    * @param vlength
    * @throws IOException
    */
-  private void append(final long memstoreTS, final byte[] key, final int koffset, final int klength,
-      final byte[] value, final int voffset, final int vlength)
-      throws IOException {
+  private void append(final long memstoreTS, final byte[] key,
+      final int koffset, final int klength, final byte[] value,
+      final int voffset, final int vlength) throws IOException {
     boolean dupKey = checkKey(key, koffset, klength);
     checkValue(value, voffset, vlength);
     if (!dupKey) {
@@ -296,18 +295,10 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
     // Write length of key and value and then actual key and value bytes.
     // Additionally, we may also write down the memstoreTS.
-    {
-      DataOutputStream out = fsBlockWriter.getUserDataStream();
-      out.writeInt(klength);
-      totalKeyLength += klength;
-      out.writeInt(vlength);
-      totalValueLength += vlength;
-      out.write(key, koffset, klength);
-      out.write(value, voffset, vlength);
-      if (this.includeMemstoreTS) {
-        WritableUtils.writeVLong(out, memstoreTS);
-      }
-    }
+    this.fsBlockWriter.appendEncodedKV(memstoreTS, key, koffset, klength, value,
+        voffset, vlength);
+    totalKeyLength += klength;
+    totalValueLength += vlength;
 
     // Are we the first key in this block?
     if (firstKeyInBlock == null) {

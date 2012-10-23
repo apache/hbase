@@ -21,6 +21,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -28,9 +29,9 @@ import org.apache.hadoop.io.RawComparator;
 
 /**
  * Compress using:
- * - store size of common prefix
+ * - store the size of common prefix
  * - save column family once, it is same within HFile
- * - use integer compression for key, value and prefix (7-bit encoding)
+ * - use integer compression for key, value and prefix lengths (7-bit encoding)
  * - use bits to avoid duplication key length, value length
  *   and type if it same as previous
  * - store in 3 bits length of timestamp field
@@ -56,7 +57,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
   static final int SHIFT_TIMESTAMP_LENGTH = 4;
   static final int FLAG_TIMESTAMP_SIGN = 1 << 7;
 
-  protected static class DiffCompressionState extends CompressionState {
+  protected static class DiffEncodingState extends EncodingState {
     long timestamp;
     byte[] familyNameWithSize;
 
@@ -66,141 +67,16 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     }
 
     @Override
-    void copyFrom(CompressionState state) {
+    void copyFrom(EncodingState state) {
       super.copyFrom(state);
-      DiffCompressionState state2 = (DiffCompressionState) state;
+      DiffEncodingState state2 = (DiffEncodingState) state;
       timestamp = state2.timestamp;
     }
   }
 
-  private void compressSingleKeyValue(DiffCompressionState previousState,
-      DiffCompressionState currentState, DataOutputStream out,
-      ByteBuffer in) throws IOException {
-    byte flag = 0;
-    int kvPos = in.position();
-    int keyLength = in.getInt();
-    int valueLength = in.getInt();
-
-    long timestamp;
-    long diffTimestamp = 0;
-    int diffTimestampFitsInBytes = 0;
-
-    int commonPrefix;
-
-    int timestampFitsInBytes;
-
-    if (previousState.isFirst()) {
-      currentState.readKey(in, keyLength, valueLength);
-      currentState.prevOffset = kvPos;
-      timestamp = currentState.timestamp;
-      if (timestamp < 0) {
-        flag |= FLAG_TIMESTAMP_SIGN;
-        timestamp = -timestamp;
-      }
-      timestampFitsInBytes = ByteBufferUtils.longFitsIn(timestamp);
-
-      flag |= (timestampFitsInBytes - 1) << SHIFT_TIMESTAMP_LENGTH;
-      commonPrefix = 0;
-
-      // put column family
-      in.mark();
-      ByteBufferUtils.skip(in, currentState.rowLength
-          + KeyValue.ROW_LENGTH_SIZE);
-      ByteBufferUtils.moveBufferToStream(out, in, currentState.familyLength
-          + KeyValue.FAMILY_LENGTH_SIZE);
-      in.reset();
-    } else {
-      // find a common prefix and skip it
-      commonPrefix =
-          ByteBufferUtils.findCommonPrefix(in, in.position(),
-              previousState.prevOffset + KeyValue.ROW_OFFSET, keyLength
-                  - KeyValue.TIMESTAMP_TYPE_SIZE);
-      // don't compress timestamp and type using prefix
-
-      currentState.readKey(in, keyLength, valueLength,
-          commonPrefix, previousState);
-      currentState.prevOffset = kvPos;
-      timestamp = currentState.timestamp;
-      boolean negativeTimestamp = timestamp < 0;
-      if (negativeTimestamp) {
-        timestamp = -timestamp;
-      }
-      timestampFitsInBytes = ByteBufferUtils.longFitsIn(timestamp);
-
-      if (keyLength == previousState.keyLength) {
-        flag |= FLAG_SAME_KEY_LENGTH;
-      }
-      if (valueLength == previousState.valueLength) {
-        flag |= FLAG_SAME_VALUE_LENGTH;
-      }
-      if (currentState.type == previousState.type) {
-        flag |= FLAG_SAME_TYPE;
-      }
-
-      // encode timestamp
-      diffTimestamp = previousState.timestamp - currentState.timestamp;
-      boolean minusDiffTimestamp = diffTimestamp < 0;
-      if (minusDiffTimestamp) {
-        diffTimestamp = -diffTimestamp;
-      }
-      diffTimestampFitsInBytes = ByteBufferUtils.longFitsIn(diffTimestamp);
-      if (diffTimestampFitsInBytes < timestampFitsInBytes) {
-        flag |= (diffTimestampFitsInBytes - 1) << SHIFT_TIMESTAMP_LENGTH;
-        flag |= FLAG_TIMESTAMP_IS_DIFF;
-        if (minusDiffTimestamp) {
-          flag |= FLAG_TIMESTAMP_SIGN;
-        }
-      } else {
-        flag |= (timestampFitsInBytes - 1) << SHIFT_TIMESTAMP_LENGTH;
-        if (negativeTimestamp) {
-          flag |= FLAG_TIMESTAMP_SIGN;
-        }
-      }
-    }
-
-    out.write(flag);
-
-    if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
-      ByteBufferUtils.putCompressedInt(out, keyLength);
-    }
-    if ((flag & FLAG_SAME_VALUE_LENGTH) == 0) {
-      ByteBufferUtils.putCompressedInt(out, valueLength);
-    }
-
-    ByteBufferUtils.putCompressedInt(out, commonPrefix);
-    ByteBufferUtils.skip(in, commonPrefix);
-
-    if (previousState.isFirst() ||
-        commonPrefix < currentState.rowLength + KeyValue.ROW_LENGTH_SIZE) {
-      int restRowLength =
-          currentState.rowLength + KeyValue.ROW_LENGTH_SIZE - commonPrefix;
-      ByteBufferUtils.moveBufferToStream(out, in, restRowLength);
-      ByteBufferUtils.skip(in, currentState.familyLength +
-          KeyValue.FAMILY_LENGTH_SIZE);
-      ByteBufferUtils.moveBufferToStream(out, in, currentState.qualifierLength);
-    } else {
-      ByteBufferUtils.moveBufferToStream(out, in,
-          keyLength - commonPrefix - KeyValue.TIMESTAMP_TYPE_SIZE);
-    }
-
-    if ((flag & FLAG_TIMESTAMP_IS_DIFF) == 0) {
-      ByteBufferUtils.putLong(out, timestamp, timestampFitsInBytes);
-    } else {
-      ByteBufferUtils.putLong(out, diffTimestamp, diffTimestampFitsInBytes);
-    }
-
-    if ((flag & FLAG_SAME_TYPE) == 0) {
-      out.write(currentState.type);
-    }
-    ByteBufferUtils.skip(in, KeyValue.TIMESTAMP_TYPE_SIZE);
-
-    ByteBufferUtils.moveBufferToStream(out, in, valueLength);
-  }
-
   private void uncompressSingleKeyValue(DataInputStream source,
-      ByteBuffer buffer,
-      DiffCompressionState state)
-          throws IOException, EncoderBufferTooSmallException {
+      ByteBuffer buffer, DiffEncodingState state)
+      throws IOException, EncoderBufferTooSmallException {
     // read the column family at the beginning
     if (state.isFirst()) {
       state.familyLength = source.readByte();
@@ -229,16 +105,14 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     }
     int commonPrefix = ByteBufferUtils.readCompressedInt(source);
 
-    // create KeyValue buffer and fill it prefix
     int keyOffset = buffer.position();
-    ByteBufferUtils.ensureSpace(buffer, keyLength + valueLength
-        + KeyValue.ROW_OFFSET);
+    ByteBufferUtils.ensureSpace(buffer, keyLength + valueLength + KeyValue.ROW_OFFSET);
     buffer.putInt(keyLength);
     buffer.putInt(valueLength);
 
     // copy common from previous key
     if (commonPrefix > 0) {
-      ByteBufferUtils.copyFromBufferToBuffer(buffer, buffer, state.prevOffset
+      ByteBufferUtils.copyFromBufferToBuffer(buffer, buffer, state.keyOffset
           + KeyValue.ROW_OFFSET, commonPrefix);
     }
 
@@ -305,49 +179,31 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     // copy value part
     ByteBufferUtils.copyFromStreamToBuffer(buffer, source, valueLength);
 
-    state.keyLength = keyLength;
-    state.valueLength = valueLength;
-    state.prevOffset = keyOffset;
+    state.keyOffset = keyOffset;
     state.timestamp = timestamp;
     state.type = type;
-    // state.qualifier is unused
-  }
-
-  @Override
-  public void encodeKeyValues(DataOutputStream out,
-      ByteBuffer in, boolean includesMemstoreTS) throws IOException {
-    in.rewind();
-    ByteBufferUtils.putInt(out, in.limit());
-    DiffCompressionState previousState = new DiffCompressionState();
-    DiffCompressionState currentState = new DiffCompressionState();
-    while (in.hasRemaining()) {
-      compressSingleKeyValue(previousState, currentState,
-          out, in);
-      afterEncodingKeyValue(in, out, includesMemstoreTS);
-
-      // swap previousState <-> currentState
-      DiffCompressionState tmp = previousState;
-      previousState = currentState;
-      currentState = tmp;
-    }
+    state.keyLength = keyLength;
+    state.valueLength = valueLength;
   }
 
   @Override
   public ByteBuffer decodeKeyValues(DataInputStream source,
-      int allocHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
+      int allocHeaderLength, boolean includesMemstoreTS, int totalEncodedSize)
       throws IOException {
+    int skipLastBytes = source.available() - totalEncodedSize;
+    Preconditions.checkState(skipLastBytes >= 0, "Requested to skip a negative number of bytes");
     int decompressedSize = source.readInt();
     ByteBuffer buffer = ByteBuffer.allocate(decompressedSize +
         allocHeaderLength);
     buffer.position(allocHeaderLength);
-    DiffCompressionState state = new DiffCompressionState();
+    DiffEncodingState state = new DiffEncodingState();
     while (source.available() > skipLastBytes) {
       uncompressSingleKeyValue(source, buffer, state);
       afterDecodingKeyValue(source, buffer, includesMemstoreTS);
     }
 
     if (source.available() != skipLastBytes) {
-      throw new IllegalStateException("Read too much bytes.");
+      throw new IOException("Read too many bytes");
     }
 
     return buffer;
@@ -402,8 +258,143 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public String toString() {
-    return DiffKeyDeltaEncoder.class.getSimpleName();
+  public DiffKeyDeltaEncoderWriter createWriter(DataOutputStream out,
+      boolean includesMemstoreTS) throws IOException {
+    return new DiffKeyDeltaEncoderWriter(out, includesMemstoreTS);
+  }
+
+  /**
+   * A writer that incrementally performs Fast Diff Delta Encoding
+   */
+  private static class DiffKeyDeltaEncoderWriter
+      extends BufferedEncodedWriter<DiffEncodingState> {
+
+    public DiffKeyDeltaEncoderWriter(DataOutputStream out,
+        boolean includesMemstoreTS) throws IOException {
+      super(out, includesMemstoreTS);
+    }
+
+    @Override
+    DiffEncodingState createState() {
+      return new DiffEncodingState();
+    }
+
+    @Override
+    public void updateInitial(final byte[] key,
+        final int keyOffset, final int keyLength, final byte[] value,
+        final int valueOffset, final int valueLength) throws IOException {
+      ByteBuffer keyBuffer = ByteBuffer.wrap(key, keyOffset, keyLength);
+      long timestamp;
+      long diffTimestamp = 0;
+      int diffTimestampFitsInBytes = 0;
+      byte flag = 0;
+      int commonPrefix;
+      int timestampFitsInBytes;
+
+      if (this.prevState == null) {
+        currentState.readKey(keyBuffer, keyLength, valueLength);
+        timestamp = currentState.timestamp;
+        if (timestamp < 0) {
+          flag |= FLAG_TIMESTAMP_SIGN;
+          timestamp = -timestamp;
+        }
+        timestampFitsInBytes = ByteBufferUtils.longFitsIn(timestamp);
+
+        flag |= (timestampFitsInBytes - 1) << SHIFT_TIMESTAMP_LENGTH;
+        commonPrefix = 0;
+
+        // put column family
+        this.out.write(key, keyOffset + currentState.rowLength
+            + KeyValue.ROW_LENGTH_SIZE, currentState.familyLength
+            + KeyValue.FAMILY_LENGTH_SIZE);
+      } else {
+        // find a common prefix and skip it
+        // don't compress timestamp and type using this prefix
+        commonPrefix = getCommonPrefixLength(key, keyOffset, keyLength -
+            KeyValue.TIMESTAMP_TYPE_SIZE, this.prevState.key,
+            this.prevState.keyOffset, this.prevState.keyLength -
+            KeyValue.TIMESTAMP_TYPE_SIZE);
+
+        currentState.readKey(keyBuffer, keyLength, valueLength,
+            commonPrefix, this.prevState);
+        timestamp = currentState.timestamp;
+        boolean negativeTimestamp = timestamp < 0;
+        if (negativeTimestamp) {
+          timestamp = -timestamp;
+        }
+        timestampFitsInBytes = ByteBufferUtils.longFitsIn(timestamp);
+
+        if (keyLength == this.prevState.keyLength) {
+          flag |= FLAG_SAME_KEY_LENGTH;
+        }
+        if (valueLength == this.prevState.valueLength) {
+          flag |= FLAG_SAME_VALUE_LENGTH;
+        }
+        if (currentState.type == this.prevState.type) {
+          flag |= FLAG_SAME_TYPE;
+        }
+
+        // encode timestamp
+        diffTimestamp = this.prevState.timestamp - currentState.timestamp;
+        boolean negativeDiffTimestamp = diffTimestamp < 0;
+        if (negativeDiffTimestamp) {
+          diffTimestamp = -diffTimestamp;
+        }
+        diffTimestampFitsInBytes = ByteBufferUtils.longFitsIn(diffTimestamp);
+        if (diffTimestampFitsInBytes < timestampFitsInBytes) {
+          flag |= (diffTimestampFitsInBytes - 1) << SHIFT_TIMESTAMP_LENGTH;
+          flag |= FLAG_TIMESTAMP_IS_DIFF;
+          if (negativeDiffTimestamp) {
+            flag |= FLAG_TIMESTAMP_SIGN;
+          }
+        } else {
+          flag |= (timestampFitsInBytes - 1) << SHIFT_TIMESTAMP_LENGTH;
+          if (negativeTimestamp) {
+            flag |= FLAG_TIMESTAMP_SIGN;
+          }
+        }
+      }
+
+      this.out.write(flag);
+
+      if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
+        ByteBufferUtils.putCompressedInt(this.out, keyLength);
+      }
+      if ((flag & FLAG_SAME_VALUE_LENGTH) == 0) {
+        ByteBufferUtils.putCompressedInt(this.out, valueLength);
+      }
+
+      ByteBufferUtils.putCompressedInt(this.out, commonPrefix);
+
+      if ((this.prevState == null) ||
+          commonPrefix < currentState.rowLength + KeyValue.ROW_LENGTH_SIZE) {
+        int restRowLength =
+            currentState.rowLength + KeyValue.ROW_LENGTH_SIZE - commonPrefix;
+        this.out.write(key, keyOffset + commonPrefix, restRowLength);
+        this.out.write(key, keyOffset + commonPrefix + restRowLength +
+            currentState.familyLength + KeyValue.FAMILY_LENGTH_SIZE,
+            currentState.qualifierLength);
+      } else {
+        this.out.write(key, keyOffset + commonPrefix, keyLength -
+            commonPrefix - KeyValue.TIMESTAMP_TYPE_SIZE);
+      }
+
+      if ((flag & FLAG_TIMESTAMP_IS_DIFF) == 0) {
+        ByteBufferUtils.putLong(this.out, timestamp, timestampFitsInBytes);
+      } else {
+        ByteBufferUtils.putLong(this.out, diffTimestamp,
+            diffTimestampFitsInBytes);
+      }
+
+      if ((flag & FLAG_SAME_TYPE) == 0) {
+        this.out.write(currentState.type);
+      }
+
+      this.out.write(value, valueOffset, valueLength);
+
+      this.currentState.key = key;
+      this.currentState.keyOffset = keyOffset;
+    }
   }
 
   protected static class DiffSeekerState extends SeekerState {
