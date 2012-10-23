@@ -290,6 +290,13 @@ public class TestBytes extends TestCase {
     assertEquals("", Bytes.readStringFixedSize(dis, 9));
   }
 
+  public void testToBytesBinaryTrailingBackslashes() throws Exception {
+    try {
+      Bytes.toBytesBinary("abc\\x00\\x01\\");
+    } catch (StringIndexOutOfBoundsException ex) {
+      fail("Illegal string access: " + ex.getMessage());
+    }
+  }
 
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =

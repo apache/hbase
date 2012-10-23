@@ -378,19 +378,12 @@ public class Bytes {
   }
 
   public static byte [] toBytesBinary(String in) {
-    // this may be bigger than we need, but lets be safe.
+    // this may be bigger than we need, but let's be safe.
     byte [] b = new byte[in.length()];
     int size = 0;
     for (int i = 0; i < in.length(); ++i) {
       char ch = in.charAt(i);
-      if (ch == '\\') {
-        // begin hex escape:
-        char next = in.charAt(i+1);
-        if (next != 'x') {
-          // invalid escape sequence, ignore this one.
-          b[size++] = (byte)ch;
-          continue;
-        }
+      if (ch == '\\' && in.length() > i+1 && in.charAt(i+1) == 'x') {
         // ok, take next 2 hex digits.
         char hd1 = in.charAt(i+2);
         char hd2 = in.charAt(i+3);
