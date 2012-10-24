@@ -67,6 +67,7 @@ public class CoprocessorClassLoader extends URLClassLoader {
     "sunw.",
     // Hadoop/HBase:
     "org.apache.hadoop",
+    "com.hadoop",
   };
   
   /**
