@@ -1248,7 +1248,7 @@ public class AssignmentManager extends ZooKeeperListener {
         long maxWaitTime = System.currentTimeMillis() +
           this.server.getConfiguration().
             getLong("hbase.regionserver.rpc.startup.waittime", 60000);
-        while (!this.server.isStopped()) {
+        for (int i = 1; i <= maximumAttempts && !server.isStopped(); i++) {
           try {
             List<RegionOpeningState> regionOpeningStateList = serverManager
               .sendRegionOpen(destination, regionOpenInfos);
@@ -1256,10 +1256,10 @@ public class AssignmentManager extends ZooKeeperListener {
               // Failed getting RPC connection to this server
               return false;
             }
-            for (int i = 0, n = regionOpeningStateList.size(); i < n; i++) {
-              RegionOpeningState openingState = regionOpeningStateList.get(i);
+            for (int k = 0, n = regionOpeningStateList.size(); k < n; k++) {
+              RegionOpeningState openingState = regionOpeningStateList.get(k);
               if (openingState != RegionOpeningState.OPENED) {
-                HRegionInfo region = regionOpenInfos.get(i).getFirst();
+                HRegionInfo region = regionOpenInfos.get(k).getFirst();
                 if (openingState == RegionOpeningState.ALREADY_OPENED) {
                   processAlreadyOpenedRegion(region, destination);
                 } else if (openingState == RegionOpeningState.FAILED_OPENING) {
@@ -1281,15 +1281,26 @@ public class AssignmentManager extends ZooKeeperListener {
               // No need to retry, the region server is a goner.
               return false;
             } else if (e instanceof ServerNotRunningYetException) {
-              // This is the one exception to retry.  For all else we should just fail
-              // the startup.
               long now = System.currentTimeMillis();
               if (now < maxWaitTime) {
                 LOG.debug("Server is not yet up; waiting up to " +
                   (maxWaitTime - now) + "ms", e);
                 Thread.sleep(100);
+                i--; // reset the try count
                 continue;
               }
+            } else if (e instanceof java.net.SocketTimeoutException
+                && this.serverManager.isServerOnline(destination)) {
+              // In case socket is timed out and the region server is still online,
+              // the openRegion RPC could have been accepted by the server and
+              // just the response didn't go through.  So we will retry to
+              // open the region on the same server.
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Bulk assigner openRegion() to " + destination
+                  + " has timed out, but the regions might"
+                  + " already be opened on it.", e);
+              }
+              continue;
             }
             throw e;
           }
@@ -1417,7 +1428,7 @@ public class AssignmentManager extends ZooKeeperListener {
     RegionPlan plan = null;
     long maxRegionServerStartupWaitTime = -1;
     HRegionInfo region = state.getRegion();
-    for (int i = 1; i <= this.maximumAttempts; i++) {
+    for (int i = 1; i <= maximumAttempts && !server.isStopped(); i++) {
       if (plan == null) { // Get a server for the region at first
         plan = getRegionPlan(region, forceNewPlan);
       }
@@ -1511,7 +1522,7 @@ public class AssignmentManager extends ZooKeeperListener {
             && this.serverManager.isServerOnline(plan.getDestination())) {
           // In case socket is timed out and the region server is still online,
           // the openRegion RPC could have been accepted by the server and
-          // just the response isn't gone through.  So we will retry to
+          // just the response didn't go through.  So we will retry to
           // open the region on the same server to avoid possible
           // double assignment.
           socketTimedOut = true;
