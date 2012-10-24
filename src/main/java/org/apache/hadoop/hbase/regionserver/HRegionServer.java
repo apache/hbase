@@ -2773,7 +2773,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       htd = htds.get(region.getTableNameAsString());
       if (htd == null) {
         htd = this.tableDescriptors.get(region.getTableName());
-        htds.put(region.getRegionNameAsString(), htd);
+        htds.put(region.getTableNameAsString(), htd);
       }
     }
     this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(),
