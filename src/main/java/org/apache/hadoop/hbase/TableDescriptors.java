@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Map;
 
@@ -29,22 +28,18 @@ public interface TableDescriptors {
   /**
    * @param tablename
    * @return HTableDescriptor for tablename
-   * @throws TableExistsException
-   * @throws FileNotFoundException
    * @throws IOException
    */
   public HTableDescriptor get(final String tablename)
-  throws FileNotFoundException, IOException;
+  throws IOException;
 
   /**
    * @param tablename
    * @return HTableDescriptor for tablename
-   * @throws TableExistsException
-   * @throws FileNotFoundException
    * @throws IOException
    */
   public HTableDescriptor get(final byte[] tablename)
-  throws FileNotFoundException, IOException;
+  throws IOException;
 
   /**
    * Get Map of all HTableDescriptors. Populates the descriptor cache as a
