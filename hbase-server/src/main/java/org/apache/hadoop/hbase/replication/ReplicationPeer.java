@@ -153,7 +153,7 @@ public class ReplicationPeer implements Abortable, Closeable {
 
   @Override
   public void abort(String why, Throwable e) {
-    LOG.warn("The ReplicationPeer coresponding to peer " + clusterKey
+    LOG.fatal("The ReplicationPeer coresponding to peer " + clusterKey
         + " was aborted for the following reason(s):" + why, e);
   }
 
