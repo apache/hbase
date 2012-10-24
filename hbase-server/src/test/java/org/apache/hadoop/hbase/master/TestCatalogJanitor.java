@@ -25,7 +25,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Map;
 import java.util.SortedMap;
@@ -267,13 +266,13 @@ public class TestCatalogJanitor {
 
         @Override
         public HTableDescriptor get(byte[] tablename)
-        throws FileNotFoundException, IOException {
+        throws IOException {
           return get(Bytes.toString(tablename));
         }
 
         @Override
         public HTableDescriptor get(String tablename)
-        throws FileNotFoundException, IOException {
+        throws IOException {
           return createHTableDescriptor();
         }
 
