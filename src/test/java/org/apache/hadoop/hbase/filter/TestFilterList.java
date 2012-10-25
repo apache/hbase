@@ -234,6 +234,77 @@ public class TestFilterList extends TestCase {
   }
 
   /**
+   * Test filterKeyValue logic.
+   * @throws Exception
+   */
+  public void testFilterKeyValue() throws Exception {
+    Filter includeFilter = new FilterBase() {
+      @Override
+      public Filter.ReturnCode filterKeyValue(KeyValue v) {
+        return Filter.ReturnCode.INCLUDE;
+      }
+
+      @Override
+      public void readFields(DataInput arg0) throws IOException {}
+
+      @Override
+      public void write(DataOutput arg0) throws IOException {}
+    };
+
+    Filter alternateFilter = new FilterBase() {
+      boolean returnInclude = true;
+
+      @Override
+      public Filter.ReturnCode filterKeyValue(KeyValue v) {
+        Filter.ReturnCode returnCode = returnInclude ? Filter.ReturnCode.INCLUDE :
+                                                       Filter.ReturnCode.SKIP;
+        returnInclude = !returnInclude;
+        return returnCode;
+      }
+
+      @Override
+      public void readFields(DataInput arg0) throws IOException {}
+
+      @Override
+      public void write(DataOutput arg0) throws IOException {}
+    };
+
+    Filter alternateIncludeFilter = new FilterBase() {
+      boolean returnIncludeOnly = false;
+
+      @Override
+      public Filter.ReturnCode filterKeyValue(KeyValue v) {
+        Filter.ReturnCode returnCode = returnIncludeOnly ? Filter.ReturnCode.INCLUDE :
+                                                           Filter.ReturnCode.INCLUDE_AND_NEXT_COL;
+        returnIncludeOnly = !returnIncludeOnly;
+        return returnCode;
+      }
+
+      @Override
+      public void readFields(DataInput arg0) throws IOException {}
+
+      @Override
+      public void write(DataOutput arg0) throws IOException {}
+    };
+
+    // Check must pass one filter.
+    FilterList mpOnefilterList = new FilterList(Operator.MUST_PASS_ONE,
+        Arrays.asList(new Filter[] { includeFilter, alternateIncludeFilter, alternateFilter }));
+    // INCLUDE, INCLUDE, INCLUDE_AND_NEXT_COL.
+    assertEquals(Filter.ReturnCode.INCLUDE_AND_NEXT_COL, mpOnefilterList.filterKeyValue(null));
+    // INCLUDE, SKIP, INCLUDE. 
+    assertEquals(Filter.ReturnCode.INCLUDE, mpOnefilterList.filterKeyValue(null));
+
+    // Check must pass all filter.
+    FilterList mpAllfilterList = new FilterList(Operator.MUST_PASS_ALL,
+        Arrays.asList(new Filter[] { includeFilter, alternateIncludeFilter, alternateFilter }));
+    // INCLUDE, INCLUDE, INCLUDE_AND_NEXT_COL.
+    assertEquals(Filter.ReturnCode.INCLUDE_AND_NEXT_COL, mpAllfilterList.filterKeyValue(null));
+    // INCLUDE, SKIP, INCLUDE. 
+    assertEquals(Filter.ReturnCode.SKIP, mpAllfilterList.filterKeyValue(null));
+  }
+
+  /**
    * Test pass-thru of hints.
    */
   public void testHintPassThru() throws Exception {
