@@ -41,13 +41,15 @@ public class OfflineCallback implements StringCallback {
   private final ExistCallback callBack;
   private final ZooKeeperWatcher zkw;
   private final ServerName destination;
+  private final AtomicInteger counter;
 
-  OfflineCallback(final RegionStates regionStates,
-      final ZooKeeperWatcher zkw, final ServerName destination,
-      final AtomicInteger counter, final Map<String, Integer> offlineNodesVersions) {
+  OfflineCallback(final ZooKeeperWatcher zkw,
+      final ServerName destination, final AtomicInteger counter,
+      final Map<String, Integer> offlineNodesVersions) {
     this.callBack = new ExistCallback(
-      regionStates, counter, destination, offlineNodesVersions);
+      destination, counter, offlineNodesVersions);
     this.destination = destination;
+    this.counter = counter;
     this.zkw = zkw;
   }
 
@@ -59,13 +61,12 @@ public class OfflineCallback implements StringCallback {
       // This is result code.  If non-zero, need to resubmit.
       LOG.warn("rc != 0 for " + path + " -- retryable connectionloss -- " +
         "FIX see http://wiki.apache.org/hadoop/ZooKeeper/FAQ#A2");
-      this.zkw.abort("Connectionloss writing unassigned at " + path +
-        ", rc=" + rc, null);
+      this.counter.addAndGet(1);
       return;
     }
+
     if (LOG.isDebugEnabled()) {
-      LOG.debug("rs=" + (RegionState)ctx
-        + ", server=" + this.destination.toString());
+      LOG.debug("rs=" + ctx + ", server=" + destination);
     }
     // Async exists to set a watcher so we'll get triggered when
     // unassigned node changes.
@@ -80,17 +81,15 @@ public class OfflineCallback implements StringCallback {
   static class ExistCallback implements StatCallback {
     private final Log LOG = LogFactory.getLog(ExistCallback.class);
     private final Map<String, Integer> offlineNodesVersions;
-    private final RegionStates regionStates;
     private final AtomicInteger counter;
     private ServerName destination;
 
-    ExistCallback(final RegionStates regionStates,
-        final AtomicInteger counter, ServerName destination,
+    ExistCallback(final ServerName destination,
+        final AtomicInteger counter,
         final Map<String, Integer> offlineNodesVersions) {
       this.offlineNodesVersions = offlineNodesVersions;
-      this.regionStates = regionStates;
-      this.counter = counter;
       this.destination = destination;
+      this.counter = counter;
     }
 
     @Override
@@ -99,24 +98,16 @@ public class OfflineCallback implements StringCallback {
         // This is result code.  If non-zero, need to resubmit.
         LOG.warn("rc != 0 for " + path + " -- retryable connectionloss -- " +
           "FIX see http://wiki.apache.org/hadoop/ZooKeeper/FAQ#A2");
+        this.counter.addAndGet(1);
         return;
       }
-      RegionState state = (RegionState)ctx;
+
       if (LOG.isDebugEnabled()) {
-        LOG.debug("rs=" + state
-          + ", server=" + this.destination.toString());
+        LOG.debug("rs=" + ctx + ", server=" + destination);
       }
-      // Transition RegionState to PENDING_OPEN here in master; means we've
-      // sent the open.  We're a little ahead of ourselves here since we've not
-      // yet sent out the actual open but putting this state change after the
-      // call to open risks our writing PENDING_OPEN after state has been moved
-      // to OPENING by the regionserver.
-      HRegionInfo region = state.getRegion();
+      HRegionInfo region = ((RegionState)ctx).getRegion();
       offlineNodesVersions.put(
         region.getEncodedName(), Integer.valueOf(stat.getVersion()));
-      regionStates.updateRegionState(region,
-        RegionState.State.PENDING_OPEN, destination);
-
       this.counter.addAndGet(1);
     }
   }
