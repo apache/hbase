@@ -32,7 +32,7 @@
       <section xml:id="feature_branches">
         <title>Feature Branches</title>
         <para>Feature Branches are easy to make.  You do not have to be a committer to make one.  Just request the name of your branch be added to JIRA up on the
-        developer's mailing list and a committer will add it for you.  Thereafter you can file issues against your feature branch in HBase JIRA.  Your code you
+        developer's mailing list and a committer will add it for you.  Thereafter you can file issues against your feature branch in Apache HBase (TM) JIRA.  Your code you
         keep elsewhere -- it should be public so it can be observed -- and you can update dev mailing list on progress.   When the feature is ready for commit,
         3 +1s from committers will get your feature merged<footnote><para>See <link xlink:href="http://search-hadoop.com/m/asM982C5FkS1">HBase, mail # dev - Thoughts about large feature dev branches</link></para></footnote>
         </para>
@@ -45,14 +45,14 @@ suggested policy rather than a hard requirement.  We want to try it
 first to see if it works before we cast it in stone.
         </para>
 <para>
-HBase is made of
+Apache HBase is made of
 <link xlink:href="https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel">components</link>.
 Components have one or more <xref linkend="OWNER" />s.  See the 'Description' field on the 
 <link xlink:href="https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel">components</link>
 JIRA page for who the current owners are by component.
 </para>
 <para>
-Patches that fit within the scope of a single HBase component require,
+Patches that fit within the scope of a single Apache HBase component require,
 at least, a +1 by one of the component's owners before commit. If
 owners are absent -- busy or otherwise -- two +1s by non-owners will
 suffice.
@@ -74,8 +74,7 @@ until the justification for the -1 is addressed.
       <section xml:id="OWNER">
         <title>Component Owner</title>
         <para>
-Component owners are listed in the description field on this JIRA HBase
-<link xlink:href="https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel">components</link>
+Component owners are listed in the description field on this Apache HBase JIRA <link xlink:href="https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel">components</link>
 page.  The owners are listed in the 'Description' field rather than in the 'Component
 Lead' field because the latter only allows us list one individual
 whereas it is encouraged that components have multiple owners.
@@ -83,7 +82,7 @@ whereas it is encouraged that components have multiple owners.
 <para>
 Owners are volunteers who are (usually, but not necessarily) expert in
 their component domain and may have an agenda on how they think their
-HBase component should evolve.
+Apache HBase component should evolve.
 </para>
 <para>
 Duties include:

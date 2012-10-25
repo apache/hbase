@@ -26,13 +26,13 @@
  * limitations under the License.
  */
 -->
-    <title>Building and Developing HBase</title>
-    <para>This chapter will be of interest only to those building and developing HBase (i.e., as opposed to
+    <title>Building and Developing Apache HBase (TM)</title>
+    <para>This chapter will be of interest only to those building and developing Apache HBase (TM) (i.e., as opposed to
     just downloading the latest distribution).
     </para>
     <section xml:id="repos">
-      <title>HBase Repositories</title>
-      <para>There are two different repositories for HBase: Subversion (SVN) and Git. The former is the system of record for committers, but the latter is easier to work with to build and contribute. SVN updates get automatically propagated to the Git repo.</para>
+      <title>Apache HBase Repositories</title>
+      <para>There are two different repositories for Apache HBase: Subversion (SVN) and Git. The former is the system of record for committers, but the latter is easier to work with to build and contribute. SVN updates get automatically propagated to the Git repo.</para>
       <section xml:id="svn">
         <title>SVN</title>
         <programlisting>
@@ -140,7 +140,7 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
     </section>
 
         <section xml:id="build">
-       <title>Building HBase</title>
+       <title>Building Apache HBase</title>
       <section xml:id="build.basic">
        <title>Basic Compile</title>
        <para>Thanks to maven, building HBase is pretty easy. You can read about the various maven commands in <xref linkend="maven.build.commands"/>, but the simplest command to compile HBase from its java source code is:
@@ -176,7 +176,7 @@ mvn clean package -DskipTests
       </section>
     </section> <!--  build -->
       <section xml:id="mvn_repo">
-        <title>Adding an HBase release to Apache's Maven Repository</title>
+        <title>Adding an Apache HBase release to Apache's Maven Repository</title>
         <para>Follow the instructions at
         <link xlink:href="http://www.apache.org/dev/publishing-maven-artifacts.html">Publishing Maven Artifacts</link> after
         reading the below miscellaney.
@@ -313,7 +313,7 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
     <title>Updating hbase.apache.org</title>
       <section xml:id="hbase.org.site.contributing">
       <title>Contributing to hbase.apache.org</title>
-      <para>The HBase apache web site (including this reference guide) is maintained as part of the main HBase source tree, under <filename>/src/docbkx</filename> and <filename>/src/site</filename>. The former is this reference guide; the latter, in most cases, are legacy pages that are in the process of being merged into the docbkx tree.</para>
+      <para>The Apache HBase apache web site (including this reference guide) is maintained as part of the main Apache HBase source tree, under <filename>/src/docbkx</filename> and <filename>/src/site</filename>. The former is this reference guide; the latter, in most cases, are legacy pages that are in the process of being merged into the docbkx tree.</para>
       <para>To contribute to the reference guide, edit these files and submit them as a patch (see <xref linkend="submitting.patches"/>). Your Jira should contain a summary of the changes in each section (see <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6081">HBASE-6081</link> for an example).</para>
       <para>To generate the site locally while you're working on it, run:
       <programlisting>mvn site</programlisting>
@@ -337,8 +337,8 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
 HBase have a character not usually seen in other projects.</para>
 
 <section xml:id="hbase.moduletests">
-<title>HBase Modules</title>
-<para>As of 0.96, HBase is split into multiple modules which creates "interesting" rules for
+<title>Apache HBase Modules</title>
+<para>As of 0.96, Apache HBase is split into multiple modules which creates "interesting" rules for
 how and where tests are written. If you are writting code for <classname>hbase-server</classname>, see
 <xref linkend="hbase.unittests"/> for how to write your tests; these tests can spin
 up a minicluster and will need to be categorized. For any other module, for example
@@ -366,7 +366,7 @@ given the dependency tree).</para>
 
 <section xml:id="hbase.unittests">
 <title>Unit Tests</title>
-<para>HBase unit tests are subdivided into four categories: small, medium, large, and
+<para>Apache HBase unit tests are subdivided into four categories: small, medium, large, and
 integration with corresponding JUnit <link xlink:href="http://www.junit.org/node/581">categories</link>:
 <classname>SmallTests</classname>, <classname>MediumTests</classname>,
 <classname>LargeTests</classname>, <classname>IntegrationTests</classname>.
@@ -419,14 +419,14 @@ the developer machine as well.
 </para>
 </section>
 <para>
-HBase uses a patched maven surefire plugin and maven profiles to implement
+Apache HBase uses a patched maven surefire plugin and maven profiles to implement
 its unit test characterizations.
 </para>
 </section>
 
 <section xml:id="hbase.unittests.cmds">
 <title>Running tests</title>
-<para>Below we describe how to run the HBase junit categories.</para>
+<para>Below we describe how to run the Apache HBase junit categories.</para>
 
 <section xml:id="hbase.unittests.cmds.test">
 <title>Default: small and medium category tests
@@ -614,7 +614,7 @@ mvn compile
 
        <section xml:id="maven.build.hadoop">
           <title>Building against various hadoop versions.</title>
-          <para>As of 0.96, HBase supports building against hadoop versions: 1.0.3, 2.0.0-alpha and 3.0.0-SNAPSHOT.
+          <para>As of 0.96, Apache HBase supports building against Apache Hadoop versions: 1.0.3, 2.0.0-alpha and 3.0.0-SNAPSHOT.
           By default, we will build with Hadoop-1.0.3. To change the version to run with Hadoop-2.0.0-alpha, you would run:</para>
          <programlisting>mvn -Dhadoop.profile=2.0 ...</programlisting>
          <para>
@@ -625,7 +625,7 @@ mvn compile
          Similarly, for 3.0, you would just replace the profile value. Note that Hadoop-3.0.0-SNAPSHOT does not currently have a deployed maven artificat - you will need to build and install your own in your local maven repository if you want to run against this profile.
          </para>
          <para>
-         In earilier verions of HBase, you can build against older versions of hadoop, notably, Hadoop 0.22.x and 0.23.x.
+         In earilier verions of Apache HBase, you can build against older versions of Apache Hadoop, notably, Hadoop 0.22.x and 0.23.x.
          If you are running, for example HBase-0.94 and wanted to build against Hadoop 0.23.x, you would run with:</para>
           <programlisting>mvn -Dhadoop.profile=22 ...</programlisting>
       </section>
@@ -633,9 +633,9 @@ mvn compile
 
     <section xml:id="getting.involved">
         <title>Getting Involved</title>
-        <para>HBase gets better only when people contribute!
+        <para>Apache HBase gets better only when people contribute!
         </para>
-        <para>As HBase is an Apache Software Foundation project, see <xref linkend="asf"/> for more information about how the ASF functions.
+        <para>As Apache HBase is an Apache Software Foundation project, see <xref linkend="asf"/> for more information about how the ASF functions.
         </para>
         <section xml:id="mailing.list">
           <title>Mailing Lists</title>
@@ -748,7 +748,7 @@ mvn compile
 
           <section xml:id="run.insitu">
            <title>Running In-Situ</title>
-           <para>If you are developing HBase, frequently it is useful to test your changes against a more-real cluster than what you find in unit tests. In this case, HBase can be run directly from the source in local-mode.
+           <para>If you are developing Apache HBase, frequently it is useful to test your changes against a more-real cluster than what you find in unit tests. In this case, HBase can be run directly from the source in local-mode.
            All you need to do is run:
            </para>
            <programlisting>${HBASE_HOME}/bin/start-hbase.sh</programlisting>
@@ -768,7 +768,7 @@ mvn compile
           <para>If you are new to submitting patches to open source or new to submitting patches to Apache,
           I'd suggest you start by reading the <link xlink:href="http://commons.apache.org/patches.html">On Contributing Patches</link>
           page from <link xlink:href="http://commons.apache.org/">Apache Commons Project</link>.  Its a nice overview that
-          applies equally to the HBase Project.</para>
+          applies equally to the Apache HBase Project.</para>
           <section xml:id="submitting.patches.create">
             <title>Create Patch</title>
           <para>See the aforementioned Apache Commons link for how to make patches against a checked out subversion
@@ -781,8 +781,8 @@ mvn compile
           </section>
           <section xml:id="submitting.patches.naming">
             <title>Patch File Naming</title>
-          <para>The patch file should have the HBase Jira ticket in the name.  For example, if a patch was submitted for <filename>Foo.java</filename>, then
-          a patch file called <filename>Foo_HBASE_XXXX.patch</filename> would be acceptable where XXXX is the HBase Jira number.
+          <para>The patch file should have the Apache HBase Jira ticket in the name.  For example, if a patch was submitted for <filename>Foo.java</filename>, then
+          a patch file called <filename>Foo_HBASE_XXXX.patch</filename> would be acceptable where XXXX is the Apache HBase Jira number.
           </para>
           <para>If you generating from a branch, then including the target branch in the filename is advised, e.g., <filename>HBASE-XXXX-0.90.patch</filename>.
           </para>
@@ -805,7 +805,7 @@ mvn compile
             <para>Once attached to the ticket, click "Submit Patch" and
             the status of the ticket will change.  Committers will review submitted patches for inclusion into the codebase.  Please
             understand that not every patch may get committed, and that feedback will likely be provided on the patch.  Fear not, though,
-            because the HBase community is helpful!
+            because the Apache HBase community is helpful!
             </para>
          </section>
 
@@ -932,7 +932,7 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
         <section xml:id="committing.patches">
           <title>Committing Patches</title>
           <para>
-          Committers do this.  See <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HowToCommit">How To Commit</link> in the HBase wiki.
+          Committers do this.  See <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HowToCommit">How To Commit</link> in the Apache HBase wiki.
           </para>
           <para>Commiters will also resolve the Jira, typically after the patch passes a build.
           </para>

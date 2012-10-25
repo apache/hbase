@@ -16,12 +16,15 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title>Installing HBase on Windows using Cygwin</title>
+    <title>Apache HBase&#153; Sponsors</title>
   </properties>
 
 <body>
 <section name="Sponsors">
-<p>The below companies have been gracious enough to provide their commerical tool offerings free of charge to the Apache HBase project.
+    <p>First off, thanks to <a href="http://www.apache.org/foundation/thanks.html">all who sponsor</a>
+       our parent, the Apache Software Foundation.
+    </p>
+<p>The below companies have been gracious enough to provide their commerical tool offerings free of charge to the Apache HBase&#153; project.
 <ul>
 	<li>The crew at <a href="http://www.ej-technologies.com/">ej-technologies</a> have
         been let us use <a href="http://www.ej-technologies.com/products/jprofiler/overview.html">JProfiler</a> for years now.</li>
@@ -29,6 +32,10 @@
         given us a license for <a href="http://headwaysoftware.com/products/?code=Restructure101">Restructure101</a>
         so we can untangle our interdependency mess.</li>
 </ul>
+</p>
+</section>
+<section name="Sponsoring the Apache Software Foundation">
+<p>To contribute to the Apache Software Foundation, a good idea in our opinion, see the <a href="http://www.apache.org/foundation/sponsorship.html">ASF Sponsorship</a> page.
 </p>
 </section>
 </body>

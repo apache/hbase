@@ -535,7 +535,10 @@
       <hr/>
     </div>
     <div id="footer">
-      <div class="xright"> #publishDate( "right" $decoration.publishDate $decoration.version )&nbsp;| Copyright &#169;#copyright()All Rights Reserved.  </div>
+       <div class="xright">#publishDate( "right" $decoration.publishDate $decoration.version )&nbsp;
+        </div>
+        <div class="xright">Copyright &#169;<a href="http://www.apache.org">#copyright()</a>All Rights Reserved.  Apache Hadoop, Hadoop, HDFS, HBase and the HBase project logo are trademarks of the Apache Software Foundation.
+        </div>
       <div class="clear">
         <hr/>
       </div>

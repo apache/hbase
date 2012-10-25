@@ -16,11 +16,11 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title>Other HBase Resources</title>
+    <title>Other Apache HBase (TM) Resources</title>
   </properties>
 
 <body>
-<section name="Other HBase Resources">
+<section name="Other Apache HBase Resources">
 <section name="Books">
 <section name="HBase: The Definitive Guide">
 <p><a href="http://shop.oreilly.com/product/0636920014348.do">HBase: The Definitive Guide <i>Random Access to Your Planet-Size Data</i></a> by Lars George. Publisher: O'Reilly Media, Released: August 2011, Pages: 556.</p>

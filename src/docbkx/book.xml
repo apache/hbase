@@ -29,7 +29,7 @@
   <info>
 
     <title><link xlink:href="http://www.hbase.org">
-    Apache HBase Reference Guide
+    The Apache HBase&#153; Reference Guide
     </link></title>
     <subtitle><link xlink:href="http://www.hbase.org">
            <inlinemediaobject>
@@ -39,10 +39,13 @@
            </inlinemediaobject>
        </link>
     </subtitle>
-      <copyright><year>2012</year><holder>Apache Software Foundation</holder></copyright>
+    <copyright><year>2012</year><holder>Apache Software Foundation.
+        All Rights Reserved.  Apache Hadoop, Hadoop, MapReduce, HDFS, Zookeeper, HBase, and the HBase project logo are trademarks of the Apache Software Foundation.
+        </holder>
+    </copyright>
       <abstract>
     <para>This is the official reference guide of
-    <link xlink:href="http://www.hbase.org">Apache HBase</link>,
+    <link xlink:href="http://www.hbase.org">Apache HBase (TM)</link>,
     a distributed, versioned, column-oriented database built on top of
     <link xlink:href="http://hadoop.apache.org/">Apache Hadoop</link> and
     <link xlink:href="http://zookeeper.apache.org/">Apache ZooKeeper</link>.
@@ -175,7 +178,7 @@
     from time stamp <literal>t9</literal>, the value of
     <varname>anchor:my.look.ca</varname> from time stamp <literal>t8</literal>.
 	</para>
-	<para>For more information about the internals of how HBase stores data, see <xref linkend="regions.arch" />.
+	<para>For more information about the internals of how Apache HBase stores data, see <xref linkend="regions.arch" />.
 	</para>
 	</section>
 
@@ -197,7 +200,7 @@
     <section xml:id="columnfamily">
       <title>Column Family<indexterm><primary>Column Family</primary></indexterm></title>
         <para>
-      Columns in HBase are grouped into <emphasis>column families</emphasis>.
+      Columns in Apache HBase are grouped into <emphasis>column families</emphasis>.
       All column members of a column family have the same prefix.  For example, the
       columns <emphasis>courses:history</emphasis> and
       <emphasis>courses:math</emphasis> are both members of the
@@ -560,7 +563,7 @@ htable.put(put);
  <chapter xml:id="schema">
   <title>HBase and Schema Design</title>
       <para>A good general introduction on the strength and weaknesses modelling on
-          the various non-rdbms datastores is Ian Varleys' Master thesis,
+          the various non-rdbms datastores is Ian Varley's Master thesis,
           <link xlink:href="http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf">No Relation: The Mixed Blessings of Non-Relational Databases</link>.
           Recommended.  Also, read <xref linkend="keyvalue"/> for how HBase stores data internally.
       </para>

@@ -26,7 +26,7 @@
  * limitations under the License.
  */
 -->
-  <title>Troubleshooting and Debugging HBase</title>
+  <title>Troubleshooting and Debugging Apache HBase (TM)</title>
     <section xml:id="trouble.general">
       <title>General Guidelines</title>
       <para>
@@ -37,7 +37,7 @@
           should return some hits for those exceptions you’re seeing.
       </para>
       <para>
-          An error rarely comes alone in HBase, usually when something gets screwed up what will
+          An error rarely comes alone in Apache HBase (TM), usually when something gets screwed up what will
           follow may be hundreds of exceptions and stack traces coming from all over the place.
           The best way to approach this type of problem is to walk the log up to where it all
           began, for example one trick with RegionServers is that they will print some
@@ -207,9 +207,9 @@ export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above
       </section>
       <section xml:id="trouble.resources.lists">
         <title>Mailing Lists</title>
-        <para>Ask a question on the <link xlink:href="http://hbase.apache.org/mail-lists.html">HBase mailing lists</link>.
-        The 'dev' mailing list is aimed at the community of developers actually building HBase and for features currently under development, and 'user'
-        is generally used for questions on released versions of HBase.  Before going to the mailing list, make sure your
+        <para>Ask a question on the <link xlink:href="http://hbase.apache.org/mail-lists.html">Apache HBase mailing lists</link>.
+        The 'dev' mailing list is aimed at the community of developers actually building Apache HBase and for features currently under development, and 'user'
+        is generally used for questions on released versions of Apache HBase.  Before going to the mailing list, make sure your
         question has not already been answered by searching the mailing list archives first.  Use
         <xref linkend="trouble.resources.searchhadoop" />.
         Take some time crafting your question<footnote><para>See <link xlink="http://www.mikeash.com/getting_answers.html">Getting Answers</link></para></footnote>; a quality question that includes all context and 
@@ -498,13 +498,13 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
         <section xml:id="trouble.tools.opentsdb">
           <title>OpenTSDB</title>
           <para>
-          <link xlink:href="http://opentsdb.net">OpenTSDB</link> is an excellent alternative to Ganglia as it uses HBase to store all the time series and doesn’t have to downsample. Monitoring your own HBase cluster that hosts OpenTSDB is a good exercise.
+          <link xlink:href="http://opentsdb.net">OpenTSDB</link> is an excellent alternative to Ganglia as it uses Apache HBase to store all the time series and doesn’t have to downsample. Monitoring your own HBase cluster that hosts OpenTSDB is a good exercise.
           </para>
           <para>
           Here’s an example of a cluster that’s suffering from hundreds of compactions launched almost all around the same time, which severely affects the IO performance:  (TODO:  insert graph plotting compactionQueueSize)
           </para>
           <para>
-          It’s a good practice to build dashboards with all the important graphs per machine and per cluster so that debugging issues can be done with a single quick look. For example, at StumbleUpon there’s one dashboard per cluster with the most important metrics from both the OS and HBase. You can then go down at the machine level and get even more detailed metrics.
+          It’s a good practice to build dashboards with all the important graphs per machine and per cluster so that debugging issues can be done with a single quick look. For example, at StumbleUpon there’s one dashboard per cluster with the most important metrics from both the OS and Apache HBase. You can then go down at the machine level and get even more detailed metrics.
           </para>
        </section>
        <section xml:id="trouble.tools.clustersshtop">
@@ -551,14 +551,14 @@ Harsh J investigated the issue as part of the mailing list thread
        </section>    
        <section xml:id="trouble.client.longpauseswithcompression">
             <title>Long Client Pauses With Compression</title>
-            <para>This is a fairly frequent question on the HBase dist-list.  The scenario is that a client is typically inserting a lot of data into a 
+            <para>This is a fairly frequent question on the Apache HBase dist-list.  The scenario is that a client is typically inserting a lot of data into a 
             relatively un-optimized HBase cluster.  Compression can exacerbate the pauses, although it is not the source of the problem.</para>
             <para>See <xref linkend="precreate.regions"/> on the pattern for pre-creating regions and confirm that the table isn't starting with a single region.</para>
             <para>See <xref linkend="perf.configurations"/> for cluster configuration, particularly <code>hbase.hstore.blockingStoreFiles</code>, <code>hbase.hregion.memstore.block.multiplier</code>, 
             <code>MAX_FILESIZE</code> (region size), and <code>MEMSTORE_FLUSHSIZE.</code>  </para>
             <para>A slightly longer explanation of why pauses can happen is as follows:  Puts are sometimes blocked on the MemStores which are blocked by the flusher thread which is blocked because there are 
             too many files to compact because the compactor is given too many small files to compact and has to compact the same data repeatedly.  This situation can occur even with minor compactions.
-            Compounding this situation, HBase doesn't compress data in memory.  Thus, the 64MB that lives in the MemStore could become a 6MB file after compression - which results in a smaller StoreFile.  The upside is that
+            Compounding this situation, Apache HBase doesn't compress data in memory.  Thus, the 64MB that lives in the MemStore could become a 6MB file after compression - which results in a smaller StoreFile.  The upside is that
             more data is packed into the same region, but performance is achieved by being able to write larger files - which is why HBase waits until the flushize before writing a new StoreFile.  And smaller StoreFiles
             become targets for compaction.  Without compression the files are much bigger and don't need as much compaction, however this is at the expense of I/O.   
             </para>
@@ -623,7 +623,7 @@ invocation of the admin API.
 There can be several causes that produce this symptom.
            </para>
            <para>
-First, check that you have a valid Kerberos ticket. One is required in order to set up communication with a secure HBase cluster. Examine the ticket currently in the credential cache, if any, by running the klist command line utility. If no ticket is listed, you must obtain a ticket by running the kinit command with either a keytab specified, or by interactively entering a password for the desired principal.
+First, check that you have a valid Kerberos ticket. One is required in order to set up communication with a secure Apache HBase cluster. Examine the ticket currently in the credential cache, if any, by running the klist command line utility. If no ticket is listed, you must obtain a ticket by running the kinit command with either a keytab specified, or by interactively entering a password for the desired principal.
            </para>
            <para>
 Then, consult the <link xlink:href="http://docs.oracle.com/javase/1.5.0/docs/guide/security/jgss/tutorials/Troubleshooting.html">Java Security Guide troubleshooting section</link>. The most common problem addressed there is resolved by setting javax.security.auth.useSubjectCredsOnly system property value to false.
@@ -924,7 +924,7 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
         <section xml:id="trouble.rs.runtime.double_listed_regions">
            <title>Regions listed by domain name, then IP</title>
            <para>
-           Fix your DNS.  In versions of HBase before 0.92.x, reverse DNS needs to give same answer
+           Fix your DNS.  In versions of Apache HBase before 0.92.x, reverse DNS needs to give same answer
            as forward lookup. See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3431">HBASE 3431
            RegionServer is not using the name given it by the master; double entry in master listing of servers</link> for gorey details.
           </para>
@@ -1040,8 +1040,8 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
        <title>HBase and Hadoop version issues</title>      
           <section xml:id="trouble.versions.205">
              <title><code>NoClassDefFoundError</code> when trying to run 0.90.x on hadoop-0.20.205.x (or hadoop-1.0.x)</title>
-             <para>HBase 0.90.x does not ship with hadoop-0.20.205.x, etc.  To make it run, you need to replace the hadoop
-             jars that HBase shipped with in its <filename>lib</filename> directory with those of the Hadoop you want to
+             <para>Apache HBase 0.90.x does not ship with hadoop-0.20.205.x, etc.  To make it run, you need to replace the hadoop
+             jars that Apache HBase shipped with in its <filename>lib</filename> directory with those of the Hadoop you want to
              run HBase on.  If even after replacing Hadoop jars you get the below exception:
 <programlisting>
 sv4r6s38: Exception in thread "main" java.lang.NoClassDefFoundError: org/apache/commons/configuration/Configuration

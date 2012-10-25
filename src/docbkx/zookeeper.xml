@@ -31,9 +31,9 @@
                 <primary>ZooKeeper</primary>
               </indexterm></title>
 
-            <para>A distributed HBase depends on a running ZooKeeper cluster.
+            <para>A distributed Apache HBase (TM) installation depends on a running ZooKeeper cluster.
             All participating nodes and clients need to be able to access the
-            running ZooKeeper ensemble. HBase by default manages a ZooKeeper
+            running ZooKeeper ensemble. Apache HBase by default manages a ZooKeeper
             "cluster" for you. It will start and stop the ZooKeeper ensemble
             as part of the HBase start/stop process. You can also manage the
             ZooKeeper ensemble independent of HBase and just point HBase at
@@ -191,7 +191,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
 
             <section xml:id="zk.sasl.auth">
               <title>SASL Authentication with ZooKeeper</title>
-              <para>Newer releases of HBase (&gt;= 0.92) will
+              <para>Newer releases of Apache HBase (&gt;= 0.92) will
               support connecting to a ZooKeeper Quorum that supports
               SASL authentication (which is available in Zookeeper
               versions 3.4.0 or later).</para>

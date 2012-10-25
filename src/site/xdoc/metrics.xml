@@ -18,14 +18,14 @@
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
     <title> 
-      HBase Metrics
+      Apache HBase (TM) Metrics
     </title>
   </properties>
 
   <body>
     <section name="Introduction">
       <p>
-      HBase emits Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
+      Apache HBase (TM) emits Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html">metrics</a>.
       </p>
       </section>
       <section name="Setup">
@@ -138,7 +138,7 @@ export HBASE_REGIONSERVER_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.p
       </section>
       <section name="Understanding HBase Metrics">
       <p>
-      For more information on understanding HBase metrics, see the <a href="book.html#hbase_metrics">metrics section</a> in the HBase Reference Guide. 
+      For more information on understanding HBase metrics, see the <a href="book.html#hbase_metrics">metrics section</a> in the Apache HBase Reference Guide. 
       </p>
       </section>
     </section>

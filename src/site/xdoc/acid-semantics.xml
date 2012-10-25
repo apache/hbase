@@ -22,13 +22,13 @@
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
     <title> 
-      HBase ACID Properties
+      Apache HBase (TM) ACID Properties
     </title>
   </properties>
 
   <body>
     <section name="About this Document">
-      <p>HBase is not an ACID compliant database. However, it does guarantee certain specific
+      <p>Apache HBase (TM) is not an ACID compliant database. However, it does guarantee certain specific
       properties.</p>
       <p>This specification enumerates the ACID properties of HBase.</p>
     </section>
@@ -196,7 +196,7 @@
         </ol>
       </section>
       <section name="Tunability">
-        <p>All of the above guarantees must be possible within HBase. For users who would like to trade
+        <p>All of the above guarantees must be possible within Apache HBase. For users who would like to trade
         off some guarantees for performance, HBase may offer several tuning options. For example:</p>
         <ul>
           <li>Visibility may be tuned on a per-read basis to allow stale reads or time travel.</li>
@@ -206,7 +206,7 @@
     </section>
     <section name="More Information">
       <p>
-      For more information, see the <a href="book.html#client">client architecture</a> or <a href="book.html#datamodel">data model</a> sections in the HBase Reference Guide. 
+      For more information, see the <a href="book.html#client">client architecture</a> or <a href="book.html#datamodel">data model</a> sections in the Apache HBase Reference Guide. 
       </p>
     </section>
     
@@ -217,7 +217,7 @@
           (See <a href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setBatch(int)">Scan#setBatch(int)</a>).
       </p>
 
-      <p>[2] In the context of HBase, &quot;durably on disk&quot; implies an hflush() call on the transaction
+      <p>[2] In the context of Apache HBase, &quot;durably on disk&quot; implies an hflush() call on the transaction
       log. This does not actually imply an fsync() to magnetic media, but rather just that the data has been
       written to the OS cache on all replicas of the log. In the case of a full datacenter power loss, it is
       possible that the edits are not truly durable.</p>

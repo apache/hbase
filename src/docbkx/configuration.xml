@@ -26,16 +26,16 @@
  * limitations under the License.
  */
 -->
-    <title>Configuration</title>
-    <para>This chapter is the Not-So-Quick start guide to HBase configuration.  It goes
-    over system requirements, Hadoop setup, the different HBase run modes, and the
+    <title>Apache HBase (TM) Configuration</title>
+    <para>This chapter is the Not-So-Quick start guide to Apache HBase (TM) configuration.  It goes
+    over system requirements, Hadoop setup, the different Apache HBase run modes, and the
     various configurations in HBase.  Please read this chapter carefully.  At a mimimum
     ensure that all <xref linkend="basic.prerequisites" /> have
       been satisfied.  Failure to do so will cause you (and us) grief debugging strange errors
       and/or data loss.</para>
 
     <para>
-        HBase uses the same configuration system as Hadoop.
+        Apache HBase uses the same configuration system as Apache Hadoop.
         To configure a deploy, edit a file of environment variables
         in <filename>conf/hbase-env.sh</filename> -- this configuration
         is used mostly by the launcher shell scripts getting the cluster
@@ -142,7 +142,7 @@ to ensure well-formedness of your document after an edit session.
             </indexterm>
         </title>
 
-        <para>HBase is a database.  It uses a lot of files all at the same time.
+        <para>Apache HBase is a database.  It uses a lot of files all at the same time.
         The default ulimit -n -- i.e. user file limit -- of 1024 on most *nix systems
         is insufficient (On mac os x its 256). Any significant amount of loading will
         lead you to <xref linkend="trouble.rs.runtime.filehandles"/>.
@@ -163,7 +163,7 @@ to ensure well-formedness of your document after an edit session.
         <footnote><para>See Jack Levin's <link xlink:href="">major hdfs issues</link>
                 note up on the user list.</para></footnote>
         <footnote><para>The requirement that a database requires upping of system limits
-        is not peculiar to HBase.  See for example the section
+        is not peculiar to Apache HBase.  See for example the section
         <emphasis>Setting Shell Limits for the Oracle User</emphasis> in
         <link xlink:href="http://www.akadia.com/services/ora_linux_install_10g.html">
         Short Guide to install Oracle 10 on Linux</link>.</para></footnote>.
@@ -208,7 +208,7 @@ to ensure well-formedness of your document after an edit session.
       <section xml:id="windows">
         <title>Windows</title>
 
-        <para>HBase has been little tested running on Windows. Running a
+        <para>Apache HBase has been little tested running on Windows. Running a
         production install of HBase on top of Windows is not
         recommended.</para>
 
@@ -270,18 +270,18 @@ to ensure well-formedness of your document after an edit session.
         branch had a working sync but no official release was ever made from this branch.
         You had to build it yourself. Michael Noll wrote a detailed blog,
         <link xlink:href="http://www.michael-noll.com/blog/2011/04/14/building-an-hadoop-0-20-x-version-for-hbase-0-90-2/">Building
-        an Hadoop 0.20.x version for HBase 0.90.2</link>, on how to build an
+        an Hadoop 0.20.x version for Apache HBase 0.90.2</link>, on how to build an
     Hadoop from branch-0.20-append.  Recommended.</para></footnote>
     <footnote><para>Praveen Kumar has written
             a complimentary article,
             <link xlink:href="http://praveen.kumar.in/2011/06/20/building-hadoop-and-hbase-for-hbase-maven-application-development/">Building Hadoop and HBase for HBase Maven application development</link>.
 </para></footnote><footnote>Cloudera have <varname>dfs.support.append</varname> set to true by default.</footnote>.
         Please use the most up-to-date Hadoop possible.</para>
-   <note><title>HBase 0.96.0 requires Hadoop 1.0.0 at a minimum</title>
-   <para>As of HBase 0.96.x, Hadoop 1.0.x at least is required.  We will no
+   <note><title>Apache HBase 0.96.0 requires Apache Hadoop 1.0.0 at a minimum</title>
+   <para>As of Apache HBase 0.96.x, Apache Hadoop 1.0.x at least is required.  We will no
    longer run properly on older Hadoops such as <filename>0.20.205</filename> or <filename>branch-0.20-append</filename>.
-   Do not move to 0.96.x if you cannot upgrade your Hadoop<footnote><para>See <link xlink:href="http://search-hadoop.com/m/7vFVx4EsUb2">HBase, mail # dev - DISCUSS: Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?</link></para></footnote>.</para>
-   <para>HBase 0.96.0 runs on Hadoop 2.0.
+   Do not move to Apache HBase 0.96.x if you cannot upgrade your Hadoop<footnote><para>See <link xlink:href="http://search-hadoop.com/m/7vFVx4EsUb2">HBase, mail # dev - DISCUSS: Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?</link></para></footnote>.</para>
+   <para>Apache HBase 0.96.0 runs on Apache Hadoop 2.0.
    </para>
    </note>
 
@@ -323,8 +323,8 @@ to ensure well-formedness of your document after an edit session.
     </note>
 
        <section xml:id="hadoop.security">
-          <title>HBase on Secure Hadoop</title>
-          <para>HBase will run on any Hadoop 0.20.x that incorporates Hadoop
+          <title>Apache HBase on Secure Hadoop</title>
+          <para>Apache HBase will run on any Hadoop 0.20.x that incorporates Hadoop
           security features -- e.g. Y! 0.20S or CDH3B3 -- as long as you do as
           suggested above and replace the Hadoop jar that ships with HBase
           with the secure version.  If you want to read more about how to setup

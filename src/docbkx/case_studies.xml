@@ -26,11 +26,11 @@
  * limitations under the License.
  */
 -->
-  <title>Case Studies</title>
+  <title>Apache HBase (TM) Case Studies</title>
     <section xml:id="casestudies.overview">
       <title>Overview</title>
       <para>This chapter will describe a variety of performance and troubleshooting case studies that can 
-      provide a useful blueprint on diagnosing cluster issues.</para>
+      provide a useful blueprint on diagnosing Apache HBase (TM) cluster issues.</para>
       <para>For more information on Performance and Troubleshooting, see <xref linkend="performance"/> and <xref linkend="trouble"/>.
       </para>
     </section>
@@ -41,7 +41,7 @@
     	<section xml:id="casestudies.schema.listdata">
     		<title>List Data</title>
     		<para>The following is an exchange from the user dist-list regarding a fairly common question:  
-    		how to handle per-user list data in HBase. 
+    		how to handle per-user list data in Apache HBase. 
     		</para>
     		<para>*** QUESTION ***</para>
     		<para>

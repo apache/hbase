@@ -18,7 +18,7 @@
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
     <title> 
-      Bulk Loads in HBase
+      Bulk Loads in Apache HBase (TM)
     </title>
   </properties>
   <body>

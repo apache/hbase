@@ -17,21 +17,21 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title>Installing HBase on Windows using Cygwin</title>
+    <title>Installing Apache HBase (TM) on Windows using Cygwin</title>
   </properties>
 
 <body>
 <section name="Introduction">
-<p><a title="HBase project" href="http://hbase.apache.org" target="_blank">HBase</a> is a distributed, column-oriented store, modeled after Google's <a title="Google's BigTable" href="http://research.google.com/archive/bigtable.html" target="_blank">BigTable</a>. HBase is built on top of <a title="Hadoop project" href="http://hadoop.apache.org">Hadoop</a> for its <a title="Hadoop MapReduce project" href="http://hadoop.apache.org/mapreduce" target="_blank">MapReduce </a>and <a title="Hadoop DFS project" href="http://hadoop.apache.org/hdfs">distributed file system</a> implementation. All these projects are open-source and part of the <a title="The Apache Software Foundation" href="http://www.apache.org/" target="_blank">Apache Software Foundation</a>.</p>
+<p><a title="HBase project" href="http://hbase.apache.org" target="_blank">Apache HBase (TM)</a> is a distributed, column-oriented store, modeled after Google's <a title="Google's BigTable" href="http://research.google.com/archive/bigtable.html" target="_blank">BigTable</a>. Apache HBase is built on top of <a title="Hadoop project" href="http://hadoop.apache.org">Hadoop</a> for its <a title="Hadoop MapReduce project" href="http://hadoop.apache.org/mapreduce" target="_blank">MapReduce </a>and <a title="Hadoop DFS project" href="http://hadoop.apache.org/hdfs">distributed file system</a> implementation. All these projects are open-source and part of the <a title="The Apache Software Foundation" href="http://www.apache.org/" target="_blank">Apache Software Foundation</a>.</p>
 
 <p style="text-align: justify; ">As being distributed, large scale platforms, the Hadoop and HBase projects mainly focus on <em><strong>*nix</strong></em><strong> environments</strong> for production installations. However, being developed in <strong>Java</strong>, both projects are fully <strong>portable</strong> across platforms and, hence, also to the <strong>Windows operating system</strong>. For ease of development the projects rely on <a title="Cygwin site" href="http://www.cygwin.com/" target="_blank">Cygwin</a> to have a *nix-like environment on Windows to run the shell scripts.</p>
 </section>
 <section name="Purpose">
-<p style="text-align: justify; ">This document explains the <strong>intricacies of running HBase on Windows using Cygwin</strong> as an all-in-one single-node installation for testing and development. The HBase <a title="HBase Overview" href="http://hbase.apache.org/apidocs/overview-summary.html#overview_description" target="_blank">Overview</a> and <a title="HBase QuickStart" href="http://hbase.apache.org/book/quickstart.html" target="_blank">QuickStart</a> guides on the other hand go a long way in explaning how to setup <a title="HBase project" href="http://hadoop.apache.org/hbase" target="_blank">HBase</a> in more complex deployment scenario's.</p>
+<p style="text-align: justify; ">This document explains the <strong>intricacies of running Apache HBase on Windows using Cygwin</strong> as an all-in-one single-node installation for testing and development. The HBase <a title="HBase Overview" href="http://hbase.apache.org/apidocs/overview-summary.html#overview_description" target="_blank">Overview</a> and <a title="HBase QuickStart" href="http://hbase.apache.org/book/quickstart.html" target="_blank">QuickStart</a> guides on the other hand go a long way in explaning how to setup <a title="HBase project" href="http://hadoop.apache.org/hbase" target="_blank">HBase</a> in more complex deployment scenario's.</p>
 </section>
 
 <section name="Installation">
-<p style="text-align: justify; ">For running HBase on Windows, 3 technologies are required: <strong>Java, Cygwin and SSH</strong>. The following paragraphs detail the installation of each of the aforementioned technologies.</p>
+<p style="text-align: justify; ">For running Apache HBase on Windows, 3 technologies are required: <strong>Java, Cygwin and SSH</strong>. The following paragraphs detail the installation of each of the aforementioned technologies.</p>
 <section name="Java">
 <p style="text-align: justify; ">HBase depends on the <a title="Java Platform, Standard Edition, 6 Release" href="http://java.sun.com/javase/6/" target="_blank">Java Platform, Standard Edition, 6 Release</a>. So the target system has to be provided with at least the Java Runtime Environment (JRE); however if the system will also be used for development, the Jave Development Kit (JDK) is preferred. You can download the latest versions for both from <a title="Java SE Downloads" href="http://java.sun.com/javase/downloads/index.jsp" target="_blank">Sun's download page</a>. Installation is a simple GUI wizard that guides you through the process.</p>
 </section>
@@ -91,7 +91,7 @@
 </ol>
 </section>
 <section name="HBase">
-<p style="text-align: justify; ">Download the <strong>latest release </strong>of HBase from the <a title="HBase Releases" href="http://www.apache.org/dyn/closer.cgi/hbase/" target="_blank">website</a>. As the HBase distributable is just a zipped archive, installation is as simple as unpacking the archive so it ends up in its final <strong>installation</strong> directory. Notice that HBase has to be installed in Cygwin and a good directory suggestion is to use <code>/usr/local/</code> (or [<code><strong>Root</strong> directory]\usr\local</code> in Windows slang). You should end up with a <code>/usr/local/hbase-<em>&lt;version&gt;</em></code> installation in Cygwin.</p>
+<p style="text-align: justify; ">Download the <strong>latest release </strong>of Apache HBase from the <a title="HBase Releases" href="http://www.apache.org/dyn/closer.cgi/hbase/" target="_blank">website</a>. As the Apache HBase distributable is just a zipped archive, installation is as simple as unpacking the archive so it ends up in its final <strong>installation</strong> directory. Notice that HBase has to be installed in Cygwin and a good directory suggestion is to use <code>/usr/local/</code> (or [<code><strong>Root</strong> directory]\usr\local</code> in Windows slang). You should end up with a <code>/usr/local/hbase-<em>&lt;version&gt;</em></code> installation in Cygwin.</p>
 
 This finishes installation. We go on with the configuration.
 </section>
@@ -192,7 +192,7 @@ If all previous configurations are working properly, we just need some tinkering
 <section>
 <title>Testing</title>
 <p>
-This should conclude the installation and configuration of HBase on Windows using Cygwin. So it's time <strong>to test it</strong>.
+This should conclude the installation and configuration of Apache HBase on Windows using Cygwin. So it's time <strong>to test it</strong>.
 <ol>
 	<li>Start a Cygwin<strong> terminal</strong>, if you haven't already.</li>
 	<li>Change directory to HBase <strong>installation</strong> using <code>CD /usr/local/hbase-<em>&lt;version&gt;</em></code>, preferably using auto-completion.</li>

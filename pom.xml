@@ -42,7 +42,7 @@
   <version>0.95-SNAPSHOT</version>
   <name>HBase</name>
   <description>
-    HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
+    Apache HBase&#153; is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
     random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters
     of commodity hardware.
@@ -396,7 +396,7 @@
               profile on the command line as follows:
 
               $ ~/bin/mvn/bin/mvn  -Papache-release release:perform
-              
+
               I've also been kiling the release:prepare step mid-way to check the
               release.properties it generates at the top-level.  Sometimes it refers
               to HEAD rather than to the svn branch.
@@ -408,7 +408,7 @@
              -->
             <releaseProfiles>apache-release</releaseProfiles>
             <!--This stops our running tests for each stage of maven release.
-                But it builds the test jar.  From SUREFIRE-172.      
+                But it builds the test jar.  From SUREFIRE-172.
               -->
             <arguments>-Dmaven.test.skip.exec</arguments>
           </configuration>
@@ -429,8 +429,8 @@
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${surefire.version}</version>
           <dependencies>
-            <!-- by default surefire selects dynamically the connector to the unit tests 
-              tool. We want to use always the same as the different connectors can have different 
+            <!-- by default surefire selects dynamically the connector to the unit tests
+              tool. We want to use always the same as the different connectors can have different
               bugs and behaviour. -->
             <dependency>
               <groupId>org.apache.maven.surefire</groupId>
@@ -469,7 +469,7 @@
                 <perCoreThreadCount>false</perCoreThreadCount>
                 <threadCount>${surefire.secondPartThreadCount}</threadCount>
                 <parallel>classes</parallel>
-                <!-- surefire hack, if not we're using method 
+                <!-- surefire hack, if not we're using method
                   parallelisation class ! -->
                 <groups>${surefire.secondPartGroups}</groups>
               </configuration>
@@ -558,11 +558,11 @@
           <artifactId>maven-eclipse-plugin</artifactId>
           <version>2.8</version>
         </plugin>
-        <!--This plugin's configuration is used to store Eclipse m2e settings only. It 
-          has no influence on the Maven build itself. m2e does not provide any safeguards against 
-          rogue maven plugins that leak classloaders, modify random files inside workspace 
+        <!--This plugin's configuration is used to store Eclipse m2e settings only. It
+          has no influence on the Maven build itself. m2e does not provide any safeguards against
+          rogue maven plugins that leak classloaders, modify random files inside workspace
           or throw nasty exceptions to fail the build -->
-        <!-- Top level doesn't do any specific configuration currently - left to modules 
+        <!-- Top level doesn't do any specific configuration currently - left to modules
           to decide what they want to bind -->
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
@@ -1336,7 +1336,7 @@
         </dependencies>
       </dependencyManagement>
     </profile>
-    <!-- profile for building against Hadoop 2.0.x 
+    <!-- profile for building against Hadoop 2.0.x
     Activate using: mvn -Dhadoop.profile=2.0 -->
     <profile>
       <id>hadoop-2.0</id>
@@ -1364,7 +1364,7 @@
             <artifactId>hadoop-annotations</artifactId>
             <version>${hadoop-two.version}</version>
           </dependency>
-          <!-- This was marked as test dep in earlier pom, but was scoped compile. 
+          <!-- This was marked as test dep in earlier pom, but was scoped compile.
             Where do we actually need it? -->
           <dependency>
             <groupId>org.apache.hadoop</groupId>

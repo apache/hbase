@@ -26,7 +26,7 @@
  * limitations under the License.
  */
 -->
-  <title>Performance Tuning</title>
+  <title>Apache HBase (TM) Performance Tuning</title>
 
   <section xml:id="perf.os">
     <title>Operating System</title>
@@ -105,7 +105,7 @@
     <title>Java</title>
 
     <section xml:id="gc">
-      <title>The Garbage Collector and HBase</title>
+      <title>The Garbage Collector and Apache HBase</title>
 
       <section xml:id="gcpause">
         <title>Long GC pauses</title>
@@ -122,8 +122,8 @@
         threshold, the more GCing is done, the more CPU used). To address the
         second fragmentation issue, Todd added an experimental facility,
         <indexterm><primary>MSLAB</primary></indexterm>, that
-        must be explicitly enabled in HBase 0.90.x (Its defaulted to be on in
-        0.92.x HBase). See <code>hbase.hregion.memstore.mslab.enabled</code>
+        must be explicitly enabled in Apache HBase 0.90.x (Its defaulted to be on in
+        Apache 0.92.x HBase). See <code>hbase.hregion.memstore.mslab.enabled</code>
         to true in your <classname>Configuration</classname>. See the cited
         slides for background and detail<footnote><para>The latest jvms do better
         regards fragmentation so make sure you are running a recent release.
@@ -646,7 +646,7 @@ htable.close();</programlisting></para>
    </para>
     <section xml:id="perf.hdfs.curr"><title>Current Issues With Low-Latency Reads</title>
       <para>The original use-case for HDFS was batch processing.  As such, there low-latency reads were historically not a priority.
-      With the increased adoption of HBase this is changing, and several improvements are already in development.
+      With the increased adoption of Apache HBase this is changing, and several improvements are already in development.
       See the 
       <link xlink:href="https://issues.apache.org/jira/browse/HDFS-1599">Umbrella Jira Ticket for HDFS Improvements for HBase</link>.
       </para>

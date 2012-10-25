@@ -22,13 +22,13 @@
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
     <title>
-      HBase Replication
+      Apache HBase (TM) Replication
     </title>
   </properties>
   <body>
     <section name="Overview">
       <p>
-        HBase replication is a way to copy data between HBase deployments. It
+        The replication feature of Apache HBase (TM) provides a way to copy data between HBase deployments. It
         can serve as a disaster recovery solution and can contribute to provide
         higher availability at the HBase layer. It can also serve more practically;
         for example, as a way to easily copy edits from a web-facing cluster to a "MapReduce"
@@ -36,7 +36,7 @@
         automatically.
       </p>
       <p>
-        The basic architecture pattern used for HBase replication is (HBase cluster) master-push;
+        The basic architecture pattern used for Apache HBase replication is (HBase cluster) master-push;
         it is much easier to keep track of what’s currently being replicated since
         each region server has its own write-ahead-log (aka WAL or HLog), just like
         other well known solutions like MySQL master/slave replication where
@@ -74,15 +74,15 @@
         of replication on the slave clusters by relying on randomization.
       </p>
       <p>
-        As of version 0.92 HBase supports master/master and cyclic replication as
-        well as replication to multiple slaves.
+        As of version 0.92, Apache HBase supports master/master and cyclic
+        replication as well as replication to multiple slaves.
       </p>
       <img src="images/replication_overview.png"/>
     </section>
     <section name="Enabling replication">
       <p>
         The guide on enabling and using cluster replication is contained
-        in the API documentation shipped with your HBase distribution.
+        in the API documentation shipped with your Apache HBase distribution.
       </p>
       <p>
         The most up-to-date documentation is
@@ -98,7 +98,7 @@
       </p>
       <section name="Normal processing">
         <p>
-          The client uses a HBase API that sends a Put, Delete or ICV to a region
+          The client uses an API that sends a Put, Delete or ICV to a region
           server. The key values are transformed into a WALEdit by the region
           server and is inspected by the replication code that, for each family
           that is scoped for replication, adds the scope to the edit. The edit

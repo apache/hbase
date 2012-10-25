@@ -24,7 +24,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/DECORATION/1.0.0 http://maven.apache.org/xsd/decoration-1.0.0.xsd">
   <bannerLeft>
-    <name>HBase</name>
+    <name>Apache HBase</name>
     <src>images/hbase_logo.png</src>
     <href>http://hbase.apache.org/</href>
   </bannerLeft>
@@ -32,7 +32,7 @@
   <version position="right" />
   <publishDate position="right" />
   <body>
-    <menu name="HBase Project">
+    <menu name="Apache HBase Project">
       <item name="Overview" href="index.html"/>
       <item name="License" href="license.html" />
       <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/hbase/" />
@@ -42,7 +42,7 @@
       <item name="Source Repository" href="source-repository.html" />
       <item name="ReviewBoard" href="https://reviews.apache.org"/>
       <item name="Team" href="team-list.html" />
-      <item name="Sponsors" href="sponsors.html" />
+      <item name="Thanks" href="sponsors.html" />
       <item name="Blog" href="http://blogs.apache.org/hbase/" />
       <item name="Other resources" href="resources.html" />
     </menu>
@@ -60,6 +60,11 @@
       <item name="Metrics"      href="metrics.html" />
       <item name="HBase on Windows"      href="cygwin.html" />
       <item name="Cluster replication"      href="replication.html" />
+    </menu>
+    <menu name="ASF">
+        <item name="Apache Software Foundation"      href="http://www.apache.org/foundation/" />
+        <item name="How Apache Works"      href="http://www.apache.org/foundation/how-it-works.html" />
+        <item name="Sponsoring Apache"      href="http://www.apache.org/foundation/sponsorship.html" />
     </menu>
   </body>
     <skin>

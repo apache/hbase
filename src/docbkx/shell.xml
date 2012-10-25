@@ -26,10 +26,10 @@
  * limitations under the License.
  */
 -->
-    <title>The HBase Shell</title>
+    <title>The Apache HBase Shell</title>
 
     <para>
-        The HBase Shell is <link xlink:href="http://jruby.org">(J)Ruby</link>'s
+        The Apache HBase (TM) Shell is <link xlink:href="http://jruby.org">(J)Ruby</link>'s
         IRB with some HBase particular commands added.  Anything you can do in
         IRB, you should be able to do in the HBase Shell.</para>
         <para>To run the HBase shell, 
@@ -47,7 +47,7 @@
             for example basic shell operation.</para>
 
     <section xml:id="scripting"><title>Scripting</title>
-        <para>For examples scripting HBase, look in the
+        <para>For examples scripting Apache HBase, look in the
             HBase <filename>bin</filename> directory.  Look at the files
             that end in <filename>*.rb</filename>.  To run one of these
             files, do as follows:

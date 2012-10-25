@@ -17,20 +17,20 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title>HBase Home</title>
+    <title>Apache HBase&#153; Home</title>
     <link rel="shortcut icon" href="/images/favicon.ico" />
   </properties>
-  
+
   <body>
-    <section name="Welcome to Apache HBase!">
-    <p>HBase is the <a href="http://hadoop.apache.org">Hadoop</a> database.  Think of it as a distributed, scalable, big data store.
+    <section name="Welcome to Apache HBase&#153;">
+        <p><a href="http://www.apache.org/">Apache</a> HBase&#153; is the <a href="http://hadoop.apache.org">Hadoop</a> database, a distributed, scalable, big data store.
     </p>
-    <h4>When Would I Use HBase?</h4>
+    <h4>When Would I Use Apache HBase?</h4>
     <p>
-    Use HBase when you need random, realtime read/write access to your Big Data.
+    Use Apache HBase when you need random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware.
-HBase is an open-source, distributed, versioned, column-oriented store modeled after Google's <a href="http://research.google.com/archive/bigtable.html">Bigtable: A Distributed Storage System for Structured Data</a> by Chang et al.
- Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of Hadoop and HDFS.
+Apache HBase is an open-source, distributed, versioned, column-oriented store modeled after Google's <a href="http://research.google.com/archive/bigtable.html">Bigtable: A Distributed Storage System for Structured Data</a> by Chang et al.
+ Just as Bigtable leverages the distributed data storage provided by the Google File System, Apache HBase provides Bigtable-like capabilities on top of Hadoop and HDFS.
     </p>
     <h4>Features</h4>
     <p>
@@ -43,7 +43,7 @@ HBase is an open-source, distributed, versioned, column-oriented store modeled a
 </li>
     <li>Automatic failover support between RegionServers.
 </li>
-    <li>Convenient base classes for backing Hadoop MapReduce jobs with HBase tables.
+    <li>Convenient base classes for backing Hadoop MapReduce jobs with Apache HBase tables.
 </li>
     <li>Easy to use Java API for client access.
 </li>
@@ -68,12 +68,12 @@ HBase is an open-source, distributed, versioned, column-oriented store modeled a
             <p>October 29th, 2012 <a href="http://www.meetup.com/hbaseusergroup/events/82791572/">HBase User Group Meetup</a> at Wize Commerce in San Mateo.</p>
             <p>October 25th, 2012 <a href="http://www.meetup.com/HBase-NYC/events/81728932/">Strata/Hadoop World HBase Meetup.</a> in NYC</p>
             <p>September 11th, 2012 <a href="http://www.meetup.com/hbaseusergroup/events/80621872/">Contributor's Pow-Wow at HortonWorks HQ.</a></p>
-            <p>August 8th, 2012 <a href="http://www.apache.org/dyn/closer.cgi/hbase/">HBase 0.94.1 is available for download</a></p>
+            <p>August 8th, 2012 <a href="http://www.apache.org/dyn/closer.cgi/hbase/">Apache HBase 0.94.1 is available for download</a></p>
             <p>June 15th, 2012 <a href="http://www.meetup.com/hbaseusergroup/events/59829652/">Birds-of-a-feather</a> in San Jose, day after <a href="http://hadoopsummit.org">Hadoop Summit</a></p>
             <p>May 23rd, 2012 <a href="http://www.meetup.com/hackathon/events/58953522/">HackConAthon</a> in Palo Alto</p>
 
       <p><small><a href="old_news.html">Old News</a></small></p>
     </section>
   </body>
-  
+
 </document>

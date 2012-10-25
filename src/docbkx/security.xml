@@ -26,12 +26,12 @@
  * limitations under the License.
  */
 -->
-<title>Secure HBase</title>
+<title>Secure Apache HBase (TM)</title>
 <section xml:id="hbase.secure.configuration">
-    <title>Secure Client Access to HBase</title>
-    <para>Newer releases of HBase (&gt;= 0.92) support optional SASL authentication of clients<footnote><para>See
+    <title>Secure Client Access to Apache HBase</title>
+    <para>Newer releases of Apache HBase (TM) (&gt;= 0.92) support optional SASL authentication of clients<footnote><para>See
     also Matteo Bertozzi's article on <link xlink:href="http://www.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/">Understanding User Authentication and Authorization in Apache HBase</link>.</para></footnote>.</para>
-    <para>This describes how to set up HBase and HBase clients for connection to secure HBase resources.</para>
+    <para>This describes how to set up Apache HBase and clients for connection to secure HBase resources.</para>
 
     <section><title>Prerequisites</title>
     <para>
@@ -233,7 +233,7 @@
 <section xml:id="hbase.accesscontrol.configuration">
     <title>Access Control</title>
     <para>
-        Newer releases of HBase (&gt;= 0.92) support optional access control
+        Newer releases of Apache HBase (&gt;= 0.92) support optional access control
         list (ACL-) based protection of resources on a column family and/or
         table basis.
     </para>

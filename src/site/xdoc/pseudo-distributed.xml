@@ -22,7 +22,7 @@
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
     <title> 
-Running HBase in pseudo-distributed mode
+Running Apache HBase (TM) in pseudo-distributed mode
     </title>
   </properties>
 

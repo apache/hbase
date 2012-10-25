@@ -26,13 +26,13 @@
  * limitations under the License.
  */
 -->
-  <title>External APIs</title>
-  This chapter will cover access to HBase either through non-Java languages, or through custom protocols.
+  <title>Apache HBase (TM) External APIs</title>
+  This chapter will cover access to Apache HBase (TM) either through non-Java languages, or through custom protocols.
   
   <section xml:id="nonjava.jvm">
     <title>Non-Java Languages Talking to the JVM</title>
     <para>Currently the documentation on this topic in the 
-      <link xlink:href="http://wiki.apache.org/hadoop/Hbase">HBase Wiki</link>.
+      <link xlink:href="http://wiki.apache.org/hadoop/Hbase">Apache HBase Wiki</link>.
       See also the <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/thrift/package-summary.html#package_description">Thrift API Javadoc</link>.
     </para>
   </section>
@@ -40,18 +40,18 @@
   <section xml:id="rest">
     <title>REST</title>
     <para>Currently most of the documentation on REST exists in the 
-      <link xlink:href="http://wiki.apache.org/hadoop/Hbase/Stargate">HBase Wiki on REST</link>.
+      <link xlink:href="http://wiki.apache.org/hadoop/Hbase/Stargate">Apache HBase Wiki on REST</link>.
     </para>
   </section>   <!-- rest -->
 
   <section xml:id="thrift">
     <title>Thrift</title>
       <para>Currently most of the documentation on Thrift exists in the 
-      <link xlink:href="http://wiki.apache.org/hadoop/Hbase/ThriftApi">HBase Wiki on Thrift</link>.
+      <link xlink:href="http://wiki.apache.org/hadoop/Hbase/ThriftApi">Apache HBase Wiki on Thrift</link>.
     </para>
           <section xml:id="thrift.filter-language"><title>Filter Language</title>
              <section xml:id="use-case"><title>Use Case</title>
-               <para>Note:  this feature was introduced in HBase 0.92</para>
+               <para>Note:  this feature was introduced in Apache HBase 0.92</para>
                <para>This allows the user to perform server-side filtering when accessing HBase over Thrift. The user specifies a filter via a string. The string is parsed on the server to construct the filter</para>
              </section>
 
@@ -414,10 +414,9 @@
   </section>  <!-- thrift -->
 
   <section xml:id="c">
-    <title>C/C++ HBase Client</title>
+    <title>C/C++ Apache HBase Client</title>
     <para>FB's Chip Turner wrote a pure C/C++ client.  <link xlink:href="https://github.com/facebook/native-cpp-hbase-client">Check it out</link>.
     </para>
   </section>
-
 
 </chapter>
