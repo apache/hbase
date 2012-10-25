@@ -337,8 +337,9 @@ public class ScanQueryMatcher {
      * counter for even that KV which may be discarded later on by Filter. This
      * would lead to incorrect results in certain cases.
      */
+    ReturnCode filterResponse = ReturnCode.SKIP;
     if (filter != null) {
-      ReturnCode filterResponse = filter.filterKeyValue(kv);
+      filterResponse = filter.filterKeyValue(kv);
       if (filterResponse == ReturnCode.SKIP) {
         return MatchCode.SKIP;
       } else if (filterResponse == ReturnCode.NEXT_COL) {
@@ -360,6 +361,9 @@ public class ScanQueryMatcher {
      */
     if (colChecker == MatchCode.SEEK_NEXT_ROW) {
       stickyNextRow = true;
+    } else if (filter != null && colChecker == MatchCode.INCLUDE &&
+               filterResponse == ReturnCode.INCLUDE_AND_NEXT_COL) {
+      return MatchCode.INCLUDE_AND_SEEK_NEXT_COL;
     }
     return colChecker;
 

@@ -64,7 +64,8 @@ public class ColumnCountGetFilter extends FilterBase {
   @Override
   public ReturnCode filterKeyValue(KeyValue v) {
     this.count++;
-    return filterAllRemaining() ? ReturnCode.SKIP: ReturnCode.INCLUDE;
+    return filterAllRemaining() ? ReturnCode.NEXT_COL:
+                                  ReturnCode.INCLUDE_AND_NEXT_COL;
   }
 
   @Override

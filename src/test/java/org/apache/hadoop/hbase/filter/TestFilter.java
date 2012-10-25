@@ -1471,8 +1471,14 @@ public class TestFilter extends HBaseTestCase {
 
 
   public void testColumnPaginationFilter() throws Exception {
+      // Test that the filter skips multiple column versions.
+      Put p = new Put(ROWS_ONE[0]);
+      p.setWriteToWAL(false);
+      p.add(FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]);
+      this.region.put(p);
+      this.region.flushcache();
 
-     // Set of KVs (page: 1; pageSize: 1) - the first set of 1 column per row
+      // Set of KVs (page: 1; pageSize: 1) - the first set of 1 column per row
       KeyValue [] expectedKVs = {
         // testRowOne-0
         new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
