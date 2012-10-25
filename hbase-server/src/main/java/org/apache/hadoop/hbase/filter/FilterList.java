@@ -202,6 +202,9 @@ public class FilterList extends Filter {
         }
         ReturnCode code = filter.filterKeyValue(v);
         switch (code) {
+        // Override INCLUDE and continue to evaluate.
+        case INCLUDE_AND_NEXT_COL:
+          rc = ReturnCode.INCLUDE_AND_NEXT_COL;
         case INCLUDE:
           continue;
         default:
@@ -214,7 +217,12 @@ public class FilterList extends Filter {
 
         switch (filter.filterKeyValue(v)) {
         case INCLUDE:
-          rc = ReturnCode.INCLUDE;
+          if (rc != ReturnCode.INCLUDE_AND_NEXT_COL) {
+            rc = ReturnCode.INCLUDE;
+          }
+          break;
+        case INCLUDE_AND_NEXT_COL:
+          rc = ReturnCode.INCLUDE_AND_NEXT_COL;
           // must continue here to evaluate all filters
           break;
         case NEXT_ROW:

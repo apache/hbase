@@ -116,6 +116,10 @@ public abstract class Filter {
      */
     INCLUDE,
     /**
+     * Include the KeyValue and seek to the next column skipping older versions.
+     */
+    INCLUDE_AND_NEXT_COL,
+    /**
      * Skip this KeyValue
      */
     SKIP,
