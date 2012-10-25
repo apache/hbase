@@ -631,7 +631,7 @@ public class RegionSplitter {
     Path hbDir = new Path(table.getConfiguration().get(HConstants.HBASE_DIR));
     Path tableDir = HTableDescriptor.getTableDir(hbDir, table.getTableName());
     Path splitFile = new Path(tableDir, "_balancedSplit");
-    FileSystem fs = FileSystem.get(table.getConfiguration());
+    FileSystem fs = tableDir.getFileSystem(table.getConfiguration());
 
     // clear the cache to forcibly refresh region information
     table.clearRegionCache();
@@ -712,7 +712,7 @@ public class RegionSplitter {
     Path hbDir = new Path(table.getConfiguration().get(HConstants.HBASE_DIR));
     Path tableDir = HTableDescriptor.getTableDir(hbDir, table.getTableName());
     Path splitFile = new Path(tableDir, "_balancedSplit");
-    FileSystem fs = FileSystem.get(table.getConfiguration());
+    FileSystem fs = tableDir.getFileSystem(table.getConfiguration());
 
     // using strings because (new byte[]{0}).equals(new byte[]{0}) == false
     Set<Pair<String, String>> daughterRegions = Sets.newHashSet();
