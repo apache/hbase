@@ -30,7 +30,8 @@ import com.google.common.base.Preconditions;
 /**
  * A filter, based on the ColumnCountGetFilter, takes two arguments: limit and offset.
  * This filter can be used for row-based indexing, where references to other tables are stored across many columns,
- * in order to efficient lookups and paginated results for end users.
+ * in order to efficient lookups and paginated results for end users. Only most recent versions are considered
+ * for pagination.
  */
 public class ColumnPaginationFilter extends FilterBase
 {
@@ -76,7 +77,8 @@ public class ColumnPaginationFilter extends FilterBase
       return ReturnCode.NEXT_ROW;
     }
 
-    ReturnCode code = count < offset ? ReturnCode.SKIP : ReturnCode.INCLUDE;
+    ReturnCode code = count < offset ? ReturnCode.NEXT_COL :
+                                       ReturnCode.INCLUDE_AND_NEXT_COL;
     count++;
     return code;
   }
