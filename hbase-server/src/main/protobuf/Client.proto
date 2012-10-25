@@ -209,6 +209,7 @@ message ScanRequest {
   optional uint64 scannerId = 3;
   optional uint32 numberOfRows = 4;
   optional bool closeScanner = 5;
+  optional uint64 nextCallSeq = 6;
 }
 
 /**

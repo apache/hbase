@@ -1,0 +1,129 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.client;
+
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
+
+/**
+ * Test the scenario where a HRegionServer#scan() call, while scanning, timeout at client side and
+ * getting retried. This scenario should not result in some data being skipped at RS side.
+ */
+@Category(MediumTests.class)
+public class TestClientScannerRPCTimeout {
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final byte[] FAMILY = Bytes.toBytes("testFamily");
+  private static final byte[] QUALIFIER = Bytes.toBytes("testQualifier");
+  private static final byte[] VALUE = Bytes.toBytes("testValue");
+  private static final int rpcTimeout = 2 * 1000;
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, rpcTimeout);
+    conf.setStrings(HConstants.REGION_SERVER_IMPL, RegionServerWithScanTimeout.class.getName());
+    TEST_UTIL.startMiniCluster(1);
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testScannerNextRPCTimesout() throws Exception {
+    final byte[] TABLE_NAME = Bytes.toBytes("testScannerNextRPCTimesout");
+    HTable ht = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
+    byte[] r1 = Bytes.toBytes("row-1");
+    byte[] r2 = Bytes.toBytes("row-2");
+    byte[] r3 = Bytes.toBytes("row-3");
+    putToTable(ht, r1);
+    putToTable(ht, r2);
+    putToTable(ht, r3);
+    RegionServerWithScanTimeout.seqNoToSleepOn = 1;
+    Scan scan = new Scan();
+    scan.setCaching(1);
+    ResultScanner scanner = ht.getScanner(scan);
+    Result result = scanner.next();
+    assertTrue("Expected row: row-1", Bytes.equals(r1, result.getRow()));
+    long t1 = System.currentTimeMillis();
+    result = scanner.next();
+    assertTrue((System.currentTimeMillis() - t1) > rpcTimeout);
+    assertTrue("Expected row: row-2", Bytes.equals(r2, result.getRow()));
+    RegionServerWithScanTimeout.seqNoToSleepOn = -1;// No need of sleep
+    result = scanner.next();
+    assertTrue("Expected row: row-3", Bytes.equals(r3, result.getRow()));
+    scanner.close();
+  }
+
+  private void putToTable(HTable ht, byte[] rowkey) throws IOException {
+    Put put = new Put(rowkey);
+    put.add(FAMILY, QUALIFIER, VALUE);
+    ht.put(put);
+  }
+
+  private static class RegionServerWithScanTimeout extends MiniHBaseClusterRegionServer {
+    private long tableScannerId;
+    private boolean slept;
+    private static long seqNoToSleepOn = -1;
+
+    public RegionServerWithScanTimeout(Configuration conf) throws IOException, InterruptedException {
+      super(conf);
+    }
+
+    @Override
+    public ScanResponse scan(final RpcController controller, final ScanRequest request)
+        throws ServiceException {
+      if (request.hasScannerId()) {
+        if (!slept && this.tableScannerId == request.getScannerId()
+            && seqNoToSleepOn == request.getNextCallSeq()) {
+          try {
+            Thread.sleep(rpcTimeout + 500);
+          } catch (InterruptedException e) {
+          }
+          slept = true;
+        }
+        return super.scan(controller, request);
+      } else {
+        ScanResponse scanRes = super.scan(controller, request);
+        String regionName = Bytes.toString(request.getRegion().getValue().toByteArray());
+        if (!regionName.contains("-ROOT-") && !regionName.contains(".META.")) {
+          tableScannerId = scanRes.getScannerId();
+        }
+        return scanRes;
+      }
+    }
+  }
+}

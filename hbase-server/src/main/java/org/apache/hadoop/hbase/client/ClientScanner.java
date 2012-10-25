@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
@@ -295,8 +296,9 @@ public class ClientScanner extends AbstractClientScanner {
               }
             } else {
               Throwable cause = e.getCause();
-              if (cause == null || (!(cause instanceof NotServingRegionException)
-                  && !(cause instanceof RegionServerStoppedException))) {
+              if ((cause == null || (!(cause instanceof NotServingRegionException)
+                  && !(cause instanceof RegionServerStoppedException)))
+                  && !(e instanceof OutOfOrderScannerNextException)) {
                 throw e;
               }
             }

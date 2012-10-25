@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.RegionMovedException;
 import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -280,8 +281,8 @@ public class  HRegionServer implements ClientProtocol,
   // Compactions
   public CompactSplitThread compactSplitThread;
 
-  final ConcurrentHashMap<String, RegionScanner> scanners =
-      new ConcurrentHashMap<String, RegionScanner>();
+  final ConcurrentHashMap<String, RegionScannerHolder> scanners =
+      new ConcurrentHashMap<String, RegionScannerHolder>();
 
   /**
    * Map of regions currently being served by this region server. Key is the
@@ -560,7 +561,11 @@ public class  HRegionServer implements ClientProtocol,
 
   RegionScanner getScanner(long scannerId) {
     String scannerIdString = Long.toString(scannerId);
-    return scanners.get(scannerIdString);
+    RegionScannerHolder scannerHolder = scanners.get(scannerIdString);
+    if (scannerHolder != null) {
+      return scannerHolder.s;
+    }
+    return null;
   }
 
   /**
@@ -1140,9 +1145,9 @@ public class  HRegionServer implements ClientProtocol,
   private void closeAllScanners() {
     // Close any outstanding scanners. Means they'll get an UnknownScanner
     // exception next time they come in.
-    for (Map.Entry<String, RegionScanner> e : this.scanners.entrySet()) {
+    for (Map.Entry<String, RegionScannerHolder> e : this.scanners.entrySet()) {
       try {
-        e.getValue().close();
+        e.getValue().s.close();
       } catch (IOException ioe) {
         LOG.warn("Closing scanner " + e.getKey(), ioe);
       }
@@ -2536,8 +2541,9 @@ public class  HRegionServer implements ClientProtocol,
     }
 
     public void leaseExpired() {
-      RegionScanner s = scanners.remove(this.scannerName);
-      if (s != null) {
+      RegionScannerHolder rsh = scanners.remove(this.scannerName);
+      if (rsh != null) {
+        RegionScanner s = rsh.s;
         LOG.info("Scanner " + this.scannerName + " lease expired on region "
             + s.getRegionInfo().getRegionNameAsString());
         try {
@@ -2841,7 +2847,7 @@ public class  HRegionServer implements ClientProtocol,
       scannerId = rand.nextLong();
       if (scannerId == -1) continue;
       String scannerName = String.valueOf(scannerId);
-      RegionScanner existing = scanners.putIfAbsent(scannerName, s);
+      RegionScannerHolder existing = scanners.putIfAbsent(scannerName, new RegionScannerHolder(s));
       if (existing == null) {
         this.leases.createLease(scannerName, this.scannerLeaseTimeoutPeriod,
             new ScannerListener(scannerName));
@@ -3073,6 +3079,7 @@ public class  HRegionServer implements ClientProtocol,
         int ttl = 0;
         HRegion region = null;
         RegionScanner scanner = null;
+        RegionScannerHolder rsh = null;
         boolean moreResults = true;
         boolean closeScanner = false;
         ScanResponse.Builder builder = ScanResponse.newBuilder();
@@ -3084,11 +3091,12 @@ public class  HRegionServer implements ClientProtocol,
           rows = request.getNumberOfRows();
         }
         if (request.hasScannerId()) {
-          scanner = scanners.get(scannerName);
-          if (scanner == null) {
+          rsh = scanners.get(scannerName);
+          if (rsh == null) {
             throw new UnknownScannerException(
               "Name: " + scannerName + ", already closed?");
           }
+          scanner = rsh.s;
           region = getRegion(scanner.getRegionInfo().getRegionName());
         } else {
           region = getRegion(request.getRegion());
@@ -3110,6 +3118,22 @@ public class  HRegionServer implements ClientProtocol,
         }
 
         if (rows > 0) {
+          // if nextCallSeq does not match throw Exception straight away. This needs to be
+          // performed even before checking of Lease.
+          // See HBASE-5974
+          if (request.hasNextCallSeq()) {
+            if (rsh == null) {
+              rsh = scanners.get(scannerName);
+            }
+            if (rsh != null) {
+              if (request.getNextCallSeq() != rsh.nextCallSeq) {
+                throw new OutOfOrderScannerNextException("Expected nextCallSeq: " + rsh.nextCallSeq
+                    + " But the nextCallSeq got from client: " + request.getNextCallSeq());
+              }
+              // Increment the nextCallSeq value which is the next expected from client.
+              rsh.nextCallSeq++;
+            }
+          }
           try {
             // Remove lease while its being processed in server; protects against case
             // where processing of request takes > lease expiration time.
@@ -3193,8 +3217,9 @@ public class  HRegionServer implements ClientProtocol,
               return builder.build(); // bypass
             }
           }
-          scanner = scanners.remove(scannerName);
-          if (scanner != null) {
+          rsh = scanners.remove(scannerName);
+          if (rsh != null) {
+            scanner = rsh.s;
             scanner.close();
             leases.cancelLease(scannerName);
             if (region != null && region.getCoprocessorHost() != null) {
@@ -4134,5 +4159,17 @@ public class  HRegionServer implements ClientProtocol,
 
   private String getMyEphemeralNodePath() {
     return ZKUtil.joinZNode(this.zooKeeper.rsZNode, getServerName().toString());
+  }
+  
+  /**
+   * Holder class which holds the RegionScanner and nextCallSeq together.
+   */
+  private static class RegionScannerHolder {
+    private RegionScanner s;
+    private long nextCallSeq = 0L;
+
+    public RegionScannerHolder(RegionScanner s) {
+      this.s = s;
+    }
   }
 }

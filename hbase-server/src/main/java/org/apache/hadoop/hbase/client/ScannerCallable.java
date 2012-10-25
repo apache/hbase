@@ -67,7 +67,8 @@ public class ScannerCallable extends ServerCallable<Result[]> {
 
   // indicate if it is a remote server call
   private boolean isRegionServerRemote = true;
-
+  private long nextCallSeq = 0;
+  
   /**
    * @param connection which connection
    * @param tableName table callable is on
@@ -138,9 +139,19 @@ public class ScannerCallable extends ServerCallable<Result[]> {
         try {
           incRPCcallsMetrics();
           ScanRequest request =
-            RequestConverter.buildScanRequest(scannerId, caching, false);
+            RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
           try {
             ScanResponse response = server.scan(null, request);
+            // Client and RS maintain a nextCallSeq number during the scan. Every next() call
+            // from client to server will increment this number in both sides. Client passes this
+            // number along with the request and at RS side both the incoming nextCallSeq and its
+            // nextCallSeq will be matched. In case of a timeout this increment at the client side
+            // should not happen. If at the server side fetching of next batch of data was over,
+            // there will be mismatch in the nextCallSeq number. Server will throw
+            // OutOfOrderScannerNextException and then client will reopen the scanner with startrow
+            // as the last successfully retrieved row.
+            // See HBASE-5974
+            nextCallSeq++;
             long timestamp = System.currentTimeMillis();
             rrs = ResponseConverter.getResults(response);
             if (logScannerActivity) {

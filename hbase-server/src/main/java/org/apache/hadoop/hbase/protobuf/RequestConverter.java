@@ -416,6 +416,25 @@ public final class RequestConverter {
     builder.setScannerId(scannerId);
     return builder.build();
   }
+  
+  /**
+   * Create a protocol buffer ScanRequest for a scanner id
+   * 
+   * @param scannerId
+   * @param numberOfRows
+   * @param closeScanner
+   * @param nextCallSeq
+   * @return a scan request
+   */
+  public static ScanRequest buildScanRequest(final long scannerId, final int numberOfRows,
+      final boolean closeScanner, final long nextCallSeq) {
+    ScanRequest.Builder builder = ScanRequest.newBuilder();
+    builder.setNumberOfRows(numberOfRows);
+    builder.setCloseScanner(closeScanner);
+    builder.setScannerId(scannerId);
+    builder.setNextCallSeq(nextCallSeq);
+    return builder.build();
+  }
 
   /**
    * Create a protocol buffer LockRowRequest
