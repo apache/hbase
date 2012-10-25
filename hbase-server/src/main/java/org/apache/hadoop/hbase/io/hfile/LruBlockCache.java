@@ -97,9 +97,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
   static final Log LOG = LogFactory.getLog(LruBlockCache.class);
 
+  static final String LRU_MIN_FACTOR_CONFIG_NAME = "hbase.lru.blockcache.min.factor";
+  static final String LRU_ACCEPTABLE_FACTOR_CONFIG_NAME = "hbase.lru.blockcache.acceptable.factor";
+
   /** Default Configuration Parameters*/
-  static final String LRU_MIN_FACTOR = "hbase.lru.blockcache.min.factor";
-  
+
   /** Backing Concurrent Map Configuration */
   static final float DEFAULT_LOAD_FACTOR = 0.75f;
   static final int DEFAULT_CONCURRENCY_LEVEL = 16;
@@ -202,8 +204,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
         (int)Math.ceil(1.2*maxSize/blockSize),
         DEFAULT_LOAD_FACTOR, 
         DEFAULT_CONCURRENCY_LEVEL,
-        conf.getFloat(LRU_MIN_FACTOR, DEFAULT_MIN_FACTOR), 
-        DEFAULT_ACCEPTABLE_FACTOR,
+        conf.getFloat(LRU_MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR), 
+        conf.getFloat(LRU_ACCEPTABLE_FACTOR_CONFIG_NAME, DEFAULT_ACCEPTABLE_FACTOR), 
         DEFAULT_SINGLE_FACTOR, 
         DEFAULT_MULTI_FACTOR,
         DEFAULT_MEMORY_FACTOR);
