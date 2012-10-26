@@ -65,7 +65,7 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
         + StringUtils.humanReadableInt(onHeapSize)
         + "bytes with an average block size of "
         + StringUtils.humanReadableInt(onHeapBlockSize) + " bytes.");
-    onHeapCache = new LruBlockCache(onHeapSize, onHeapBlockSize);
+    onHeapCache = new LruBlockCache(onHeapSize, onHeapBlockSize, conf);
 
     LOG.info("Creating off-heap cache of size "
         + StringUtils.humanReadableInt(offHeapSize)
