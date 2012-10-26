@@ -349,7 +349,7 @@ public class CacheConfig {
       StringUtils.humanReadableInt(cacheSize));
     if (offHeapCacheSize <= 0) {
       globalBlockCache = new LruBlockCache(cacheSize,
-          StoreFile.DEFAULT_BLOCKSIZE_SMALL);
+          StoreFile.DEFAULT_BLOCKSIZE_SMALL, conf);
     } else {
       globalBlockCache = new DoubleBlockCache(cacheSize, offHeapCacheSize,
           StoreFile.DEFAULT_BLOCKSIZE_SMALL, blockSize, conf);

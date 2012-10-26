@@ -93,7 +93,7 @@ public class TestHFileDataBlockEncoder {
   public void testEncodingWithCache() {
     HFileBlock block = getSampleHFileBlock();
     LruBlockCache blockCache =
-        new LruBlockCache(8 * 1024 * 1024, 32 * 1024);
+        new LruBlockCache(8 * 1024 * 1024, 32 * 1024, TEST_UTIL.getConfiguration());
     HFileBlock cacheBlock = blockEncoder.diskToCacheFormat(block, false);
     BlockCacheKey cacheKey = new BlockCacheKey("test", 0);
     blockCache.cacheBlock(cacheKey, cacheBlock);

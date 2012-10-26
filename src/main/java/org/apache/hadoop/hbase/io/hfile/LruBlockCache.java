@@ -96,6 +96,9 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
   static final Log LOG = LogFactory.getLog(LruBlockCache.class);
 
+  static final String LRU_MIN_FACTOR_CONFIG_NAME = "hbase.lru.blockcache.min.factor";
+  static final String LRU_ACCEPTABLE_FACTOR_CONFIG_NAME = "hbase.lru.blockcache.acceptable.factor";
+
   /** Default Configuration Parameters*/
 
   /** Backing Concurrent Map Configuration */
@@ -178,22 +181,27 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * this class.
    * @param maxSize maximum size of cache, in bytes
    * @param blockSize approximate size of each block, in bytes
+   * @param conf configuration
    */
-  public LruBlockCache(long maxSize, long blockSize) {
-    this(maxSize, blockSize, true);
+  public LruBlockCache(long maxSize, long blockSize, Configuration conf) {
+    this(maxSize, blockSize, true, conf);
   }
 
   /**
    * Constructor used for testing.  Allows disabling of the eviction thread.
    */
-  public LruBlockCache(long maxSize, long blockSize, boolean evictionThread) {
+  public LruBlockCache(long maxSize, long blockSize, boolean evictionThread, Configuration conf) {
     this(maxSize, blockSize, evictionThread,
         (int)Math.ceil(1.2*maxSize/blockSize),
-        DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL,
-        DEFAULT_MIN_FACTOR, DEFAULT_ACCEPTABLE_FACTOR,
-        DEFAULT_SINGLE_FACTOR, DEFAULT_MULTI_FACTOR,
+        DEFAULT_LOAD_FACTOR, 
+        DEFAULT_CONCURRENCY_LEVEL,
+        conf.getFloat(LRU_MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR), 
+        conf.getFloat(LRU_ACCEPTABLE_FACTOR_CONFIG_NAME, DEFAULT_ACCEPTABLE_FACTOR), 
+        DEFAULT_SINGLE_FACTOR, 
+        DEFAULT_MULTI_FACTOR,
         DEFAULT_MEMORY_FACTOR);
   }
+
 
   /**
    * Configurable constructor.  Use this constructor if not using defaults.

@@ -24,6 +24,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
@@ -51,6 +53,8 @@ import static org.junit.Assert.*;
 public class TestLruBlockCache {
 
   private Map<String, Long> startingMetrics;
+  private final HBaseTestingUtility TEST_UTIL =
+      new HBaseTestingUtility();
 
   public TestLruBlockCache(boolean useTableName) {
     SchemaMetrics.setUseTableNameInTest(useTableName);
@@ -77,7 +81,7 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSizeDefault(maxSize, 9); // room for 9, will evict
 
-    LruBlockCache cache = new LruBlockCache(maxSize,blockSize);
+    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, TEST_UTIL.getConfiguration());
 
     CachedItem [] blocks = generateFixedBlocks(10, blockSize, "block");
 
@@ -104,7 +108,7 @@ public class TestLruBlockCache {
     long maxSize = 1000000;
     long blockSize = calculateBlockSizeDefault(maxSize, 101);
 
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
+    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, TEST_UTIL.getConfiguration());
 
     CachedItem [] blocks = generateRandomBlocks(100, blockSize);
 
@@ -164,7 +168,7 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSizeDefault(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize,blockSize,false);
+    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false, TEST_UTIL.getConfiguration());
 
     CachedItem [] blocks = generateFixedBlocks(10, blockSize, "block");
 
@@ -205,7 +209,7 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     long blockSize = calculateBlockSizeDefault(maxSize, 10);
 
-    LruBlockCache cache = new LruBlockCache(maxSize,blockSize,false);
+    LruBlockCache cache = new LruBlockCache(maxSize, blockSize, false, TEST_UTIL.getConfiguration());
 
     CachedItem [] singleBlocks = generateFixedBlocks(5, 10000, "single");
     CachedItem [] multiBlocks = generateFixedBlocks(5, 10000, "multi");
