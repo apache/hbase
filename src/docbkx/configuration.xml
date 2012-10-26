@@ -1126,7 +1126,9 @@ of all regions.
       <para>If a big 40ms or so occasional delay is seen in operations against HBase,
       try the Nagles' setting.  For example, see the user mailing list thread,
       <link xlink:href="http://search-hadoop.com/m/pduLg2fydtE/Inconsistent+scan+performance+with+caching+set+&amp;subj=Re+Inconsistent+scan+performance+with+caching+set+to+1">Inconsistent scan performance with caching set to 1</link>
-      and the issue cited therein where setting notcpdelay improved scan speeds.</para>
+      and the issue cited therein where setting notcpdelay improved scan speeds.  You might also
+      see the graphs on the tail of <link xlink:href="https://issues.apache.org/jira/browse/HBASE-7008">HBASE-7008 Set scanner caching to a better default</link>
+      where our Lars Hofhansl tries various data sizes w/ Nagle's on and off measuring the effect.</para>
     </section>
 
       </section>
