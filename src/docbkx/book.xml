@@ -2683,6 +2683,12 @@ listing of all the splits present in all the tables.
 <programlisting>
 $ ./bin/hbase hbck -details
 </programlisting>
+If you just want to know if some tables are corrupted, you can limit hbck to identify inconsistencies
+in only specific tables. For example the following command would only attempt to check table
+TableFoo and TableBar. The benefit is that hbck will run in less time.
+<programlisting>
+$ ./bin/hbase/ hbck TableFoo TableBar
+</programlisting>
 	</section>
 	<section><title>Inconsistencies</title>
 	<para>
@@ -2812,7 +2818,7 @@ integrity options.
 		</listitem>
 	</itemizedlist>
 Finally, there are safeguards to limit repairs to only specific tables. For example the following
-command would only attempt to repair table TableFoo and TableBar.
+command would only attempt to check and repair table TableFoo and TableBar.
 <programlisting>
 $ ./bin/hbase/ hbck -repair TableFoo TableBar
 </programlisting>
@@ -2844,6 +2850,19 @@ $ ./bin/hbase org.apache.hadoop.hbase.util.OfflineMetaRepair
 NOTE: This tool is not as clever as uberhbck but can be used to bootstrap repairs that uberhbck
 can complete.
 If the tool succeeds you should be able to start hbase and run online repairs if necessary.
+	</section>
+	<section><title>Special cases: Offline split parent</title>
+    <para>
+Once a region is split, the offline parent will be cleaned up automatically. Sometimes, daughter regions
+are split again before their parents are cleaned up. HBase can clean up parents in the right order. However,
+there could be some lingering offline split parents sometimes. They are in META, in HDFS, and not deployed.
+But HBase can't clean them up. In this case, you can use the <code>-fixSplitParents</code> option to reset
+them in META to be online and not split. Therefore, hbck can merge them with other regions if fixing
+overlapping regions option is used.
+    </para>
+    <para>
+This option should not normally be used, and it is not in <code>-fixAll</code>.
+    </para>
 	</section>
 	</section>
   </appendix>
