@@ -54,8 +54,8 @@ public class TableMapReduceUtil {
    */
   public static void initTableMapJob(String table, String columns,
     Class<? extends TableMap> mapper,
-    Class<? extends WritableComparable> outputKeyClass,
-    Class<? extends Writable> outputValueClass, JobConf job) {
+    Class<?> outputKeyClass,
+    Class<?> outputValueClass, JobConf job) {
     initTableMapJob(table, columns, mapper, outputKeyClass, outputValueClass, job, true);
   }
 
@@ -74,8 +74,8 @@ public class TableMapReduceUtil {
    */
   public static void initTableMapJob(String table, String columns,
     Class<? extends TableMap> mapper,
-    Class<? extends WritableComparable> outputKeyClass,
-    Class<? extends Writable> outputValueClass, JobConf job, boolean addDependencyJars) {
+    Class<?> outputKeyClass,
+    Class<?> outputValueClass, JobConf job, boolean addDependencyJars) {
 
     job.setInputFormat(TableInputFormat.class);
     job.setMapOutputValueClass(outputValueClass);

@@ -82,8 +82,8 @@ public class TableMapReduceUtil {
    */
   public static void initTableMapperJob(String table, Scan scan,
       Class<? extends TableMapper> mapper,
-      Class<? extends WritableComparable> outputKeyClass,
-      Class<? extends Writable> outputValueClass, Job job)
+      Class<?> outputKeyClass, 
+      Class<?> outputValueClass, Job job)
   throws IOException {
     initTableMapperJob(table, scan, mapper, outputKeyClass, outputValueClass,
         job, true);
@@ -104,9 +104,9 @@ public class TableMapReduceUtil {
    * @throws IOException When setting up the details fails.
    */
    public static void initTableMapperJob(byte[] table, Scan scan,
-      Class<? extends TableMapper> mapper,
-      Class<? extends WritableComparable> outputKeyClass,
-      Class<? extends Writable> outputValueClass, Job job)
+      Class<? extends TableMapper> mapper, 
+      Class<?> outputKeyClass, 
+      Class<?> outputValueClass, Job job)
   throws IOException {
       initTableMapperJob(Bytes.toString(table), scan, mapper, outputKeyClass, outputValueClass,
               job, true);
@@ -129,8 +129,8 @@ public class TableMapReduceUtil {
    */
   public static void initTableMapperJob(String table, Scan scan,
       Class<? extends TableMapper> mapper,
-      Class<? extends WritableComparable> outputKeyClass,
-      Class<? extends Writable> outputValueClass, Job job,
+      Class<?> outputKeyClass,
+      Class<?> outputValueClass, Job job,
       boolean addDependencyJars, Class<? extends InputFormat> inputFormatClass)
   throws IOException {
     job.setInputFormatClass(inputFormatClass);
@@ -165,8 +165,8 @@ public class TableMapReduceUtil {
    */
   public static void initTableMapperJob(byte[] table, Scan scan,
       Class<? extends TableMapper> mapper,
-      Class<? extends WritableComparable> outputKeyClass,
-      Class<? extends Writable> outputValueClass, Job job,
+      Class<?> outputKeyClass,
+      Class<?> outputValueClass, Job job,
       boolean addDependencyJars, Class<? extends InputFormat> inputFormatClass)
   throws IOException {
       initTableMapperJob(Bytes.toString(table), scan, mapper, outputKeyClass,
@@ -190,8 +190,8 @@ public class TableMapReduceUtil {
    */
   public static void initTableMapperJob(byte[] table, Scan scan,
       Class<? extends TableMapper> mapper,
-      Class<? extends WritableComparable> outputKeyClass,
-      Class<? extends Writable> outputValueClass, Job job,
+      Class<?> outputKeyClass,
+      Class<?> outputValueClass, Job job,
       boolean addDependencyJars)
   throws IOException {
       initTableMapperJob(Bytes.toString(table), scan, mapper, outputKeyClass,
@@ -215,8 +215,8 @@ public class TableMapReduceUtil {
    */
   public static void initTableMapperJob(String table, Scan scan,
       Class<? extends TableMapper> mapper,
-      Class<? extends WritableComparable> outputKeyClass,
-      Class<? extends Writable> outputValueClass, Job job,
+      Class<?> outputKeyClass,
+      Class<?> outputValueClass, Job job,
       boolean addDependencyJars)
   throws IOException {
       initTableMapperJob(table, scan, mapper, outputKeyClass,
