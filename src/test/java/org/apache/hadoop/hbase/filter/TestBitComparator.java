@@ -32,6 +32,11 @@ public class TestBitComparator extends TestCase {
   private static byte[] data1 = new byte[]{15, 0, 0, 0, 0, 0};
   private static byte[] data2 = new byte[]{0, 0, 0, 0, 0, 15};
   private static byte[] data3 = new byte[]{15, 15, 15, 15, 15};
+  
+  // data for testing compareTo method with offset and length parameters
+  private static byte[] data1_2 = new byte[]{15, 15, 0, 0, 0, 0, 0, 15};
+  private static byte[] data2_2 = new byte[]{15, 0, 0, 0, 0, 0, 15, 15};
+  
   private final int Equal = 0;
   private final int NotEqual = 1;
 
@@ -63,6 +68,26 @@ public class TestBitComparator extends TestCase {
   private void testOperation(byte[] data, byte[] comparatorBytes, BitComparator.BitwiseOp operator, int expected) {
     BitComparator comparator = new BitComparator(comparatorBytes, operator);
     assertEquals(comparator.compareTo(data), expected);
+  }
+
+  public void testANDOperationWithOffset() {
+    testOperationWithOffset(data1_2, ones, BitComparator.BitwiseOp.AND, Equal);
+    testOperationWithOffset(data1_2, data0, BitComparator.BitwiseOp.AND, NotEqual);
+    testOperationWithOffset(data2_2, data1, BitComparator.BitwiseOp.AND, NotEqual);
+  }
+
+  public void testOROperationWithOffset() {
+    testOperationWithOffset(data1_2, zeros, BitComparator.BitwiseOp.OR, Equal);
+    testOperationWithOffset(data2_2, data1, BitComparator.BitwiseOp.OR, Equal);
+  }
+
+  public void testXOROperationWithOffset() {
+    testOperationWithOffset(data2_2, data1, BitComparator.BitwiseOp.XOR, Equal);
+  }
+
+  private void testOperationWithOffset(byte[] data, byte[] comparatorBytes, BitComparator.BitwiseOp operator, int expected) {
+    BitComparator comparator = new BitComparator(comparatorBytes, operator);
+    assertEquals(comparator.compareTo(data, 1, comparatorBytes.length), expected);
   }
 
   @org.junit.Rule
