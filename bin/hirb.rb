@@ -20,8 +20,6 @@
 # and hbase  commands and then loads jirb.  Outputs a banner that tells user
 # where to find help, shell version, and loads up a custom hirb.
 
-# TODO: Add 'debug' support (client-side logs show in shell).  Add it as
-# command-line option and as command.
 # TODO: Interrupt a table creation or a connection to a bad master.  Currently
 # has to time out.  Below we've set down the retries for rpc and hbase but
 # still can be annoying (And there seem to be times when we'll retry for
@@ -61,6 +59,7 @@ found = []
 format = 'console'
 script2run = nil
 log_level = org.apache.log4j.Level::ERROR
+@shell_debug = false
 for arg in ARGV
   if arg =~ /^--format=(.+)/i
     format = $1
@@ -78,6 +77,7 @@ for arg in ARGV
   elsif arg == '-d' || arg == '--debug'
     log_level = org.apache.log4j.Level::DEBUG
     $fullBackTrace = true
+    @shell_debug = true
     puts "Setting DEBUG log level..."
   else
     # Presume it a script. Save it off for running later below
@@ -130,18 +130,22 @@ end
 
 # Debugging method
 def debug
-  if @shell.debug
-    @shell.debug = false
+  if @shell_debug
+    @shell_debug = false
     conf.back_trace_limit = 0
+    log_level = org.apache.log4j.Level::ERROR
   else
-    @shell.debug = true
+    @shell_debug = true
     conf.back_trace_limit = 100
+    log_level = org.apache.log4j.Level::DEBUG
   end
+  org.apache.log4j.Logger.getLogger("org.apache.zookeeper").setLevel(log_level)
+  org.apache.log4j.Logger.getLogger("org.apache.hadoop.hbase").setLevel(log_level)
   debug?
 end
 
 def debug?
-  puts "Debug mode is #{@shell.debug ? 'ON' : 'OFF'}\n\n"
+  puts "Debug mode is #{@shell_debug ? 'ON' : 'OFF'}\n\n"
   nil
 end
 
