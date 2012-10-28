@@ -50,16 +50,14 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
   @Override
   public boolean isFileDeletable(Path file) {
     try {
+      // if its a directory, then it can be deleted
+      if (!fs.isFile(file)) return true;
 
+      // check to see if
       FileStatus[] deleteStatus = FSUtils.listStatus(this.fs, file, null);
       // if the file doesn't exist, then it can be deleted (but should never
       // happen since deleted files shouldn't get passed in)
       if (deleteStatus == null) return true;
-      // if its a directory with stuff in it, don't delete
-      if (deleteStatus.length > 1) return false;
-
-      // if its an empty directory, we can definitely delete
-      if (deleteStatus[0].isDir()) return true;
 
       // otherwise, we need to check the file's table and see its being archived
       Path family = file.getParent();
@@ -67,7 +65,9 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
       Path table = region.getParent();
 
       String tableName = table.getName();
-      return !archiveTracker.keepHFiles(tableName);
+      boolean ret = !archiveTracker.keepHFiles(tableName);
+      LOG.debug("Archiver says to [" + (ret ? "delete" : "keep") + "] files for table:" + tableName);
+      return ret;
     } catch (IOException e) {
       LOG.error("Failed to lookup status of:" + file + ", keeping it just incase.", e);
       return false;
