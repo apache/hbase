@@ -243,8 +243,9 @@ public class TestZooKeeperTableArchiveClient {
     assertTrue("Didn't archive files for:" + STRING_TABLE_NAME, initialCountForPrimary > 0);
     assertTrue("Didn't archive files for:" + otherTable, initialCountForOtherTable > 0);
 
-    // run the cleaners
-    CountDownLatch finished = setupCleanerWatching(delegate, cleaners, files.size());
+    // run the cleaners, checking for each of the directories + files (both should be deleted and
+    // need to be checked) in 'otherTable' and the files (which should be retained) in the 'table'
+    CountDownLatch finished = setupCleanerWatching(delegate, cleaners, files.size() + 3);
     // run the cleaner
     cleaner.start();
     // wait for the cleaner to check all the files
@@ -335,10 +336,12 @@ public class TestZooKeeperTableArchiveClient {
       @Override
       public Boolean answer(InvocationOnMock invocation) throws Throwable {
         counter[0]++;
-        LOG.debug(counter[0] + "/ " + expected + ") Mocking call to isFileDeletable");
-        if (counter[0] > expected) finished.countDown();
-        return (Boolean) invocation.callRealMethod();
+        LOG.debug(counter[0] + "/ " + expected + ") Wrapping call to isFileDeletable for file: "
+            + invocation.getArguments()[0]);
 
+        Boolean ret = (Boolean) invocation.callRealMethod();
+        if (counter[0] >= expected) finished.countDown();
+        return ret;
       }
     }).when(delegateSpy).isFileDeletable(Mockito.any(Path.class));
     cleaners.set(0, delegateSpy);
@@ -353,7 +356,10 @@ public class TestZooKeeperTableArchiveClient {
    */
   private List<Path> getAllFiles(FileSystem fs, Path dir) throws IOException {
     FileStatus[] files = FSUtils.listStatus(fs, dir, null);
-    if (files == null) return null;
+    if (files == null) {
+      LOG.warn("No files under:" + dir);
+      return null;
+    }
 
     List<Path> allFiles = new ArrayList<Path>();
     for (FileStatus file : files) {
