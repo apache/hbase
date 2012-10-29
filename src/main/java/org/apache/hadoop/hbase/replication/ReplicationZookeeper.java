@@ -683,14 +683,14 @@ public class ReplicationZookeeper {
         // number-startcode-number-otherstartcode-number-anotherstartcode-etc
         String newCluster = cluster+"-"+znode;
         String newClusterZnode = ZKUtil.joinZNode(rsServerNameZnode, newCluster);
-        ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, newClusterZnode,
-          HConstants.EMPTY_BYTE_ARRAY);
         String clusterPath = ZKUtil.joinZNode(nodePath, cluster);
         List<String> hlogs = ZKUtil.listChildrenNoWatch(this.zookeeper, clusterPath);
         // That region server didn't have anything to replicate for this cluster
         if (hlogs == null || hlogs.size() == 0) {
           continue;
         }
+        ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, newClusterZnode,
+            HConstants.EMPTY_BYTE_ARRAY);
         SortedSet<String> logQueue = new TreeSet<String>();
         queues.put(newCluster, logQueue);
         for (String hlog : hlogs) {
