@@ -186,9 +186,9 @@ public class AssignmentManager extends ZooKeeperListener {
                            (new HashMap<String, HRegionInfo> ());
     Configuration conf = server.getConfiguration();
     this.timeoutMonitor = new TimeoutMonitor(
-      conf.getInt("hbase.master.assignment.timeoutmonitor.period", 60000),
+      conf.getInt("hbase.master.assignment.timeoutmonitor.period", 30000),
       server, serverManager,
-      conf.getInt("hbase.master.assignment.timeoutmonitor.timeout", 1200000));
+      conf.getInt("hbase.master.assignment.timeoutmonitor.timeout", 600000));
     this.timerUpdater = new TimerUpdater(conf.getInt(
       "hbase.master.assignment.timerupdater.period", 10000), server);
     Threads.setDaemonThreadRunning(timerUpdater.getThread(),
