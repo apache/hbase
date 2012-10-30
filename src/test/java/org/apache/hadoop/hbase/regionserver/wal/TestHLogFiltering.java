@@ -108,9 +108,11 @@ public class TestHLogFiltering {
         new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; i < NUM_RS; ++i) {
       SortedMap<byte[], Long> flushedSequenceIds = flushAllRegions(i);
-      assertTrue(flushedSequenceIds.size() > 0);
-      allFlushedSequenceIds.putAll(flushedSequenceIds);
+      if (flushedSequenceIds.size() > 0) {
+        allFlushedSequenceIds.putAll(flushedSequenceIds);
+      }
     }
+    assertTrue(allFlushedSequenceIds.size() > 0);
     Thread.sleep(10000);
     HMasterRegionInterface master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     for (int i = 0; i < NUM_RS; ++i) {

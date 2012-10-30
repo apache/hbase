@@ -1540,6 +1540,12 @@ public class HRegion implements HeapSize {
         this.getRegionInfo().isMetaRegion());
     }
 
+    // Update the last flushed sequence id for region
+    if (this.regionServer != null) {
+      this.regionServer.getServerInfo().setFlushedSequenceIdForRegion(
+          getRegionName(),
+          completeSequenceId);
+    }
     // C. Finally notify anyone waiting on memstore to clear:
     // e.g. checkResources().
     synchronized (this) {
