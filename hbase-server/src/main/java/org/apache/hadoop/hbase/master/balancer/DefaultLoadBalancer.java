@@ -269,13 +269,22 @@ public class DefaultLoadBalancer extends BaseLoadBalancer {
     fetchFromTail = false;
 
     Map<ServerName, Integer> underloadedServers = new HashMap<ServerName, Integer>();
+    float average = (float)numRegions / numServers; // for logging
+    int maxToTake = numRegions - (int)average;
     for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server:
         serversByLoad.entrySet()) {
+      if (maxToTake == 0) break; // no more to take
       int regionCount = server.getKey().getLoad();
-      if (regionCount >= min) {
-        break;
+      if (regionCount >= min && regionCount > 0) {
+        continue; // look for other servers which haven't reached min
       }
-      underloadedServers.put(server.getKey().getServerName(), min - regionCount);
+      int regionsToPut = min - regionCount;
+      if (regionsToPut == 0)
+      {
+        regionsToPut = 1;
+        maxToTake--;
+      }
+      underloadedServers.put(server.getKey().getServerName(), regionsToPut);
     }
     // number of servers that get new regions
     int serversUnderloaded = underloadedServers.size();
