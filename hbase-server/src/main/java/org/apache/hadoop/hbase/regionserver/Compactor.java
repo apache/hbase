@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -64,11 +65,15 @@ class Compactor extends Configured {
       final Collection<StoreFile> filesToCompact,
       final boolean majorCompaction, final long maxId)
   throws IOException {
-    // Calculate maximum key count after compaction (for blooms)
+    // Calculate maximum key count after compaction (for blooms), and minFlushTime after compaction
     // Also calculate earliest put timestamp if major compaction
     int maxKeyCount = 0;
+    long minFlushTime = Long.MAX_VALUE;
     long earliestPutTs = HConstants.LATEST_TIMESTAMP;
     for (StoreFile file: filesToCompact) {
+      if (file.hasMinFlushTime() && file.getMinFlushTime() < minFlushTime) {
+        minFlushTime = file.getMinFlushTime();
+      }
       StoreFile.Reader r = file.getReader();
       if (r == null) {
         LOG.warn("Null reader for " + file.getPath());
@@ -194,6 +199,10 @@ class Compactor extends Configured {
       }
     } finally {
       if (writer != null) {
+        if (minFlushTime == Long.MAX_VALUE) {
+          minFlushTime = StoreFile.NO_MIN_FLUSH_TIME;
+        }
+        writer.appendFileInfo(StoreFile.MIN_FLUSH_TIME, Bytes.toBytes(minFlushTime));
         writer.appendMetadata(maxId, majorCompaction);
         writer.close();
       }

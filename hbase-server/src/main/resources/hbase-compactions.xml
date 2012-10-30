@@ -1,0 +1,160 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+<configuration>
+  <property>
+    <name>hbase.hstore.compactionThreshold</name>
+    <value>3</value>
+    <description>
+    If more than this number of HStoreFiles in any one HStore
+    (one HStoreFile is written per flush of memstore) then a compaction
+    is run to rewrite all HStoreFiles files as one.  Larger numbers
+    put off compaction but when it runs, it takes longer to complete.
+    During a compaction, updates cannot be flushed to disk.  Long
+    compactions require memory sufficient to carry the logging of
+    all updates across the duration of the compaction.
+
+    If too large, clients timeout during compaction.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.max</name>
+    <value>10</value>
+    <description>Max number of HStoreFiles to compact per 'minor' compaction.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hregion.majorcompaction</name>
+    <value>86400000</value>
+    <description>The time (in miliseconds) between 'major' compactions of all
+    HStoreFiles in a region.  Default: 1 day.
+    Set to 0 to disable automated major compactions.
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.hstore.compaction.CompactionPolicy</name>
+    <value>TierBasedCompactionPolicy</value>
+    <description>The compaction policy which should be used
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.tbl.cluster_test.cf.test_cf.NumCompactionTiers</name>
+    <value>4</value>
+    <description>The number of tiers into which the files are assigned
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.hstore.compaction.Default.Tier.0.MaxAgeInDisk</name>
+    <value>3600000</value>
+    <description>Length of time for which flush files are in 1st tier
+      value one hour.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.tbl.cluster_test.cf.test_cf.Tier.1.MaxAgeInDisk</name>
+    <value>10800000</value>
+    <description>Maximum age of a file to be in second tier
+      value 3 hours.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.Default.Tier.2.MaxAgeInDisk</name>
+    <value>36000000</value>
+    <description>Maximum age of a file to be in third tier
+      value 10 hours
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.hstore.compaction.Default.CompactionRatio</name>
+    <value>0.0</value>
+    <description>The default compaction ratio used if unspecified.
+      value 0.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.Default.Tier.1.CompactionRatio</name>
+    <value>1.0</value>
+    <description>The compaction ratio for the second tier.
+      value 1.5.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.Default.Tier.2.CompactionRatio</name>
+    <value>0.75</value>
+    <description>The compaction ratio for the third tier.
+      value 0.75.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.Default.Tier.3.CompactionRatio</name>
+    <value>0.2</value>
+    <description>The compaction ratio for the fourth tier.
+      value 0.2.
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.hstore.compaction.min</name>
+    <value>2</value>
+    <description>Default minimum number of files to compact
+      value 2.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.tbl.cluster_test.cf.MinFilesToCompact</name>
+    <value>3</value>
+    <description>Overridden Default minimum number of files to compact
+      value 3.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.max</name>
+    <value>7</value>
+    <description>Default maximum number of files to compact
+      value 7.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.Default.Tier.1.MinFilesToCompact</name>
+    <value>2</value>
+    <description>minimum number of files to compact in second tier
+      value 2.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.Default.Tier.3.MaxFilesToCompact</name>
+    <value>6</value>
+    <description>maximum number of files to compact in fourth tier
+      value 6.
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.hstore.compaction.Default.Tier.2.EndInclusionTier</name>
+    <value>1</value>
+    <description>The minimum tier whose files go together with this tier
+      value 1.
+    </description>
+  </property>
+</configuration>

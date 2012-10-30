@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -63,9 +64,10 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
+import org.apache.hadoop.hbase.regionserver.CompactionManager;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -77,8 +79,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -108,21 +108,24 @@ import com.google.common.collect.Lists;
 @InterfaceAudience.Private
 public class HStore extends SchemaConfigured implements Store {
   static final Log LOG = LogFactory.getLog(HStore.class);
+  
+  /** Parameter name for what compaction manager to use. */
+  private static final String COMPACTION_MANAGER_CLASS = "hbase.compactionmanager.class";
+
+  /** Default compaction manager class name. */
+  private static final String DEFAULT_COMPACTION_MANAGER_CLASS = CompactionManager.class.getName();
 
   protected final MemStore memstore;
   // This stores directory in the filesystem.
   private final Path homedir;
   private final HRegion region;
   private final HColumnDescriptor family;
+  CompactionManager compactionManager;
   final FileSystem fs;
   final Configuration conf;
   final CacheConfig cacheConf;
-  // ttl in milliseconds.
+  // ttl in milliseconds. TODO: can this be removed? Already stored in scanInfo.
   private long ttl;
-  private final int minFilesToCompact;
-  private final int maxFilesToCompact;
-  private final long minCompactSize;
-  private final long maxCompactSize;
   private long lastCompactSize = 0;
   volatile boolean forceMajor = false;
   /* how many bytes to write between status checks */
@@ -197,7 +200,7 @@ public class HStore extends SchemaConfigured implements Store {
 
     this.comparator = info.getComparator();
     // Get TTL
-    this.ttl = getTTL(family);
+    this.ttl = determineTTLFromFamily(family);
     // used by ScanQueryMatcher
     long timeToPurgeDeletes =
         Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
@@ -208,22 +211,10 @@ public class HStore extends SchemaConfigured implements Store {
     scanInfo = new ScanInfo(family, ttl, timeToPurgeDeletes, this.comparator);
     this.memstore = new MemStore(conf, this.comparator);
 
-    // By default, compact if storefile.count >= minFilesToCompact
-    this.minFilesToCompact = Math.max(2,
-      conf.getInt("hbase.hstore.compaction.min",
-        /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
-    LOG.info("hbase.hstore.compaction.min = " + this.minFilesToCompact);
-
     // Setting up cache configuration for this family
     this.cacheConf = new CacheConfig(conf, family);
     this.blockingStoreFileCount =
       conf.getInt("hbase.hstore.blockingStoreFiles", 7);
-
-    this.maxFilesToCompact = conf.getInt("hbase.hstore.compaction.max", 10);
-    this.minCompactSize = conf.getLong("hbase.hstore.compaction.min.size",
-      this.region.memstoreFlushSize);
-    this.maxCompactSize
-      = conf.getLong("hbase.hstore.compaction.max.size", Long.MAX_VALUE);
 
     this.verifyBulkLoads = conf.getBoolean("hbase.hstore.bulkload.verify", false);
 
@@ -239,13 +230,53 @@ public class HStore extends SchemaConfigured implements Store {
     this.bytesPerChecksum = getBytesPerChecksum(conf);
     // Create a compaction tool instance
     this.compactor = new Compactor(this.conf);
+
+    setCompactionPolicy(conf.get(COMPACTION_MANAGER_CLASS, DEFAULT_COMPACTION_MANAGER_CLASS));
   }
+
+  /**
+   * This setter is used for unit testing
+   * TODO: Fix this for online configuration updating
+   */
+  void setCompactionPolicy(String managerClassName) {
+    try {
+      Class<? extends CompactionManager> managerClass =
+        (Class<? extends CompactionManager>) Class.forName(managerClassName);
+      compactionManager = managerClass.getDeclaredConstructor(
+          new Class[] {Configuration.class, Store.class } ).newInstance(
+          new Object[] { conf, this } );
+    } catch (ClassNotFoundException e) {
+      throw new UnsupportedOperationException(
+          "Unable to find region server interface " + managerClassName, e);
+    } catch (IllegalAccessException e) {
+      throw new UnsupportedOperationException(
+          "Unable to access specified class " + managerClassName, e);
+    } catch (InstantiationException e) {
+      throw new UnsupportedOperationException(
+          "Unable to instantiate specified class " + managerClassName, e);
+    } catch (InvocationTargetException e) {
+      throw new UnsupportedOperationException(
+          "Unable to invoke specified target class constructor " + managerClassName, e);
+    } catch (NoSuchMethodException e) {
+      throw new UnsupportedOperationException(
+          "Unable to find suitable constructor for class " + managerClassName, e);
+    }
+  }
+
+  @Override
+  public Integer getDeterministicRandomSeed() {
+    ImmutableList<StoreFile> snapshot = storefiles;
+    if (snapshot != null && !snapshot.isEmpty()) {
+      return snapshot.get(0).getPath().getName().hashCode();
+    }
+    return null;
+   }
 
   /**
    * @param family
    * @return
    */
-  long getTTL(final HColumnDescriptor family) {
+  private static long determineTTLFromFamily(final HColumnDescriptor family) {
     // HCD.getTimeToLive returns ttl in seconds.  Convert to milliseconds.
     long ttl = family.getTimeToLive();
     if (ttl == HConstants.FOREVER) {
@@ -278,6 +309,11 @@ public class HStore extends SchemaConfigured implements Store {
 
   FileSystem getFileSystem() {
     return this.fs;
+  }
+
+  public long getTtl() {
+    // TTL only applies if there's no MIN_VERSIONs setting on the column.
+    return (this.scanInfo.getMinVersions() == 0) ? this.ttl : Long.MAX_VALUE;
   }
 
   /**
@@ -771,8 +807,11 @@ public class HStore extends SchemaConfigured implements Store {
           } while (hasMore);
         } finally {
           // Write out the log sequence number that corresponds to this output
-          // hfile.  The hfile is current up to and including logCacheFlushId.
+          // hfile. Also write current time in metadata as minFlushTime.
+          // The hfile is current up to and including logCacheFlushId.
           status.setStatus("Flushing " + this + ": appending metadata");
+          writer.appendFileInfo(StoreFile.MIN_FLUSH_TIME, 
+              Bytes.toBytes(EnvironmentEdgeManager.currentTimeMillis()));
           writer.appendMetadata(logCacheFlushId, false);
           status.setStatus("Flushing " + this + ": closing flushed file");
           writer.close();
@@ -1014,12 +1053,12 @@ public class HStore extends SchemaConfigured implements Store {
 
     // Ready to go. Have list of files to compact.
     LOG.info("Starting compaction of " + filesToCompact.size() + " file(s) in "
-        + this + " of "
-        + this.region.getRegionInfo().getRegionNameAsString()
+        + this + " of " + this.region.getRegionInfo().getRegionNameAsString()
         + " into tmpdir=" + region.getTmpDir() + ", seqid=" + maxId + ", totalSize="
         + StringUtils.humanReadableInt(cr.getSize()));
 
     StoreFile sf = null;
+    long compactionStartTime = EnvironmentEdgeManager.currentTimeMillis();
     try {
       StoreFile.Writer writer =
         this.compactor.compact(this, filesToCompact, cr.isMajor(), maxId);
@@ -1048,8 +1087,11 @@ public class HStore extends SchemaConfigured implements Store {
         (sf == null ? "none" : sf.getPath().getName()) +
         ", size=" + (sf == null ? "none" :
           StringUtils.humanReadableInt(sf.getReader().length()))
-        + "; total size for store is "
-        + StringUtils.humanReadableInt(storeSize));
+        + "; total size for store is " + StringUtils.humanReadableInt(storeSize)
+        + ". This selection was in queue for "
+        + StringUtils.formatTimeDiff(compactionStartTime, cr.getSelectionTime()) + ", and took "
+        + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTimeMillis(), compactionStartTime)
+        + " to execute.");
     return sf;
   }
 
@@ -1107,11 +1149,8 @@ public class HStore extends SchemaConfigured implements Store {
     return hasReferences(this.storefiles);
   }
 
-  /*
-   * @param files
-   * @return True if any of the files in <code>files</code> are References.
-   */
-  private boolean hasReferences(Collection<StoreFile> files) {
+  @Override
+  public boolean hasReferences(Collection<StoreFile> files) {
     if (files != null && files.size() > 0) {
       for (StoreFile hsf: files) {
         if (hsf.isReference()) {
@@ -1120,22 +1159,6 @@ public class HStore extends SchemaConfigured implements Store {
       }
     }
     return false;
-  }
-
-  /*
-   * Gets lowest timestamp from candidate StoreFiles
-   *
-   * @param fs
-   * @param dir
-   * @throws IOException
-   */
-  public static long getLowestTimestamp(final List<StoreFile> candidates)
-      throws IOException {
-    long minTs = Long.MAX_VALUE;
-    for (StoreFile storeFile : candidates) {
-      minTs = Math.min(minTs, storeFile.getModificationTimeStamp());
-    }
-    return minTs;
   }
 
   @Override
@@ -1153,91 +1176,7 @@ public class HStore extends SchemaConfigured implements Store {
     }
 
     List<StoreFile> candidates = new ArrayList<StoreFile>(this.storefiles);
-
-    // exclude files above the max compaction threshold
-    // except: save all references. we MUST compact them
-    int pos = 0;
-    while (pos < candidates.size() &&
-           candidates.get(pos).getReader().length() > this.maxCompactSize &&
-           !candidates.get(pos).isReference()) ++pos;
-    candidates.subList(0, pos).clear();
-
-    return isMajorCompaction(candidates);
-  }
-
-  /*
-   * @param filesToCompact Files to compact. Can be null.
-   * @return True if we should run a major compaction.
-   */
-  private boolean isMajorCompaction(final List<StoreFile> filesToCompact) throws IOException {
-    boolean result = false;
-    long mcTime = getNextMajorCompactTime();
-    if (filesToCompact == null || filesToCompact.isEmpty() || mcTime == 0) {
-      return result;
-    }
-    // TODO: Use better method for determining stamp of last major (HBASE-2990)
-    long lowTimestamp = getLowestTimestamp(filesToCompact);
-    long now = System.currentTimeMillis();
-    if (lowTimestamp > 0l && lowTimestamp < (now - mcTime)) {
-      // Major compaction time has elapsed.
-      if (filesToCompact.size() == 1) {
-        // Single file
-        StoreFile sf = filesToCompact.get(0);
-        long oldest =
-            (sf.getReader().timeRangeTracker == null) ?
-                Long.MIN_VALUE :
-                now - sf.getReader().timeRangeTracker.minimumTimestamp;
-        if (sf.isMajorCompaction() &&
-            (this.ttl == HConstants.FOREVER || oldest < this.ttl)) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Skipping major compaction of " + this +
-                " because one (major) compacted file only and oldestTime " +
-                oldest + "ms is < ttl=" + this.ttl);
-          }
-        } else if (this.ttl != HConstants.FOREVER && oldest > this.ttl) {
-          LOG.debug("Major compaction triggered on store " + this +
-            ", because keyvalues outdated; time since last major compaction " +
-            (now - lowTimestamp) + "ms");
-          result = true;
-        }
-      } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Major compaction triggered on store " + this +
-              "; time since last major compaction " + (now - lowTimestamp) + "ms");
-        }
-        result = true;
-      }
-    }
-    return result;
-  }
-
-  long getNextMajorCompactTime() {
-    // default = 24hrs
-    long ret = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24);
-    if (family.getValue(HConstants.MAJOR_COMPACTION_PERIOD) != null) {
-      String strCompactionTime =
-        family.getValue(HConstants.MAJOR_COMPACTION_PERIOD);
-      ret = (new Long(strCompactionTime)).longValue();
-    }
-
-    if (ret > 0) {
-      // default = 20% = +/- 4.8 hrs
-      double jitterPct =  conf.getFloat("hbase.hregion.majorcompaction.jitter",
-          0.20F);
-      if (jitterPct > 0) {
-        long jitter = Math.round(ret * jitterPct);
-        // deterministic jitter avoids a major compaction storm on restart
-        ImmutableList<StoreFile> snapshot = storefiles;
-        if (snapshot != null && !snapshot.isEmpty()) {
-          String seed = snapshot.get(0).getPath().getName();
-          double curRand = new Random(seed.hashCode()).nextDouble();
-          ret += jitter - Math.round(2L * jitter * curRand);
-        } else {
-          ret = 0; // no storefiles == no major compaction
-        }
-      }
-    }
-    return ret;
+    return compactionManager.isMajorCompaction(candidates);
   }
 
   public CompactionRequest requestCompaction() throws IOException {
@@ -1273,9 +1212,10 @@ public class HStore extends SchemaConfigured implements Store {
         CompactSelection filesToCompact;
         if (override) {
           // coprocessor is overriding normal file selection
-          filesToCompact = new CompactSelection(conf, candidates);
+          filesToCompact = new CompactSelection(candidates);
         } else {
-          filesToCompact = compactSelection(candidates, priority);
+          filesToCompact = compactionManager.selectCompaction(candidates, priority,
+              forceMajor && filesCompacting.isEmpty());
         }
 
         if (region.getCoprocessorHost() != null) {
@@ -1323,191 +1263,6 @@ public class HStore extends SchemaConfigured implements Store {
     synchronized (filesCompacting) {
       filesCompacting.removeAll(cr.getFiles());
     }
-  }
-
-  /**
-   * Algorithm to choose which files to compact, see {@link #compactSelection(java.util.List, int)}
-   * @param candidates
-   * @return
-   * @throws IOException
-   */
-  CompactSelection compactSelection(List<StoreFile> candidates) throws IOException {
-    return compactSelection(candidates,Store.NO_PRIORITY);
-  }
-
-  /**
-   * Algorithm to choose which files to compact
-   *
-   * Configuration knobs:
-   *  "hbase.hstore.compaction.ratio"
-   *    normal case: minor compact when file <= sum(smaller_files) * ratio
-   *  "hbase.hstore.compaction.min.size"
-   *    unconditionally compact individual files below this size
-   *  "hbase.hstore.compaction.max.size"
-   *    never compact individual files above this size (unless splitting)
-   *  "hbase.hstore.compaction.min"
-   *    min files needed to minor compact
-   *  "hbase.hstore.compaction.max"
-   *    max files to compact at once (avoids OOM)
-   *
-   * @param candidates candidate files, ordered from oldest to newest
-   * @return subset copy of candidate list that meets compaction criteria
-   * @throws IOException
-   */
-  CompactSelection compactSelection(List<StoreFile> candidates, int priority)
-      throws IOException {
-    // ASSUMPTION!!! filesCompacting is locked when calling this function
-
-    /* normal skew:
-     *
-     *         older ----> newer
-     *     _
-     *    | |   _
-     *    | |  | |   _
-     *  --|-|- |-|- |-|---_-------_-------  minCompactSize
-     *    | |  | |  | |  | |  _  | |
-     *    | |  | |  | |  | | | | | |
-     *    | |  | |  | |  | | | | | |
-     */
-    CompactSelection compactSelection = new CompactSelection(conf, candidates);
-
-    boolean forcemajor = this.forceMajor && filesCompacting.isEmpty();
-    if (!forcemajor) {
-      // Delete the expired store files before the compaction selection.
-      if (conf.getBoolean("hbase.store.delete.expired.storefile", true)
-          && (ttl != Long.MAX_VALUE) && (this.scanInfo.minVersions == 0)) {
-        CompactSelection expiredSelection = compactSelection
-            .selectExpiredStoreFilesToCompact(
-                EnvironmentEdgeManager.currentTimeMillis() - this.ttl);
-
-        // If there is any expired store files, delete them  by compaction.
-        if (expiredSelection != null) {
-          return expiredSelection;
-        }
-      }
-      // do not compact old files above a configurable threshold
-      // save all references. we MUST compact them
-      int pos = 0;
-      while (pos < compactSelection.getFilesToCompact().size() &&
-             compactSelection.getFilesToCompact().get(pos).getReader().length()
-               > maxCompactSize &&
-             !compactSelection.getFilesToCompact().get(pos).isReference()) ++pos;
-      if (pos != 0) compactSelection.clearSubList(0, pos);
-    }
-
-    if (compactSelection.getFilesToCompact().isEmpty()) {
-      LOG.debug(this.getHRegionInfo().getEncodedName() + " - " +
-        this + ": no store files to compact");
-      compactSelection.emptyFileList();
-      return compactSelection;
-    }
-
-    // Force a major compaction if this is a user-requested major compaction,
-    // or if we do not have too many files to compact and this was requested
-    // as a major compaction
-    boolean majorcompaction = (forcemajor && priority == Store.PRIORITY_USER) ||
-      (forcemajor || isMajorCompaction(compactSelection.getFilesToCompact())) &&
-      (compactSelection.getFilesToCompact().size() < this.maxFilesToCompact
-    );
-    LOG.debug(this.getHRegionInfo().getEncodedName() + " - " +
-      this.getColumnFamilyName() + ": Initiating " +
-      (majorcompaction ? "major" : "minor") + "compaction");
-
-    if (!majorcompaction &&
-        !hasReferences(compactSelection.getFilesToCompact())) {
-      // we're doing a minor compaction, let's see what files are applicable
-      int start = 0;
-      double r = compactSelection.getCompactSelectionRatio();
-
-      // remove bulk import files that request to be excluded from minors
-      compactSelection.getFilesToCompact().removeAll(Collections2.filter(
-          compactSelection.getFilesToCompact(),
-          new Predicate<StoreFile>() {
-            public boolean apply(StoreFile input) {
-              return input.excludeFromMinorCompaction();
-            }
-          }));
-
-      // skip selection algorithm if we don't have enough files
-      if (compactSelection.getFilesToCompact().size() < this.minFilesToCompact) {
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("Not compacting files because we only have " +
-            compactSelection.getFilesToCompact().size() +
-            " files ready for compaction.  Need " + this.minFilesToCompact + " to initiate.");
-        }
-        compactSelection.emptyFileList();
-        return compactSelection;
-      }
-
-      /* TODO: add sorting + unit test back in when HBASE-2856 is fixed
-      // Sort files by size to correct when normal skew is altered by bulk load.
-      Collections.sort(filesToCompact, StoreFile.Comparators.FILE_SIZE);
-       */
-
-      // get store file sizes for incremental compacting selection.
-      int countOfFiles = compactSelection.getFilesToCompact().size();
-      long [] fileSizes = new long[countOfFiles];
-      long [] sumSize = new long[countOfFiles];
-      for (int i = countOfFiles-1; i >= 0; --i) {
-        StoreFile file = compactSelection.getFilesToCompact().get(i);
-        fileSizes[i] = file.getReader().length();
-        // calculate the sum of fileSizes[i,i+maxFilesToCompact-1) for algo
-        int tooFar = i + this.maxFilesToCompact - 1;
-        sumSize[i] = fileSizes[i]
-                   + ((i+1    < countOfFiles) ? sumSize[i+1]      : 0)
-                   - ((tooFar < countOfFiles) ? fileSizes[tooFar] : 0);
-      }
-
-      /* Start at the oldest file and stop when you find the first file that
-       * meets compaction criteria:
-       *   (1) a recently-flushed, small file (i.e. <= minCompactSize)
-       *      OR
-       *   (2) within the compactRatio of sum(newer_files)
-       * Given normal skew, any newer files will also meet this criteria
-       *
-       * Additional Note:
-       * If fileSizes.size() >> maxFilesToCompact, we will recurse on
-       * compact().  Consider the oldest files first to avoid a
-       * situation where we always compact [end-threshold,end).  Then, the
-       * last file becomes an aggregate of the previous compactions.
-       */
-      while(countOfFiles - start >= this.minFilesToCompact &&
-            fileSizes[start] >
-              Math.max(minCompactSize, (long)(sumSize[start+1] * r))) {
-        ++start;
-      }
-      int end = Math.min(countOfFiles, start + this.maxFilesToCompact);
-      long totalSize = fileSizes[start]
-                     + ((start+1 < countOfFiles) ? sumSize[start+1] : 0);
-      compactSelection = compactSelection.getSubList(start, end);
-
-      // if we don't have enough files to compact, just wait
-      if (compactSelection.getFilesToCompact().size() < this.minFilesToCompact) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Skipped compaction of " + this
-            + ".  Only " + (end - start) + " file(s) of size "
-            + StringUtils.humanReadableInt(totalSize)
-            + " have met compaction criteria.");
-        }
-        compactSelection.emptyFileList();
-        return compactSelection;
-      }
-    } else {
-      if(majorcompaction) {
-        if (compactSelection.getFilesToCompact().size() > this.maxFilesToCompact) {
-          LOG.debug("Warning, compacting more than " + this.maxFilesToCompact +
-            " files, probably because of a user-requested major compaction");
-          if(priority != Store.PRIORITY_USER) {
-            LOG.error("Compacting more than max files on a non user-requested compaction");
-          }
-        }
-      } else if (compactSelection.getFilesToCompact().size() > this.maxFilesToCompact) {
-        // all files included in this compaction, up to max
-        int pastMax = compactSelection.getFilesToCompact().size() - this.maxFilesToCompact;
-        compactSelection.getFilesToCompact().subList(0, pastMax).clear();
-      }
-    }
-    return compactSelection;
   }
 
   /**
@@ -2017,11 +1772,7 @@ public class HStore extends SchemaConfigured implements Store {
 
   @Override
   public boolean throttleCompaction(long compactionSize) {
-    // see HBASE-5867 for discussion on the default
-    long throttlePoint = conf.getLong(
-        "hbase.regionserver.thread.compaction.throttle",
-        2 * this.minFilesToCompact * this.region.memstoreFlushSize);
-    return compactionSize > throttlePoint;
+    return compactionManager.throttleCompaction(compactionSize);
   }
 
   @Override
@@ -2116,7 +1867,7 @@ public class HStore extends SchemaConfigured implements Store {
 
   @Override
   public boolean needsCompaction() {
-    return (storefiles.size() - filesCompacting.size()) > minFilesToCompact;
+    return compactionManager.needsCompaction(storefiles.size() - filesCompacting.size());
   }
 
   @Override
@@ -2126,8 +1877,8 @@ public class HStore extends SchemaConfigured implements Store {
 
   public static final long FIXED_OVERHEAD =
       ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-          + (17 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
-          + (5 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
+          + (18 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
+          + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
       + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK
@@ -2146,6 +1897,15 @@ public class HStore extends SchemaConfigured implements Store {
 
   public ScanInfo getScanInfo() {
     return scanInfo;
+  }
+
+  /**
+   * Refreshes compaction manager class configuration. 
+   * Used for tests only - not plumbed thru any layers.
+   * TODO: replace when HBASE-3909 is in.
+   */
+  void updateConfiguration() {
+    setCompactionPolicy(conf.get(COMPACTION_MANAGER_CLASS, DEFAULT_COMPACTION_MANAGER_CLASS));
   }
 
   /**

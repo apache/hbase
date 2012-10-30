@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.RawComparator;
@@ -114,6 +115,9 @@ public class StoreFile extends SchemaConfigured {
   /** Max Sequence ID in FileInfo */
   public static final byte [] MAX_SEQ_ID_KEY = Bytes.toBytes("MAX_SEQ_ID_KEY");
 
+  /** Min Flush time in FileInfo */
+  public static final byte [] MIN_FLUSH_TIME = Bytes.toBytes("MIN_FLUSH_TIME");
+
   /** Major compaction flag in FileInfo */
   public static final byte[] MAJOR_COMPACTION_KEY =
       Bytes.toBytes("MAJOR_COMPACTION_KEY");
@@ -143,6 +147,9 @@ public class StoreFile extends SchemaConfigured {
   // Need to make it 8k for testing.
   public static final int DEFAULT_BLOCKSIZE_SMALL = 8 * 1024;
 
+  /** Default value for files without minFlushTime in metadata */
+  public static final long NO_MIN_FLUSH_TIME = -1;
+
   private final FileSystem fs;
 
   // This file's path.
@@ -169,6 +176,8 @@ public class StoreFile extends SchemaConfigured {
   // Keys for metadata stored in backing HFile.
   // Set when we obtain a Reader.
   private long sequenceid = -1;
+  // default value is -1, remains -1 if file written without minFlushTime
+  private long minFlushTime = NO_MIN_FLUSH_TIME;
 
   // max of the MemstoreTS in the KV's in this store
   // Set when we obtain a Reader.
@@ -381,6 +390,22 @@ public class StoreFile extends SchemaConfigured {
     return this.sequenceid;
   }
 
+  public boolean hasMinFlushTime() {
+    return this.minFlushTime != NO_MIN_FLUSH_TIME;
+  }
+
+  public long getMinFlushTime() {
+      // BulkLoad files are assumed to contain very old data, return 0
+      if (isBulkLoadResult() && getMaxSequenceId() <= 0) {
+        return 0;
+      } else if (this.minFlushTime == NO_MIN_FLUSH_TIME) {
+          // File written without minFlushTime field assume recent data
+          return EnvironmentEdgeManager.currentTimeMillis();
+      } else {
+        return this.minFlushTime;
+      }
+  }
+
   public long getModificationTimeStamp() {
     return modificationTimeStamp;
   }
@@ -587,7 +612,10 @@ public class StoreFile extends SchemaConfigured {
         }
       }
     }
-
+    b = metadataMap.get(MIN_FLUSH_TIME);
+    if (b != null) {
+        this.minFlushTime = Bytes.toLong(b);
+    }
     this.reader.setSequenceID(this.sequenceid);
 
     b = metadataMap.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);

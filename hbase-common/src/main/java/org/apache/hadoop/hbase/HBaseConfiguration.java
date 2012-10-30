@@ -98,6 +98,7 @@ public class HBaseConfiguration extends Configuration {
   public static Configuration addHbaseResources(Configuration conf) {
     conf.addResource("hbase-default.xml");
     conf.addResource("hbase-site.xml");
+    conf.addResource("hbase-compactions.xml");
 
     checkDefaultsVersion(conf);
     checkForClusterFreeMemoryLimit(conf);

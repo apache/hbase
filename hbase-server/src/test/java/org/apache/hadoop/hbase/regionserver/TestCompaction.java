@@ -303,6 +303,8 @@ public class TestCompaction extends HBaseTestCase {
     conf.setFloat("hbase.hregion.majorcompaction.jitter", jitterPct);
 
     HStore s = ((HStore) r.getStore(COLUMN_FAMILY));
+    // TODO: temporary call, until HBASE-3909 is committed in some form.
+    s.updateConfiguration();
     try {
       createStoreFile(r);
       createStoreFile(r);
@@ -314,9 +316,10 @@ public class TestCompaction extends HBaseTestCase {
       assertEquals(2, s.getStorefilesCount());
 
       // ensure that major compaction time is deterministic
-      long mcTime = s.getNextMajorCompactTime();
+      CompactionManager c = s.compactionManager;
+      long mcTime = c.getNextMajorCompactTime();
       for (int i = 0; i < 10; ++i) {
-        assertEquals(mcTime, s.getNextMajorCompactTime());
+        assertEquals(mcTime, c.getNextMajorCompactTime());
       }
 
       // ensure that the major compaction time is within the variance
