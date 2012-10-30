@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.util.Collection;
 import java.util.List;
 import java.util.NavigableSet;
 
@@ -206,12 +204,6 @@ public interface Store extends SchemaAware, HeapSize {
    * @return <tt>true</tt> if the store has any underlying reference files to older HFiles
    */
   public boolean hasReferences();
-  
-  /*
-   * @param files
-   * @return True if any of the files in <code>files</code> are References.
-   */
-  public boolean hasReferences(Collection<StoreFile> files);
 
   /**
    * @return The size of this store's memstore, in bytes
@@ -275,11 +267,6 @@ public interface Store extends SchemaAware, HeapSize {
    * @return the total size of all Bloom filters in the store
    */
   public long getTotalStaticBloomSize();
-  
-  /**
-   * Returns the TTL for this store's column family.
-   */
-  public long getTtl(); 
 
   // Test-helper methods
 
@@ -300,10 +287,4 @@ public interface Store extends SchemaAware, HeapSize {
    * @return the parent region hosting this store
    */
   public HRegion getHRegion();
-  
-  /**
-   * @return A hash code depending on the state of the current store files.
-   * This is used as seed for deterministic random generator for selecting major compaction time
-   */
-  public Integer getDeterministicRandomSeed();
 }

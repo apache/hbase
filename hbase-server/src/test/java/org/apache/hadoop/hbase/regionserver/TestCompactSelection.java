@@ -1,4 +1,5 @@
 /**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +26,6 @@ import java.util.GregorianCalendar;
 import java.util.List;
 
 import junit.framework.TestCase;
-import org.junit.experimental.categories.Category;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,27 +39,26 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.collect.Lists;
+import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestDefaultCompactSelection extends TestCase {
-  private final static Log LOG = LogFactory.getLog(TestDefaultCompactSelection.class);
+public class TestCompactSelection extends TestCase {
+  private final static Log LOG = LogFactory.getLog(TestCompactSelection.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  protected Configuration conf;
-  protected HStore store;
+  private Configuration conf;
+  private HStore store;
   private static final String DIR=
     TEST_UTIL.getDataTestDir("TestCompactSelection").toString();
   private static Path TEST_FILE;
-  private CompactionManager manager;
 
-  protected static final int minFiles = 3;
-  protected static final int maxFiles = 5;
+  private static final int minFiles = 3;
+  private static final int maxFiles = 5;
 
-  protected static final long minSize = 10;
-  protected static final long maxSize = 1000;
+  private static final long minSize = 10;
+  private static final long maxSize = 1000;
 
 
   @Override
@@ -95,8 +94,6 @@ public class TestDefaultCompactSelection extends TestCase {
     region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
 
     store = new HStore(basedir, region, hcd, fs, conf);
-    manager = store.compactionManager;
-
     TEST_FILE = StoreFile.getRandomFilename(fs, store.getHomedir());
     fs.create(TEST_FILE);
   }
@@ -105,39 +102,18 @@ public class TestDefaultCompactSelection extends TestCase {
   static class MockStoreFile extends StoreFile {
     long length = 0;
     boolean isRef = false;
-    long ageInDisk;
-    long sequenceid;
 
-    MockStoreFile(long length, long ageInDisk, boolean isRef, long sequenceid) throws IOException {
-      super(TEST_UTIL.getTestFileSystem(), TEST_FILE, TEST_UTIL.getConfiguration(),
+    MockStoreFile(long length, boolean isRef) throws IOException {
+      super(TEST_UTIL.getTestFileSystem(), TEST_FILE,
+            TEST_UTIL.getConfiguration(),
             new CacheConfig(TEST_UTIL.getConfiguration()), BloomType.NONE,
             NoOpDataBlockEncoder.INSTANCE);
       this.length = length;
-      this.isRef = isRef;
-      this.ageInDisk = ageInDisk;
-      this.sequenceid = sequenceid;
+      this.isRef  = isRef;
     }
 
     void setLength(long newLen) {
       this.length = newLen;
-    }
-
-    @Override
-    public boolean hasMinFlushTime() {
-      return ageInDisk != 0;
-    }
-
-    @Override
-    public long getMinFlushTime() {
-      if (ageInDisk < 0) {
-        return ageInDisk;
-      }
-      return EnvironmentEdgeManager.currentTimeMillis() - ageInDisk;
-    }
-
-    @Override
-    public long getMaxSequenceId() {
-      return sequenceid;
     }
 
     @Override
@@ -162,70 +138,43 @@ public class TestDefaultCompactSelection extends TestCase {
     }
   }
 
-  ArrayList<Long> toArrayList(long... numbers) {
-    ArrayList<Long> result = new ArrayList<Long>();
-    for (long i : numbers) {
-      result.add(i);
-    }
-    return result;
+  List<StoreFile> sfCreate(long ... sizes) throws IOException {
+    return sfCreate(false, sizes);
   }
 
-  List<StoreFile> sfCreate(long... sizes) throws IOException {
-    ArrayList<Long> ageInDisk = new ArrayList<Long>();
-    for (int i = 0; i < sizes.length; i++) {
-      ageInDisk.add(0L);
-    }
-    return sfCreate(toArrayList(sizes), ageInDisk);
-  }
-
-  List<StoreFile> sfCreate(ArrayList<Long> sizes, ArrayList<Long> ageInDisk)
-    throws IOException {
-    return sfCreate(false, sizes, ageInDisk);
-  }
-
-  List<StoreFile> sfCreate(boolean isReference, long... sizes) throws IOException {
-    ArrayList<Long> ageInDisk = new ArrayList<Long>(sizes.length);
-    for (int i = 0; i < sizes.length; i++) {
-      ageInDisk.add(0L);
-    }
-    return sfCreate(isReference, toArrayList(sizes), ageInDisk);
-  }
-
-  List<StoreFile> sfCreate(boolean isReference, ArrayList<Long> sizes, ArrayList<Long> ageInDisk)
-      throws IOException {
+  List<StoreFile> sfCreate(boolean isReference, long ... sizes)
+  throws IOException {
     List<StoreFile> ret = Lists.newArrayList();
-    for (int i = 0; i < sizes.size(); i++) {
-      ret.add(new MockStoreFile(sizes.get(i), ageInDisk.get(i), isReference, i));
+    for (long i : sizes) {
+      ret.add(new MockStoreFile(i, isReference));
     }
     return ret;
   }
 
   long[] getSizes(List<StoreFile> sfList) {
     long[] aNums = new long[sfList.size()];
-    for (int i = 0; i < sfList.size(); ++i) {
+    for (int i=0; i <sfList.size(); ++i) {
       aNums[i] = sfList.get(i).getReader().length();
     }
     return aNums;
   }
-
-  void compactEquals(List<StoreFile> candidates, long... expected)
-    throws IOException {
+  
+  void compactEquals(List<StoreFile> candidates, long ... expected) 
+  throws IOException {
     compactEquals(candidates, false, expected);
   }
 
-  void compactEquals(List<StoreFile> candidates, boolean forcemajor,
+  void compactEquals(List<StoreFile> candidates, boolean forcemajor, 
       long ... expected)
   throws IOException {
     store.forceMajor = forcemajor;
-    //Test Default compactions
-    List<StoreFile> actual = store.compactionManager
-      .selectCompaction(candidates, Store.NO_PRIORITY, forcemajor).getFilesToCompact();
-    assertEquals(Arrays.toString(expected), Arrays.toString(getSizes(actual)));
+    List<StoreFile> actual = store.compactSelection(candidates).getFilesToCompact();
     store.forceMajor = false;
+    assertEquals(Arrays.toString(expected), Arrays.toString(getSizes(actual)));
   }
 
   public void testCompactionRatio() throws IOException {
-    /**
+    /*
      * NOTE: these tests are specific to describe the implementation of the
      * current compaction algorithm.  Developed to ensure that refactoring
      * doesn't implicitly alter this.
@@ -242,15 +191,17 @@ public class TestDefaultCompactSelection extends TestCase {
     compactEquals(sfCreate(tooBig, tooBig, 700,700) /* empty */);
     // small files = don't care about ratio
     compactEquals(sfCreate(8,3,1), 8,3,1);
-    /* TODO: add sorting + unit test back in when HBASE-2856 is fixed
-    // sort first so you don't include huge file the tail end.
+    /* TODO: add sorting + unit test back in when HBASE-2856 is fixed 
+    // sort first so you don't include huge file the tail end
     // happens with HFileOutputFormat bulk migration
     compactEquals(sfCreate(100,50,23,12,12, 500), 23, 12, 12);
      */
     // don't exceed max file compact threshold
+    assertEquals(maxFiles,
+        store.compactSelection(sfCreate(7,6,5,4,3,2,1)).getFilesToCompact().size());
     // note:  file selection starts with largest to smallest.
     compactEquals(sfCreate(7, 6, 5, 4, 3, 2, 1), 7, 6, 5, 4, 3);
-
+    
     /* MAJOR COMPACTION */
     // if a major compaction has been forced, then compact everything
     compactEquals(sfCreate(50,25,12,12), true, 50, 25, 12, 12);
@@ -260,18 +211,15 @@ public class TestDefaultCompactSelection extends TestCase {
     compactEquals(sfCreate(tooBig, 12,12), true, tooBig, 12, 12);
     // don't exceed max file compact threshold, even with major compaction
     store.forceMajor = true;
-    assertEquals(maxFiles,
-        manager.selectCompaction(sfCreate(7, 6, 5, 4, 3, 2, 1), Store.NO_PRIORITY, false)
-          .getFilesToCompact().size());
     compactEquals(sfCreate(7, 6, 5, 4, 3, 2, 1), 7, 6, 5, 4, 3);
     store.forceMajor = false;
+
     // if we exceed maxCompactSize, downgrade to minor
     // if not, it creates a 'snowball effect' when files >> maxCompactSize:
     // the last file in compaction is the aggregate of all previous compactions
     compactEquals(sfCreate(100,50,23,12,12), true, 23, 12, 12);
     conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 1);
     conf.setFloat("hbase.hregion.majorcompaction.jitter", 0);
-    store.updateConfiguration();
     try {
       // trigger an aged major compaction
       compactEquals(sfCreate(50,25,12,12), 50, 25, 12, 12);
@@ -288,12 +236,15 @@ public class TestDefaultCompactSelection extends TestCase {
     // reference files shouldn't obey max threshold
     compactEquals(sfCreate(true, tooBig, 12,12), tooBig, 12, 12);
     // reference files should obey max file compact to avoid OOM
-    compactEquals(sfCreate(true, 7, 6, 5, 4, 3, 2, 1), 7, 6, 5, 4, 3);
-
+    assertEquals(maxFiles,
+        store.compactSelection(sfCreate(true, 7,6,5,4,3,2,1)).getFilesToCompact().size());
+    // reference compaction
+    compactEquals(sfCreate(true, 7, 6, 5, 4, 3, 2, 1), 5, 4, 3, 2, 1);
+    
     // empty case
     compactEquals(new ArrayList<StoreFile>() /* empty */);
     // empty case (because all files are too big)
-   compactEquals(sfCreate(tooBig, tooBig) /* empty */);
+    compactEquals(sfCreate(tooBig, tooBig) /* empty */);
   }
 
   public void testOffPeakCompactionRatio() throws IOException {
@@ -307,7 +258,7 @@ public class TestDefaultCompactSelection extends TestCase {
     Calendar calendar = new GregorianCalendar();
     int hourOfDay = calendar.get(Calendar.HOUR_OF_DAY);
     LOG.debug("Hour of day = " + hourOfDay);
-    int hourPlusOne = ((hourOfDay+1)%24);
+    int hourPlusOne = ((hourOfDay+1+24)%24);
     int hourMinusOne = ((hourOfDay-1+24)%24);
     int hourMinusTwo = ((hourOfDay-2+24)%24);
 
@@ -323,16 +274,15 @@ public class TestDefaultCompactSelection extends TestCase {
     this.conf.setLong("hbase.offpeak.end.hour", hourPlusOne);
     LOG.debug("Testing compact selection with off-peak settings (" +
         hourMinusOne + ", " + hourPlusOne + ")");
-    // update the compaction policy to include conf changes
-    store.setCompactionPolicy(CompactionManager.class.getName());
-    compactEquals(sfCreate(999, 50, 12, 12, 1), 50, 12, 12, 1);
+    compactEquals(sfCreate(999,50,12,12, 1), 50, 12, 12, 1);
 
     // set peak hour outside current selection and check compact selection
     this.conf.setLong("hbase.offpeak.start.hour", hourMinusTwo);
     this.conf.setLong("hbase.offpeak.end.hour", hourMinusOne);
-    store.setCompactionPolicy(CompactionManager.class.getName());
     LOG.debug("Testing compact selection with off-peak settings (" +
         hourMinusTwo + ", " + hourMinusOne + ")");
     compactEquals(sfCreate(999,50,12,12, 1), 12, 12, 1);
   }
+
 }
+

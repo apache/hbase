@@ -223,8 +223,6 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
               Bytes.toBytes(compactionExclude));
           w.appendFileInfo(StoreFile.TIMERANGE_KEY,
               WritableUtils.toByteArray(trt));
-          w.appendFileInfo(StoreFile.MIN_FLUSH_TIME, 
-              Bytes.toBytes(StoreFile.NO_MIN_FLUSH_TIME));
           w.close();
         }
       }
