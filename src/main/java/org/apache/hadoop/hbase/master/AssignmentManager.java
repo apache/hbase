@@ -109,6 +109,8 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private TimeoutMonitor timeoutMonitor;
 
+  private TimerUpdater timerUpdater;
+
   private LoadBalancer balancer;
 
   /**
@@ -152,6 +154,13 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   private final NavigableMap<ServerName, Set<HRegionInfo>> servers =
     new TreeMap<ServerName, Set<HRegionInfo>>();
+
+  /**
+   * Contains the server which need to update timer, these servers will be
+   * handled by {@link TimerUpdater}
+   */
+  private final ConcurrentSkipListSet<ServerName> serversInUpdatingTimer = 
+    new ConcurrentSkipListSet<ServerName>();
 
   /**
    * Region to server assignment map.
@@ -207,6 +216,10 @@ public class AssignmentManager extends ZooKeeperListener {
       conf.getInt("hbase.master.assignment.timeoutmonitor.period", 10000),
       master, serverManager,
       conf.getInt("hbase.master.assignment.timeoutmonitor.timeout", 1800000));
+    this.timerUpdater = new TimerUpdater(conf.getInt(
+        "hbase.master.assignment.timerupdater.period", 10000), master);
+    Threads.setDaemonThreadRunning(timerUpdater.getThread(),
+        master.getServerName() + ".timerUpdater");
     this.zkTable = new ZKTable(this.master.getZooKeeper());
     this.maximumAssignmentAttempts =
       this.master.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10);
@@ -1215,8 +1228,17 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     // Remove plan if one.
     clearRegionPlan(regionInfo);
-    // Update timers for all regions in transition going against this server.
-    updateTimers(sn);
+    // Add the server to serversInUpdatingTimer
+    addToServersInUpdatingTimer(sn);
+  }
+
+  /**
+   * Add the server to the set serversInUpdatingTimer, then {@link TimerUpdater}
+   * will update timers for this server in background
+   * @param sn
+   */
+  private void addToServersInUpdatingTimer(final ServerName sn) {
+    this.serversInUpdatingTimer.add(sn);
   }
 
   /**
@@ -2889,6 +2911,35 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
+   * Update timers for all regions in transition going against the server in the
+   * serversInUpdatingTimer.
+   */
+  public class TimerUpdater extends Chore {
+
+    public TimerUpdater(final int period, final Stoppable stopper) {
+      super("AssignmentTimerUpdater", period, stopper);
+    }
+
+    @Override
+    protected void chore() {
+      ServerName serverToUpdateTimer = null;
+      while (!serversInUpdatingTimer.isEmpty() && !stopper.isStopped()) {
+        if (serverToUpdateTimer == null) {
+          serverToUpdateTimer = serversInUpdatingTimer.first();
+        } else {
+          serverToUpdateTimer = serversInUpdatingTimer
+              .higher(serverToUpdateTimer);
+        }
+        if (serverToUpdateTimer == null) {
+          break;
+        }
+        updateTimers(serverToUpdateTimer);
+        serversInUpdatingTimer.remove(serverToUpdateTimer);
+      }
+    }
+  }
+
+  /**
    * Monitor to check for time outs on region transition operations
    */
   public class TimeoutMonitor extends Chore {
@@ -3428,6 +3479,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
   public void stop() {
     this.timeoutMonitor.interrupt();
+    this.timerUpdater.interrupt();
   }
   
   /**
