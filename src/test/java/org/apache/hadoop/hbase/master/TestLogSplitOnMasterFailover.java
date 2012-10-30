@@ -48,8 +48,10 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.junit.Test;
 
 /**
@@ -248,6 +250,33 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     runTest();
   }
 
+  @Test(timeout=180000)
+  public void testWithDistributedLogSplittingAndErrors() throws Exception {
+    // add a split log worker to handle InjectionEvent.SPLITLOGWORKER_SPLIT_LOG_START.
+    ZooKeeperWrapper.setNamespaceForTesting();
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, true);
+    InjectionHandler.set(new SplitLogKillInjectionHandler());
+    runTest();
+  }
+  
+  static  class SplitLogKillInjectionHandler extends InjectionHandler {
+      static int count = 0;
+      
+      @Override
+      // kill split log workers the first few times. 
+      protected void _processEventIO(InjectionEvent event, Object... args) throws IOException{
+        if (event == InjectionEvent.SPLITLOGWORKER_SPLIT_LOG_START) {
+          count++;
+          LOG.debug("Processing a split log event. Count = " + count);
+          Threads.sleep(50); // make it take a bit of time. sleep 50ms.
+          if (count < 5) {
+            throw new IOException("Failing for the test");
+          }
+        }
+      }
+   }
+    
+  
   private void runTest() throws Exception {
     startMiniCluster(NUM_MASTERS, NUM_RS);
     Thread.currentThread().setName(getClass().getSimpleName());
@@ -301,7 +330,15 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
 
     masters = miniCluster().getMasters();
     assertEquals(1, masters.size());
-
+    
+    // Start a few new regionservers.
+    final int EXTRA_RS = 2;
+    for (int i = NUM_RS; i < NUM_RS + EXTRA_RS; ++i) {
+      miniCluster().startRegionServer();
+      otherRsNames.add(
+          miniCluster().getRegionServer(i).getServerInfo().getServerName());
+    }
+    
     // wait for an active master to show up and be ready
     assertTrue(miniCluster().waitForActiveAndReadyMaster());
 

@@ -41,6 +41,8 @@ import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.InjectionEvent;
+import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog.TaskState;
@@ -136,6 +138,8 @@ public class SplitLogWorker implements Runnable, Watcher {
         try {
           FileStatus st;
           try {
+          InjectionHandler.processEventIO(InjectionEvent.SPLITLOGWORKER_SPLIT_LOG_START);
+          
           st = fs.getFileStatus(new Path(filename));
 
           t1  = System.currentTimeMillis();

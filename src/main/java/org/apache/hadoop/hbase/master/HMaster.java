@@ -1061,7 +1061,9 @@ public class HMaster extends HasThread implements HMasterInterface,
             Path logDir = status.getPath();
             String serverName = logDir.getName();
             LOG.info("Found log folder : " + serverName);
-            if (!clusterStateRecovery.liveRegionServersAtStartup().contains(serverName)) {
+            if (!clusterStateRecovery.liveRegionServersAtStartup().contains(serverName)
+                // If a server now checked in with the new master, don't kill it.
+                && serverManager.getServerInfo(serverName) == null) {
               LOG.info("Log folder " + status.getPath() + " doesn't belong " +
                   "to a known region server, splitting");
               serverNames.add(serverName);
