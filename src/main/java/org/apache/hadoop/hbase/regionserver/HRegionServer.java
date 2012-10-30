@@ -1455,8 +1455,7 @@ public class HRegionServer implements HRegionInterface,
     };
     Threads.setDaemonThreadRunning(this.hlogRoller, n + ".logRoller",
         handler);
-    Threads.setDaemonThreadRunning(this.cacheFlusher, n + ".cacheFlusher",
-      handler);
+    this.cacheFlusher.start(n, handler);
     Threads.setDaemonThreadRunning(this.workerThread, n + ".worker", handler);
     Threads.setDaemonThreadRunning(this.majorCompactionChecker,
         n + ".majorCompactionChecker", handler);
@@ -1660,7 +1659,7 @@ public class HRegionServer implements HRegionInterface,
   protected void join() {
     Threads.shutdown(this.majorCompactionChecker);
     Threads.shutdown(this.workerThread);
-    Threads.shutdown(this.cacheFlusher);
+    this.cacheFlusher.join();
     Threads.shutdown(this.hlogRoller);
     this.compactSplitThread.join();
   }

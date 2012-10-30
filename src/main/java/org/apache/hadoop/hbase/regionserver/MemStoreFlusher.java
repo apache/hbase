@@ -26,9 +26,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
@@ -39,7 +41,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Thread that flushes cache on request
@@ -50,7 +52,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @see FlushRequester
  */
-class MemStoreFlusher extends HasThread implements FlushRequester {
+class MemStoreFlusher implements FlushRequester {
   static final Log LOG = LogFactory.getLog(MemStoreFlusher.class);
   // These two data members go together.  Any entry in the one must have
   // a corresponding entry in the other.
@@ -61,7 +63,7 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
 
   private final long threadWakeFrequency;
   private final HRegionServer server;
-  private final ReentrantLock lock = new ReentrantLock();
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   protected final long globalMemStoreLimit;
   protected final long globalMemStoreLimitLowMark;
@@ -74,6 +76,9 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
     "hbase.regionserver.global.memstore.lowerLimit";
   private long blockingStoreFilesNumber;
   private long blockingWaitTime;
+
+  private FlushHandler[] flushHandlers = null;
+  private int handlerCount;
 
   /**
    * @param conf
@@ -103,6 +108,10 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
     }
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
       90000);
+
+    // number of "memstore flusher" threads per region server
+    this.handlerCount = conf.getInt("hbase.regionserver.flusher.count", 2);
+
     LOG.info("globalMemStoreLimit=" +
       StringUtils.humanReadableInt(this.globalMemStoreLimit) +
       ", globalMemStoreLimitLowMark=" +
@@ -134,32 +143,38 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
     return (long)(max * limit);
   }
 
-  @Override
-  public void run() {
-    while (!this.server.isStopRequested()) {
-      FlushQueueEntry fqe = null;
-      try {
-        fqe = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
-        if (fqe == null) {
-          continue;
-        }
-        if (!flushRegion(fqe)) {
-          LOG.warn("Failed to flush " + fqe.region);
-        }
-      } catch (InterruptedException ex) {
-        continue;
-      } catch (ConcurrentModificationException ex) {
-        continue;
-      } catch (Exception ex) {
-        LOG.error("Cache flush failed" +
-          (fqe != null ? (" for region " + Bytes.toString(fqe.region.getRegionName())) : ""),
-          ex);
-        server.checkFileSystem();
-      }
+  private class FlushHandler extends HasThread {
+
+    FlushHandler(String threadName) {
+      this.setDaemon(true);
+      this.setName(threadName);
     }
-    this.regionsInQueue.clear();
-    this.flushQueue.clear();
-    LOG.info(getName() + " exiting");
+
+    @Override
+    public void run() {
+      while (!server.isStopRequested()) {
+        FlushQueueEntry fqe = null;
+        try {
+          fqe = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
+          if (fqe == null) {
+            continue;
+          }
+          if (!flushRegion(fqe, getName())) {
+            LOG.warn("Failed to flush " + fqe.region);
+          }
+        } catch (InterruptedException ex) {
+          continue;
+        } catch (ConcurrentModificationException ex) {
+          continue;
+        } catch (Exception ex) {
+          LOG.error("Cache flush failed" +
+              (fqe != null ? (" for region " + Bytes.toString(fqe.region.getRegionName())) : ""),
+              ex);
+          server.checkFileSystem();
+        }
+      }
+      LOG.info(getName() + " exiting");
+    }
   }
 
   public void request(HRegion r) {
@@ -178,11 +193,49 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
    * Only interrupt once it's done with a run through the work loop.
    */
   void interruptIfNecessary() {
-    lock.lock();
+    lock.writeLock().lock();
     try {
-      this.interrupt();
+      for (FlushHandler flushHandler : flushHandlers) {
+        if (flushHandler != null)
+          flushHandler.interrupt();
+      }
     } finally {
-      lock.unlock();
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Start the flusher threads.
+   *
+   * @param rsThreadName prefix for thread name (since there might be multiple
+   *                     region servers running within the same JVM.
+   * @param eh
+   */
+  void start(String rsThreadName, UncaughtExceptionHandler eh) {
+    flushHandlers = new FlushHandler[handlerCount];
+    for (int i = 0; i < flushHandlers.length; i++) {
+      flushHandlers[i] = new FlushHandler(rsThreadName + ".cacheFlusher." + i);
+      if (eh != null) {
+        flushHandlers[i].setUncaughtExceptionHandler(eh);
+      }
+      flushHandlers[i].start();
+    }
+  }
+
+  boolean isAlive() {
+    for (FlushHandler flushHander : flushHandlers) {
+      if (flushHander != null && flushHander.isAlive()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void join() {
+    for (FlushHandler flushHandler : flushHandlers) {
+      if (flushHandler != null) {
+        Threads.shutdown(flushHandler.getThread());
+      }
     }
   }
 
@@ -194,7 +247,7 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
    * false, there will be accompanying log messages explaining why the log was
    * not flushed.
    */
-  private boolean flushRegion(final FlushQueueEntry fqe) {
+  private boolean flushRegion(final FlushQueueEntry fqe, String why) {
     HRegion region = fqe.region;
     if (!fqe.region.getRegionInfo().isMetaRegion() &&
         isTooManyStoreFiles(region)) {
@@ -220,7 +273,7 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
          */
         if (!this.server.compactSplitThread.requestSplit(region)
             || region.hasReferences()) {
-          this.server.compactSplitThread.requestCompaction(region, getName());
+          this.server.compactSplitThread.requestCompaction(region, why);
         }
         // Put back on the queue.  Have it come back out of the queue
         // after a delay of this.blockingWaitTime / 100 ms.
@@ -229,7 +282,7 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
         return true;
       }
     }
-    return flushRegion(region, false);
+    return flushRegion(region, why, false);
   }
 
   /*
@@ -244,7 +297,9 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
    * false, there will be accompanying log messages explaining why the log was
    * not flushed.
    */
-  private boolean flushRegion(final HRegion region, final boolean emergencyFlush) {
+  private boolean flushRegion(final HRegion region, String why,
+    final boolean emergencyFlush) {
+
     synchronized (this.regionsInQueue) {
       FlushQueueEntry fqe = this.regionsInQueue.remove(region);
       if (fqe != null && emergencyFlush) {
@@ -252,11 +307,11 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
         // emergencyFlush, then item was removed via a flushQueue.poll.
         flushQueue.remove(fqe);
      }
-     lock.lock();
+     lock.readLock().lock();
     }
     try {
       if (region.flushcache()) {
-        server.compactSplitThread.requestCompaction(region, getName());
+        server.compactSplitThread.requestCompaction(region, why);
       }
       server.getMetrics().addFlush(region.getRecentFlushInfo());
     } catch (IOException ex) {
@@ -267,7 +322,7 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
       server.checkFileSystem();
       return false;
     } finally {
-      lock.unlock();
+      lock.readLock().unlock();
     }
     return true;
   }
@@ -324,14 +379,14 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
         " exceeded; currently " +
         StringUtils.humanReadableInt(globalMemStoreSize) + " and flushing till " +
         StringUtils.humanReadableInt(this.globalMemStoreLimitLowMark));
-      if (!flushRegion(biggestMemStoreRegion, true)) {
+      if (!flushRegion(biggestMemStoreRegion, "emergencyFlush", true)) {
         LOG.warn("Flush failed");
         break;
       }
       regionsToCompact.add(biggestMemStoreRegion);
     }
     for (HRegion region : regionsToCompact) {
-      server.compactSplitThread.requestCompaction(region, getName());
+      server.compactSplitThread.requestCompaction(region, "emergencyFlush");
     }
   }
 

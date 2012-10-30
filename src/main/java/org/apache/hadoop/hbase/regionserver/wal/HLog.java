@@ -55,8 +55,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -232,7 +232,7 @@ public class HLog implements Syncable {
 
   // This lock prevents starting a log roll during a cache flush.
   // synchronized is insufficient because a cache flush spans two method calls.
-  private final Lock cacheFlushLock = new ReentrantLock();
+  private final ReentrantReadWriteLock cacheFlushLock = new ReentrantReadWriteLock();
 
   // We synchronize on updateLock to prevent updates and to prevent a log roll
   // during an update
@@ -505,7 +505,7 @@ public class HLog implements Syncable {
       return null;
     }
     byte [][] regionsToFlush = null;
-    this.cacheFlushLock.lock();
+    this.cacheFlushLock.writeLock().lock();
     long t0 = 0;
     long t1 = 0;
     try {
@@ -602,7 +602,7 @@ public class HLog implements Syncable {
         }
       }
     } finally {
-      this.cacheFlushLock.unlock();
+      this.cacheFlushLock.writeLock().unlock();
     }
     return regionsToFlush;
   }
@@ -884,7 +884,7 @@ public class HLog implements Syncable {
       LOG.error("Exception while waiting for syncer thread to die", e);
     }
 
-    cacheFlushLock.lock();
+    cacheFlushLock.writeLock().lock();
     try {
       synchronized (updateLock) {
         this.closed = true;
@@ -894,7 +894,7 @@ public class HLog implements Syncable {
         cleanupCurrentWriter(-1);
       }
     } finally {
-      cacheFlushLock.unlock();
+      cacheFlushLock.writeLock().unlock();
     }
   }
 
@@ -1287,7 +1287,7 @@ public class HLog implements Syncable {
    * @see #abortCacheFlush()
    */
   public long startCacheFlush(final byte [] regionName) {
-    this.cacheFlushLock.lock();
+    this.cacheFlushLock.readLock().lock();
     Long seq = this.lastSeqWritten.remove(regionName);
     // seq is the lsn of the oldest edit associated with this region. If a
     // snapshot already exists - because the last flush failed - then seq will
@@ -1330,7 +1330,6 @@ public class HLog implements Syncable {
           return;
         }
         try {
-          long now = System.currentTimeMillis();
           WALEdit edit = completeCacheFlushLogEdit();
           HLogKey key = makeKey(regionName, tableName, logSeqId,
               System.currentTimeMillis());
@@ -1347,7 +1346,7 @@ public class HLog implements Syncable {
       // Cleaning up of lastSeqWritten is in the finally clause because we
       // don't want to confuse getOldestOutstandingSeqNum()
       this.lastSeqWritten.remove(regionName);
-      this.cacheFlushLock.unlock();
+      this.cacheFlushLock.readLock().unlock();
     }
   }
 
@@ -1386,7 +1385,7 @@ public class HLog implements Syncable {
             current_memstore_earliest_seq + " snapshot seq=" + snapshot_seq, new Throwable());
       }
     }
-    this.cacheFlushLock.unlock();
+    this.cacheFlushLock.readLock().unlock();
   }
 
   /**
