@@ -51,11 +51,12 @@ public class OperationMetrics {
   private static final String CONF_KEY =
       "hbase.metrics.exposeOperationTimes";
 
-  private String tableName = null;
-  private String regionName = null;
-  private String regionMetrixPrefix = null;
-  private Configuration conf = null;
-  
+  private final String tableName;
+  private final String regionName;
+  private final String regionMetrixPrefix;
+  private final Configuration conf;
+  private final boolean exposeTimes;
+
 
   /**
    * Create a new OperationMetrics
@@ -78,6 +79,14 @@ public class OperationMetrics {
       }
       this.regionMetrixPrefix =
           SchemaMetrics.generateRegionMetricsPrefix(this.tableName, this.regionName);
+      this.exposeTimes = this.conf.getBoolean(CONF_KEY, true);
+    } else {
+      //Make all the final values happy.
+      this.conf = null;
+      this.tableName = null;
+      this.regionName = null;
+      this.regionMetrixPrefix = null;
+      this.exposeTimes = false;
     }
   }
   
@@ -212,7 +221,7 @@ public class OperationMetrics {
   }
 
   private void doSafeIncTimeVarying(String prefix, String key, long value) {
-    if (conf.getBoolean(CONF_KEY, true)) {
+    if (exposeTimes) {
       if (prefix != null && !prefix.isEmpty() && key != null && !key.isEmpty()) {
         String m = prefix + key;
         RegionMetricsStorage.incrTimeVaryingMetric(m, value);
