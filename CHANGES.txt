@@ -2741,4 +2741,3 @@ Below are the list of changes before 2007-08-18
      (Edward Yoon via Stack).
  61. HADOOP-1709 Make HRegionInterface more like that of HTable
      HADOOP-1725 Client find of table regions should not include offlined, split parents
-     TEST
