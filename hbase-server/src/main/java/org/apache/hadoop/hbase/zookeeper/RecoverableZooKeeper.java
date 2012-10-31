@@ -441,7 +441,7 @@ public class RecoverableZooKeeper {
                   Bytes.toStringBinary(data));
               throw e;
             }
-            LOG.error("Node " + path + " already exists and this is not a " +
+            LOG.info("Node " + path + " already exists and this is not a " +
                 "retry");
             throw e;
 
