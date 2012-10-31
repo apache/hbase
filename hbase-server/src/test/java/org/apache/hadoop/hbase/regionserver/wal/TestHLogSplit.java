@@ -85,8 +85,7 @@ public class TestHLogSplit {
   private Configuration conf;
   private FileSystem fs;
 
-  private final static HBaseTestingUtility
-          TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
 
   private static final Path hbaseDir = new Path("/hbase");
@@ -157,10 +156,50 @@ public class TestHLogSplit {
   }
 
   /**
+   * Simulates splitting a WAL out from under a regionserver that is still trying to write it.  Ensures we do not
+   * lose edits.
+   * @throws IOException
+   */
+  @Test
+  public void testLogCannotBeWrittenOnceParsed() throws IOException {
+    AtomicLong counter = new AtomicLong(0);
+    AtomicBoolean stop = new AtomicBoolean(false);
+    // Index of the WAL we want to keep open.  generateHLogs will leave open the WAL whose index we supply here.
+    int walToKeepOpen = 9;
+    // The below method writes NUM_WRITERS files each with ENTRIES entries it for a total of NUM_WRITERS * ENTRIES added
+    // per column family in the region.
+    generateHLogs(walToKeepOpen);
+    fs.initialize(fs.getUri(), conf);
+    String julietRegion = regions.get(0);
+    // This WAL should be open still
+    HLog.Writer stillOpenWAL = writer[walToKeepOpen];
+    // Thread that will keep writing the WAL across the WAL splitting below.  Before we start writing, make sure the
+    // counter has the edits that were written above in generateHLogs.
+    counter.addAndGet(ENTRIES * NUM_WRITERS);
+    Thread zombie = new ZombieLastLogWriterRegionServer(stillOpenWAL, counter, stop, TABLE_NAME, julietRegion);
+    try {
+      zombie.start();
+      HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf, hbaseDir, hlogDir, oldLogDir, fs);
+      logSplitter.splitLog();
+      // Get the recovered edits file made by the WAL log splitting process above.
+      Path logfile = getLogForRegion(hbaseDir, TABLE_NAME, julietRegion);
+
+      // It's possible that the writer got an error while appending and didn't count an edit
+      // however the entry will in fact be written to file and split with the rest
+      long numberOfEditsInRegion = countHLog(logfile, fs, conf);
+      assertTrue("The log file could have at most 1 extra log entry, but can't have less. Zombie could write " +
+        counter.get() + " and logfile had only " + numberOfEditsInRegion + " in logfile="  + logfile,
+          counter.get() == numberOfEditsInRegion || counter.get() + 1 == numberOfEditsInRegion);
+    } finally {
+      stop.set(true);
+    }
+  }
+
+  /**
    * @throws IOException
    * @see https://issues.apache.org/jira/browse/HBASE-3020
    */
-  @Test 
+  @Test
   public void testRecoveredEditsPathForMeta() throws IOException {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     byte [] encoded = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
@@ -182,7 +221,7 @@ public class TestHLogSplit {
    * Test old recovered edits file doesn't break HLogSplitter.
    * This is useful in upgrading old instances.
    */
-  @Test 
+  @Test
   public void testOldRecoveredEditsFileSidelined() throws IOException {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     byte [] encoded = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
@@ -197,7 +236,7 @@ public class TestHLogSplit {
       new WALEdit());
     Path parent = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
     assertEquals(parent.getName(), HLog.RECOVERED_EDITS_DIR);
-    fs.createNewFile(parent); // create a recovered.edits file 
+    fs.createNewFile(parent); // create a recovered.edits file
 
     Path p = HLogSplitter.getRegionSplitEditsPath(fs, entry, hbaseDir, true);
     String parentOfParent = p.getParent().getParent().getName();
@@ -478,12 +517,12 @@ public class TestHLogSplit {
         hbaseDir, hlogDir, oldLogDir, fs);
     logSplitter.splitLog();
 
-    Path originalLog = (fs.listStatus(oldLogDir))[0].getPath();
     Path splitLog = getLogForRegion(hbaseDir, TABLE_NAME, REGION);
 
     int actualCount = 0;
     HLog.Reader in = HLogFactory.createReader(fs, splitLog, conf);
-    HLog.Entry entry;
+    @SuppressWarnings("unused")
+	HLog.Entry entry;
     while ((entry = in.next()) != null) ++actualCount;
     assertEquals(entryCount-1, actualCount);
 
@@ -542,36 +581,7 @@ public class TestHLogSplit {
       // hadoop 0.21 throws FNFE whereas hadoop 0.20 returns null
     }
   }
-/* DISABLED for now.  TODO: HBASE-2645
-  @Test
-  public void testLogCannotBeWrittenOnceParsed() throws IOException {
-    AtomicLong counter = new AtomicLong(0);
-    AtomicBoolean stop = new AtomicBoolean(false);
-    generateHLogs(9);
-    fs.initialize(fs.getUri(), conf);
 
-    Thread zombie = new ZombieLastLogWriterRegionServer(writer[9], counter, stop);
-
-
-
-    try {
-      zombie.start();
-
-      HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
-
-      Path logfile = getLogForRegion(hbaseDir, TABLE_NAME, "juliet");
-
-      // It's possible that the writer got an error while appending and didn't count it
-      // however the entry will in fact be written to file and split with the rest
-      long numberOfEditsInRegion = countHLog(logfile, fs, conf);
-      assertTrue("The log file could have at most 1 extra log entry, but " +
-              "can't have less. Zombie could write "+counter.get() +" and logfile had only"+ numberOfEditsInRegion+" "  + logfile, counter.get() == numberOfEditsInRegion ||
-                      counter.get() + 1 == numberOfEditsInRegion);
-    } finally {
-      stop.set(true);
-    }
-  }
-*/
 
   @Test
   public void testSplitWillNotTouchLogsIfNewHLogGetsCreatedAfterSplitStarted()
@@ -876,7 +886,7 @@ public class TestHLogSplit {
       HRegionInfo regioninfo = new HRegionInfo(tableName,
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
       log = HLogFactory.createHLog(fs, hbaseDir, logName, conf);
-      
+
       final int total = 20;
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
@@ -935,10 +945,16 @@ public class TestHLogSplit {
     AtomicBoolean stop;
     Path log;
     HLog.Writer lastLogWriter;
-    public ZombieLastLogWriterRegionServer(HLog.Writer writer, AtomicLong counter, AtomicBoolean stop) {
+    private final byte [] tableName;
+    private final String regionName;
+
+    public ZombieLastLogWriterRegionServer(HLog.Writer writer, AtomicLong counter, AtomicBoolean stop,
+        final byte [] tableName, final String regionName) {
       this.stop = stop;
       this.editsCount = counter;
       this.lastLogWriter = writer;
+      this.tableName = tableName;
+      this.regionName = regionName;
     }
 
     @Override
@@ -947,13 +963,16 @@ public class TestHLogSplit {
         return;
       }
       flushToConsole("starting");
+      byte [] regionBytes = Bytes.toBytes(this.regionName);
+      boolean created = false;
       while (true) {
         try {
-          String region = "juliet";
-
-          fs.mkdirs(new Path(new Path(hbaseDir, region), region));
-          appendEntry(lastLogWriter, TABLE_NAME, region.getBytes(),
-                  ("r" + editsCount).getBytes(), FAMILY, QUALIFIER, VALUE, 0);
+          if (!created) {
+            fs.mkdirs(new Path(new Path(hbaseDir, Bytes.toString(this.tableName)), this.regionName));
+            created = true;
+          }
+          appendEntry(lastLogWriter, TABLE_NAME, regionBytes, ("r" + editsCount).getBytes(), regionBytes,
+            QUALIFIER, VALUE, 0);
           lastLogWriter.sync();
           editsCount.incrementAndGet();
           try {
@@ -961,21 +980,16 @@ public class TestHLogSplit {
           } catch (InterruptedException e) {
             //
           }
-
-
         } catch (IOException ex) {
           if (ex instanceof RemoteException) {
-            flushToConsole("Juliet: got RemoteException " +
-                    ex.getMessage() + " while writing " + (editsCount.get() + 1));
+            flushToConsole("Juliet: got RemoteException " + ex.getMessage() +
+              " while writing " + (editsCount.get() + 1));
             break;
           } else {
             assertTrue("Failed to write " + editsCount.get(), false);
           }
-
         }
       }
-
-
     }
   }
 
@@ -1007,7 +1021,7 @@ public class TestHLogSplit {
           flushToConsole("Juliet: split not started, sleeping a bit...");
           Threads.sleep(10);
         }
- 
+
         fs.mkdirs(new Path(tableDir, region));
         HLog.Writer writer = HLogFactory.createWriter(fs,
             julietLog, conf);
@@ -1054,7 +1068,7 @@ public class TestHLogSplit {
 
     assertEquals(true, logsAreEqual(originalLog, splitLog));
   }
-  
+
   @Test
   public void testSplitLogFileDeletedRegionDir()
   throws IOException {
@@ -1067,21 +1081,21 @@ public class TestHLogSplit {
     generateHLogs(1, 10, -1);
     FileStatus logfile = fs.listStatus(hlogDir)[0];
     fs.initialize(fs.getUri(), conf);
-    
+
     Path regiondir = new Path(tabledir, REGION);
     LOG.info("Region directory is" + regiondir);
     fs.delete(regiondir, true);
-    
+
     HLogSplitter.splitLogFile(hbaseDir, logfile, fs, conf, reporter);
     HLogSplitter.finishSplitLogFile(hbaseDir, oldLogDir, logfile.getPath()
         .toString(), conf);
-    
+
     assertTrue(!fs.exists(regiondir));
     assertTrue(true);
   }
 
-  
-  
+
+
   @Test
   public void testSplitLogFileEmpty() throws IOException {
     LOG.info("testSplitLogFileEmpty");
@@ -1149,8 +1163,7 @@ public class TestHLogSplit {
     regions.add(regionName);
     generateHLogs(-1);
 
-    final HLog log = HLogFactory.createHLog(fs, regiondir, 
-        regionName, conf);
+    HLogFactory.createHLog(fs, regiondir, regionName, conf);
 
     HLogSplitter logSplitter = new HLogSplitter(
         conf, hbaseDir, hlogDir, oldLogDir, fs, null) {
@@ -1210,14 +1223,12 @@ public class TestHLogSplit {
     makeRegionDirs(fs, regions);
     fs.mkdirs(hlogDir);
     for (int i = 0; i < writers; i++) {
-      writer[i] = HLogFactory.createWriter(fs, new Path(hlogDir, HLOG_FILE_PREFIX + i), 
-          conf);
+      writer[i] = HLogFactory.createWriter(fs, new Path(hlogDir, HLOG_FILE_PREFIX + i), conf);
       for (int j = 0; j < entries; j++) {
         int prefix = 0;
         for (String region : regions) {
           String row_key = region + prefix++ + i + j;
-          appendEntry(writer[i], TABLE_NAME, region.getBytes(),
-                  row_key.getBytes(), FAMILY, QUALIFIER, VALUE, seq);
+          appendEntry(writer[i], TABLE_NAME, region.getBytes(), row_key.getBytes(), FAMILY, QUALIFIER, VALUE, seq);
         }
       }
       if (i != leaveOpen) {
@@ -1354,7 +1365,7 @@ public class TestHLogSplit {
 
   private void injectEmptyFile(String suffix, boolean closeFile)
           throws IOException {
-    HLog.Writer writer = HLogFactory.createWriter( 
+    HLog.Writer writer = HLogFactory.createWriter(
         fs, new Path(hlogDir, HLOG_FILE_PREFIX + suffix), conf);
     if (closeFile) writer.close();
   }
