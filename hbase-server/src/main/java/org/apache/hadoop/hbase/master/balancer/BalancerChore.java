@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.master.HMaster;
+
+import java.io.IOException;
 
 /**
  * Chore that will call HMaster.balance{@link org.apache.hadoop.hbase.master.HMaster#balance()} when
@@ -28,7 +32,7 @@ import org.apache.hadoop.hbase.master.HMaster;
  */
 @InterfaceAudience.Private
 public class BalancerChore extends Chore {
-
+  private static final Log LOG = LogFactory.getLog(BalancerChore.class);
   private final HMaster master;
 
   public BalancerChore(HMaster master) {
@@ -40,6 +44,10 @@ public class BalancerChore extends Chore {
 
   @Override
   protected void chore() {
-    master.balance();
+    try {
+      master.balance();
+    } catch (IOException ioe) {
+      LOG.error("Error invoking balancer", ioe);
+    }
   }
 }

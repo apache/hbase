@@ -1256,7 +1256,7 @@ Server {
     return balancerCutoffTime;
   }
 
-  public boolean balance() {
+  public boolean balance() throws IOException {
     // if master not initialized, don't run balancer.
     if (!this.initialized) {
       LOG.debug("Master has not been initialized, don't run balancer.");
@@ -1285,13 +1285,8 @@ Server {
       }
 
       if (this.cpHost != null) {
-        try {
-          if (this.cpHost.preBalance()) {
-            LOG.debug("Coprocessor bypassing balancer request");
-            return false;
-          }
-        } catch (IOException ioe) {
-          LOG.error("Error invoking master coprocessor preBalance()", ioe);
+        if (this.cpHost.preBalance()) {
+          LOG.debug("Coprocessor bypassing balancer request");
           return false;
         }
       }
@@ -1326,12 +1321,7 @@ Server {
         }
       }
       if (this.cpHost != null) {
-        try {
-          this.cpHost.postBalance();
-        } catch (IOException ioe) {
-          // balancing already succeeded so don't change the result
-          LOG.error("Error invoking master coprocessor postBalance()", ioe);
-        }
+        this.cpHost.postBalance();
       }
     }
     return balancerRan;
@@ -1339,7 +1329,11 @@ Server {
 
   @Override
   public BalanceResponse balance(RpcController c, BalanceRequest request) throws ServiceException {
-    return BalanceResponse.newBuilder().setBalancerRan(balance()).build();
+    try {
+      return BalanceResponse.newBuilder().setBalancerRan(balance()).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   enum BalanceSwitchMode {
@@ -2005,14 +1999,10 @@ Server {
     return rsFatals;
   }
 
-  public void shutdown() {
+  public void shutdown() throws IOException {
     spanReceiverHost.closeReceivers();
     if (cpHost != null) {
-      try {
-        cpHost.preShutdown();
-      } catch (IOException ioe) {
-        LOG.error("Error call master coprocessor preShutdown()", ioe);
-      }
+      cpHost.preShutdown();
     }
     if (mxBean != null) {
       MBeanUtil.unregisterMBean(mxBean);
@@ -2032,17 +2022,17 @@ Server {
   @Override
   public ShutdownResponse shutdown(RpcController controller, ShutdownRequest request)
   throws ServiceException {
-    shutdown();
+    try {
+      shutdown();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
     return ShutdownResponse.newBuilder().build();
   }
 
-  public void stopMaster() {
+  public void stopMaster() throws IOException {
     if (cpHost != null) {
-      try {
-        cpHost.preStopMaster();
-      } catch (IOException ioe) {
-        LOG.error("Error call master coprocessor preStopMaster()", ioe);
-      }
+      cpHost.preStopMaster();
     }
     stop("Stopped by " + Thread.currentThread().getName());
   }
@@ -2050,7 +2040,11 @@ Server {
   @Override
   public StopMasterResponse stopMaster(RpcController controller, StopMasterRequest request)
   throws ServiceException {
-    stopMaster();
+    try {
+      stopMaster();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
     return StopMasterResponse.newBuilder().build();
   }
 
