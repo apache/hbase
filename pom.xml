@@ -55,6 +55,7 @@
     <module>hbase-hadoop-compat</module>
     <module>hbase-common</module>
     <module>hbase-it</module>
+    <module>hbase-examples</module>
   </modules>
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
@@ -167,8 +168,8 @@
       <name>Jonathan Gray</name>
       <email>jgray@fb.com</email>
       <timezone>-8</timezone>
-      <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
+      <organization>Continuuity</organization>
+      <organizationUrl>http://www.continuuity.com</organizationUrl>
     </developer>
     <developer>
       <id>jmhsieh</id>
@@ -239,7 +240,7 @@
       <name>Ryan Rawson</name>
       <email>rawson@apache.org</email>
       <timezone>-8</timezone>
-      <organization>CX</organization>
+      <organization>DrawnToScale</organization>
       <organizationUrl>http://www.cx.com</organizationUrl>
     </developer>
     <developer>
@@ -247,7 +248,7 @@
       <name>Michael Stack</name>
       <email>stack@apache.org</email>
       <timezone>-8</timezone>
-      <organization>StumbleUpon</organization>
+      <organization>Cloudera</organization>
       <organizationUrl>http://www.stumbleupon.com/</organizationUrl>
     </developer>
     <developer>
@@ -940,6 +941,11 @@
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-examples</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
       </dependency>
       <!-- General dependencies -->
       <dependency>
