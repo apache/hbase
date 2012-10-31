@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.io.VersionedWritable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * This class is used exporting current state of load on a RegionServer.
@@ -99,6 +100,7 @@ implements WritableComparable<HServerLoad> {
    */
   public static class RegionLoad extends VersionedWritable {
     private static final byte VERSION = 1;
+    private static final byte VERSION_94 = 2;
 
     /** @return the object version number */
     public byte getVersion() {
@@ -352,33 +354,71 @@ implements WritableComparable<HServerLoad> {
     }
 
     // Writable
+    // Writable
     public void readFields(DataInput in) throws IOException {
-      super.readFields(in);
       int version = in.readByte();
-      if (version > VERSION) throw new IOException("Version mismatch; " + version);
-      int namelen = in.readInt();
+      // in 92, we write version twice, but in 94, it is written only once.
+      if (version == VERSION_94) {
+        readFields94(in);
+      } else if (version == VERSION) {
+        // response is coming from a 92 server; re-read the version.
+        version = in.readByte();
+        int namelen = in.readInt();
+        this.name = new byte[namelen];
+        in.readFully(this.name);
+        this.stores = in.readInt();
+        this.storefiles = in.readInt();
+        this.storeUncompressedSizeMB = in.readInt();
+        this.storefileSizeMB = in.readInt();
+        this.memstoreSizeMB = in.readInt();
+        this.storefileIndexSizeMB = in.readInt();
+        this.readRequestsCount = in.readInt();
+        this.writeRequestsCount = in.readInt();
+        this.rootIndexSizeKB = in.readInt();
+        this.totalStaticIndexSizeKB = in.readInt();
+        this.totalStaticBloomSizeKB = in.readInt();
+        this.totalCompactingKVs = in.readLong();
+        this.currentCompactedKVs = in.readLong();
+        int coprocessorsSize = in.readInt();
+        coprocessors = new TreeSet<String>();
+        for (int i = 0; i < coprocessorsSize; i++) {
+          coprocessors.add(in.readUTF());
+        }
+      } else {
+        throw new IOException("Version mismatch; " + version);
+      }
+    }
+
+    /**
+     * Reads 94 server response; the version number is upped in 94, so need to handle it
+     * differently.
+     * @param in
+     * @throws IOException
+     */
+    public void readFields94(DataInput in) throws IOException {
+      int namelen = WritableUtils.readVInt(in);
       this.name = new byte[namelen];
       in.readFully(this.name);
-      this.stores = in.readInt();
-      this.storefiles = in.readInt();
-      this.storeUncompressedSizeMB = in.readInt();
-      this.storefileSizeMB = in.readInt();
-      this.memstoreSizeMB = in.readInt();
-      this.storefileIndexSizeMB = in.readInt();
-      this.readRequestsCount = in.readInt();
-      this.writeRequestsCount = in.readInt();
-      this.rootIndexSizeKB = in.readInt();
-      this.totalStaticIndexSizeKB = in.readInt();
-      this.totalStaticBloomSizeKB = in.readInt();
-      this.totalCompactingKVs = in.readLong();
-      this.currentCompactedKVs = in.readLong();
-      int coprocessorsSize = in.readInt();
+      this.stores = WritableUtils.readVInt(in);
+      this.storefiles = WritableUtils.readVInt(in);
+      this.storeUncompressedSizeMB = WritableUtils.readVInt(in);
+      this.storefileSizeMB = WritableUtils.readVInt(in);
+      this.memstoreSizeMB = WritableUtils.readVInt(in);
+      this.storefileIndexSizeMB = WritableUtils.readVInt(in);
+      this.readRequestsCount = (int) WritableUtils.readVLong(in);// may cause overflow
+      this.writeRequestsCount = (int) WritableUtils.readVLong(in); // may cause overflow
+      this.rootIndexSizeKB = WritableUtils.readVInt(in);
+      this.totalStaticIndexSizeKB = WritableUtils.readVInt(in);
+      this.totalStaticBloomSizeKB = WritableUtils.readVInt(in);
+      this.totalCompactingKVs = WritableUtils.readVLong(in);
+      this.currentCompactedKVs = WritableUtils.readVLong(in);
+      int coprocessorsSize = WritableUtils.readVInt(in);
       coprocessors = new TreeSet<String>();
       for (int i = 0; i < coprocessorsSize; i++) {
         coprocessors.add(in.readUTF());
       }
     }
-
+    
     public void write(DataOutput out) throws IOException {
       super.write(out);
       out.writeByte(VERSION);
