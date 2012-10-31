@@ -4046,7 +4046,7 @@ public class TestHRegion extends HBaseTestCase {
    * @throws IOException
    * @return A region on which you must call {@link HRegion#closeHRegion(HRegion)} when done.
    */
-  private static HRegion initHRegion (byte [] tableName, String callingMethod,
+  public static HRegion initHRegion (byte [] tableName, String callingMethod,
       Configuration conf, byte [] ... families)
     throws IOException{
     return initHRegion(tableName, null, null, callingMethod, conf, families);
