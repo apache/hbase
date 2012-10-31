@@ -2395,6 +2395,8 @@ public class HRegion implements HeapSize { // , Writable{
 
       // Lock row
       Integer lid = getLock(lockId, get.getRow(), true);
+      // wait for all previous transactions to complete (with lock held)
+      mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
       List<KeyValue> result = null;
       try {
         result = get(get, false);
