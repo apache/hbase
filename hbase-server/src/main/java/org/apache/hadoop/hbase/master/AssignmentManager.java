@@ -521,8 +521,8 @@ public class AssignmentManager extends ZooKeeperListener {
       break;
 
     case RS_ZK_REGION_OPENING:
+      regionStates.updateRegionState(rt, RegionState.State.OPENING);
       if (regionInfo.isMetaTable() || !serverManager.isServerOnline(sn)) {
-        regionStates.updateRegionState(rt, RegionState.State.OPENING);
         // If ROOT or .META. table is waiting for timeout monitor to assign
         // it may take lot of time when the assignment.timeout.period is
         // the default value which may be very long.  We will not be able
@@ -532,11 +532,10 @@ public class AssignmentManager extends ZooKeeperListener {
         // some time for timeout monitor to kick in.  We know the region
         // won't open. So we will assign the opening
         // region immediately too.
+        //
+        // Otherwise, just insert region into RIT. If the state never
+        // updates, the timeout will trigger new assignment
         processOpeningState(regionInfo);
-      } else {
-        // Just insert region into RIT.
-        // If this never updates the timeout will trigger new assignment
-        regionStates.updateRegionState(rt, RegionState.State.OPENING);
       }
       break;
 
@@ -940,19 +939,24 @@ public class AssignmentManager extends ZooKeeperListener {
                 "clearing from RIT; rs=" + rs);
               regionOffline(rs.getRegion());
             } else {
-              LOG.debug("The znode of region " + regionInfo.getRegionNameAsString()
-                  + " has been deleted.");
+              String regionNameStr = regionInfo.getRegionNameAsString();
+              LOG.debug("The znode of region " + regionNameStr
+                + " has been deleted.");
               if (rs.isOpened()) {
                 ServerName serverName = rs.getServerName();
                 regionOnline(regionInfo, serverName);
                 LOG.info("The master has opened the region "
-                  + regionInfo.getRegionNameAsString() + " that was online on "
-                  + serverName);
-                if (getZKTable().isDisablingOrDisabledTable(
-                    regionInfo.getTableNameAsString())) {
-                  LOG.debug("Opened region "
-                      + regionInfo.getRegionNameAsString() + " but "
-                      + "this table is disabled, triggering close of region");
+                  + regionNameStr + " that was online on " + serverName);
+                boolean disabled = getZKTable().isDisablingOrDisabledTable(
+                  regionInfo.getTableNameAsString());
+                if (!serverManager.isServerOnline(serverName) && !disabled) {
+                  LOG.info("Opened region " + regionNameStr
+                    + "but the region server is offline, reassign the region");
+                  assign(regionInfo, true);
+                } else if (disabled) {
+                  // if server is offline, no hurt to unassign again
+                  LOG.info("Opened region " + regionNameStr
+                    + "but this table is disabled, triggering close of region");
                   unassign(regionInfo);
                 }
               }
@@ -1369,8 +1373,10 @@ public class AssignmentManager extends ZooKeeperListener {
     ServerName server = state.getServerName();
     // ClosedRegionhandler can remove the server from this.regions
     if (!serverManager.isServerOnline(server)) {
-      // delete the node. if no node exists need not bother.
-      deleteClosingOrClosedNode(region);
+      if (transitionInZK) {
+        // delete the node. if no node exists need not bother.
+        deleteClosingOrClosedNode(region);
+      }
       regionOffline(region);
       return;
     }
@@ -1391,7 +1397,9 @@ public class AssignmentManager extends ZooKeeperListener {
           t = ((RemoteException)t).unwrapRemoteException();
         }
         if (t instanceof NotServingRegionException) {
-          deleteClosingOrClosedNode(region);
+          if (transitionInZK) {
+            deleteClosingOrClosedNode(region);
+          }
           regionOffline(region);
           return;
         } else if (t instanceof RegionAlreadyInTransitionException) {
@@ -1899,29 +1907,29 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   *
    * @param region regioninfo of znode to be deleted.
    */
   public void deleteClosingOrClosedNode(HRegionInfo region) {
+    String encodedName = region.getEncodedName();
     try {
-      if (!ZKAssign.deleteNode(watcher, region.getEncodedName(),
+      if (!ZKAssign.deleteNode(watcher, encodedName,
           EventHandler.EventType.M_ZK_REGION_CLOSING)) {
-        boolean deleteNode = ZKAssign.deleteNode(watcher, region
-            .getEncodedName(), EventHandler.EventType.RS_ZK_REGION_CLOSED);
+        boolean deleteNode = ZKAssign.deleteNode(watcher,
+          encodedName, EventHandler.EventType.RS_ZK_REGION_CLOSED);
         // TODO : We don't abort if the delete node returns false. Is there any
         // such corner case?
         if (!deleteNode) {
           LOG.error("The deletion of the CLOSED node for the region "
-              + region.getEncodedName() + " returned " + deleteNode);
+            + encodedName + " returned " + deleteNode);
         }
       }
     } catch (NoNodeException e) {
-      LOG.debug("CLOSING/CLOSED node for the region " + region.getEncodedName()
-          + " already deleted");
+      LOG.debug("CLOSING/CLOSED node for the region " + encodedName
+        + " already deleted");
     } catch (KeeperException ke) {
       server.abort(
-          "Unexpected ZK exception deleting node CLOSING/CLOSED for the region "
-              + region.getEncodedName(), ke);
+        "Unexpected ZK exception deleting node CLOSING/CLOSED for the region "
+          + encodedName, ke);
       return;
     }
   }

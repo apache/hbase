@@ -573,14 +573,14 @@ public class TestAssignmentManager {
     // Make an RS Interface implementation.  Make it so a scanner can go against it.
     ClientProtocol implementation = Mockito.mock(ClientProtocol.class);
     // Get a meta row result that has region up on SERVERNAME_A
-    
+
     Result r = null;
     if (splitRegion) {
       r = MetaMockingUtil.getMetaTableRowResultAsSplitRegion(REGIONINFO, SERVERNAME_A);
     } else {
       r = MetaMockingUtil.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
     }
-    
+
     ScanResponse.Builder builder = ScanResponse.newBuilder();
     builder.setMoreResults(true);
     builder.addResult(ProtobufUtil.toResult(r));
@@ -903,6 +903,37 @@ public class TestAssignmentManager {
       am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
       am.shutdown();
       ZKAssign.deleteAllNodes(this.watcher);
+    }
+  }
+
+  /**
+   * When a region is in transition, if the region server opening the region goes down,
+   * the region assignment takes a long time normally (waiting for timeout monitor to trigger assign).
+   * This test is to make sure SSH times out the transition right away.
+   */
+  @Test
+  public void testSSHTimesOutOpeningRegionTransition()
+      throws KeeperException, IOException, ServiceException {
+    // We need a mocked catalog tracker.
+    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    // Create an AM.
+    AssignmentManagerWithExtrasForTesting am =
+      setUpMockedAssignmentManager(this.server, this.serverManager);
+    // adding region in pending open.
+    RegionState state = new RegionState(REGIONINFO,
+      State.OPENING, System.currentTimeMillis(), SERVERNAME_A);
+    am.getRegionStates().regionsInTransition.put(REGIONINFO.getEncodedName(), state);
+    // adding region plan
+    am.regionPlans.put(REGIONINFO.getEncodedName(),
+      new RegionPlan(REGIONINFO, SERVERNAME_B, SERVERNAME_A));
+    am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
+
+    try {
+      processServerShutdownHandler(ct, am, false);
+      assertTrue("Transtion is timed out", state.getStamp() == 0);
+    } finally {
+      am.getRegionStates().regionsInTransition.remove(REGIONINFO.getEncodedName());
+      am.regionPlans.remove(REGIONINFO.getEncodedName());
     }
   }
 

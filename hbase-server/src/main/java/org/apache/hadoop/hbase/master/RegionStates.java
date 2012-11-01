@@ -329,9 +329,8 @@ public class RegionStates {
     // of this server from online map of regions.
     List<RegionState> rits = new ArrayList<RegionState>();
     Set<HRegionInfo> assignedRegions = serverHoldings.get(sn);
-    if (assignedRegions == null || assignedRegions.isEmpty()) {
-      // No regions on this server, we are done, return empty list of RITs
-      return rits;
+    if (assignedRegions == null) {
+      assignedRegions = new HashSet<HRegionInfo>();
     }
 
     for (HRegionInfo region : assignedRegions) {
@@ -344,6 +343,17 @@ public class RegionStates {
     for (RegionState state : regionsInTransition.values()) {
       if (assignedRegions.contains(state.getRegion())) {
         rits.add(state);
+      } else if (sn.equals(state.getServerName())) {
+        // Region is in transition on this region server, and this
+        // region is not open on this server. So the region must be
+        // moving to this server from another one (i.e. opening or
+        // pending open on this server, was open on another one
+        if (state.isPendingOpen() || state.isOpening()) {
+          state.setTimestamp(0); // timeout it, let timeout monitor reassign
+        } else {
+          LOG.warn("THIS SHOULD NOT HAPPEN: unexpected state "
+            + state + " of region in transition on server " + sn);
+        }
       }
     }
     assignedRegions.clear();
@@ -367,11 +377,8 @@ public class RegionStates {
     // before all table's regions.
     HRegionInfo boundary = new HRegionInfo(tableName, null, null, false, 0L);
     for (HRegionInfo hri: regionAssignments.tailMap(boundary).keySet()) {
-      if(Bytes.equals(hri.getTableName(), tableName)) {
-        tableRegions.add(hri);
-      } else {
-        break;
-      }
+      if(!Bytes.equals(hri.getTableName(), tableName)) break;
+      tableRegions.add(hri);
     }
     return tableRegions;
   }
