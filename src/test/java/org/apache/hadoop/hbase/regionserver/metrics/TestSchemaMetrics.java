@@ -201,8 +201,10 @@ public class TestSchemaMetrics {
 
           for (boolean isCompaction : BOOL_VALUES) {
             sm.updateOnCacheHit(blockCat, isCompaction);
+            sm.flushMetrics();
             checkMetrics();
             sm.updateOnCacheMiss(blockCat, isCompaction, rand.nextInt());
+            sm.flushMetrics();
             checkMetrics();
           }
 
