@@ -1,6 +1,4 @@
-/*
- * Copyright 2010 The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,12 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.cleaner;
 
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,9 +30,9 @@ import org.apache.commons.logging.LogFactory;
  * Log cleaner that uses the timestamp of the hlog to determine if it should
  * be deleted. By default they are allowed to live for 10 minutes.
  */
-public class TimeToLiveLogCleaner implements LogCleanerDelegate {
+@InterfaceAudience.Private
+public class TimeToLiveLogCleaner extends BaseLogCleanerDelegate {
   static final Log LOG = LogFactory.getLog(TimeToLiveLogCleaner.class.getName());
-  private Configuration conf;
   // Configured time a log can be kept after it was closed
   private long ttl;
   private boolean stopped = false;
@@ -43,7 +42,7 @@ public class TimeToLiveLogCleaner implements LogCleanerDelegate {
     long time = 0;
     long currentTime = System.currentTimeMillis();
     try {
-      FileStatus fStat = filePath.getFileSystem(conf).getFileStatus(filePath);
+      FileStatus fStat = filePath.getFileSystem(this.getConf()).getFileStatus(filePath);
       time = fStat.getModificationTime();
     } catch (IOException e) {
       LOG.error("Unable to get modification time of file " + filePath.getName() +
@@ -61,14 +60,10 @@ public class TimeToLiveLogCleaner implements LogCleanerDelegate {
 
   @Override
   public void setConf(Configuration conf) {
-    this.conf = conf;
+    super.setConf(conf);
     this.ttl = conf.getLong("hbase.master.logcleaner.ttl", 600000);
   }
 
-  @Override
-  public Configuration getConf() {
-    return conf;
-  }
 
   @Override
   public void stop(String why) {

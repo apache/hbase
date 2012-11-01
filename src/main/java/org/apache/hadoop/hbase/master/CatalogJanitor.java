@@ -39,18 +39,16 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
-
 
 /**
  * A janitor for the catalog tables.  Scans the <code>.META.</code> catalog
@@ -237,7 +235,7 @@ class CatalogJanitor extends Chore {
     if (hasNoReferences(a) && hasNoReferences(b)) {
       LOG.debug("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
-	  // wipe out daughter references from parent region
+      // wipe out daughter references from parent region in meta
       removeDaughtersFromParent(parent);
 
       // This latter regionOffline should not be necessary but is done for now
@@ -248,8 +246,7 @@ class CatalogJanitor extends Chore {
         this.services.getAssignmentManager().regionOffline(parent);
       }
       FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
-      Path rootdir = this.services.getMasterFileSystem().getRootDir();
-      HRegion.deleteRegion(fs, rootdir, parent);
+      HFileArchiver.archiveRegion(fs, parent);
       MetaEditor.deleteRegion(this.server.getCatalogTracker(), parent);
       result = true;
     }

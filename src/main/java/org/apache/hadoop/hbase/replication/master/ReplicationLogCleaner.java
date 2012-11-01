@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.master.LogCleanerDelegate;
+import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -40,9 +40,8 @@ import java.util.Set;
  * Implementation of a log cleaner that checks if a log is still scheduled for
  * replication before deleting it when its TTL is over.
  */
-public class ReplicationLogCleaner implements LogCleanerDelegate, Abortable {
+public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abortable {
   private static final Log LOG = LogFactory.getLog(ReplicationLogCleaner.class);
-  private Configuration conf;
   private ReplicationZookeeper zkHelper;
   private Set<String> hlogs = new HashSet<String>();
   private boolean stopped = false;
@@ -67,7 +66,7 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Abortable {
 
     // all members of this class are null if replication is disabled, and we
     // return true since false would render the LogsCleaner useless
-    if (this.conf == null) {
+    if (this.getConf() == null) {
       return true;
     }
     String log = filePath.getName();
@@ -122,18 +121,18 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Abortable {
   }
 
   @Override
-  public void setConf(Configuration conf) {
+  public void setConf(Configuration config) {
     // If replication is disabled, keep all members null
-    if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false)) {
+    if (!config.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false)) {
       return;
     }
     // Make my own Configuration.  Then I'll have my own connection to zk that
     // I can close myself when comes time.
-    this.conf = new Configuration(conf);
+    Configuration conf = new Configuration(config);
+    super.setConf(conf);
     try {
-      ZooKeeperWatcher zkw =
-          new ZooKeeperWatcher(this.conf, "replicationLogCleaner", null);
-      this.zkHelper = new ReplicationZookeeper(this, this.conf, zkw);
+      ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "replicationLogCleaner", null);
+      this.zkHelper = new ReplicationZookeeper(this, conf, zkw);
     } catch (KeeperException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     } catch (IOException e) {
@@ -142,10 +141,6 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Abortable {
     refreshHLogsAndSearch(null);
   }
 
-  @Override
-  public Configuration getConf() {
-    return conf;
-  }
 
   @Override
   public void stop(String why) {
@@ -156,7 +151,7 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Abortable {
       this.zkHelper.getZookeeperWatcher().close();
     }
     // Not sure why we're deleting a connection that we never acquired or used
-    HConnectionManager.deleteConnection(this.conf, true);
+    HConnectionManager.deleteConnection(this.getConf(), true);
   }
 
   @Override

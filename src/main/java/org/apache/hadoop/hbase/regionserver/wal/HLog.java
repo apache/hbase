@@ -1768,6 +1768,11 @@ public class HLog implements Syncable {
     return dir;
   }
   
+  /**
+   * @param filename name of the file to validate
+   * @return <tt>true</tt> if the filename matches an HLog, <tt>false</tt>
+   *         otherwise
+   */
   public static boolean validateHLogFilename(String filename) {
     return pattern.matcher(filename).matches();
   }

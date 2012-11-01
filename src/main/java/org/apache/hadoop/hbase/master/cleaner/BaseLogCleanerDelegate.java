@@ -1,6 +1,4 @@
-/*
- * Copyright 2010 The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,32 +15,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.cleaner;
 
-import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.BaseConfigurable;
 
 /**
- * Interface for the log cleaning function inside the master. By default, two 
- * cleaners: <code>TimeToLiveLogCleaner</code> and 
- * <code>ReplicationLogCleaner</code> are called in order. So if other 
- * effects are needed, implement your own LogCleanerDelegate and add it to the
+ * Base class for the log cleaning function inside the master. By default, two
+ * cleaners: <code>TimeToLiveLogCleaner</code> and
+ * <code>ReplicationLogCleaner</code> are called in order. So if other effects
+ * are needed, implement your own LogCleanerDelegate and add it to the
  * configuration "hbase.master.logcleaner.plugins", which is a comma-separated
  * list of fully qualified class names. LogsCleaner will add it to the chain.
- *
- * <p>HBase ships with LogsCleaner as the default implementation.
- *
- * <p>This interface extends Configurable, so setConf needs to be called once
- * before using the cleaner.
- * Since LogCleanerDelegates are created in LogsCleaner by reflection. Classes
- * that implements this interface should provide a default constructor.
+ * <p>
+ * HBase ships with LogsCleaner as the default implementation.
+ * <p>
+ * This interface extends Configurable, so setConf needs to be called once
+ * before using the cleaner. Since LogCleanerDelegates are created in
+ * LogsCleaner by reflection. Classes that implements this interface should
+ * provide a default constructor.
  */
-public interface LogCleanerDelegate extends Configurable, Stoppable {
+@InterfaceAudience.Private
+public abstract class BaseLogCleanerDelegate extends BaseConfigurable implements FileCleanerDelegate {
+
+  @Override
+  public boolean isFileDeletable(Path file) {
+    return isLogDeletable(file);
+  }
+
   /**
    * Should the master delete the log or keep it?
+   * <p>
+   * Implementing classes should override {@link #isFileDeletable(Path)} instead.
    * @param filePath full path to log.
    * @return true if the log is deletable, false if not
    */
-  public boolean isLogDeletable(Path filePath);
+  @Deprecated
+  public abstract boolean isLogDeletable(Path filePath);
 }

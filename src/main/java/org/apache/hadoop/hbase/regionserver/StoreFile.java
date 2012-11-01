@@ -861,13 +861,20 @@ public class StoreFile extends SchemaConfigured {
   }
 
   /**
-   * Write out a split reference.
-   *
-   * Package local so it doesnt leak out of regionserver.
-   *
+   * Validate the store file name.
+   * @param fileName name of the file to validate
+   * @return <tt>true</tt> if the file could be a valid store file, <tt>false</tt> otherwise
+   */
+  public static boolean validateStoreFileName(String fileName) {
+    return !fileName.contains("-");
+  }
+
+  /**
+   * Write out a split reference. Package local so it doesnt leak out of
+   * regionserver.
    * @param fs
    * @param splitDir Presumes path format is actually
-   * <code>SOME_DIRECTORY/REGIONNAME/FAMILY</code>.
+   *          <code>SOME_DIRECTORY/REGIONNAME/FAMILY</code>.
    * @param f File to split.
    * @param splitRow
    * @param range

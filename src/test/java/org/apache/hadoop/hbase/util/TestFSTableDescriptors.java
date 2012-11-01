@@ -54,7 +54,7 @@ public class TestFSTableDescriptors {
 
   @Test
   public void testCreateAndUpdate() throws IOException {
-    Path testdir = UTIL.getDataTestDir();
+    Path testdir = UTIL.getDataTestDir("testCreate");
     HTableDescriptor htd = new HTableDescriptor("testCreate");
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     assertTrue(FSTableDescriptors.createTableDescriptor(fs, testdir, htd));
@@ -249,6 +249,19 @@ public class TestFSTableDescriptors {
       assertTrue(alist[i].equals(blist[i]));
       assertTrue(blist[i].equals(clist[i]));
       assertTrue(clist[i].equals(i == 0? farFuture: i == 1? future: bare));
+    }
+  }
+
+  @Test
+  public void testReadingArchiveDirectoryFromFS() throws IOException {
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    try {
+      new FSTableDescriptors(fs, FSUtils.getRootDir(UTIL.getConfiguration()))
+          .get(HConstants.HFILE_ARCHIVE_DIRECTORY);
+      fail("Shouldn't be able to read a table descriptor for the archive directory.");
+    } catch (IOException e) {
+      LOG.debug("Correctly got error when reading a table descriptor from the archive directory: "
+          + e.getMessage());
     }
   }
 
