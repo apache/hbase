@@ -562,6 +562,10 @@ public abstract class FSUtils {
     return p.makeQualified(fs);
   }
 
+  public static void setRootDir(final Configuration c, final Path root) throws IOException {
+    c.set(HConstants.HBASE_DIR, root.toString());
+  }
+
   /**
    * Checks if root region exists
    *
@@ -1186,5 +1190,37 @@ public abstract class FSUtils {
    */
   public static boolean isExists(final FileSystem fs, final Path path) throws IOException {
     return fs.exists(path);
+  }
+
+  /**
+   * Log the current state of the filesystem from a certain root directory
+   * @param fs filesystem to investigate
+   * @param root root file/directory to start logging from
+   * @param LOG log to output information
+   * @throws IOException if an unexpected exception occurs
+   */
+  public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
+      throws IOException {
+    LOG.debug("Current file system:");
+    logFSTree(LOG, fs, root, "|-");
+  }
+
+  /**
+   * Recursive helper to log the state of the FS
+   * @see #logFileSystemState(FileSystem, Path, Log)
+   */
+  private static void logFSTree(Log LOG, final FileSystem fs, final Path root, String prefix)
+      throws IOException {
+    FileStatus[] files = FSUtils.listStatus(fs, root, null);
+    if (files == null) return;
+
+    for (FileStatus file : files) {
+      if (file.isDir()) {
+        LOG.debug(prefix + file.getPath().getName() + "/");
+        logFSTree(LOG, fs, file.getPath(), prefix + "---");
+      } else {
+        LOG.debug(prefix + file.getPath().getName());
+      }
+    }
   }
 }

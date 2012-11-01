@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -457,7 +458,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   /**
    * @return All store files.
    */
-  List<StoreFile> getStorefiles() {
+  public List<StoreFile> getStorefiles() {
     return this.storefiles;
   }
 
@@ -1732,10 +1733,12 @@ public class Store extends SchemaConfigured implements HeapSize {
 
       // Tell observers that list of StoreFiles has changed.
       notifyChangedReadersObservers();
-      // Finally, delete old store files.
-      for (StoreFile hsf: compactedFiles) {
-        hsf.deleteReader();
-      }
+
+      // let the archive util decide if we should archive or delete the files
+      LOG.debug("Removing store files after compaction...");
+      HFileArchiver.archiveStoreFiles(this.fs, this.region, this.conf, this.family.getName(),
+        compactedFiles);
+
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.error("Failed replacing compacted files in " + this.storeNameStr +

@@ -78,6 +78,7 @@ public abstract class Chore extends HasThread {
       LOG.fatal(getName() + "error", t);
     } finally {
       LOG.info(getName() + " exiting");
+      cleanup();
     }
   }
 
@@ -109,5 +110,12 @@ public abstract class Chore extends HasThread {
    */
   protected void sleep() {
     this.sleeper.sleep();
+  }
+
+  /**
+   * Called when the chore has completed, allowing subclasses to cleanup any
+   * extra overhead
+   */
+  protected void cleanup() {
   }
 }

@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -440,7 +441,7 @@ public class MasterFileSystem {
 
 
   public void deleteRegion(HRegionInfo region) throws IOException {
-    fs.delete(HRegion.getRegionDir(rootdir, region), true);
+    HFileArchiver.archiveRegion(fs, region);
   }
 
   public void deleteTable(byte[] tableName) throws IOException {

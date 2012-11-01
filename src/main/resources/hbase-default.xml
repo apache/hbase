@@ -299,7 +299,7 @@
   </property>
   <property>
     <name>hbase.master.logcleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.TimeToLiveLogCleaner</value>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner</value>
     <description>A comma-separated list of LogCleanerDelegate invoked by
     the LogsCleaner service. These WAL/HLog cleaners are called in order,
     so put the HLog cleaner that prunes the most HLog files in front. To
@@ -869,5 +869,23 @@
 	In both cases, the aggregated metric M across tables and cfs will be reported.
     </description>
   </property>
-
+  <property>
+    <name>hbase.table.archive.directory</name>
+    <value>.archive</value>
+    <description>Per-table directory name under which to backup files for a
+      table. Files are moved to the same directories as they would be under the
+      table directory, but instead are just one level lower (under
+      table/.archive/... rather than table/...). Currently only applies to HFiles.</description>
+  </property>
+  <property>
+    <name>hbase.master.hfilecleaner.plugins</name>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
+    <description>A comma-separated list of HFileCleanerDelegate invoked by
+    the HFileCleaner service. These HFiles cleaners are called in order,
+    so put the cleaner that prunes the most files in front. To
+    implement your own HFileCleanerDelegate, just put it in HBase's classpath
+    and add the fully qualified class name here. Always add the above
+    default log cleaners in the list as they will be overwritten in hbase-site.xml.
+    </description>
+  </property>
 </configuration>
