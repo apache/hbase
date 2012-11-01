@@ -95,6 +95,8 @@ public class TestHFileCleaner {
     Configuration conf = UTIL.getConfiguration();
     // set TTL
     long ttl = 2000;
+    conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
+      "org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner");
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, ttl);
     Server server = new DummyServer();
     Path archivedHfileDir = new Path(UTIL.getDataTestDir(), HConstants.HFILE_ARCHIVE_DIRECTORY);
