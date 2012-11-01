@@ -202,7 +202,7 @@ public class TestReplicationSourceManager {
     hlog.rollWriter();
 
     manager.logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(),
-        "1", 0, false);
+        "1", 0, false, false);
 
     HLogKey key = new HLogKey(hri.getRegionName(), test, seq++,
         System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
