@@ -177,10 +177,9 @@ public class ResourceChecker {
     if (phase == Phase.END) {
       Map<Thread, StackTraceElement[]> stackTraces = Thread.getAllStackTraces();
       if (stackTraces.size() > initialThreadNames.size()) {
-        LOG.info(tagLine + ": potentially hanging thread");
-
         for (Thread t : stackTraces.keySet()) {
           if (!initialThreadNames.contains(t.getName())) {
+            LOG.info(tagLine + ": potentially hanging thread - " + t.getName());
             StackTraceElement[] stackElements = stackTraces.get(t);
             for (StackTraceElement ele : stackElements) {
               LOG.info("\t" + ele);
