@@ -266,6 +266,7 @@ public class ClientScanner extends AbstractClientScanner {
         // This flag is set when we want to skip the result returned.  We do
         // this when we reset scanner because it split under us.
         boolean skipFirst = false;
+        boolean retryAfterOutOfOrderException  = true;
         do {
           try {
             if (skipFirst) {
@@ -280,6 +281,7 @@ public class ClientScanner extends AbstractClientScanner {
             // returns an empty array if scanning is to go on and we've just
             // exhausted current region.
             values = callable.withRetries();
+            retryAfterOutOfOrderException  = true;
           } catch (DoNotRetryIOException e) {
             if (e instanceof UnknownScannerException) {
               long timeout = lastNext + scannerTimeout;
@@ -309,6 +311,14 @@ public class ClientScanner extends AbstractClientScanner {
               // Skip first row returned.  We already let it out on previous
               // invocation.
               skipFirst = true;
+            }
+            if (e instanceof OutOfOrderScannerNextException) {
+              if (retryAfterOutOfOrderException) {
+                retryAfterOutOfOrderException = false;
+              } else {
+                throw new DoNotRetryIOException("Failed after retry"
+                    + ", it could be cause by rpc timeout", e);
+              }
             }
             // Clear region
             this.currentRegion = null;
