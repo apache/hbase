@@ -14,7 +14,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.apache.hadoop.hbase.io.hfile;
+package org.apache.hadoop.hbase.io.compress;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -35,8 +35,8 @@ import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
-import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -330,7 +330,13 @@ public final class Compression {
         "Unsupported compression algorithm name: " + compressName);
   }
 
-  static String[] getSupportedAlgorithms() {
+  /**
+   * Get names of supported compression algorithms.
+   *
+   * @return Array of strings, each represents a supported compression
+   * algorithm. Currently, the following compression algorithms are supported.
+   */
+  public static String[] getSupportedAlgorithms() {
     Algorithm[] algos = Algorithm.class.getEnumConstants();
 
     String[] ret = new String[algos.length];

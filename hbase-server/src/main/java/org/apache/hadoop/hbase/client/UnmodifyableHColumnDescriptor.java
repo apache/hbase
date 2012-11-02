@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.compress.Compression;
 
 /**
  * Immutable HColumnDescriptor
@@ -87,7 +87,7 @@ public class UnmodifyableHColumnDescriptor extends HColumnDescriptor {
   }
 
   /**
-   * @see org.apache.hadoop.hbase.HColumnDescriptor#setCompressionType(org.apache.hadoop.hbase.io.hfile.Compression.Algorithm)
+   * @see org.apache.hadoop.hbase.HColumnDescriptor#setCompressionType(org.apache.hadoop.hbase.io.compress.Compression.Algorithm)
    */
   @Override
   public HColumnDescriptor setCompressionType(Compression.Algorithm type) {

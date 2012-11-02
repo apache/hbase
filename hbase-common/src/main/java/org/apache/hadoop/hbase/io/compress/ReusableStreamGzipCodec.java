@@ -14,7 +14,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.hadoop.hbase.io.hfile;
+package org.apache.hadoop.hbase.io.compress;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

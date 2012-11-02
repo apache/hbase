@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionOutputStream;

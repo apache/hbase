@@ -18,8 +18,8 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
-import org.apache.hadoop.hbase.io.hfile.Compression;
 
 /**
  * An encoding context that is created by a writer's encoder, and is shared
