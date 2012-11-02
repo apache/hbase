@@ -38,6 +38,11 @@ import java.util.*;
 public class ResourceChecker {
   private static final Log LOG = LogFactory.getLog(ResourceChecker.class);
 
+  enum Phase {
+    INITIAL, INTERMEDIATE, END
+  }
+  private static Set<String> initialThreadNames = new HashSet<String>();
+
   /**
    * On unix, we know how to get the number of open file descriptor
    */
@@ -45,8 +50,14 @@ public class ResourceChecker {
     private static final OperatingSystemMXBean osStats;
     private static final UnixOperatingSystemMXBean unixOsStats;
 
-    public long getThreadsCount() {
-      return Thread.getAllStackTraces().size();
+    public long getThreadsCount(Phase phase) {
+      Map<Thread, StackTraceElement[]> stackTraces = Thread.getAllStackTraces();
+      if (phase == Phase.INITIAL) {
+        for (Thread t : stackTraces.keySet()) {
+          initialThreadNames.add(t.getName());
+        }
+      }
+      return stackTraces.size();
     }
 
     public long getOpenFileDescriptorCount() {
@@ -102,14 +113,14 @@ public class ResourceChecker {
 
   public boolean checkThreads(String tagLine) {
     boolean isOk = true;
+    long threadCount = rc.getThreadsCount(Phase.INTERMEDIATE);
 
-    if (rc.getThreadsCount() > MAX_THREADS_COUNT) {
+    if (threadCount > MAX_THREADS_COUNT) {
       LOG.error(
         tagLine + ": too many threads used. We use " +
-          rc.getThreadsCount() + " our max is " + MAX_THREADS_COUNT);
+          threadCount + " our max is " + MAX_THREADS_COUNT);
       isOk = false;
     }
-
     return isOk;
   }
 
@@ -132,19 +143,20 @@ public class ResourceChecker {
           rc.getMaxFileDescriptorCount() + " our is " + MAX_FILE_HANDLES_COUNT);
     }
 
-    logInfo(tagLine);
+    logInfo(Phase.INITIAL, tagLine);
 
-    initialThreadsCount = rc.getThreadsCount();
+    initialThreadsCount = rc.getThreadsCount(Phase.INITIAL);
     initialFileHandlesCount = rc.getOpenFileDescriptorCount();
     initialConnectionCount= rc.getConnectionCount();
 
     check(tagLine);
   }
 
-  public void logInfo(String tagLine) {
+  public void logInfo(Phase phase, String tagLine) {
+    long threadCount = rc.getThreadsCount(phase);
     LOG.info(
-      tagLine + ": " +
-        rc.getThreadsCount() + " threads" +
+        tagLine + ": " +
+        threadCount + " threads" +
         (initialThreadsCount > 0 ?
           " (was " + initialThreadsCount + "), " : ", ") +
         rc.getOpenFileDescriptorCount() + " file descriptors" +
@@ -153,7 +165,7 @@ public class ResourceChecker {
         rc.getConnectionCount() + " connections" +
         (initialConnectionCount > 0 ?
           " (was " + initialConnectionCount + "), " : ", ") +
-        (initialThreadsCount > 0 && rc.getThreadsCount() > initialThreadsCount ?
+        (initialThreadsCount > 0 && threadCount > initialThreadsCount ?
           " -thread leak?- " : "") +
         (initialFileHandlesCount > 0 &&
           rc.getOpenFileDescriptorCount() > initialFileHandlesCount ?
@@ -162,6 +174,21 @@ public class ResourceChecker {
           rc.getConnectionCount() > initialConnectionCount ?
           " -connection leak?- " : "" )
     );
+    if (phase == Phase.END) {
+      Map<Thread, StackTraceElement[]> stackTraces = Thread.getAllStackTraces();
+      if (stackTraces.size() > initialThreadNames.size()) {
+        LOG.info(tagLine + ": potentially hanging thread");
+
+        for (Thread t : stackTraces.keySet()) {
+          if (!initialThreadNames.contains(t.getName())) {
+            StackTraceElement[] stackElements = stackTraces.get(t);
+            for (StackTraceElement ele : stackElements) {
+              LOG.info("\t" + ele);
+            }
+          }
+        }
+      }
+    }
   }
 
 
