@@ -436,7 +436,7 @@ public class ServerShutdownHandler extends EventHandler {
       // but could be missing references to parent region.
 
       // And assign it.
-      assignmentManager.assign(daughter, true);
+      assignmentManager.assign(daughter, true, true);
       return 1;
     } else {
       LOG.debug("Daughter " + daughter.getRegionNameAsString() + " present");
