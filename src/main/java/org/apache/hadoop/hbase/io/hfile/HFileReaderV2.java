@@ -424,6 +424,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
         istream = null;
       }
     }
+
+    getSchemaMetrics().flushMetrics();
   }
 
   protected abstract static class AbstractScannerV2

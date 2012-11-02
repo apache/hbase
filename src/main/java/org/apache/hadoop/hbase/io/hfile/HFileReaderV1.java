@@ -391,6 +391,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
       this.istream.close();
       this.istream = null;
     }
+
+    getSchemaMetrics().flushMetrics();
   }
 
   protected abstract static class AbstractScannerV1
