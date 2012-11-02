@@ -3,6 +3,10 @@ Foundation (http://www.apache.org/).
 
 In addition, this product includes software developed by:
 
+Jamon (http://www.jamon.org/) is a text template engine for Java used by our
+UI.  It uses the Mozilla Public License (http://www.mozilla.org/MPL/)
+See the tail of http://www.jamon.org/About.html
+
 JUnit (http://www.junit.org/) included under the Common Public License v1.0.  See
 the full text here: http://junit.sourceforge.net/cpl-v10.html
 
