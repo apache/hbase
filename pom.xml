@@ -941,11 +941,6 @@
         <type>test-jar</type>
         <scope>test</scope>
       </dependency>
-      <dependency>
-        <artifactId>hbase-examples</artifactId>
-        <groupId>org.apache.hbase</groupId>
-        <version>${project.version}</version>
-      </dependency>
       <!-- General dependencies -->
       <dependency>
         <groupId>io.netty</groupId>
