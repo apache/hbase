@@ -157,8 +157,8 @@ public class TestMasterFailover {
     // Need to drop the timeout much lower
     conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
     conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 4000);
-    conf.setInt("hbase.master.wait.on.regionservers.mintostart", 3);
-    conf.setInt("hbase.master.wait.on.regionservers.maxtostart", 3);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 3);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 3);
 
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
@@ -460,8 +460,8 @@ public class TestMasterFailover {
     // Need to drop the timeout much lower
     conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
     conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 4000);
-    conf.setInt("hbase.master.wait.on.regionservers.mintostart", 1);
-    conf.setInt("hbase.master.wait.on.regionservers.maxtostart", 2);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 2);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     log("Cluster started");

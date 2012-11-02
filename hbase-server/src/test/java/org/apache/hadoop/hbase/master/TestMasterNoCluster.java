@@ -247,8 +247,8 @@ public class TestMasterNoCluster {
   public void testCatalogDeploys()
   throws IOException, KeeperException, InterruptedException, DeserializationException, ServiceException {
     final Configuration conf = TESTUTIL.getConfiguration();
-    conf.setInt("hbase.master.wait.on.regionservers.mintostart", 1);
-    conf.setInt("hbase.master.wait.on.regionservers.maxtostart", 1);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 1);
 
     final long now = System.currentTimeMillis();
     // Name for our single mocked up regionserver.

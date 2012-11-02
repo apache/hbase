@@ -444,7 +444,7 @@ public class TestZooKeeper {
    * Tests whether the logs are split when master recovers from a expired zookeeper session and an
    * RS goes down.
    */
-  @Test(timeout = 180000)
+  @Test(timeout = 240000)
   public void testLogSplittingAfterMasterRecoveryDueToZKExpiry() throws IOException,
       KeeperException, InterruptedException {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
