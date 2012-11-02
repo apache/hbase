@@ -933,6 +933,18 @@ index e70ebc6..96f8c27 100644
       <section xml:id="required_configuration"><title>Required Configurations</title>
           <para>Review the <xref linkend="os" /> and <xref linkend="hadoop" /> sections.
       </para>
+      <section xml:id="big.cluster.config"><title>Big Cluster Configurations</title>
+        <para>If a cluster with a lot of regions, it is possible if an eager beaver
+            regionserver checks in soon after master start while all the rest in the
+            cluster are laggardly, this first server to checkin will be assigned all
+            regions.  If lots of regions, this first server could buckle under the
+            load.  To prevent the above scenario happening up the
+            <varname>hbase.master.wait.on.regionservers.mintostart</varname> from its
+            default value of 1.  See
+            <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6389">HBASE-6389 Modify the conditions to ensure that Master waits for sufficient number of Region Servers before starting region assignments</link>
+            for more detail.
+        </para>
+      </section>
       </section>
 
       <section xml:id="recommended_configurations"><title>Recommended Configurations</title>
