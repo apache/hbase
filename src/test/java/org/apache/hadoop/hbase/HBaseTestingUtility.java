@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -73,6 +74,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
@@ -627,9 +629,13 @@ public class HBaseTestingUtility {
     createRootDir();
 
     // These settings will make the server waits until this exact number of
-    //  regions servers are connected.
-    conf.setInt("hbase.master.wait.on.regionservers.mintostart", numSlaves);
-    conf.setInt("hbase.master.wait.on.regionservers.maxtostart", numSlaves);
+    // regions servers are connected.
+    if (conf.getInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, -1) == -1) {
+      conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, numSlaves);
+    }
+    if (conf.getInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, -1) == -1) {
+      conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, numSlaves);
+    }
 
     Configuration c = new Configuration(this.conf);
     this.hbaseCluster = new MiniHBaseCluster(c, numMasters, numSlaves);
@@ -709,6 +715,9 @@ public class HBaseTestingUtility {
       hbaseAdmin.close();
       hbaseAdmin = null;
     }
+    // unset the configuration for MIN and MAX RS to start
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, -1);
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
       // Wait till hbase is down before going on to shutdown zk.
@@ -1360,6 +1369,27 @@ public class HBaseTestingUtility {
   public void expireRegionServerSession(int index) throws Exception {
     HRegionServer rs = hbaseCluster.getRegionServer(index);
     expireSession(rs.getZooKeeper(), false);
+    decrementMinRegionServerCount();
+  }
+
+  private void decrementMinRegionServerCount() {
+    // decrement the count for this.conf, for newly spwaned master
+    // this.hbaseCluster shares this configuration too
+    decrementMinRegionServerCount(getConfiguration());
+
+    // each master thread keeps a copy of configuration
+    for (MasterThread master : getHBaseCluster().getMasterThreads()) {
+      decrementMinRegionServerCount(master.getMaster().getConfiguration());
+    }
+  }
+
+  private void decrementMinRegionServerCount(Configuration conf) {
+    int currentCount = conf.getInt(
+        ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, -1);
+    if (currentCount != -1) {
+      conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
+          Math.max(currentCount - 1, 1));
+    }
   }
 
    /**
