@@ -88,7 +88,7 @@ public class TestHFileCleaner {
         + status.getAccessTime();
   }
 
-  @Test(timeout = 2000)
+  @Test
   public void testHFileCleaning() throws Exception {
     final EnvironmentEdge originalEdge = EnvironmentEdgeManager.getDelegate();
     String prefix = "someHFileThatWouldBeAUUID";
