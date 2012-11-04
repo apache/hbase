@@ -20,13 +20,19 @@
 package org.apache.hadoop.hbase;
 
 
-import com.sun.management.UnixOperatingSystemMXBean;
-import org.junit.runner.notification.RunListener;
-
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.hadoop.hbase.ResourceChecker.Phase;
+import org.junit.runner.notification.RunListener;
+
+import com.sun.management.UnixOperatingSystemMXBean;
 
 /**
  * Listen to the test progress and check the usage of:
@@ -40,14 +46,42 @@ public class ResourceCheckerJUnitListener extends RunListener {
   private Map<String, ResourceChecker> rcs = new ConcurrentHashMap<String, ResourceChecker>();
 
   static class ThreadResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
+    private static Set<String> initialThreadNames = new HashSet<String>();
+    private static List<String> stringsToLog = null;
+
     @Override
-    public int getVal() {
-      return Thread.getAllStackTraces().size();
+    public int getVal(Phase phase) {
+      Map<Thread, StackTraceElement[]> stackTraces = Thread.getAllStackTraces();
+      if (phase == Phase.INITIAL) {
+        stringsToLog = null;
+        for (Thread t : stackTraces.keySet()) {
+          initialThreadNames.add(t.getName());
+        }
+      } else if (phase == Phase.END) {
+        if (stackTraces.size() > initialThreadNames.size()) {
+          stringsToLog = new ArrayList<String>();
+          for (Thread t : stackTraces.keySet()) {
+            if (!initialThreadNames.contains(t.getName())) {
+              stringsToLog.add("\nPotentially hanging thread: " + t.getName() + "\n");
+              StackTraceElement[] stackElements = stackTraces.get(t);
+              for (StackTraceElement ele : stackElements) {
+                stringsToLog.add("\t" + ele + "\n");
+              }
+            }
+          }
+        }
+      }
+      return stackTraces.size();
     }
 
     @Override
     public int getMax() {
       return 500;
+    }
+    
+    @Override
+    public List<String> getStringsToLog() {
+      return stringsToLog;
     }
   }
 
@@ -71,7 +105,7 @@ public class ResourceCheckerJUnitListener extends RunListener {
 
   static class OpenFileDescriptorResourceAnalyzer extends OSResourceAnalyzer {
     @Override
-    public int getVal() {
+    public int getVal(Phase phase) {
       if (unixOsStats == null) {
         return 0;
       } else {
@@ -87,7 +121,7 @@ public class ResourceCheckerJUnitListener extends RunListener {
 
   static class MaxFileDescriptorResourceAnalyzer extends OSResourceAnalyzer {
     @Override
-    public int getVal() {
+    public int getVal(Phase phase) {
       if (unixOsStats == null) {
         return 0;
       } else {

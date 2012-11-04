@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 
 import java.util.*;
 
-
 /**
  * Utility class to check the resources:
  *  - log them before and after each test method
@@ -34,6 +33,10 @@ import java.util.*;
 public class ResourceChecker {
   private static final Log LOG = LogFactory.getLog(ResourceChecker.class);
   private String tagLine;
+
+  enum Phase {
+    INITIAL, INTERMEDIATE, END
+  }
 
   /**
    * Constructor
@@ -80,10 +83,15 @@ public class ResourceChecker {
 
     /**
      * The value for the resource.
+     * @param phase
      */
-    abstract public int getVal();
+    abstract public int getVal(Phase phase);
+    
+    /*
+     * Retrieves List of Strings which would be logged in logEndings()
+     */
+    public List<String> getStringsToLog() { return null; }
   }
-
 
   private List<ResourceAnalyzer> ras = new ArrayList<ResourceAnalyzer>();
   private int[] initialValues;
@@ -92,18 +100,18 @@ public class ResourceChecker {
 
   private void fillInit() {
     initialValues = new int[ras.size()];
-    fill(initialValues);
+    fill(Phase.INITIAL, initialValues);
   }
 
   private void fillEndings() {
     endingValues = new int[ras.size()];
-    fill(endingValues);
+    fill(Phase.END, endingValues);
   }
 
-  private void fill(int[] vals) {
+  private void fill(Phase phase, int[] vals) {
     int i = 0;
     for (ResourceAnalyzer ra : ras) {
-      vals[i++] = ra.getVal();
+      vals[i++] = ra.getVal(phase);
     }
   }
 
@@ -151,6 +159,12 @@ public class ResourceChecker {
       if (sb.length() > 0) sb.append(", ");
       sb.append(ra.getName()).append("=").append(curN).append(" (was ").append(curP).append(")");
       if (curN > curP) {
+        List<String> strings = ra.getStringsToLog();
+        if (strings != null) {
+          for (String s : strings) {
+            sb.append(s);
+          }
+        }
         sb.append(" - ").append(ra.getName()).append(" LEAK? -");
       }
     }

@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.ResourceChecker.Phase;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 
 /**
@@ -29,7 +30,7 @@ public class ServerResourceCheckerJUnitListener extends ResourceCheckerJUnitList
 
   static class ConnectionCountResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
     @Override
-    public int getVal() {
+    public int getVal(Phase phase) {
       return HConnectionTestingUtility.getConnectionCount();
     }
   }
