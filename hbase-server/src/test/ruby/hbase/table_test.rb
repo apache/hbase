@@ -328,6 +328,22 @@ module Hbase
         end
     end
 
+    define_test "get should support FILTER" do
+      @test_table.put(1, "x:v", "thisvalue")
+      begin
+        res = @test_table._get_internal('1', FILTER => "ValueFilter(=, 'binary:thisvalue')")
+        assert_not_nil(res)
+        assert_kind_of(Hash, res)
+        assert_not_nil(res['x:v'])
+        assert_nil(res['x:a'])
+        res = @test_table._get_internal('1', FILTER => "ValueFilter(=, 'binary:thatvalue')")
+        assert_nil(res)
+      ensure
+        # clean up newly added columns for this test only.
+        @test_table.delete(1, "x:v")
+      end
+    end
+
     #-------------------------------------------------------------------------------
 
     define_test "scan should work w/o any params" do
@@ -447,8 +463,26 @@ module Hbase
         # clean up newly added columns for this test only.
         @test_table.delete(1, "x:c")
         @test_table.delete(1, "x:d")
+      end
     end
-end
-    
+
+    define_test "scan should support FILTER" do
+      @test_table.put(1, "x:v", "thisvalue")
+      begin
+        res = @test_table._scan_internal FILTER => "ValueFilter(=, 'binary:thisvalue')"
+        assert_not_equal(res, {}, "Result is empty")
+        assert_kind_of(Hash, res)
+        assert_not_nil(res['1'])
+        assert_not_nil(res['1']['x:v'])
+        assert_nil(res['1']['x:a'])
+        assert_nil(res['2'])
+        res = @test_table._scan_internal FILTER => "ValueFilter(=, 'binary:thatvalue')"
+        assert_equal(res, {}, "Result is not empty")
+      ensure
+        # clean up newly added columns for this test only.
+        @test_table.delete(1, "x:v")
+      end
+    end
+
   end
 end
