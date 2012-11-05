@@ -6,6 +6,7 @@ Release 0.92.3 - Unreleased
    HBASE-6847  HBASE-6649 broke replication (Devaraj Das via JD)
    HBASE-6906  TestHBaseFsck#testQuarantine* tests are flakey due to TableNotEnabledException
    HBASE-6916  HBA logs at info level errors that won't show in the shell
+   HBASE-7097  Log message in SecureServer.class uses wrong class name (Y. Sreenivasulu Reddy)
 
   IMPROVEMENTS
    HBASE-6914  Scans/Gets/Mutations don't give a good error if the table is disabled.
