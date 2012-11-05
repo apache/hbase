@@ -87,9 +87,10 @@ public abstract class SecureServer extends HBaseServer {
   public static final byte CURRENT_VERSION = 4;
   public static final Set<Byte> INSECURE_VERSIONS = ImmutableSet.of((byte) 3);
 
-  public static final Log LOG = LogFactory.getLog("org.apache.hadoop.ipc.SecureServer");
-  private static final Log AUDITLOG =
-    LogFactory.getLog("SecurityLogger.org.apache.hadoop.ipc.SecureServer");
+  public static final Log LOG = LogFactory.getLog(SecureServer.class);
+  private static final Log AUDITLOG = LogFactory.getLog("SecurityLogger." +
+    SecureServer.class.getName());
+
   private static final String AUTH_FAILED_FOR = "Auth failed for ";
   private static final String AUTH_SUCCESSFUL_FOR = "Auth successful for ";
 
