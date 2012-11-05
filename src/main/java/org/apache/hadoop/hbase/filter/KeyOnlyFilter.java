@@ -48,9 +48,13 @@ public class KeyOnlyFilter extends FilterBase {
   }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
-    Preconditions.checkArgument(filterArguments.size() == 0,
-                                "Expected: 0 but got: %s", filterArguments.size());
-    return new KeyOnlyFilter();
+    Preconditions.checkArgument((filterArguments.size() == 0 || filterArguments.size() == 1),
+                                "Expected: 0 or 1 but got: %s", filterArguments.size());
+    KeyOnlyFilter filter = new KeyOnlyFilter();
+    if (filterArguments.size() == 1) {
+      filter.lenAsVal = ParseFilter.convertByteArrayToBoolean(filterArguments.get(0));
+    }
+    return filter;
   }
 
   public void write(DataOutput out) throws IOException {
