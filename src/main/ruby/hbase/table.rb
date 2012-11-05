@@ -118,6 +118,7 @@ module Hbase
 
       # Get maxlength parameter if passed
       maxlength = args.delete(MAXLENGTH) if args[MAXLENGTH]
+      filter = args.delete(FILTER) if args[FILTER]
 
       unless args.empty?
         columns = args[COLUMN] || args[COLUMNS]
@@ -160,6 +161,12 @@ module Hbase
           get.setTimeStamp(ts.to_i) if args[TIMESTAMP]
           get.setTimeRange(args[TIMERANGE][0], args[TIMERANGE][1]) if args[TIMERANGE]
         end
+      end
+
+      unless filter.class == String
+        get.setFilter(filter)
+      else
+        get.setFilter(org.apache.hadoop.hbase.filter.ParseFilter.new.parseFilterString(filter))
       end
 
       # Call hbase for the results
