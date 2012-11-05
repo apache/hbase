@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.util.ParamFormatHelper;
 import org.apache.hadoop.io.Writable;
@@ -613,6 +614,9 @@ public class HBaseRPC {
           if (tooSlow) {
             // increment global slow RPC response counter
             rpcMetrics.inc("slowResponse.", processingTime);
+            HRegion.incrNumericPersistentMetric("slowResponse.all.cumulative", 1);
+            HRegion.incrNumericPersistentMetric("slowResponse."
+                + call.getMethodName() + ".cumulative", 1);
           }
         }
         if (processingTime > 1000) {
@@ -621,6 +625,8 @@ public class HBaseRPC {
           // metric itself
           rpcMetrics.inc(call.getMethodName() + ".aboveOneSec.",
               processingTime);
+          HRegion.incrNumericPersistentMetric(call.getMethodName() +
+              ".aboveOneSec.cumulative", 1);
         }
 
         return retVal;
