@@ -27,10 +27,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.RegionSplitter.UniformSplit;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.util.StringUtils;
+
+import static org.apache.hadoop.hbase.mapreduce.TableInputFormat.MAPPERS_PER_REGION;
+import static org.apache.hadoop.hbase.mapreduce.TableInputFormat.SPLIT_ALGO;
 
 /**
  * Convert HBase tabular data into a format that is consumable by Map/Reduce.
@@ -59,6 +63,14 @@ public class TableInputFormat extends TableInputFormatBase implements
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));
     }
+
+    // Reuse scan configuration option support from the new TableInputFormat implementation.
+    setScan(org.apache.hadoop.hbase.mapreduce.TableInputFormat.createScan(job));
+    if (job.get(MAPPERS_PER_REGION) != null) {
+      setNumMapperPerRegion(Integer.parseInt(job.get(MAPPERS_PER_REGION)));
+    }
+
+    setSplitAlgorithm(job.get(SPLIT_ALGO, UniformSplit.class.getSimpleName()));
   }
 
   public void validateInput(JobConf job) throws IOException {

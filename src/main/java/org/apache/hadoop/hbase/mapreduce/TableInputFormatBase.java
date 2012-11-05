@@ -22,13 +22,15 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.naming.NamingException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.client.HTable;
@@ -50,34 +52,11 @@ import org.apache.hadoop.net.DNS;
  * A base for {@link TableInputFormat}s. Receives a {@link HTable}, an
  * {@link Scan} instance that defines the input columns etc. Subclasses may use
  * other TableRecordReader implementations.
- * <p>
- * An example of a subclass:
- * <pre>
- *   class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
- *
- *     public void configure(JobConf job) {
- *       HTable exampleTable = new HTable(new HBaseConfiguration(job),
- *         Bytes.toBytes("exampleTable"));
- *       // mandatory
- *       setHTable(exampleTable);
- *       Text[] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
- *         Bytes.toBytes("columnB") };
- *       // mandatory
- *       setInputColumns(inputColumns);
- *       RowFilterInterface exampleFilter = new RegExpRowFilter("keyPrefix.*");
- *       // optional
- *       setRowFilter(exampleFilter);
- *     }
- *
- *     public void validateInput(JobConf job) throws IOException {
- *     }
- *  }
- * </pre>
  */
 public abstract class TableInputFormatBase
 extends InputFormat<ImmutableBytesWritable, Result> {
 
-  final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
+  private static final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
 
   /** Holds the details for the internal scanner. */
   private Scan scan = null;
@@ -91,11 +70,11 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   private String splitAlgmName; // default to Uniform
 
   /** The reverse DNS lookup cache mapping: IPAddress => HostName */
-  private HashMap<InetAddress, String> reverseDNSCacheMap =
-    new HashMap<InetAddress, String>();
+  private static ConcurrentHashMap<InetAddress, String> reverseDNSCacheMap =
+      new ConcurrentHashMap<InetAddress, String>();
   
   /** The NameServer address */
-  private String nameServer = null;
+  private static String nameServer = null;
   
   /**
    * Builds a TableRecordReader. If no TableRecordReader was provided, uses
@@ -140,17 +119,25 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    */
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException {
-    // Get the name server address and the default value is null.
-    this.nameServer =
-      context.getConfiguration().get("hbase.nameserver.address", null);
-    
+    return getSplitsInternal(table, context.getConfiguration(), scan, numMappersPerRegion,
+        splitAlgmName, this);
+  }
+
+  public static List<InputSplit> getSplitsInternal(HTable table,
+      Configuration conf,
+      Scan scan,
+      int numMappersPerRegion,
+      String splitAlgmName,
+      TableInputFormatBase tifb) throws IOException {
+    if (table == null) {
+      throw new IOException("No table was provided.");
+    }
+    determineNameServer(conf);
+
     Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
     if (keys == null || keys.getFirst() == null ||
         keys.getFirst().length == 0) {
       throw new IOException("Expecting at least one region.");
-    }
-    if (table == null) {
-      throw new IOException("No table was provided.");
     }
     Pair<byte[][], byte[][]> splitKeys = null;
     int numRegions = keys.getFirst().length;
@@ -171,8 +158,8 @@ extends InputFormat<ImmutableBytesWritable, Result> {
 
       for (int i = 0; i < originalStartKeys.length; i++) {
         // get a new instance each time
-        algmImpl = RegionSplitter.newSplitAlgoInstance(context.getConfiguration(),
-            this.splitAlgmName);
+        algmImpl = RegionSplitter.newSplitAlgoInstance(conf,
+            splitAlgmName);
         if (originalStartKeys[i].length != 0)
           algmImpl.setFirstRow(algmImpl.rowToStr(originalStartKeys[i]));
         if (originalStopKeys[i].length != 0)
@@ -196,7 +183,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     byte[] startRow = scan.getStartRow();
     byte[] stopRow = scan.getStopRow();
     for (int i = 0; i < numRegions * numMappersPerRegion; i++) {
-      if (!includeRegionInSplit(keys.getFirst()[i / numMappersPerRegion],
+      if (tifb != null && !tifb.includeRegionInSplit(keys.getFirst()[i / numMappersPerRegion],
           keys.getSecond()[i / numMappersPerRegion])) {
         continue;
       }
@@ -234,13 +221,20 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     }
     return splits;
   }
-  
-  private String reverseDNS(InetAddress ipAddress)
+
+  private static synchronized void determineNameServer(Configuration conf) {
+    // Get the name server address and the default value is null.
+    if (nameServer == null) {
+      nameServer = conf.get("hbase.nameserver.address", null);
+    }
+  }
+
+  private static String reverseDNS(InetAddress ipAddress)
   throws NamingException {
-    String hostName = this.reverseDNSCacheMap.get(ipAddress);
+    String hostName = reverseDNSCacheMap.get(ipAddress);
     if (hostName == null) {
-      hostName = DNS.reverseDns(ipAddress, this.nameServer);
-      this.reverseDNSCacheMap.put(ipAddress, hostName);
+      hostName = DNS.reverseDns(ipAddress, nameServer);
+      reverseDNSCacheMap.put(ipAddress, hostName);
     }
     return hostName;
   }
@@ -334,9 +328,5 @@ extends InputFormat<ImmutableBytesWritable, Result> {
 
   public void setSplitAlgorithm(String name) {
     this.splitAlgmName = name;
-  }
-
-  public String getSplitAlgorithm() {
-    return splitAlgmName;
   }
 }

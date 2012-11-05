@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.RegionSplitter.UniformSplit;
 import org.apache.hadoop.util.StringUtils;
 
@@ -39,7 +38,7 @@ import org.apache.hadoop.util.StringUtils;
 public class TableInputFormat extends TableInputFormatBase
 implements Configurable {
 
-  private final Log LOG = LogFactory.getLog(TableInputFormat.class);
+  private static final Log LOG = LogFactory.getLog(TableInputFormat.class);
 
   /** Job parameter that specifies the input table. */
   public static final String INPUT_TABLE = "hbase.mapreduce.inputtable";
@@ -47,25 +46,41 @@ implements Configurable {
    * See {@link TableMapReduceUtil#convertScanToString(Scan)} for more details.
    */
   public static final String SCAN = "hbase.mapreduce.scan";
+
   /** Column Family to Scan */
   public static final String SCAN_COLUMN_FAMILY = "hbase.mapreduce.scan.column.family";
+
   /** Space delimited list of columns to scan. */
   public static final String SCAN_COLUMNS = "hbase.mapreduce.scan.columns";
+
   /** The timestamp used to filter columns with a specific timestamp. */
   public static final String SCAN_TIMESTAMP = "hbase.mapreduce.scan.timestamp";
+
   /** The starting timestamp used to filter columns with a specific range of versions. */
   public static final String SCAN_TIMERANGE_START = "hbase.mapreduce.scan.timerange.start";
+
   /** The ending timestamp used to filter columns with a specific range of versions. */
   public static final String SCAN_TIMERANGE_END = "hbase.mapreduce.scan.timerange.end";
+
   /** The maximum number of version to return. */
   public static final String SCAN_MAXVERSIONS = "hbase.mapreduce.scan.maxversions";
+
   /** Set to false to disable server-side caching of blocks for this scan. */
   public static final String SCAN_CACHEBLOCKS = "hbase.mapreduce.scan.cacheblocks";
+
   /** The number of rows for caching that will be passed to scanners. */
   public static final String SCAN_CACHEDROWS = "hbase.mapreduce.scan.cachedrows";
+
+  /** Start row of the scan */
+  public static final String SCAN_START_ROW = "hbase.mapreduce.scan.startrow";
+
+  /** End row of the scan */
+  public static final String SCAN_END_ROW = "hbase.mapreduce.scan.endrow";
+
   /** The number of mappers that should be assigned to each region. */
   public static final String MAPPERS_PER_REGION = "hbase.mapreduce.mappersperregion";
-  /** The Algorithm used to splie each region's keyspace. */
+
+  /** The Algorithm used to split each region's keyspace. */
   public static final String SPLIT_ALGO = "hbase.mapreduce.tableinputformat.split.algo";
 
   /** The configuration. */
@@ -100,13 +115,23 @@ implements Configurable {
       LOG.error(StringUtils.stringifyException(e));
     }
 
-    Scan scan = null;
+    setScan(createScan(conf));
+    if (conf.get(MAPPERS_PER_REGION) != null) {
+      setNumMapperPerRegion(Integer.parseInt(conf.get(MAPPERS_PER_REGION)));
+    }
+
+    setSplitAlgorithm(conf.get(SPLIT_ALGO, UniformSplit.class.getSimpleName()));
+  }
+
+  public static Scan createScan(Configuration conf) {
+    Scan scan;
 
     if (conf.get(SCAN) != null) {
       try {
         scan = TableMapReduceUtil.convertStringToScan(conf.get(SCAN));
       } catch (IOException e) {
         LOG.error("An error occurred.", e);
+        throw new RuntimeException(e);
       }
     } else {
       try {
@@ -140,18 +165,24 @@ implements Configurable {
 
         // false by default, full table scans generate too much BC churn
         scan.setCacheBlocks((conf.getBoolean(SCAN_CACHEBLOCKS, false)));
+
+        String startRow = conf.get(SCAN_START_ROW);
+        if (startRow != null) {
+          LOG.info("Setting start row to: " + startRow);
+          scan.setStartRow(Bytes.toBytes(startRow));
+        }
+
+        String endRow = conf.get(SCAN_END_ROW);
+        if (conf.get(SCAN_END_ROW) != null) {
+          LOG.info("Setting end row to: " + endRow);
+          scan.setStopRow(Bytes.toBytes(endRow));
+        }
       } catch (Exception e) {
-          LOG.error(StringUtils.stringifyException(e));
+        LOG.error(StringUtils.stringifyException(e));
+        throw new RuntimeException(e);
       }
     }
-
-    if (conf.get(MAPPERS_PER_REGION) != null) {
-      setNumMapperPerRegion(Integer.parseInt(conf.get(MAPPERS_PER_REGION)));
-    }
-
-    setSplitAlgorithm(conf.get(SPLIT_ALGO, UniformSplit.class.getSimpleName()));
-
-    setScan(scan);
+    return scan;
   }
 
 }

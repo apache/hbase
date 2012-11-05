@@ -20,12 +20,13 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -73,6 +74,15 @@ implements InputFormat<ImmutableBytesWritable, Result> {
   private TableRecordReader tableRecordReader;
   private Filter rowFilter;
 
+  /** Holds the details for the internal scanner. */
+  private Scan scan;
+
+  /** The number of mappers to assign to each region. */
+  private int numMappersPerRegion = 1;
+
+  /** Splitting algorithm to be used to split the keys */
+  private String splitAlgmName; // default to Uniform
+
   /**
    * Builds a TableRecordReader. If no TableRecordReader was provided, uses
    * the default.
@@ -92,6 +102,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
     trr.setStartRow(tSplit.getStartRow());
     trr.setEndRow(tSplit.getEndRow());
     trr.setHTable(this.table);
+    trr.setScan(scan);
     trr.setInputColumns(this.inputColumns);
     trr.setRowFilter(this.rowFilter);
     trr.init();
@@ -116,33 +127,20 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    * @see org.apache.hadoop.mapred.InputFormat#getSplits(org.apache.hadoop.mapred.JobConf, int)
    */
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
-    if (this.table == null) {
-      throw new IOException("No table was provided");
+    List<org.apache.hadoop.mapreduce.InputSplit> newStyleSplits =
+        org.apache.hadoop.hbase.mapreduce.TableInputFormatBase.getSplitsInternal(
+            table, job, scan, numMappersPerRegion, splitAlgmName, null);
+    int n = newStyleSplits.size();
+    InputSplit[] result = new InputSplit[n];
+    for (int i = 0; i < n; ++i) {
+      org.apache.hadoop.hbase.mapreduce.TableSplit newTableSplit =
+          (org.apache.hadoop.hbase.mapreduce.TableSplit) newStyleSplits.get(i);
+      result[i] = new TableSplit(table.getTableName(),
+          newTableSplit.getStartRow(),
+          newTableSplit.getEndRow(),
+          newTableSplit.getRegionLocation());
     }
-    byte [][] startKeys = this.table.getStartKeys();
-    if (startKeys == null || startKeys.length == 0) {
-      throw new IOException("Expecting at least one region");
-    }
-    if (this.inputColumns == null || this.inputColumns.length == 0) {
-      throw new IOException("Expecting at least one column");
-    }
-    int realNumSplits = numSplits > startKeys.length? startKeys.length:
-      numSplits;
-    InputSplit[] splits = new InputSplit[realNumSplits];
-    int middle = startKeys.length / realNumSplits;
-    int startPos = 0;
-    for (int i = 0; i < realNumSplits; i++) {
-      int lastPos = startPos + middle;
-      lastPos = startKeys.length % realNumSplits > i ? lastPos + 1 : lastPos;
-      String regionLocation = table.getRegionLocation(startKeys[startPos]).
-        getServerAddress().getHostname();
-      splits[i] = new TableSplit(this.table.getTableName(),
-        startKeys[startPos], ((i + 1) < realNumSplits) ? startKeys[lastPos]:
-          HConstants.EMPTY_START_ROW, regionLocation);
-      LOG.info("split: " + i + "->" + splits[i]);
-      startPos = lastPos;
-    }
-    return splits;
+    return result;
   }
 
   /**
@@ -185,5 +183,32 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    */
   protected void setRowFilter(Filter rowFilter) {
     this.rowFilter = rowFilter;
+  }
+
+  /**
+   * Sets the scan defining the actual details like columns etc.
+   *
+   * @param scan  The scan to set.
+   */
+  public void setScan(Scan scan) {
+    this.scan = scan;
+  }
+
+  /**
+   * Sets the number of mappers assigned to each region.
+   *
+   * @param num
+   * @throws IllegalArgumentException When <code>num</code> <= 0.
+   */
+  public void setNumMapperPerRegion(int num) throws IllegalArgumentException {
+    if (num <= 0) {
+      throw new IllegalArgumentException("Expecting at least 1 mapper " +
+          "per region; instead got: " + num);
+    }
+    numMappersPerRegion = num;
+  }
+
+  public void setSplitAlgorithm(String name) {
+    this.splitAlgmName = name;
   }
 }

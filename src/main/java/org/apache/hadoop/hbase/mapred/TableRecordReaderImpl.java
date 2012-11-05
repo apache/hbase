@@ -41,6 +41,7 @@ import org.apache.hadoop.util.StringUtils;
 public class TableRecordReaderImpl {
   static final Log LOG = LogFactory.getLog(TableRecordReaderImpl.class);
 
+  private Scan scan = null;
   private byte [] startRow;
   private byte [] endRow;
   private byte [] lastRow = null;
@@ -56,9 +57,11 @@ public class TableRecordReaderImpl {
    * @throws IOException
    */
   public void restart(byte[] firstRow) throws IOException {
+    Scan scan = new Scan(this.scan);
+    scan.setStartRow(firstRow);
     if ((endRow != null) && (endRow.length > 0)) {
+      scan.setStopRow(endRow);
       if (trrRowFilter != null) {
-        Scan scan = new Scan(firstRow, endRow);
         scan.addColumns(trrInputColumns);
         scan.setFilter(trrRowFilter);
         scan.setCacheBlocks(false);
@@ -67,7 +70,6 @@ public class TableRecordReaderImpl {
         LOG.debug("TIFB.restart, firstRow: " +
             Bytes.toStringBinary(firstRow) + ", endRow: " +
             Bytes.toStringBinary(endRow));
-        Scan scan = new Scan(firstRow, endRow);
         scan.addColumns(trrInputColumns);
         this.scanner = this.htable.getScanner(scan);
       }
@@ -75,7 +77,6 @@ public class TableRecordReaderImpl {
       LOG.debug("TIFB.restart, firstRow: " +
           Bytes.toStringBinary(firstRow) + ", no endRow");
 
-      Scan scan = new Scan(firstRow);
       scan.addColumns(trrInputColumns);
 //      scan.setFilter(trrRowFilter);
       this.scanner = this.htable.getScanner(scan);
@@ -192,5 +193,9 @@ public class TableRecordReaderImpl {
       return true;
     }
     return false;
+  }
+
+  public void setScan(Scan scan) {
+    this.scan = scan;
   }
 }
