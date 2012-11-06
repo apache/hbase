@@ -14,8 +14,7 @@
  *  limitations under the License.
  *
  */
-
-package org.apache.hadoop.hbase.regionserver.kvaggregator;
+package org.apache.hadoop.hbase.regionserver.compactionhook;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,8 +37,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 @SuppressWarnings("deprecation")
-public class TestKeyValueAggregator {
-  private static byte[] TABLE = Bytes.toBytes("TestKeyValueAggregator");
+public class TestCompactionHook {
+
+  private static byte[] TABLE = Bytes.toBytes("TestCompactionHook");
   private static byte[] FAMILY = Bytes.toBytes("family");
   private static byte[] START_KEY = Bytes.toBytes("aaa");
   private static byte[] END_KEY = Bytes.toBytes("zzz");
@@ -59,12 +59,13 @@ public class TestKeyValueAggregator {
         .setCompressionType(Compression.Algorithm.NONE));
     TEST_UTIL
         .getConfiguration()
-        .set(HConstants.KV_AGGREGATOR,
-            "org.apache.hadoop.hbase.regionserver.kvaggregator.LowerToUpperAggregator");
+        .set(
+            HConstants.COMPACTION_HOOK,
+            "org.apache.hadoop.hbase.regionserver.compactionhook.LowerToUpperCompactionHook");
   }
 
   @Test
-  public void testDummyKvAggregator() throws Exception {
+  public void testLowerToUpperHook() throws Exception {
     HRegion r = HBaseTestCase.createNewHRegion(TESTTABLEDESC, START_KEY,
         END_KEY, TEST_UTIL.getConfiguration());
     Put[] puts = new Put[25];
@@ -78,13 +79,19 @@ public class TestKeyValueAggregator {
       puts[i] = put;
     }
     r.put(puts);
+    // without calling this, the compaction will not happen
+    r.flushcache();
+    r.compactStores(true);
+    //
     Scan scan = new Scan();
     InternalScanner s = r.getScanner(scan);
     List<KeyValue> results = new ArrayList<KeyValue>();
     while (s.next(results))
       ;
-    // check if the values in results are in upper case
     s.close();
+    // check if the values in results are in upper case
+    // this should return true, we are flushing the HRegion, so we expect the
+    // compaction to be done
     Assert.assertTrue(checkIfLowerCase(results));
     // check if we got all 25 results back
     Assert.assertEquals(25, results.size());
@@ -100,4 +107,39 @@ public class TestKeyValueAggregator {
     }
     return true;
   }
+
+  @Test
+  public void testSkipHook () throws Exception {
+    TEST_UTIL
+    .getConfiguration()
+    .set(
+        HConstants.COMPACTION_HOOK,
+        "org.apache.hadoop.hbase.regionserver.compactionhook.SkipCompactionHook");
+    HRegion r = HBaseTestCase.createNewHRegion(TESTTABLEDESC, START_KEY,
+        END_KEY, TEST_UTIL.getConfiguration());
+    Put[] puts = new Put[25];
+    // put some strings
+    for (int i = 0; i < 25; i++) {
+      byte[] row = Bytes.toBytes("row" + i);
+      Put put = new Put(row);
+      byte[] qualifier = Bytes.toBytes("qual" + i);
+      byte[] value = Bytes.toBytes("ab" + (char) (i + 97));
+      put.add(FAMILY, qualifier, value);
+      puts[i] = put;
+    }
+    r.put(puts);
+    // without calling this, the compaction will not happen
+    r.flushcache();
+    r.compactStores(true);
+    //
+    Scan scan = new Scan();
+    InternalScanner s = r.getScanner(scan);
+    List<KeyValue> results = new ArrayList<KeyValue>();
+    while (s.next(results))
+      ;
+    s.close();
+    // check if we got 24 results back, since "abc" should be skipped.
+    Assert.assertEquals(24, results.size());
+  }
+
 }

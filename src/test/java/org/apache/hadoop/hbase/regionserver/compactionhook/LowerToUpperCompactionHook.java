@@ -15,26 +15,22 @@
  *
  */
 
-package org.apache.hadoop.hbase.regionserver.kvaggregator;
+package org.apache.hadoop.hbase.regionserver.compactionhook;
 
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.regionserver.RestrictedKeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * <p>
- * Dummy test aggregator which takes the String Value of the KV which is
- * expected to be in lowercase and transforms it to uppercase
+ * Dummy compaction hook which transforms a lower-case value in KV to
+ * upper-case, implements CompactionHook interface.
  * </p>
+ *
  */
-public class LowerToUpperAggregator implements KeyValueAggregator {
+public class LowerToUpperCompactionHook implements CompactionHook {
 
   @Override
-  public void reset() {
-  }
-
-  @Override
-  public KeyValue process(KeyValue kv) {
+  public RestrictedKeyValue transform (RestrictedKeyValue kv) {
     byte[] newValue;
     String currentValue = Bytes.toString(kv.getValue());
     /**
@@ -42,18 +38,7 @@ public class LowerToUpperAggregator implements KeyValueAggregator {
      */
     String newValueString = currentValue.toUpperCase();
     newValue = Bytes.toBytes(newValueString);
-    KeyValue newKv = new KeyValue(kv.getRow(), kv.getFamily(),
-        kv.getQualifier(), kv.getTimestamp(), newValue);
-    return newKv;
-  }
-
-  @Override
-  public MatchCode nextAction(MatchCode origCode) {
-    return origCode;
-  }
-
-  @Override
-  public KeyValue finalizeKeyValues() {
-    return null;
+    kv.modifyValue(newValue);
+    return kv;
   }
 }

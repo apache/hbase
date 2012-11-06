@@ -967,6 +967,14 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * @return return True if Put type.
+   */
+  public boolean isPut() {
+    int t = getType();
+    return (t == Type.Put.getCode()) ? true : false;
+  }
+
+  /**
    * @return True if this KV is a {@link KeyValue.Type#Delete} type.
    */
   public boolean isDeleteType() {
@@ -2187,5 +2195,15 @@ public class KeyValue implements Writable, HeapSize {
   public static int getKVSize(final int keyLength,
       final int valueLength) {
     return ROW_OFFSET + keyLength + valueLength;
+  }
+
+  /**
+   * Overwrites the value in the KV, keeps the other properties the same
+   */
+  public KeyValue modifyValueAndClone(byte[] newValue) {
+    KeyValue newKV = new KeyValue(this.getRow(), this.getFamily(),
+        this.getQualifier(), this.getTimestamp(), newValue);
+    newKV.setMemstoreTS(this.getMemstoreTS());
+    return newKV;
   }
 }

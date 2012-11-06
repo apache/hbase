@@ -595,10 +595,14 @@ public final class HConstants {
   public static final int IPC_CALL_PARAMETER_LENGTH_MAX = 1000;
 
   /**
-   * used in Configuration to get/set the KV aggregator for compaction
-   * hooks
+   * Used in Configuration to get/set the KV aggregator
    */
   public static final String KV_AGGREGATOR = "kvaggregator";
+
+  /**
+   * Used in Configuration to get/set the compaction hook
+   */
+  public static final String COMPACTION_HOOK = "compaction_hook";
 
   private HConstants() {
     // Can't be instantiated with this ctor.

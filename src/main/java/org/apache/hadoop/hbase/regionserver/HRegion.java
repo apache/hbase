@@ -343,7 +343,7 @@ public class HRegion implements HeapSize {
     }
     oldVal.addAndGet(amount);
   }
-  
+
   public static void clearNumericPersistentMetric(String key) {
     numericPersistentMetrics.remove(key);
   }
@@ -1175,7 +1175,7 @@ public class HRegion implements HeapSize {
    * @return split row if split is needed
    * @throws IOException e
    */
-  byte [] compactStores(final boolean majorCompaction)
+  public byte [] compactStores(final boolean majorCompaction)
   throws IOException {
     if (majorCompaction) {
       this.triggerMajorCompaction();
@@ -1972,7 +1972,7 @@ public class HRegion implements HeapSize {
    * @param methodName "multiput_/multidelete_" to update metrics correctly.
    * @throws IOException
    */
-  public OperationStatusCode[] batchMutateWithLocks(Pair<Mutation, Integer>[] putsAndLocks, 
+  public OperationStatusCode[] batchMutateWithLocks(Pair<Mutation, Integer>[] putsAndLocks,
       String methodName) throws IOException {
     this.writeRequests.incrTotalRequstCount();
     BatchOperationInProgress<Pair<Mutation, Integer>> batchOp =
@@ -1998,7 +1998,7 @@ public class HRegion implements HeapSize {
     return batchOp.retCodes;
   }
 
-  private long doMiniBatchOp(BatchOperationInProgress<Pair<Mutation, Integer>> batchOp, 
+  private long doMiniBatchOp(BatchOperationInProgress<Pair<Mutation, Integer>> batchOp,
       String methodNameForMetricsUpdate) throws IOException {
     String signature = null;
     // variable to note if all Put items are for the same CF -- metrics related
@@ -2023,7 +2023,7 @@ public class HRegion implements HeapSize {
       byte[] previousRow = null;
       Integer previousLockID = null;
       Integer currentLockID = null;
-      
+
       while (lastIndexExclusive < batchOp.operations.length) {
         Pair<Mutation, Integer> nextPair = batchOp.operations[lastIndexExclusive];
         Mutation op = nextPair.getFirst();
@@ -2034,7 +2034,7 @@ public class HRegion implements HeapSize {
           checkFamilies(op.getFamilyMap().keySet());
           checkTimestamps(op, now);
         }
-        
+
         if (previousRow == null || !Bytes.equals(previousRow, op.getRow()) ||
             (providedLockId != null && !previousLockID.equals(providedLockId))) {
           // If we haven't got any rows in our batch, we should block to
@@ -2046,18 +2046,18 @@ public class HRegion implements HeapSize {
             assert !shouldBlock : "Should never fail to get lock when blocking";
             break; // stop acquiring more rows for this batch
           }
-          
+
           if (providedLockId == null) {
             acquiredLocks.add(currentLockID);
           }
-          
+
           // reset the previous row and lockID with the current one
           previousRow = op.getRow();
           previousLockID = currentLockID;
         }
         lastIndexExclusive++;
         numReadyToWrite++;
-        
+
         // if first time around, designate expected signature for metric
         // else, if all have been consistent so far, check if it still holds
         // all else, designate failure signature and mark as unclear
@@ -2087,7 +2087,7 @@ public class HRegion implements HeapSize {
       // ----------------------------------
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         Mutation op = batchOp.operations[i].getFirst();
-        
+
         if (op instanceof Put) {
           updateKVTimestamps(
               op.getFamilyMap().values(),
@@ -2136,7 +2136,7 @@ public class HRegion implements HeapSize {
       if (locked) {
         this.updatesLock.readLock().unlock();
       }
-      
+
       releaseRowLocks(acquiredLocks);
 
       // do after lock
@@ -2195,7 +2195,7 @@ public class HRegion implements HeapSize {
       try {
         result = get(get);
         boolean matches = false;
-        
+
         if (result.size() == 0) {
           if (expectedValue == null ) {
             matches = true;
@@ -2394,7 +2394,7 @@ public class HRegion implements HeapSize {
   private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap) {
     return applyFamilyMapToMemstore(familyMap, null);
   }
-  
+
   private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap,
                  MultiVersionConsistencyControl.WriteEntry writeEntryToUse) {
     long start = EnvironmentEdgeManager.currentTimeMillis();
@@ -2896,7 +2896,7 @@ public class HRegion implements HeapSize {
       lockedRows.notifyAll();
     }
   }
-  
+
   /**
    * Release the row locks!
    * @param lockidList The list of the lock ID to release.
@@ -2969,7 +2969,7 @@ public class HRegion implements HeapSize {
   public void bulkLoadHFile(String hfilePath, byte[] familyName, boolean assignSeqId)
   throws IOException {
     long seqId = this.log.obtainSeqNum();
-    
+
     splitsAndClosesLock.readLock().lock();
     try {
       Store store = getStore(familyName);
@@ -2982,7 +2982,7 @@ public class HRegion implements HeapSize {
       splitsAndClosesLock.readLock().unlock();
     }
   }
-  
+
   public void bulkLoadHFile(String hfilePath, byte[] familyName)
   throws IOException {
     bulkLoadHFile(hfilePath, familyName, false);
@@ -3791,7 +3791,7 @@ public class HRegion implements HeapSize {
     boolean flush = false;
 
     Integer lid = null;
-    
+
     splitsAndClosesLock.readLock().lock();
     try {
       // 1. run all pre-hooks before the atomic operation
@@ -3859,7 +3859,7 @@ public class HRegion implements HeapSize {
       }
       // 10. run all coprocessor post hooks, after region lock is released
       // NOT required in 0.89. coprocessors are not supported.
-      
+
     } finally {
       if (lid != null) {
         // 11. release the row lock

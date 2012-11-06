@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.regionserver.compactionhook.CompactionHook;
 import org.apache.hadoop.hbase.regionserver.kvaggregator.DefaultKeyValueAggregator;
 import org.apache.hadoop.hbase.regionserver.kvaggregator.KeyValueAggregator;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
@@ -147,6 +148,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   final KeyValue.KVComparator comparator;
 
   private Class<KeyValueAggregator> aggregatorClass = null;
+  private CompactionHook compactHook = null;
 
   /**
    * Constructor
@@ -247,6 +249,18 @@ public class Store extends SchemaConfigured implements HeapSize {
       try {
         this.aggregatorClass = ((Class<KeyValueAggregator>) Class
             .forName(aggregatorString));
+      } catch (ClassNotFoundException e) {
+        throw new IllegalArgumentException(e);
+      }
+    }
+    String compactHookString = conf.get(HConstants.COMPACTION_HOOK);
+    if (compactHookString != null && !compactHookString.isEmpty()) {
+      try {
+        this.compactHook = (CompactionHook) Class.forName(compactHookString).newInstance();
+      } catch (InstantiationException e) {
+        throw new IllegalArgumentException(e);
+      } catch (IllegalAccessException e) {
+        throw new IllegalArgumentException(e);
       } catch (ClassNotFoundException e) {
         throw new IllegalArgumentException(e);
       }
@@ -435,7 +449,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   /**
-   * Adds a value to the memstore
+   * Deletes a value to the memstore
    *
    * @param kv
    * @return memstore size delta
@@ -1187,8 +1201,15 @@ public class Store extends SchemaConfigured implements HeapSize {
               if (kv.getMemstoreTS() <= smallestReadPoint) {
                 kv.setMemstoreTS(0);
               }
-              writer.append(kv);
-
+              if (compactHook != null && kv.isPut()) {
+                RestrictedKeyValue restrictedKv = new RestrictedKeyValue(kv);
+                RestrictedKeyValue modifiedKv = compactHook.transform(restrictedKv);
+                if (modifiedKv != null) {
+                  writer.append(modifiedKv.getKeyValue());
+                }
+              } else {
+                writer.append(kv);
+              }
               // check periodically to see if a system stop is requested
               if (Store.closeCheckInterval > 0) {
                 bytesWritten += kv.getLength();
@@ -1833,7 +1854,7 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   public static final long FIXED_OVERHEAD =
       ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-          + (18 * ClassSize.REFERENCE) + (5 * Bytes.SIZEOF_LONG)
+          + (19 * ClassSize.REFERENCE) + (5 * Bytes.SIZEOF_LONG)
           + (4 * Bytes.SIZEOF_INT) + 2 * Bytes.SIZEOF_BOOLEAN) ;
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
