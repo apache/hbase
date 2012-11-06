@@ -528,6 +528,7 @@ public class DynamicMetricsRegistry {
     return returnExistingWithCast(metric, metricClass, name);
   }
 
+  @SuppressWarnings("unchecked")
   private<T> T returnExistingWithCast(MutableMetric metric,
                                       Class<T> metricClass, String name) {
     if (!metricClass.isAssignableFrom(metric.getClass())) {

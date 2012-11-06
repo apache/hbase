@@ -28,9 +28,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
@@ -52,7 +49,7 @@ public class TestBlocksScanned extends HBaseTestCase {
    @Override
    public void setUp() throws Exception {
      super.setUp();
-     SchemaMetrics.setUseTableNameInTest(true);
+
      TEST_UTIL = new HBaseTestingUtility();
      TESTTABLEDESC = new HTableDescriptor(TABLE);
 
@@ -72,11 +69,6 @@ public class TestBlocksScanned extends HBaseTestCase {
     addContent(r, FAMILY, COL);
     r.flushcache();
 
-    // Get the per-cf metrics
-    SchemaMetrics schemaMetrics =
-      SchemaMetrics.getInstance(Bytes.toString(TABLE), Bytes.toString(FAMILY));
-    Map<String, Long> schemaMetricSnapshot = SchemaMetrics.getMetricsSnapshot();
-
     // Do simple test of getting one row only first.
     Scan scan = new Scan(Bytes.toBytes("aaa"), Bytes.toBytes("aaz"));
     scan.addColumn(FAMILY, COL);
@@ -92,26 +84,6 @@ public class TestBlocksScanned extends HBaseTestCase {
 
     int kvPerBlock = (int) Math.ceil(BLOCK_SIZE / (double) results.get(0).getLength());
     Assert.assertEquals(2, kvPerBlock);
-
-    long expectDataBlockRead = (long) Math.ceil(expectResultSize / (double) kvPerBlock);
-    long expectIndexBlockRead = expectDataBlockRead;
-
-    verifyDataAndIndexBlockRead(schemaMetricSnapshot, schemaMetrics,
-        expectDataBlockRead, expectIndexBlockRead);
   }
 
-  private void verifyDataAndIndexBlockRead(Map<String, Long> previousMetricSnapshot,
-      SchemaMetrics schemaMetrics, long expectDataBlockRead, long expectedIndexBlockRead){
-    Map<String, Long> currentMetricsSnapshot = SchemaMetrics.getMetricsSnapshot();
-    Map<String, Long> diffs =
-      SchemaMetrics.diffMetrics(previousMetricSnapshot, currentMetricsSnapshot);
-
-    long dataBlockRead = SchemaMetrics.getLong(diffs,
-        schemaMetrics.getBlockMetricName(BlockCategory.DATA, false, BlockMetricType.READ_COUNT));
-    long indexBlockRead = SchemaMetrics.getLong(diffs,
-        schemaMetrics.getBlockMetricName(BlockCategory.INDEX, false, BlockMetricType.READ_COUNT));
-
-    Assert.assertEquals(expectDataBlockRead, dataBlockRead);
-    Assert.assertEquals(expectedIndexBlockRead, indexBlockRead);
-  }
 }

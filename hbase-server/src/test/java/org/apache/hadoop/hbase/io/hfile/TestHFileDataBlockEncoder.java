@@ -34,8 +34,6 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.RedundantKVGenerator;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.junit.After;
 import org.junit.Before;
@@ -53,8 +51,6 @@ public class TestHFileDataBlockEncoder {
       new HBaseTestingUtility();
   private HFileDataBlockEncoderImpl blockEncoder;
   private RedundantKVGenerator generator = new RedundantKVGenerator();
-  private SchemaConfigured UNKNOWN_TABLE_AND_CF =
-      SchemaConfigured.createUnknown();
   private boolean includesMemstoreTS;
 
   /**
@@ -76,7 +72,6 @@ public class TestHFileDataBlockEncoder {
   @Before
   public void setUp() {
     conf = TEST_UTIL.getConfiguration();
-    SchemaMetrics.configureGlobally(conf);
   }
 
   /**
@@ -162,7 +157,6 @@ public class TestHFileDataBlockEncoder {
     HFileBlock b = new HFileBlock(BlockType.DATA, size, size, -1, buf,
         HFileBlock.FILL_HEADER, 0, includesMemstoreTS, 
         HFileReaderV2.MAX_MINOR_VERSION, 0, ChecksumType.NULL.getCode(), 0);
-    UNKNOWN_TABLE_AND_CF.passSchemaMetricsTo(b);
     return b;
   }
 

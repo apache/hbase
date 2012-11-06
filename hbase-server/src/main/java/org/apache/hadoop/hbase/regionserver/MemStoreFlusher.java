@@ -416,7 +416,6 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
         server.compactSplitThread.requestCompaction(region, getName());
       }
 
-      server.getMetrics().addFlush(region.getRecentFlushInfo());
     } catch (DroppedSnapshotException ex) {
       // Cache flush can fail in a few places. If it fails in a critical
       // section, we get a DroppedSnapshotException and a replay of hlog

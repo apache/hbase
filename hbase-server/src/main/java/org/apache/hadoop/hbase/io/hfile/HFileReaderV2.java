@@ -226,7 +226,6 @@ public class HFileReaderV2 extends AbstractHFileReader {
           // Return a distinct 'shallow copy' of the block,
           // so pos does not get messed by the scanner
           cacheHits.incrementAndGet();
-          getSchemaMetrics().updateOnCacheHit(BlockCategory.META, false);
           return cachedBlock.getBufferWithoutHeader();
         }
         // Cache Miss, please load.
@@ -234,11 +233,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset,
           blockSize, -1, true);
-      passSchemaMetricsTo(metaBlock);
 
       final long delta = System.nanoTime() - startTimeNs;
       HFile.offerReadLatency(delta, true);
-      getSchemaMetrics().updateOnCacheMiss(BlockCategory.META, false, delta);
 
       // Cache the block
       if (cacheBlock) {
@@ -302,7 +299,6 @@ public class HFileReaderV2 extends AbstractHFileReader {
               cachedBlock.getBlockType().getCategory();
           cacheHits.incrementAndGet();
 
-          getSchemaMetrics().updateOnCacheHit(blockCategory, isCompaction);
 
           if (cachedBlock.getBlockType() == BlockType.DATA) {
             HFile.dataBlockReadCnt.incrementAndGet();
@@ -331,12 +327,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
       hfileBlock = dataBlockEncoder.diskToCacheFormat(hfileBlock,
           isCompaction);
       validateBlockType(hfileBlock, expectedBlockType);
-      passSchemaMetricsTo(hfileBlock);
       BlockCategory blockCategory = hfileBlock.getBlockType().getCategory();
 
       final long delta = System.nanoTime() - startTimeNs;
       HFile.offerReadLatency(delta, pread);
-      getSchemaMetrics().updateOnCacheMiss(blockCategory, isCompaction, delta);
 
       // Cache the block if necessary
       if (cacheBlock && cacheConf.shouldCacheBlockOnRead(

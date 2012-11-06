@@ -24,7 +24,6 @@ String format = "html";
 <%import>
 java.util.*;
 org.apache.hadoop.hbase.regionserver.HRegionServer;
-org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 org.apache.hadoop.hbase.util.Bytes;
 org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.ServerName;
@@ -38,7 +37,6 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
   <%java return; %>
 </%if>
 <%java>
-  RegionServerMetrics metrics = regionServer.getMetrics();
   ServerInfo serverInfo = ProtobufUtil.getServerInfo(regionServer);
   ServerName serverName = ProtobufUtil.toServerName(serverInfo.getServerName());
   List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(regionServer);
@@ -98,7 +96,7 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
     </div>
 
     <h2>Server Metrics</h2>
-    <& ServerMetricsTmpl; metrics = metrics; &>
+    <& ServerMetricsTmpl; mWrap = regionServer.getMetrics().getRegionServerWrapper(); &>
 
     <& ../common/TaskMonitorTmpl; filter = filter &>
 

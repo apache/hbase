@@ -44,10 +44,8 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.OrphanHLogAfterSplitException;
@@ -69,7 +67,7 @@ public class MasterFileSystem {
   // master status
   Server master;
   // metrics for master
-  MasterMetrics metrics;
+  MetricsMaster metricsMaster;
   // Persisted unique cluster ID
   private ClusterId clusterId;
   // Keep around for convenience.
@@ -87,12 +85,12 @@ public class MasterFileSystem {
   private final MasterServices services;
 
   public MasterFileSystem(Server master, MasterServices services,
-      MasterMetrics metrics, boolean masterRecovery)
+      MetricsMaster metricsMaster, boolean masterRecovery)
   throws IOException {
     this.conf = master.getConfiguration();
     this.master = master;
     this.services = services;
-    this.metrics = metrics;
+    this.metricsMaster = metricsMaster;
     // Set filesystem to be that of this.rootdir else we get complaints about
     // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
     // default localfs.  Presumption is that rootdir is fully-qualified before
@@ -317,8 +315,8 @@ public class MasterFileSystem {
       }
     }
 
-    if (this.metrics != null) {
-      this.metrics.addSplit(splitTime, splitLogSize);
+    if (this.metricsMaster != null) {
+      this.metricsMaster.addSplit(splitTime, splitLogSize);
     }
   }
 

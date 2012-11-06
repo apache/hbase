@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -72,22 +71,17 @@ public class TestStoreFile extends HBaseTestCase {
   private CacheConfig cacheConf =  new CacheConfig(TEST_UTIL.getConfiguration());
   private static String ROOT_DIR =
     TEST_UTIL.getDataTestDir("TestStoreFile").toString();
-  private Map<String, Long> startingMetrics;
-
   private static final ChecksumType CKTYPE = ChecksumType.CRC32;
   private static final int CKBYTES = 512;
 
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.startingMetrics = SchemaMetrics.getMetricsSnapshot();
   }
 
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
-    LOG.info("Verifying metrics for " + getName() + ": " + this.startingMetrics);
-    SchemaMetrics.validateMetricChanges(this.startingMetrics);
   }
 
   /**

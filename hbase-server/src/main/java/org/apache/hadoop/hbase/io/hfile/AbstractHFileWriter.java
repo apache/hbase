@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.RawComparator;
@@ -44,8 +43,7 @@ import org.apache.hadoop.io.Writable;
  * Common functionality needed by all versions of {@link HFile} writers.
  */
 @InterfaceAudience.Private
-public abstract class AbstractHFileWriter extends SchemaConfigured
-    implements HFile.Writer {
+public abstract class AbstractHFileWriter implements HFile.Writer {
 
   /** Key previously appended. Becomes the last key in the file. */
   protected byte[] lastKeyBuffer = null;
@@ -116,7 +114,6 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
       Compression.Algorithm compressAlgo,
       HFileDataBlockEncoder dataBlockEncoder,
       KeyComparator comparator) {
-    super(null, path);
     this.outputStream = outputStream;
     this.path = path;
     this.name = path != null ? path.getName() : outputStream.toString();

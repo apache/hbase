@@ -66,8 +66,6 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactSelection;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -106,7 +104,7 @@ import com.google.common.collect.Lists;
  * not be called directly but by an HRegion manager.
  */
 @InterfaceAudience.Private
-public class HStore extends SchemaConfigured implements Store {
+public class HStore implements Store {
   static final Log LOG = LogFactory.getLog(HStore.class);
 
   protected final MemStore memstore;
@@ -174,9 +172,7 @@ public class HStore extends SchemaConfigured implements Store {
   protected HStore(Path basedir, HRegion region, HColumnDescriptor family,
       FileSystem fs, Configuration confParam)
   throws IOException {
-    super(new CompoundConfiguration().add(confParam).add(
-        family.getValues()), region.getRegionInfo().getTableNameAsString(),
-        Bytes.toString(family.getName()));
+
     HRegionInfo info = region.getRegionInfo();
     this.fs = fs;
     // Assemble the store's home directory.
@@ -258,6 +254,15 @@ public class HStore extends SchemaConfigured implements Store {
       ttl *= 1000;
     }
     return ttl;
+  }
+
+  public String getColumnFamilyName() {
+    return this.family.getNameAsString();
+  }
+
+  @Override
+  public String getTableName() {
+    return this.region.getTableDesc().getNameAsString();
   }
 
   /**
@@ -414,7 +419,6 @@ public class HStore extends SchemaConfigured implements Store {
         public StoreFile call() throws IOException {
           StoreFile storeFile = new StoreFile(fs, p, conf, cacheConf,
               family.getBloomFilterType(), dataBlockEncoder);
-          passSchemaMetricsTo(storeFile);
           storeFile.createReader();
           return storeFile;
         }
@@ -573,7 +577,6 @@ public class HStore extends SchemaConfigured implements Store {
 
     StoreFile sf = new StoreFile(fs, dstPath, this.conf, this.cacheConf,
         this.family.getBloomFilterType(), this.dataBlockEncoder);
-    passSchemaMetricsTo(sf);
 
     StoreFile.Reader r = sf.createReader();
     this.storeSize += r.length();
@@ -817,19 +820,11 @@ public class HStore extends SchemaConfigured implements Store {
     status.setStatus("Flushing " + this + ": reopening flushed file");
     StoreFile sf = new StoreFile(this.fs, dstPath, this.conf, this.cacheConf,
         this.family.getBloomFilterType(), this.dataBlockEncoder);
-    passSchemaMetricsTo(sf);
 
     StoreFile.Reader r = sf.createReader();
     this.storeSize += r.length();
     this.totalUncompressedBytes += r.getTotalUncompressedBytes();
 
-    // This increments the metrics associated with total flushed bytes for this
-    // family. The overall flush count is stored in the static metrics and
-    // retrieved from HRegion.recentFlushes, which is set within
-    // HRegion.internalFlushcache, which indirectly calls this to actually do
-    // the flushing through the StoreFlusherImpl class
-    getSchemaMetrics().updatePersistentStoreMetric(
-        SchemaMetrics.StoreMetricType.FLUSH_SIZE, flushedSize.longValue());
     if (LOG.isInfoEnabled()) {
       LOG.info("Added " + sf + ", entries=" + r.getEntries() +
         ", sequenceid=" + logCacheFlushId +
@@ -875,11 +870,6 @@ public class HStore extends SchemaConfigured implements Store {
             .withBytesPerChecksum(bytesPerChecksum)
             .withCompression(compression)
             .build();
-    // The store file writer's path does not include the CF name, so we need
-    // to configure the HFile writer directly.
-    SchemaConfigured sc = (SchemaConfigured) w.writer;
-    SchemaConfigured.resetSchemaMetricsConf(sc);
-    passSchemaMetricsTo(sc);
     return w;
   }
 
@@ -1409,8 +1399,8 @@ public class HStore extends SchemaConfigured implements Store {
       (forcemajor || isMajorCompaction(compactSelection.getFilesToCompact())) &&
       (compactSelection.getFilesToCompact().size() < this.maxFilesToCompact
     );
-    LOG.debug(this.getHRegionInfo().getEncodedName() + " - " +
-      this.getColumnFamilyName() + ": Initiating " +
+    LOG.debug(this.getHRegionInfo().getEncodedName() + " - "
+        + this.getColumnFamilyName() + ": Initiating " +
       (majorcompaction ? "major" : "minor") + "compaction");
 
     if (!majorcompaction &&
@@ -1523,7 +1513,6 @@ public class HStore extends SchemaConfigured implements Store {
       storeFile = new StoreFile(this.fs, path, this.conf,
           this.cacheConf, this.family.getBloomFilterType(),
           NoOpDataBlockEncoder.INSTANCE);
-      passSchemaMetricsTo(storeFile);
       storeFile.createReader();
     } catch (IOException e) {
       LOG.error("Failed to open store file : " + path
@@ -1575,7 +1564,6 @@ public class HStore extends SchemaConfigured implements Store {
       }
       result = new StoreFile(this.fs, destPath, this.conf, this.cacheConf,
           this.family.getBloomFilterType(), this.dataBlockEncoder);
-      passSchemaMetricsTo(result);
       result.createReader();
     }
     try {
@@ -1936,7 +1924,7 @@ public class HStore extends SchemaConfigured implements Store {
 
   @Override
   public String toString() {
-    return getColumnFamilyName();
+    return this.getColumnFamilyName();
   }
 
   @Override
@@ -2125,9 +2113,8 @@ public class HStore extends SchemaConfigured implements Store {
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-          + (17 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
-          + (5 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
+      ClassSize.align((19 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
+              + (5 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
       + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK

@@ -48,13 +48,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.ObjectName;
 
 import com.google.protobuf.Message;
-import org.apache.commons.lang.mutable.MutableDouble;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -67,7 +65,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.FailedSanityCheckException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -107,9 +104,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
@@ -191,11 +186,6 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseRootHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRootHandler;
-import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
-import org.apache.hadoop.hbase.regionserver.metrics.RegionServerDynamicMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.StoreMetricType;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
@@ -225,6 +215,7 @@ import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
+import org.cliffc.high_scale_lib.Counter;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.base.Function;
@@ -297,9 +288,8 @@ public class  HRegionServer implements ClientProtocol,
   // Instance of the hbase executor service.
   protected ExecutorService service;
 
-  // Request counter.
-  // Do we need this?  Can't we just sum region counters?  St.Ack 20110412
-  protected AtomicInteger requestCount = new AtomicInteger();
+  // Request counter. (Includes requests that are not serviced by regions.)
+  final Counter requestCount = new Counter();
 
   // If false, the file system has become unavailable
   protected volatile boolean fsOk;
@@ -366,9 +356,7 @@ public class  HRegionServer implements ClientProtocol,
    */
   private final LinkedList<byte[]> reservedSpace = new LinkedList<byte[]>();
 
-  private RegionServerMetrics metrics;
-
-  private RegionServerDynamicMetrics dynamicMetrics;
+  private MetricsRegionServer metricsRegionServer;
 
   /*
    * Check for compactions requests.
@@ -403,7 +391,7 @@ public class  HRegionServer implements ClientProtocol,
   private final RegionServerAccounting regionServerAccounting;
 
   // Cache configuration and block cache reference
-  private final CacheConfig cacheConfig;
+  final CacheConfig cacheConfig;
 
   // reference to the Thrift Server.
   volatile private HRegionThriftServer thriftServer;
@@ -445,7 +433,6 @@ public class  HRegionServer implements ClientProtocol,
    * The reference to the QosFunction
    */
   private final QosFunction qosFunction;
-
 
   /**
    * Starts a HRegionServer at the default location
@@ -548,6 +535,10 @@ public class  HRegionServer implements ClientProtocol,
           " not supported, aborting RS construction");
       }
     }
+  }
+
+  String getClusterId() {
+    return this.conf.get(HConstants.CLUSTER_ID);
   }
 
   @Retention(RetentionPolicy.RUNTIME)
@@ -858,7 +849,6 @@ public class  HRegionServer implements ClientProtocol,
           break;
         }
       }
-      registerMBean();
 
       // We registered with the Master.  Go into run mode.
       long lastMsg = 0;
@@ -893,7 +883,6 @@ public class  HRegionServer implements ClientProtocol,
         }
         long now = System.currentTimeMillis();
         if ((now - lastMsg) >= msgInterval) {
-          doMetrics();
           tryRegionServerReport(lastMsg, now);
           lastMsg = System.currentTimeMillis();
         }
@@ -1022,8 +1011,6 @@ public class  HRegionServer implements ClientProtocol,
   void tryRegionServerReport(long reportStartTime, long reportEndTime)
   throws IOException {
     HBaseProtos.ServerLoad sl = buildServerLoad(reportStartTime, reportEndTime);
-    // Why we do this?
-    this.requestCount.set(0);
     try {
       RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();
       ServerName sn = ServerName.parseVersionedServerName(
@@ -1044,13 +1031,21 @@ public class  HRegionServer implements ClientProtocol,
   }
 
   HBaseProtos.ServerLoad buildServerLoad(long reportStartTime, long reportEndTime) {
+    // We're getting the MetricsRegionServerWrapper here because the wrapper computes requests
+    // per second, and other metrics  As long as metrics are part of ServerLoad it's best to use
+    // the wrapper to compute those numbers in one place.
+    // In the long term most of these should be moved off of ServerLoad and the heart beat.
+    // Instead they should be stored in an HBase table so that external visibility into HBase is
+    // improved; Additionally the load balancer will be able to take advantage of a more complete
+    // history.
+    MetricsRegionServerWrapper regionServerWrapper = this.metricsRegionServer.getRegionServerWrapper();
     Collection<HRegion> regions = getOnlineRegionsLocalContext();
     MemoryUsage memory =
       ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
 
     HBaseProtos.ServerLoad.Builder serverLoad = HBaseProtos.ServerLoad.newBuilder();
-    serverLoad.setNumberOfRequests((int)metrics.getRequests());
-    serverLoad.setTotalNumberOfRequests(requestCount.get());
+    serverLoad.setNumberOfRequests((int) regionServerWrapper.getRequestsPerSecond());
+    serverLoad.setTotalNumberOfRequests((int) regionServerWrapper.getTotalRequestCount());
     serverLoad.setUsedHeapMB((int)(memory.getUsed() / 1024 / 1024));
     serverLoad.setMaxHeapMB((int) (memory.getMax() / 1024 / 1024));
     Set<String> coprocessors = this.hlog.getCoprocessorHost().getCoprocessors();
@@ -1205,8 +1200,7 @@ public class  HRegionServer implements ClientProtocol,
       this.tableDescriptors = new FSTableDescriptors(this.fs, this.rootDir, true);
       this.hlog = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set
-      this.metrics = new RegionServerMetrics();
-      this.dynamicMetrics = RegionServerDynamicMetrics.newInstance();
+      this.metricsRegionServer = new MetricsRegionServer(new MetricsRegionServerWrapperImpl(this));
       startServiceThreads();
       LOG.info("Serving as " + this.serverNameFromMasterPOV +
         ", RPC listening on " + this.isa +
@@ -1441,179 +1435,8 @@ public class  HRegionServer implements ClientProtocol,
     return hlogRoller;
   }
 
-  /*
-   * @param interval Interval since last time metrics were called.
-   */
-  protected void doMetrics() {
-    try {
-      metrics();
-    } catch (Throwable e) {
-      LOG.warn("Failed metrics", e);
-    }
-  }
-
-  protected void metrics() {
-    this.metrics.regions.set(this.onlineRegions.size());
-    this.metrics.incrementRequests(this.requestCount.get());
-    this.metrics.requests.intervalHeartBeat();
-    // Is this too expensive every three seconds getting a lock on onlineRegions
-    // and then per store carried? Can I make metrics be sloppier and avoid
-    // the synchronizations?
-    int stores = 0;
-    int storefiles = 0;
-    long memstoreSize = 0;
-    int readRequestsCount = 0;
-    int writeRequestsCount = 0;
-    long checkAndMutateChecksFailed = 0;
-    long checkAndMutateChecksPassed = 0;
-    long storefileIndexSize = 0;
-    HDFSBlocksDistribution hdfsBlocksDistribution =
-      new HDFSBlocksDistribution();
-    long totalStaticIndexSize = 0;
-    long totalStaticBloomSize = 0;
-    long numPutsWithoutWAL = 0;
-    long dataInMemoryWithoutWAL = 0;
-    long updatesBlockedMs = 0;
-
-    // Note that this is a map of Doubles instead of Longs. This is because we
-    // do effective integer division, which would perhaps truncate more than it
-    // should because we do it only on one part of our sum at a time. Rather
-    // than dividing at the end, where it is difficult to know the proper
-    // factor, everything is exact then truncated.
-    final Map<String, MutableDouble> tempVals =
-        new HashMap<String, MutableDouble>();
-
-    for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
-      HRegion r = e.getValue();
-      memstoreSize += r.memstoreSize.get();
-      numPutsWithoutWAL += r.numPutsWithoutWAL.get();
-      dataInMemoryWithoutWAL += r.dataInMemoryWithoutWAL.get();
-      readRequestsCount += r.readRequestsCount.get();
-      writeRequestsCount += r.writeRequestsCount.get();
-      checkAndMutateChecksFailed += r.checkAndMutateChecksFailed.get();
-      checkAndMutateChecksPassed += r.checkAndMutateChecksPassed.get();
-      updatesBlockedMs += r.updatesBlockedMs.get();
-      synchronized (r.stores) {
-        stores += r.stores.size();
-        for (Map.Entry<byte[], Store> ee : r.stores.entrySet()) {
-          final Store store = ee.getValue();
-            final SchemaMetrics schemaMetrics = store.getSchemaMetrics();
-
-            {
-              long tmpStorefiles = store.getStorefilesCount();
-              schemaMetrics.accumulateStoreMetric(tempVals,
-                  StoreMetricType.STORE_FILE_COUNT, tmpStorefiles);
-              storefiles += tmpStorefiles;
-            }
-
-
-            {
-              long tmpStorefileIndexSize = store.getStorefilesIndexSize();
-              schemaMetrics.accumulateStoreMetric(tempVals,
-                  StoreMetricType.STORE_FILE_INDEX_SIZE,
-                  (long) (tmpStorefileIndexSize / (1024.0 * 1024)));
-              storefileIndexSize += tmpStorefileIndexSize;
-            }
-
-            {
-              long tmpStorefilesSize = store.getStorefilesSize();
-              schemaMetrics.accumulateStoreMetric(tempVals,
-                  StoreMetricType.STORE_FILE_SIZE_MB,
-                  (long) (tmpStorefilesSize / (1024.0 * 1024)));
-            }
-
-            {
-              long tmpStaticBloomSize = store.getTotalStaticBloomSize();
-              schemaMetrics.accumulateStoreMetric(tempVals,
-                  StoreMetricType.STATIC_BLOOM_SIZE_KB,
-                  (long) (tmpStaticBloomSize / 1024.0));
-              totalStaticBloomSize += tmpStaticBloomSize;
-            }
-
-            {
-              long tmpStaticIndexSize = store.getTotalStaticIndexSize();
-              schemaMetrics.accumulateStoreMetric(tempVals,
-                  StoreMetricType.STATIC_INDEX_SIZE_KB,
-                  (long) (tmpStaticIndexSize / 1024.0));
-              totalStaticIndexSize += tmpStaticIndexSize;
-            }
-
-            schemaMetrics.accumulateStoreMetric(tempVals,
-                StoreMetricType.MEMSTORE_SIZE_MB,
-                (long) (store.getMemStoreSize() / (1024.0 * 1024)));
-        }
-      }
-
-      hdfsBlocksDistribution.add(r.getHDFSBlocksDistribution());
-    }
-
-    for (Entry<String, MutableDouble> e : tempVals.entrySet()) {
-      RegionMetricsStorage.setNumericMetric(e.getKey(), e.getValue().longValue());
-    }
-
-    this.metrics.stores.set(stores);
-    this.metrics.storefiles.set(storefiles);
-    this.metrics.memstoreSizeMB.set((int) (memstoreSize / (1024 * 1024)));
-    this.metrics.mbInMemoryWithoutWAL.set((int) (dataInMemoryWithoutWAL / (1024 * 1024)));
-    this.metrics.numPutsWithoutWAL.set(numPutsWithoutWAL);
-    this.metrics.storefileIndexSizeMB.set(
-        (int) (storefileIndexSize / (1024 * 1024)));
-    this.metrics.rootIndexSizeKB.set(
-        (int) (storefileIndexSize / 1024));
-    this.metrics.totalStaticIndexSizeKB.set(
-        (int) (totalStaticIndexSize / 1024));
-    this.metrics.totalStaticBloomSizeKB.set(
-        (int) (totalStaticBloomSize / 1024));
-    this.metrics.readRequestsCount.set(readRequestsCount);
-    this.metrics.writeRequestsCount.set(writeRequestsCount);
-    this.metrics.checkAndMutateChecksFailed.set(checkAndMutateChecksFailed);
-    this.metrics.checkAndMutateChecksPassed.set(checkAndMutateChecksPassed);
-    this.metrics.compactionQueueSize.set(compactSplitThread
-        .getCompactionQueueSize());
-    this.metrics.flushQueueSize.set(cacheFlusher
-        .getFlushQueueSize());
-    this.metrics.updatesBlockedSeconds.update(updatesBlockedMs > 0 ? 
-        updatesBlockedMs/1000: 0);
-    final long updatesBlockedMsHigherWater = cacheFlusher.getUpdatesBlockedMsHighWater().get();
-    this.metrics.updatesBlockedSecondsHighWater.update(updatesBlockedMsHigherWater > 0 ? 
-        updatesBlockedMsHigherWater/1000: 0);
-
-    BlockCache blockCache = cacheConfig.getBlockCache();
-    if (blockCache != null) {
-      this.metrics.blockCacheCount.set(blockCache.size());
-      this.metrics.blockCacheFree.set(blockCache.getFreeSize());
-      this.metrics.blockCacheSize.set(blockCache.getCurrentSize());
-      CacheStats cacheStats = blockCache.getStats();
-      this.metrics.blockCacheHitCount.set(cacheStats.getHitCount());
-      this.metrics.blockCacheMissCount.set(cacheStats.getMissCount());
-      this.metrics.blockCacheEvictedCount.set(blockCache.getEvictedCount());
-      double ratio = blockCache.getStats().getHitRatio();
-      int percent = (int) (ratio * 100);
-      this.metrics.blockCacheHitRatio.set(percent);
-      ratio = blockCache.getStats().getHitCachingRatio();
-      percent = (int) (ratio * 100);
-      this.metrics.blockCacheHitCachingRatio.set(percent);
-      // past N period block cache hit / hit caching ratios
-      cacheStats.rollMetricsPeriod();
-      ratio = cacheStats.getHitRatioPastNPeriods();
-      percent = (int) (ratio * 100);
-      this.metrics.blockCacheHitRatioPastNPeriods.set(percent);
-      ratio = cacheStats.getHitCachingRatioPastNPeriods();
-      percent = (int) (ratio * 100);
-      this.metrics.blockCacheHitCachingRatioPastNPeriods.set(percent);
-    }
-    float localityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(
-      getServerName().getHostname());
-    int percent = (int) (localityIndex * 100);
-    this.metrics.hdfsBlocksLocalityIndex.set(percent);
-
-  }
-
-  /**
-   * @return Region server metrics instance.
-   */
-  public RegionServerMetrics getMetrics() {
-    return this.metrics;
+  public MetricsRegionServer getMetrics() {
+    return this.metricsRegionServer;
   }
 
   /**
@@ -1841,9 +1664,6 @@ public class  HRegionServer implements ClientProtocol,
     // java.util.HashSet's toString() method to print the coprocessor names.
     LOG.fatal("RegionServer abort: loaded coprocessors are: " +
         CoprocessorHost.getLoadedCoprocessors());
-    if (this.metrics != null) {
-      LOG.info("Dump of metrics: " + this.metrics);
-    }
     // Do our best to report our abort to the master, but this may not work
     try {
       if (cause != null) {
@@ -2146,45 +1966,7 @@ public class  HRegionServer implements ClientProtocol,
   }
 
   /**
-   * @param encodedRegionName
-   * @return JSON Map of labels to values for passed in <code>encodedRegionName</code>
-   * @throws IOException
-   */
-  public byte [] getRegionStats(final String encodedRegionName)
-  throws IOException {
-    HRegion r = null;
-    synchronized (this.onlineRegions) {
-      r = this.onlineRegions.get(encodedRegionName);
-    }
-    if (r == null) return null;
-    ObjectMapper mapper = new ObjectMapper();
-    int stores = 0;
-    int storefiles = 0;
-    int storefileSizeMB = 0;
-    int memstoreSizeMB = (int) (r.memstoreSize.get() / 1024 / 1024);
-    int storefileIndexSizeMB = 0;
-    synchronized (r.stores) {
-      stores += r.stores.size();
-      for (Store store : r.stores.values()) {
-        storefiles += store.getStorefilesCount();
-        storefileSizeMB += (int) (store.getStorefilesSize() / 1024 / 1024);
-        storefileIndexSizeMB += (int) (store.getStorefilesIndexSize() / 1024 / 1024);
-      }
-    }
-    Map<String, Integer> map = new TreeMap<String, Integer>();
-    map.put("stores", stores);
-    map.put("storefiles", storefiles);
-    map.put("storefileSizeMB", storefileSizeMB);
-    map.put("storefileIndexSizeMB", storefileIndexSizeMB);
-    map.put("memstoreSizeMB", memstoreSizeMB);
-    StringWriter w = new StringWriter();
-    mapper.writeValue(w, map);
-    w.close();
-    return Bytes.toBytes(w.toString());
-  }
-
-  /**
-   * For tests and web ui.
+   * For tests, web ui and metrics.
    * This method will only work if HRegionServer is in the same JVM as client;
    * HRegion cannot be serialized to cross an rpc.
    * @see #getOnlineRegions()
@@ -2216,11 +1998,6 @@ public class  HRegionServer implements ClientProtocol,
       sortedRegions.put(Long.valueOf(region.memstoreSize.get()), region);
     }
     return sortedRegions;
-  }
-
-  /** @return the request count */
-  public AtomicInteger getRequestCount() {
-    return this.requestCount;
   }
 
   /**
@@ -2498,16 +2275,6 @@ public class  HRegionServer implements ClientProtocol,
   }
 
   /**
-   * Register bean with platform management server
-   */
-  void registerMBean() {
-    MXBeanImpl mxBeanInfo = MXBeanImpl.init(this);
-    mxBean = MBeanUtil.registerMBean("RegionServer", "RegionServer",
-        mxBeanInfo);
-    LOG.info("Registered RegionServer MXBean");
-  }
-
-  /**
    * Instantiated as a row lock lease. If the lease times out, the row lock is
    * released
    */
@@ -2685,14 +2452,7 @@ public class  HRegionServer implements ClientProtocol,
     if (destination != null){
       addToMovedRegions(encodedRegionName, destination);
     }
-    
-    //Clear all of the dynamic metrics as they are now probably useless.
-    //This is a clear because dynamic metrics could include metrics per cf and
-    //per hfile.  Figuring out which cfs, hfiles, and regions are still relevant to
-    //this region server would be an onerous task.  Instead just clear everything
-    //and on the next tick of the metrics everything that is still relevant will be
-    //re-added.
-    this.dynamicMetrics.clear();
+
     return toReturn != null;
   }
 
@@ -2885,8 +2645,9 @@ public class  HRegionServer implements ClientProtocol,
   @Override
   public GetResponse get(final RpcController controller,
       final GetRequest request) throws ServiceException {
+    long before = EnvironmentEdgeManager.currentTimeMillis();
     try {
-      requestCount.incrementAndGet();
+      requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       GetResponse.Builder builder = GetResponse.newBuilder();
       ClientProtos.Get get = request.getGet();
@@ -2926,6 +2687,8 @@ public class  HRegionServer implements ClientProtocol,
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
+    } finally {
+      metricsRegionServer.updateGet(EnvironmentEdgeManager.currentTimeMillis() - before);
     }
   }
 
@@ -2940,7 +2703,7 @@ public class  HRegionServer implements ClientProtocol,
   public MutateResponse mutate(final RpcController controller,
       final MutateRequest request) throws ServiceException {
     try {
-      requestCount.incrementAndGet();
+      requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       MutateResponse.Builder builder = MutateResponse.newBuilder();
       Mutate mutate = request.getMutate();
@@ -3073,7 +2836,7 @@ public class  HRegionServer implements ClientProtocol,
         }
         throw e;
       }
-      requestCount.incrementAndGet();
+      requestCount.increment();
 
       try {
         int ttl = 0;
@@ -3167,7 +2930,7 @@ public class  HRegionServer implements ClientProtocol,
               for (int i = 0; i < rows
                   && currentScanResultSize < maxResultSize; i++) {
                 // Collect values to be returned here
-                boolean moreRows = scanner.next(values, SchemaMetrics.METRIC_NEXTSIZE);
+                boolean moreRows = scanner.next(values);
                 if (!values.isEmpty()) {
                   for (KeyValue kv : values) {
                     currentScanResultSize += kv.heapSize();
@@ -3261,7 +3024,7 @@ public class  HRegionServer implements ClientProtocol,
         throw new DoNotRetryIOException(
           "lockRow supports only one row now, not " + request.getRowCount() + " rows");
       }
-      requestCount.incrementAndGet();
+      requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       byte[] row = request.getRow(0).toByteArray();
       try {
@@ -3292,7 +3055,7 @@ public class  HRegionServer implements ClientProtocol,
   public UnlockRowResponse unlockRow(final RpcController controller,
       final UnlockRowRequest request) throws ServiceException {
     try {
-      requestCount.incrementAndGet();
+      requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       if (!request.hasLockId()) {
         throw new DoNotRetryIOException(
@@ -3327,7 +3090,7 @@ public class  HRegionServer implements ClientProtocol,
   public BulkLoadHFileResponse bulkLoadHFile(final RpcController controller,
       final BulkLoadHFileRequest request) throws ServiceException {
     try {
-      requestCount.incrementAndGet();
+      requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       List<Pair<byte[], String>> familyPaths = new ArrayList<Pair<byte[], String>>();
       for (FamilyPath familyPath: request.getFamilyPathList()) {
@@ -3374,7 +3137,7 @@ public class  HRegionServer implements ClientProtocol,
   public ExecCoprocessorResponse execCoprocessor(final RpcController controller,
       final ExecCoprocessorRequest request) throws ServiceException {
     try {
-      requestCount.incrementAndGet();
+      requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       ExecCoprocessorResponse.Builder
         builder = ExecCoprocessorResponse.newBuilder();
@@ -3392,7 +3155,7 @@ public class  HRegionServer implements ClientProtocol,
   public CoprocessorServiceResponse execService(final RpcController controller,
       final CoprocessorServiceRequest request) throws ServiceException {
     try {
-      requestCount.incrementAndGet();
+      requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       // ignore the passed in controller (from the serialized call)
       ServerRpcController execController = new ServerRpcController();
@@ -3441,7 +3204,7 @@ public class  HRegionServer implements ClientProtocol,
         ActionResult.Builder resultBuilder = null;
         List<Mutate> mutates = new ArrayList<Mutate>();
         for (ClientProtos.MultiAction actionUnion : request.getActionList()) {
-          requestCount.incrementAndGet();
+          requestCount.increment();
           try {
             Object result = null;
             if (actionUnion.hasGet()) {
@@ -3524,7 +3287,7 @@ public class  HRegionServer implements ClientProtocol,
       final GetRegionInfoRequest request) throws ServiceException {
     try {
       checkOpen();
-      requestCount.incrementAndGet();
+      requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       HRegionInfo info = region.getRegionInfo();
       GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
@@ -3544,7 +3307,7 @@ public class  HRegionServer implements ClientProtocol,
       final GetStoreFileRequest request) throws ServiceException {
     try {
       HRegion region = getRegion(request.getRegion());
-      requestCount.incrementAndGet();
+      requestCount.increment();
       Set<byte[]> columnFamilies = null;
       if (request.getFamilyCount() == 0) {
         columnFamilies = region.getStores().keySet();
@@ -3571,7 +3334,7 @@ public class  HRegionServer implements ClientProtocol,
       final GetOnlineRegionRequest request) throws ServiceException {
     try {
       checkOpen();
-      requestCount.incrementAndGet();
+      requestCount.increment();
       List<HRegionInfo> list = new ArrayList<HRegionInfo>(onlineRegions.size());
       for (HRegion region: this.onlineRegions.values()) {
         list.add(region.getRegionInfo());
@@ -3602,7 +3365,7 @@ public class  HRegionServer implements ClientProtocol,
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
-    requestCount.incrementAndGet();
+    requestCount.increment();
     OpenRegionResponse.Builder builder = OpenRegionResponse.newBuilder();
     int regionCount = request.getOpenInfoCount();
     Map<String, HTableDescriptor> htds =
@@ -3694,7 +3457,6 @@ public class  HRegionServer implements ClientProtocol,
 
     try {
       checkOpen();
-      requestCount.incrementAndGet();
       String encodedRegionName =
         ProtobufUtil.getRegionEncodedName(request.getRegion());
       byte[] encodedName = Bytes.toBytes(encodedRegionName);
@@ -3706,6 +3468,7 @@ public class  HRegionServer implements ClientProtocol,
         checkIfRegionInTransition(encodedName, CLOSE);
       }
       HRegion region = getRegionByEncodedName(encodedRegionName);
+      requestCount.increment();
       LOG.info("Received close region: " + region.getRegionNameAsString() +
         ". Version of ZK closing node:" + versionOfClosingNode +
         ". Destination server:" + sn);
@@ -3734,7 +3497,7 @@ public class  HRegionServer implements ClientProtocol,
       final FlushRegionRequest request) throws ServiceException {
     try {
       checkOpen();
-      requestCount.incrementAndGet();
+      requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       LOG.info("Flushing " + region.getRegionNameAsString());
       boolean shouldFlush = true;
@@ -3765,7 +3528,7 @@ public class  HRegionServer implements ClientProtocol,
       final SplitRegionRequest request) throws ServiceException {
     try {
       checkOpen();
-      requestCount.incrementAndGet();
+      requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       LOG.info("Splitting " + region.getRegionNameAsString());
       region.flushcache();
@@ -3794,7 +3557,7 @@ public class  HRegionServer implements ClientProtocol,
       final CompactRegionRequest request) throws ServiceException {
     try {
       checkOpen();
-      requestCount.incrementAndGet();
+      requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       LOG.info("Compacting " + region.getRegionNameAsString());
       boolean major = false;
@@ -3829,7 +3592,7 @@ public class  HRegionServer implements ClientProtocol,
     try {
       if (replicationSinkHandler != null) {
         checkOpen();
-        requestCount.incrementAndGet();
+        requestCount.increment();
         HLog.Entry[] entries = ProtobufUtil.toHLogEntries(request.getEntryList());
         if (entries != null && entries.length > 0) {
           replicationSinkHandler.replicateLogEntries(entries);
@@ -3852,7 +3615,7 @@ public class  HRegionServer implements ClientProtocol,
   public RollWALWriterResponse rollWALWriter(final RpcController controller,
       final RollWALWriterRequest request) throws ServiceException {
     try {
-      requestCount.incrementAndGet();
+      requestCount.increment();
       HLog wal = this.getWAL();
       byte[][] regionsToFlush = wal.rollWriter(true);
       RollWALWriterResponse.Builder builder = RollWALWriterResponse.newBuilder();
@@ -3877,7 +3640,7 @@ public class  HRegionServer implements ClientProtocol,
   @Override
   public StopServerResponse stopServer(final RpcController controller,
       final StopServerRequest request) throws ServiceException {
-    requestCount.incrementAndGet();
+    requestCount.increment();
     String reason = request.getReason();
     stop(reason);
     return StopServerResponse.newBuilder().build();
@@ -3894,7 +3657,7 @@ public class  HRegionServer implements ClientProtocol,
   public GetServerInfoResponse getServerInfo(final RpcController controller,
       final GetServerInfoRequest request) throws ServiceException {
     ServerName serverName = getServerName();
-    requestCount.incrementAndGet();
+    requestCount.increment();
     return ResponseConverter.buildGetServerInfoResponse(serverName, webuiport);
   }
 
@@ -3924,6 +3687,7 @@ public class  HRegionServer implements ClientProtocol,
    */
   protected Result append(final HRegion region,
       final Mutate mutate) throws IOException {
+    long before = EnvironmentEdgeManager.currentTimeMillis();
     Append append = ProtobufUtil.toAppend(mutate);
     Result r = null;
     if (region.getCoprocessorHost() != null) {
@@ -3936,6 +3700,7 @@ public class  HRegionServer implements ClientProtocol,
         region.getCoprocessorHost().postAppend(append, r);
       }
     }
+    metricsRegionServer.updateAppend(EnvironmentEdgeManager.currentTimeMillis() - before);
     return r;
   }
 
@@ -3949,6 +3714,7 @@ public class  HRegionServer implements ClientProtocol,
    */
   protected Result increment(final HRegion region,
       final Mutate mutate) throws IOException {
+    long before = EnvironmentEdgeManager.currentTimeMillis();
     Increment increment = ProtobufUtil.toIncrement(mutate);
     Result r = null;
     if (region.getCoprocessorHost() != null) {
@@ -3961,6 +3727,7 @@ public class  HRegionServer implements ClientProtocol,
         r = region.getCoprocessorHost().postIncrement(increment, r);
       }
     }
+    metricsRegionServer.updateIncrement(EnvironmentEdgeManager.currentTimeMillis() - before);
     return r;
   }
 
@@ -3975,7 +3742,8 @@ public class  HRegionServer implements ClientProtocol,
       final HRegion region, final List<Mutate> mutates) {
     @SuppressWarnings("unchecked")
     Pair<Mutation, Integer>[] mutationsWithLocks = new Pair[mutates.size()];
-
+    long before = EnvironmentEdgeManager.currentTimeMillis();
+    boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
       ActionResult.Builder resultBuilder = ActionResult.newBuilder();
       NameBytesPair value = ProtobufUtil.toParameter(new Result());
@@ -3987,15 +3755,18 @@ public class  HRegionServer implements ClientProtocol,
         Mutation mutation = null;
         if (m.getMutateType() == MutateType.PUT) {
           mutation = ProtobufUtil.toPut(m);
+          batchContainsPuts = true;
         } else {
           mutation = ProtobufUtil.toDelete(m);
+          batchContainsDelete = true;
         }
         Integer lock = getLockFromId(mutation.getLockId());
         mutationsWithLocks[i++] = new Pair<Mutation, Integer>(mutation, lock);
         builder.addResult(result);
       }
 
-      requestCount.addAndGet(mutates.size());
+
+      requestCount.add(mutates.size());
       if (!region.getRegionInfo().isMetaTable()) {
         cacheFlusher.reclaimMemStoreMemory();
       }
@@ -4030,6 +3801,13 @@ public class  HRegionServer implements ClientProtocol,
       for (int i = 0, n = mutates.size(); i < n; i++) {
         builder.setResult(i, result);
       }
+    }
+    long after = EnvironmentEdgeManager.currentTimeMillis();
+    if (batchContainsPuts) {
+      metricsRegionServer.updatePut(after - before);
+    }
+    if (batchContainsDelete) {
+      metricsRegionServer.updateDelete(after - before);
     }
   }
 

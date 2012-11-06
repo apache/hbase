@@ -78,7 +78,6 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
@@ -132,14 +131,11 @@ public class TestHRegion extends HBaseTestCase {
   protected final byte [] row2 = Bytes.toBytes("rowB");
 
 
-  private Map<String, Long> startingMetrics;
-
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
    */
   @Override
   protected void setUp() throws Exception {
-    startingMetrics = SchemaMetrics.getMetricsSnapshot();
     super.setUp();
   }
 
@@ -147,7 +143,6 @@ public class TestHRegion extends HBaseTestCase {
   protected void tearDown() throws Exception {
     super.tearDown();
     EnvironmentEdgeManagerTestHelper.reset();
-    SchemaMetrics.validateMetricChanges(startingMetrics);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -3331,9 +3326,6 @@ public class TestHRegion extends HBaseTestCase {
       info = new HRegionInfo(htd.getName(), HConstants.EMPTY_BYTE_ARRAY,
           HConstants.EMPTY_BYTE_ARRAY, false);
       Path path = new Path(DIR + "testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization");
-      // no where we are instantiating HStore in this test case so useTableNameGlobally is null. To
-      // avoid NullPointerException we are setting useTableNameGlobally to false.
-      SchemaMetrics.setUseTableNameInTest(false);
       region = HRegion.newHRegion(path, null, fs, conf, info, htd, null);
       // region initialization throws IOException and set task state to ABORTED.
       region.initialize();

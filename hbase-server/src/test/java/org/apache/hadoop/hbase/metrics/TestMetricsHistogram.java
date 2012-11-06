@@ -28,6 +28,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+@Deprecated
 @Category(SmallTests.class)
 public class TestMetricsHistogram {
 

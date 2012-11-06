@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
-import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
@@ -152,7 +151,7 @@ public class AssignmentManager extends ZooKeeperListener {
       EventType.RS_ZK_REGION_FAILED_OPEN, EventType.RS_ZK_REGION_CLOSED });
 
   // metrics instance to send metrics for RITs
-  MasterMetrics masterMetrics;
+  MetricsMaster metricsMaster;
 
   private final RegionStates regionStates;
 
@@ -176,7 +175,7 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   public AssignmentManager(Server server, ServerManager serverManager,
       CatalogTracker catalogTracker, final LoadBalancer balancer,
-      final ExecutorService service, MasterMetrics metrics) throws KeeperException, IOException {
+      final ExecutorService service, MetricsMaster metricsMaster) throws KeeperException, IOException {
     super(server.getZooKeeper());
     this.server = server;
     this.serverManager = serverManager;
@@ -200,7 +199,7 @@ public class AssignmentManager extends ZooKeeperListener {
     int maxThreads = conf.getInt("hbase.assignment.threads.max", 30);
     this.threadPoolExecutorService = Threads.getBoundedCachedThreadPool(
       maxThreads, 60L, TimeUnit.SECONDS, Threads.newDaemonThreadFactory("hbase-am"));
-    this.masterMetrics = metrics;// can be null only with tests.
+    this.metricsMaster = metricsMaster;// can be null only with tests.
     this.regionStates = new RegionStates(server, serverManager);
 
     int workers = conf.getInt("hbase.assignment.zkevent.workers", 5);
@@ -2343,10 +2342,10 @@ public class AssignmentManager extends ZooKeeperListener {
         oldestRITTime = ritTime;
       }
     }
-    if (this.masterMetrics != null) {
-      this.masterMetrics.updateRITOldestAge(oldestRITTime);
-      this.masterMetrics.updateRITCount(totalRITs);
-      this.masterMetrics.updateRITCountOverThreshold(totalRITsOverThreshold);
+    if (this.metricsMaster != null) {
+      this.metricsMaster.updateRITOldestAge(oldestRITTime);
+      this.metricsMaster.updateRITCount(totalRITs);
+      this.metricsMaster.updateRITCountOverThreshold(totalRITsOverThreshold);
     }
   }
 

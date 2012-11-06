@@ -81,7 +81,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -116,11 +115,7 @@ import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.regionserver.metrics.OperationMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -235,16 +230,21 @@ public class HRegion implements HeapSize { // , Writable{
   // private int [] storeSize = null;
   // private byte [] name = null;
 
-  final AtomicLong memstoreSize = new AtomicLong(0);
+  public final AtomicLong memstoreSize = new AtomicLong(0);
 
   // Debug possible data loss due to WAL off
-  final AtomicLong numPutsWithoutWAL = new AtomicLong(0);
-  final AtomicLong dataInMemoryWithoutWAL = new AtomicLong(0);
+  final Counter numPutsWithoutWAL = new Counter();
+  final Counter dataInMemoryWithoutWAL = new Counter();
 
+  // Debug why CAS operations are taking a while.
   final Counter checkAndMutateChecksPassed = new Counter();
   final Counter checkAndMutateChecksFailed = new Counter();
+
+  //Number of requests
   final Counter readRequestsCount = new Counter();
   final Counter writeRequestsCount = new Counter();
+
+  //How long operations were blocked by a memstore over highwater.
   final Counter updatesBlockedMs = new Counter();
 
   /**
@@ -362,7 +362,8 @@ public class HRegion implements HeapSize { // , Writable{
   public final static String REGIONINFO_FILE = ".regioninfo";
   private HTableDescriptor htableDescriptor = null;
   private RegionSplitPolicy splitPolicy;
-  private final OperationMetrics opMetrics;
+
+  private final MetricsRegion metricsRegion;
 
   /**
    * Should only be used for testing purposes
@@ -386,7 +387,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.coprocessorHost = null;
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
 
-    this.opMetrics = new OperationMetrics();
+    this.metricsRegion = new MetricsRegion(new MetricsRegionWrapperImpl(this));
   }
 
   /**
@@ -449,7 +450,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.regiondir = getRegionDir(this.tableDir, encodedNameStr);
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
 
-    this.opMetrics = new OperationMetrics(conf, this.regionInfo);
+    this.metricsRegion = new MetricsRegion(new MetricsRegionWrapperImpl(this));
 
     /*
      * timestamp.slop provides a server-side constraint on the timestamp. This
@@ -839,19 +840,18 @@ public class HRegion implements HeapSize { // , Writable{
     return this.rsServices;
   }
 
-  /** @return requestsCount for this region */
-  public long getRequestsCount() {
-    return this.readRequestsCount.get() + this.writeRequestsCount.get();
-  }
-
   /** @return readRequestsCount for this region */
-  public long getReadRequestsCount() {
+  long getReadRequestsCount() {
     return this.readRequestsCount.get();
   }
 
   /** @return writeRequestsCount for this region */
-  public long getWriteRequestsCount() {
+  long getWriteRequestsCount() {
     return this.writeRequestsCount.get();
+  }
+
+  MetricsRegion getMetrics() {
+    return metricsRegion;
   }
 
   /** @return true if region is closed */
@@ -1023,7 +1023,7 @@ public class HRegion implements HeapSize { // , Writable{
         status.setStatus("Running coprocessor post-close hooks");
         this.coprocessorHost.postClose(abort);
       }
-      this.opMetrics.closeMetrics();
+      this.metricsRegion.close();
       status.markComplete("Closed");
       LOG.info("Closed " + this);
       return result;
@@ -1723,7 +1723,6 @@ public class HRegion implements HeapSize { // , Writable{
   protected RegionScanner getScanner(Scan scan,
       List<KeyValueScanner> additionalScanners) throws IOException {
     startRegionOperation();
-    this.readRequestsCount.increment();
     try {
       // Verify families are all valid
       prepareScanner(scan);
@@ -2322,26 +2321,20 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
 
-      // do after lock
-      final long netTimeMs = EnvironmentEdgeManager.currentTimeMillis() - startTimeMs;
-
       // See if the column families were consistent through the whole thing.
       // if they were then keep them. If they were not then pass a null.
       // null will be treated as unknown.
       // Total time taken might be involving Puts and Deletes.
       // Split the time for puts and deletes based on the total number of Puts and Deletes.
-      long timeTakenForPuts = 0;
+
       if (noOfPuts > 0) {
         // There were some Puts in the batch.
         double noOfMutations = noOfPuts + noOfDeletes;
-        timeTakenForPuts = (long) (netTimeMs * (noOfPuts / noOfMutations));
-        final Set<byte[]> keptCfs = putsCfSetConsistent ? putsCfSet : null;
-        this.opMetrics.updateMultiPutMetrics(keptCfs, timeTakenForPuts);
+        this.metricsRegion.updatePut();
       }
       if (noOfDeletes > 0) {
         // There were some Deletes in the batch.
-        final Set<byte[]> keptCfs = deletesCfSetConsistent ? deletesCfSet : null;
-        this.opMetrics.updateMultiDeleteMetrics(keptCfs, netTimeMs - timeTakenForPuts);
+        this.metricsRegion.updateDelete();
       }
       if (!success) {
         for (int i = firstIndex; i < lastIndexExclusive; i++) {
@@ -3179,7 +3172,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * See if row is currently locked.
-   * @param lockid
+   * @param lockId
    * @return boolean
    */
   boolean isRowLocked(final Integer lockId) {
@@ -4248,7 +4241,6 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private List<KeyValue> get(Get get, boolean withCoprocessor)
   throws IOException {
-    long now = EnvironmentEdgeManager.currentTimeMillis();
 
     List<KeyValue> results = new ArrayList<KeyValue>();
 
@@ -4264,7 +4256,7 @@ public class HRegion implements HeapSize { // , Writable{
     RegionScanner scanner = null;
     try {
       scanner = getScanner(scan);
-      scanner.next(results, SchemaMetrics.METRIC_GETSIZE);
+      scanner.next(results);
     } finally {
       if (scanner != null)
         scanner.close();
@@ -4276,8 +4268,8 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     // do after lock
-    final long after = EnvironmentEdgeManager.currentTimeMillis();
-    this.opMetrics.updateGetMetrics(get.familySet(), after - now);
+
+    this.metricsRegion.updateGet();
 
     return results;
   }
@@ -4324,9 +4316,6 @@ public class HRegion implements HeapSize { // , Writable{
   public void processRowsWithLocks(RowProcessor<?> processor, long timeout)
       throws IOException {
 
-    final long startNanoTime = System.nanoTime();
-    String metricsName = "rowprocessor." + processor.getName();
-
     for (byte[] row : processor.getRowsToLock()) {
       checkRow(row, "processRowsWithLocks");
     }
@@ -4349,20 +4338,13 @@ public class HRegion implements HeapSize { // , Writable{
             processor, now, this, null, null, timeout);
         processor.postProcess(this, walEdit);
       } catch (IOException e) {
-        long endNanoTime = System.nanoTime();
-        RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".error.nano",
-                                      endNanoTime - startNanoTime);
         throw e;
       } finally {
         closeRegionOperation();
       }
-      final long endNanoTime = System.nanoTime();
-      RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".nano",
-                                    endNanoTime - startNanoTime);
       return;
     }
 
-    long lockedNanoTime, processDoneNanoTime, unlockedNanoTime = 0;
     MultiVersionConsistencyControl.WriteEntry writeEntry = null;
     boolean locked = false;
     boolean walSyncSuccessful = false;
@@ -4385,7 +4367,6 @@ public class HRegion implements HeapSize { // , Writable{
       // 3. Region lock
       this.updatesLock.readLock().lock();
       locked = true;
-      lockedNanoTime = System.nanoTime();
 
       long now = EnvironmentEdgeManager.currentTimeMillis();
       try {
@@ -4393,7 +4374,6 @@ public class HRegion implements HeapSize { // , Writable{
         //    waledits
         doProcessRowWithTimeout(
             processor, now, this, mutations, walEdit, timeout);
-        processDoneNanoTime = System.nanoTime();
 
         if (!mutations.isEmpty()) {
           // 5. Get a mvcc write number
@@ -4418,7 +4398,6 @@ public class HRegion implements HeapSize { // , Writable{
             this.updatesLock.readLock().unlock();
             locked = false;
           }
-          unlockedNanoTime = System.nanoTime();
 
           // 9. Release row lock(s)
           if (acquiredLocks != null) {
@@ -4456,17 +4435,13 @@ public class HRegion implements HeapSize { // , Writable{
             releaseRowLock(lid);
           }
         }
-        unlockedNanoTime = unlockedNanoTime == 0 ?
-            System.nanoTime() : unlockedNanoTime;
+
       }
 
       // 12. Run post-process hook
       processor.postProcess(this, walEdit);
 
     } catch (IOException e) {
-      long endNanoTime = System.nanoTime();
-      RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".error.nano",
-                                    endNanoTime - startNanoTime);
       throw e;
     } finally {
       closeRegionOperation();
@@ -4475,22 +4450,6 @@ public class HRegion implements HeapSize { // , Writable{
         requestFlush();
       }
     }
-    // Populate all metrics
-    long endNanoTime = System.nanoTime();
-    RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".nano",
-                                  endNanoTime - startNanoTime);
-
-    RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".acquirelock.nano",
-                                  lockedNanoTime - startNanoTime);
-
-    RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".process.nano",
-                                  processDoneNanoTime - lockedNanoTime);
-
-    RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".occupylock.nano",
-                                  unlockedNanoTime - lockedNanoTime);
-
-    RegionMetricsStorage.incrTimeVaryingMetric(metricsName + ".sync.nano",
-                                  endNanoTime - unlockedNanoTime);
   }
 
   private void doProcessRowWithTimeout(final RowProcessor<?> processor,
@@ -4567,7 +4526,7 @@ public class HRegion implements HeapSize { // , Writable{
     WALEdit walEdits = null;
     List<KeyValue> allKVs = new ArrayList<KeyValue>(append.size());
     Map<Store, List<KeyValue>> tempMemstore = new HashMap<Store, List<KeyValue>>();
-    long before = EnvironmentEdgeManager.currentTimeMillis();
+
     long size = 0;
     long txid = 0;
 
@@ -4684,8 +4643,7 @@ public class HRegion implements HeapSize { // , Writable{
       closeRegionOperation();
     }
 
-    long after = EnvironmentEdgeManager.currentTimeMillis();
-    this.opMetrics.updateAppendMetrics(append.getFamilyMap().keySet(), after - before);
+    this.metricsRegion.updateAppend();
 
 
     if (flush) {
@@ -4720,7 +4678,7 @@ public class HRegion implements HeapSize { // , Writable{
     WALEdit walEdits = null;
     List<KeyValue> allKVs = new ArrayList<KeyValue>(increment.numColumns());
     Map<Store, List<KeyValue>> tempMemstore = new HashMap<Store, List<KeyValue>>();
-    long before = EnvironmentEdgeManager.currentTimeMillis();
+
     long size = 0;
     long txid = 0;
 
@@ -4810,8 +4768,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
     } finally {
       closeRegionOperation();
-      long after = EnvironmentEdgeManager.currentTimeMillis();
-      this.opMetrics.updateIncrementMetrics(increment.getFamilyMap().keySet(), after - before);
+      this.metricsRegion.updateIncrement();
     }
 
     if (flush) {
@@ -5284,7 +5241,8 @@ public class HRegion implements HeapSize { // , Writable{
    * These information are exposed by the region server metrics.
    */
   private void recordPutWithoutWal(final Map<byte [], List<KeyValue>> familyMap) {
-    if (numPutsWithoutWAL.getAndIncrement() == 0) {
+    numPutsWithoutWAL.increment();
+    if (numPutsWithoutWAL.get() <= 1) {
       LOG.info("writing data to region " + this +
                " with WAL disabled. Data may be lost in the event of a crash.");
     }
@@ -5296,7 +5254,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
 
-    dataInMemoryWithoutWAL.addAndGet(putSize);
+    dataInMemoryWithoutWAL.add(putSize);
   }
 
   /**

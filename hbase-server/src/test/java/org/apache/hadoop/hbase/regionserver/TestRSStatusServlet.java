@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse;
-import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.tmpl.regionserver.RSStatusTmpl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
@@ -59,8 +58,7 @@ public class TestRSStatusServlet {
     new ServerName("localhost", FAKE_IPC_PORT, 11111);
   private final GetServerInfoResponse fakeResponse =
     ResponseConverter.buildGetServerInfoResponse(fakeServerName, FAKE_WEB_PORT);
-  private final RegionServerMetrics metrics =
-    new RegionServerMetrics();
+
   private final ServerName fakeMasterAddress =
     new ServerName("localhost", 60010, 1212121212);
 
@@ -71,8 +69,6 @@ public class TestRSStatusServlet {
       .when(rs).getConfiguration();
     Mockito.doReturn(fakeResponse).when(rs).getServerInfo(
       (RpcController)Mockito.any(), (GetServerInfoRequest)Mockito.any());
-    Mockito.doReturn(metrics).when(rs).getMetrics();
-
     // Fake ZKW
     ZooKeeperWatcher zkw = Mockito.mock(ZooKeeperWatcher.class);
     Mockito.doReturn("fakequorum").when(zkw).getQuorum();
@@ -82,6 +78,10 @@ public class TestRSStatusServlet {
     MasterAddressTracker mat = Mockito.mock(MasterAddressTracker.class);
     Mockito.doReturn(fakeMasterAddress).when(mat).getMasterAddress();
     Mockito.doReturn(mat).when(rs).getMasterAddressManager();
+
+    MetricsRegionServer rms = Mockito.mock(MetricsRegionServer.class);
+    Mockito.doReturn(new MetricsRegionServerWrapperStub()).when(rms).getRegionServerWrapper();
+    Mockito.doReturn(rms).when(rs).getMetrics();
   }
   
   @Test

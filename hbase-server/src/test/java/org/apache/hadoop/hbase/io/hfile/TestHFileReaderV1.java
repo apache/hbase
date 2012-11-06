@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.junit.After;
@@ -47,21 +46,13 @@ public class TestHFileReaderV1 {
 
   private Configuration conf;
   private FileSystem fs;
-  private Map<String, Long> startingMetrics;
 
   private static final int N = 1000;
 
   @Before
   public void setUp() throws IOException {
-    startingMetrics = SchemaMetrics.getMetricsSnapshot();
     conf = TEST_UTIL.getConfiguration();
     fs = FileSystem.get(conf);
-    SchemaMetrics.configureGlobally(conf);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    SchemaMetrics.validateMetricChanges(startingMetrics);
   }
 
   @Test

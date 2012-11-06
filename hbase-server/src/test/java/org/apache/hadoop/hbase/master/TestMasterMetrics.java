@@ -19,25 +19,16 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.master.metrics.MasterMetricsSource;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -95,18 +86,18 @@ public class TestMasterMetrics {
 
   @Test
   public void testDefaultMasterMetrics() throws Exception {
-    MasterMetricsSource source = master.getMetrics().getMetricsSource();
-    metricsHelper.assertGauge( "numRegionServers", 1, source);
-    metricsHelper.assertGauge( "averageLoad", 2, source);
-    metricsHelper.assertGauge( "numDeadRegionServers", 0, source);
+    MetricsMasterSource masterSource = master.getMetrics().getMetricsSource();
+    metricsHelper.assertGauge( "numRegionServers", 1, masterSource);
+    metricsHelper.assertGauge( "averageLoad", 2, masterSource);
+    metricsHelper.assertGauge( "numDeadRegionServers", 0, masterSource);
 
-    metricsHelper.assertGauge("masterStartTime", master.getMasterStartTime(), source);
-    metricsHelper.assertGauge("masterActiveTime", master.getMasterActiveTime(), source);
+    metricsHelper.assertGauge("masterStartTime", master.getMasterStartTime(), masterSource);
+    metricsHelper.assertGauge("masterActiveTime", master.getMasterActiveTime(), masterSource);
 
-    metricsHelper.assertTag("isActiveMaster", "true", source);
-    metricsHelper.assertTag("serverName", master.getServerName().toString(), source);
-    metricsHelper.assertTag("clusterId", master.getClusterId(), source);
-    metricsHelper.assertTag("zookeeperQuorum", master.getZooKeeper().getQuorum(), source);
+    metricsHelper.assertTag("isActiveMaster", "true", masterSource);
+    metricsHelper.assertTag("serverName", master.getServerName().toString(), masterSource);
+    metricsHelper.assertTag("clusterId", master.getClusterId(), masterSource);
+    metricsHelper.assertTag("zookeeperQuorum", master.getZooKeeper().getQuorum(), masterSource);
 
   }
 }

@@ -23,6 +23,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsTag;
@@ -38,6 +40,8 @@ import org.apache.hadoop.metrics2.MetricsTag;
  *       concurrent map, as we allow dynamic metrics additions/removals.
  */
 public class DynamicMetricsRegistry {
+
+  private final Log LOG = LogFactory.getLog(this.getClass());
 
   /** key for the context tag */
   public static final String CONTEXT_KEY = "context";
@@ -284,6 +288,7 @@ public class DynamicMetricsRegistry {
    * @param all get all the metrics even if the values are not changed.
    */
   public void snapshot(MetricsRecordBuilder builder, boolean all) {
+
     for (Entry<String, MetricsTag> entry : tags()) {
       builder.add(entry.getValue());
     }

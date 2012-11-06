@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MemStore;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.experimental.categories.Category;
@@ -312,12 +311,6 @@ public class TestHeapSize extends TestCase {
       ClassSize.estimateBase(CopyOnWriteArrayList.class, true);
       assertEquals(expected, actual);
     }
-
-    // SchemaConfigured
-    LOG.debug("Heap size for: " + SchemaConfigured.class.getName());
-    SchemaConfigured sc = new SchemaConfigured(null, "myTable", "myCF");
-    assertEquals(ClassSize.estimateBase(SchemaConfigured.class, true),
-        sc.heapSize());
 
     // Store Overhead
     cl = HStore.class;

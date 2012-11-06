@@ -23,7 +23,6 @@
 <%import>
         java.util.*;
         org.apache.hadoop.hbase.regionserver.HRegionServer;
-        org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
         org.apache.hadoop.hbase.util.Bytes;
         org.apache.hadoop.hbase.HRegionInfo;
         org.apache.hadoop.hbase.ServerName;

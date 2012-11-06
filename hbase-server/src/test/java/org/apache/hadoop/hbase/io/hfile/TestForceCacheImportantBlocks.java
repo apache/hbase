@@ -36,8 +36,6 @@ import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -103,7 +101,7 @@ public class TestForceCacheImportantBlocks {
     TEST_UTIL.getConfiguration().setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY,
         BLOCK_SIZE);
 
-    SchemaMetrics.setUseTableNameInTest(false);
+
     HColumnDescriptor hcd =
         new HColumnDescriptor(Bytes.toBytes(CF))
             .setMaxVersions(MAX_VERSIONS)
@@ -113,16 +111,12 @@ public class TestForceCacheImportantBlocks {
     hcd.setBlockCacheEnabled(cfCacheEnabled);
     HRegion region = TEST_UTIL.createTestRegion(TABLE, hcd);
     writeTestData(region);
-    Map<String, Long> metricsBefore = SchemaMetrics.getMetricsSnapshot();
+
     for (int i = 0; i < NUM_ROWS; ++i) {
       Get get = new Get(Bytes.toBytes("row" + i));
       region.get(get, null);
     }
-    SchemaMetrics.validateMetricChanges(metricsBefore);
-    Map<String, Long> metricsAfter = SchemaMetrics.getMetricsSnapshot();
-    Map<String, Long> metricsDelta = SchemaMetrics.diffMetrics(metricsBefore,
-        metricsAfter);
-    SchemaMetrics metrics = SchemaMetrics.getInstance(TABLE, CF);
+
     List<BlockCategory> importantBlockCategories =
         new ArrayList<BlockCategory>();
     importantBlockCategories.add(BlockCategory.BLOOM);
@@ -130,30 +124,8 @@ public class TestForceCacheImportantBlocks {
       // We only have index blocks for HFile v2.
       importantBlockCategories.add(BlockCategory.INDEX);
     }
-
-    for (BlockCategory category : importantBlockCategories) {
-      String hitsMetricName = getMetricName(metrics, category);
-      assertTrue("Metric " + hitsMetricName + " was not incremented",
-          metricsDelta.containsKey(hitsMetricName));
-      long hits = metricsDelta.get(hitsMetricName);
-      assertTrue("Invalid value of " + hitsMetricName + ": " + hits, hits > 0);
-    }
-
-    if (!cfCacheEnabled) {
-      // Caching is turned off for the CF, so make sure we are not caching data
-      // blocks.
-      String dataHitMetricName = getMetricName(metrics, BlockCategory.DATA);
-      assertFalse("Nonzero value for metric " + dataHitMetricName,
-          metricsDelta.containsKey(dataHitMetricName));
-    }
   }
 
-  private String getMetricName(SchemaMetrics metrics, BlockCategory category) {
-    String hitsMetricName =
-        metrics.getBlockMetricName(category, SchemaMetrics.NO_COMPACTION,
-            BlockMetricType.CACHE_HIT);
-    return hitsMetricName;
-  }
 
   private void writeTestData(HRegion region) throws IOException {
     for (int i = 0; i < NUM_ROWS; ++i) {

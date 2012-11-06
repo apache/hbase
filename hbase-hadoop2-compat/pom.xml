@@ -138,6 +138,10 @@ limitations under the License.
       <groupId>com.yammer.metrics</groupId>
       <artifactId>metrics-core</artifactId>
     </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+    </dependency>
     <!-- This was marked as test dep in earlier pom, but was scoped compile. Where
       do we actually need it? -->
     <dependency>

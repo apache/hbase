@@ -21,9 +21,8 @@ package org.apache.hadoop.metrics2.lib;
 import com.yammer.metrics.stats.ExponentiallyDecayingSample;
 import com.yammer.metrics.stats.Sample;
 import com.yammer.metrics.stats.Snapshot;
-import org.apache.hadoop.metrics.MetricHistogram;
+import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-import org.apache.hadoop.metrics2.lib.MetricMutable;
 
 import java.util.concurrent.atomic.AtomicLong;
 

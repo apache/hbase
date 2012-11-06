@@ -33,8 +33,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.regionserver.HStore.ScanInfo;
-import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -110,7 +108,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
                               throws IOException {
     this(store, scan.getCacheBlocks(), scan, columns, scanInfo.getTtl(),
         scanInfo.getMinVersions());
-    initializeMetricNames();
     if (columns != null && scan.isRaw()) {
       throw new DoNotRetryIOException(
           "Cannot specify any column for a raw scan");
@@ -163,7 +160,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
       long smallestReadPoint, long earliestPutTs) throws IOException {
     this(store, false, scan, null, scanInfo.getTtl(),
         scanInfo.getMinVersions());
-    initializeMetricNames();
     matcher = new ScanQueryMatcher(scan, scanInfo, null, scanType,
         smallestReadPoint, earliestPutTs, oldestUnexpiredTS);
 
@@ -194,7 +190,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
           throws IOException {
     this(null, scan.getCacheBlocks(), scan, columns, scanInfo.getTtl(),
         scanInfo.getMinVersions());
-    this.initializeMetricNames();
     this.matcher = new ScanQueryMatcher(scan, scanInfo, columns, scanType,
         Long.MAX_VALUE, earliestPutTs, oldestUnexpiredTS);
 
@@ -203,23 +198,6 @@ public class StoreScanner extends NonLazyKeyValueScanner
       scanner.seek(matcher.getStartKey());
     }
     heap = new KeyValueHeap(scanners, scanInfo.getComparator());
-  }
-
-  /**
-   * Method used internally to initialize metric names throughout the
-   * constructors.
-   *
-   * To be called after the store variable has been initialized!
-   */
-  private void initializeMetricNames() {
-    String tableName = SchemaMetrics.UNKNOWN;
-    String family = SchemaMetrics.UNKNOWN;
-    if (store != null) {
-      tableName = store.getTableName();
-      family = Bytes.toString(store.getFamily().getName());
-    }
-    this.metricNamePrefix =
-        SchemaMetrics.generateSchemaMetricsPrefix(tableName, family);
   }
 
   /**
@@ -458,8 +436,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
       }
     } finally {
       if (cumulativeMetric > 0 && metric != null) {
-        RegionMetricsStorage.incrNumericMetric(this.metricNamePrefix + metric,
-            cumulativeMetric);
+
       }
     }
 

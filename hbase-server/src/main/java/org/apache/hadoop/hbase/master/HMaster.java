@@ -47,6 +47,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -96,8 +97,6 @@ import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableEventHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
-import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
-import org.apache.hadoop.hbase.master.metrics.MasterMetricsWrapperImpl;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -247,7 +246,7 @@ Server {
   private final InetSocketAddress isa;
 
   // Metrics for the HMaster
-  private final MasterMetrics metrics;
+  private final MetricsMaster metricsMaster;
   // file system manager for the master FS operations
   private MasterFileSystem fileSystemManager;
 
@@ -383,7 +382,7 @@ Server {
     //should we check the compression codec type at master side, default true, HBASE-6370
     this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
 
-    this.metrics = new MasterMetrics( new MasterMetricsWrapperImpl(this));
+    this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
   }
 
   /**
@@ -413,8 +412,8 @@ Server {
 
   }
 
-  MasterMetrics getMetrics() {
-    return metrics;
+  MetricsMaster getMetrics() {
+    return metricsMaster;
   }
 
   /**
@@ -523,7 +522,7 @@ Server {
     this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
     this.loadBalancerTracker.start();
     this.assignmentManager = new AssignmentManager(this, serverManager,
-      this.catalogTracker, this.balancer, this.executorService, this.metrics);
+      this.catalogTracker, this.balancer, this.executorService, this.metricsMaster);
     zooKeeper.registerListenerFirst(assignmentManager);
 
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
@@ -627,7 +626,7 @@ Server {
     status.setStatus("Initializing Master file system");
     this.masterActiveTime = System.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
-    this.fileSystemManager = new MasterFileSystem(this, this, metrics, masterRecovery);
+    this.fileSystemManager = new MasterFileSystem(this, this, metricsMaster, masterRecovery);
 
     this.tableDescriptors =
       new FSTableDescriptors(this.fileSystemManager.getFileSystem(),
@@ -1182,9 +1181,9 @@ Server {
     try {
       HBaseProtos.ServerLoad sl = request.getLoad();
       this.serverManager.regionServerReport(ProtobufUtil.toServerName(request.getServer()), new ServerLoad(sl));
-      if (sl != null && this.metrics != null) {
+      if (sl != null && this.metricsMaster != null) {
         // Up our metrics.
-        this.metrics.incrementRequests(sl.getTotalNumberOfRequests());
+        this.metricsMaster.incrementRequests(sl.getTotalNumberOfRequests());
       }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -1834,7 +1833,14 @@ Server {
   }
 
   public String getClusterId() {
-    return fileSystemManager.getClusterId().toString();
+    if (fileSystemManager == null) {
+      return "";
+    }
+    ClusterId id = fileSystemManager.getClusterId();
+    if (id == null) {
+      return "";
+    }
+    return id.toString();
   }
 
   /**
@@ -2232,7 +2238,15 @@ Server {
    * @return the average load
    */
   public double getAverageLoad() {
-    return this.assignmentManager.getRegionStates().getAverageLoad();
+    if (this.assignmentManager == null) {
+      return 0;
+    }
+
+    RegionStates regionStates = this.assignmentManager.getRegionStates();
+    if (regionStates == null) {
+      return 0;
+    }
+    return regionStates.getAverageLoad();
   }
 
   /**

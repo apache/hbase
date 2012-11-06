@@ -66,7 +66,6 @@ class SplitRequest implements Runnable {
       if (!st.prepare()) return;
       try {
         st.execute(this.server, this.server);
-        this.server.getMetrics().incrementSplitSuccessCount(System.currentTimeMillis() - startTime);
       } catch (Exception e) {
         if (this.server.isStopping() || this.server.isStopped()) {
           LOG.info(
@@ -81,7 +80,6 @@ class SplitRequest implements Runnable {
           if (st.rollback(this.server, this.server)) {
             LOG.info("Successful rollback of failed split of " +
               parent.getRegionNameAsString());
-            this.server.getMetrics().incrementSplitFailureCount();
           } else {
             this.server.abort("Abort; we got an error after point-of-no-return");
           }
@@ -102,7 +100,6 @@ class SplitRequest implements Runnable {
     } catch (IOException ex) {
       LOG.error("Split failed " + this, RemoteExceptionHandler
           .checkIOException(ex));
-      this.server.getMetrics().incrementSplitFailureCount();
       server.checkFileSystem();
     } finally {
       if (this.parent.getCoprocessorHost() != null) {

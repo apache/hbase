@@ -243,7 +243,6 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
         includesMemstoreTS, block.getMinorVersion(),
         block.getBytesPerChecksum(), block.getChecksumType(),
         block.getOnDiskDataSizeWithHeader());
-    block.passSchemaMetricsTo(encodedBlock);
     return encodedBlock;
   }
 

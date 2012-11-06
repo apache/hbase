@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.thrift;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.thrift.metrics.ThriftServerMetricsSource;
-import org.apache.hadoop.hbase.thrift.metrics.ThriftServerMetricsSourceFactory;
 
 /**
  * This class is for maintaining the various statistics of thrift server
@@ -38,15 +36,15 @@ public class ThriftMetrics  {
     TWO
   }
 
-  public ThriftServerMetricsSource getSource() {
+  public MetricsThriftServerSource getSource() {
     return source;
   }
 
-  public void setSource(ThriftServerMetricsSource source) {
+  public void setSource(MetricsThriftServerSource source) {
     this.source = source;
   }
 
-  private ThriftServerMetricsSource source;
+  private MetricsThriftServerSource source;
   private final long slowResponseTime;
   public static final String SLOW_RESPONSE_NANO_SEC =
     "hbase.thrift.slow.response.nano.second";
@@ -57,9 +55,9 @@ public class ThriftMetrics  {
     slowResponseTime = conf.getLong( SLOW_RESPONSE_NANO_SEC, DEFAULT_SLOW_RESPONSE_NANO_SEC);
 
     if (t == ThriftServerType.ONE) {
-      source = CompatibilitySingletonFactory.getInstance(ThriftServerMetricsSourceFactory.class).createThriftOneSource();
+      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class).createThriftOneSource();
     } else if (t == ThriftServerType.TWO) {
-      source = CompatibilitySingletonFactory.getInstance(ThriftServerMetricsSourceFactory.class).createThriftTwoSource();
+      source = CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class).createThriftTwoSource();
     }
 
   }

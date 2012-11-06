@@ -49,8 +49,6 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -284,8 +282,6 @@ public class HFile {
     /** @return the path to this {@link HFile} */
     Path getPath();
 
-    String getColumnFamilyName();
-
     void appendMetaBlock(String bloomFilterMetaKey, Writable metaWriter);
 
     /**
@@ -431,7 +427,6 @@ public class HFile {
    */
   public static final WriterFactory getWriterFactory(Configuration conf,
       CacheConfig cacheConf) {
-    SchemaMetrics.configureGlobally(conf);
     int version = getFormatVersion(conf);
     switch (version) {
     case 1:
@@ -453,16 +448,13 @@ public class HFile {
   }
 
   /** An interface used by clients to open and iterate an {@link HFile}. */
-  public interface Reader extends Closeable, CachingBlockReader,
-      SchemaAware {
+  public interface Reader extends Closeable, CachingBlockReader {
     /**
      * Returns this reader's "name". Usually the last component of the path.
      * Needs to be constant as the file is being moved to support caching on
      * write.
      */
     String getName();
-
-    String getColumnFamilyName();
 
     RawComparator<byte []> getComparator();
 

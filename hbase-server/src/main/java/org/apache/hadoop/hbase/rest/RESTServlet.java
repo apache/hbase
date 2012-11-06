@@ -24,7 +24,6 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTablePool;
-import org.apache.hadoop.hbase.rest.metrics.RESTMetrics;
 
 /**
  * Singleton class encapsulating global REST servlet state and functions.
@@ -34,7 +33,7 @@ public class RESTServlet implements Constants {
   private static RESTServlet INSTANCE;
   private final Configuration conf;
   private final HTablePool pool;
-  private final RESTMetrics metrics = new RESTMetrics();
+  private final MetricsREST metrics = new MetricsREST();
 
   /**
    * @return the RESTServlet singleton instance
@@ -80,7 +79,7 @@ public class RESTServlet implements Constants {
     return conf;
   }
 
-  RESTMetrics getMetrics() {
+  MetricsREST getMetrics() {
     return metrics;
   }
 

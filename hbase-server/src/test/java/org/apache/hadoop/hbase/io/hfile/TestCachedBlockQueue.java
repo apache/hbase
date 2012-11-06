@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-
 import junit.framework.TestCase;
 import org.apache.hadoop.hbase.SmallTests;
 import org.junit.experimental.categories.Category;
@@ -137,15 +135,6 @@ public class TestCachedBlockQueue extends TestCase {
               return null;
             }
 
-            @Override
-            public BlockType getBlockType() {
-              return BlockType.DATA;
-            }
-
-            @Override
-            public SchemaMetrics getSchemaMetrics() {
-              return SchemaMetrics.ALL_SCHEMA_METRICS;
-            }
           }, accessTime, false);
     }
   }

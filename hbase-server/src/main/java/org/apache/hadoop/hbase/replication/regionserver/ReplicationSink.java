@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.replication.regionserver.metrics.ReplicationSinkMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 
@@ -73,7 +72,7 @@ public class ReplicationSink {
   private final Configuration conf;
   private final ExecutorService sharedThreadPool;
   private final HConnection sharedHtableCon;
-  private final ReplicationSinkMetrics metrics;
+  private final MetricsSink metrics;
 
   /**
    * Create a sink for replication
@@ -86,7 +85,7 @@ public class ReplicationSink {
       throws IOException {
     this.conf = HBaseConfiguration.create(conf);
     decorateConf();
-    this.metrics = new ReplicationSinkMetrics();
+    this.metrics = new MetricsSink();
     this.sharedHtableCon = HConnectionManager.createConnection(this.conf);
     this.sharedThreadPool = new ThreadPoolExecutor(1,
         conf.getInt("hbase.htable.threads.max", Integer.MAX_VALUE),

@@ -47,8 +47,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
@@ -120,12 +118,6 @@ public class TestMultiColumnScanner {
     for (int i = 0; i < TIMESTAMPS.length - 1; ++i)
       assertTrue(TIMESTAMPS[i] < TIMESTAMPS[i + 1]);
   }
-
-  @Before
-  public void setUp() {
-    SchemaMetrics.configureGlobally(TEST_UTIL.getConfiguration());
-  }
-
 
   @Parameters
   public static final Collection<Object[]> parameters() {

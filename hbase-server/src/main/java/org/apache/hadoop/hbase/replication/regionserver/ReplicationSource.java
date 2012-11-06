@@ -56,12 +56,8 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
-import org.apache.hadoop.hbase.replication.regionserver.metrics.ReplicationSourceMetrics;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
@@ -141,7 +137,7 @@ public class ReplicationSource extends Thread
   // Indicates if this particular source is running
   private volatile boolean running = true;
   // Metrics for this source
-  private ReplicationSourceMetrics metrics;
+  private MetricsSource metrics;
 
   /**
    * Instantiation method used by region servers
@@ -188,7 +184,7 @@ public class ReplicationSource extends Thread
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);
     this.fs = fs;
-    this.metrics = new ReplicationSourceMetrics(peerClusterZnode);
+    this.metrics = new MetricsSource(peerClusterZnode);
 
     try {
       this.clusterId = zkHelper.getUUIDForCluster(zkHelper.getZookeeperWatcher());

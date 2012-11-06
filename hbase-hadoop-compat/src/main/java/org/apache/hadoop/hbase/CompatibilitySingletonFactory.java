@@ -44,6 +44,7 @@ public class CompatibilitySingletonFactory extends CompatibilityFactory {
    *
    * @return the singleton
    */
+  @SuppressWarnings("unchecked")
   public static synchronized <T> T getInstance(Class<T> klass) {
     T instance = (T) instances.get(klass);
     if (instance == null) {

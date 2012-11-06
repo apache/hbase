@@ -45,6 +45,7 @@ import org.junit.experimental.categories.Category;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@Deprecated
 @Category(SmallTests.class)
 public class TestMetricsMBeanBase extends TestCase {
 

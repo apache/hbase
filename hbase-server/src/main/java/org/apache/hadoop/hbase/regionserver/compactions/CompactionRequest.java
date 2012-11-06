@@ -253,7 +253,6 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
         LOG.info(((completed) ? "completed" : "aborted") + " compaction: " +
               this + "; duration=" + StringUtils.formatTimeDiff(now, start));
         if (completed) {
-          server.getMetrics().addCompaction(now - start, this.totalSize);
           // degenerate case: blocked regions require recursive enqueues
           if (s.getCompactPriority() <= 0) {
             server.compactSplitThread

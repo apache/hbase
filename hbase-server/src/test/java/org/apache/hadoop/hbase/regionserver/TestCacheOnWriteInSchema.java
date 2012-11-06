@@ -194,7 +194,6 @@ public class TestCacheOnWriteInSchema {
     BlockCache cache = cacheConf.getBlockCache();
     StoreFile sf = new StoreFile(fs, path, conf, cacheConf,
         BloomType.ROWCOL, null);
-    store.passSchemaMetricsTo(sf);
     HFileReaderV2 reader = (HFileReaderV2) sf.createReader().getHFileReader();
     try {
       // Open a scanner with (on read) caching disabled

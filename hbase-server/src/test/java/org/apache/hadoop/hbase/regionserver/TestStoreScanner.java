@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HStore.ScanInfo;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
@@ -54,7 +53,6 @@ public class TestStoreScanner extends TestCase {
 
   public void setUp() throws Exception {
     super.setUp();
-    SchemaMetrics.setUseTableNameInTest(false);
   }
 
   /*

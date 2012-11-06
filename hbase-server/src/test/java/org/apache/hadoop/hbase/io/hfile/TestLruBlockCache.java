@@ -26,11 +26,10 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.EvictionThread;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.TestSchemaMetrics;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.After;
 import org.junit.Before;
@@ -47,30 +46,9 @@ import org.junit.runners.Parameterized.Parameters;
  * evictions run when they're supposed to and do what they should,
  * and that cached blocks are accessible when expected to be.
  */
-@RunWith(Parameterized.class)
 @Category(SmallTests.class)
 public class TestLruBlockCache {
 
-  private Map<String, Long> startingMetrics;
-
-  public TestLruBlockCache(boolean useTableName) {
-    SchemaMetrics.setUseTableNameInTest(useTableName);
-  }
-
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    return TestSchemaMetrics.parameters();
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    startingMetrics = SchemaMetrics.getMetricsSnapshot();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    SchemaMetrics.validateMetricChanges(startingMetrics);
-  }
 
   @Test
   public void testBackgroundEvictionThread() throws Exception {
@@ -670,16 +648,6 @@ public class TestLruBlockCache {
       return CachedBlock.PER_BLOCK_OVERHEAD
           + ClassSize.align(cacheKey.heapSize())
           + ClassSize.align(size);
-    }
-
-    @Override
-    public BlockType getBlockType() {
-      return BlockType.DATA;
-    }
-
-    @Override
-    public SchemaMetrics getSchemaMetrics() {
-      return SchemaMetrics.getUnknownInstanceForTest();
     }
 
     @Override

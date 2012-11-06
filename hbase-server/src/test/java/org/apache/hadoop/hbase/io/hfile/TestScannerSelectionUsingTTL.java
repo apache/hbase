@@ -39,8 +39,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Test;
@@ -146,9 +144,6 @@ public class TestScannerSelectionUsingTTL {
     Set<String> accessedFiles = cache.getCachedFileNamesForTest();
     LOG.debug("Files accessed during scan: " + accessedFiles);
 
-    Map<String, Long> metricsBeforeCompaction =
-      SchemaMetrics.getMetricsSnapshot();
-
     // Exercise both compaction codepaths.
     if (explicitCompaction) {
       region.getStore(FAMILY_BYTES).compactRecentForTesting(totalNumFiles);
@@ -156,18 +151,6 @@ public class TestScannerSelectionUsingTTL {
       region.compactStores();
     }
 
-    SchemaMetrics.validateMetricChanges(metricsBeforeCompaction);
-    Map<String, Long> compactionMetrics =
-        SchemaMetrics.diffMetrics(metricsBeforeCompaction,
-            SchemaMetrics.getMetricsSnapshot());
-    long compactionDataBlocksRead = SchemaMetrics.getLong(
-        compactionMetrics,
-        SchemaMetrics.getInstance(TABLE, FAMILY).getBlockMetricName(
-            BlockCategory.DATA, true, BlockMetricType.READ_COUNT));
-    assertEquals("Invalid number of blocks accessed during compaction. " +
-        "We only expect non-expired files to be accessed.",
-        numFreshFiles, compactionDataBlocksRead);
     region.close();
   }
-
 }

@@ -58,8 +58,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV1;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -80,7 +78,7 @@ import com.google.common.collect.Ordering;
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
  * are produced by flushing the memstore to disk.  To
- * create, instantiate a writer using {@link StoreFile#WriterBuilder}
+ * create, instantiate a writer using {@link StoreFile.WriterBuilder}
  * and append data. Be sure to add any metadata before calling close on the
  * Writer (Use the appendMetadata convenience methods). On close, a StoreFile
  * is sitting in the Filesystem.  To refer to it, create a StoreFile instance
@@ -91,7 +89,7 @@ import com.google.common.collect.Ordering;
  * writer and a reader is that we write once but read a lot more.
  */
 @InterfaceAudience.LimitedPrivate("Coprocessor")
-public class StoreFile extends SchemaConfigured {
+public class StoreFile {
   static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
 
   public static enum BloomType {
@@ -277,7 +275,6 @@ public class StoreFile extends SchemaConfigured {
       this.modificationTimeStamp = 0;
     }
 
-    SchemaMetrics.configureGlobally(conf);
   }
 
   /**
@@ -543,11 +540,6 @@ public class StoreFile extends SchemaConfigured {
     } else {
       this.reader = new Reader(this.fs, this.path, this.cacheConf,
           dataBlockEncoder.getEncodingInCache());
-    }
-
-    if (isSchemaConfigured()) {
-      SchemaConfigured.resetSchemaMetricsConf(reader);
-      passSchemaMetricsTo(reader);
     }
 
     computeHDFSBlockDistribution();
@@ -1287,7 +1279,7 @@ public class StoreFile extends SchemaConfigured {
   /**
    * Reader for a StoreFile.
    */
-  public static class Reader extends SchemaConfigured {
+  public static class Reader {
     static final Log LOG = LogFactory.getLog(Reader.class.getName());
 
     protected BloomFilter generalBloomFilter = null;
@@ -1301,7 +1293,6 @@ public class StoreFile extends SchemaConfigured {
 
     public Reader(FileSystem fs, Path path, CacheConfig cacheConf,
         DataBlockEncoding preferredEncodingInCache) throws IOException {
-      super(path);
       reader = HFile.createReaderWithEncoding(fs, path, cacheConf,
           preferredEncodingInCache);
       bloomFilterType = BloomType.NONE;
@@ -1310,7 +1301,6 @@ public class StoreFile extends SchemaConfigured {
     public Reader(FileSystem fs, Path path, HFileLink hfileLink, long size,
         CacheConfig cacheConf, DataBlockEncoding preferredEncodingInCache,
         boolean closeIStream) throws IOException {
-      super(path);
 
       FSDataInputStream in = hfileLink.open(fs);
       FSDataInputStream inNoChecksum = in;
@@ -1584,7 +1574,6 @@ public class StoreFile extends SchemaConfigured {
                 && bloomFilter.contains(key, 0, key.length, bloom);
           }
 
-          getSchemaMetrics().updateBloomMetrics(exists);
           return exists;
         }
       } catch (IOException e) {
@@ -1728,10 +1717,6 @@ public class StoreFile extends SchemaConfigured {
       return reader.indexSize();
     }
 
-    public String getColumnFamilyName() {
-      return reader.getColumnFamilyName();
-    }
-
     public BloomType getBloomFilterType() {
       return this.bloomFilterType;
     }
@@ -1773,11 +1758,6 @@ public class StoreFile extends SchemaConfigured {
 
     public long getMaxTimestamp() {
       return timeRangeTracker.maximumTimestamp;
-    }
-
-    @Override
-    public void schemaConfigurationChanged() {
-      passSchemaMetricsTo((SchemaConfigured) reader);
     }
   }
 

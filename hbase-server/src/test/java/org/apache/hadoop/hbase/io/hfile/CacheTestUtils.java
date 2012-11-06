@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ChecksumType;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 
 public class CacheTestUtils {
 
@@ -281,17 +280,6 @@ public class CacheTestUtils {
         }
       };
     }
-
-    @Override
-    public BlockType getBlockType() {
-      return BlockType.DATA;
-    }
-
-    @Override
-    public SchemaMetrics getSchemaMetrics() {
-      return SchemaMetrics.getUnknownInstanceForTest();
-    }
-
   }
 
   private static HFileBlockPair[] generateHFileBlocks(int blockSize,

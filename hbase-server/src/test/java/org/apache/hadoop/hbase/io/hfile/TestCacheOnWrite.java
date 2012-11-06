@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -361,13 +360,9 @@ public class TestCacheOnWrite {
         (LruBlockCache) new CacheConfig(conf).getBlockCache();
     blockCache.clearCache();
     assertEquals(0, blockCache.getBlockTypeCountsForTest().size());
-    Map<String, Long> metricsBefore = SchemaMetrics.getMetricsSnapshot();
     region.compactStores();
     LOG.debug("compactStores() returned");
-    SchemaMetrics.validateMetricChanges(metricsBefore);
-    Map<String, Long> compactionMetrics = SchemaMetrics.diffMetrics(
-        metricsBefore, SchemaMetrics.getMetricsSnapshot());
-    LOG.debug(SchemaMetrics.formatMetrics(compactionMetrics));
+
     Map<BlockType, Integer> blockTypesInCache =
         blockCache.getBlockTypeCountsForTest();
     LOG.debug("Block types in cache: " + blockTypesInCache);

@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.CachingBlockReader;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompoundBloomFilterWriter;
@@ -719,8 +718,7 @@ public class HFileBlockIndex {
    * index. However, in most practical cases we will only have leaf-level
    * blocks and the root index, or just the root index.
    */
-  public static class BlockIndexWriter extends SchemaConfigured
-      implements InlineBlockWriter {
+  public static class BlockIndexWriter implements InlineBlockWriter {
     /**
      * While the index is being written, this represents the current block
      * index referencing all leaf blocks, with one exception. If the file is
@@ -954,7 +952,6 @@ public class HFileBlockIndex {
 
       if (blockCache != null) {
         HFileBlock blockForCaching = blockWriter.getBlockForCaching();
-        passSchemaMetricsTo(blockForCaching);
         blockCache.cacheBlock(new BlockCacheKey(nameForCaching,
             beginOffset, DataBlockEncoding.NONE, 
             blockForCaching.getBlockType()), blockForCaching);

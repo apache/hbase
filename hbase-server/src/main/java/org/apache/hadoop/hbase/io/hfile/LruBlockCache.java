@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -325,12 +324,6 @@ public class LruBlockCache implements BlockCache, HeapSize {
     long heapsize = cb.heapSize();
     if (evict) {
       heapsize *= -1;
-    }
-    Cacheable cachedBlock = cb.getBuffer();
-    SchemaMetrics schemaMetrics = cachedBlock.getSchemaMetrics();
-    if (schemaMetrics != null) {
-      schemaMetrics.updateOnCachePutOrEvict(
-          cachedBlock.getBlockType().getCategory(), heapsize, evict);
     }
     return size.addAndGet(heapsize);
   }

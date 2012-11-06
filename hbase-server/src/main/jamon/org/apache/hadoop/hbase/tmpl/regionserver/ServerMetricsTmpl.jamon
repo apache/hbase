@@ -17,12 +17,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 </%doc>
 <%args>
-    RegionServerMetrics metrics;
+MetricsRegionServerWrapper mWrap;
 </%args>
 <%import>
 java.util.*;
 org.apache.hadoop.hbase.regionserver.HRegionServer;
-org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
+org.apache.hadoop.hbase.regionserver.MetricsRegionServerWrapper;
 org.apache.hadoop.hbase.util.Bytes;
 org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.ServerName;
@@ -42,36 +42,32 @@ java.lang.management.ManagementFactory;
         <li class=""><a href="#storeStats" data-toggle="tab">Storefiles</a></li>
         <li class=""><a href="#queueStats" data-toggle="tab">Queues</a></li>
         <li class=""><a href="#blockCacheStats" data-toggle="tab">Block Cache</a></li>
-        <li class=""><a href="#latencyStats" data-toggle="tab">Latency</a></li>
     </ul>
     <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
         <div class="tab-pane active" id="baseStats">
-            <& baseStats; metrics = metrics; &>
+            <& baseStats; mWrap = mWrap &>
         </div>
         <div class="tab-pane" id="memoryStats">
-            <& memoryStats; metrics = metrics; &>
+            <& memoryStats; mWrap = mWrap &>
         </div>
         <div class="tab-pane" id="requestStats">
-            <& requestStats; metrics = metrics; &>
+            <& requestStats; mWrap = mWrap &>
         </div>
         <div class="tab-pane" id="storeStats">
-            <& storeStats; metrics = metrics; &>
+            <& storeStats; mWrap = mWrap &>
         </div>
         <div class="tab-pane" id="queueStats">
-            <& queueStats; metrics = metrics; &>
+            <& queueStats; mWrap = mWrap  &>
         </div>
         <div class="tab-pane" id="blockCacheStats">
-            <& blockCacheStats; metrics = metrics; &>
-        </div>
-        <div class="tab-pane" id="latencyStats">
-            <& latencyStats; metrics = metrics; &>
+            <& blockCacheStats; mWrap = mWrap &>
         </div>
     </div>
 </div>
 
 <%def baseStats>
 <%args>
-    RegionServerMetrics metrics;
+    MetricsRegionServerWrapper mWrap;
 </%args>
 <table class="table table-striped">
     <tr>
@@ -82,17 +78,17 @@ java.lang.management.ManagementFactory;
         <th>Slow HLog Append Count</th>
     </tr>
     <tr>
-        <td><% metrics.requests.getPreviousIntervalValue() %></td>
-        <td><% metrics.regions.get() %></td>
-        <td><% metrics.hdfsBlocksLocalityIndex.get() %></td>
-        <td><% metrics.slowHLogAppendCount.get() %></td>
+        <td><% mWrap.getRequestsPerSecond() %></td>
+        <td><% mWrap.getNumOnlineRegions() %></td>
+        <td><% mWrap.getPercentFileLocal() %></td>
+        <td><% 0 %></td>
     </tr>
 </table>
 </%def>
 
 <%def memoryStats>
 <%args>
-        RegionServerMetrics metrics;
+MetricsRegionServerWrapper mWrap;
 </%args>
 <table class="table table-striped">
 <tr>
@@ -104,19 +100,19 @@ java.lang.management.ManagementFactory;
 </tr>
 <tr>
     <td>
-        <% ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() / (1024*1024) %>MB
+        <% ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() %>
     </td>
     <td>
-        <% ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax() / (1024*1024) %>MB
+        <% ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()%>
     </td>
-    <td><% metrics.memstoreSizeMB.get()%>MB</td>
+    <td><% mWrap.getMemstoreSize() %></td>
 </tr>
 </table>
 </%def>
 
 <%def storeStats>
 <%args>
-    RegionServerMetrics metrics;
+MetricsRegionServerWrapper mWrap;
 </%args>
 <table class="table table-striped">
 <tr>
@@ -128,11 +124,11 @@ java.lang.management.ManagementFactory;
     <th>Bloom Size</th>
 </tr>
 <tr>
-    <td><% metrics.stores.get() %></td>
-    <td><% metrics.storefiles.get() %></td>
-    <td><% metrics.rootIndexSizeKB.get() %>KB</td>
-    <td><% metrics.totalStaticIndexSizeKB.get() %>KB</td>
-    <td><% metrics.totalStaticBloomSizeKB.get() %>KB</td>
+    <td><% mWrap.getNumStores() %></td>
+    <td><% mWrap.getNumStoreFiles() %></td>
+    <td><% mWrap.getStoreFileIndexSize() %></td>
+    <td><% mWrap.getTotalStaticIndexSize() %></td>
+    <td><% mWrap.getTotalStaticBloomSize() %></td>
 </tr>
 </table>
 </%def>
@@ -140,8 +136,8 @@ java.lang.management.ManagementFactory;
 
 <%def requestStats>
 <%args>
-        RegionServerMetrics metrics;
-        </%args>
+MetricsRegionServerWrapper mWrap;
+</%args>
 <table class="table table-striped">
 <tr>
     <th>Request Per Second</th>
@@ -149,17 +145,17 @@ java.lang.management.ManagementFactory;
     <th>Write Request Count</th>
 </tr>
 <tr>
-    <td><% metrics.requests.getPreviousIntervalValue() %></td>
-    <td><% metrics.readRequestsCount.get() %></td>
-    <td><% metrics.writeRequestsCount.get() %>KB</td>
+    <td><% mWrap.getRequestsPerSecond() %></td>
+    <td><% mWrap.getReadRequestsCount() %></td>
+    <td><% mWrap.getWriteRequestsCount() %>KB</td>
 </tr>
 </table>
 </%def>
 
 <%def queueStats>
 <%args>
-        RegionServerMetrics metrics;
-        </%args>
+MetricsRegionServerWrapper mWrap;
+</%args>
 <table class="table table-striped">
 <tr>
     <th>Compaction queue size</th>
@@ -167,8 +163,8 @@ java.lang.management.ManagementFactory;
 
 </tr>
 <tr>
-    <td><% metrics.compactionQueueSize.get() %></td>
-    <td><% metrics.flushQueueSize.get() %>KB</td>
+    <td><% mWrap.getCompactionQueueSize() %></td>
+    <td><% mWrap.getFlushQueueSize() %></td>
 </tr>
 </table>
 </%def>
@@ -176,8 +172,8 @@ java.lang.management.ManagementFactory;
 
 <%def blockCacheStats>
 <%args>
-        RegionServerMetrics metrics;
-        </%args>
+MetricsRegionServerWrapper mWrap;
+</%args>
 <table class="table table-striped">
 <tr>
     <th>Cache Size</th>
@@ -190,57 +186,13 @@ java.lang.management.ManagementFactory;
 
 </tr>
 <tr>
-    <td><% metrics.blockCacheSize.get() / (1024*1024) %>MB</td>
-    <td><% metrics.blockCacheFree.get() / (1024 * 1024) %>MB</td>
-    <td><% metrics.blockCacheCount.get()%></td>
-    <td><% metrics.blockCacheHitCount.get()%></td>
-    <td><% metrics.blockCacheMissCount.get()%></td>
-    <td><% metrics.blockCacheHitRatio.get()%>%</td>
-    <td><% metrics.blockCacheEvictedCount.get()%></td>
+    <td><% mWrap.getBlockCacheSize()%></td>
+    <td><% mWrap.getBlockCacheFreeSize()%></td>
+    <td><% mWrap.getBlockCacheCount() %></td>
+    <td><% mWrap.getBlockCacheHitCount() %></td>
+    <td><% mWrap.getBlockCacheMissCount() %></td>
+    <td><% mWrap.getBlockCacheHitPercent() %>%</td>
+    <td><% mWrap.getBlockCacheEvictedCount() %></td>
 </tr>
 </table>
-</%def>
-
-<%def latencyStats>
-<%args>
-        RegionServerMetrics metrics;
-        </%args>
-<table class="table table-striped">
-<tr>
-    <th>Operation</th>
-    <th>Count</th>
-    <th>Mean</th>
-    <th>Median</th>
-    <th>75th</th>
-    <th>95th</th>
-    <th>99th</th>
-    <th>99.9th</th>
-
-</tr>
-
-    <& histogramRow; op ="FS Read"; histo = metrics.fsReadLatencyHistogram &>
-    <& histogramRow; op ="FS PRead"; histo = metrics.fsPreadLatencyHistogram &>
-    <& histogramRow; op ="FS Write"; histo = metrics.fsWriteLatencyHistogram &>
-
-</table>
-</%def>
-
-<%def histogramRow>
-<%args>
-        String op;
-        MetricsHistogram histo;
-</%args>
-<%java>
-    Snapshot s = histo.getSnapshot();
-</%java>
-<tr>
-    <td><% op %></td>
-    <td><% histo.getCount()%></td>
-    <td><% String.format("%10.2f", histo.getMean()) %></td>
-    <td><% String.format("%10.2f", s.getMedian()) %></td>
-    <td><% String.format("%10.2f", s.get75thPercentile()) %></td>
-    <td><% String.format("%10.2f", s.get95thPercentile()) %></td>
-    <td><% String.format("%10.2f", s.get99thPercentile()) %></td>
-    <td><% String.format("%10.2f", s.get999thPercentile())%></td>
-</tr>
 </%def>

@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.SchemaAware;
 
 import com.google.common.collect.ImmutableList;
 
@@ -42,7 +41,7 @@ import com.google.common.collect.ImmutableList;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface Store extends SchemaAware, HeapSize {
+public interface Store extends  HeapSize {
 
   /* The default priority for user-specified compaction requests.
    * The user gets top priority unless we have blocking compactions. (Pri <= 0)
@@ -287,4 +286,8 @@ public interface Store extends SchemaAware, HeapSize {
    * @return the parent region hosting this store
    */
   public HRegion getHRegion();
+
+  public String getColumnFamilyName();
+
+  public String getTableName();
 }
