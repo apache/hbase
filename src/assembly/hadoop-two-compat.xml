@@ -43,6 +43,7 @@
         <include>org.apache.hbase:hbase-hadoop-compat</include>
         <include>org.apache.hbase:hbase-server</include>
         <include>org.apache.hbase:hbase-hadoop1-compat</include>
+        <include>org.apache.hbase:hbase-examples</include>
       </includes>
       <!-- Include all the sources in the top directory -->
       <sources>
