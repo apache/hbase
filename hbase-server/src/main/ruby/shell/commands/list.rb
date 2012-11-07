@@ -34,8 +34,7 @@ EOF
         now = Time.now
         formatter.header([ "TABLE" ])
 
-        regex = /#{regex}/ unless regex.is_a?(Regexp)
-        list = admin.list.grep(regex)
+        list = admin.list(regex)
         list.each do |table|
           formatter.row([ table ])
         end
