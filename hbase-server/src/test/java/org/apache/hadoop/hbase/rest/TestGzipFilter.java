@@ -115,6 +115,8 @@ public class TestGzipFilter {
     is.read(value, 0, VALUE_1.length);
     assertTrue(Bytes.equals(value, VALUE_1));
     is.close();
+
+    testScannerResultCodes();
   }
 
   @Test
@@ -132,8 +134,7 @@ public class TestGzipFilter {
     assertTrue(contentEncoding == null || !contentEncoding.contains("gzip"));
   }
 
-  @Test
-  public void testScannerResultCodes() throws Exception {
+  void testScannerResultCodes() throws Exception {
     Header[] headers = new Header[3];
     headers[0] = new Header("Content-Type", Constants.MIMETYPE_XML);
     headers[1] = new Header("Accept", Constants.MIMETYPE_JSON);
