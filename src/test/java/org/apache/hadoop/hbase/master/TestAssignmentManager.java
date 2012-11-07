@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -802,43 +801,49 @@ public class TestAssignmentManager {
         MockedLoadBalancer.class, LoadBalancer.class);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(this.server,
         this.serverManager);
-    // Boolean variable used for waiting until randomAssignment is called and new
-    // plan is generated.
-    AtomicBoolean gate = new AtomicBoolean(false);
-    if (balancer instanceof MockedLoadBalancer) {
-      ((MockedLoadBalancer) balancer).setGateVariable(gate);
-    }
-    ZKAssign.createNodeOffline(this.watcher, REGIONINFO, SERVERNAME_A);
-    int v = ZKAssign.getVersion(this.watcher, REGIONINFO);
-    ZKAssign.transitionNode(this.watcher, REGIONINFO, SERVERNAME_A, EventType.M_ZK_REGION_OFFLINE,
-        EventType.RS_ZK_REGION_FAILED_OPEN, v);
-    String path = ZKAssign.getNodeName(this.watcher, REGIONINFO.getEncodedName());
-    RegionState state = new RegionState(REGIONINFO, State.OPENING, System.currentTimeMillis(),
-        SERVERNAME_A);
-    am.regionsInTransition.put(REGIONINFO.getEncodedName(), state);
-    // a dummy plan inserted into the regionPlans. This plan is cleared and new one is formed
-    am.regionPlans.put(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, null, SERVERNAME_A));
-    RegionPlan regionPlan = am.regionPlans.get(REGIONINFO.getEncodedName());
-    List<ServerName> serverList = new ArrayList<ServerName>(2);
-    serverList.add(SERVERNAME_B);
-    Mockito.when(this.serverManager.getOnlineServersList()).thenReturn(serverList);
-    am.nodeDataChanged(path);
-    // here we are waiting until the random assignment in the load balancer is called.
-    while (!gate.get()) {
-      Thread.sleep(10);
-    }
-    // new region plan may take some time to get updated after random assignment is called and 
-    // gate is set to true.
-    RegionPlan newRegionPlan = am.regionPlans.get(REGIONINFO.getEncodedName());
-    while (newRegionPlan == null) {
-      Thread.sleep(10);
-      newRegionPlan = am.regionPlans.get(REGIONINFO.getEncodedName());
-    }
-    // the new region plan created may contain the same RS as destination but it should
-    // be new plan.
-    assertNotSame("Same region plan should not come", regionPlan, newRegionPlan);
-    assertTrue("Destnation servers should be different.", !(regionPlan.getDestination().equals(
+    try {
+      // Boolean variable used for waiting until randomAssignment is called and new
+      // plan is generated.
+      AtomicBoolean gate = new AtomicBoolean(false);
+      if (balancer instanceof MockedLoadBalancer) {
+        ((MockedLoadBalancer) balancer).setGateVariable(gate);
+      }
+      ZKAssign.createNodeOffline(this.watcher, REGIONINFO, SERVERNAME_A);
+      int v = ZKAssign.getVersion(this.watcher, REGIONINFO);
+      ZKAssign.transitionNode(this.watcher, REGIONINFO, SERVERNAME_A, EventType.M_ZK_REGION_OFFLINE,
+          EventType.RS_ZK_REGION_FAILED_OPEN, v);
+      String path = ZKAssign.getNodeName(this.watcher, REGIONINFO.getEncodedName());
+      RegionState state = new RegionState(REGIONINFO, State.OPENING, System.currentTimeMillis(),
+          SERVERNAME_A);
+      am.regionsInTransition.put(REGIONINFO.getEncodedName(), state);
+      // a dummy plan inserted into the regionPlans. This plan is cleared and new one is formed
+      am.regionPlans.put(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, null, SERVERNAME_A));
+      RegionPlan regionPlan = am.regionPlans.get(REGIONINFO.getEncodedName());
+      List<ServerName> serverList = new ArrayList<ServerName>(2);
+      serverList.add(SERVERNAME_B);
+      Mockito.when(this.serverManager.getOnlineServersList()).thenReturn(serverList);
+      am.nodeDataChanged(path);
+      // here we are waiting until the random assignment in the load balancer is called.
+      while (!gate.get()) {
+        Thread.sleep(10);
+      }
+      // new region plan may take some time to get updated after random assignment is called and
+      // gate is set to true.
+      RegionPlan newRegionPlan = am.regionPlans.get(REGIONINFO.getEncodedName());
+      while (newRegionPlan == null) {
+        Thread.sleep(10);
+        newRegionPlan = am.regionPlans.get(REGIONINFO.getEncodedName());
+      }
+      // the new region plan created may contain the same RS as destination but it should
+      // be new plan.
+      assertNotSame("Same region plan should not come", regionPlan, newRegionPlan);
+      assertTrue("Destnation servers should be different.", !(regionPlan.getDestination().equals(
         newRegionPlan.getDestination())));
+    } finally {
+      this.server.getConfiguration().setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        DefaultLoadBalancer.class, LoadBalancer.class);
+      am.shutdown();
+    }
   }
   
   /**
@@ -877,8 +882,10 @@ public class TestAssignmentManager {
           gate.get());
       // need to change table state from disabling to disabled.
       assertTrue("Table should be disabled.",
-          am.getZKTable().isDisabledTable(REGIONINFO.getTableNameAsString()));      
+          am.getZKTable().isDisabledTable(REGIONINFO.getTableNameAsString()));
     } finally {
+      this.server.getConfiguration().setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+        DefaultLoadBalancer.class, LoadBalancer.class);
       am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
       am.shutdown();
     }
