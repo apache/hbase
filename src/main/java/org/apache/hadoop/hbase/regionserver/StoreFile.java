@@ -175,7 +175,7 @@ public class StoreFile extends SchemaConfigured {
 
   // If true, this file was product of a major compaction.  Its then set
   // whenever you get a Reader.
-  private AtomicBoolean majorCompaction = null;
+  private AtomicBoolean majorCompaction = new AtomicBoolean(false);
 
   /** Meta key set when store file is a result of a bulk load */
   public static final byte[] BULKLOAD_TASK_KEY =
