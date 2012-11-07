@@ -22,34 +22,35 @@ module Shell
     class Alter < Command
       def help
         return <<-EOF
-Alter column family schema;  pass table name and a dictionary
-specifying new column family schema. Dictionaries are described
-on the main help command output. Dictionary must include name
-of column family to alter. For example,
+Alter a table. Table must be disabled to be altered (see help 'disable').
+You can add/modify/delete column families, as well as change table 
+configuration. Column families work similarly to create; column family 
+spec can either be a name string, or a dictionary with NAME attribute.
+Dictionaries are described on the main help command output.
 
-To change or add the 'f1' column family in table 't1' from defaults
-to instead keep a maximum of 5 cell VERSIONS, do:
+For example, to change or add the 'f1' column family in table 't1' from 
+current value to keep a maximum of 5 cell VERSIONS, do:
 
   hbase> alter 't1', NAME => 'f1', VERSIONS => 5
 
-To delete the 'f1' column family in table 't1', do:
+You can operate on several column families:
+
+  hbase> alter 't1', 'f1', {NAME => 'f2', IN_MEMORY => true}, {NAME => 'f3', VERSIONS => 5}
+
+To delete the 'f1' column family in table 't1', use one of:
 
   hbase> alter 't1', NAME => 'f1', METHOD => 'delete'
-
-or a shorter version:
-
   hbase> alter 't1', 'delete' => 'f1'
 
-You can also change table-scope attributes like MAX_FILESIZE
-MEMSTORE_FLUSHSIZE, READONLY, and DEFERRED_LOG_FLUSH.
+You can also change table-scope attributes like MAX_FILESIZE, READONLY, 
+MEMSTORE_FLUSHSIZE, DEFERRED_LOG_FLUSH, etc. These can be put at the end;
+for example, to change the max size of a region to 128MB, do:
 
-For example, to change the max size of a family to 128MB, do:
-
-  hbase> alter 't1', METHOD => 'table_att', MAX_FILESIZE => '134217728'
+  hbase> alter 't1', MAX_FILESIZE => '134217728'
 
 You can add a table coprocessor by setting a table coprocessor attribute:
 
-  hbase> alter 't1', METHOD => 'table_att',
+  hbase> alter 't1',
     'coprocessor'=>'hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2'
 
 Since you can have multiple coprocessors configured for a table, a
@@ -69,7 +70,9 @@ You can also remove a table-scope attribute:
 
 There could be more than one alteration in one command:
 
-  hbase> alter 't1', {NAME => 'f1'}, {NAME => 'f2', METHOD => 'delete'}
+  hbase> alter 't1', { NAME => 'f1', VERSIONS => 3 }, 
+   { MAX_FILESIZE => '134217728' }, { METHOD => 'delete', NAME => 'f2' },
+   OWNER => 'johndoe', CONFIG => { 'mykey' => 'myvalue' }
 EOF
       end
 

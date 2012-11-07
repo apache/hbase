@@ -186,9 +186,7 @@ module Hbase
 
       # Flatten params array
       args = args.flatten.compact
-
-      # Fail if no column families defined
-      raise(ArgumentError, "Table must have at least one column family") if args.empty?
+      has_columns = false
 
       # Start defining the table
       htd = org.apache.hadoop.hbase.HTableDescriptor.new(table_name)
@@ -199,69 +197,70 @@ module Hbase
         unless arg.kind_of?(String) || arg.kind_of?(Hash)
           raise(ArgumentError, "#{arg.class} of #{arg.inspect} is not of Hash or String type")
         end
-
-        if arg.kind_of?(String)
-          # the arg is a string, default action is to add a column to the table
+        
+        # First, handle all the cases where arg is a column family.
+        if arg.kind_of?(String) or arg.has_key?(NAME)
+          # If the arg is a string, default action is to add a column to the table.
+          # If arg has a name, it must also be a column descriptor.
           htd.addFamily(hcd(arg, htd))
-        else
-          # arg is a hash.  4 possibilities:
-          if (arg.has_key?(SPLITS) or arg.has_key?(SPLITS_FILE))
-            if arg.has_key?(SPLITS_FILE)
-              unless File.exist?(arg[SPLITS_FILE])
-                raise(ArgumentError, "Splits file #{arg[SPLITS_FILE]} doesn't exist")
-              end
-              arg[SPLITS] = []
-              File.foreach(arg[SPLITS_FILE]) do |line|
-                arg[SPLITS].push(line.strip())
-              end
-            end
-
-            splits = Java::byte[][arg[SPLITS].size].new
-            idx = 0
-            arg[SPLITS].each do |split|
-              splits[idx] = org.apache.hadoop.hbase.util.Bytes.toBytesBinary(split)
-              idx = idx + 1
-            end
-          elsif (arg.has_key?(NUMREGIONS) or arg.has_key?(SPLITALGO))
-            # (1) deprecated region pre-split API
-            raise(ArgumentError, "Column family configuration should be specified in a separate clause") if arg.has_key?(NAME)
-            raise(ArgumentError, "Number of regions must be specified") unless arg.has_key?(NUMREGIONS)
-            raise(ArgumentError, "Split algorithm must be specified") unless arg.has_key?(SPLITALGO)
-            raise(ArgumentError, "Number of regions must be greater than 1") unless arg[NUMREGIONS] > 1
-            num_regions = arg[NUMREGIONS]
-            split_algo = RegionSplitter.newSplitAlgoInstance(@conf, arg[SPLITALGO])
-            splits = split_algo.split(JInteger.valueOf(num_regions))
-          elsif (method = arg.delete(METHOD))
-            # (2) table_att modification
+          has_columns = true
+          next
+        end
+        
+        # Get rid of the "METHOD", which is deprecated for create.
+        # We'll do whatever it used to do below if it's table_att.
+        if (method = arg.delete(METHOD))
             raise(ArgumentError, "table_att is currently the only supported method") unless method == 'table_att'
-            raise(ArgumentError, "NUMREGIONS & SPLITALGO must both be specified") unless arg.has_key?(NUMREGIONS) == arg.has_key?(split_algo)
-            htd.setMaxFileSize(JLong.valueOf(arg[MAX_FILESIZE])) if arg[MAX_FILESIZE]
-            htd.setReadOnly(JBoolean.valueOf(arg[READONLY])) if arg[READONLY]
-            htd.setMemStoreFlushSize(JLong.valueOf(arg[MEMSTORE_FLUSHSIZE])) if arg[MEMSTORE_FLUSHSIZE]
-            htd.setDeferredLogFlush(JBoolean.valueOf(arg[DEFERRED_LOG_FLUSH])) if arg[DEFERRED_LOG_FLUSH]
-            htd.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT]) if arg[COMPRESSION_COMPACT]
-            if arg[NUMREGIONS]
-              raise(ArgumentError, "Number of regions must be greater than 1") unless arg[NUMREGIONS] > 1
-              num_regions = arg[NUMREGIONS]
-              split_algo = RegionSplitter.newSplitAlgoInstance(@conf, arg[SPLITALGO])
-              splits = split_algo.split(JInteger.valueOf(num_regions))
-            end
-            if arg[CONFIG]
-              raise(ArgumentError, "#{CONFIG} must be a Hash type") unless arg.kind_of?(Hash)
-              for k,v in arg[CONFIG]
-                v = v.to_s unless v.nil?
-                htd.setValue(k, v)
-              end
-            end
-          else
-            # (3) column family spec
-            descriptor = hcd(arg, htd)
-            htd.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT]) if arg[COMPRESSION_COMPACT]
-            htd.addFamily(hcd(arg, htd))
+        end
+        
+        # The hash is not a column family. Figure out what's in it.
+        # First, handle splits.
+        if arg.has_key?(SPLITS_FILE)
+          splits_file = arg.delete(SPLITS_FILE)
+          unless File.exist?(splits_file)
+            raise(ArgumentError, "Splits file #{splits_file} doesn't exist")
+          end
+          arg[SPLITS] = []
+          File.foreach(splits_file) do |line|
+            arg[SPLITS].push(line.strip())
           end
         end
-      end
 
+        if arg.has_key?(SPLITS) 
+          splits = Java::byte[][arg[SPLITS].size].new
+          idx = 0
+          arg.delete(SPLITS).each do |split|
+            splits[idx] = org.apache.hadoop.hbase.util.Bytes.toBytesBinary(split)
+            idx = idx + 1
+          end
+        elsif arg.has_key?(NUMREGIONS) or arg.has_key?(SPLITALGO)
+          # deprecated region pre-split API; if one of the above is specified, will be ignored.
+          raise(ArgumentError, "Number of regions must be specified") unless arg.has_key?(NUMREGIONS)
+          raise(ArgumentError, "Split algorithm must be specified") unless arg.has_key?(SPLITALGO)
+          raise(ArgumentError, "Number of regions must be greater than 1") unless arg[NUMREGIONS] > 1
+          num_regions = arg.delete(NUMREGIONS)
+          split_algo = RegionSplitter.newSplitAlgoInstance(@conf, arg.delete(SPLITALGO))
+          splits = split_algo.split(JInteger.valueOf(num_regions))
+        end
+        
+        # Done with splits; apply formerly-table_att parameters.
+        htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER] 
+        htd.setMaxFileSize(JLong.valueOf(arg.delete(MAX_FILESIZE))) if arg[MAX_FILESIZE]
+        htd.setReadOnly(JBoolean.valueOf(arg.delete(READONLY))) if arg[READONLY]
+        htd.setMemStoreFlushSize(JLong.valueOf(arg.delete(MEMSTORE_FLUSHSIZE))) if arg[MEMSTORE_FLUSHSIZE]
+        htd.setDeferredLogFlush(JBoolean.valueOf(arg.delete(DEFERRED_LOG_FLUSH))) if arg[DEFERRED_LOG_FLUSH]
+        if arg[CONFIG]
+          apply_config(htd, arg.delete(CONFIG))
+        end
+        
+        arg.each_key do |ignored_key|
+          puts("An argument ignored (unknown or overridden): %s" % [ ignored_key ])
+        end
+      end
+      
+      # Fail if no column families defined
+      raise(ArgumentError, "Table must have at least one column family") if !has_columns
+      
       if splits.nil?
         # Perform the create table call
         @admin.createTable(htd)
@@ -368,133 +367,130 @@ module Hbase
 
       # Process all args
       args.each do |arg|
+      
+      
         # Normalize args to support column name only alter specs
         arg = { NAME => arg } if arg.kind_of?(String)
 
         # Normalize args to support shortcut delete syntax
         arg = { METHOD => 'delete', NAME => arg['delete'] } if arg['delete']
-
-        # No method parameter, try to use the args as a column definition
-        unless method = arg.delete(METHOD)
-          # Note that we handle owner here, and also below (see (2)) as part of the "METHOD => 'table_att'" table attributes.
-          # In other words, if OWNER is specified, then METHOD is set to table_att.
-          #   alter 'tablename', {OWNER => 'username'} (that is, METHOD => 'table_att' is not specified).
-          if arg[OWNER]
-            htd.setOwnerString(arg[OWNER])
-            @admin.modifyTable(table_name.to_java_bytes, htd)
-            return
-          end
-
+        
+        # There are 3 possible options.
+        # 1) Column family spec. Distinguished by having a NAME and no METHOD.
+        method = arg.delete(METHOD)
+        if method == nil and arg.has_key?(NAME)
           descriptor = hcd(arg, htd)
-
-          if arg[COMPRESSION_COMPACT]
-            descriptor.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT])
-          end
           column_name = descriptor.getNameAsString
 
           # If column already exist, then try to alter it. Create otherwise.
           if htd.hasFamily(column_name.to_java_bytes)
             @admin.modifyColumn(table_name, descriptor)
-            if wait == true
-              puts "Updating all regions with the new schema..."
-              alter_status(table_name)
-            end
           else
             @admin.addColumn(table_name, descriptor)
-            if wait == true
-              puts "Updating all regions with the new schema..."
-              alter_status(table_name)
-            end
           end
-          next
-        end
 
-        # Delete column family
-        if method == "delete"
-          raise(ArgumentError, "NAME parameter missing for delete method") unless arg[NAME]
-          @admin.deleteColumn(table_name, arg[NAME])
           if wait == true
             puts "Updating all regions with the new schema..."
             alter_status(table_name)
           end
+          
+          # We bypass descriptor when adding column families; refresh it to apply other args correctly.
+          htd = @admin.getTableDescriptor(table_name.to_java_bytes)
           next
         end
-
-        # Change table attributes
-        if method == "table_att"
-          htd.setMaxFileSize(JLong.valueOf(arg[MAX_FILESIZE])) if arg[MAX_FILESIZE]
-          htd.setReadOnly(JBoolean.valueOf(arg[READONLY])) if arg[READONLY]
-          htd.setMemStoreFlushSize(JLong.valueOf(arg[MEMSTORE_FLUSHSIZE])) if arg[MEMSTORE_FLUSHSIZE]
-          htd.setDeferredLogFlush(JBoolean.valueOf(arg[DEFERRED_LOG_FLUSH])) if arg[DEFERRED_LOG_FLUSH]
-          # (2) Here, we handle the alternate syntax of ownership setting, where method => 'table_att' is specified.
-          htd.setOwnerString(arg[OWNER]) if arg[OWNER]
-
-          # set a coprocessor attribute
-          if arg.kind_of?(Hash)
-            arg.each do |key, value|
-              k = String.new(key) # prepare to strip
-              k.strip!
-
-              if (k =~ /coprocessor/i)
-                # validate coprocessor specs
-                v = String.new(value)
-                v.strip!
-                if !(v =~ /^([^\|]*)\|([^\|]+)\|[\s]*([\d]*)[\s]*(\|.*)?$/)
-                  raise ArgumentError, "Coprocessor value doesn't match spec: #{v}"
-                end
-
-                # generate a coprocessor ordinal by checking max id of existing cps
-                maxId = 0
-                htd.getValues().each do |k1, v1|
-                  attrName = org.apache.hadoop.hbase.util.Bytes.toString(k1.get())
-                  # a cp key is coprocessor$(\d)
-                  if (attrName =~ /coprocessor\$(\d+)/i)
-                    ids = attrName.scan(/coprocessor\$(\d+)/i)
-                    maxId = ids[0][0].to_i if ids[0][0].to_i > maxId
-                  end
-                end
-                maxId += 1
-                htd.setValue(k + "\$" + maxId.to_s, value)
-              end
+          
+        # 2) Method other than table_att, with some args.
+        name = arg.delete(NAME)
+        if method != nil and method != "table_att"
+          # Delete column family
+          if method == "delete"
+            raise(ArgumentError, "NAME parameter missing for delete method") unless name
+            @admin.deleteColumn(table_name, name)
+          # Unset table attributes
+          elsif method == "table_att_unset"
+            raise(ArgumentError, "NAME parameter missing for table_att_unset method") unless name
+            if (htd.getValue(name) == nil)
+              raise ArgumentError, "Can not find attribute: #{name}"
             end
-          end
-
-          if arg[CONFIG]
-            raise(ArgumentError, "#{CONFIG} must be a Hash type") unless arg.kind_of?(Hash)
-            for k,v in arg[CONFIG]
-              v = v.to_s unless v.nil?
-              htd.setValue(k, v)
-            end
-          end
-          @admin.modifyTable(table_name.to_java_bytes, htd)
-          if wait == true
-            puts "Updating all regions with the new schema..."
-            alter_status(table_name)
-          end
-          next
-        end
-
-        # Unset table attributes
-        if method == "table_att_unset"
-          if arg.kind_of?(Hash)
-            if (!arg[NAME])
-              next
-            end
-            if (htd.getValue(arg[NAME]) == nil)
-              raise ArgumentError, "Can not find attribute: #{arg[NAME]}"
-            end
-            htd.remove(arg[NAME].to_java_bytes)
+            htd.remove(name.to_java_bytes)
             @admin.modifyTable(table_name.to_java_bytes, htd)
-            if wait == true
-              puts "Updating all regions with the new schema..."
-              alter_status(table_name)
+          # Unknown method
+          else
+            raise ArgumentError, "Unknown method: #{method}"
+          end
+          
+          arg.each_key do |unknown_key|
+            puts("Unknown argument ignored: %s" % [unknown_key])
+          end
+          
+          if wait == true
+            puts "Updating all regions with the new schema..."
+            alter_status(table_name)
+          end
+          
+          if method == "delete"
+            # We bypass descriptor when deleting column families; refresh it to apply other args correctly.
+            htd = @admin.getTableDescriptor(table_name.to_java_bytes)
+          end
+          next          
+        end
+        
+        # 3) Some args for the table, optionally with METHOD => table_att (deprecated)
+        raise(ArgumentError, "NAME argument in an unexpected place") if name
+        htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER] 
+        apply_config(htd, arg.delete(CONFIG)) if arg[CONFIG]
+        htd.setMaxFileSize(JLong.valueOf(arg.delete(MAX_FILESIZE))) if arg[MAX_FILESIZE]
+        htd.setReadOnly(JBoolean.valueOf(arg.delete(READONLY))) if arg[READONLY]
+        htd.setMemStoreFlushSize(JLong.valueOf(arg.delete(MEMSTORE_FLUSHSIZE))) if arg[MEMSTORE_FLUSHSIZE]
+        htd.setDeferredLogFlush(JBoolean.valueOf(arg.delete(DEFERRED_LOG_FLUSH))) if arg[DEFERRED_LOG_FLUSH]
+
+        # set a coprocessor attribute
+        valid_coproc_keys = []
+        if arg.kind_of?(Hash)
+          arg.each do |key, value|
+            k = String.new(key) # prepare to strip
+            k.strip!
+
+            if (k =~ /coprocessor/i)
+              # validate coprocessor specs
+              v = String.new(value)
+              v.strip!
+              if !(v =~ /^([^\|]*)\|([^\|]+)\|[\s]*([\d]*)[\s]*(\|.*)?$/)
+                raise ArgumentError, "Coprocessor value doesn't match spec: #{v}"
+              end
+
+              # generate a coprocessor ordinal by checking max id of existing cps
+              maxId = 0
+              htd.getValues().each do |k1, v1|
+                attrName = org.apache.hadoop.hbase.util.Bytes.toString(k1.get())
+                # a cp key is coprocessor$(\d)
+                if (attrName =~ /coprocessor\$(\d+)/i)
+                  ids = attrName.scan(/coprocessor\$(\d+)/i)
+                  maxId = ids[0][0].to_i if ids[0][0].to_i > maxId
+                end
+              end
+              maxId += 1
+              htd.setValue(k + "\$" + maxId.to_s, value)
+              valid_coproc_keys << key
             end
+          end
+          
+          valid_coproc_keys.each do |key|
+            arg.delete(key)
+          end
+
+          @admin.modifyTable(table_name.to_java_bytes, htd)
+                    
+          arg.each_key do |unknown_key|
+            puts("Unknown argument ignored: %s" % [unknown_key])
+          end
+          
+          if wait == true
+            puts "Updating all regions with the new schema..."
+            alter_status(table_name)
           end
           next
         end
-
-        # Unknown method
-        raise ArgumentError, "Unknown method: #{method}"
       end
     end
 
@@ -555,7 +551,7 @@ module Hbase
     def exists?(table_name)
       @admin.tableExists(table_name)
     end
-
+    
     #----------------------------------------------------------------------------------------------
     # Is table enabled
     def enabled?(table_name)
@@ -574,24 +570,25 @@ module Hbase
       # String arg, single parameter constructor
       return org.apache.hadoop.hbase.HColumnDescriptor.new(arg) if arg.kind_of?(String)
 
-      raise(ArgumentError, "Column family #{arg} must have a name") unless name = arg[NAME]
+      raise(ArgumentError, "Column family #{arg} must have a name") unless name = arg.delete(NAME)
 
       family = htd.getFamily(name.to_java_bytes)
       # create it if it's a new family
       family ||= org.apache.hadoop.hbase.HColumnDescriptor.new(name.to_java_bytes)
 
-      family.setBlockCacheEnabled(JBoolean.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::BLOCKCACHE])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKCACHE)
-      family.setScope(JInteger.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::REPLICATION_SCOPE])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::REPLICATION_SCOPE)
-      family.setInMemory(JBoolean.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::IN_MEMORY])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::IN_MEMORY)
-      family.setTimeToLive(JInteger.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::TTL])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::TTL)
-      family.setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::DATA_BLOCK_ENCODING])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::DATA_BLOCK_ENCODING)
-      family.setEncodeOnDisk(JBoolean.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::ENCODE_ON_DISK])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::ENCODE_ON_DISK)
-      family.setBlocksize(JInteger.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::BLOCKSIZE])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKSIZE)
-      family.setMaxVersions(JInteger.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::VERSIONS])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::VERSIONS)
-      family.setMinVersions(JInteger.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::MIN_VERSIONS])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::MIN_VERSIONS)
-      family.setKeepDeletedCells(JBoolean.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::KEEP_DELETED_CELLS])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::KEEP_DELETED_CELLS)
+      family.setBlockCacheEnabled(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKCACHE))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKCACHE)
+      family.setScope(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::REPLICATION_SCOPE))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::REPLICATION_SCOPE)
+      family.setInMemory(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::IN_MEMORY))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::IN_MEMORY)
+      family.setTimeToLive(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::TTL))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::TTL)
+      family.setDataBlockEncoding(org.apache.hadoop.hbase.io.encoding.DataBlockEncoding.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::DATA_BLOCK_ENCODING))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::DATA_BLOCK_ENCODING)
+      family.setEncodeOnDisk(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::ENCODE_ON_DISK))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::ENCODE_ON_DISK)
+      family.setBlocksize(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKSIZE))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKSIZE)
+      family.setMaxVersions(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::VERSIONS))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::VERSIONS)
+      family.setMinVersions(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::MIN_VERSIONS))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::MIN_VERSIONS)
+      family.setKeepDeletedCells(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::KEEP_DELETED_CELLS))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::KEEP_DELETED_CELLS)
+      family.setValue(COMPRESSION_COMPACT, arg.delete(COMPRESSION_COMPACT)) if arg.include?(COMPRESSION_COMPACT)
       if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::BLOOMFILTER)
-        bloomtype = arg[org.apache.hadoop.hbase.HColumnDescriptor::BLOOMFILTER].upcase
+        bloomtype = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::BLOOMFILTER).upcase
         unless org.apache.hadoop.hbase.regionserver.StoreFile::BloomType.constants.include?(bloomtype)      
           raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + org.apache.hadoop.hbase.regionserver.StoreFile::BloomType.constants.join(" ")) 
         else 
@@ -599,7 +596,7 @@ module Hbase
         end
       end
       if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION)
-        compression = arg[org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION].upcase
+        compression = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION).upcase
         unless org.apache.hadoop.hbase.io.hfile.Compression::Algorithm.constants.include?(compression)      
           raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.hfile.Compression::Algorithm.constants.join(" ")) 
         else 
@@ -607,13 +604,14 @@ module Hbase
         end
       end
 
-      if arg[CONFIG]
-        raise(ArgumentError, "#{CONFIG} must be a Hash type") unless arg.kind_of?(Hash)
-        for k,v in arg[CONFIG]
-          v = v.to_s unless v.nil?
-          family.setValue(k, v)
-        end
+      if config = arg.delete(CONFIG)
+        apply_config(family, config)
       end
+      
+      arg.each_key do |unknown_key|
+        puts("Unknown argument ignored for column family %s: %s" % [name, unknown_key])
+      end
+      
       return family
     end
 
@@ -639,5 +637,15 @@ module Hbase
       put.add(org.apache.hadoop.hbase.HConstants::CATALOG_FAMILY, org.apache.hadoop.hbase.HConstants::REGIONINFO_QUALIFIER, org.apache.hadoop.hbase.util.Writables.getBytes(hri))
       meta.put(put)
     end
+    
+    # Apply config to table/column descriptor
+    def apply_config(descriptor, config)
+      raise(ArgumentError, "#{CONFIG} must be a Hash type") unless config.kind_of?(Hash)
+        for k,v in config
+          v = v.to_s unless v.nil?
+          descriptor.setValue(k, v)
+        end
+    end
+    
   end
 end

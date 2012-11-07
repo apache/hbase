@@ -148,6 +148,13 @@ module Hbase
         admin.create(@create_test_name)
       end
     end
+    
+    define_test "create should fail without columns when called with options" do
+      drop_test_table(@create_test_name)
+      assert_raise(ArgumentError) do
+        admin.create(@create_test_name, { OWNER => 'a' })
+      end
+    end
 
     define_test "create should work with string column args" do
       drop_test_table(@create_test_name)
@@ -160,12 +167,28 @@ module Hbase
       admin.create(@create_test_name, { NAME => 'a'}, { NAME => 'b'})
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
     end
-
+    
+    define_test "create should be able to set table options" do
+      drop_test_table(@create_test_name)
+      admin.create(@create_test_name, 'a', 'b', 'MAX_FILESIZE' => 12345678, OWNER => '987654321')
+      assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
+      assert_match(/12345678/, admin.describe(@create_test_name))
+      assert_match(/987654321/, admin.describe(@create_test_name))
+    end
+        
+    define_test "create should ignore table_att" do
+      drop_test_table(@create_test_name)
+      admin.create(@create_test_name, 'a', 'b', METHOD => 'table_att', OWNER => '987654321')
+      assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
+      assert_match(/987654321/, admin.describe(@create_test_name))
+    end
+    
     define_test "create should work with SPLITALGO" do
       drop_test_table(@create_test_name)
       admin.create(@create_test_name, 'a', 'b', {NUMREGIONS => 10, SPLITALGO => 'HexStringSplit'})
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
     end
+
     #-------------------------------------------------------------------------------
 
     define_test "describe should fail for non-existent tables" do
@@ -253,9 +276,10 @@ module Hbase
 
     define_test "alter should support more than one alteration in one call" do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      admin.alter(@test_name, true, { NAME => 'z' }, { METHOD => 'delete', NAME => 'y' })
+      admin.alter(@test_name, true, { NAME => 'z' }, { METHOD => 'delete', NAME => 'y' }, 'MAX_FILESIZE' => 12345678)
       admin.enable(@test_name)
       assert_equal(['x:', 'z:'], table(@test_name).get_all_columns.sort)
+      assert_match(/12345678/, admin.describe(@test_name))
     end
 
     define_test 'alter should support shortcut DELETE alter specs' do
@@ -269,6 +293,11 @@ module Hbase
       assert_match(/12345678/, admin.describe(@test_name))
     end
 
+    define_test "alter should be able to change table options w/o table_att" do
+      admin.alter(@test_name, true, 'MAX_FILESIZE' => 12345678)
+      assert_match(/12345678/, admin.describe(@test_name))
+    end
+    
     define_test "alter should be able to change coprocessor attributes" do
       drop_test_table(@test_name)
       create_test_table(@test_name)

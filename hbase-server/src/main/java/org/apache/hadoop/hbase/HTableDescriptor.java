@@ -781,13 +781,15 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     if (reservedKeys.isEmpty() && configKeys.isEmpty()) return s;
 
     // step 2: printing
-    s.append(", {METHOD => 'table_att'");
+    s.append(", {TABLE_ATTRIBUTES => {");
 
     // print all reserved keys first
+    boolean printCommaForAttr = false;
     for (ImmutableBytesWritable k : reservedKeys) {
       String key = Bytes.toString(k.get());
       String value = Bytes.toString(values.get(k).get());
-      s.append(", ");
+      if (printCommaForAttr) s.append(", ");
+      printCommaForAttr = true;
       s.append(key);
       s.append(" => ");
       s.append('\'').append(value).append('\'');
@@ -795,15 +797,16 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
     if (!configKeys.isEmpty()) {
       // print all non-reserved, advanced config keys as a separate subset
-      s.append(", ");
+      if (printCommaForAttr) s.append(", ");
+      printCommaForAttr = true;
       s.append(HConstants.CONFIG).append(" => ");
       s.append("{");
-      boolean printComma = false;
+      boolean printCommaForCfg = false;
       for (ImmutableBytesWritable k : configKeys) {
         String key = Bytes.toString(k.get());
         String value = Bytes.toString(values.get(k).get());
-        if (printComma) s.append(", ");
-        printComma = true;
+        if (printCommaForCfg) s.append(", ");
+        printCommaForCfg = true;
         s.append('\'').append(key).append('\'');
         s.append(" => ");
         s.append('\'').append(value).append('\'');
@@ -811,8 +814,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       s.append("}");
     }
 
-    s.append('}'); // end METHOD
-
+    s.append("}}"); // end METHOD
     return s;
   }
 

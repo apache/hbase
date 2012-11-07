@@ -22,9 +22,11 @@ module Shell
     class Create < Command
       def help
         return <<-EOF
-Create table; pass table name, a dictionary of specifications per
-column family, and optionally a dictionary of table configuration.
-Dictionaries are described below in the GENERAL NOTES section.
+Creates a table. Pass a table name, and a set of column family
+specifications (at least one), and, optionally, table configuration.
+Column specification can be a simple string (name), or a dictionary
+(dictionaries are described below in main help output), necessarily 
+including NAME attribute. 
 Examples:
 
   hbase> create 't1', {NAME => 'f1', VERSIONS => 5}
@@ -32,18 +34,23 @@ Examples:
   hbase> # The above in shorthand would be the following:
   hbase> create 't1', 'f1', 'f2', 'f3'
   hbase> create 't1', {NAME => 'f1', VERSIONS => 1, TTL => 2592000, BLOCKCACHE => true}
-  hbase> create 't1', 'f1', {SPLITS => ['10', '20', '30', '40']}
-  hbase> create 't1', 'f1', {SPLITS_FILE => 'splits.txt'}
+
+Table configuration options can be put at the end.
+Examples:
+
+  hbase> create 't1', 'f1', SPLITS => ['10', '20', '30', '40']
+  hbase> create 't1', 'f1', SPLITS_FILE => 'splits.txt', OWNER => 'johndoe'
+  hbase> create 't1', {NAME => 'f1', VERSIONS => 5}, CONFIG => { 'mykey' => 'myvalue' }
   hbase> # Optionally pre-split the table into NUMREGIONS, using
   hbase> # SPLITALGO ("HexStringSplit", "UniformSplit" or classname)
   hbase> create 't1', 'f1', {NUMREGIONS => 15, SPLITALGO => 'HexStringSplit'}
 
-  You can also keep around a reference to the created table:
+You can also keep around a reference to the created table:
 
   hbase> t1 = create 't1', 'f1'
 
-  Which gives you a reference to the table named 't1', on which you can then
-  call methods.
+Which gives you a reference to the table named 't1', on which you can then
+call methods.
 EOF
       end
 
