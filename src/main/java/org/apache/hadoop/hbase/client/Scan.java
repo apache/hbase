@@ -204,10 +204,15 @@ public class Scan extends Operation implements Writable {
    */
   public Scan addColumn(byte [] family, byte [] qualifier) {
     NavigableSet<byte []> set = familyMap.get(family);
-    if(set == null) {
+    if (set == null) {
       set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
     }
-    set.add(qualifier);
+    
+    if (qualifier == null) {
+      set.add(HConstants.EMPTY_BYTE_ARRAY);
+    } else {
+      set.add(qualifier);
+    }
     familyMap.put(family, set);
 
     return this;

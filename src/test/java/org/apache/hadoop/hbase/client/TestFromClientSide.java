@@ -130,6 +130,50 @@ public class TestFromClientSide {
   }
 
   @Test
+  public void testEmptyColumn() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testEmptyColumn");
+    byte [][] FAMILIES = new byte[][] {FAMILY};
+    byte [] r1 = Bytes.toBytes("r1");
+    byte [] r2 = Bytes.toBytes("r12");
+    byte[] value =  Bytes.toBytes("v");
+    Result result1, result2;
+    
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Put put = new Put(r1);
+    put.add(FAMILY, null, value);
+    ht.put(put);
+   
+    Get g1 = new Get(r1);
+    g1.addColumn(FAMILY, null);
+    result1 = ht.get(g1);
+    
+    Get g2 = new Get(r1);
+    g2.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
+    result2 = ht.get(g2);
+    
+    assertEquals(result1.getBytes(), result2.getBytes());
+    assertEquals(1, result2.raw().length);
+    assertEquals(result1.raw().length, result2.raw().length);
+    
+    put = new Put(r2);
+    put.add(FAMILY, HConstants.EMPTY_BYTE_ARRAY, value);
+    ht.put(put);
+    ht.flushCommits();
+    
+    g1 = new Get(r2);
+    g1.addColumn(FAMILY, null);
+    result1 = ht.get(g1);
+    
+    g2 = new Get(r2);
+    g2.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
+    result2 = ht.get(g2);
+    
+    assertEquals(result1.getBytes(), result2.getBytes());
+    assertEquals(1, result2.raw().length);
+    assertEquals(result1.raw().length, result2.raw().length);
+  }
+  
+  @Test
   public void testFlashBackTime() throws Exception {
     byte[] TABLE = Bytes.toBytes("testFlashBackTime");
     HColumnDescriptor[] expected = new HColumnDescriptor[10];

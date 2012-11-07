@@ -139,7 +139,37 @@
       <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
   </developers>
-
+  
+  <profiles>
+    <profile>
+      <id>default_jdk</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <jdk>${env.JAVA_HOME}</jdk>
+      </properties>
+    </profile>
+    <profile>
+      <id>jdk6</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <jdk>/usr/local/jdk-6u14-64</jdk>
+      </properties>
+    </profile>
+    <profile>
+      <id>jdk7</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <jdk>/usr/local/jdk-7u6-64</jdk>
+      </properties>
+    </profile>
+  </profiles>
+  
   <repositories>
     <repository>
       <id>nicolas fb releases</id>
