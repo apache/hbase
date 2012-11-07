@@ -75,6 +75,8 @@ public class ScanQueryMatcher {
    * */
   private boolean hasNullColumn = true;
 
+  private final long oldestFlashBackTS;
+
   /**
    * Constructs a ScanQueryMatcher for a Scan.
    * @param scan
@@ -87,6 +89,23 @@ public class ScanQueryMatcher {
       int maxVersions, long readPointToUse,
       long retainDeletesInOutputUntil,
       long oldestUnexpiredTS) {
+    this(scan, family, columnSet, rowComparator, maxVersions, readPointToUse,
+        retainDeletesInOutputUntil, oldestUnexpiredTS,
+        HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Constructs a ScanQueryMatcher for a Scan.
+   *
+   * @param scan
+   * @param family
+   * @param columnSet
+   * @param rowComparator
+   */
+  public ScanQueryMatcher(Scan scan, byte[] family,
+      NavigableSet<byte[]> columnSet, KeyValue.KeyComparator rowComparator,
+      int maxVersions, long readPointToUse, long retainDeletesInOutputUntil,
+      long oldestUnexpiredTS, long oldestFlashBackTS) {
     this.tr = scan.getTimeRange();
     this.oldestStamp = oldestUnexpiredTS;
     this.rowComparator = rowComparator;
@@ -97,6 +116,7 @@ public class ScanQueryMatcher {
     this.filter = scan.getFilter();
     this.retainDeletesInOutputUntil = retainDeletesInOutputUntil;
     this.maxReadPointToTrackVersions = readPointToUse;
+    this.oldestFlashBackTS = oldestFlashBackTS;
 
     // Single branch to deal with two types of reads (columns vs all in family)
     if (columnSet == null || columnSet.size() == 0) {
@@ -104,14 +124,17 @@ public class ScanQueryMatcher {
       hasNullColumn = true;
 
       // use a specialized scan for wildcard column tracker.
-      this.columns = new ScanWildcardColumnTracker(maxVersions);
+      this.columns = new ScanWildcardColumnTracker(maxVersions,
+          this.oldestFlashBackTS);
     } else {
       // whether there is null column in the explicit column query
       hasNullColumn = (columnSet.first().length == 0);
 
       // We can share the ExplicitColumnTracker, diff is we reset
       // between rows, not between storefiles.
-      this.columns = new ExplicitColumnTracker(columnSet,maxVersions);
+      // Note that we do not use oldestFlashBackTS here since
+      // ExplicitColumnTracker is never used in Compactions/Flushes.
+      this.columns = new ExplicitColumnTracker(columnSet, maxVersions);
     }
   }
 
@@ -199,7 +222,11 @@ public class ScanQueryMatcher {
     }
 
     byte type = kv.getType();
-    if (isDelete(type)) {
+    if (isDelete(type) && kv.getTimestamp() > this.oldestFlashBackTS) {
+      // During Flushes and Compactions we don't want to process deletes unless
+      // they are older than the FLASHBACK_QUERY_LIMIT.
+      return MatchCode.INCLUDE;
+    } else if (isDelete(type)) {
       if (tr.withinOrAfterTimeRange(timestamp)) {
         this.deletes.add(bytes, offset, qualLength, timestamp, type);
         // Can't early out now, because DelFam come before any other keys

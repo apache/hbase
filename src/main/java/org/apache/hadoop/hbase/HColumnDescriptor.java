@@ -656,6 +656,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setFlashBackQueryLimit(int flashBackQueryLimit) {
+    if (flashBackQueryLimit < 0) {
+      throw new IllegalArgumentException(
+          "FlashBackQueryLimit cannot be negative");
+    }
     return setValue(FLASHBACK_QUERY_LIMIT,
         Integer.toString(flashBackQueryLimit));
   }

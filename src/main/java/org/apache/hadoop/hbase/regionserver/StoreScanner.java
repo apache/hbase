@@ -29,6 +29,7 @@ import java.util.NavigableSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
@@ -76,9 +77,15 @@ public class StoreScanner extends NonLazyKeyValueScanner
   // if heap == null and lastTop != null, you need to reseek given the key below
   private KeyValue lastTop = null;
 
-  /** An internal constructor. */
   private StoreScanner(Store store, boolean cacheBlocks, Scan scan,
       final NavigableSet<byte[]> columns, long ttl, KeyValueAggregator keyValueAggregator) {
+    this(store, cacheBlocks, scan, columns, ttl, keyValueAggregator, 0);
+  }
+
+  /** An internal constructor. */
+  private StoreScanner(Store store, boolean cacheBlocks, Scan scan,
+      final NavigableSet<byte[]> columns, long ttl,
+      KeyValueAggregator keyValueAggregator, long flashBackQueryLimit) {
     this.store = store;
     initializeMetricNames();
     this.cacheBlocks = cacheBlocks;
@@ -88,7 +95,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
     this.scan = scan;
     this.keyValueAggregator = keyValueAggregator;
     this.columns = columns;
-    oldestUnexpiredTS = EnvironmentEdgeManager.currentTimeMillis() - ttl;
+    oldestUnexpiredTS = EnvironmentEdgeManager.currentTimeMillis() - ttl
+        - flashBackQueryLimit;
 
     // We look up row-column Bloom filters for multi-column queries as part of
     // the seek operation. However, we also look the row-column Bloom filter
@@ -145,6 +153,14 @@ public class StoreScanner extends NonLazyKeyValueScanner
     this.store.addChangedReaderObserver(this);
   }
 
+  StoreScanner(Store store, Scan scan,
+      List<? extends KeyValueScanner> scanners, long smallestReadPoint,
+      long retainDeletesInOutputUntil, KeyValueAggregator keyValueAggregator)
+      throws IOException {
+    this(store, scan, scanners, smallestReadPoint, retainDeletesInOutputUntil,
+        keyValueAggregator, 0);
+  }
+
   /**
    * Opens a scanner across specified StoreFiles. Can be used in compactions.
    * @param store who we scan
@@ -156,14 +172,20 @@ public class StoreScanner extends NonLazyKeyValueScanner
    */
   StoreScanner(Store store, Scan scan,
       List<? extends KeyValueScanner> scanners, long smallestReadPoint,
-      long retainDeletesInOutputUntil, KeyValueAggregator keyValueAggregator) throws IOException {
-    this(store, false, scan, null, store.ttl, keyValueAggregator);
+      long retainDeletesInOutputUntil, KeyValueAggregator keyValueAggregator,
+      long flashBackQueryLimit) throws IOException {
+    this(store, false, scan, null, store.ttl, keyValueAggregator, flashBackQueryLimit);
+
+    // This is the oldest TS upto which flashback queries are supported.
+    long oldestFlashBackTS = (flashBackQueryLimit != 0) ? EnvironmentEdgeManager
+        .currentTimeMillis() - flashBackQueryLimit
+        : HConstants.LATEST_TIMESTAMP;
 
     matcher =
         new ScanQueryMatcher(scan, store.getFamily().getName(), null,
             store.comparator.getRawComparator(),
             store.versionsToReturn(scan.getMaxVersions()), smallestReadPoint,
-            retainDeletesInOutputUntil, oldestUnexpiredTS);
+            retainDeletesInOutputUntil, oldestUnexpiredTS, oldestFlashBackTS);
 
     // Filter the list of scanners using Bloom filters, time range, TTL, etc.
     scanners = selectScannersFrom(scanners);

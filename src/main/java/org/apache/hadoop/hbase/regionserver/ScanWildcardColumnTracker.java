@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Keeps track of the columns for a scan if they are not explicitly specified
@@ -44,11 +45,22 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   private long latestTSOfCurrentColumn;
 
   /**
+   * This is the oldest timestamp upto which FlashBack Queries are supported.
+   */
+  private final long oldestFlashBackTS;
+
+  public ScanWildcardColumnTracker(int maxVersion) {
+    this(maxVersion, HConstants.LATEST_TIMESTAMP);
+    this.maxVersions = maxVersion;
+  }
+
+  /**
    * Return maxVersions of every row.
    * @param maxVersion
    */
-  public ScanWildcardColumnTracker(int maxVersion) {
+  public ScanWildcardColumnTracker(int maxVersion, long oldestFlashBackTS) {
     this.maxVersions = maxVersion;
+    this.oldestFlashBackTS = oldestFlashBackTS;
   }
 
   /**
@@ -77,7 +89,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
 
       if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
 
-      if (++currentCount > maxVersions) {
+      if (timestamp <= this.oldestFlashBackTS && ++currentCount > maxVersions) {
         return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
       }
       setTS(timestamp);
@@ -92,7 +104,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
       if (sameAsPreviousTS(timestamp)) {
         return ScanQueryMatcher.MatchCode.SKIP;
       }
-      if (++currentCount > maxVersions) {
+      if (timestamp <= this.oldestFlashBackTS && ++currentCount > maxVersions) {
         return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL; // skip to next col
       }
       setTS(timestamp);
@@ -111,7 +123,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
 
       if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
 
-      if (++currentCount > maxVersions)
+      if (timestamp <= this.oldestFlashBackTS && ++currentCount > maxVersions)
         return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
       setTS(timestamp);
       return ScanQueryMatcher.MatchCode.INCLUDE;

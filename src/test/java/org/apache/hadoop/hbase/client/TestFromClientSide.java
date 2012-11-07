@@ -136,7 +136,7 @@ public class TestFromClientSide {
     for (int i = 0; i < expected.length; i++) {
       byte[] FAMILY = Bytes.toBytes("foo" + i);
       HColumnDescriptor desc = new HColumnDescriptor(FAMILY);
-      int fbt = random.nextInt();
+      int fbt = random.nextInt(Integer.MAX_VALUE);
       desc.setFlashBackQueryLimit(fbt);
       expected[i] = desc;
     }

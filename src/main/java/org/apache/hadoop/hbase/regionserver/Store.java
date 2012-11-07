@@ -69,6 +69,8 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.InjectionEvent;
+import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -112,6 +114,10 @@ public class Store extends SchemaConfigured implements HeapSize {
   final CacheConfig cacheConf;
   // ttl in milliseconds.
   protected long ttl;
+  // The amount of time in seconds in the past upto which we support FlashBack
+  // queries. Ex. 60 * 60 * 24 indicates we support FlashBack queries upto 1 day
+  // ago.
+  public final long flashBackQueryLimit;
   private long timeToPurgeDeletes;
   private long lastCompactSize = 0;
   volatile boolean forceMajor = false;
@@ -191,6 +197,7 @@ public class Store extends SchemaConfigured implements HeapSize {
             family.getDataBlockEncoding());
 
     this.comparator = info.getComparator();
+    this.flashBackQueryLimit = family.getFlashBackQueryLimit() * 1000;
     // getTimeToLive returns ttl in seconds.  Convert to milliseconds.
     this.ttl = family.getTimeToLive();
     if (ttl == HConstants.FOREVER) {
@@ -667,7 +674,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     InternalScanner scanner = new StoreScanner(this, scan,
         MemStore.getSnapshotScanners(snapshot, this.comparator),
         this.region.getSmallestReadPoint(),
-        Long.MIN_VALUE, getAggregator()); // include all deletes
+        Long.MIN_VALUE, getAggregator(),
+        flashBackQueryLimit); // include all deletes
 
     String fileName;
     try {
@@ -966,6 +974,10 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   /**
    * Compact the most recent N files.
+   *
+   * @param N
+   *          the number of store files to compact, pass -1 to compact
+   *          everything
    */
   public void compactRecentForTesting(int N) throws IOException {
     List<StoreFile> filesToCompact;
@@ -985,11 +997,13 @@ public class Store extends SchemaConfigured implements HeapSize {
           filesToCompact.subList(0, idx + 1).clear();
         }
         int count = filesToCompact.size();
-        if (N > count) {
+        if (N > count && N != -1) {
           throw new RuntimeException("Not enough files");
         }
 
-        filesToCompact = filesToCompact.subList(count - N, count);
+        if (N != -1) {
+          filesToCompact = filesToCompact.subList(count - N, count);
+        }
         maxId = StoreFile.getMaxSequenceIdInList(filesToCompact, true);
         isMajor = (filesToCompact.size() == storefiles.size());
         filesCompacting.addAll(filesToCompact);
@@ -1181,7 +1195,7 @@ public class Store extends SchemaConfigured implements HeapSize {
              (System.currentTimeMillis() - this.timeToPurgeDeletes))
           : Long.MIN_VALUE;
         scanner = new StoreScanner(this, scan, scanners, smallestReadPoint,
-            retainDeletesUntil, getAggregator());
+            retainDeletesUntil, getAggregator(), flashBackQueryLimit);
         int bytesWritten = 0;
         // since scanner.next() can return 'false' but still be delivering data,
         // we have to use a do/while loop.
@@ -1209,6 +1223,8 @@ public class Store extends SchemaConfigured implements HeapSize {
                 }
               } else {
                 writer.append(kv);
+                InjectionHandler.processEvent(
+                    InjectionEvent.STORE_AFTER_APPEND_KV, (Object) kv);
               }
               // check periodically to see if a system stop is requested
               if (Store.closeCheckInterval > 0) {
@@ -1854,8 +1870,8 @@ public class Store extends SchemaConfigured implements HeapSize {
 
   public static final long FIXED_OVERHEAD =
       ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-          + (19 * ClassSize.REFERENCE) + (5 * Bytes.SIZEOF_LONG)
-          + (4 * Bytes.SIZEOF_INT) + 2 * Bytes.SIZEOF_BOOLEAN) ;
+          + (19 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
+          + (4 * Bytes.SIZEOF_INT) + 2 * Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +
