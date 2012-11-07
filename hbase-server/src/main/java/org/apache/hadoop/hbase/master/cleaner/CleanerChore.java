@@ -73,7 +73,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
   protected abstract boolean validate(Path file);
 
   /**
-   * Instanitate and initialize all the file cleaners set in the configuration
+   * Instantiate and initialize all the file cleaners set in the configuration
    * @param confKey key to get the file cleaner classes from the configuration
    */
   private void initCleanerChain(String confKey) {
@@ -129,7 +129,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
         }
       }
     } catch (IOException e) {
-      LOG.warn("Failed to get status of:" + oldFileDir);
+      LOG.warn("Failed to get status of: " + oldFileDir);
     }
 
   }
@@ -184,7 +184,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
       LOG.warn("Found a wrongly formatted file: " + filePath.getName() + " deleting it.");
       boolean success = this.fs.delete(filePath, true);
       if(!success)
-        LOG.warn("Attempted to delete:" + filePath
+        LOG.warn("Attempted to delete: " + filePath
             + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
 
       return success;
@@ -205,7 +205,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
       }
     }
     // delete this file if it passes all the cleaners
-    LOG.debug("Removing:" + filePath + " from archive");
+    LOG.debug("Removing: " + filePath + " from archive");
     boolean success = this.fs.delete(filePath, false);
     if (!success) {
       LOG.warn("Attempted to delete:" + filePath

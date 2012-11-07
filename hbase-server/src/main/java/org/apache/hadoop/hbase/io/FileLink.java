@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
- * The FileLink is a sort of hardlink, that allows to access a file given a set of locations.
+ * The FileLink is a sort of hardlink, that allows access to a file given a set of locations.
  *
  * <p><b>The Problem:</b>
  * <ul>
@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  *  </li>
  *  <li>
  *    HBase store files in one location (e.g. table/region/family/) and when the file is not
- *    needed anymore (e.g. compaction, region deletetion, ...) moves it to an archive directory.
+ *    needed anymore (e.g. compaction, region deletion, ...) moves it to an archive directory.
  *  </li>
  * </ul>
  * If we want to create a reference to a file, we need to remember that it can be in its
@@ -83,7 +83,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  *      (Back-reference to the link in table-cloned)
  *  </li>
  *  <li>
- *      /hbase/.archive/table/region-x/.links-file-k/region-z.table-cloned
+ *      /hbase/.archive/table/region-x/.links-file-k/region-z.table-2nd-cloned
  *      (Back-reference to the link in table-2nd-cloned)
  *  </li>
  * </ul>

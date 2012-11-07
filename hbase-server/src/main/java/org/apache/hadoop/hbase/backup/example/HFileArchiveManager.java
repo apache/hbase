@@ -47,7 +47,7 @@ class HFileArchiveManager {
 
   public HFileArchiveManager(HConnection connection, Configuration conf)
       throws ZooKeeperConnectionException, IOException {
-    this.zooKeeper = new ZooKeeperWatcher(conf, "hfileArchiveManger-on-" + connection.toString(),
+    this.zooKeeper = new ZooKeeperWatcher(conf, "hfileArchiveManager-on-" + connection.toString(),
         connection);
     this.archiveZnode = ZKTableArchiveClient.getArchiveZNode(this.zooKeeper.getConfiguration(),
       this.zooKeeper);
