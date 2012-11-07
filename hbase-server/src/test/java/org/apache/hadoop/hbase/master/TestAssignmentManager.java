@@ -863,8 +863,11 @@ public class TestAssignmentManager {
           gate.get());
       // need to change table state from disabling to disabled.
       assertTrue("Table should be disabled.",
-          am.getZKTable().isDisabledTable(REGIONINFO.getTableNameAsString()));      
+          am.getZKTable().isDisabledTable(REGIONINFO.getTableNameAsString()));
     } finally {
+      this.server.getConfiguration().setClass(
+        HConstants.HBASE_MASTER_LOADBALANCER_CLASS, DefaultLoadBalancer.class,
+        LoadBalancer.class);
       am.getZKTable().setEnabledTable(REGIONINFO.getTableNameAsString());
       am.shutdown();
     }
