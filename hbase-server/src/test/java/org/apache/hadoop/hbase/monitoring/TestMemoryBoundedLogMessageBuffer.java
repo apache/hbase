@@ -18,7 +18,8 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -53,17 +54,18 @@ public class TestMemoryBoundedLogMessageBuffer {
     StringWriter sw = new StringWriter();
     buf.dumpTo(new PrintWriter(sw));
     String dump = sw.toString();
+    String eol = System.getProperty("line.separator");
     assertFalse("The early log messages should be evicted",
-        dump.contains("hello 1\n"));
+        dump.contains("hello 1" + eol));
     assertTrue("The late log messages should be retained",
-        dump.contains("hello 999\n"));
+        dump.contains("hello 999" + eol));
   }
-  
+
   @Test
   public void testNonAsciiEncoding() {
     MemoryBoundedLogMessageBuffer buf =
       new MemoryBoundedLogMessageBuffer(TEN_KB);
-    
+
     buf.add(JP_TEXT);
     StringWriter sw = new StringWriter();
     buf.dumpTo(new PrintWriter(sw));
