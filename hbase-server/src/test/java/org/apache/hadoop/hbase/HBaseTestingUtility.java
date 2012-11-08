@@ -98,6 +98,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.ZooKeeper.States;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -1621,6 +1622,14 @@ public class HBaseTestingUtility {
     // Making it expire
     ZooKeeper newZK = new ZooKeeper(quorumServers,
         1000, EmptyWatcher.instance, sessionID, password);
+
+    //ensure that we have connection to the server before closing down, otherwise
+    //the close session event will be eaten out before we start CONNECTING state
+    long start = System.currentTimeMillis();
+    while (newZK.getState() != States.CONNECTED 
+         && System.currentTimeMillis() - start < 1000) {
+       Thread.sleep(1);
+    }
     newZK.close();
     LOG.info("ZK Closed Session 0x" + Long.toHexString(sessionID));
 
