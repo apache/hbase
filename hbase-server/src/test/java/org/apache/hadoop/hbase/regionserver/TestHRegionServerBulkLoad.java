@@ -169,7 +169,7 @@ public class TestHRegionServerBulkLoad {
               location.getHostname(), location.getPort());
             CompactRegionRequest request =
               RequestConverter.buildCompactRegionRequest(
-                location.getRegionInfo().getRegionName(), true);
+                location.getRegionInfo().getRegionName(), true, null);
             server.compactRegion(null, request);
             numCompactions.incrementAndGet();
             return null;

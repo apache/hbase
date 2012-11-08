@@ -740,12 +740,15 @@ public final class RequestConverter {
   * @return a CompactRegionRequest
   */
  public static CompactRegionRequest buildCompactRegionRequest(
-     final byte[] regionName, final boolean major) {
+     final byte[] regionName, final boolean major, final byte [] family) {
    CompactRegionRequest.Builder builder = CompactRegionRequest.newBuilder();
    RegionSpecifier region = buildRegionSpecifier(
      RegionSpecifierType.REGION_NAME, regionName);
    builder.setRegion(region);
    builder.setMajor(major);
+   if (family != null) {
+     builder.setFamily(ByteString.copyFrom(family));
+   }
    return builder.build();
  }
 

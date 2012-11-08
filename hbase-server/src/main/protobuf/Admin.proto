@@ -135,6 +135,7 @@ message SplitRegionResponse {
 message CompactRegionRequest {
   required RegionSpecifier region = 1;
   optional bool major = 2;
+  optional bytes family = 3;
 }
 
 message CompactRegionResponse {

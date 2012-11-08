@@ -7687,6 +7687,10 @@ public final class AdminProtos {
     // optional bool major = 2;
     boolean hasMajor();
     boolean getMajor();
+    
+    // optional bytes family = 3;
+    boolean hasFamily();
+    com.google.protobuf.ByteString getFamily();
   }
   public static final class CompactRegionRequest extends
       com.google.protobuf.GeneratedMessage
@@ -7740,9 +7744,20 @@ public final class AdminProtos {
       return major_;
     }
     
+    // optional bytes family = 3;
+    public static final int FAMILY_FIELD_NUMBER = 3;
+    private com.google.protobuf.ByteString family_;
+    public boolean hasFamily() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public com.google.protobuf.ByteString getFamily() {
+      return family_;
+    }
+    
     private void initFields() {
       region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       major_ = false;
+      family_ = com.google.protobuf.ByteString.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -7770,6 +7785,9 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeBool(2, major_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, family_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -7786,6 +7804,10 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(2, major_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, family_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -7820,6 +7842,11 @@ public final class AdminProtos {
         result = result && (getMajor()
             == other.getMajor());
       }
+      result = result && (hasFamily() == other.hasFamily());
+      if (hasFamily()) {
+        result = result && getFamily()
+            .equals(other.getFamily());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -7836,6 +7863,10 @@ public final class AdminProtos {
       if (hasMajor()) {
         hash = (37 * hash) + MAJOR_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getMajor());
+      }
+      if (hasFamily()) {
+        hash = (37 * hash) + FAMILY_FIELD_NUMBER;
+        hash = (53 * hash) + getFamily().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -7962,6 +7993,8 @@ public final class AdminProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         major_ = false;
         bitField0_ = (bitField0_ & ~0x00000002);
+        family_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
       
@@ -8012,6 +8045,10 @@ public final class AdminProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.major_ = major_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.family_ = family_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -8033,6 +8070,9 @@ public final class AdminProtos {
         }
         if (other.hasMajor()) {
           setMajor(other.getMajor());
+        }
+        if (other.hasFamily()) {
+          setFamily(other.getFamily());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -8085,6 +8125,11 @@ public final class AdminProtos {
             case 16: {
               bitField0_ |= 0x00000002;
               major_ = input.readBool();
+              break;
+            }
+            case 26: {
+              bitField0_ |= 0x00000004;
+              family_ = input.readBytes();
               break;
             }
           }
@@ -8200,6 +8245,30 @@ public final class AdminProtos {
       public Builder clearMajor() {
         bitField0_ = (bitField0_ & ~0x00000002);
         major_ = false;
+        onChanged();
+        return this;
+      }
+      
+      // optional bytes family = 3;
+      private com.google.protobuf.ByteString family_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasFamily() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public com.google.protobuf.ByteString getFamily() {
+        return family_;
+      }
+      public Builder setFamily(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        family_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearFamily() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        family_ = getDefaultInstance().getFamily();
         onChanged();
         return this;
       }
@@ -16383,51 +16452,52 @@ public final class AdminProtos {
       "lastFlushTime\030\001 \002(\004\022\017\n\007flushed\030\002 \001(\010\"J\n\022" +
       "SplitRegionRequest\022 \n\006region\030\001 \002(\0132\020.Reg",
       "ionSpecifier\022\022\n\nsplitPoint\030\002 \001(\014\"\025\n\023Spli" +
-      "tRegionResponse\"G\n\024CompactRegionRequest\022" +
+      "tRegionResponse\"W\n\024CompactRegionRequest\022" +
       " \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\r\n\005maj" +
-      "or\030\002 \001(\010\"\027\n\025CompactRegionResponse\"1\n\004UUI" +
-      "D\022\024\n\014leastSigBits\030\001 \002(\004\022\023\n\013mostSigBits\030\002" +
-      " \002(\004\"\270\003\n\010WALEntry\022\035\n\003key\030\001 \002(\0132\020.WALEntr" +
-      "y.WALKey\022\037\n\004edit\030\002 \002(\0132\021.WALEntry.WALEdi" +
-      "t\032~\n\006WALKey\022\031\n\021encodedRegionName\030\001 \002(\014\022\021" +
-      "\n\ttableName\030\002 \002(\014\022\031\n\021logSequenceNumber\030\003" +
-      " \002(\004\022\021\n\twriteTime\030\004 \002(\004\022\030\n\tclusterId\030\005 \001",
-      "(\0132\005.UUID\032\353\001\n\007WALEdit\022\025\n\rkeyValueBytes\030\001" +
-      " \003(\014\0222\n\013familyScope\030\002 \003(\0132\035.WALEntry.WAL" +
-      "Edit.FamilyScope\032M\n\013FamilyScope\022\016\n\006famil" +
-      "y\030\001 \002(\014\022.\n\tscopeType\030\002 \002(\0162\033.WALEntry.WA" +
-      "LEdit.ScopeType\"F\n\tScopeType\022\033\n\027REPLICAT" +
-      "ION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATION_SCOPE_G" +
-      "LOBAL\020\001\"4\n\030ReplicateWALEntryRequest\022\030\n\005e" +
-      "ntry\030\001 \003(\0132\t.WALEntry\"\033\n\031ReplicateWALEnt" +
-      "ryResponse\"\026\n\024RollWALWriterRequest\".\n\025Ro" +
-      "llWALWriterResponse\022\025\n\rregionToFlush\030\001 \003",
-      "(\014\"#\n\021StopServerRequest\022\016\n\006reason\030\001 \002(\t\"" +
-      "\024\n\022StopServerResponse\"\026\n\024GetServerInfoRe" +
-      "quest\"@\n\nServerInfo\022\037\n\nserverName\030\001 \002(\0132" +
-      "\013.ServerName\022\021\n\twebuiPort\030\002 \001(\r\"8\n\025GetSe" +
-      "rverInfoResponse\022\037\n\nserverInfo\030\001 \002(\0132\013.S" +
-      "erverInfo2\371\005\n\014AdminService\022>\n\rgetRegionI" +
-      "nfo\022\025.GetRegionInfoRequest\032\026.GetRegionIn" +
-      "foResponse\022;\n\014getStoreFile\022\024.GetStoreFil" +
-      "eRequest\032\025.GetStoreFileResponse\022D\n\017getOn" +
-      "lineRegion\022\027.GetOnlineRegionRequest\032\030.Ge",
-      "tOnlineRegionResponse\0225\n\nopenRegion\022\022.Op" +
-      "enRegionRequest\032\023.OpenRegionResponse\0228\n\013" +
-      "closeRegion\022\023.CloseRegionRequest\032\024.Close" +
-      "RegionResponse\0228\n\013flushRegion\022\023.FlushReg" +
-      "ionRequest\032\024.FlushRegionResponse\0228\n\013spli" +
-      "tRegion\022\023.SplitRegionRequest\032\024.SplitRegi" +
-      "onResponse\022>\n\rcompactRegion\022\025.CompactReg" +
-      "ionRequest\032\026.CompactRegionResponse\022J\n\021re" +
-      "plicateWALEntry\022\031.ReplicateWALEntryReque" +
-      "st\032\032.ReplicateWALEntryResponse\022>\n\rrollWA",
-      "LWriter\022\025.RollWALWriterRequest\032\026.RollWAL" +
-      "WriterResponse\022>\n\rgetServerInfo\022\025.GetSer" +
-      "verInfoRequest\032\026.GetServerInfoResponse\0225" +
-      "\n\nstopServer\022\022.StopServerRequest\032\023.StopS" +
-      "erverResponseBA\n*org.apache.hadoop.hbase" +
-      ".protobuf.generatedB\013AdminProtosH\001\210\001\001\240\001\001"
+      "or\030\002 \001(\010\022\016\n\006family\030\003 \001(\014\"\027\n\025CompactRegio" +
+      "nResponse\"1\n\004UUID\022\024\n\014leastSigBits\030\001 \002(\004\022" +
+      "\023\n\013mostSigBits\030\002 \002(\004\"\270\003\n\010WALEntry\022\035\n\003key" +
+      "\030\001 \002(\0132\020.WALEntry.WALKey\022\037\n\004edit\030\002 \002(\0132\021" +
+      ".WALEntry.WALEdit\032~\n\006WALKey\022\031\n\021encodedRe" +
+      "gionName\030\001 \002(\014\022\021\n\ttableName\030\002 \002(\014\022\031\n\021log" +
+      "SequenceNumber\030\003 \002(\004\022\021\n\twriteTime\030\004 \002(\004\022",
+      "\030\n\tclusterId\030\005 \001(\0132\005.UUID\032\353\001\n\007WALEdit\022\025\n" +
+      "\rkeyValueBytes\030\001 \003(\014\0222\n\013familyScope\030\002 \003(" +
+      "\0132\035.WALEntry.WALEdit.FamilyScope\032M\n\013Fami" +
+      "lyScope\022\016\n\006family\030\001 \002(\014\022.\n\tscopeType\030\002 \002" +
+      "(\0162\033.WALEntry.WALEdit.ScopeType\"F\n\tScope" +
+      "Type\022\033\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030REP" +
+      "LICATION_SCOPE_GLOBAL\020\001\"4\n\030ReplicateWALE" +
+      "ntryRequest\022\030\n\005entry\030\001 \003(\0132\t.WALEntry\"\033\n" +
+      "\031ReplicateWALEntryResponse\"\026\n\024RollWALWri" +
+      "terRequest\".\n\025RollWALWriterResponse\022\025\n\rr",
+      "egionToFlush\030\001 \003(\014\"#\n\021StopServerRequest\022" +
+      "\016\n\006reason\030\001 \002(\t\"\024\n\022StopServerResponse\"\026\n" +
+      "\024GetServerInfoRequest\"@\n\nServerInfo\022\037\n\ns" +
+      "erverName\030\001 \002(\0132\013.ServerName\022\021\n\twebuiPor" +
+      "t\030\002 \001(\r\"8\n\025GetServerInfoResponse\022\037\n\nserv" +
+      "erInfo\030\001 \002(\0132\013.ServerInfo2\371\005\n\014AdminServi" +
+      "ce\022>\n\rgetRegionInfo\022\025.GetRegionInfoReque" +
+      "st\032\026.GetRegionInfoResponse\022;\n\014getStoreFi" +
+      "le\022\024.GetStoreFileRequest\032\025.GetStoreFileR" +
+      "esponse\022D\n\017getOnlineRegion\022\027.GetOnlineRe",
+      "gionRequest\032\030.GetOnlineRegionResponse\0225\n" +
+      "\nopenRegion\022\022.OpenRegionRequest\032\023.OpenRe" +
+      "gionResponse\0228\n\013closeRegion\022\023.CloseRegio" +
+      "nRequest\032\024.CloseRegionResponse\0228\n\013flushR" +
+      "egion\022\023.FlushRegionRequest\032\024.FlushRegion" +
+      "Response\0228\n\013splitRegion\022\023.SplitRegionReq" +
+      "uest\032\024.SplitRegionResponse\022>\n\rcompactReg" +
+      "ion\022\025.CompactRegionRequest\032\026.CompactRegi" +
+      "onResponse\022J\n\021replicateWALEntry\022\031.Replic" +
+      "ateWALEntryRequest\032\032.ReplicateWALEntryRe",
+      "sponse\022>\n\rrollWALWriter\022\025.RollWALWriterR" +
+      "equest\032\026.RollWALWriterResponse\022>\n\rgetSer" +
+      "verInfo\022\025.GetServerInfoRequest\032\026.GetServ" +
+      "erInfoResponse\0225\n\nstopServer\022\022.StopServe" +
+      "rRequest\032\023.StopServerResponseBA\n*org.apa" +
+      "che.hadoop.hbase.protobuf.generatedB\013Adm" +
+      "inProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -16559,7 +16629,7 @@ public final class AdminProtos {
           internal_static_CompactRegionRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CompactRegionRequest_descriptor,
-              new java.lang.String[] { "Region", "Major", },
+              new java.lang.String[] { "Region", "Major", "Family", },
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest.Builder.class);
           internal_static_CompactRegionResponse_descriptor =

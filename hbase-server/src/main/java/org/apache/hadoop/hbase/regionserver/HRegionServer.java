@@ -3561,17 +3561,35 @@ public class  HRegionServer implements ClientProtocol,
       HRegion region = getRegion(request.getRegion());
       LOG.info("Compacting " + region.getRegionNameAsString());
       boolean major = false;
+      byte [] family = null;
+      Store store = null;
+      if (request.hasFamily()) {
+        family = request.getFamily().toByteArray();
+        store = region.getStore(family);
+        if (store == null) {
+          throw new ServiceException(new IOException("column family " + Bytes.toString(family) +
+            " does not exist in region " + new String(region.getRegionNameAsString())));
+        }
+      }
       if (request.hasMajor()) {
         major = request.getMajor();
       }
       if (major) {
-        region.triggerMajorCompaction();
+        if (family != null) {
+          store.triggerMajorCompaction();
+        } else {
+          region.triggerMajorCompaction();
+        }
       }
-      LOG.trace("User-triggered compaction requested for region " +
-        region.getRegionNameAsString());
-      compactSplitThread.requestCompaction(region,
-        "User-triggered " + (major ? "major " : "") + "compaction",
+
+      String log = "User-triggered " + (major ? "major " : "") + "compaction";
+      if(family != null) {
+        compactSplitThread.requestCompaction(region, store, log,
           Store.PRIORITY_USER);
+      } else {
+        compactSplitThread.requestCompaction(region, log,
+          Store.PRIORITY_USER);
+      }
       return CompactRegionResponse.newBuilder().build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
