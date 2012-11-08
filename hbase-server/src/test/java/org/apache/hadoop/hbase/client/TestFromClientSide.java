@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -4259,7 +4260,7 @@ public class TestFromClientSide {
     assertEquals(0, Bytes.compareTo(Bytes.add(v1,v2), r.getValue(FAMILY, QUALIFIERS[0])));
     assertEquals(0, Bytes.compareTo(Bytes.add(v2,v1), r.getValue(FAMILY, QUALIFIERS[1])));
   }
- 
+
   @Test
   public void testIncrementWithDeletes() throws Exception {
     LOG.info("Starting testIncrementWithDeletes");
@@ -4480,6 +4481,10 @@ public class TestFromClientSide {
     threads.get(1).join();
     assertEquals(2, pool.getPoolSize());
 
+    //ensure that ThreadPoolExecutor knows that threads are finished.
+    while (pool.getCompletedTaskCount() < 2) {
+      Threads.sleep(1);
+    }
     // Now let's simulate adding a RS meaning that we'll go up to three
     // concurrent threads. The pool should not grow larger than three.
     pool.submit(threads.get(2));
@@ -4504,14 +4509,15 @@ public class TestFromClientSide {
     HTable table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY },
         conf, Integer.MAX_VALUE);
     table.setAutoFlush(true);
-    Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, VALUE);
 
+    final long ts = EnvironmentEdgeManager.currentTimeMillis();
     Get get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions();
 
     for (int versions = 1; versions <= numVersions; versions++) {
+      Put put = new Put(ROW);
+      put.add(FAMILY, QUALIFIER, ts + versions, VALUE);
       table.put(put);
 
       Result result = table.get(get);
@@ -4541,14 +4547,15 @@ public class TestFromClientSide {
     final HTable table = TEST_UTIL.createTable(tableName,
         new byte[][] { FAMILY }, conf);
     table.setAutoFlush(true);
-    final Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, VALUE);
 
+    final long ts = EnvironmentEdgeManager.currentTimeMillis();
     final Get get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions();
 
     for (int versions = 1; versions <= numVersions; versions++) {
+      Put put = new Put(ROW);
+      put.add(FAMILY, QUALIFIER, ts + versions, VALUE);
       table.put(put);
 
       Result result = table.get(get);
@@ -4573,6 +4580,8 @@ public class TestFromClientSide {
         @Override
         public Void call() {
           try {
+            Put put = new Put(ROW);
+            put.add(FAMILY, QUALIFIER, ts + versionsCopy, VALUE);
             table.put(put);
 
             Result result = table.get(get);
@@ -4701,7 +4710,7 @@ public class TestFromClientSide {
     assertEquals("Did not access all the regions in the table", numOfRegions,
         scanMetrics.countOfRegions.getCurrentIntervalValue());
 
-    // now, test that the metrics are still collected even if you don't call close, but do 
+    // now, test that the metrics are still collected even if you don't call close, but do
     // run past the end of all the records
     Scan scanWithoutClose = new Scan();
     scanWithoutClose.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
