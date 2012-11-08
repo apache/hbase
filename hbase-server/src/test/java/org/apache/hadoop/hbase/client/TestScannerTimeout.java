@@ -51,6 +51,7 @@ public class TestScannerTimeout {
   private final static int NB_ROWS = 10;
   // Be careful w/ what you set this timer to... it can get in the way of
   // the mini cluster coming up -- the verification in particular.
+  private final static int THREAD_WAKE_FREQUENCY = 1000;
   private final static int SCANNER_TIMEOUT = 10000;
   private final static int SCANNER_CACHING = 5;
 
@@ -61,6 +62,7 @@ public class TestScannerTimeout {
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
     c.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT);
+    c.setInt(HConstants.THREAD_WAKE_FREQUENCY, THREAD_WAKE_FREQUENCY);
     // We need more than one region server for this test
     TEST_UTIL.startMiniCluster(2);
     HTable table = TEST_UTIL.createTable(TABLE_NAME, SOME_BYTES);
@@ -106,7 +108,7 @@ public class TestScannerTimeout {
         count++;
         if (count == 5) {
           // Sleep just a bit more to be sure
-          Thread.sleep(SCANNER_TIMEOUT+100);
+          Thread.sleep(SCANNER_TIMEOUT + THREAD_WAKE_FREQUENCY + 100);
         }
         res = r.next();
       }
@@ -147,7 +149,7 @@ public class TestScannerTimeout {
     LOG.info("END ************ test2772");
 
   }
-  
+
   /**
    * Test that scanner won't miss any rows if the region server it was reading
    * from failed. Before 3686, it would skip rows in the scan.
@@ -183,7 +185,7 @@ public class TestScannerTimeout {
     table.close();
     LOG.info("************ END TEST3686A");
   }
-  
+
   /**
    * Make sure that no rows are lost if the scanner timeout is longer on the
    * client than the server, and the scan times out on the server but not the
