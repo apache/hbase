@@ -187,6 +187,7 @@ public class MiniZooKeeperCluster {
       clientPortList.add(tentativePort);
       standaloneServerFactoryList.add(standaloneServerFactory);
       zooKeeperServers.add(server);
+      tentativePort++; //for the next server
     }
 
     // set the first one to be active ZK; Others are backups
