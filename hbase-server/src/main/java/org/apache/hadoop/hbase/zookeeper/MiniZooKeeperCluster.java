@@ -201,7 +201,9 @@ public class MiniZooKeeperCluster {
 
   private void recreateDir(File dir) throws IOException {
     if (dir.exists()) {
-      FileUtil.fullyDelete(dir);
+      if(!FileUtil.fullyDelete(dir)) {
+        throw new IOException("Could not delete zk base directory: " + dir);
+      }
     }
     try {
       dir.mkdirs();
@@ -217,6 +219,7 @@ public class MiniZooKeeperCluster {
     if (!started) {
       return;
     }
+
     // shut down all the zk servers
     for (int i = 0; i < standaloneServerFactoryList.size(); i++) {
       NIOServerCnxnFactory standaloneServerFactory =
@@ -227,6 +230,10 @@ public class MiniZooKeeperCluster {
       if (!waitForServerDown(clientPort, CONNECTION_TIMEOUT)) {
         throw new IOException("Waiting for shutdown of standalone server");
       }
+    }
+    for (ZooKeeperServer zkServer: zooKeeperServers) {
+      //explicitly close ZKDatabase since ZookeeperServer does not close them
+      zkServer.getZKDatabase().close();
     }
 
     // clear everything
