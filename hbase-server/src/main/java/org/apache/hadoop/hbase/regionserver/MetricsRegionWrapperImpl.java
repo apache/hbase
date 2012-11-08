@@ -19,8 +19,11 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 
+import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -44,17 +47,29 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper {
 
   @Override
   public String getTableName() {
-    return this.region.getTableDesc().getNameAsString();
+    HTableDescriptor tableDesc = this.region.getTableDesc();
+    if (tableDesc == null) {
+      return "";
+    }
+    return tableDesc.getNameAsString();
   }
 
   @Override
   public String getRegionName() {
-    return this.region.getRegionInfo().getEncodedName();
+    HRegionInfo regionInfo = this.region.getRegionInfo();
+    if (regionInfo == null) {
+      return "";
+    }
+    return regionInfo.getEncodedName();
   }
 
   @Override
   public long getNumStores() {
-    return this.region.stores.size();
+    Map<byte[],Store> stores = this.region.stores;
+    if (stores == null) {
+      return 0;
+    }
+    return stores.size();
   }
 
   @Override
@@ -90,10 +105,12 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper {
       long tempMemstoreSize = 0;
       long tempStoreFileSize = 0;
 
-      for (Store store : region.stores.values()) {
-        tempNumStoreFiles += store.getStorefilesCount();
-        tempMemstoreSize += store.getMemStoreSize();
-        tempStoreFileSize += store.getStorefilesSize();
+      if (region.stores != null) {
+        for (Store store : region.stores.values()) {
+          tempNumStoreFiles += store.getStorefilesCount();
+          tempMemstoreSize += store.getMemStoreSize();
+          tempStoreFileSize += store.getStorefilesSize();
+        }
       }
 
       numStoreFiles = tempNumStoreFiles;

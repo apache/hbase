@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -46,7 +47,8 @@ class MetricsRegionServerWrapperImpl
   public static final int PERIOD = 15;
 
   private final HRegionServer regionServer;
-  private final BlockCache blockCache;
+
+  private BlockCache blockCache;
 
   private volatile long numStores = 0;
   private volatile long numStoreFiles = 0;
@@ -70,11 +72,27 @@ class MetricsRegionServerWrapperImpl
 
   public MetricsRegionServerWrapperImpl(final HRegionServer regionServer) {
     this.regionServer = regionServer;
-    this.blockCache = this.regionServer.cacheConfig.getBlockCache();
-    this.cacheStats = blockCache.getStats();
+    initBlockCache();
+
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new RegionServerMetricsWrapperRunnable();
     this.executor.scheduleWithFixedDelay(this.runnable, PERIOD, PERIOD, TimeUnit.SECONDS);
+  }
+
+  /**
+   * It's possible that due to threading the block cache could not be initialized
+   * yet (testing multiple region servers in one jvm).  So we need to try and initialize
+   * the blockCache and cacheStats reference multiple times until we succeed.
+   */
+  private synchronized  void initBlockCache() {
+    CacheConfig cacheConfig = this.regionServer.cacheConfig;
+    if (cacheConfig != null && this.blockCache == null) {
+      this.blockCache = cacheConfig.getBlockCache();
+    }
+
+    if (this.blockCache != null && this.cacheStats == null) {
+      this.cacheStats = blockCache.getStats();
+    }
   }
 
   @Override
@@ -309,7 +327,7 @@ class MetricsRegionServerWrapperImpl
 
     @Override
     synchronized public void run() {
-
+      initBlockCache();
       cacheStats = blockCache.getStats();
 
       HDFSBlocksDistribution hdfsBlocksDistribution =
