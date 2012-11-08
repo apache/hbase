@@ -248,12 +248,9 @@ public class TestSplitTransaction {
     assertTrue(Bytes.equals(GOOD_SPLIT_ROW, daughters.getFirst().getEndKey()));
     assertTrue(Bytes.equals(daughters.getSecond().getStartKey(), GOOD_SPLIT_ROW));
     assertTrue(Bytes.equals(this.parent.getEndKey(), daughters.getSecond().getEndKey()));
-    // Count rows.
+    // Count rows. daughters are already open
     int daughtersRowCount = 0;
-    for (HRegion r: daughters) {
-      // Open so can count its content.
-      HRegion openRegion = HRegion.openHRegion(this.testdir, r.getRegionInfo(),
-         r.getTableDesc(), r.getLog(), TEST_UTIL.getConfiguration());
+    for (HRegion openRegion: daughters) {
       try {
         int count = countRows(openRegion);
         assertTrue(count > 0 && count != rowcount);
@@ -303,12 +300,9 @@ public class TestSplitTransaction {
     // Now retry the split but do not throw an exception this time.
     assertTrue(st.prepare());
     PairOfSameType<HRegion> daughters = st.execute(mockServer, null);
-    // Count rows.
+    // Count rows. daughters are already open
     int daughtersRowCount = 0;
-    for (HRegion r: daughters) {
-      // Open so can count its content.
-      HRegion openRegion = HRegion.openHRegion(this.testdir, r.getRegionInfo(),
-         r.getTableDesc(), r.getLog(), TEST_UTIL.getConfiguration());
+    for (HRegion openRegion: daughters) {
       try {
         int count = countRows(openRegion);
         assertTrue(count > 0 && count != rowcount);
