@@ -79,7 +79,11 @@ public class AggregateImplementation<T, S> extends AggregateService implements
       scanner = env.getRegion().getScanner(scan);
       List<KeyValue> results = new ArrayList<KeyValue>();
       byte[] colFamily = scan.getFamilies()[0];
-      byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+      NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+      byte[] qualifier = null;
+      if (qualifiers != null && !qualifiers.isEmpty()) {
+        qualifier = qualifiers.pollFirst();
+      }
       // qualifier can be null.
       boolean hasMoreRows = false;
       do {
@@ -129,7 +133,11 @@ public class AggregateImplementation<T, S> extends AggregateService implements
       scanner = env.getRegion().getScanner(scan);
       List<KeyValue> results = new ArrayList<KeyValue>();
       byte[] colFamily = scan.getFamilies()[0];
-      byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+      NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+      byte[] qualifier = null;
+      if (qualifiers != null && !qualifiers.isEmpty()) {
+        qualifier = qualifiers.pollFirst();
+      }
       boolean hasMoreRows = false;
       do {
         hasMoreRows = scanner.next(results);
@@ -177,7 +185,11 @@ public class AggregateImplementation<T, S> extends AggregateService implements
       Scan scan = ProtobufUtil.toScan(request.getScan());
       scanner = env.getRegion().getScanner(scan);
       byte[] colFamily = scan.getFamilies()[0];
-      byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+      NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+      byte[] qualifier = null;
+      if (qualifiers != null && !qualifiers.isEmpty()) {
+        qualifier = qualifiers.pollFirst();
+      }
       List<KeyValue> results = new ArrayList<KeyValue>();
       boolean hasMoreRows = false;
       do {
@@ -222,7 +234,11 @@ public class AggregateImplementation<T, S> extends AggregateService implements
     try {
       Scan scan = ProtobufUtil.toScan(request.getScan());
       byte[] colFamily = scan.getFamilies()[0];
-      byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+      NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+      byte[] qualifier = null;
+      if (qualifiers != null && !qualifiers.isEmpty()) {
+        qualifier = qualifiers.pollFirst();
+      }
       if (scan.getFilter() == null && qualifier == null)
         scan.setFilter(new FirstKeyOnlyFilter());
       scanner = env.getRegion().getScanner(scan);
@@ -277,7 +293,11 @@ public class AggregateImplementation<T, S> extends AggregateService implements
       Scan scan = ProtobufUtil.toScan(request.getScan());
       scanner = env.getRegion().getScanner(scan);
       byte[] colFamily = scan.getFamilies()[0];
-      byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+      NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+      byte[] qualifier = null;
+      if (qualifiers != null && !qualifiers.isEmpty()) {
+        qualifier = qualifiers.pollFirst();
+      }
       List<KeyValue> results = new ArrayList<KeyValue>();
       boolean hasMoreRows = false;
     
@@ -332,7 +352,11 @@ public class AggregateImplementation<T, S> extends AggregateService implements
       Scan scan = ProtobufUtil.toScan(request.getScan());
       scanner = env.getRegion().getScanner(scan);
       byte[] colFamily = scan.getFamilies()[0];
-      byte[] qualifier = scan.getFamilyMap().get(colFamily).pollFirst();
+      NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+      byte[] qualifier = null;
+      if (qualifiers != null && !qualifiers.isEmpty()) {
+        qualifier = qualifiers.pollFirst();
+      }
       List<KeyValue> results = new ArrayList<KeyValue>();
 
       boolean hasMoreRows = false;
@@ -391,10 +415,13 @@ public class AggregateImplementation<T, S> extends AggregateService implements
       Scan scan = ProtobufUtil.toScan(request.getScan());
       scanner = env.getRegion().getScanner(scan);
       byte[] colFamily = scan.getFamilies()[0];
-      NavigableSet<byte[]> quals = scan.getFamilyMap().get(colFamily);
-      byte[] valQualifier = quals.pollFirst();
-      // if weighted median is requested, get qualifier for the weight column
-      byte[] weightQualifier = quals.size() > 1 ? quals.pollLast() : null;
+      NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
+      byte[] valQualifier = null, weightQualifier = null;
+      if (qualifiers != null && !qualifiers.isEmpty()) {
+        valQualifier = qualifiers.pollFirst();
+        // if weighted median is requested, get qualifier for the weight column
+        weightQualifier = qualifiers.pollLast();
+      }
       List<KeyValue> results = new ArrayList<KeyValue>();
 
       boolean hasMoreRows = false;

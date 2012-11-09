@@ -21,14 +21,11 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -250,11 +247,11 @@ public class Scan extends OperationWithAttributes {
     if(set == null) {
       set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
     }
-    if (qualifier != null) {
-      set.add(qualifier);
+    if (qualifier == null) {
+      qualifier = HConstants.EMPTY_BYTE_ARRAY;
     }
+    set.add(qualifier);
     familyMap.put(family, set);
-
     return this;
   }
 

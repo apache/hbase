@@ -38,7 +38,6 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DeserializationException;
@@ -643,20 +642,20 @@ public final class ProtobufUtil {
     if (scan.hasFilter()) {
       scanBuilder.setFilter(ProtobufUtil.toFilter(scan.getFilter()));
     }
-    Column.Builder columnBuilder = Column.newBuilder();
-    for (Map.Entry<byte[],NavigableSet<byte []>>
-        family: scan.getFamilyMap().entrySet()) {
-      columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
-      NavigableSet<byte []> columns = family.getValue();
-      columnBuilder.clearQualifier();
-      if (columns != null && columns.size() > 0) {
-        for (byte [] qualifier: family.getValue()) {
-          if (qualifier != null) {
+    if (scan.hasFamilies()) {
+      Column.Builder columnBuilder = Column.newBuilder();
+      for (Map.Entry<byte[],NavigableSet<byte []>>
+          family: scan.getFamilyMap().entrySet()) {
+        columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
+        NavigableSet<byte []> qualifiers = family.getValue();
+        columnBuilder.clearQualifier();
+        if (qualifiers != null && qualifiers.size() > 0) {
+          for (byte [] qualifier: qualifiers) {
             columnBuilder.addQualifier(ByteString.copyFrom(qualifier));
           }
         }
+        scanBuilder.addColumn(columnBuilder.build());
       }
-      scanBuilder.addColumn(columnBuilder.build());
     }
     if (scan.getMaxResultsPerColumnFamily() >= 0) {
       scanBuilder.setStoreLimit(scan.getMaxResultsPerColumnFamily());
@@ -723,17 +722,16 @@ public final class ProtobufUtil {
       scan.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
     }
     if (proto.getColumnCount() > 0) {
-      TreeMap<byte [], NavigableSet<byte[]>> familyMap =
-        new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
       for (Column column: proto.getColumnList()) {
         byte[] family = column.getFamily().toByteArray();
-        TreeSet<byte []> set = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
-        for (ByteString qualifier: column.getQualifierList()) {
-          set.add(qualifier.toByteArray());
+        if (column.getQualifierCount() > 0) {
+          for (ByteString qualifier: column.getQualifierList()) {
+            scan.addColumn(family, qualifier.toByteArray());
+          }
+        } else {
+          scan.addFamily(family);
         }
-        familyMap.put(family, set);
       }
-      scan.setFamilyMap(familyMap);
     }
     return scan;
   }
@@ -821,9 +819,7 @@ public final class ProtobufUtil {
         columnBuilder.clearQualifier();
         if (qualifiers != null && qualifiers.size() > 0) {
           for (byte[] qualifier: qualifiers) {
-            if (qualifier != null) {
-              columnBuilder.addQualifier(ByteString.copyFrom(qualifier));
-            }
+            columnBuilder.addQualifier(ByteString.copyFrom(qualifier));
           }
         }
         builder.addColumn(columnBuilder.build());

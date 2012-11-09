@@ -19,13 +19,9 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -102,5 +98,13 @@ public class TestGet {
     Assert.assertNull(get.getAttributesMap().get("attribute1"));
   }
 
+  @Test
+  public void testNullQualifier() {
+    Get get = new Get(null);
+    byte[] family = Bytes.toBytes("family");
+    get.addColumn(family, null);
+    Set<byte[]> qualifiers = get.getFamilyMap().get(family);
+    Assert.assertEquals(1, qualifiers.size());
+  }
 }
 
