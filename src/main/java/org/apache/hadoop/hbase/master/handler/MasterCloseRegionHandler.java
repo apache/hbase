@@ -65,6 +65,10 @@ public class MasterCloseRegionHandler extends HBaseEventHandler
     ensureEventDataAvailable();
     String serverName = hbEventData.getRsName();
     HServerInfo serverInfo = serverManager.getServerInfo(serverName);
+    if (serverInfo == null) {
+      LOG.warn("Could not find serverInfo for " + serverName + " . Creating from serverName");
+      serverInfo = HServerInfo.fromServerName(serverName);
+    }
     
     // process the region close - this will cause the reopening of the 
     // region as a part of the heartbeat of some RS

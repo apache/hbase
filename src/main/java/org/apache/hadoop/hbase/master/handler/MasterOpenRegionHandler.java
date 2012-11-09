@@ -83,6 +83,10 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
     ensureEventDataAvailable();
     LOG.debug("RS " + hbEventData.getRsName() + " has opened region " + regionName);
     HServerInfo serverInfo = serverManager.getServerInfo(hbEventData.getRsName());
+    if (serverInfo == null) {
+      LOG.warn("Could not find serverInfo for " + serverName + " . Creating from serverName");
+      serverInfo = HServerInfo.fromServerName(hbEventData.getRsName());
+    }
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
     serverManager.processRegionOpen(serverInfo, hbEventData.getHmsg().getRegionInfo(), returnMsgs);
     if(returnMsgs.size() > 0) {
