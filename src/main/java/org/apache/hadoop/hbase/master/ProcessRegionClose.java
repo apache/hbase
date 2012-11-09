@@ -89,14 +89,18 @@ public class ProcessRegionClose extends ProcessRegionStatusChange {
                 master.getRegionManager().setUnassigned(regionInfo, false);
                 LOG.info("region set as unassigned: " + regionInfo.getRegionNameAsString());
               }
+              return true;
+            } else {
+              return false;
             }
-            return true;
           }
         }.doWithRetries();
 
-      if (result == null || result) {
+      if (result != null && result.booleanValue() == true) {
         return RegionServerOperationResult.OPERATION_SUCCEEDED;
-      } else {
+      } else if (result != null && result.booleanValue() == false) {
+        return RegionServerOperationResult.OPERATION_DELAYED;
+      } else { // Had an exception
         return RegionServerOperationResult.OPERATION_FAILED;
       }
     } else {
