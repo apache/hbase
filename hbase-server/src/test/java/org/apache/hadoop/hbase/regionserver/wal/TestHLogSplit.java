@@ -202,7 +202,7 @@ public class TestHLogSplit {
     Path p = HLogSplitter.getRegionSplitEditsPath(fs, entry, hbaseDir, true);
     String parentOfParent = p.getParent().getParent().getName();
     assertEquals(parentOfParent, HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
-    HLogFactory.createWriter(fs, p, conf);
+    HLogFactory.createWriter(fs, p, conf).close();
   }
 
   @Test(expected = OrphanHLogAfterSplitException.class)
